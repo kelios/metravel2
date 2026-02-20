@@ -37,12 +37,12 @@ describe('HomeHero Component', () => {
   describe('Rendering', () => {
     it('should render title correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Поездки на выходные/)).toBeTruthy();
+      expect(getByText(/Выходные с умом/)).toBeTruthy();
     });
 
     it('should render subtitle correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Выбирай готовые маршруты/)).toBeTruthy();
+      expect(getByText(/Выбирай маршруты по расстоянию/)).toBeTruthy();
     });
 
     it('should not show hint for unauthenticated users', () => {
@@ -66,12 +66,12 @@ describe('HomeHero Component', () => {
   });
 
   describe('Button Labels', () => {
-    it('should show "Начать и создать книгу" for unauthenticated users', () => {
+    it('should show "Создать книгу путешествий" for unauthenticated users', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Начать и создать книгу')).toBeTruthy();
+      expect(getByText('Создать книгу путешествий')).toBeTruthy();
     });
 
-    it('should show "Сохранить первую поездку" for authenticated users with no travels', () => {
+    it('should show "Добавить первую поездку" for authenticated users with no travels', () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: true,
         userId: '123',
@@ -82,7 +82,7 @@ describe('HomeHero Component', () => {
       } as any);
 
       const { getByText } = render(<HomeHero travelsCount={0} />);
-      expect(getByText('Сохранить первую поездку')).toBeTruthy();
+      expect(getByText('Добавить первую поездку')).toBeTruthy();
     });
 
     it('should show "Открыть мою книгу" for authenticated users with travels', () => {
@@ -103,7 +103,7 @@ describe('HomeHero Component', () => {
   describe('Navigation', () => {
     it('should navigate to login for unauthenticated users', () => {
       const { getByText } = render(<HomeHero />);
-      const button = getByText('Начать и создать книгу');
+      const button = getByText('Создать книгу путешествий');
       
       fireEvent.press(button);
       
@@ -122,7 +122,7 @@ describe('HomeHero Component', () => {
       } as any);
 
       const { getByText } = render(<HomeHero travelsCount={0} />);
-      const button = getByText('Сохранить первую поездку');
+      const button = getByText('Добавить первую поездку');
       
       fireEvent.press(button);
       
@@ -147,9 +147,9 @@ describe('HomeHero Component', () => {
       expect(mockPush).toHaveBeenCalledWith('/export');
     });
 
-    it('should navigate to search when clicking "Подобрать маршрут"', () => {
+    it('should navigate to search when clicking "Смотреть маршруты"', () => {
       const { getByText } = render(<HomeHero />);
-      const button = getByText('Подобрать маршрут');
+      const button = getByText('Смотреть маршруты');
       
       fireEvent.press(button);
       
@@ -168,7 +168,7 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Поездки на выходные/)).toBeTruthy();
+      expect(getByText(/Выходные с умом/)).toBeTruthy();
     });
 
     it('should apply mobile styles on medium screens (480px)', () => {
@@ -180,7 +180,7 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Поездки на выходные/)).toBeTruthy();
+      expect(getByText(/Выходные с умом/)).toBeTruthy();
     });
 
     it('should apply mobile styles on tablets (768px)', () => {
@@ -192,7 +192,7 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Поездки на выходные/)).toBeTruthy();
+      expect(getByText(/Выходные с умом/)).toBeTruthy();
     });
 
     it('should apply desktop styles on large screens (1024px)', () => {
@@ -204,14 +204,14 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Поездки на выходные/)).toBeTruthy();
+      expect(getByText(/Выходные с умом/)).toBeTruthy();
     });
   });
 
   describe('Accessibility', () => {
     it('should have accessible buttons with proper labels', () => {
       const { getByLabelText } = render(<HomeHero />);
-      expect(getByLabelText('Подобрать маршрут')).toBeTruthy();
+      expect(getByLabelText('Смотреть маршруты')).toBeTruthy();
     });
   });
 });

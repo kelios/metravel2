@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
+import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { buildLoginHref } from '@/utils/authNavigation';
@@ -16,23 +16,34 @@ interface HomeHeroProps {
   travelsCount?: number;
 }
 
-const QUICK_FILTER_BADGES = [
-  { icon: 'navigation', label: 'Маршруты до 200 км' },
-  { icon: 'map-pin', label: 'С готовыми точками на карте' },
-  { icon: 'sun', label: 'Природа, город или актив' },
-  { icon: 'clock', label: '1 день или уикенд' },
-];
+const BOOK_IMAGES = [
+  {
+    source: require('../../assets/images/pdf.webp'),
+    alt: 'Пример книги путешествий',
+  },
+  {
+    source: require('../../assets/images/pdf2.png'),
+    alt: 'Книга путешествий — Озеро Карецца',
+  },
+] as const;
 
 const MOOD_CARDS = [
   { title: 'У озера за выходные', meta: 'Природа • 2 дня • до 180 км', icon: 'sun' },
-  { title: 'Город и кофе', meta: 'Город • 1 день • неспешный ритм', icon: 'coffee' },
+  { title: 'Город и кофе', meta: 'Город • 1 день • спокойный темп', icon: 'coffee' },
   { title: 'Активный выезд', meta: 'Треккинг • 2 дня • больше движения', icon: 'activity' },
 ] as const;
 
-const VALUE_STRIPS = [
-  { icon: 'compass', label: 'Идея поездки за 2 минуты' },
+const FEATURE_PILLS = [
+  { icon: 'map-pin', label: 'Готовые точки на карте' },
+  { icon: 'clock', label: '1 день или выходные' },
+  { icon: 'navigation', label: 'До 200 км от дома' },
   { icon: 'book-open', label: 'Личная книга поездок' },
-  { icon: 'share-2', label: 'PDF или ссылка для друзей' },
+] as const;
+
+const STATS = [
+  { value: '200+', label: 'маршрутов' },
+  { value: '0 ₽', label: 'бесплатно' },
+  { value: '2 мин', label: 'до идеи' },
 ] as const;
 
 const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
@@ -65,13 +76,13 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   };
 
   const handleOpenArticles = () => {
-    queueAnalyticsEvent('HomeClick_OpenArticles');
-    router.push('/articles' as any);
+    queueAnalyticsEvent('HomeClick_OpenSearch');
+    router.push('/search' as any);
   };
 
   const primaryButtonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Начать и создать книгу';
-    if (travelsCount === 0) return 'Сохранить первую поездку';
+    if (!isAuthenticated) return 'Создать книгу путешествий';
+    if (travelsCount === 0) return 'Добавить первую поездку';
     return 'Открыть мою книгу';
   }, [isAuthenticated, travelsCount]);
 
@@ -89,43 +100,43 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const isMobile = isSmallPhone || isPhone;
   const shouldRenderImageSlot = isWeb && !isMobile;
 
+  const [bookImageIndex, setBookImageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!shouldRenderImageSlot) return;
+    const timer = setInterval(() => {
+      setBookImageIndex((prev) => (prev + 1) % BOOK_IMAGES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [shouldRenderImageSlot]);
+
   // Preload removed: the <img loading="eager"> already fetches the image.
   // A separate <link rel="preload"> caused "preloaded but not used" warnings,
   // especially on mobile where the image slot is CSS-hidden (<768px).
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
-      paddingVertical: 58,
+      paddingTop: isMobile ? 32 : 52,
+      paddingBottom: isMobile ? 32 : 56,
       backgroundColor: colors.background,
       width: '100%',
       alignSelf: 'stretch',
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 85% 60% at 74% 36%, ${colors.primarySoft} 0%, transparent 68%), radial-gradient(ellipse 70% 54% at 8% 18%, ${colors.primaryLight} 0%, transparent 72%), linear-gradient(120deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 90% 70% at 68% 30%, ${colors.primarySoft} 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 5% 10%, ${colors.primaryLight} 0%, transparent 65%), linear-gradient(160deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: '100% 100%',
         },
       }),
     },
     bandMobile: {
-      paddingVertical: 34,
+      paddingTop: 32,
+      paddingBottom: 32,
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 125% 52% at 50% 22%, ${colors.primarySoft} 0%, transparent 70%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 130% 55% at 50% 18%, ${colors.primarySoft} 0%, transparent 65%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
         },
-      }),
-    },
-    bandGrid: {
-      position: 'absolute',
-      inset: 0,
-      ...Platform.select({
-        web: {
-          backgroundImage: `linear-gradient(0deg, transparent 24%, ${colors.primaryAlpha30} 25%, transparent 26%, transparent 74%, ${colors.primaryAlpha30} 75%, transparent 76%), linear-gradient(90deg, transparent 24%, ${colors.primaryAlpha30} 25%, transparent 26%, transparent 74%, ${colors.primaryAlpha30} 75%, transparent 76%)`,
-          backgroundSize: '58px 58px',
-          opacity: 0.12,
-          pointerEvents: 'none',
-        } as any,
       }),
     },
     decorOrb: {
@@ -133,230 +144,155 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       borderRadius: DESIGN_TOKENS.radii.full,
       ...Platform.select({
         web: {
-          filter: 'blur(2px)',
-        },
-      }),
-    },
-    decorOrbTop: {
-      width: 280,
-      height: 280,
-      top: -120,
-      right: -70,
-      backgroundColor: colors.primarySoft,
-      opacity: 0.8,
-    },
-    decorOrbBottom: {
-      width: 220,
-      height: 220,
-      bottom: -120,
-      left: -70,
-      backgroundColor: colors.primaryLight,
-      opacity: 0.7,
-    },
-    heroFrame: {
-      width: '100%',
-      borderRadius: DESIGN_TOKENS.radii.xl,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.surfaceAlpha40,
-      paddingHorizontal: isMobile ? 16 : 28,
-      paddingVertical: isMobile ? 18 : 30,
-      overflow: 'hidden',
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.modal,
-          backdropFilter: 'blur(14px)',
+          filter: 'blur(60px)',
+          pointerEvents: 'none',
         } as any,
       }),
     },
-    heroFrameMobile: {
-      paddingHorizontal: 14,
-      paddingVertical: 16,
+    decorOrbTop: {
+      width: 400,
+      height: 400,
+      top: -180,
+      right: -100,
+      backgroundColor: colors.primarySoft,
+      opacity: 0.5,
+    },
+    decorOrbBottom: {
+      width: 300,
+      height: 300,
+      bottom: -160,
+      left: -80,
+      backgroundColor: colors.primaryLight,
+      opacity: 0.4,
     },
     content: {
       flex: 1,
       width: '100%',
-      gap: isMobile ? 14 : 18,
+      gap: isMobile ? 14 : 20,
       alignItems: 'flex-start',
       justifyContent: 'center',
     },
-    titleWrap: {
-      gap: 8,
-      maxWidth: 640,
-    },
-    positioning: {
+    eyebrow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       alignSelf: 'flex-start',
       borderRadius: DESIGN_TOKENS.radii.full,
       backgroundColor: colors.primaryLight,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 5,
     },
-    positioningText: {
-      fontSize: 12,
+    eyebrowText: {
+      fontSize: 11,
       fontWeight: '700',
       color: colors.primaryText,
-      letterSpacing: 0.4,
+      letterSpacing: 0.6,
       textTransform: 'uppercase',
+    },
+    titleWrap: {
+      gap: 0,
+      maxWidth: isMobile ? '100%' as const : 580,
     },
     title: {
       color: colors.text,
-      letterSpacing: -0.5,
+      letterSpacing: -1,
+      lineHeight: isMobile ? 40 : 56,
+      fontSize: isMobile ? 32 : 46,
+      fontWeight: '800',
     },
     subtitle: {
       color: colors.textMuted,
-      maxWidth: 620,
-      fontSize: isMobile ? 16 : 18,
-      lineHeight: isMobile ? 24 : 27,
+      maxWidth: 500,
+      fontSize: isMobile ? 15 : 17,
+      lineHeight: isMobile ? 23 : 26,
+      fontWeight: '400',
+      marginTop: isMobile ? 10 : 14,
+    },
+    featurePills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      maxWidth: isMobile ? '100%' as const : 480,
+    },
+    featurePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+      }),
+    },
+    featurePillText: {
+      color: colors.textMuted,
+      fontSize: 12,
+      lineHeight: 18,
       fontWeight: '500',
     },
-    flowText: {
-      color: colors.text,
-      fontSize: isMobile ? 13 : 15,
-      lineHeight: isMobile ? 20 : 22,
-      fontWeight: '600',
-      maxWidth: 580,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
-        },
-      }),
-    },
-    valueStrips: {
-      width: '100%',
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-      marginTop: 4,
-    },
-    valueStrip: {
+    statsRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 11,
-      paddingVertical: 7,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
-        },
-      }),
+      gap: isMobile ? 16 : 24,
     },
-    valueStripText: {
+    statItem: {
+      gap: 2,
+      alignItems: 'flex-start',
+    },
+    statItemFirst: {},
+    statValue: {
       color: colors.text,
+      fontSize: isMobile ? 20 : 24,
+      fontWeight: '800',
+      letterSpacing: -0.5,
+      lineHeight: isMobile ? 26 : 30,
+    },
+    statLabel: {
+      color: colors.textMuted,
       fontSize: 12,
       lineHeight: 16,
-      fontWeight: '700',
+      fontWeight: '400',
     },
-    contentLink: {
-      marginTop: 2,
+    statWrapper: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.primarySoft,
-      paddingHorizontal: 13,
-      paddingVertical: 9,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          boxShadow: DESIGN_TOKENS.shadows.light,
-        },
-      }),
+      gap: isMobile ? 16 : 24,
     },
-    contentLinkHover: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primaryLight,
-      ...Platform.select({
-        web: {
-          transform: 'translateY(-1px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-        },
-      }),
-    },
-    contentLinkText: {
-      color: colors.primaryText,
-      fontSize: 13,
-      lineHeight: 18,
-      fontWeight: '700',
-    },
-    quickFilters: {
-      width: '100%',
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 9,
-      marginTop: 4,
-    },
-    quickFilterItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 11,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
-          backdropFilter: 'blur(6px)',
-          transition: 'all 0.2s ease',
-        },
-      }),
-    },
-    quickFilterItemHover: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primarySoft,
-      ...Platform.select({
-        web: {
-          transform: 'translateY(-1px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-        },
-      }),
-    },
-    quickFilterText: {
-      color: colors.textMuted,
-      fontSize: 13,
-      fontWeight: '600',
-      lineHeight: 18,
+    statDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: colors.border,
+      alignSelf: 'center',
     },
     hint: {
-      fontSize: isMobile ? 13 : 15,
+      fontSize: isMobile ? 13 : 14,
       color: colors.textMuted,
-      lineHeight: isMobile ? 20 : 24,
-      marginTop: 6,
+      lineHeight: isMobile ? 20 : 22,
       paddingLeft: 12,
-      borderLeftWidth: 3,
+      borderLeftWidth: 2,
       borderLeftColor: colors.primary,
-      maxWidth: 560,
+      maxWidth: 520,
     },
     buttonsContainer: {
-      marginTop: isMobile ? 14 : 22,
       width: '100%',
     },
     primaryButton: {
-      paddingHorizontal: 28,
-      paddingVertical: 16,
-      minHeight: 58,
+      paddingHorizontal: isMobile ? 24 : 32,
+      paddingVertical: isMobile ? 14 : 16,
+      minHeight: isMobile ? 50 : 54,
       borderRadius: DESIGN_TOKENS.radii.md,
       ...Platform.select({
         web: {
-          flex: 1,
-          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 0 0 0 ${colors.primarySoft}`,
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          transition: 'all 0.2s ease',
         },
       }),
     },
@@ -364,92 +300,101 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
         web: {
-          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 0 24px ${colors.primaryAlpha30}`,
           transform: 'translateY(-2px)',
+          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 0 28px ${colors.primaryAlpha30}`,
         },
       }),
     },
     primaryButtonText: {
       color: colors.textOnPrimary,
-      fontSize: 16,
+      fontSize: isMobile ? 15 : 16,
       fontWeight: '600',
-      letterSpacing: 0.2,
+      letterSpacing: 0.1,
     },
     secondaryButton: {
       borderWidth: 1.5,
-      borderColor: colors.primaryAlpha30,
-      paddingHorizontal: 24,
-      paddingVertical: 14,
-      gap: 8,
-      minHeight: 58,
+      borderColor: colors.border,
+      paddingHorizontal: isMobile ? 20 : 28,
+      paddingVertical: isMobile ? 14 : 16,
+      minHeight: isMobile ? 50 : 54,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.surface,
       ...Platform.select({
         web: {
-          flex: 1,
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          backdropFilter: 'blur(8px)',
+          transition: 'all 0.2s ease',
         },
       }),
     },
     secondaryButtonHover: {
-      backgroundColor: colors.surface,
-      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primaryAlpha30,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
           transform: 'translateY(-1px)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
         },
       }),
     },
     secondaryButtonText: {
-      color: colors.primaryText,
-      fontSize: 15,
-      fontWeight: '600',
-      letterSpacing: 0.1,
+      color: colors.text,
+      fontSize: isMobile ? 15 : 16,
+      fontWeight: '500',
     },
     imageContainer: {
       flex: 1,
-      minHeight: 440,
+      minHeight: 460,
       justifyContent: 'center',
       alignItems: 'center',
       position: 'relative',
     },
     imageDecor: {
       position: 'absolute',
-      width: 388,
-      height: 470,
+      width: 320,
+      height: 450,
       borderRadius: DESIGN_TOKENS.radii.xl,
-      backgroundColor: colors.primarySoft,
-      opacity: 0.75,
+      backgroundColor: colors.primaryLight,
+      opacity: 0.55,
       ...Platform.select({
         web: {
-          transform: 'rotate(4deg) translate(16px, 14px)',
-        },
+          transform: 'rotate(6deg) translate(22px, 8px)',
+          filter: 'blur(2px)',
+        } as any,
+      }),
+    },
+    imageDecor2: {
+      position: 'absolute',
+      width: 290,
+      height: 420,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      opacity: 0.7,
+      ...Platform.select({
+        web: {
+          transform: 'rotate(-3deg) translate(-12px, 16px)',
+        } as any,
       }),
     },
     moodPanel: {
       position: 'absolute',
-      left: -58,
-      top: 18,
-      width: 222,
-      gap: 10,
-    },
-    moodPanelMobileHidden: {
-      display: 'none',
+      left: -52,
+      top: 24,
+      width: 200,
+      gap: 8,
     },
     moodCard: {
       borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.surface,
-      paddingHorizontal: 11,
-      paddingVertical: 9,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
-          backdropFilter: 'blur(10px)',
-          transition: 'all 0.25s ease',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          backdropFilter: 'blur(12px)',
+          transition: 'all 0.2s ease',
         },
       }),
     },
@@ -458,8 +403,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primarySoft,
       ...Platform.select({
         web: {
-          transform: 'translateX(5px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
+          transform: 'translateX(4px)',
         },
       }),
     },
@@ -471,164 +415,143 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     moodCardTitle: {
       color: colors.text,
-      fontSize: 13,
-      fontWeight: '700',
-      lineHeight: 18,
+      fontSize: 12,
+      fontWeight: '600',
+      lineHeight: 17,
     },
     moodCardMeta: {
       color: colors.textMuted,
-      fontSize: 12,
-      lineHeight: 16,
-      fontWeight: '500',
+      fontSize: 11,
+      lineHeight: 15,
     },
     travelStats: {
       position: 'absolute',
-      right: -30,
-      top: 28,
-      width: 232,
-      minHeight: 102,
-      maxHeight: 116,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      right: -20,
+      bottom: 44,
+      width: 196,
+      borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
-      paddingHorizontal: 13,
-      paddingVertical: 11,
-      gap: 3,
-      justifyContent: 'flex-start',
-      alignItems: 'flex-start',
-      overflow: 'hidden',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      gap: 4,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          backdropFilter: 'blur(10px)',
+          boxShadow: DESIGN_TOKENS.shadows.modal,
+          backdropFilter: 'blur(12px)',
         },
       }),
     },
+    travelStatsLabel: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
     travelStatsTitle: {
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: '700',
-      lineHeight: 16,
+      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '500',
+      lineHeight: 15,
     },
     travelStatsValue: {
-      color: colors.primaryText,
-      fontSize: 17,
+      color: colors.text,
+      fontSize: 18,
       fontWeight: '800',
-      lineHeight: 22,
+      lineHeight: 24,
+      letterSpacing: -0.3,
     },
     travelStatsMeta: {
       color: colors.textMuted,
-      fontSize: 12,
-      lineHeight: 16,
-      fontWeight: '500',
-    },
-    imagePlaceholder: {
-      width: 320,
-      height: 400,
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 16,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.card,
-        },
-      }),
-    },
-    imagePlaceholderText: {
-      fontSize: 14,
-      color: colors.textMuted,
-      fontWeight: '500',
+      fontSize: 11,
+      lineHeight: 15,
     },
     bookImage: {
-      width: 267,
-      height: 400,
+      width: 260,
+      height: 390,
       borderRadius: DESIGN_TOKENS.radii.lg,
       ...Platform.select({
         web: {
-          boxShadow: `${DESIGN_TOKENS.shadows.modal}, 0 10px 36px ${colors.primaryAlpha30}`,
-          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease',
-          transform: 'rotate(-1.5deg)',
+          boxShadow: `${DESIGN_TOKENS.shadows.modal}, 0 12px 40px ${colors.primaryAlpha30}`,
+          transition: 'transform 0.35s ease, box-shadow 0.35s ease',
+          transform: 'rotate(-1deg)',
         },
       }),
     },
     bookImageHover: {
       ...Platform.select({
         web: {
-          transform: 'rotate(0deg) scale(1.03)',
-          boxShadow: `${DESIGN_TOKENS.shadows.modal}, 0 12px 40px ${colors.primaryAlpha40}`,
+          transform: 'rotate(0deg) scale(1.02)',
+          boxShadow: `${DESIGN_TOKENS.shadows.modal}, 0 16px 48px ${colors.primaryAlpha40}`,
         },
       }),
+    },
+    bookImageWrap: {
+      position: 'relative',
+    },
+    bookDots: {
+      position: 'absolute',
+      bottom: -20,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    bookDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+      ...Platform.select({
+        web: { transition: 'all 0.3s ease' },
+      }),
+    },
+    bookDotActive: {
+      width: 18,
+      backgroundColor: colors.primary,
     },
   }), [colors, isMobile]);
 
   return (
     <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>
-      <View style={styles.bandGrid} />
       <View style={[styles.decorOrb, styles.decorOrbTop]} />
       <View style={[styles.decorOrb, styles.decorOrbBottom]} />
       <ResponsiveContainer maxWidth="xl" padding>
-        <View style={[styles.heroFrame, isMobile && styles.heroFrameMobile]}>
-          <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={isMobile ? 24 : 52} align="center">
-            <View style={styles.content}>
-            <View style={styles.positioning}>
-              <Text style={styles.positioningText}>Маршрут за 2 минуты</Text>
+        <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={isMobile ? 32 : 64} align="center">
+          <View style={styles.content}>
+            <View style={styles.eyebrow}>
+              <Feather name="zap" size={11} color={colors.primary} />
+              <Text style={styles.eyebrowText}>Бесплатно • Без регистрации</Text>
             </View>
 
             <View style={styles.titleWrap}>
-              <ResponsiveText variant="h1" style={styles.title}>
-                Поездки на выходные + личная книга путешествий
-              </ResponsiveText>
+              <Text style={styles.title}>
+                Выходные с умом — и книга поездок в подарок
+              </Text>
+              <Text style={styles.subtitle}>
+                Выбирай маршруты по расстоянию и формату. Сохраняй поездки с фото и заметками. Собирай книгу, которой хочется делиться.
+              </Text>
             </View>
 
-            <ResponsiveText variant="h2" style={styles.subtitle}>
-              Выбирай готовые маршруты по расстоянию и формату отдыха. Сохраняй поездки с фото и заметками и собирай красивую книгу, которой хочется делиться.
-            </ResponsiveText>
-
-            <Text style={styles.flowText}>
-              1. Выбери маршрут {'->'} 2. Сохрани поездку {'->'} 3. Получи книгу в PDF.
-            </Text>
-
-            <View style={styles.valueStrips}>
-              {VALUE_STRIPS.map((item) => (
-                <View key={item.label} style={styles.valueStrip}>
-                  <Feather name={item.icon as any} size={12} color={colors.primary} />
-                  <Text style={styles.valueStripText}>{item.label}</Text>
+            <View style={styles.featurePills}>
+              {FEATURE_PILLS.map((pill) => (
+                <View key={pill.label} style={styles.featurePill}>
+                  <Feather name={pill.icon as any} size={13} color={colors.primary} />
+                  <Text style={styles.featurePillText}>{pill.label}</Text>
                 </View>
               ))}
             </View>
 
-            <Pressable
-              onPress={handleOpenArticles}
-              style={({ pressed, hovered }) => [
-                styles.contentLink,
-                (pressed || hovered) && styles.contentLinkHover,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Открыть статьи и реальные маршруты"
-            >
-              <Feather name="book" size={14} color={colors.primary} />
-              <Text style={styles.contentLinkText}>Открыть статьи и реальные маршруты</Text>
-              <Feather name="arrow-right" size={14} color={colors.primaryText} />
-            </Pressable>
-
-            <View style={styles.quickFilters}>
-              {QUICK_FILTER_BADGES.map((badge) => (
-                <Pressable
-                  key={badge.label}
-                  onPress={() => handleQuickFilterPress(badge.label)}
-                  style={({ pressed, hovered }) => [
-                    styles.quickFilterItem,
-                    (pressed || hovered) && styles.quickFilterItemHover,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Быстрый фильтр ${badge.label}`}
-                >
-                  <Feather name={badge.icon as any} size={14} color={colors.primary} />
-                  <Text style={styles.quickFilterText}>{badge.label}</Text>
-                </Pressable>
+            <View style={styles.statsRow}>
+              {STATS.map((stat, idx) => (
+                <View key={stat.value} style={styles.statWrapper}>
+                  {idx > 0 && <View style={styles.statDivider} />}
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{stat.value}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
+                  </View>
+                </View>
               ))}
             </View>
 
@@ -638,98 +561,104 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               </Text>
             )}
 
-              <ResponsiveStack
-                direction={isMobile ? 'vertical' : 'horizontal'}
-                gap={isMobile ? 12 : 16}
-                style={styles.buttonsContainer}
-              >
+            <ResponsiveStack
+              direction={isMobile ? 'vertical' : 'horizontal'}
+              gap={isMobile ? 12 : 16}
+              style={styles.buttonsContainer}
+            >
               <Button
-                onPress={handleOpenSearch}
-                label="Подобрать маршрут"
+                onPress={handleCreateBook}
+                label={primaryButtonLabel}
                 variant="primary"
                 size={isMobile ? 'md' : 'lg'}
                 fullWidth={isMobile}
-                icon={<Feather name="compass" size={18} color={colors.textOnPrimary} />}
                 style={styles.primaryButton}
                 labelStyle={styles.primaryButtonText}
                 hoverStyle={styles.primaryButtonHover}
                 pressedStyle={styles.primaryButtonHover}
-                accessibilityLabel="Подобрать маршрут"
+                accessibilityLabel={primaryButtonLabel}
               />
 
               <Button
-                onPress={handleCreateBook}
-                label={primaryButtonLabel}
+                onPress={handleOpenSearch}
+                label="Смотреть маршруты"
                 variant="secondary"
                 size={isMobile ? 'md' : 'lg'}
                 fullWidth={isMobile}
+                icon={<Feather name="compass" size={16} color={colors.text} />}
                 style={styles.secondaryButton}
                 labelStyle={styles.secondaryButtonText}
                 hoverStyle={styles.secondaryButtonHover}
                 pressedStyle={styles.secondaryButtonHover}
+                accessibilityLabel="Смотреть маршруты"
               />
-              </ResponsiveStack>
-            </View>
+            </ResponsiveStack>
+          </View>
 
-            {shouldRenderImageSlot && (
-              <Pressable
-                testID="home-hero-image-slot"
-                onPress={handleOpenArticles}
-                accessibilityRole="button"
-                accessibilityLabel="Открыть раздел статей и маршрутов"
-                style={[
-                  styles.imageContainer,
-                  isWeb && ({ cursor: 'pointer' } as any),
-                ]}
-              >
-                {({ hovered }) => (
-                  <>
-                    <View style={styles.imageDecor} />
-                    <View style={[styles.moodPanel, isMobile && styles.moodPanelMobileHidden]}>
-                      {MOOD_CARDS.map((card) => (
-                        <Pressable
-                          key={card.title}
-                          onPress={() => handleQuickFilterPress(card.meta)}
-                          style={({ pressed, hovered }) => [
-                            styles.moodCard,
-                            (pressed || hovered) && styles.moodCardHover,
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Идея поездки ${card.title}`}
-                        >
-                          <View style={styles.moodCardHeader}>
-                            <Feather name={card.icon as any} size={13} color={colors.primary} />
-                            <Text style={styles.moodCardTitle}>{card.title}</Text>
-                          </View>
-                          <Text style={styles.moodCardMeta}>{card.meta}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
+          {shouldRenderImageSlot && (
+            <Pressable
+              testID="home-hero-image-slot"
+              onPress={handleOpenArticles}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть раздел статей и маршрутов"
+              style={[
+                styles.imageContainer,
+                isWeb && ({ cursor: 'pointer' } as any),
+              ]}
+            >
+              {({ hovered }) => (
+                <>
+                  <View style={styles.imageDecor} />
+                  <View style={styles.imageDecor2} />
+                  <View style={styles.moodPanel}>
+                    {MOOD_CARDS.map((card) => (
+                      <Pressable
+                        key={card.title}
+                        onPress={() => handleQuickFilterPress(card.meta)}
+                        style={({ pressed, hovered: h }) => [
+                          styles.moodCard,
+                          (pressed || h) && styles.moodCardHover,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Идея поездки ${card.title}`}
+                      >
+                        <View style={styles.moodCardHeader}>
+                          <Feather name={card.icon as any} size={12} color={colors.primary} />
+                          <Text style={styles.moodCardTitle}>{card.title}</Text>
+                        </View>
+                        <Text style={styles.moodCardMeta}>{card.meta}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
 
+                  <View style={styles.bookImageWrap}>
                     <ImageCardMedia
-                      source={require('../../assets/images/pdf.webp')}
-                      width={267}
-                      height={400}
+                      source={BOOK_IMAGES[bookImageIndex].source}
+                      width={260}
+                      height={390}
                       borderRadius={DESIGN_TOKENS.radii.lg}
                       fit="cover"
                       quality={90}
-                      alt="Пример книги путешествий"
+                      alt={BOOK_IMAGES[bookImageIndex].alt}
                       loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
                       priority={Platform.OS === 'web' ? 'high' : 'normal'}
                       transition={300}
                       style={[styles.bookImage, hovered && styles.bookImageHover]}
                     />
-                    <View style={styles.travelStats}>
-                      <Text style={styles.travelStatsTitle}>Книга путешествий</Text>
-                      <Text style={styles.travelStatsValue}>{travelStatsValue}</Text>
-                      <Text style={styles.travelStatsMeta}>{travelStatsMeta}</Text>
+                    <View style={styles.bookDots}>
+                      {BOOK_IMAGES.map((_, i) => (
+                        <View
+                          key={i}
+                          style={[styles.bookDot, i === bookImageIndex && styles.bookDotActive]}
+                        />
+                      ))}
                     </View>
-                  </>
-                )}
-              </Pressable>
-            )}
-          </ResponsiveStack>
-        </View>
+                  </View>
+                </>
+              )}
+            </Pressable>
+          )}
+        </ResponsiveStack>
       </ResponsiveContainer>
     </View>
   );

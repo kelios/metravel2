@@ -114,8 +114,8 @@ function HomeInspirationSection({
   }, [title, router]);
 
   const handleOpenArticles = useCallback(() => {
-    sendAnalyticsEvent('HomeClick_OpenArticles', { section: title });
-    router.push('/articles' as any);
+    sendAnalyticsEvent('HomeClick_OpenSearch', { section: title });
+    router.push('/search' as any);
   }, [title, router]);
 
   const sectionBadge = useMemo(() => {
@@ -125,7 +125,7 @@ function HomeInspirationSection({
   }, [queryKey]);
 
   const viewMoreLabel = isMobile ? 'Все маршруты' : 'Смотреть все маршруты';
-  const articlesLabel = isMobile ? 'Статьи' : 'Смотреть статьи';
+  const articlesLabel = isMobile ? 'Все маршруты' : 'Смотреть все маршруты';
   const emptyState = EMPTY_STATE_TEXT[queryKey] ?? {
     title: 'Пока здесь пусто',
     subtitle: 'Попробуйте открыть каталог маршрутов.',
@@ -465,8 +465,8 @@ function HomeInspirationSection({
             <Button
               label={articlesLabel}
               onPress={handleOpenArticles}
-              accessibilityLabel={`Открыть статьи для секции «${title}»`}
-              icon={<Feather name="book" size={15} color={colors.primaryText} />}
+              accessibilityLabel={`Открыть каталог маршрутов для секции «${title}»`}
+              icon={<Feather name="compass" size={15} color={colors.primaryText} />}
               variant="secondary"
               style={[styles.articlesButton, isMobile && styles.viewMoreButtonMobile]}
               labelStyle={styles.articlesButtonText}
@@ -495,10 +495,10 @@ function HomeInspirationSection({
               pressedStyle={styles.viewMoreButtonHover}
             />
             <Button
-              label="Открыть статьи"
+              label="Смотреть все маршруты"
               onPress={handleOpenArticles}
               variant="secondary"
-              icon={<Feather name="book" size={15} color={colors.primaryText} />}
+              icon={<Feather name="compass" size={15} color={colors.primaryText} />}
               style={[styles.articlesButton, isMobile && styles.viewMoreButtonMobile]}
               labelStyle={styles.articlesButtonText}
               hoverStyle={styles.articlesButtonHover}
@@ -607,8 +607,8 @@ function HomeInspirationSections() {
   );
 
   const handleOpenArticles = useCallback(() => {
-    sendAnalyticsEvent('HomeClick_OpenArticles', { source: 'home-filter-block' });
-    router.push('/articles' as any);
+    sendAnalyticsEvent('HomeClick_OpenSearch', { source: 'home-filter-block' });
+    router.push('/search' as any);
   }, [router]);
 
   const styles = useMemo(() => StyleSheet.create({
@@ -823,13 +823,13 @@ function HomeInspirationSections() {
               </Text>
               <View style={styles.quickFiltersLinks}>
                 <Text style={styles.quickFiltersHint}>
-                  Хотите посмотреть, как это выглядит на практике? Откройте статьи с готовыми поездками.
+                  Хотите посмотреть, как это выглядит на практике? Откройте каталог с готовыми маршрутами.
                 </Text>
                 <Button
-                  label="Открыть статьи"
+                  label="Смотреть маршруты"
                   onPress={handleOpenArticles}
                   variant="secondary"
-                  icon={<Feather name="book" size={15} color={colors.primaryText} />}
+                  icon={<Feather name="compass" size={15} color={colors.primaryText} />}
                   style={styles.quickFiltersArticlesButton}
                   labelStyle={styles.quickFiltersArticlesText}
                   hoverStyle={styles.quickFiltersArticlesButtonHover}

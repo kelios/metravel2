@@ -104,7 +104,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   }, [handleDismiss]);
 
   const handleOpenDemoBook = useCallback(() => {
-    router.push('/articles');
+    router.push('/search');
     handleDismiss(false);
   }, [handleDismiss]);
 

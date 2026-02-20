@@ -12,22 +12,22 @@ import { buildLoginHref } from '@/utils/authNavigation';
 const STEPS = [
   {
     number: 1,
-    title: 'Найди подходящий маршрут',
-    description: 'Выбери направление по расстоянию и формату отдыха',
+    title: 'Найди маршрут',
+    description: 'Фильтруй по расстоянию, формату и длительности — сразу видишь подходящие варианты',
     icon: 'compass',
     path: '/search',
   },
   {
     number: 2,
-    title: 'Сохрани в личную коллекцию',
-    description: 'Добавь поездку в книгу и оставь заметки, чтобы легко повторить маршрут',
+    title: 'Сохрани в коллекцию',
+    description: 'Добавь поездку в книгу, оставь заметки и фото — всё будет под рукой',
     icon: 'bookmark',
     path: '/search',
   },
   {
     number: 3,
-    title: 'Собери и отправь книгу',
-    description: 'Экспортируй поездки в PDF или поделись ссылкой с друзьями',
+    title: 'Поделись книгой',
+    description: 'Скачай PDF или отправь ссылку — книга готова за пару минут',
     icon: 'share-2',
     path: '/export',
   },
@@ -37,11 +37,11 @@ const USE_CASES = [
   {
     key: 'idea',
     tag: 'Сценарий 1',
-    title: 'Хочу идею на выходные',
+    title: 'Нужна идея на выходные',
     icon: 'navigation',
-    description: 'Выбери несколько параметров и сразу получи подходящие маршруты.',
-    result: 'Итог: понятный список вариантов за пару минут',
-    bullets: ['До 100 / 200 / 300+ км', 'Соло, парой или компанией', 'Природа, город или актив', '1 день или уикенд'],
+    description: 'Укажи расстояние, формат и длительность — и сразу увидишь подходящие маршруты.',
+    result: 'Готовый список вариантов за пару минут',
+    bullets: ['До 100, 200 или 300+ км', 'Соло, парой или компанией', 'Природа, город или актив', '1 день или выходные'],
     cta: 'Найти маршрут',
     path: '/search',
   },
@@ -50,11 +50,11 @@ const USE_CASES = [
     tag: 'Сценарий 2',
     title: 'Хочу сохранить лучшие поездки',
     icon: 'book-open',
-    description: 'Собирай маршруты в личную книгу, чтобы возвращаться к ним и делиться с близкими.',
-    result: 'Итог: аккуратная книга путешествий в пару кликов',
+    description: 'Собирай маршруты в личную книгу — чтобы возвращаться к ним и делиться с близкими.',
+    result: 'Красивая книга путешествий в пару кликов',
     bullets: ['Готовый демо-пример', 'Фото, заметки и точки маршрута', 'План следующих выездов', 'Экспорт в PDF или ссылка'],
-    cta: 'Собрать книгу',
-    path: '/export',
+    cta: 'Начать собирать',
+    path: '/search',
   },
 ] as const;
 
@@ -91,29 +91,11 @@ function HomeHowItWorks() {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: isMobile ? 40 : 62,
+      paddingVertical: isMobile ? 36 : 56,
       backgroundColor: colors.background,
-      ...Platform.select({
-        web: {
-          backgroundImage: `radial-gradient(ellipse 88% 70% at 8% 20%, ${colors.primarySoft} 0%, transparent 72%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 52%, ${colors.background} 100%)`,
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: '100% 100%',
-        },
-      }),
     },
     panel: {
-      borderRadius: DESIGN_TOKENS.radii.xl,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 14 : 24,
-      paddingVertical: isMobile ? 18 : 30,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.modal,
-          backdropFilter: 'blur(12px)',
-        } as any,
-      }),
+      gap: isMobile ? 20 : 28,
     },
     header: {
       marginBottom: isMobile ? 20 : 30,
@@ -306,18 +288,13 @@ function HomeHowItWorks() {
         } as any,
       }),
     },
-    stepAccent: {
-      height: 3,
-      width: '100%',
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primaryAlpha30,
-      marginBottom: isMobile ? 8 : 10,
-    },
-    stepAccentStrong: {
-      backgroundColor: colors.primary,
-      width: '52%',
-      height: '100%',
-      borderRadius: DESIGN_TOKENS.radii.pill,
+    stepNumber: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.primary,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginBottom: isMobile ? 10 : 14,
     },
     stepHover: {
       ...Platform.select({
@@ -330,15 +307,12 @@ function HomeHowItWorks() {
       }),
     },
     stepHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginBottom: isMobile ? 4 : 12,
+      marginBottom: isMobile ? 8 : 12,
     },
     iconContainer: {
-      width: isMobile ? 44 : 56,
-      height: isMobile ? 44 : 56,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: isMobile ? 48 : 56,
+      height: isMobile ? 48 : 56,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.primaryLight,
       justifyContent: 'center',
       alignItems: 'center',
@@ -350,24 +324,8 @@ function HomeHowItWorks() {
         },
       }),
     },
-    numberBadge: {
-      width: 32,
-      height: 32,
-      borderRadius: DESIGN_TOKENS.radii.full,
-      backgroundColor: colors.primary,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...Platform.select({
-        web: {
-          boxShadow: `0 2px 8px ${colors.primaryAlpha30}`,
-        },
-      }),
-    },
-    numberText: {
-      color: colors.textOnPrimary,
-      fontSize: 15,
-      fontWeight: '700',
-    },
+    numberBadge: {},
+    numberText: {},
     stepTitle: {
       color: colors.text,
       fontSize: isMobile ? 17 : 20,
@@ -399,10 +357,10 @@ function HomeHowItWorks() {
         <View style={styles.panel}>
           <View style={styles.header}>
             <ResponsiveText variant="h2" style={styles.title}>
-              С чего начать за 2 минуты
+              Как это работает
             </ResponsiveText>
             <Text style={styles.headerSubtitle}>
-              Выберите сценарий под цель: быстро найти маршрут на выходные или сразу начать личную книгу поездок.
+              Выбери сценарий под себя: найти маршрут на выходные или собрать личную книгу поездок.
             </Text>
           </View>
 
@@ -459,10 +417,10 @@ function HomeHowItWorks() {
 
           <View style={styles.header}>
             <ResponsiveText variant="h2" style={styles.title}>
-              Дальше всё просто: 3 шага
+              Три шага до готовой книги
             </ResponsiveText>
             <Text style={styles.headerSubtitle}>
-              Маршрут {'->'} личная коллекция {'->'} готовая книга путешествий
+              Нашёл → сохранил → поделился
             </Text>
           </View>
 
@@ -484,19 +442,14 @@ function HomeHowItWorks() {
                   accessibilityHint={step.description}
                   {...pressableProps}
                 >
-                  <View style={styles.stepAccent}>
-                    <View style={styles.stepAccentStrong} />
-                  </View>
+                  <Text style={styles.stepNumber}>Шаг {step.number}</Text>
                   <View style={styles.stepHeader}>
                     <View style={styles.iconContainer}>
                       <Feather
                         name={step.icon as any}
-                        size={24}
+                        size={26}
                         color={colors.primary}
                       />
-                    </View>
-                    <View style={styles.numberBadge}>
-                      <Text style={styles.numberText}>{step.number}</Text>
                     </View>
                   </View>
 

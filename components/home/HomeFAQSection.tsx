@@ -17,24 +17,24 @@ function HomeFAQSection() {
   const items = useMemo<FaqItem[]>(
     () => [
       {
-        q: 'Можно ли вести поездки только для себя?',
-        a: 'Да. Вы сами решаете, что публиковать, а что оставить личным в своей книге путешествий.',
+        q: 'Это бесплатно?',
+        a: 'Да, полностью бесплатно. Смотреть маршруты можно без регистрации. Регистрация нужна только чтобы сохранять поездки и собирать книгу.',
       },
       {
-        q: 'Как быстро собрать книгу из поездок?',
-        a: 'Откройте раздел «Экспорт», выберите нужные поездки и стиль оформления, затем скачайте готовый PDF.',
+        q: 'Нужна регистрация, чтобы смотреть маршруты?',
+        a: 'Нет. Маршруты открыты для всех. Регистрация нужна только если хочешь сохранять поездки и собирать свою книгу.',
       },
       {
-        q: 'Подходит ли PDF для печати?',
-        a: 'Да. Книга формируется в печатном формате: можно сохранить файл или отправить его в типографию.',
+        q: 'Как собрать книгу из поездок?',
+        a: 'Открой раздел «Экспорт», выбери нужные поездки и стиль — и скачай готовый PDF. Занимает пару минут.',
       },
       {
-        q: 'Нужна ли регистрация для просмотра маршрутов?',
-        a: 'Смотреть маршруты можно без регистрации. Регистрация нужна, если хотите сохранять поездки и собирать свою книгу.',
+        q: 'Поездки видны только мне?',
+        a: 'Да. Всё, что ты сохраняешь, остаётся личным — ты сам решаешь, чем делиться, а что оставить для себя.',
       },
       {
-        q: 'Можно ли сделать книгу из одной поездки?',
-        a: 'Да. Вы можете собрать книгу как из одной поездки, так и из целой серии путешествий.',
+        q: 'PDF можно распечатать?',
+        a: 'Да, книга формируется в печатном формате. Можно сохранить файл или отправить в типографию.',
       },
     ],
     []
@@ -53,8 +53,15 @@ function HomeFAQSection() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingVertical: isMobile ? 36 : 52,
-      backgroundColor: colors.background,
+      paddingVertical: isMobile ? 32 : 48,
+      backgroundColor: colors.backgroundSecondary,
+      ...Platform.select({
+        web: {
+          borderTopWidth: 1,
+          borderBottomWidth: 1,
+          borderColor: colors.borderLight,
+        },
+      }),
     },
     inner: {
       maxWidth: 720,
@@ -65,6 +72,24 @@ function HomeFAQSection() {
       alignItems: 'center',
       marginBottom: isMobile ? 20 : 28,
       gap: 8,
+    },
+    eyebrow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+    },
+    eyebrowText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.primaryText,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
     },
     title: {
       fontSize: isMobile ? 24 : 32,
@@ -155,8 +180,12 @@ function HomeFAQSection() {
     <View style={styles.band} testID="home-faq">
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
-          <Text style={styles.title}>FAQ</Text>
-          <Text style={styles.subtitle}>Коротко о самом важном</Text>
+          <View style={styles.eyebrow}>
+            <Feather name="help-circle" size={11} color={colors.primary} />
+            <Text style={styles.eyebrowText}>Вопросы и ответы</Text>
+          </View>
+          <Text style={styles.title}>Частые вопросы</Text>
+          <Text style={styles.subtitle}>Отвечаем на самые частые вопросы</Text>
         </View>
 
         <View style={styles.inner}>

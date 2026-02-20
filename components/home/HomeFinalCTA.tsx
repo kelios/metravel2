@@ -16,9 +16,9 @@ interface HomeFinalCTAProps {
 }
 
 const CTA_BENEFITS = [
-  { icon: 'bookmark', label: 'Маршрут + фото + заметки' },
-  { icon: 'calendar', label: 'План на следующие выходные' },
-  { icon: 'share-2', label: 'PDF или ссылка за минуту' },
+  { icon: 'bookmark', label: 'Маршрут, фото и заметки в одном месте' },
+  { icon: 'calendar', label: 'Готовый план на выходные' },
+  { icon: 'share-2', label: 'PDF или ссылка — за пару минут' },
 ] as const;
 
 function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
@@ -50,8 +50,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   };
 
   const buttonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Начать и создать книгу';
-    if (travelsCount === 0) return 'Сохранить первую поездку';
+    if (!isAuthenticated) return 'Создать книгу путешествий';
+    if (travelsCount === 0) return 'Добавить первую поездку';
     return 'Открыть мою книгу';
   }, [isAuthenticated, travelsCount]);
 
@@ -81,26 +81,27 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       alignSelf: 'stretch',
       paddingHorizontal: 0,
       paddingVertical: isMobile ? 48 : 72,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.background,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
       position: 'relative',
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 80% 80% at 50% 50%, ${colors.primarySoft} 0%, ${colors.backgroundSecondary} 70%)`,
+          backgroundImage: `radial-gradient(ellipse 80% 80% at 50% 100%, ${colors.primarySoft} 0%, transparent 70%), radial-gradient(ellipse 60% 50% at 50% 0%, ${colors.primaryLight} 0%, transparent 60%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: '100% 100%',
+          borderTopWidth: 1,
+          borderColor: colors.borderLight,
         },
       }),
     },
     containerMobile: {
-      paddingHorizontal: 0,
-      paddingVertical: 48,
+      paddingVertical: 40,
     },
     content: {
       alignItems: 'center',
-      gap: isMobile ? 20 : 28,
+      gap: isMobile ? 16 : 24,
       width: '100%',
     },
     eyebrow: {
@@ -249,10 +250,10 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
           </View>
 
           <Text style={[styles.title, isMobile && styles.titleMobile]}>
-            Запланируйте следующую поездку уже сегодня
+            Начни собирать свою книгу путешествий
           </Text>
           <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-            Выберите маршрут, сохраните его в коллекцию и соберите книгу путешествий, которой удобно делиться.
+            Найди маршрут, сохрани с фото и заметками — и собери книгу, которой хочется делиться.
           </Text>
 
           <View style={styles.benefitsRow}>
@@ -288,7 +289,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
 
             <Button
               onPress={handlePickTrip}
-              label="Подобрать маршрут сначала"
+              label="Смотреть маршруты"
               variant="secondary"
               size={isMobile ? 'md' : 'lg'}
               style={styles.secondaryButton}
@@ -296,7 +297,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
               hoverStyle={styles.secondaryButtonHover}
               pressedStyle={styles.secondaryButtonHover}
               icon={<Feather name="compass" size={16} color={colors.text} />}
-              accessibilityLabel="Подобрать маршрут сначала"
+              accessibilityLabel="Смотреть маршруты"
             />
           </View>
         </View>
