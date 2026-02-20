@@ -21,7 +21,7 @@ test.describe('Mobile menu navigation', () => {
     await expect(panel).toBeVisible({ timeout: 10_000 });
 
     // Pick any stable nav item and ensure menu closes after navigation.
-    const mapNav = panel.getByRole('button', { name: /Карта/i });
+    const mapNav = panel.getByRole('button', { name: /Популярное|Карта/i });
     await expect(mapNav).toBeVisible({ timeout: 10_000 });
     await Promise.all([
       page.waitForURL((url) => url.pathname.includes('/map'), { timeout: 30_000 }),

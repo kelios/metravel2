@@ -191,15 +191,15 @@ describe('SubscriptionsScreen', () => {
             wrapper: createQueryWrapper().Wrapper,
         });
 
-        const withUrl = await findByLabelText('Travel With Url');
+        const withUrl = await findByLabelText(/Travel With Url/);
         fireEvent.press(withUrl);
         expect(mockPush).toHaveBeenCalledWith('/custom/travel-url');
 
-        const withSlug = await findByLabelText('Travel With Slug');
+        const withSlug = await findByLabelText(/Travel With Slug/);
         fireEvent.press(withSlug);
         expect(mockPush).toHaveBeenCalledWith('/travels/slug-trip');
 
-        const withIdOnly = await findByLabelText('Travel With Id Only');
+        const withIdOnly = await findByLabelText(/Travel With Id Only/);
         fireEvent.press(withIdOnly);
         expect(mockPush).toHaveBeenCalledWith('/travels/102');
     });

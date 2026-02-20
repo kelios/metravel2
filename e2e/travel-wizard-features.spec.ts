@@ -475,12 +475,11 @@ test.describe('ArticleEditor (Якоря в описании)', () => {
     await expect(anchorButton.first()).toBeVisible({ timeout: 30_000 });
     await anchorButton.first().click({ force: true });
 
-    const anchorInput = page.getByPlaceholder('day-3').first();
+    const anchorDialog = page.getByRole('dialog').filter({ hasText: /Вставить якорь/i }).first();
+    await expect(anchorDialog).toBeVisible({ timeout: 10_000 });
+    const anchorInput = anchorDialog.getByRole('textbox').first();
     await expect(anchorInput).toBeVisible({ timeout: 15_000 });
     await anchorInput.fill('day-3');
-
-    const anchorDialog = page.getByRole('dialog').first();
-    await expect(anchorDialog).toBeVisible({ timeout: 10_000 });
 
     const insertButton = anchorDialog.getByRole('button', { name: 'Вставить' }).first();
     await expect(insertButton).toBeVisible({ timeout: 10_000 });

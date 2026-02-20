@@ -212,14 +212,14 @@ describe('ProfileScreen', () => {
     const { getAllByText, findByLabelText } = renderProfile();
 
     // По умолчанию активна вкладка "Мои" и показываются путешествия пользователя
-    expect(await findByLabelText('My Travel 1')).toBeTruthy();
+    expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
     const favCandidates = getAllByText('Избранное');
     fireEvent.press(favCandidates[favCandidates.length - 1]);
-    expect(await findByLabelText('Fav 1')).toBeTruthy();
+    expect(await findByLabelText(/Fav 1/)).toBeTruthy();
 
     const historyCandidates = getAllByText('История');
     fireEvent.press(historyCandidates[historyCandidates.length - 1]);
-    expect(await findByLabelText('History 1')).toBeTruthy();
+    expect(await findByLabelText(/History 1/)).toBeTruthy();
   });
 });

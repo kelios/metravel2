@@ -84,8 +84,8 @@ describe('WeeklyHighlights', () => {
     expect(getByText('Подборка месяца')).toBeTruthy()
     expect(getByText('Самые популярные маршруты этого месяца')).toBeTruthy()
     // Travel names are in accessibility labels, not as text content
-    expect(getByLabelText('Test Travel 1')).toBeTruthy()
-    expect(getByLabelText('Test Travel 2')).toBeTruthy()
+    expect(getByLabelText(/Test Travel 1/)).toBeTruthy()
+    expect(getByLabelText(/Test Travel 2/)).toBeTruthy()
   })
 
   it('filters out viewed items', () => {
@@ -114,7 +114,7 @@ describe('WeeklyHighlights', () => {
     const { queryByText, getByLabelText } = render(<WeeklyHighlights />)
     
     expect(queryByText('Viewed Travel')).toBeNull()
-    expect(getByLabelText('New Travel')).toBeTruthy()
+    expect(getByLabelText(/New Travel/)).toBeTruthy()
   })
 
   it('handles item press', () => {
@@ -133,7 +133,7 @@ describe('WeeklyHighlights', () => {
     })
 
     const { getByLabelText } = render(<WeeklyHighlights />)
-    const item = getByLabelText('Test Travel')
+    const item = getByLabelText(/Test Travel/)
     
     fireEvent.press(item)
     
@@ -157,7 +157,6 @@ describe('WeeklyHighlights', () => {
 
     const { getByLabelText } = render(<WeeklyHighlights />)
     
-    expect(getByLabelText('Test Travel')).toBeTruthy()
+    expect(getByLabelText(/Test Travel/)).toBeTruthy()
   })
 })
-
