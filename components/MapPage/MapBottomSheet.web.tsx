@@ -10,6 +10,7 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
+import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 
 interface MapBottomSheetProps {
   children: React.ReactNode;
@@ -32,6 +33,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
   ({ children, title, subtitle, peekContent, bottomInset = 0, onStateChange }, ref) => {
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
+    const setBottomSheetHeightPx = useBottomSheetStore((s) => s.setHeightPx);
     const lastProgrammaticOpenTsRef = useRef(0);
     const [sheetIndex, setSheetIndex] = useState(-1);
 
@@ -68,7 +70,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
 
     const isCollapsed = sheetIndex < 0;
     // Pixel-based snap heights (vh units don't work reliably in RN Web View styles)
-    const SNAP_RATIOS = [0.25, 0.55, 0.85] as const;
+    const SNAP_RATIOS = windowHeight < 700 ? ([0.3, 0.62, 0.9] as const) : ([0.25, 0.55, 0.85] as const);
     const openHeight = !isCollapsed
       ? Math.round(windowHeight * (SNAP_RATIOS[sheetIndex] ?? 0.55))
       : 0;
@@ -91,6 +93,17 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         node.style.maxHeight = `${openHeight}px`;
       }
     }, [isCollapsed, openHeight, peekContent]);
+
+    useEffect(() => {
+      setBottomSheetHeightPx(openHeight);
+    }, [openHeight, setBottomSheetHeightPx]);
+
+    useEffect(
+      () => () => {
+        setBottomSheetHeightPx(0);
+      },
+      [setBottomSheetHeightPx]
+    );
 
     const handleClose = useCallback(() => {
       const dt = Date.now() - lastProgrammaticOpenTsRef.current;
@@ -237,14 +250,19 @@ const getStyles = (colors: ThemedColors) =>
     },
     contentContainer: {
       flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+      height: 0,
       minHeight: 0,
+      minWidth: 0,
       ...(Platform.OS === 'web'
         ? ({
+            flex: '1 1 auto',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
+            overscrollBehavior: 'contain',
           } as any)
         : null),
     },
   });
-

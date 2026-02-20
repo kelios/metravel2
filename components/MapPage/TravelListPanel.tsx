@@ -287,6 +287,8 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   emptyActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 12,
     marginTop: 4,
   },

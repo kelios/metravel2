@@ -263,8 +263,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
  * Хук для определения responsive параметров карты.
  */
 export function useMapResponsive() {
-  const { isPhone, isLargePhone, width } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { isMobile, width } = useResponsive();
 
   return useMemo(() => ({
     isMobile,

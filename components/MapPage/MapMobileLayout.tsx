@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
-import { View, StyleSheet, Platform, InteractionManager } from 'react-native';
+import { View, StyleSheet, Platform, InteractionManager, useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { usePathname } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -65,7 +65,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   onExpandRadius,
 }) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrow = viewportWidth <= 390;
+  const isVeryNarrow = viewportWidth <= 350;
+  const stackSheetToolbar = Platform.OS === 'web' || viewportWidth <= 460;
+  const styles = useMemo(
+    () => getStyles(colors, { isNarrow, stackSheetToolbar }),
+    [colors, isNarrow, stackSheetToolbar]
+  );
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
   const pathname = usePathname();
   const isActiveWebRoute = Platform.OS === 'web' && (pathname === '/map' || String(pathname).startsWith('/map/'));
@@ -151,6 +158,22 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     return canBuildRoute ? 'Построить маршрут' : 'Добавьте старт и финиш';
   }, [routingLoading, routeDistance, canBuildRoute]);
 
+  const listTabsOptions = useMemo(
+    () => [
+      { key: 'list', label: 'Список', icon: isVeryNarrow ? undefined : 'list', badge: travelsData.length },
+      { key: 'filters', label: 'Фильтры', icon: isVeryNarrow ? undefined : 'filter-list' },
+    ],
+    [isVeryNarrow, travelsData.length]
+  );
+
+  const modeTabsOptions = useMemo(
+    () => [
+      { key: 'radius', label: 'Радиус', icon: isVeryNarrow ? undefined : 'my-location' },
+      { key: 'route', label: 'Маршрут', icon: isVeryNarrow ? undefined : 'alt-route' },
+    ],
+    [isVeryNarrow]
+  );
+
   // Peek content for collapsed state
   const peekContent = useMemo(() => {
     if (contentTab === 'list') {
@@ -173,13 +196,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     return (
       <View style={styles.filtersPeek}>
         <SegmentedControl
-          options={[
-            { key: 'radius', label: 'Радиус', icon: 'my-location' },
-            { key: 'route', label: 'Маршрут', icon: 'alt-route' },
-          ]}
+          options={modeTabsOptions}
           value={filtersMode}
           onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
           compact={true}
+          dense={isNarrow}
           tone="subtle"
           accessibilityLabel="Выбор режима поиска"
         />
@@ -215,6 +236,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     canBuildRoute,
     routingLoading,
     routeCtaLabel,
+    modeTabsOptions,
+    isNarrow,
   ]);
 
   const sheetPeekContent = Platform.OS === 'web' ? null : peekContent;
@@ -222,7 +245,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // Content based on active tab
   const sheetContent = useMemo(() => {
     const showModeToggle =
-      uiTab === 'filters' &&
       (filtersMode === 'radius' || filtersMode === 'route') &&
       typeof setFiltersMode === 'function';
 
@@ -275,13 +297,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
     return (
       <View style={styles.sheetRoot}>
-        <View style={styles.sheetToolbar}>
-          <View style={styles.sheetToolbarLeft}>
+        <View style={[styles.sheetToolbar, stackSheetToolbar ? styles.sheetToolbarStacked : styles.sheetToolbarInline]}>
+          <View style={[styles.sheetToolbarLeft, stackSheetToolbar && styles.sheetToolbarFullWidth]}>
             <SegmentedControl
-              options={[
-                { key: 'list', label: 'Список', icon: 'list', badge: travelsData.length },
-                { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
-              ]}
+              options={listTabsOptions}
               value={uiTab}
               onChange={(key) => {
                 const next = key === 'filters' ? 'filters' : 'list';
@@ -289,21 +308,20 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                 bottomSheetRef.current?.snapToHalf();
               }}
               compact={true}
+              dense={isNarrow}
               tone="subtle"
               accessibilityLabel="Переключение между фильтрами и списком"
             />
           </View>
 
           {showModeToggle && (
-            <View style={styles.sheetToolbarRight}>
+            <View style={[styles.sheetToolbarRight, stackSheetToolbar && styles.sheetToolbarFullWidth]}>
               <SegmentedControl
-                options={[
-                  { key: 'radius', label: 'Радиус', icon: 'my-location' },
-                  { key: 'route', label: 'Маршрут', icon: 'alt-route' },
-                ]}
+                options={modeTabsOptions}
                 value={filtersMode}
                 onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
                 compact={true}
+                dense={isNarrow}
                 tone="subtle"
                 accessibilityLabel="Выбор режима поиска"
               />
@@ -351,10 +369,17 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     styles.sheetBody,
     styles.sheetRoot,
     styles.sheetToolbar,
+    styles.sheetToolbarInline,
+    styles.sheetToolbarStacked,
+    styles.sheetToolbarFullWidth,
     transportMode,
     travelsData,
     onExpandRadius,
     onResetFilters,
+    listTabsOptions,
+    modeTabsOptions,
+    isNarrow,
+    stackSheetToolbar,
   ]);
 
 
@@ -408,7 +433,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   );
 };
 
-const getStyles = (colors: ThemedColors) =>
+const getStyles = (
+  colors: ThemedColors,
+  options: { isNarrow: boolean; stackSheetToolbar: boolean }
+) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -431,25 +459,23 @@ const getStyles = (colors: ThemedColors) =>
         : null),
     },
     sheetRoot: {
-      flex: 1,
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+      minHeight: 0,
     },
     sheetToolbar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      minHeight: 44,
-      paddingVertical: 2,
-      paddingHorizontal: 2,
+      flexDirection: options.stackSheetToolbar ? 'column' : 'row',
+      alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
+      gap: options.isNarrow ? 6 : 8,
+      minHeight: options.stackSheetToolbar ? undefined : 44,
+      paddingVertical: Platform.OS === 'web' ? (options.isNarrow ? 6 : 8) : (options.isNarrow ? 4 : 6),
+      paddingHorizontal: options.isNarrow ? 4 : 8,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...Platform.select({
         web: {
-          flexDirection: 'column',
-          alignItems: 'stretch',
-          minHeight: 'auto' as any,
-          paddingVertical: 8,
-          paddingHorizontal: 8,
           position: 'sticky' as any,
           top: 0,
           zIndex: 10,
@@ -457,25 +483,24 @@ const getStyles = (colors: ThemedColors) =>
       }),
     },
     sheetToolbarLeft: {
-      flex: 1,
+      flex: options.stackSheetToolbar ? 0 : 1,
       minWidth: 0,
-      ...Platform.select({
-        web: {
-          flex: 0,
-          width: '100%',
-          minHeight: 44,
-        },
-      }),
     },
     sheetToolbarRight: {
-      flex: 1,
+      flex: options.stackSheetToolbar ? 0 : 1,
       minWidth: 0,
-      ...Platform.select({
-        web: {
-          flex: 0,
-          width: '100%',
-        },
-      }),
+    },
+    sheetToolbarInline: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    sheetToolbarStacked: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+    },
+    sheetToolbarFullWidth: {
+      width: '100%',
+      minHeight: 40,
     },
     sheetIconButton: {
       width: 36,
@@ -518,22 +543,27 @@ const getStyles = (colors: ThemedColors) =>
       }),
     },
     sheetBody: {
-      flex: 1,
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 0,
+      minHeight: 0,
       ...Platform.select({
         web: {
-          paddingHorizontal: 16,
+          paddingHorizontal: options.isNarrow ? 8 : 16,
         },
       }),
     },
     filtersPeek: {
       gap: 8,
+      paddingHorizontal: options.isNarrow ? 8 : 12,
+      paddingBottom: 4,
     },
     filtersPeekCtaRow: {
-      paddingHorizontal: 12,
+      paddingHorizontal: options.isNarrow ? 0 : 2,
       paddingBottom: 4,
     },
     fab: {
-      bottom: 140,
-      right: 12,
+      bottom: options.isNarrow ? 124 : 140,
+      right: options.isNarrow ? 10 : 12,
     },
   });

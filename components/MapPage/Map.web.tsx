@@ -63,14 +63,7 @@ const MapRouteViaUseMap: React.FC<{
 
 /** Wrapper that subscribes to bottom sheet store so controls reposition reactively. */
 const MapControlsReactive: React.FC<Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>> = (props) => {
-  const bsState = useBottomSheetStore((s) => s.state);
-  const bsHeightPx = useBottomSheetStore((s) => s.heightPx);
-  const bottomOffset = useMemo(() => {
-    if (bsState === 'collapsed') return 120;
-    if (bsState === 'half') return Math.max(bsHeightPx * 0.5 + 20, 200);
-    if (bsState === 'full') return Math.max(bsHeightPx * 0.9 + 20, 400);
-    return 120;
-  }, [bsState, bsHeightPx]);
+  const bottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset());
   return <MapControls {...props} bottomOffset={bottomOffset} />;
 };
 

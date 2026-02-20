@@ -19,6 +19,7 @@ interface SegmentedControlProps {
   onChange: (key: string) => void;
   accessibilityLabel?: string;
   compact?: boolean;
+  dense?: boolean;
   disabled?: boolean;
   disabledKeys?: string[];
   role?: 'radio' | 'button';
@@ -31,13 +32,14 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   onChange,
   accessibilityLabel,
   compact = false,
+  dense = false,
   disabled = false,
   disabledKeys = [],
   role = 'radio',
   tone = 'default',
 }) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors, compact, tone), [colors, compact, tone]);
+  const styles = useMemo(() => getStyles(colors, compact, tone, dense), [colors, compact, tone, dense]);
 
   const activeIndex = options.findIndex((o) => o.key === value);
   const pillAnim = useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
@@ -111,14 +113,14 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             {icon && (
               <MapIcon
                 name={icon}
-                size={16}
+                size={compact && dense ? 14 : 16}
                 color={iconColor}
               />
             )}
             <Text style={[
               styles.segmentText,
               active && styles.segmentTextActive,
-            ]}>
+            ]} numberOfLines={1} ellipsizeMode="tail">
               {label}
             </Text>
             {typeof badge === 'number' && badge > 0 && (
@@ -141,14 +143,19 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   );
 };
 
-const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'subtle') => StyleSheet.create({
+const getStyles = (
+  colors: ThemedColors,
+  compact: boolean,
+  tone: 'default' | 'subtle',
+  dense: boolean,
+) => StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
     backgroundColor: tone === 'subtle' ? colors.backgroundSecondary : colors.surface,
-    borderRadius: 12,
+    borderRadius: compact && dense ? 10 : 12,
     padding: compact ? 1 : 2,
     marginHorizontal: compact ? 0 : 12,
-    marginVertical: compact ? 4 : 8,
+    marginVertical: compact ? (dense ? 2 : 4) : 8,
     borderWidth: 1,
     borderColor: tone === 'subtle' ? colors.borderLight : colors.border,
     position: 'relative',
@@ -156,9 +163,9 @@ const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'su
   },
   pill: {
     position: 'absolute',
-    top: 2,
-    bottom: 2,
-    borderRadius: 6,
+    top: compact && dense ? 1 : 2,
+    bottom: compact && dense ? 1 : 2,
+    borderRadius: compact && dense ? 5 : 6,
     backgroundColor: tone === 'subtle' ? colors.primarySoft : colors.primary,
     ...(tone === 'subtle'
       ? {
@@ -170,14 +177,16 @@ const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'su
   },
   segment: {
     flex: 1,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: compact ? 6 : 4,
-    paddingVertical: compact ? 8 : 8,
-    paddingHorizontal: compact ? 12 : 8,
-    borderRadius: 6,
-    minWidth: compact ? 80 : 0,
+    gap: compact ? (dense ? 4 : 6) : 4,
+    paddingVertical: compact ? (dense ? 7 : 8) : 8,
+    paddingHorizontal: compact ? (dense ? 8 : 12) : 8,
+    borderRadius: dense ? 5 : 6,
+    minWidth: compact ? (dense ? 0 : 72) : 0,
+    minHeight: compact ? (dense ? 36 : 40) : 40,
     backgroundColor: 'transparent',
     zIndex: 1,
   },
@@ -188,9 +197,10 @@ const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'su
     opacity: 0.5,
   },
   segmentText: {
-    fontSize: 13,
+    fontSize: compact && dense ? 12 : 13,
     fontWeight: '600',
     color: colors.textMuted,
+    flexShrink: 1,
   },
   segmentTextActive: {
     color: tone === 'subtle' ? colors.primaryText : colors.textOnPrimary,
@@ -198,13 +208,13 @@ const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'su
   },
   badge: {
     backgroundColor: tone === 'subtle' ? colors.surface : colors.surfaceLight,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 6,
+    borderRadius: compact && dense ? 9 : 10,
+    minWidth: compact && dense ? 18 : 20,
+    height: compact && dense ? 18 : 20,
+    paddingHorizontal: compact && dense ? 5 : 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
+    marginLeft: compact && dense ? 3 : 4,
     ...(tone === 'subtle'
       ? {
           borderWidth: 1,
@@ -216,7 +226,7 @@ const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'su
     backgroundColor: tone === 'subtle' ? colors.primarySoft : 'rgba(255, 255, 255, 0.25)',
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: compact && dense ? 10 : 11,
     fontWeight: '700',
     color: colors.text,
   },

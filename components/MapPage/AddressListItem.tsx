@@ -163,6 +163,15 @@ const AddressListItem: React.FC<Props> = ({
     const isMobile = isMobileProp ?? (isPhone || isLargePhone);
     const isSmallScreen = isPhone;
     const isTablet = width > 480 && width <= METRICS.breakpoints.largeTablet;
+    const webCardWidth = useMemo(() => {
+      if (Platform.OS !== 'web') return 300;
+      const horizontalInsets = width <= 360 ? 28 : width <= 480 ? 40 : width <= 768 ? 56 : 72;
+      return Math.max(236, Math.min(360, width - horizontalInsets));
+    }, [width]);
+    const webCardImageHeight = useMemo(
+      () => Math.round(Math.max(128, Math.min(188, webCardWidth * 0.48))),
+      [webCardWidth]
+    );
 
     // показываем оверлеи всегда на мобиле и только при hover на web
     const showOverlays = isMobile || hovered;
@@ -449,8 +458,8 @@ const AddressListItem: React.FC<Props> = ({
             onAddPoint={handleAddPoint}
             addDisabled={!authReady || !isAuthenticated || isAddingPoint}
             isAdding={isAddingPoint}
-            imageHeight={140}
-            width={300}
+            imageHeight={webCardImageHeight}
+            width={webCardWidth}
             style={PLACE_CARD_STYLE}
             testID="map-travel-card"
           />

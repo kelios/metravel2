@@ -64,6 +64,7 @@ lighthouse-reports/local-*.json
 lighthouse-reports/local-*.html
 lighthouse-reports/local-*.png
 yarn-error.log
+output/
 
 # Android build files
 android/
