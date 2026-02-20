@@ -551,7 +551,7 @@ test.describe('Travel Rating - API Integration', () => {
    * TC-RATING-009: Изменение существующей оценки
    */
   test('TC-RATING-009: пользователь может изменить свою оценку', async ({ page }) => {
-    let postCallCount = 0;
+    let mutationCallCount = 0;
     let lastPostedRating: number | null = null;
 
     // Мокаем состояние - пользователь уже оценил на 3
@@ -588,10 +588,11 @@ test.describe('Travel Rating - API Integration', () => {
       return route.continue();
     });
 
-    // Мокаем POST для изменения оценки
+    // Мокаем mutation для изменения оценки (в зависимости от реализации это может быть POST/PATCH/PUT)
     await page.route('**/api/travels/rating/**', async (route) => {
-      if (route.request().method() === 'POST') {
-        postCallCount++;
+      const method = route.request().method();
+      if (method === 'POST' || method === 'PATCH' || method === 'PUT') {
+        mutationCallCount++;
         try {
           const body = route.request().postDataJSON();
           lastPostedRating = body?.rating ?? null;
@@ -618,30 +619,37 @@ test.describe('Travel Rating - API Integration', () => {
     await page.waitForTimeout(500);
 
     // Проверяем что отображается текущая оценка
-    const textBefore = await ratingSection.textContent();
+    const textBefore = (await ratingSection.textContent()) || '';
     const hasRating3 = textBefore && /3/.test(textBefore);
+    const currentRatingMatch = textBefore.match(/ваша оценка[^0-9]*([1-5])/i);
+    const currentRating = currentRatingMatch ? Number(currentRatingMatch[1]) : null;
+    const targetRating = currentRating === 5 ? 4 : 5;
 
-    // Кликаем на 5-ю звезду чтобы изменить оценку
-    const fifthStar = ratingSection.getByRole('button', { name: /оценить на 5 из 5/i }).first();
-    await expect(fifthStar).toBeVisible();
-    const ratingPostRequest = page
+    // Кликаем на звезду с другой оценкой, чтобы гарантированно инициировать изменение
+    const targetStar = ratingSection
+      .getByRole('button', { name: new RegExp(`оценить на ${targetRating} из 5`, 'i') })
+      .first();
+    await expect(targetStar).toBeVisible();
+    const ratingMutationRequest = page
       .waitForRequest(
-        (req) => req.method() === 'POST' && req.url().includes('/api/travels/rating/'),
+        (req) =>
+          (req.method() === 'POST' || req.method() === 'PATCH' || req.method() === 'PUT') &&
+          req.url().includes('/api/travels/rating/'),
         { timeout: 10_000 }
       )
       .catch(() => null);
-    await fifthStar.click({ force: true });
-    const postedRequest = await ratingPostRequest;
-    expect(postedRequest, 'Rating update POST request was not sent').not.toBeNull();
+    await targetStar.click({ force: true });
+    const mutationRequest = await ratingMutationRequest;
+    expect(mutationRequest, 'Rating update request was not sent').not.toBeNull();
     await page.waitForTimeout(500);
 
     test.info().annotations.push({
       type: 'note',
-      description: `POST calls: ${postCallCount}, last rating: ${lastPostedRating}, had rating 3: ${hasRating3}`,
+      description: `Mutation calls: ${mutationCallCount}, last rating: ${lastPostedRating}, had rating 3: ${hasRating3}, currentRating: ${currentRating}, targetRating: ${targetRating}`,
     });
 
-    expect(postCallCount).toBeGreaterThan(0);
-    expect(lastPostedRating).toBe(5);
+    expect(mutationCallCount).toBeGreaterThan(0);
+    expect(lastPostedRating).toBe(targetRating);
   });
 
   /**

@@ -12,9 +12,9 @@ describe('Routes Existence Tests', () => {
   // Получаем все пути из компонентов
   const navItems = [
     { path: '/search', label: 'Идеи поездок' },
-    { path: '/travelsby', label: 'Направления' },
-    { path: '/export', label: 'Книга путешествий' },
-    { path: '/map', label: 'Популярное' },
+    { path: '/travelsby', label: 'Беларусь' },
+    { path: '/map', label: 'Карта' },
+    { path: '/quests', label: 'Квесты' },
   ];
 
   const userMenuPaths = [
@@ -132,8 +132,8 @@ describe('Routes Existence Tests', () => {
     const customHeaderPaths = [
       '/search',
       '/travelsby',
-      '/export',
       '/map',
+      '/quests',
     ];
 
     customHeaderPaths.forEach((routePath) => {

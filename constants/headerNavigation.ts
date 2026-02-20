@@ -9,9 +9,9 @@ export interface HeaderNavItem {
 
 export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/search', label: 'Идеи поездок', icon: 'compass', priority: 'primary' },
-  { path: '/travelsby', label: 'Направления', icon: 'map', priority: 'primary' },
-  { path: '/export', label: 'Книга путешествий', icon: 'book-open', priority: 'primary' },
-  { path: '/map', label: 'Популярное', icon: 'trending-up', priority: 'primary' },
+  { path: '/travelsby', label: 'Беларусь', icon: 'map', priority: 'primary' },
+  { path: '/map', label: 'Карта', icon: 'map-pin', priority: 'primary' },
+  { path: '/quests', label: 'Квесты', icon: 'flag', priority: 'primary' },
 ];
 
 export const DOCUMENT_NAV_ITEMS: HeaderNavItem[] = [

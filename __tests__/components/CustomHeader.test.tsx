@@ -134,16 +134,16 @@ describe('CustomHeader', () => {
             const utils = renderHeader();
             
             expect(utils.getByLabelText('Идеи поездок')).toBeTruthy();
-            expect(utils.getByLabelText('Направления')).toBeTruthy();
-            expect(utils.getByLabelText('Книга путешествий')).toBeTruthy();
-            expect(utils.getByLabelText('Популярное')).toBeTruthy();
+            expect(utils.getByLabelText('Беларусь')).toBeTruthy();
+            expect(utils.getByLabelText('Карта')).toBeTruthy();
+            expect(utils.getByLabelText('Квесты')).toBeTruthy();
         });
 
         it('highlights active navigation item', () => {
             (usePathname as jest.Mock).mockReturnValue('/map');
             const utils = renderHeader();
             
-            const mapItem = utils.getByLabelText('Популярное');
+            const mapItem = utils.getByLabelText('Карта');
             expect(mapItem.props.accessibilityState?.selected).toBe(true);
         });
 
@@ -151,7 +151,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             
-            const mapItem = utils.getByLabelText('Популярное');
+            const mapItem = utils.getByLabelText('Карта');
             fireEvent.press(mapItem);
             
             expect(mockPush).toHaveBeenCalledWith('/map');
@@ -169,7 +169,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/quests/minsk');
             const utils = renderHeader();
             
-            const questsItem = utils.getByLabelText('Популярное');
+            const questsItem = utils.getByLabelText('Квесты');
             expect(questsItem.props.accessibilityState?.selected).toBe(true);
         });
 

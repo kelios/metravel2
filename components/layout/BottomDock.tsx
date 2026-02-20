@@ -45,7 +45,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     if (pathname.startsWith('/travelsby')) return '/travelsby';
     if (pathname.startsWith('/export')) return '/export';
     if (pathname.startsWith('/map')) return '/map';
-    if (pathname.startsWith('/quests')) return '/map';
+    if (pathname.startsWith('/quests')) return '/quests';
     return pathname;
   }, [pathname]);
 
@@ -146,9 +146,9 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const dockItemDefs = useMemo(
     () => [
       { key: "home", label: "Идеи поездок", route: "/search" as any, iconName: "compass" as const },
-      { key: "search", label: "Направления", route: "/travelsby" as any, iconName: "map" as const },
-      { key: "map", label: "Книга путешествий", route: "/export" as any, iconName: "book-open" as const },
-      { key: "favorites", label: "Популярное", route: "/map" as any, iconName: "trending-up" as const },
+      { key: "search", label: "Беларусь", route: "/travelsby" as any, iconName: "map" as const },
+      { key: "map", label: "Карта", route: "/map" as any, iconName: "map-pin" as const },
+      { key: "favorites", label: "Квесты", route: "/quests" as any, iconName: "flag" as const },
       { key: "more", label: "Ещё", route: "/more" as any, iconName: "more-horizontal" as const, isMore: true },
     ],
     []
@@ -238,6 +238,18 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               >
                 <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Создать маршрут</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowMore(false);
+                  router.push("/export" as any);
+                }}
+                style={styles.moreItem}
+                accessibilityRole="link"
+                accessibilityLabel="Книга путешествий"
+              >
+                <Feather name="book-open" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                <Text style={styles.moreItemText}>Книга путешествий</Text>
               </Pressable>
               <Pressable
                 onPress={() => {

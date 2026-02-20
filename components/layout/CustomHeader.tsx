@@ -100,7 +100,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         if (pathname.startsWith('/travelsby')) return '/travelsby';
         if (pathname.startsWith('/export')) return '/export';
         if (pathname.startsWith('/map')) return '/map';
-        if (pathname.startsWith('/quests')) return '/map';
+        if (pathname.startsWith('/quests')) return '/quests';
         return pathname;
     }, [pathname]);
 

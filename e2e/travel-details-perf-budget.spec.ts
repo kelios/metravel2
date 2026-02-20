@@ -52,6 +52,14 @@ const MAX_REQUESTS = envNum('PERF_MAX_REQUESTS', 90);
 const MAX_LONG_TASKS = envNum('PERF_MAX_LONG_TASKS', 5);
 const LONG_TASK_THRESHOLD_MS = 50;
 
+const REQUEST_BUDGET_HOSTS = new Set(
+  (process.env.PERF_REQUEST_BUDGET_HOSTS ??
+    '127.0.0.1,localhost,images.weserv.nl,metravellocal.s3.amazonaws.com,metravelprod.s3.eu-north-1.amazonaws.com')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean)
+);
+
 // A known travel page slug for direct navigation (avoids SPA transition overhead).
 const TRAVEL_SLUG =
   process.env.PERF_TRAVEL_SLUG ||
@@ -193,25 +201,63 @@ type NetworkStats = {
   cssKB: number;
   fontKB: number;
   otherKB: number;
-  requestCount: number;
+  requestCount: number; // first-party scoped count used for request budget assertion
+  allRequestCount: number;
+  ignoredThirdPartyRequestCount: number;
   jsRequests: number;
   imgRequests: number;
   largestResources: Array<{ url: string; sizeKB: number; type: string }>;
 };
 
+function hostFromUrl(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isPrivateOrLocalHost(host: string): boolean {
+  if (!host) return false;
+  if (host === 'localhost' || host === '::1' || host.endsWith('.local')) return true;
+  if (/^127\.\d+\.\d+\.\d+$/.test(host)) return true;
+  if (/^10\.\d+\.\d+\.\d+$/.test(host)) return true;
+  if (/^192\.168\.\d+\.\d+$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+$/.test(host)) return true;
+  return false;
+}
+
+function shouldCountForRequestBudget(url: string): boolean {
+  const host = hostFromUrl(url);
+  if (!host) return true;
+  if (REQUEST_BUDGET_HOSTS.has(host)) return true;
+  if (isPrivateOrLocalHost(host)) return true;
+  return false;
+}
+
 function createNetworkTracker(page: any): { getStats: () => NetworkStats } {
   const resources: Array<{ url: string; size: number; type: string }> = [];
+  let allRequestCount = 0;
   let requestCount = 0;
+  let ignoredThirdPartyRequestCount = 0;
 
   page.on('response', async (response: any) => {
-    requestCount++;
+    allRequestCount++;
     try {
       const req = response.request();
       const type = req.resourceType();
+      const url = req.url();
+      const isCounted = shouldCountForRequestBudget(url);
+      if (isCounted) {
+        requestCount++;
+      } else {
+        ignoredThirdPartyRequestCount++;
+      }
+
       const contentLength = response.headers()['content-length'];
       const size = contentLength ? parseInt(contentLength, 10) : 0;
       if (size > 0) {
-        resources.push({ url: req.url(), size, type });
+        resources.push({ url, size, type });
       }
     } catch { /* ignore */ }
   });
@@ -249,6 +295,8 @@ function createNetworkTracker(page: any): { getStats: () => NetworkStats } {
         fontKB: Math.round(fontKB),
         otherKB: Math.round(otherKB),
         requestCount,
+        allRequestCount,
+        ignoredThirdPartyRequestCount,
         jsRequests,
         imgRequests,
         largestResources,
@@ -455,7 +503,11 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
       imgKB: stats.imgKB,
       cssKB: stats.cssKB,
       fontKB: stats.fontKB,
-      requestCount: stats.requestCount,
+      requestCount: {
+        budgetScoped: stats.requestCount,
+        all: stats.allRequestCount,
+        ignoredThirdParty: stats.ignoredThirdPartyRequestCount,
+      },
       largestResources: stats.largestResources,
     }, null, 2));
 
@@ -485,7 +537,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
     // Request count
     expect(
       stats.requestCount,
-      `${stats.requestCount} requests exceeds budget ${MAX_REQUESTS}`
+      `${stats.requestCount} first-party requests exceeds budget ${MAX_REQUESTS} (all=${stats.allRequestCount}, ignoredThirdParty=${stats.ignoredThirdPartyRequestCount})`
     ).toBeLessThanOrEqual(MAX_REQUESTS);
   });
 

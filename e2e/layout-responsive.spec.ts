@@ -119,11 +119,11 @@ test.describe('@perf Responsive layout invariants', () => {
 
     // Resize down to tablet, then mobile.
     await page.setViewportSize({ width: 820, height: 1180 });
-    await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
+    await page.waitForTimeout(200);
     await assertNoHorizontalScroll(page);
 
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
+    await page.waitForTimeout(200);
     await assertNoHorizontalScroll(page);
   });
 
