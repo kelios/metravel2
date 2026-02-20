@@ -81,8 +81,7 @@ const WebMainImage = memo(function WebMainImage({
         borderRadius,
         display: 'block',
         // Show image only when loaded to avoid showing progressive/partial image that looks blurry.
-        // The flatBackground in Slide.tsx provides a solid color while loading.
-        // showImmediately bypasses this for cached images (e.g., transition overlay).
+        // showImmediately bypasses this for cached images or deliberate immediate reveal.
         opacity: showImmediately || loaded ? 1 : 0,
         transition: hasBlurBehind ? 'opacity 0.2s ease' : 'none',
         willChange: hasBlurBehind ? 'opacity' : 'auto',

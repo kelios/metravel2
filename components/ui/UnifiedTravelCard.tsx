@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
@@ -51,6 +51,7 @@ type Props = {
   testID?: string;
   webAsView?: boolean;
   webPressableProps?: any;
+  visualVariant?: 'default' | 'featured';
 };
 
 function UnifiedTravelCard({
@@ -79,6 +80,7 @@ function UnifiedTravelCard({
   testID,
   webPressableProps,
   webAsView = false,
+  visualVariant = 'default',
 }: Props) {
   const isWeb =
     Platform.OS === 'web' ||
@@ -86,6 +88,11 @@ function UnifiedTravelCard({
     typeof document !== 'undefined' ||
     webAsView;
   const colors = useThemedColors();
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const isFeatured = visualVariant === 'featured';
+  const cardActionLabel = `Открыть маршрут «${title}»`;
+  const mediaActionLabel = `Открыть фото маршрута «${title}»`;
   const optimizedImageUrl = useMemo(() => {
     if (!imageUrl || !isWeb) return imageUrl ?? null;
 
@@ -124,6 +131,44 @@ function UnifiedTravelCard({
               touchAction: 'pan-y',
             } as any,
             default: DESIGN_TOKENS.shadowsNative.light,
+          }),
+        },
+        containerHovered: {
+          ...Platform.select({
+            web: {
+              transform: 'translateY(-2px)',
+              borderColor: colors.primaryAlpha30,
+              boxShadow: DESIGN_TOKENS.shadows.medium,
+            } as any,
+          }),
+        },
+        containerFocused: {
+          ...Platform.select({
+            web: {
+              borderColor: colors.primary,
+              boxShadow: `${DESIGN_TOKENS.shadows.light}, 0 0 0 3px ${colors.primaryAlpha20}`,
+            } as any,
+          }),
+        },
+        containerFeatured: {
+          borderWidth: 1,
+          borderColor: colors.primaryAlpha20,
+          ...Platform.select({
+            web: {
+              boxShadow: DESIGN_TOKENS.shadows.medium,
+              transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease',
+              backgroundImage: `linear-gradient(180deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+              backgroundRepeat: 'no-repeat',
+            } as any,
+          }),
+        },
+        containerFeaturedHovered: {
+          ...Platform.select({
+            web: {
+              transform: 'translateY(-4px) scale(1.01)',
+              borderColor: colors.primaryAlpha40,
+              boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 12px 28px ${colors.primaryAlpha30}`,
+            } as any,
           }),
         },
         imageContainer: {
@@ -172,6 +217,15 @@ function UnifiedTravelCard({
               }),
         },
         imageVignetteOverlay: {},
+        imageVignetteOverlayFeatured: {
+          ...StyleSheet.absoluteFillObject,
+          ...Platform.select({
+            web: ({
+              backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 42%, ${colors.overlay} 100%)`,
+              pointerEvents: 'none',
+            } as any),
+          }),
+        },
         rightTopSlot: {
           position: 'absolute',
           top: 10,
@@ -241,41 +295,81 @@ function UnifiedTravelCard({
   // On web we avoid rendering <button> because cards often contain interactive children
   // (e.g. favorite button). Nested <button> triggers validateDOMNesting warnings.
   const ContainerComponent: any = isWeb || webPressableProps ? View : Pressable;
-  const containerProps =
-    isWeb
-      ? (webPressableProps ?? {
-          tabIndex: 0,
-          role: 'link',
-          'aria-label': title,
-          onClick: (e: any) => {
-            const target = e?.target as any;
-            if (target?.closest?.('[data-card-action="true"]')) {
-              return;
-            }
-            e?.preventDefault?.();
-            onPress();
-          },
-          onKeyDown: (e: any) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              const target = e?.target as any;
-              if (target?.closest?.('[data-card-action="true"]')) {
-                return;
-              }
-              e.preventDefault();
-              onPress();
-            }
-          },
-        })
-      : { onPress };
+  const defaultWebProps = useMemo(
+    () => ({
+      tabIndex: 0,
+      role: 'link',
+      'aria-label': cardActionLabel,
+      onClick: (e: any) => {
+        const target = e?.target as any;
+        if (target?.closest?.('[data-card-action="true"]')) {
+          return;
+        }
+        e?.preventDefault?.();
+        onPress();
+      },
+      onKeyDown: (e: any) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const target = e?.target as any;
+          if (target?.closest?.('[data-card-action="true"]')) {
+            return;
+          }
+          e.preventDefault();
+          onPress();
+        }
+      },
+    }),
+    [cardActionLabel, onPress],
+  );
+
+  const containerProps = useMemo(() => {
+    if (!isWeb) return { onPress };
+
+    const base = webPressableProps ?? defaultWebProps;
+    const originalMouseEnter = base?.onMouseEnter;
+    const originalMouseLeave = base?.onMouseLeave;
+    const originalFocus = base?.onFocus;
+    const originalBlur = base?.onBlur;
+
+    return {
+      ...base,
+      onMouseEnter: (e: any) => {
+        setIsHovered(true);
+        originalMouseEnter?.(e);
+      },
+      onMouseLeave: (e: any) => {
+        setIsHovered(false);
+        originalMouseLeave?.(e);
+      },
+      onFocus: (e: any) => {
+        setIsFocused(true);
+        originalFocus?.(e);
+      },
+      onBlur: (e: any) => {
+        setIsFocused(false);
+        originalBlur?.(e);
+      },
+    };
+  }, [defaultWebProps, isWeb, onPress, webPressableProps]);
 
   const showHeroTitle = heroTitleOverlay && typeof title === 'string' && title.trim().length > 0;
+  const normalizedMetaText = typeof metaText === 'string' ? metaText.trim() : '';
+  const displayMetaText = normalizedMetaText || 'Локация уточняется';
 
   return (
     <ContainerComponent
       {...containerProps}
-      style={[styles.container, typeof width === 'number' ? { width } : null, style]}
+      style={[
+        styles.container,
+        isWeb && !isFeatured && isHovered && styles.containerHovered,
+        isFeatured && styles.containerFeatured,
+        isFeatured && isHovered && styles.containerFeaturedHovered,
+        isWeb && isFocused && styles.containerFocused,
+        typeof width === 'number' ? { width } : null,
+        style,
+      ]}
       accessibilityRole={isWeb ? undefined : 'button'}
-      accessibilityLabel={title}
+      accessibilityLabel={cardActionLabel}
       testID={testID}
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
@@ -313,7 +407,7 @@ function UnifiedTravelCard({
                 style={StyleSheet.absoluteFill}
                 {...({
                   tabIndex: 0,
-                  'aria-label': title,
+                  'aria-label': mediaActionLabel,
                   onClick: (e: any) => {
                     e?.preventDefault?.();
                     e?.stopPropagation?.();
@@ -333,6 +427,7 @@ function UnifiedTravelCard({
             ) : (
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel={mediaActionLabel}
                 onPress={onMediaPress}
                 style={StyleSheet.absoluteFill}
                 {...({ 'data-card-action': 'true' } as any)}
@@ -343,6 +438,7 @@ function UnifiedTravelCard({
           {showHeroTitle ? (
             <View style={StyleSheet.absoluteFillObject}>
               <View style={styles.imageVignetteOverlay} />
+              {isFeatured ? <View style={styles.imageVignetteOverlayFeatured} /> : null}
               <View style={styles.imageTitleOverlay}>
                 <View style={styles.imageTitleOverlayBg} />
                 <Text style={styles.imageTitleOverlayText} numberOfLines={heroTitleMaxLines}>
@@ -386,7 +482,7 @@ function UnifiedTravelCard({
             <View style={styles.metaRow}>
               <Feather name="map-pin" size={12} color={colors.textMuted} style={MAP_PIN_ICON_STYLE as any} />
               <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
-                {metaText || ' '}
+                {displayMetaText}
               </Text>
             </View>
           </View>

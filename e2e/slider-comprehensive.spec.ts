@@ -569,24 +569,21 @@ test.describe('Slider — touch/pointer swipe', () => {
 test.describe('Slider — slide virtualization', () => {
   // Virtualization: Slider.web.tsx renders only slides within ±VIRTUAL_WINDOW (2) of current index.
   // Slides outside the window render an empty placeholder div (no Slide component = no content).
-  // We detect rendered slides via the flat-bg or loading-overlay testids set on Slide internals.
-  // Format: slider-flat-bg-N or slider-loading-overlay-N (N = slide index).
+  // We detect rendered slides via slide content testids.
+  // Format: slider-image-N / slider-neutral-placeholder-N (N = slide index).
 
-  test('slide 0 is rendered at index 0 (flat-bg or loading overlay present)', async ({ page }) => {
+  test('slide 0 is rendered at index 0 (slide content present)', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
       throw new Error('Slider test precondition failed');
     }
 
-    // Slide 0 should be rendered — either flat-bg-0 (loading) or the image itself
+    // Slide 0 should be rendered — image or fallback placeholder.
     const slide0Rendered = await page.evaluate(() => {
-      // Check for any testid that indicates slide 0 content is rendered
       return (
-        document.querySelector('[data-testid="slider-flat-bg-0"]') !== null ||
-        document.querySelector('[data-testid="slider-loading-overlay-0"]') !== null ||
+        document.querySelector('[data-testid="slider-image-0"]') !== null ||
         document.querySelector('[data-testid="slider-neutral-placeholder-0"]') !== null ||
-        // Also check if any img with alt containing '1 из' exists (slide 0 image loaded)
         document.querySelector('img[alt*="1 из"]') !== null
       );
     });
@@ -605,8 +602,7 @@ test.describe('Slider — slide virtualization', () => {
     const lastIdx = counter.total - 1;
     const lastSlideRendered = await page.evaluate((idx: number) => {
       return (
-        document.querySelector(`[data-testid="slider-flat-bg-${idx}"]`) !== null ||
-        document.querySelector(`[data-testid="slider-loading-overlay-${idx}"]`) !== null ||
+        document.querySelector(`[data-testid="slider-image-${idx}"]`) !== null ||
         document.querySelector(`[data-testid="slider-neutral-placeholder-${idx}"]`) !== null
       );
     }, lastIdx);
@@ -673,15 +669,13 @@ test.describe('Slider — slide virtualization', () => {
     // instead of hardcoding index=4.
     const forwardRendered = await page.evaluate(() => {
       const has3 =
-        document.querySelector('[data-testid="slider-flat-bg-3"]') !== null ||
-        document.querySelector('[data-testid="slider-loading-overlay-3"]') !== null ||
+        document.querySelector('[data-testid="slider-image-3"]') !== null ||
         document.querySelector('[data-testid="slider-neutral-placeholder-3"]') !== null ||
-        document.querySelector('[data-testid="slider-image-3"]') !== null;
+        document.querySelector('img[alt*="4 из"]') !== null;
       const has4 =
-        document.querySelector('[data-testid="slider-flat-bg-4"]') !== null ||
-        document.querySelector('[data-testid="slider-loading-overlay-4"]') !== null ||
+        document.querySelector('[data-testid="slider-image-4"]') !== null ||
         document.querySelector('[data-testid="slider-neutral-placeholder-4"]') !== null ||
-        document.querySelector('[data-testid="slider-image-4"]') !== null;
+        document.querySelector('img[alt*="5 из"]') !== null;
       return has3 || has4;
     });
     expect(forwardRendered).toBe(true);
@@ -689,8 +683,8 @@ test.describe('Slider — slide virtualization', () => {
     // Slide at index 0 should still be rendered (within ±2 of index 2)
     const slide0Rendered = await page.evaluate(() => {
       return (
-        document.querySelector('[data-testid="slider-flat-bg-0"]') !== null ||
-        document.querySelector('[data-testid="slider-loading-overlay-0"]') !== null ||
+        document.querySelector('[data-testid="slider-image-0"]') !== null ||
+        document.querySelector('[data-testid="slider-neutral-placeholder-0"]') !== null ||
         document.querySelector('img[alt*="1 из"]') !== null
       );
     });

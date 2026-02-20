@@ -52,8 +52,8 @@ function HomeScreen() {
         return isHomePath;
     }, [isHomePath]);
 
-    const title = 'Твоя книга путешествий по Беларуси и миру | Metravel';
-    const description = 'Metravel — сервис для путешественников. Добавляй поездки, фото и заметки, делись маршрутами и собирай красивую книгу путешествий в PDF.';
+    const title = 'Идеи поездок на выходные и книга путешествий | Metravel';
+    const description = 'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.';
 
     // Before hydration or when URL is not home: render nothing.
     // null avoids any visible DOM footprint from this tab.

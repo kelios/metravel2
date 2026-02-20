@@ -305,49 +305,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const setActiveIndex = useCallback(
     (idx: number) => {
       const clampedIdx = clamp(idx, 0, Math.max(0, images.length - 1));
-      const prevIdx = indexRef.current;
-      if (clampedIdx !== prevIdx && showVisualLoadingState) {
-        const prevLoaded = !!loadedIndexesRef.current[prevIdx];
-        const nextLoaded = !!loadedIndexesRef.current[clampedIdx];
-        if (prevLoaded && !nextLoaded) startTransitionOverlay(prevIdx, clampedIdx);
-        else hideTransitionOverlay();
-      } else if (!showVisualLoadingState) {
-        hideTransitionOverlay();
-      }
-
       indexRef.current = clampedIdx;
       currentIndexRef.current = clampedIdx;
       setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
       onIndexChanged?.(clampedIdx);
     },
-    [hideTransitionOverlay, images.length, onIndexChanged, showVisualLoadingState, startTransitionOverlay]
+    [images.length, onIndexChanged]
   );
-
-  const handleSlideLoad = useCallback((index: number) => {
-    setLoadedIndexes((prev) => {
-      if (prev[index]) return prev;
-      const next = { ...prev, [index]: true as const };
-      loadedIndexesRef.current = next;
-      return next;
-    });
-
-    if (showVisualLoadingState && overlayToRef.current === index && transitionOverlayVisibleRef.current) {
-      clearOverlayHideTimer();
-      setTransitionOverlayFading(true);
-      overlayHideTimerRef.current = setTimeout(() => {
-        hideTransitionOverlay();
-      }, 180);
-    }
-  }, [clearOverlayHideTimer, hideTransitionOverlay, showVisualLoadingState]);
-
-  useEffect(() => {
-    const initialLoaded = showVisualLoadingState && firstImagePreloaded
-      ? ({ 0: true } as Record<number, true>)
-      : {};
-    loadedIndexesRef.current = initialLoaded;
-    setLoadedIndexes(initialLoaded);
-    hideTransitionOverlay();
-  }, [firstImagePreloaded, images, hideTransitionOverlay, showVisualLoadingState]);
 
   // Resolve cached DOM nodes — try ref-captured nodes first, fall back to querySelector with escaped ID
   const resolveNodes = useCallback(() => {
@@ -672,11 +636,10 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // Invalidate cached DOM nodes on unmount
   useEffect(() => {
     return () => {
-      clearOverlayHideTimer();
       scrollNodeRef.current = null;
       wrapperNodeRef.current = null;
     };
-  }, [clearOverlayHideTimer]);
+  }, []);
 
   // Stable arrow callbacks
   const onPrev = useCallback(() => {
@@ -694,8 +657,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const navOffset = isMobile ? 8 : isTablet ? 12 : Math.max(44, 16 + Math.max(insets.left || 0, insets.right || 0));
   const slideHeight = fillContainer ? '100%' : computedH;
   const imagesLen = images.length;
-  const overlayUri =
-    showVisualLoadingState && transitionOverlayFrom != null ? getUri(transitionOverlayFrom) : '';
 
   return (
     <View style={[styles.sliderStack, fillContainer && { height: '100%' }]} testID="slider-stack">
@@ -722,40 +683,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip} testID="slider-clip">
-          {showVisualLoadingState && transitionOverlayVisible && transitionOverlayFrom != null && !!overlayUri ? (
-            <View
-              pointerEvents="none"
-              testID="slider-transition-overlay"
-              style={[
-                {
-                  position: 'absolute',
-                  inset: 0,
-                  zIndex: 30,
-                  opacity: transitionOverlayFading ? 0 : 1,
-                } as any,
-                Platform.OS === 'web'
-                  ? ({ transition: 'opacity 180ms ease' } as any)
-                  : null,
-              ]}
-            >
-              <ImageCardMedia
-                src={overlayUri}
-                fit={fit}
-                blurBackground={false}
-                priority="high"
-                loading="eager"
-                transition={0}
-                style={styles.img}
-                alt="Предыдущий слайд"
-                showImmediately
-                imageProps={{
-                  contentPosition: 'center',
-                  accessibilityRole: 'image',
-                  accessibilityLabel: 'Предыдущий слайд',
-                }}
-              />
-            </View>
-          ) : null}
           <ScrollView
             ref={scrollRef}
             horizontal
@@ -794,12 +721,10 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       isActive={index === currentIndex}
                       imageProps={imageProps}
                       onFirstImageLoad={onFirstImageLoad}
-                      onSlideLoad={handleSlideLoad}
                       onImagePress={onImagePress}
                       firstImagePreloaded={firstImagePreloaded}
                       preloadPriority={preloadPriority}
                       fit={fit}
-                      showVisualLoadingState={showVisualLoadingState}
                     />
                   ) : null}
                 </View>

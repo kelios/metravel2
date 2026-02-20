@@ -12,22 +12,22 @@ import { buildLoginHref } from '@/utils/authNavigation';
 const STEPS = [
   {
     number: 1,
-    title: 'Выбери поездку',
-    description: 'Подбери идею по расстоянию, бюджету и формату отдыха на 1-2 дня',
+    title: 'Найди подходящий маршрут',
+    description: 'Выбери направление по расстоянию и формату отдыха',
     icon: 'compass',
     path: '/search',
   },
   {
     number: 2,
-    title: 'Сохрани маршрут',
-    description: 'Добавь понравившийся маршрут в личную коллекцию и дополни своими заметками',
+    title: 'Сохрани в личную коллекцию',
+    description: 'Добавь поездку в книгу и оставь заметки, чтобы легко повторить маршрут',
     icon: 'bookmark',
     path: '/search',
   },
   {
     number: 3,
-    title: 'Получи книгу путешествий',
-    description: 'Собери поездки в красивую travel-книгу: для памяти, планирования и share с друзьями',
+    title: 'Собери и отправь книгу',
+    description: 'Экспортируй поездки в PDF или поделись ссылкой с друзьями',
     icon: 'share-2',
     path: '/export',
   },
@@ -36,22 +36,24 @@ const STEPS = [
 const USE_CASES = [
   {
     key: 'idea',
-    tag: 'Сценарий A',
-    title: 'Не знаю куда поехать',
+    tag: 'Сценарий 1',
+    title: 'Хочу идею на выходные',
     icon: 'navigation',
-    description: 'Подберём поездку на выходные за пару минут.',
-    bullets: ['Расстояние', 'Бюджет', 'Природа / город / активность', '1 день / 2 дня'],
-    cta: 'Подобрать поездку',
+    description: 'Выбери несколько параметров и сразу получи подходящие маршруты.',
+    result: 'Итог: понятный список вариантов за пару минут',
+    bullets: ['До 100 / 200 / 300+ км', 'Соло, парой или компанией', 'Природа, город или актив', '1 день или уикенд'],
+    cta: 'Найти маршрут',
     path: '/search',
   },
   {
     key: 'book',
-    tag: 'Сценарий B',
-    title: 'Хочу свою книгу путешествий',
+    tag: 'Сценарий 2',
+    title: 'Хочу сохранить лучшие поездки',
     icon: 'book-open',
-    description: 'Сохраняй маршруты и собирай личную travel-историю.',
-    bullets: ['Демо-пример книги', 'Память о поездках', 'Планирование новых выездов', 'Можно поделиться с друзьями'],
-    cta: 'Открыть книгу путешествий',
+    description: 'Собирай маршруты в личную книгу, чтобы возвращаться к ним и делиться с близкими.',
+    result: 'Итог: аккуратная книга путешествий в пару кликов',
+    bullets: ['Готовый демо-пример', 'Фото, заметки и точки маршрута', 'План следующих выездов', 'Экспорт в PDF или ссылка'],
+    cta: 'Собрать книгу',
     path: '/export',
   },
 ] as const;
@@ -62,7 +64,7 @@ function HomeHowItWorks() {
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
   const isMobile = isSmallPhone || isPhone;
   const showConnectors = isTablet || isDesktop;
-  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const colors = useThemedColors();
 
   const handleStepPress = useCallback(
     (path: string) => {
@@ -89,20 +91,34 @@ function HomeHowItWorks() {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: isMobile ? 36 : 52,
+      paddingVertical: isMobile ? 40 : 62,
       backgroundColor: colors.background,
       ...Platform.select({
         web: {
-          backgroundImage: `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 50%, ${colors.background} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 88% 70% at 8% 20%, ${colors.primarySoft} 0%, transparent 72%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 52%, ${colors.background} 100%)`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: '100% 100%',
         },
       }),
     },
+    panel: {
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.surface,
+      paddingHorizontal: isMobile ? 14 : 24,
+      paddingVertical: isMobile ? 18 : 30,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.modal,
+          backdropFilter: 'blur(12px)',
+        } as any,
+      }),
+    },
     header: {
-      marginBottom: isMobile ? 24 : 32,
+      marginBottom: isMobile ? 20 : 30,
       alignItems: 'center',
-      gap: 8,
+      gap: 9,
     },
     title: {
       color: colors.text,
@@ -117,20 +133,20 @@ function HomeHowItWorks() {
       maxWidth: 640,
     },
     useCases: {
-      marginBottom: isMobile ? 20 : 28,
+      marginBottom: isMobile ? 24 : 34,
       alignItems: 'stretch',
     },
     useCaseCard: {
       flex: 1,
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
       padding: isMobile ? 18 : 24,
-      gap: 12,
+      gap: 13,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.card,
+          boxShadow: DESIGN_TOKENS.shadows.modal,
           transition: 'all 0.3s ease',
         } as any,
       }),
@@ -155,11 +171,23 @@ function HomeHowItWorks() {
     useCaseCardHover: {
       ...Platform.select({
         web: {
-          transform: 'translateY(-3px)',
-          borderColor: colors.primaryAlpha30,
+          transform: 'translateY(-4px)',
+          borderColor: colors.primary,
           boxShadow: DESIGN_TOKENS.shadows.hover,
         },
       }),
+    },
+    useCaseAccent: {
+      height: 5,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      marginBottom: 4,
+      opacity: 0.9,
+    },
+    useCaseAccentIdea: {
+      backgroundColor: colors.primary,
+    },
+    useCaseAccentBook: {
+      backgroundColor: colors.textMuted,
     },
     useCaseHeader: {
       flexDirection: 'row',
@@ -201,6 +229,20 @@ function HomeHowItWorks() {
       color: colors.textMuted,
       fontSize: isMobile ? 14 : 15,
       lineHeight: isMobile ? 20 : 22,
+    },
+    useCaseResult: {
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    useCaseResultText: {
+      color: colors.primaryText,
+      fontSize: 12,
+      lineHeight: 17,
+      fontWeight: '700',
     },
     useCaseBullets: {
       gap: 8,
@@ -253,21 +295,36 @@ function HomeHowItWorks() {
       padding: isMobile ? 20 : 28,
       gap: isMobile ? 10 : 16,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.primaryAlpha30,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.card,
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          backgroundImage: `linear-gradient(165deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+          backgroundRepeat: 'no-repeat',
           transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
           touchAction: 'pan-y',
         } as any,
       }),
+    },
+    stepAccent: {
+      height: 3,
+      width: '100%',
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primaryAlpha30,
+      marginBottom: isMobile ? 8 : 10,
+    },
+    stepAccentStrong: {
+      backgroundColor: colors.primary,
+      width: '52%',
+      height: '100%',
+      borderRadius: DESIGN_TOKENS.radii.pill,
     },
     stepHover: {
       ...Platform.select({
         web: {
           transform: 'translateY(-4px)',
           boxShadow: DESIGN_TOKENS.shadows.hover,
-          borderColor: colors.primaryAlpha30,
+          borderColor: colors.primary,
         },
         default: {},
       }),
@@ -328,121 +385,138 @@ function HomeHowItWorks() {
       paddingHorizontal: 4,
       opacity: 0.4,
     },
+    sectionDivider: {
+      height: 1,
+      width: '100%',
+      backgroundColor: colors.borderLight,
+      marginBottom: isMobile ? 20 : 30,
+    },
   }), [colors, isMobile]);
 
   return (
     <View testID="home-how-it-works" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
-        <View style={styles.header}>
-          <ResponsiveText variant="h2" style={styles.title}>
-            Два сценария, которые закрывает MeTravel
-          </ResponsiveText>
-          <Text style={styles.headerSubtitle}>
-            1) Не знаешь куда поехать на выходных. 2) Хочешь вести личную книгу путешествий.
-          </Text>
-        </View>
+        <View style={styles.panel}>
+          <View style={styles.header}>
+            <ResponsiveText variant="h2" style={styles.title}>
+              С чего начать за 2 минуты
+            </ResponsiveText>
+            <Text style={styles.headerSubtitle}>
+              Выберите сценарий под цель: быстро найти маршрут на выходные или сразу начать личную книгу поездок.
+            </Text>
+          </View>
 
-        <ResponsiveStack direction={isMobile ? 'vertical' : 'horizontal'} gap={isMobile ? 16 : 20} style={styles.useCases}>
-          {USE_CASES.map((item) => (
-            <Pressable
-              key={item.key}
-              onPress={() => handleStepPress(item.path)}
-              style={({ pressed, hovered }) => [
-                styles.useCaseCard,
-                item.key === 'idea' ? styles.useCaseCardIdea : styles.useCaseCardBook,
-                (pressed || hovered) && styles.useCaseCardHover,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={item.title}
-              accessibilityHint={item.description}
-              {...pressableProps}
-            >
-              <View style={styles.useCaseTag}>
-                <Text style={styles.useCaseTagText}>{item.tag}</Text>
-              </View>
-
-              <View style={styles.useCaseHeader}>
-                <View style={styles.useCaseIconWrap}>
-                  <Feather name={item.icon as any} size={18} color={colors.primary} />
-                </View>
-                <Text style={styles.useCaseTitle}>{item.title}</Text>
-              </View>
-
-              <Text style={styles.useCaseDescription}>{item.description}</Text>
-
-              <View style={styles.useCaseBullets}>
-                {item.bullets.map((bullet) => (
-                  <View key={bullet} style={styles.useCaseBullet}>
-                    <Feather name="check-circle" size={14} color={colors.primary} />
-                    <Text style={styles.useCaseBulletText}>{bullet}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={styles.useCaseCta}>
-                <Text style={styles.useCaseCtaText}>{item.cta}</Text>
-                <Feather name="arrow-right" size={14} color={colors.primaryText} />
-              </View>
-            </Pressable>
-          ))}
-        </ResponsiveStack>
-
-        <View style={styles.header}>
-          <ResponsiveText variant="h2" style={styles.title}>
-            Мини-onboarding за 3 шага
-          </ResponsiveText>
-          <Text style={styles.headerSubtitle}>
-            Выбери поездку {'->'} сохрани {'->'} получи личную книгу путешествий
-          </Text>
-        </View>
-
-        <ResponsiveStack
-          direction={isMobile ? 'vertical' : 'horizontal'}
-          gap={isMobile ? 20 : 24}
-          justify="space-between"
-        >
-          {STEPS.map((step, index) => (
-            <View key={step.number} style={styles.stepWrapper}>
+          <ResponsiveStack direction={isMobile ? 'vertical' : 'horizontal'} gap={isMobile ? 16 : 20} style={styles.useCases}>
+            {USE_CASES.map((item) => (
               <Pressable
-                onPress={() => handleStepPress(step.path)}
+                key={item.key}
+                onPress={() => handleStepPress(item.path)}
                 style={({ pressed, hovered }) => [
-                  styles.step,
-                  (pressed || hovered) && styles.stepHover,
+                  styles.useCaseCard,
+                  item.key === 'idea' ? styles.useCaseCardIdea : styles.useCaseCardBook,
+                  (pressed || hovered) && styles.useCaseCardHover,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={`${step.number}. ${step.title}`}
-                accessibilityHint={step.description}
+                accessibilityLabel={item.title}
+                accessibilityHint={item.description}
                 {...pressableProps}
               >
-                <View style={styles.stepHeader}>
-                  <View style={styles.iconContainer}>
-                    <Feather
-                      name={step.icon as any}
-                      size={24}
-                      color={colors.primary}
-                    />
-                  </View>
-                  <View style={styles.numberBadge}>
-                    <Text style={styles.numberText}>{step.number}</Text>
-                  </View>
+                <View style={[styles.useCaseAccent, item.key === 'idea' ? styles.useCaseAccentIdea : styles.useCaseAccentBook]} />
+                <View style={styles.useCaseTag}>
+                  <Text style={styles.useCaseTagText}>{item.tag}</Text>
                 </View>
 
-                <ResponsiveText variant="h3" style={styles.stepTitle}>
-                  {step.title}
-                </ResponsiveText>
-                <ResponsiveText variant="body" style={styles.stepDescription}>
-                  {step.description}
-                </ResponsiveText>
+                <View style={styles.useCaseHeader}>
+                  <View style={styles.useCaseIconWrap}>
+                    <Feather name={item.icon as any} size={18} color={colors.primary} />
+                  </View>
+                  <Text style={styles.useCaseTitle}>{item.title}</Text>
+                </View>
+
+                <Text style={styles.useCaseDescription}>{item.description}</Text>
+                <View style={styles.useCaseResult}>
+                  <Text style={styles.useCaseResultText}>{item.result}</Text>
+                </View>
+
+                <View style={styles.useCaseBullets}>
+                  {item.bullets.map((bullet) => (
+                    <View key={bullet} style={styles.useCaseBullet}>
+                      <Feather name="check-circle" size={14} color={colors.primary} />
+                      <Text style={styles.useCaseBulletText}>{bullet}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.useCaseCta}>
+                  <Text style={styles.useCaseCtaText}>{item.cta}</Text>
+                  <Feather name="arrow-right" size={14} color={colors.primaryText} />
+                </View>
               </Pressable>
+            ))}
+          </ResponsiveStack>
 
-              {index < STEPS.length - 1 && showConnectors && (
-                <View style={styles.connector}>
-                  <Feather name="arrow-right" size={20} color={colors.border} />
-                </View>
-              )}
-            </View>
-          ))}
-        </ResponsiveStack>
+          <View style={styles.sectionDivider} />
+
+          <View style={styles.header}>
+            <ResponsiveText variant="h2" style={styles.title}>
+              Дальше всё просто: 3 шага
+            </ResponsiveText>
+            <Text style={styles.headerSubtitle}>
+              Маршрут {'->'} личная коллекция {'->'} готовая книга путешествий
+            </Text>
+          </View>
+
+          <ResponsiveStack
+            direction={isMobile ? 'vertical' : 'horizontal'}
+            gap={isMobile ? 20 : 24}
+            justify="space-between"
+          >
+            {STEPS.map((step, index) => (
+              <View key={step.number} style={styles.stepWrapper}>
+                <Pressable
+                  onPress={() => handleStepPress(step.path)}
+                  style={({ pressed, hovered }) => [
+                    styles.step,
+                    (pressed || hovered) && styles.stepHover,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${step.number}. ${step.title}`}
+                  accessibilityHint={step.description}
+                  {...pressableProps}
+                >
+                  <View style={styles.stepAccent}>
+                    <View style={styles.stepAccentStrong} />
+                  </View>
+                  <View style={styles.stepHeader}>
+                    <View style={styles.iconContainer}>
+                      <Feather
+                        name={step.icon as any}
+                        size={24}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={styles.numberBadge}>
+                      <Text style={styles.numberText}>{step.number}</Text>
+                    </View>
+                  </View>
+
+                  <ResponsiveText variant="h3" style={styles.stepTitle}>
+                    {step.title}
+                  </ResponsiveText>
+                  <ResponsiveText variant="body" style={styles.stepDescription}>
+                    {step.description}
+                  </ResponsiveText>
+                </Pressable>
+
+                {index < STEPS.length - 1 && showConnectors && (
+                  <View style={styles.connector}>
+                    <Feather name="arrow-right" size={20} color={colors.border} />
+                  </View>
+                )}
+              </View>
+            ))}
+          </ResponsiveStack>
+        </View>
       </ResponsiveContainer>
     </View>
   );

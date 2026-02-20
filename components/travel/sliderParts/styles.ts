@@ -81,12 +81,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     blurBg: {
       ...StyleSheet.absoluteFillObject,
     },
-    flatBackground: {
-      ...StyleSheet.absoluteFillObject,
-      // Fill the slide while the image is loading to avoid showing page background through
-      // (which can appear as a gray flash on scroll / virtualization).
-      backgroundColor: colors.background,
-    },
     img: {
       width: '100%',
       height: '100%',

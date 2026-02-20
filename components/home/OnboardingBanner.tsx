@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import Button from '@/components/ui/Button';
 import IconButton from '@/components/ui/IconButton';
 
@@ -17,12 +18,15 @@ interface OnboardingBannerProps {
   userId?: string;
 }
 
-const TUTORIAL_STEPS = ['Выбери поездку', 'Сохрани маршрут', 'Получи книгу'];
+const TUTORIAL_STEPS = ['Найди маршрут', 'Сохрани поездку', 'Собери книгу'];
+const ONBOARDING_RESULTS = ['Идея на ближайшие выходные', 'Личная коллекция поездок', 'Готовая книга в PDF'];
 
 const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   const [visible, setVisible] = useState(false);
   const [fadeAnim] = useState(() => new Animated.Value(0));
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isSmallPhone || isPhone || isLargePhone;
   const shouldUseNativeDriver = Platform.OS !== 'web';
 
   const checkShouldShow = useCallback(async () => {
@@ -100,7 +104,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   }, [handleDismiss]);
 
   const handleOpenDemoBook = useCallback(() => {
-    router.push('/export');
+    router.push('/articles');
     handleDismiss(false);
   }, [handleDismiss]);
 
@@ -172,6 +176,26 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
       flexDirection: 'row',
       flexWrap: 'wrap',
     },
+    resultsRow: {
+      marginTop: 4,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    resultBadge: {
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    resultText: {
+      fontSize: 12,
+      lineHeight: 16,
+      color: colors.primaryText,
+      fontWeight: '700',
+    },
     stepBadge: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -206,6 +230,39 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
       flexDirection: 'row',
       gap: 12,
       marginTop: 8,
+    },
+    actionsMobile: {
+      flexDirection: 'column',
+      gap: 10,
+    },
+    demoCard: {
+      marginTop: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+      }),
+    },
+    demoCardTitle: {
+      color: colors.text,
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: '700',
+    },
+    demoCardMeta: {
+      color: colors.textMuted,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '500',
     },
     button: {
       flex: 1,
@@ -259,7 +316,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <LinearGradient
-        colors={[colors.primaryLight, colors.surface]}
+        colors={[colors.primarySoft, colors.surface, colors.backgroundSecondary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
@@ -278,9 +335,9 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
           </View>
 
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Мини-гайд: как получить свою книгу путешествий</Text>
+            <Text style={styles.title}>Первая поездка и книга путешествий за 3 шага</Text>
             <Text style={styles.description}>
-              Сценарий для первого входа: выбери идею поездки на выходные, сохрани маршрут и собери личную travel-историю.
+              Быстрый старт для первого входа: выберите маршрут, сохраните поездку и сразу получите основу личной книги.
             </Text>
 
             <View style={styles.stepRow}>
@@ -293,22 +350,38 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
                 </View>
               ))}
             </View>
+
+            <View style={styles.resultsRow}>
+              {ONBOARDING_RESULTS.map((item) => (
+                <View key={item} style={styles.resultBadge}>
+                  <Text style={styles.resultText}>{item}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.demoCard}>
+              <Feather name="book-open" size={18} color={colors.primary} />
+              <View>
+                <Text style={styles.demoCardTitle}>Статьи и реальные примеры маршрутов</Text>
+                <Text style={styles.demoCardMeta}>Посмотрите, как другие оформляют поездки, и стартуйте с готовой идеей</Text>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.actions}>
+          <View style={[styles.actions, isMobile && styles.actionsMobile]}>
             <Button
-              label="Подобрать поездку"
+              label="Подобрать первую поездку"
               onPress={handleStart}
-              accessibilityLabel="Подобрать поездку"
+              accessibilityLabel="Подобрать первую поездку"
               icon={<Feather name="compass" size={18} color={colors.textOnPrimary} />}
               style={[styles.button, styles.buttonPrimary]}
               labelStyle={styles.buttonTextPrimary}
             />
 
             <Button
-              label="Открыть демо-книгу"
+              label="Смотреть примеры маршрутов"
               onPress={handleOpenDemoBook}
-              accessibilityLabel="Открыть демо-книгу"
+              accessibilityLabel="Смотреть примеры маршрутов"
               variant="secondary"
               style={[styles.button, styles.buttonSecondary]}
               labelStyle={styles.buttonTextSecondary}

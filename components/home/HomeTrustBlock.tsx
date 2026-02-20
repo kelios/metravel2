@@ -15,18 +15,18 @@ type TrustItem = {
 const ITEMS: TrustItem[] = [
   {
     icon: 'bookmark',
-    title: 'Личная память',
-    subtitle: 'Сохраняй поездки, чтобы ничего не потерять',
+    title: 'Все поездки в одном месте',
+    subtitle: 'Маршруты, фото и заметки всегда под рукой',
   },
   {
     icon: 'calendar',
-    title: 'Планирование',
-    subtitle: 'Собирай идеи на выходные и возвращайся к ним',
+    title: 'План на выходные',
+    subtitle: 'Готовые идеи для быстрых выездов без долгой подготовки',
   },
   {
     icon: 'share-2',
-    title: 'Книга и share',
-    subtitle: 'Собери travel-книгу и отправь друзьям',
+    title: 'Легко поделиться',
+    subtitle: 'Отправляй друзьям ссылку или PDF-книгу в пару кликов',
   },
 ];
 
@@ -50,12 +50,49 @@ function HomeTrustBlock() {
       borderColor: colors.border,
       paddingVertical: isMobile ? 16 : 20,
       paddingHorizontal: isMobile ? 16 : 24,
+      gap: isMobile ? 14 : 18,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
           backdropFilter: 'blur(8px)',
         },
       }),
+    },
+    header: {
+      gap: 6,
+    },
+    badge: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    badgeText: {
+      color: colors.primaryText,
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.2,
+    },
+    headerTitle: {
+      fontSize: isMobile ? 20 : 24,
+      lineHeight: isMobile ? 26 : 30,
+      color: colors.text,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+    },
+    headerSubtitle: {
+      fontSize: isMobile ? 13 : 15,
+      lineHeight: isMobile ? 18 : 22,
+      color: colors.textMuted,
+      maxWidth: 700,
     },
     items: {
       width: '100%',
@@ -151,6 +188,17 @@ function HomeTrustBlock() {
     <View style={styles.band} testID="home-trust-block">
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.card}>
+          <View style={styles.header}>
+            <View style={styles.badge}>
+              <Feather name="book-open" size={12} color={colors.primary} />
+              <Text style={styles.badgeText}>Почему это удобно</Text>
+            </View>
+            <Text style={styles.headerTitle}>Зачем вам книга путешествий</Text>
+            <Text style={styles.headerSubtitle}>
+              Это не просто список сохранёнок. Это ваша история поездок, план новых выездов и удобный формат, чтобы делиться маршрутами с близкими.
+            </Text>
+          </View>
+
           <View style={[styles.items, isMobile && styles.itemsMobile]}>
             {ITEMS.map((item, idx) => (
               <View key={item.title} style={[styles.item, isMobile && styles.itemMobile, idx === ITEMS.length - 1 && (isMobile ? styles.itemMobileLast : styles.itemLast)]}>
