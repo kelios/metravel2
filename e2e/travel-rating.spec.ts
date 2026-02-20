@@ -251,6 +251,7 @@ test.describe('Travel Rating - Authenticated', () => {
    */
   test('TC-RATING-004: клик на звезду отправляет оценку', async ({ page }) => {
     let ratingApiCalled = false;
+    let ratingMutationCount = 0;
     let ratingValue: number | null = null;
 
     // Мокаем GET запрос /rating/users/ - пользователь ещё не оценивал (404)
@@ -288,11 +289,13 @@ test.describe('Travel Rating - Authenticated', () => {
     await page.route('**/api/travels/**', async (route) => {
       const req = route.request();
       const url = req.url();
+      const method = req.method();
       const isRatingPost =
-        req.method() === 'POST' &&
+        (method === 'POST' || method === 'PATCH' || method === 'PUT') &&
         /\/api\/travels\/.*rating\/?/i.test(url);
       if (isRatingPost) {
         ratingApiCalled = true;
+        ratingMutationCount++;
         try {
           const body = req.postDataJSON();
           ratingValue = body?.rating ?? null;
@@ -325,20 +328,11 @@ test.describe('Travel Rating - Authenticated', () => {
       await waitForInteractiveStars(ratingSection, 15_000);
     }
 
-    let postedRequest: import('@playwright/test').Request | null = null;
     let clickedRating: number | null = null;
     for (const rating of [5, 4, 3, 2, 1]) {
       const star = ratingSection.getByRole('button', { name: new RegExp(`оценить на\\s*${rating}\\s*из\\s*5`, 'i') }).first();
       if ((await star.count()) === 0) continue;
-
-      const ratingPostRequest = page
-        .waitForRequest(
-          (req) =>
-            req.method() === 'POST' &&
-            /\/api\/travels\/.*rating\/?/i.test(req.url()),
-          { timeout: 6_000 }
-        )
-        .catch(() => null);
+      const beforeMutationCount = ratingMutationCount;
 
       const clicked = await star
         .click({ force: true, timeout: 5_000 })
@@ -359,22 +353,16 @@ test.describe('Travel Rating - Authenticated', () => {
 
       if (!clicked) continue;
       clickedRating = rating;
-      postedRequest = await ratingPostRequest;
-      if (postedRequest) break;
-    }
-
-    expect(postedRequest, 'Rating POST request was not sent').not.toBeNull();
-    if (postedRequest) {
-      try {
-        const body = postedRequest.postDataJSON() as { rating?: number } | null;
-        ratingValue = body?.rating ?? ratingValue;
-      } catch {
-        // ignore parse error
-      }
+      await expect
+        .poll(() => ratingMutationCount, { timeout: 6_000 })
+        .toBeGreaterThan(beforeMutationCount)
+        .catch(() => null);
+      if (ratingMutationCount > beforeMutationCount) break;
     }
 
     await page.waitForTimeout(500);
     expect(ratingApiCalled).toBe(true);
+    expect(ratingMutationCount).toBeGreaterThan(0);
     expect(clickedRating, 'No interactive rating star could be clicked').not.toBeNull();
     expect(ratingValue).toBe(clickedRating);
   });

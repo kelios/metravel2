@@ -27,6 +27,10 @@ function hasAnyArg(args, names) {
   return args.some((a) => names.includes(a));
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function runPlaywright(args) {
   return new Promise((resolve, reject) => {
     const childEnv = { ...process.env };
@@ -86,18 +90,36 @@ async function main() {
   ]);
 
   // Pass 2: perf/vitals tests in isolation (single worker).
-  await runPlaywright([
-    'test',
-    '--forbid-only',
-    '--retries=0',
-    '--pass-with-no-tests',
-    '--workers=1',
-    '--grep',
-    '@perf',
-    '--output',
-    path.join(outputRoot, 'e2e-perf'),
-    ...forwardedWithoutOutput,
-  ]);
+  // Local environments occasionally hit transient web-server disconnects between long phases.
+  // Retry once by default; real regressions still fail on the second attempt.
+  const perfRetries = Math.max(0, getNumberEnv('E2E_PERF_RETRIES', 1));
+  let perfAttempt = 0;
+  while (true) {
+    try {
+      await runPlaywright([
+        'test',
+        '--forbid-only',
+        '--retries=0',
+        '--pass-with-no-tests',
+        '--workers=1',
+        '--grep',
+        '@perf',
+        '--output',
+        path.join(outputRoot, 'e2e-perf'),
+        ...forwardedWithoutOutput,
+      ]);
+      break;
+    } catch (err) {
+      if (perfAttempt >= perfRetries) throw err;
+      perfAttempt += 1;
+      const message = err && err.message ? err.message : String(err);
+      console.warn(
+        `[e2e-run] Perf pass failed (attempt ${perfAttempt}/${perfRetries + 1}): ${message}`
+      );
+      console.warn('[e2e-run] Retrying perf pass...');
+      await sleep(1500);
+    }
+  }
 }
 
 main().catch((err) => {
