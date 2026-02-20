@@ -56,6 +56,7 @@ type Props = {
     cardWidth?: number; // ✅ Фактическая ширина карточки (с учётом паддингов и колонок)
     viewportWidth?: number; // ✅ Ширина viewport для width-based адаптивности на web
     hideAuthor?: boolean;
+    visualVariant?: 'default' | 'home-featured';
 };
 
 function TravelListItem({
@@ -73,6 +74,7 @@ function TravelListItem({
                             cardWidth,
                             viewportWidth,
                             hideAuthor = false,
+                            visualVariant = 'default',
                         }: Props) {
 
     // ✅ ДИЗАЙН: Используем динамические цвета темы
@@ -602,11 +604,13 @@ const unifiedCard = (
     title={title}
     imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
     onPress={handlePress}
-    mediaFit="contain"
+    mediaFit={visualVariant === 'home-featured' ? 'cover' : 'contain'}
+    visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
     heroTitleOverlay={true}
     testID={cardTestId}
     style={[
       styles.card,
+      visualVariant === 'home-featured' && styles.cardHomeFeatured,
       Platform.OS === 'web' && ({ height: '100%' as any } as any),
       Platform.OS === 'web' && ({ borderRadius: responsiveValues.borderRadius } as any),
       globalFocusStyles.focusable,
@@ -731,7 +735,8 @@ function areEqual(prev: Props, next: Props) {
         prev.isMetravel !== next.isMetravel ||
         prev.isSingle !== next.isSingle ||
         prev.selectable !== next.selectable ||
-        prev.isSelected !== next.isSelected
+        prev.isSelected !== next.isSelected ||
+        prev.visualVariant !== next.visualVariant
     ) {
         return false;
     }

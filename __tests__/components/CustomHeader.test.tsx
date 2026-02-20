@@ -126,26 +126,24 @@ describe('CustomHeader', () => {
         it('renders desktop navigation by default', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
-            expect(utils.getByLabelText('Главная')).toBeTruthy();
+            expect(utils.getByLabelText('Идеи поездок')).toBeTruthy();
         });
 
         it('shows navigation items on desktop', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             
-            expect(utils.getByLabelText('Главная')).toBeTruthy();
-            expect(utils.getByLabelText('Поиск')).toBeTruthy();
-            expect(utils.getByLabelText('Беларусь')).toBeTruthy();
-            expect(utils.getByLabelText('Карта')).toBeTruthy();
-            expect(utils.getByLabelText('Рулетка')).toBeTruthy();
-            expect(utils.getByLabelText('Квесты')).toBeTruthy();
+            expect(utils.getByLabelText('Идеи поездок')).toBeTruthy();
+            expect(utils.getByLabelText('Направления')).toBeTruthy();
+            expect(utils.getByLabelText('Книга путешествий')).toBeTruthy();
+            expect(utils.getByLabelText('Популярное')).toBeTruthy();
         });
 
         it('highlights active navigation item', () => {
             (usePathname as jest.Mock).mockReturnValue('/map');
             const utils = renderHeader();
             
-            const mapItem = utils.getByLabelText('Карта');
+            const mapItem = utils.getByLabelText('Популярное');
             expect(mapItem.props.accessibilityState?.selected).toBe(true);
         });
 
@@ -153,7 +151,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             
-            const mapItem = utils.getByLabelText('Карта');
+            const mapItem = utils.getByLabelText('Популярное');
             fireEvent.press(mapItem);
             
             expect(mockPush).toHaveBeenCalledWith('/map');
@@ -163,7 +161,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
             const utils = renderHeader();
             
-            const homeItem = utils.getByLabelText('Главная');
+            const homeItem = utils.getByLabelText('Идеи поездок');
             expect(homeItem.props.accessibilityState?.selected).toBe(true);
         });
 
@@ -171,7 +169,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/quests/minsk');
             const utils = renderHeader();
             
-            const questsItem = utils.getByLabelText('Квесты');
+            const questsItem = utils.getByLabelText('Популярное');
             expect(questsItem.props.accessibilityState?.selected).toBe(true);
         });
 

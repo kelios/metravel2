@@ -17,6 +17,19 @@ interface HomeHeroProps {
   travelsCount?: number;
 }
 
+const QUICK_FILTER_BADGES = [
+  { icon: 'navigation', label: 'До 200 км' },
+  { icon: 'credit-card', label: 'Бюджет до 200 BYN' },
+  { icon: 'sun', label: 'Природа / город / активность' },
+  { icon: 'clock', label: '1-2 дня' },
+];
+
+const MOOD_CARDS = [
+  { title: 'Озёрный уикенд', meta: 'Природа • 2 дня', icon: 'sun' },
+  { title: 'Город и кофе', meta: 'Город • 1 день', icon: 'coffee' },
+  { title: 'Активный выезд', meta: 'Треккинг • Бюджетно', icon: 'activity' },
+] as const;
+
 const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -49,9 +62,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   };
 
   const primaryButtonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Рассказать о путешествии';
-    if (travelsCount === 0) return 'Написать первую историю';
-    return 'Собрать книгу из историй';
+    if (!isAuthenticated) return 'Создать книгу путешествий';
+    if (travelsCount === 0) return 'Сохранить первую поездку';
+    return 'Открыть книгу путешествий';
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
@@ -70,7 +83,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 80% 60% at 70% 40%, ${colors.primarySoft} 0%, transparent 70%)`,
+          backgroundImage: `radial-gradient(ellipse 80% 60% at 72% 38%, ${colors.primarySoft} 0%, transparent 72%), linear-gradient(115deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: '100% 100%',
         },
@@ -80,9 +93,34 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       paddingVertical: 28,
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 120% 50% at 50% 30%, ${colors.primarySoft} 0%, transparent 70%)`,
+          backgroundImage: `radial-gradient(ellipse 120% 50% at 50% 30%, ${colors.primarySoft} 0%, transparent 70%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
         },
       }),
+    },
+    decorOrb: {
+      position: 'absolute',
+      borderRadius: DESIGN_TOKENS.radii.full,
+      ...Platform.select({
+        web: {
+          filter: 'blur(2px)',
+        },
+      }),
+    },
+    decorOrbTop: {
+      width: 280,
+      height: 280,
+      top: -120,
+      right: -70,
+      backgroundColor: colors.primarySoft,
+      opacity: 0.8,
+    },
+    decorOrbBottom: {
+      width: 220,
+      height: 220,
+      bottom: -120,
+      left: -70,
+      backgroundColor: colors.primaryLight,
+      opacity: 0.7,
     },
     content: {
       flex: 1,
@@ -91,7 +129,23 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       justifyContent: 'center',
     },
     titleWrap: {
-      gap: 4,
+      gap: 8,
+    },
+    positioning: {
+      alignSelf: 'flex-start',
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    positioningText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.primaryText,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
     },
     title: {
       color: colors.text,
@@ -100,9 +154,47 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     subtitle: {
       color: colors.textMuted,
       maxWidth: 540,
-      fontSize: isMobile ? 16 : 20,
-      lineHeight: isMobile ? 24 : 28,
+      fontSize: isMobile ? 16 : 18,
+      lineHeight: isMobile ? 24 : 27,
       fontWeight: '400',
+    },
+    flowText: {
+      color: colors.text,
+      fontSize: isMobile ? 14 : 16,
+      lineHeight: isMobile ? 22 : 24,
+      fontWeight: '600',
+      maxWidth: 560,
+    },
+    quickFilters: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 2,
+    },
+    quickFilterItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+          backdropFilter: 'blur(6px)',
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    quickFilterText: {
+      color: colors.textMuted,
+      fontSize: 13,
+      fontWeight: '600',
+      lineHeight: 18,
     },
     hint: {
       fontSize: isMobile ? 13 : 15,
@@ -197,6 +289,85 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
         },
       }),
     },
+    moodPanel: {
+      position: 'absolute',
+      left: -54,
+      top: 22,
+      width: 210,
+      gap: 8,
+    },
+    moodPanelMobileHidden: {
+      display: 'none',
+    },
+    moodCard: {
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+          backdropFilter: 'blur(10px)',
+          transition: 'all 0.25s ease',
+        },
+      }),
+    },
+    moodCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 2,
+    },
+    moodCardTitle: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '700',
+      lineHeight: 18,
+    },
+    moodCardMeta: {
+      color: colors.textMuted,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '500',
+    },
+    travelStats: {
+      position: 'absolute',
+      right: -40,
+      bottom: 34,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 2,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          backdropFilter: 'blur(10px)',
+        },
+      }),
+    },
+    travelStatsTitle: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: '700',
+      lineHeight: 16,
+    },
+    travelStatsValue: {
+      color: colors.primaryText,
+      fontSize: 17,
+      fontWeight: '800',
+      lineHeight: 22,
+    },
+    travelStatsMeta: {
+      color: colors.textMuted,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '500',
+    },
     imagePlaceholder: {
       width: 320,
       height: 400,
@@ -240,22 +411,41 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   return (
     <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>
+      <View style={[styles.decorOrb, styles.decorOrbTop]} />
+      <View style={[styles.decorOrb, styles.decorOrbBottom]} />
       <ResponsiveContainer maxWidth="xl" padding>
         <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={60} align="center">
           <View style={styles.content}>
+            <View style={styles.positioning}>
+              <Text style={styles.positioningText}>Планировщик коротких путешествий</Text>
+            </View>
+
             <View style={styles.titleWrap}>
               <ResponsiveText variant="h1" style={styles.title}>
-                Находи маршруты.{isWeb ? '\n' : ' '}Делись историями.
+                Идеи поездок на выходные + ваша личная книга путешествий
               </ResponsiveText>
             </View>
 
             <ResponsiveText variant="h2" style={styles.subtitle}>
-              Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои истории в книгу.
+              Сервис для тех, кто не знает куда поехать: выбирай направление, сохраняй маршруты и собирай travel-историю в одном месте.
             </ResponsiveText>
+
+            <Text style={styles.flowText}>
+              Выбирай куда поехать {'->'} сохраняй маршруты {'->'} создавай travel-историю.
+            </Text>
+
+            <View style={styles.quickFilters}>
+              {QUICK_FILTER_BADGES.map((badge) => (
+                <View key={badge.label} style={styles.quickFilterItem}>
+                  <Feather name={badge.icon as any} size={14} color={colors.primary} />
+                  <Text style={styles.quickFilterText}>{badge.label}</Text>
+                </View>
+              ))}
+            </View>
 
             {travelsCount === 0 && isAuthenticated && (
               <Text style={styles.hint}>
-                Расскажи о своём первом путешествии — или найди вдохновение в историях других путешественников.
+                Начни с одной поездки на выходные: сохрани маршрут и получи основу для своей книги путешествий.
               </Text>
             )}
 
@@ -266,7 +456,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
             >
               <Button
                 onPress={handleOpenSearch}
-                label="Найти маршрут"
+                label="Подобрать поездку"
                 variant="primary"
                 size={isMobile ? 'md' : 'lg'}
                 fullWidth={isMobile}
@@ -275,7 +465,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 labelStyle={styles.primaryButtonText}
                 hoverStyle={styles.primaryButtonHover}
                 pressedStyle={styles.primaryButtonHover}
-                accessibilityLabel="Найти маршрут"
+                accessibilityLabel="Подобрать поездку"
               />
 
               <Button
@@ -306,6 +496,18 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               {({ hovered }) => (
                 <>
                   <View style={styles.imageDecor} />
+                  <View style={[styles.moodPanel, isMobile && styles.moodPanelMobileHidden]}>
+                    {MOOD_CARDS.map((card) => (
+                      <View key={card.title} style={styles.moodCard}>
+                        <View style={styles.moodCardHeader}>
+                          <Feather name={card.icon as any} size={13} color={colors.primary} />
+                          <Text style={styles.moodCardTitle}>{card.title}</Text>
+                        </View>
+                        <Text style={styles.moodCardMeta}>{card.meta}</Text>
+                      </View>
+                    ))}
+                  </View>
+
                   <ImageCardMedia
                     source={require('../../assets/images/pdf.webp')}
                     width={267}
@@ -319,6 +521,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                     transition={300}
                     style={[styles.bookImage, hovered && styles.bookImageHover]}
                   />
+                  <View style={styles.travelStats}>
+                    <Text style={styles.travelStatsTitle}>Книга путешествий</Text>
+                    <Text style={styles.travelStatsValue}>12 поездок</Text>
+                    <Text style={styles.travelStatsMeta}>готова к PDF и share</Text>
+                  </View>
                 </>
               )}
             </Pressable>

@@ -14,19 +14,19 @@ type TrustItem = {
 
 const ITEMS: TrustItem[] = [
   {
-    icon: 'file-text',
-    title: 'Экспорт в PDF',
-    subtitle: 'Собери книгу из своих историй',
+    icon: 'bookmark',
+    title: 'Личная память',
+    subtitle: 'Сохраняй поездки, чтобы ничего не потерять',
   },
   {
-    icon: 'lock',
-    title: 'Приватно',
-    subtitle: 'Публикуй только то, чем хочешь делиться',
+    icon: 'calendar',
+    title: 'Планирование',
+    subtitle: 'Собирай идеи на выходные и возвращайся к ним',
   },
   {
-    icon: 'printer',
-    title: 'Печать',
-    subtitle: 'Красивый макет для печатной версии',
+    icon: 'share-2',
+    title: 'Книга и share',
+    subtitle: 'Собери travel-книгу и отправь друзьям',
   },
 ];
 

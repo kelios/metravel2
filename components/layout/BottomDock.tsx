@@ -38,8 +38,14 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const pathname = usePathname();
 
   const activePath = useMemo(() => {
-    if (pathname === '/' || pathname === '/index') return '/';
-    if (pathname.startsWith('/travels/')) return '/';
+    if (pathname === '/' || pathname === '/index') return '/search';
+    if (pathname.startsWith('/travels/')) return '/search';
+    if (pathname.startsWith('/travel/')) return '/search';
+    if (pathname.startsWith('/search')) return '/search';
+    if (pathname.startsWith('/travelsby')) return '/travelsby';
+    if (pathname.startsWith('/export')) return '/export';
+    if (pathname.startsWith('/map')) return '/map';
+    if (pathname.startsWith('/quests')) return '/map';
     return pathname;
   }, [pathname]);
 
@@ -139,10 +145,10 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
 
   const dockItemDefs = useMemo(
     () => [
-      { key: "home", label: "Главная", route: "/" as any, iconName: "home" as const },
-      { key: "search", label: "Поиск", route: "/search" as any, iconName: "search" as const },
-      { key: "map", label: "Карта", route: "/map" as any, iconName: "map-pin" as const },
-      { key: "favorites", label: "Избранное", route: "/favorites" as any, iconName: "heart" as const },
+      { key: "home", label: "Идеи поездок", route: "/search" as any, iconName: "compass" as const },
+      { key: "search", label: "Направления", route: "/travelsby" as any, iconName: "map" as const },
+      { key: "map", label: "Книга путешествий", route: "/export" as any, iconName: "book-open" as const },
+      { key: "favorites", label: "Популярное", route: "/map" as any, iconName: "trending-up" as const },
       { key: "more", label: "Ещё", route: "/more" as any, iconName: "more-horizontal" as const, isMore: true },
     ],
     []
@@ -212,14 +218,14 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               <Pressable
                 onPress={() => {
                   setShowMore(false);
-                  router.push("/travelsby" as any);
+                  router.push("/roulette" as any);
                 }}
                 style={styles.moreItem}
                 accessibilityRole="link"
-                accessibilityLabel="Беларусь"
+                accessibilityLabel="Случайная поездка"
               >
-                <Feather name="flag" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                <Text style={styles.moreItemText}>Беларусь</Text>
+                <Feather name="shuffle" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                <Text style={styles.moreItemText}>Случайная поездка</Text>
               </Pressable>
               <Pressable
                 onPress={() => {

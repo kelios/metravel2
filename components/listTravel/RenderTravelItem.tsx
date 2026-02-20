@@ -27,6 +27,7 @@ type RenderTravelItemProps = {
     cardWidth?: string | number; // пока не используем для width, оставляем для совместимости пропсов
     viewportWidth?: number;
     hideAuthor?: boolean;
+    visualVariant?: 'default' | 'home-featured';
 };
 
 function RenderTravelItem({
@@ -45,6 +46,7 @@ function RenderTravelItem({
                               cardWidth,
                               viewportWidth = 0,
                               hideAuthor = false,
+                              visualVariant = 'default',
                           }: RenderTravelItemProps) {
 
     const cardWidthNumber = useMemo(() => {
@@ -92,6 +94,7 @@ function RenderTravelItem({
                 viewportWidth={viewportWidth}
                 cardWidth={cardWidthNumber}
                 hideAuthor={hideAuthor}
+                visualVariant={visualVariant}
             />
         </AnimatedCard>
     );
@@ -120,6 +123,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     if (prev.isFirst !== next.isFirst) return false;
     if (prev.isSingle !== next.isSingle) return false;
     if (prev.viewportWidth !== next.viewportWidth) return false;
+    if (prev.visualVariant !== next.visualVariant) return false;
 
     return true;
 }

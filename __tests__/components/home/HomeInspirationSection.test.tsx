@@ -58,9 +58,9 @@ describe('HomeInspirationSections', () => {
   it('renders three inspiration sections (of-month, popular, random)', () => {
     const { getByText } = render(<HomeInspirationSections />);
 
-    expect(getByText('Куда отправиться в этом месяце')).toBeTruthy();
+    expect(getByText('Идеи на ближайшие выходные')).toBeTruthy();
     expect(getByText('Популярные направления')).toBeTruthy();
-    expect(getByText('Случайный маршрут')).toBeTruthy();
+    expect(getByText('Если не знаешь, куда поехать')).toBeTruthy();
   });
 
   it('calls useQuery with expected query keys', () => {

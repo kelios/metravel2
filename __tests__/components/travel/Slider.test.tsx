@@ -57,12 +57,12 @@ describe('Slider', () => {
     ;(Platform as any).OS = originalPlatform
   })
 
-  it('keeps image in contain mode and hides loader after load', async () => {
+  it('keeps image in contain mode without visual loader by default', async () => {
     const { getByTestId, queryByTestId } = await renderSlider([portraitImage])
     const image = getByTestId('slider-image-0')
 
     expect(image.props.contentFit).toBe('contain')
-    expect(getByTestId('slider-loading-overlay-0')).toBeTruthy()
+    expect(queryByTestId('slider-loading-overlay-0')).toBeNull()
 
     act(() => {
       image.props.onLoad?.()
@@ -73,12 +73,10 @@ describe('Slider', () => {
 
   it('applies blurred background for both portrait and landscape images when blurBackground is enabled', async () => {
     const portraitRender = await renderSlider([portraitImage])
-    // Blur background only shows after image loads (status === 'loaded')
-    // Initially shows flat background
-    expect(portraitRender.getByTestId('slider-flat-bg-0')).toBeTruthy()
+    expect(portraitRender.queryByTestId('slider-flat-bg-0')).toBeNull()
 
     const landscapeRender = await renderSlider([landscapeImage])
-    expect(landscapeRender.getByTestId('slider-flat-bg-0')).toBeTruthy()
+    expect(landscapeRender.queryByTestId('slider-flat-bg-0')).toBeNull()
   })
 
   it('shows neutral placeholder when image fails to load', async () => {
@@ -129,7 +127,7 @@ describe('Slider', () => {
     expect(apiMobile.queryByLabelText('Next slide')).toBeNull()
   })
 
-  it('shows flat bg while loading, hides it after load', async () => {
+  it('does not render flat background while loading by default', async () => {
     ;(Platform as any).OS = 'web'
 
     const { getByTestId, queryByTestId } = render(
@@ -143,7 +141,7 @@ describe('Slider', () => {
       />
     )
 
-    expect(getByTestId('slider-flat-bg-0')).toBeTruthy()
+    expect(queryByTestId('slider-flat-bg-0')).toBeNull()
     expect(getByTestId('slider-image-0')).toBeTruthy()
 
     const img = getByTestId('slider-image-0')
@@ -153,6 +151,29 @@ describe('Slider', () => {
 
     expect(queryByTestId('slider-flat-bg-0')).toBeNull()
     expect(getByTestId('slider-image-0')).toBeTruthy()
+  })
+
+  it('renders visual loading states when showVisualLoadingState=true', async () => {
+    ;(Platform as any).OS = 'web'
+
+    const { getByTestId, queryByTestId } = render(
+      <Slider
+        images={[portraitImage, landscapeImage]}
+        showArrows={false}
+        showDots={false}
+        autoPlay={false}
+        preloadCount={0}
+        blurBackground
+        showVisualLoadingState
+      />
+    )
+
+    expect(getByTestId('slider-flat-bg-0')).toBeTruthy()
+    const img = getByTestId('slider-image-0')
+    act(() => {
+      img.props.onLoad?.()
+    })
+    expect(queryByTestId('slider-flat-bg-0')).toBeNull()
   })
 
   it('updates counter when navigating to the next slide via arrow', async () => {

@@ -1,10 +1,7 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
-import type { SliderImage, LoadStatus } from './types';
-
-const SHIMMER_DELAY_MS_WEB = 140;
+import type { SliderImage } from './types';
 
 interface SlideProps {
   item: SliderImage;
@@ -19,9 +16,8 @@ interface SlideProps {
   isActive?: boolean;
   imageProps?: any;
   onFirstImageLoad?: () => void;
-  onSlideLoad?: (index: number) => void;
   onImagePress?: (index: number) => void;
-  /** When true, skip the loading shimmer (image already in browser cache). */
+  /** When true, first slide is treated as loaded (cached hero handoff). */
   firstImagePreloaded?: boolean;
   /** When true, this slide should preload eagerly on web (near current index). */
   preloadPriority?: boolean;
@@ -41,16 +37,12 @@ const Slide = memo(function Slide({
   isActive = false,
   imageProps,
   onFirstImageLoad,
-  onSlideLoad,
   onImagePress,
   firstImagePreloaded,
   preloadPriority,
   fit = 'contain',
 }: SlideProps) {
-  const [status, setStatus] = useState<LoadStatus>(
-    index === 0 && firstImagePreloaded ? 'loaded' : 'loading',
-  );
-  const [showShimmer, setShowShimmer] = useState(false);
+  const [hasError, setHasError] = useState(false);
   const firstLoadReportedRef = useRef(false);
 
   const isFirstSlide = index === 0;
@@ -62,52 +54,28 @@ const Slide = memo(function Slide({
 
   useEffect(() => {
     firstLoadReportedRef.current = false;
-    setStatus(index === 0 && firstImagePreloaded ? 'loaded' : 'loading');
-    setShowShimmer(false);
-  }, [uri, index, firstImagePreloaded]);
-
-  useEffect(() => {
-    if (status !== 'loading') {
-      setShowShimmer(false);
-      return;
-    }
-
-    if (Platform.OS !== 'web') {
-      setShowShimmer(true);
-      return;
-    }
-
-    const t = setTimeout(() => setShowShimmer(true), SHIMMER_DELAY_MS_WEB);
-    return () => clearTimeout(t);
-  }, [status]);
-
-  const handleLoadStart = useCallback(() => {
-    setStatus((prev) => (prev === 'loaded' ? prev : 'loading'));
-  }, []);
+    setHasError(false);
+  }, [uri, index]);
 
   const handleLoad = useCallback(() => {
-    setStatus('loaded');
-    setShowShimmer(false);
-    onSlideLoad?.(index);
+    setHasError(false);
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
-  }, [index, isFirstSlide, onFirstImageLoad, onSlideLoad]);
+  }, [isFirstSlide, onFirstImageLoad]);
 
   useEffect(() => {
     // If first slide is already preloaded/cached, report readiness once on mount.
     if (!isFirstSlide) return;
     if (!firstImagePreloaded) return;
     if (firstLoadReportedRef.current) return;
-    onSlideLoad?.(index);
     firstLoadReportedRef.current = true;
     onFirstImageLoad?.();
-  }, [index, isFirstSlide, firstImagePreloaded, onFirstImageLoad, onSlideLoad]);
+  }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
 
   const handleError = useCallback(() => {
-    setStatus('error');
-    setShowShimmer(false);
+    setHasError(true);
   }, []);
 
   const handlePress = useCallback(() => {
@@ -116,13 +84,8 @@ const Slide = memo(function Slide({
 
   const slideContent = (
     <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
-      {/* Flat background while loading */}
-      {status !== 'loaded' && status !== 'error' && (
-        <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
-      )}
-
       {/* Main image with integrated blur background */}
-      {status === 'error' ? (
+      {hasError ? (
         <View
           style={styles.neutralPlaceholder}
           testID={`slider-neutral-placeholder-${index}`}
@@ -152,16 +115,10 @@ const Slide = memo(function Slide({
             accessibilityIgnoresInvertColors: true,
             accessibilityRole: 'image',
             accessibilityLabel: `Фотография путешествия ${index + 1} из ${imagesLength}`,
-            onLoadStart: handleLoadStart,
           }}
           onLoad={handleLoad}
           onError={handleError}
         />
-      )}
-
-      {/* Loading shimmer */}
-      {status === 'loading' && showShimmer && (
-        <ShimmerOverlay testID={`slider-loading-overlay-${index}`} />
       )}
     </View>
   );

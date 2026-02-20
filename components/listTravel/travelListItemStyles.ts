@@ -42,6 +42,18 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         },
       }),
     },
+    cardHomeFeatured: {
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha20,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease',
+          backgroundImage: `linear-gradient(180deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+          backgroundRepeat: 'no-repeat',
+        } as any,
+      }),
+    },
 
     androidOptimized: {
       shadowColor: undefined,

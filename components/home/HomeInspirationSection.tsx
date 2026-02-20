@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
@@ -22,6 +22,29 @@ interface HomeSectionProps {
   hideAuthor?: boolean;
   centerRowsOnWebDesktop?: boolean;
 }
+
+const FILTER_GROUPS = [
+  {
+    title: 'Формат',
+    icon: 'layers',
+    chips: ['Природа', 'Города', 'Активный отдых', 'Романтика', 'Бюджетные'],
+  },
+  {
+    title: 'Длительность',
+    icon: 'clock',
+    chips: ['1 день', '2 дня', 'Уикенд'],
+  },
+  {
+    title: 'Сезон',
+    icon: 'calendar',
+    chips: ['Весна', 'Лето', 'Осень', 'Зима'],
+  },
+  {
+    title: 'Расстояние',
+    icon: 'navigation',
+    chips: ['До 100 км', '100-250 км', '250+ км'],
+  },
+] as const;
 
 function HomeInspirationSection({
   title,
@@ -75,6 +98,12 @@ function HomeInspirationSection({
     router.push('/search' as any);
   }, [title, router]);
 
+  const sectionBadge = useMemo(() => {
+    if (queryKey === 'home-travels-of-month') return { icon: 'zap', label: 'Сезонные идеи' };
+    if (queryKey === 'home-popular-travels') return { icon: 'trending-up', label: 'Чаще всего выбирают' };
+    return { icon: 'shuffle', label: 'Спонтанный выбор' };
+  }, [queryKey]);
+
   const styles = useMemo(() => StyleSheet.create({
     section: {
       gap: 28,
@@ -99,6 +128,26 @@ function HomeInspirationSection({
       flex: 1,
       gap: 8,
       minWidth: 0,
+    },
+    sectionBadge: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    sectionBadgeText: {
+      color: colors.primaryText,
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: '700',
+      letterSpacing: 0.2,
+      textTransform: 'uppercase',
     },
     title: {
       fontSize: 28,
@@ -240,6 +289,10 @@ function HomeInspirationSection({
     <View style={[styles.section, isMobile && styles.sectionMobile]}>
       <View style={[styles.header, isMobile && styles.headerMobile]}>
         <View style={styles.titleContainer}>
+          <View style={styles.sectionBadge}>
+            <Feather name={sectionBadge.icon as any} size={12} color={colors.primary} />
+            <Text style={styles.sectionBadgeText}>{sectionBadge.label}</Text>
+          </View>
           <Text style={[styles.title, isMobile && styles.titleMobile]}>{title}</Text>
           {subtitle && <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>{subtitle}</Text>}
         </View>
@@ -273,7 +326,14 @@ function HomeInspirationSection({
                       styles.cardWrapperSingleColumn,
                     ]}
                   >
-                    <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} viewportWidth={viewportWidth} />
+                    <RenderTravelItem
+                      item={item}
+                      index={index}
+                      isMobile={isMobile}
+                      hideAuthor={hideAuthor}
+                      viewportWidth={viewportWidth}
+                      visualVariant="home-featured"
+                    />
                   </View>
                 </React.Fragment>
               );
@@ -299,7 +359,14 @@ function HomeInspirationSection({
                         isMobile && styles.cardWrapperMobile,
                       ]}
                     >
-                      <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} viewportWidth={viewportWidth} />
+                      <RenderTravelItem
+                        item={item}
+                        index={index}
+                        isMobile={isMobile}
+                        hideAuthor={hideAuthor}
+                        viewportWidth={viewportWidth}
+                        visualVariant="home-featured"
+                      />
                     </View>
                   );
                 })}
@@ -328,9 +395,18 @@ function Separator() {
 }
 
 function HomeInspirationSections() {
+  const router = useRouter();
   const { isPhone, isLargePhone } = useResponsive();
   const colors = useThemedColors();
   const isMobile = isPhone || isLargePhone;
+
+  const handleFilterPress = useCallback(
+    (label: string) => {
+      sendAnalyticsEvent('HomeClick_QuickFilter', { label });
+      router.push('/search' as any);
+    },
+    [router],
+  );
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
@@ -350,30 +426,139 @@ function HomeInspirationSections() {
     containerMobile: {
       gap: 40,
     },
-  }), [colors]);
+    quickFiltersSection: {
+      width: '100%',
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      padding: isMobile ? 14 : 20,
+      gap: isMobile ? 14 : 16,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.card,
+        },
+      }),
+    },
+    quickFiltersHeader: {
+      gap: 6,
+    },
+    quickFiltersTitle: {
+      color: colors.text,
+      fontSize: isMobile ? 20 : 24,
+      lineHeight: isMobile ? 26 : 30,
+      fontWeight: '800',
+      letterSpacing: -0.3,
+    },
+    quickFiltersSubtitle: {
+      color: colors.textMuted,
+      fontSize: isMobile ? 13 : 15,
+      lineHeight: isMobile ? 19 : 22,
+    },
+    filterGroupRow: {
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: isMobile ? 'flex-start' : 'center',
+      gap: 10,
+    },
+    filterGroupTitle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minWidth: isMobile ? 0 : 140,
+    },
+    filterGroupTitleText: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    chipsWrap: {
+      flex: 1,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    chip: {
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.backgroundSecondary,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    chipHover: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+    },
+    chipText: {
+      color: colors.text,
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: '600',
+    },
+  }), [colors, isMobile]);
 
   return (
     <View style={[styles.band, isMobile && styles.bandMobile]}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={[styles.container, isMobile && styles.containerMobile]}>
+          <View style={styles.quickFiltersSection}>
+            <View style={styles.quickFiltersHeader}>
+              <Text style={styles.quickFiltersTitle}>Подбор поездок по параметрам</Text>
+              <Text style={styles.quickFiltersSubtitle}>
+                Быстрый старт, если не знаешь куда поехать на выходные.
+              </Text>
+            </View>
+
+            {FILTER_GROUPS.map((group) => (
+              <View key={group.title} style={styles.filterGroupRow}>
+                <View style={styles.filterGroupTitle}>
+                  <Feather name={group.icon as any} size={14} color={colors.primary} />
+                  <Text style={styles.filterGroupTitleText}>{group.title}</Text>
+                </View>
+                <View style={styles.chipsWrap}>
+                  {group.chips.map((chip) => (
+                    <Pressable
+                      key={chip}
+                      onPress={() => handleFilterPress(chip)}
+                      style={({ pressed, hovered }) => [
+                        styles.chip,
+                        (pressed || hovered) && styles.chipHover,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Фильтр ${chip}`}
+                    >
+                      <Text style={styles.chipText}>{chip}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+
           <HomeInspirationSection
-            title="Куда отправиться в этом месяце"
-            subtitle="Истории путешественников, которые вдохновляют"
+            title="Идеи на ближайшие выходные"
+            subtitle="Маршруты с атмосферой «хочу туда прямо сейчас»"
             queryKey="home-travels-of-month"
             fetchFn={fetchTravelsOfMonth}
           />
 
           <HomeInspirationSection
             title="Популярные направления"
-            subtitle="Маршруты, которые выбирают чаще всего"
+            subtitle="То, что чаще всего сохраняют в личные книги путешествий"
             queryKey="home-popular-travels"
             fetchFn={fetchTravelsPopular}
             hideAuthor
           />
 
           <HomeInspirationSection
-            title="Случайный маршрут"
-            subtitle="Идея для поездки, если не знаешь, куда поехать"
+            title="Если не знаешь, куда поехать"
+            subtitle="Случайная идея для спонтанной поездки на 1-2 дня"
             queryKey="home-random-travels"
             fetchFn={fetchTravelsRandom}
             hideAuthor

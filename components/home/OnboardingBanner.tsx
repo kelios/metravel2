@@ -17,6 +17,8 @@ interface OnboardingBannerProps {
   userId?: string;
 }
 
+const TUTORIAL_STEPS = ['Выбери поездку', 'Сохрани маршрут', 'Получи книгу'];
+
 const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   const [visible, setVisible] = useState(false);
   const [fadeAnim] = useState(() => new Animated.Value(0));
@@ -93,7 +95,12 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   }, [fadeAnim, shouldUseNativeDriver]);
 
   const handleStart = useCallback(() => {
-    router.push('/travel/new?mode=quick');
+    router.push('/search');
+    handleDismiss(false);
+  }, [handleDismiss]);
+
+  const handleOpenDemoBook = useCallback(() => {
+    router.push('/export');
     handleDismiss(false);
   }, [handleDismiss]);
 
@@ -159,30 +166,41 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
       color: colors.textMuted,
       lineHeight: 22,
     },
-    badge: {
-      fontWeight: '600',
-      color: colors.primaryText,
-    },
-    progressContainer: {
+    stepRow: {
       marginTop: 8,
-      gap: 6,
+      gap: 8,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
     },
-    progressBar: {
-      height: 8,
+    stepBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
       backgroundColor: colors.surfaceMuted,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      overflow: 'hidden',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
     },
-    progressFill: {
-      width: '0%',
-      height: '100%',
-      backgroundColor: colors.primary,
-      borderRadius: DESIGN_TOKENS.radii.pill,
+    stepDot: {
+      width: 18,
+      height: 18,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: colors.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    progressText: {
-      fontSize: 12,
+    stepDotText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    stepText: {
+      fontSize: 13,
+      lineHeight: 18,
+      color: colors.text,
       fontWeight: '600',
-      color: colors.textMuted,
     },
     actions: {
       flexDirection: 'row',
@@ -260,39 +278,37 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
           </View>
 
           <View style={styles.textContainer}>
-            <Text style={styles.title}>Готов поделиться своим путешествием?</Text>
+            <Text style={styles.title}>Мини-гайд: как получить свою книгу путешествий</Text>
             <Text style={styles.description}>
-              Создай первую историю и получи бейдж <Text style={styles.badge}>Первопроходца</Text>
+              Сценарий для первого входа: выбери идею поездки на выходные, сохрани маршрут и собери личную travel-историю.
             </Text>
 
-            {/* Прогресс-бар */}
-            <View
-              style={styles.progressContainer}
-              accessibilityRole="progressbar"
-              accessibilityValue={{ min: 0, max: 100, now: 0 }}
-              accessibilityLabel="Прогресс создания первой истории"
-            >
-              <View style={styles.progressBar}>
-                <View style={styles.progressFill} />
-              </View>
-              <Text style={styles.progressText}>0% — начни свой путь!</Text>
+            <View style={styles.stepRow}>
+              {TUTORIAL_STEPS.map((step, idx) => (
+                <View key={step} style={styles.stepBadge}>
+                  <View style={styles.stepDot}>
+                    <Text style={styles.stepDotText}>{idx + 1}</Text>
+                  </View>
+                  <Text style={styles.stepText}>{step}</Text>
+                </View>
+              ))}
             </View>
           </View>
 
           <View style={styles.actions}>
             <Button
-              label="Начать"
+              label="Подобрать поездку"
               onPress={handleStart}
-              accessibilityLabel="Начать создание статьи"
-              icon={<Feather name="edit-3" size={18} color={colors.textOnPrimary} />}
+              accessibilityLabel="Подобрать поездку"
+              icon={<Feather name="compass" size={18} color={colors.textOnPrimary} />}
               style={[styles.button, styles.buttonPrimary]}
               labelStyle={styles.buttonTextPrimary}
             />
 
             <Button
-              label="Напомнить позже"
-              onPress={() => handleDismiss(true)}
-              accessibilityLabel="Напомнить позже"
+              label="Открыть демо-книгу"
+              onPress={handleOpenDemoBook}
+              accessibilityLabel="Открыть демо-книгу"
               variant="secondary"
               style={[styles.button, styles.buttonSecondary]}
               labelStyle={styles.buttonTextSecondary}

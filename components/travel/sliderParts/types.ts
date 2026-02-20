@@ -23,7 +23,7 @@ export interface SliderProps {
   onFirstImageLoad?: () => void;
   mobileHeightPercent?: number;
   onImagePress?: (index: number) => void;
-  /** When true, the first slide skips the loading shimmer (image already in browser cache). */
+  /** When true, the first slide is treated as already loaded (for cached hero handoff). */
   firstImagePreloaded?: boolean;
   /** When true, slider fills parent container height instead of computing from aspect ratio */
   fillContainer?: boolean;

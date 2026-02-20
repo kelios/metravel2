@@ -93,9 +93,14 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
 
     // Определяем активную страницу
     const activePath = useMemo(() => {
-        if (pathname === '/' || pathname === '/index') return '/';
-        if (pathname.startsWith('/travels/')) return '/';
-        if (pathname.startsWith('/quests/')) return '/quests';
+        if (pathname === '/' || pathname === '/index') return '/search';
+        if (pathname.startsWith('/travels/')) return '/search';
+        if (pathname.startsWith('/travel/')) return '/search';
+        if (pathname.startsWith('/search')) return '/search';
+        if (pathname.startsWith('/travelsby')) return '/travelsby';
+        if (pathname.startsWith('/export')) return '/export';
+        if (pathname.startsWith('/map')) return '/map';
+        if (pathname.startsWith('/quests')) return '/map';
         return pathname;
     }, [pathname]);
 

@@ -39,7 +39,7 @@ import type { SliderProps, SliderRef } from './sliderParts/types';
 import { buildUriWeb, clamp, SLIDER_MAX_WIDTH, computeSliderHeight, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
 import { createSliderStyles } from './sliderParts/styles';
 import Slide from './sliderParts/Slide';
-import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia';
+import { prefetchImage } from '@/components/ui/ImageCardMedia';
 
 // Re-export types for consumers that import from '@/components/travel/Slider.web'
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
@@ -213,13 +213,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // State
   const [containerW, setContainerWState] = useState(winW);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [, setLoadedIndexes] = useState<Record<number, true>>(
-    firstImagePreloaded ? { 0: true } : {},
-  );
-  const [transitionOverlayFrom, setTransitionOverlayFrom] = useState<number | null>(null);
-  const transitionOverlayVisibleRef = useRef(false);
-  const [transitionOverlayVisible, setTransitionOverlayVisible] = useState(false);
-  const [transitionOverlayFading, setTransitionOverlayFading] = useState(false);
 
   // Refs
   const indexRef = useRef(0);
@@ -237,34 +230,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // Cached DOM node refs — set once, avoid querySelector on every interaction
   const scrollNodeRef = useRef<HTMLElement | null>(null);
   const wrapperNodeRef = useRef<HTMLElement | null>(null);
-  const loadedIndexesRef = useRef<Record<number, true>>(firstImagePreloaded ? { 0: true } : {});
-  const overlayToRef = useRef<number | null>(null);
-  const overlayHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearOverlayHideTimer = useCallback(() => {
-    if (overlayHideTimerRef.current) {
-      clearTimeout(overlayHideTimerRef.current);
-      overlayHideTimerRef.current = null;
-    }
-  }, []);
-
-  const hideTransitionOverlay = useCallback(() => {
-    clearOverlayHideTimer();
-    transitionOverlayVisibleRef.current = false;
-    setTransitionOverlayVisible(false);
-    setTransitionOverlayFading(false);
-    setTransitionOverlayFrom(null);
-    overlayToRef.current = null;
-  }, [clearOverlayHideTimer]);
-
-  const startTransitionOverlay = useCallback((fromIndex: number, toIndex: number) => {
-    clearOverlayHideTimer();
-    setTransitionOverlayFrom(fromIndex);
-    transitionOverlayVisibleRef.current = true;
-    setTransitionOverlayVisible(true);
-    setTransitionOverlayFading(false);
-    overlayToRef.current = toIndex;
-  }, [clearOverlayHideTimer]);
 
   // First image aspect ratio
   const firstAR = useMemo(() => {
@@ -341,15 +306,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (idx: number) => {
       const clampedIdx = clamp(idx, 0, Math.max(0, images.length - 1));
       const prevIdx = indexRef.current;
-      const prevLoaded = !!loadedIndexesRef.current[prevIdx];
-      const nextLoaded = !!loadedIndexesRef.current[clampedIdx];
-
-      if (clampedIdx !== prevIdx) {
-        if (prevLoaded && !nextLoaded) {
-          startTransitionOverlay(prevIdx, clampedIdx);
-        } else {
-          hideTransitionOverlay();
-        }
+      if (clampedIdx !== prevIdx && showVisualLoadingState) {
+        const prevLoaded = !!loadedIndexesRef.current[prevIdx];
+        const nextLoaded = !!loadedIndexesRef.current[clampedIdx];
+        if (prevLoaded && !nextLoaded) startTransitionOverlay(prevIdx, clampedIdx);
+        else hideTransitionOverlay();
+      } else if (!showVisualLoadingState) {
+        hideTransitionOverlay();
       }
 
       indexRef.current = clampedIdx;
@@ -357,7 +320,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
       onIndexChanged?.(clampedIdx);
     },
-    [hideTransitionOverlay, images.length, onIndexChanged, startTransitionOverlay]
+    [hideTransitionOverlay, images.length, onIndexChanged, showVisualLoadingState, startTransitionOverlay]
   );
 
   const handleSlideLoad = useCallback((index: number) => {
@@ -368,21 +331,23 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       return next;
     });
 
-    if (overlayToRef.current === index && transitionOverlayVisibleRef.current) {
+    if (showVisualLoadingState && overlayToRef.current === index && transitionOverlayVisibleRef.current) {
       clearOverlayHideTimer();
       setTransitionOverlayFading(true);
       overlayHideTimerRef.current = setTimeout(() => {
         hideTransitionOverlay();
       }, 180);
     }
-  }, [clearOverlayHideTimer, hideTransitionOverlay]);
+  }, [clearOverlayHideTimer, hideTransitionOverlay, showVisualLoadingState]);
 
   useEffect(() => {
-    const initialLoaded = firstImagePreloaded ? ({ 0: true } as Record<number, true>) : {};
+    const initialLoaded = showVisualLoadingState && firstImagePreloaded
+      ? ({ 0: true } as Record<number, true>)
+      : {};
     loadedIndexesRef.current = initialLoaded;
     setLoadedIndexes(initialLoaded);
     hideTransitionOverlay();
-  }, [firstImagePreloaded, images, hideTransitionOverlay]);
+  }, [firstImagePreloaded, images, hideTransitionOverlay, showVisualLoadingState]);
 
   // Resolve cached DOM nodes — try ref-captured nodes first, fall back to querySelector with escaped ID
   const resolveNodes = useCallback(() => {
@@ -729,7 +694,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const navOffset = isMobile ? 8 : isTablet ? 12 : Math.max(44, 16 + Math.max(insets.left || 0, insets.right || 0));
   const slideHeight = fillContainer ? '100%' : computedH;
   const imagesLen = images.length;
-  const overlayUri = transitionOverlayFrom != null ? getUri(transitionOverlayFrom) : '';
+  const overlayUri =
+    showVisualLoadingState && transitionOverlayFrom != null ? getUri(transitionOverlayFrom) : '';
 
   return (
     <View style={[styles.sliderStack, fillContainer && { height: '100%' }]} testID="slider-stack">
@@ -756,7 +722,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip} testID="slider-clip">
-          {transitionOverlayVisible && transitionOverlayFrom != null && !!overlayUri ? (
+          {showVisualLoadingState && transitionOverlayVisible && transitionOverlayFrom != null && !!overlayUri ? (
             <View
               pointerEvents="none"
               testID="slider-transition-overlay"
@@ -833,6 +799,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       firstImagePreloaded={firstImagePreloaded}
                       preloadPriority={preloadPriority}
                       fit={fit}
+                      showVisualLoadingState={showVisualLoadingState}
                     />
                   ) : null}
                 </View>

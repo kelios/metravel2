@@ -206,7 +206,11 @@ const TravelListPanel: React.FC<Props> = ({
 
     return (
       <ScrollView
+        style={styles.webScrollView}
         contentContainerStyle={styles.list}
+        onLayout={(e) => {
+          setWebViewportH(e.nativeEvent.layout.height);
+        }}
         onScroll={webScrollHandler}
         scrollEventThrottle={32}
         refreshControl={
@@ -261,6 +265,11 @@ export default React.memo(TravelListPanel);
 
 const getStyles = (colors: ThemedColors) => StyleSheet.create({
   list: { paddingBottom: 8, alignItems: 'center' },
+  webScrollView: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+  },
   loader: { paddingVertical: 16, alignItems: 'center' },
   endText: { textAlign: 'center', color: colors.textMuted, paddingVertical: 16, fontSize: 12 },
   emptyContainer: {

@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -13,6 +14,12 @@ import { buildLoginHref } from '@/utils/authNavigation';
 interface HomeFinalCTAProps {
   travelsCount?: number;
 }
+
+const CTA_BENEFITS = [
+  { icon: 'bookmark', label: 'Память о поездках' },
+  { icon: 'calendar', label: 'План на выходные' },
+  { icon: 'share-2', label: 'Share с друзьями' },
+] as const;
 
 function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const router = useRouter();
@@ -32,10 +39,15 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     }
   };
 
+  const handlePickTrip = () => {
+    sendAnalyticsEvent('HomeClick_FinalCTA_PickTrip');
+    router.push('/search' as any);
+  };
+
   const buttonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Рассказать о путешествии';
-    if (travelsCount === 0) return 'Написать первую историю';
-    return 'Собрать книгу из историй';
+    if (!isAuthenticated) return 'Создать книгу путешествий';
+    if (travelsCount === 0) return 'Сохранить первую поездку';
+    return 'Открыть книгу путешествий';
   }, [isAuthenticated, travelsCount]);
 
   // Button style kept as a plain object so RNW inlines it via the style
@@ -110,6 +122,72 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       fontSize: 15,
       lineHeight: 22,
     },
+    benefitsRow: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: 10,
+    },
+    benefitChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+      }),
+    },
+    benefitChipText: {
+      color: colors.text,
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: '600',
+    },
+    actionsRow: {
+      width: '100%',
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      maxWidth: isMobile ? undefined : 740,
+    },
+    secondaryButton: {
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      minHeight: isMobile ? 52 : 60,
+      width: isMobile ? '100%' as const : undefined,
+      paddingHorizontal: isMobile ? 24 : 30,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.25s ease',
+        },
+      }),
+    },
+    secondaryButtonHover: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primaryAlpha30,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+        },
+      }),
+    },
+    secondaryButtonText: {
+      color: colors.text,
+      fontSize: isMobile ? 15 : 16,
+      fontWeight: '700',
+      letterSpacing: 0.1,
+    },
     buttonHover: {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
@@ -132,23 +210,47 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.content}>
           <Text style={[styles.title, isMobile && styles.titleMobile]}>
-            Начни писать свою историю
+            Планируй короткие поездки и собирай их в личную книгу
           </Text>
           <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>
-            Расскажи о своих путешествиях, вдохнови других — и собери всё в красивую книгу на память.
+            Сначала выбери идею на выходные, потом сохрани маршрут и преврати поездки в одну travel-историю.
           </Text>
 
-          <Button
-            onPress={handleAction}
-            label={buttonLabel}
-            variant="primary"
-            size={isMobile ? 'md' : 'lg'}
-            style={buttonStyle}
-            labelStyle={styles.buttonText}
-            hoverStyle={styles.buttonHover}
-            pressedStyle={styles.buttonHover}
-            accessibilityLabel={buttonLabel}
-          />
+          <View style={styles.benefitsRow}>
+            {CTA_BENEFITS.map((item) => (
+              <View key={item.label} style={styles.benefitChip}>
+                <Feather name={item.icon as any} size={13} color={colors.primary} />
+                <Text style={styles.benefitChipText}>{item.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.actionsRow}>
+            <Button
+              onPress={handleAction}
+              label={buttonLabel}
+              variant="primary"
+              size={isMobile ? 'md' : 'lg'}
+              style={buttonStyle}
+              labelStyle={styles.buttonText}
+              hoverStyle={styles.buttonHover}
+              pressedStyle={styles.buttonHover}
+              accessibilityLabel={buttonLabel}
+            />
+
+            <Button
+              onPress={handlePickTrip}
+              label="Подобрать поездку"
+              variant="secondary"
+              size={isMobile ? 'md' : 'lg'}
+              style={styles.secondaryButton}
+              labelStyle={styles.secondaryButtonText}
+              hoverStyle={styles.secondaryButtonHover}
+              pressedStyle={styles.secondaryButtonHover}
+              icon={<Feather name="compass" size={16} color={colors.text} />}
+              accessibilityLabel="Подобрать поездку"
+            />
+          </View>
         </View>
       </ResponsiveContainer>
     </View>

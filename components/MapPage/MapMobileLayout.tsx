@@ -140,17 +140,18 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToHalf();
   }, [setTabDeferred]);
 
-  const filtersMode: 'radius' | 'route' | undefined = filtersPanelProps?.props?.mode;
-  const setFiltersMode: ((m: 'radius' | 'route') => void) | undefined = filtersPanelProps?.props?.setMode;
+  const filtersContextProps = filtersPanelProps?.props ?? filtersPanelProps?.contextValue;
+  const filtersMode: 'radius' | 'route' | undefined = filtersContextProps?.mode;
+  const setFiltersMode: ((m: 'radius' | 'route') => void) | undefined = filtersContextProps?.setMode;
 
   const canBuildRoute = useMemo(() => {
     if (filtersMode !== 'route') return false;
-    const points = filtersPanelProps?.props?.routePoints;
+    const points = filtersContextProps?.routePoints;
     return Array.isArray(points) && points.length >= 2;
-  }, [filtersMode, filtersPanelProps?.props?.routePoints]);
+  }, [filtersMode, filtersContextProps?.routePoints]);
 
-  const routingLoading = Boolean(filtersPanelProps?.props?.routingLoading);
-  const routeDistance = filtersPanelProps?.props?.routeDistance as number | null | undefined;
+  const routingLoading = Boolean(filtersContextProps?.routingLoading);
+  const routeDistance = filtersContextProps?.routeDistance as number | null | undefined;
 
   const routeCtaLabel = useMemo(() => {
     if (routingLoading) return 'Строим…';
@@ -191,7 +192,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     if (contentTab !== 'filters') return null;
     if (!filtersMode || typeof setFiltersMode !== 'function') return null;
 
-    const showRouteCta = filtersMode === 'route' && typeof filtersPanelProps?.props?.onBuildRoute === 'function';
+    const showRouteCta = filtersMode === 'route' && typeof filtersContextProps?.onBuildRoute === 'function';
 
     return (
       <View style={styles.filtersPeek}>
@@ -211,7 +212,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               label={routeCtaLabel}
               onPress={() => {
                 if (!canBuildRoute || routingLoading) return;
-                filtersPanelProps?.props?.onBuildRoute?.();
+                filtersContextProps?.onBuildRoute?.();
               }}
               disabled={!canBuildRoute || routingLoading}
               accessibilityLabel="Построить маршрут"
@@ -230,7 +231,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     handlePlacePress,
     filtersMode,
     setFiltersMode,
-    filtersPanelProps,
+    filtersContextProps,
     styles.filtersPeek,
     styles.filtersPeekCtaRow,
     canBuildRoute,
@@ -253,7 +254,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         (() => {
           const ProviderComponent = filtersPanelProps?.Component;
           const PanelComponent = filtersPanelProps?.Panel;
-          const providerProps = filtersPanelProps?.props;
+          const providerProps = filtersContextProps;
 
           if (!ProviderComponent || !PanelComponent || !providerProps) {
             return <View style={styles.sheetRoot} />;
@@ -328,7 +329,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             </View>
           )}
 
-          {uiTab === 'filters' && !showModeToggle && typeof filtersPanelProps?.props?.resetFilters === 'function' && (
+          {uiTab === 'filters' && !showModeToggle && typeof filtersContextProps?.resetFilters === 'function' && (
             <IconButton
               testID="map-panel-reset"
               icon={<Feather name="rotate-cw" size={18} color={colors.textMuted} />}
@@ -336,7 +337,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               size="sm"
               showLabel={false}
               onPress={() => {
-                filtersPanelProps?.props?.resetFilters?.();
+                filtersContextProps?.resetFilters?.();
               }}
               style={styles.sheetIconButton}
             />
@@ -356,7 +357,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     favorites,
     hasMore,
     filtersMode,
-    filtersPanelProps,
+    filtersContextProps,
+    filtersPanelProps?.Component,
+    filtersPanelProps?.Panel,
     isRefreshing,
     onLoadMore,
     onRefresh,

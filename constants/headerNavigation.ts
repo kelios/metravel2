@@ -8,13 +8,10 @@ export interface HeaderNavItem {
 }
 
 export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
-  { path: '/', label: 'Главная', icon: 'home', priority: 'primary' },
-  { path: '/search', label: 'Поиск', icon: 'search', priority: 'primary' },
-  { path: '/travelsby', label: 'Беларусь', icon: 'map', priority: 'primary' },
-  { path: '/map', label: 'Карта', icon: 'map-pin', priority: 'primary' },
-  { path: '/roulette', label: 'Рулетка', icon: 'shuffle', priority: 'primary' },
-  { path: '/quests', label: 'Квесты', icon: 'target', priority: 'primary' },
-  { path: '/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', label: 'Instagram', icon: 'instagram', priority: 'primary' },
+  { path: '/search', label: 'Идеи поездок', icon: 'compass', priority: 'primary' },
+  { path: '/travelsby', label: 'Направления', icon: 'map', priority: 'primary' },
+  { path: '/export', label: 'Книга путешествий', icon: 'book-open', priority: 'primary' },
+  { path: '/map', label: 'Популярное', icon: 'trending-up', priority: 'primary' },
 ];
 
 export const DOCUMENT_NAV_ITEMS: HeaderNavItem[] = [
