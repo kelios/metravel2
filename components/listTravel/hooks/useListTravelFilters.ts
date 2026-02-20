@@ -15,6 +15,7 @@ export interface UseListTravelFiltersProps {
   isTravelBy: boolean;
   userId: string | null;
   user_id?: string;
+  initialFilter?: FilterState;
 }
 
 export interface UseListTravelFiltersReturn {
@@ -81,8 +82,9 @@ export function useListTravelFilters({
   isTravelBy,
   userId,
   user_id,
+  initialFilter,
 }: UseListTravelFiltersProps): UseListTravelFiltersReturn {
-  const [filter, setFilter] = useState<FilterState>(INITIAL_FILTER);
+  const [filter, setFilter] = useState<FilterState>(initialFilter ?? INITIAL_FILTER);
 
   const filterForQuery = useMemo(() => {
     const textualCategories = extractCategoryNames(filter.categories);

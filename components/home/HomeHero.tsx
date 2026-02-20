@@ -19,18 +19,53 @@ interface HomeHeroProps {
 const BOOK_IMAGES = [
   {
     source: require('../../assets/images/pdf.webp'),
-    alt: 'Пример книги путешествий',
+    alt: 'Тропа ведьм — Германия',
+    title: null,
+    subtitle: null,
+    href: null,
   },
   {
-    source: require('../../assets/images/pdf2.png'),
-    alt: 'Книга путешествий — Озеро Карецца',
+    source: require('../../assets/images/cover_sorapiso.jpg'),
+    alt: 'Озеро Сорапис — Доломиты',
+    title: 'Озеро Сорапис',
+    subtitle: 'Поход по Доломитам • Италия',
+    href: 'https://metravel.by/travels/ozero-sorapiso-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
   },
-] as const;
+  {
+    source: require('../../assets/images/cover_trecime.jpg'),
+    alt: 'Tre Cime di Lavaredo — Доломиты',
+    title: 'Tre Cime di Lavaredo',
+    subtitle: 'Круговой маршрут 10 км • Италия',
+    href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km',
+  },
+  {
+    source: require('../../assets/images/cover_bled.jpg'),
+    alt: 'Озеро Блед — Словения',
+    title: 'Озеро Блед',
+    subtitle: 'Что посмотреть за 1 день • Словения',
+    href: 'https://metravel.by/travels/vintgarskoe-ushchelie-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
+  },
+];
 
 const MOOD_CARDS = [
-  { title: 'У озера за выходные', meta: 'Природа • 2 дня • до 180 км', icon: 'sun' },
-  { title: 'Город и кофе', meta: 'Город • 1 день • спокойный темп', icon: 'coffee' },
-  { title: 'Активный выезд', meta: 'Треккинг • 2 дня • больше движения', icon: 'activity' },
+  {
+    title: 'У озера за выходные',
+    meta: 'Природа • 2 дня • до 180 км',
+    icon: 'sun',
+    filterParams: 'categories=2,21&over_nights_stay=1',
+  },
+  {
+    title: 'Город и кофе',
+    meta: 'Город • 1 день • спокойный темп',
+    icon: 'coffee',
+    filterParams: 'categories=19,20',
+  },
+  {
+    title: 'Активный выезд',
+    meta: 'Треккинг • 2 дня • больше движения',
+    icon: 'activity',
+    filterParams: 'categories=22,2',
+  },
 ] as const;
 
 const FEATURE_PILLS = [
@@ -70,14 +105,24 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     router.push('/search' as any);
   };
 
-  const handleQuickFilterPress = (label: string) => {
+  const handleQuickFilterPress = (label: string, filterParams?: string) => {
     queueAnalyticsEvent('HomeClick_QuickFilter', { label, source: 'home-hero' });
-    router.push('/search' as any);
+    const path = filterParams ? `/search?${filterParams}` : '/search';
+    router.push(path as any);
   };
 
-  const handleOpenArticles = () => {
-    queueAnalyticsEvent('HomeClick_OpenSearch');
-    router.push('/search' as any);
+  const handleOpenArticles = (href?: string | null) => {
+    if (href) {
+      queueAnalyticsEvent('HomeClick_BookCover', { href });
+      if (Platform.OS === 'web') {
+        window.open(href, '_blank', 'noopener');
+      } else {
+        router.push(href as any);
+      }
+    } else {
+      queueAnalyticsEvent('HomeClick_OpenSearch');
+      router.push('/search' as any);
+    }
   };
 
   const primaryButtonLabel = useMemo(() => {
@@ -85,17 +130,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     if (travelsCount === 0) return 'Добавить первую поездку';
     return 'Открыть мою книгу';
   }, [isAuthenticated, travelsCount]);
-
-  const travelStatsValue = useMemo(() => {
-    if (travelsCount <= 0) return 'Демо: 12 маршрутов';
-    if (travelsCount === 1) return '1 поездка';
-    if (travelsCount < 5) return `${travelsCount} поездки`;
-    return `${travelsCount} поездок`;
-  }, [travelsCount]);
-
-  const travelStatsMeta = travelsCount > 0
-    ? 'в вашей книге путешествий'
-    : 'как может выглядеть ваша книга';
 
   const isMobile = isSmallPhone || isPhone;
   const shouldRenderImageSlot = isWeb && !isMobile;
@@ -424,48 +458,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       fontSize: 11,
       lineHeight: 15,
     },
-    travelStats: {
-      position: 'absolute',
-      right: -20,
-      bottom: 44,
-      width: 196,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      gap: 4,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.modal,
-          backdropFilter: 'blur(12px)',
-        },
-      }),
-    },
-    travelStatsLabel: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    travelStatsTitle: {
-      color: colors.textMuted,
-      fontSize: 11,
-      fontWeight: '500',
-      lineHeight: 15,
-    },
-    travelStatsValue: {
-      color: colors.text,
-      fontSize: 18,
-      fontWeight: '800',
-      lineHeight: 24,
-      letterSpacing: -0.3,
-    },
-    travelStatsMeta: {
-      color: colors.textMuted,
-      fontSize: 11,
-      lineHeight: 15,
-    },
     bookImage: {
       width: 260,
       height: 390,
@@ -488,6 +480,39 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     bookImageWrap: {
       position: 'relative',
+    },
+    bookOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      borderBottomLeftRadius: DESIGN_TOKENS.radii.lg,
+      borderBottomRightRadius: DESIGN_TOKENS.radii.lg,
+      paddingHorizontal: 14,
+      paddingTop: 32,
+      paddingBottom: 14,
+      gap: 3,
+      ...Platform.select({
+        web: {
+          backgroundImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.72))',
+        },
+      }),
+    },
+    bookOverlayTitle: {
+      color: '#ffffff',
+      fontSize: 15,
+      fontWeight: '700',
+      lineHeight: 20,
+      letterSpacing: -0.2,
+      ...Platform.select({
+        web: { textShadow: '0 1px 4px rgba(0,0,0,0.5)' },
+      }),
+    },
+    bookOverlaySubtitle: {
+      color: 'rgba(255,255,255,0.8)',
+      fontSize: 11,
+      fontWeight: '400',
+      lineHeight: 15,
     },
     bookDots: {
       position: 'absolute',
@@ -598,7 +623,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
           {shouldRenderImageSlot && (
             <Pressable
               testID="home-hero-image-slot"
-              onPress={handleOpenArticles}
+              onPress={() => handleOpenArticles(BOOK_IMAGES[bookImageIndex].href)}
               accessibilityRole="button"
               accessibilityLabel="Открыть раздел статей и маршрутов"
               style={[
@@ -614,7 +639,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                     {MOOD_CARDS.map((card) => (
                       <Pressable
                         key={card.title}
-                        onPress={() => handleQuickFilterPress(card.meta)}
+                        onPress={() => handleQuickFilterPress(card.meta, card.filterParams)}
                         style={({ pressed, hovered: h }) => [
                           styles.moodCard,
                           (pressed || h) && styles.moodCardHover,
@@ -645,6 +670,16 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                       transition={300}
                       style={[styles.bookImage, hovered && styles.bookImageHover]}
                     />
+                    {BOOK_IMAGES[bookImageIndex].title && (
+                      <View style={styles.bookOverlay}>
+                        <Text style={styles.bookOverlayTitle} numberOfLines={2}>
+                          {BOOK_IMAGES[bookImageIndex].title}
+                        </Text>
+                        <Text style={styles.bookOverlaySubtitle} numberOfLines={1}>
+                          {BOOK_IMAGES[bookImageIndex].subtitle}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.bookDots}>
                       {BOOK_IMAGES.map((_, i) => (
                         <View

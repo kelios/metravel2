@@ -145,6 +145,30 @@ test.describe('Travel Rating - Authenticated', () => {
    * TC-RATING-002: Авторизованный пользователь может оценить путешествие
    */
   test('TC-RATING-002: авторизованный пользователь видит интерактивные звёзды', async ({ page }) => {
+    // Стабилизируем сценарий: мокаем рейтинг, чтобы UI не зависел от сети/данных на бэке.
+    await page.route('**/api/travels/*/rating/users/**', (route) => {
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'Not found' }),
+        });
+      }
+      return route.continue();
+    });
+    await page.route('**/api/travels/*/rating/', (route) => {
+      const url = route.request().url();
+      if (url.includes('/rating/users/')) return route.continue();
+      if (route.request().method() === 'GET') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ rating: 4.0, rating_count: 5 }),
+        });
+      }
+      return route.continue();
+    });
+
     await assertTravelDetailsOpened(page);
     await waitForAuthenticatedUser(page);
     const ratingSection = await getVisibleRatingSection(page);
@@ -170,9 +194,7 @@ test.describe('Travel Rating - Authenticated', () => {
     const firstStar = stars.first();
     await expect(firstStar).toBeVisible();
 
-    const interactiveStars = ratingSection.getByRole('button', { name: /оценить на [1-5] из 5/i });
-    await expect(interactiveStars.first()).toBeVisible();
-    const interactiveCount = await interactiveStars.count();
+    const interactiveCount = await waitForInteractiveStars(ratingSection, 15_000);
     expect(interactiveCount).toBeGreaterThanOrEqual(5);
 
     test.info().annotations.push({
@@ -576,35 +598,41 @@ test.describe('Travel Rating - API Integration', () => {
       return route.continue();
     });
 
-    // Мокаем mutation для изменения оценки (в зависимости от реализации это может быть POST/PATCH/PUT)
-    await page.route('**/api/travels/rating/**', async (route) => {
-      const method = route.request().method();
-      if (method === 'POST' || method === 'PATCH' || method === 'PUT') {
-        mutationCallCount++;
-        try {
-          const body = route.request().postDataJSON();
-          lastPostedRating = body?.rating ?? null;
-        } catch {
-          // ignore
-        }
+    // Мокаем mutation для изменения оценки (в зависимости от реализации это может быть POST/PATCH/PUT).
+    // Эндпоинт может быть как `/api/travels/:id/rating/`, так и `/api/travels/:id/rating/users/...`,
+    // поэтому матчим на уровне `/api/travels/**` и фильтруем по URL.
+    await page.route('**/api/travels/**', async (route) => {
+      const req = route.request();
+      const url = req.url();
+      const method = req.method();
+      const isRatingMutation =
+        (method === 'POST' || method === 'PATCH' || method === 'PUT') &&
+        /\/api\/travels\/.*rating\/?/i.test(url);
+      if (!isRatingMutation) return route.continue();
 
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            rating: 4.2,
-            rating_count: 5,
-            user_rating: lastPostedRating ?? 5,
-          }),
-        });
+      mutationCallCount++;
+      try {
+        const body = req.postDataJSON();
+        lastPostedRating = body?.rating ?? null;
+      } catch {
+        // ignore
       }
-      return route.continue();
+
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          rating: 4.2,
+          rating_count: 5,
+          user_rating: lastPostedRating ?? 5,
+        }),
+      });
     });
 
     await assertTravelDetailsOpened(page);
     await waitForAuthenticatedUser(page);
     const ratingSection = await getVisibleRatingSection(page);
-    await page.waitForTimeout(500);
+    await waitForInteractiveStars(ratingSection, 15_000);
 
     // Проверяем что отображается текущая оценка
     const textBefore = (await ratingSection.textContent()) || '';
@@ -614,22 +642,31 @@ test.describe('Travel Rating - API Integration', () => {
     const targetRating = currentRating === 5 ? 4 : 5;
 
     // Кликаем на звезду с другой оценкой, чтобы гарантированно инициировать изменение
-    const targetStar = ratingSection
-      .getByRole('button', { name: new RegExp(`оценить на ${targetRating} из 5`, 'i') })
-      .first();
-    await expect(targetStar).toBeVisible();
-    const ratingMutationRequest = page
-      .waitForRequest(
-        (req) =>
-          (req.method() === 'POST' || req.method() === 'PATCH' || req.method() === 'PUT') &&
-          req.url().includes('/api/travels/rating/'),
-        { timeout: 10_000 }
-      )
-      .catch(() => null);
-    await targetStar.click({ force: true });
-    const mutationRequest = await ratingMutationRequest;
-    expect(mutationRequest, 'Rating update request was not sent').not.toBeNull();
-    await page.waitForTimeout(500);
+    const targetStarLabel = new RegExp(`оценить на\\s*${targetRating}\\s*из\\s*5`, 'i');
+    // Иногда звёзды перерисовываются в момент клика (optimistic update) и элемент успевает "отцепиться" от DOM.
+    // Делаем несколько попыток клика, каждый раз заново находя элемент по data-testid.
+    let lastClickError: unknown = null;
+    const beforeMutationCount = mutationCallCount;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const targetStar = ratingSection.getByRole('button', { name: targetStarLabel }).first();
+      await expect(targetStar).toBeVisible();
+      await expect(targetStar).toBeEnabled().catch(() => null);
+      try {
+        await targetStar.click({ timeout: 10_000 });
+        lastClickError = null;
+        break;
+      } catch (err) {
+        lastClickError = err;
+        await page.waitForTimeout(250);
+      }
+    }
+    if (lastClickError) throw lastClickError;
+    await expect
+      .poll(() => mutationCallCount, { timeout: 10_000 })
+      .toBeGreaterThan(beforeMutationCount);
+    await expect
+      .poll(() => lastPostedRating, { timeout: 10_000 })
+      .toBe(targetRating);
 
     test.info().annotations.push({
       type: 'note',

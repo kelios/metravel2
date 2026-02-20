@@ -44,7 +44,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     },
     cardHomeFeatured: {
       borderWidth: 1,
-      borderColor: colors.primaryAlpha20,
+      borderColor: colors.primaryAlpha30,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.medium,

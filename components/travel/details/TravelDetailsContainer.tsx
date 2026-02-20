@@ -264,12 +264,12 @@ export default function TravelDetailsContainer() {
   // the overwrite and re-applies the correct value. We also patch og:title and
   // other critical meta tags directly because react-helmet-async can lose the
   // race on initial page loads with async data.
-  useEffect(() => {
-    if (!readyTitle || readyTitle === 'MeTravel') return undefined;
-    navigation.setOptions({ title: readyTitle });
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
+	  useEffect(() => {
+	    if (!readyTitle || readyTitle === 'MeTravel') return undefined;
+	    navigation.setOptions({ title: readyTitle });
+	    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 
-    const patchMeta = (sel: string, attr: string, val: string) => {
+	    const patchMeta = (sel: string, attr: string, val: string) => {
       const all = document.querySelectorAll(sel);
       // Remove duplicates — keep only the first, update it
       for (let i = 1; i < all.length; i++) all[i].remove();
@@ -282,22 +282,38 @@ export default function TravelDetailsContainer() {
         el.setAttribute('data-rh', 'true');
         document.head.appendChild(el);
       }
-      if (el.getAttribute(attr) !== val) el.setAttribute(attr, val);
-    };
-    const applyAll = () => {
-      document.title = readyTitle;
-      patchMeta('meta[property="og:title"]', 'content', readyTitle);
-      patchMeta('meta[name="twitter:title"]', 'content', readyTitle);
-      if (readyDesc) {
+	      if (el.getAttribute(attr) !== val) el.setAttribute(attr, val);
+	    };
+	    const patchCanonical = (href: string) => {
+	      const sel = 'link[rel="canonical"]';
+	      const all = document.querySelectorAll(sel);
+	      for (let i = 1; i < all.length; i++) all[i].remove();
+	      let el = all[0] as HTMLLinkElement | undefined;
+	      if (!el) {
+	        el = document.createElement('link');
+	        el.setAttribute('rel', 'canonical');
+	        el.setAttribute('data-rh', 'true');
+	        document.head.appendChild(el);
+	      }
+	      if (el.getAttribute('href') !== href) el.setAttribute('href', href);
+	    };
+	    const applyAll = () => {
+	      document.title = readyTitle;
+	      patchMeta('meta[property="og:title"]', 'content', readyTitle);
+	      patchMeta('meta[name="twitter:title"]', 'content', readyTitle);
+	      if (readyDesc) {
         patchMeta('meta[name="description"]', 'content', readyDesc);
         patchMeta('meta[property="og:description"]', 'content', readyDesc);
         patchMeta('meta[name="twitter:description"]', 'content', readyDesc);
       }
-      if (readyImage) {
-        patchMeta('meta[property="og:image"]', 'content', readyImage);
-        patchMeta('meta[name="twitter:image"]', 'content', readyImage);
-      }
-    };
+	      if (readyImage) {
+	        patchMeta('meta[property="og:image"]', 'content', readyImage);
+	        patchMeta('meta[name="twitter:image"]', 'content', readyImage);
+	      }
+	      if (canonicalUrl) {
+	        patchCanonical(canonicalUrl);
+	      }
+	    };
 
     // Apply after a short delay to let Helmet commit its initial tags,
     // then apply again after a longer delay to catch late overwrites.
@@ -323,7 +339,7 @@ export default function TravelDetailsContainer() {
       clearTimeout(t3);
       titleObs?.disconnect();
     };
-  }, [navigation, readyTitle, readyDesc, readyImage]);
+	  }, [navigation, readyTitle, readyDesc, readyImage, canonicalUrl]);
 
   const forceDeferMount = !!forceOpenKey;
 

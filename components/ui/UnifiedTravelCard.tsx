@@ -146,13 +146,13 @@ function UnifiedTravelCard({
           ...Platform.select({
             web: {
               borderColor: colors.primary,
-              boxShadow: `${DESIGN_TOKENS.shadows.light}, 0 0 0 3px ${colors.primaryAlpha20}`,
+              boxShadow: `${DESIGN_TOKENS.shadows.light}, 0 0 0 3px ${colors.primaryAlpha30}`,
             } as any,
           }),
         },
         containerFeatured: {
           borderWidth: 1,
-          borderColor: colors.primaryAlpha20,
+          borderColor: colors.primaryAlpha30,
           ...Platform.select({
             web: {
               boxShadow: DESIGN_TOKENS.shadows.medium,

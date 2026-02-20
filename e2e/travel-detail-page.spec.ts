@@ -413,8 +413,8 @@ test.describe('Travel Details - Mobile Responsiveness', () => {
  * TC-TRAVEL-DETAIL-022: SEO метатеги детальной страницы (P1)
  */
 test.describe('Travel Details - SEO', () => {
-  test('TC-022: SEO метатеги присутствуют и корректны', async ({ page }) => {
-    if (!(await goToDetails(page))) return;
+	  test('TC-022: SEO метатеги присутствуют и корректны', async ({ page }) => {
+	    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие title
     const title = await page.title();
@@ -429,19 +429,18 @@ test.describe('Travel Details - SEO', () => {
       .getAttribute('content');
     expect(description).toBeTruthy();
 
-    // Проверяем наличие canonical URL
-    const canonical = await page
-      .locator('link[rel="canonical"]')
-      .getAttribute('href')
-      .catch(() => null);
+	    // Проверяем наличие canonical URL
+	    const canonicalLocator = page.locator('link[rel="canonical"]').first();
+	    await expect
+	      .poll(async () => {
+	        const href = await canonicalLocator.getAttribute('href').catch(() => null);
+	        return href || '';
+	      }, { timeout: 10_000 })
+	      .toContain('/travels/');
 
-    if (canonical) {
-      expect(canonical).toContain('/travels/');
-    }
-
-    // Проверяем наличие Open Graph метатегов
-    const ogTitle = await page
-      .locator('meta[property="og:title"]')
+	    // Проверяем наличие Open Graph метатегов
+	    const ogTitle = await page
+	      .locator('meta[property="og:title"]')
       .getAttribute('content')
       .catch(() => null);
 

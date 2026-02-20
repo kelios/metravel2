@@ -313,8 +313,25 @@ function ListTravelBase({
     const route = useRoute();
     const pathname = usePathname();
 
-    const params = useLocalSearchParams<{ user_id?: string }>();
+    const params = useLocalSearchParams<{
+      user_id?: string;
+      categories?: string;
+      over_nights_stay?: string;
+      companions?: string;
+      complexity?: string;
+      month?: string;
+    }>();
     const user_id = params.user_id;
+
+    const initialFilter = useMemo(() => {
+      const f: Record<string, any> = {};
+      if (params.categories) f.categories = params.categories.split(',').map(Number).filter(Boolean);
+      if (params.over_nights_stay) f.over_nights_stay = params.over_nights_stay.split(',').map(Number).filter(Boolean);
+      if (params.companions) f.companions = params.companions.split(',').map(Number).filter(Boolean);
+      if (params.complexity) f.complexity = params.complexity.split(',').map(Number).filter(Boolean);
+      if (params.month) f.month = params.month.split(',').map(Number).filter(Boolean);
+      return Object.keys(f).length > 0 ? f : undefined;
+    }, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";
@@ -530,6 +547,7 @@ function ListTravelBase({
         isTravelBy,
         userId,
         user_id,
+        initialFilter,
     });
 
     const baseQueryEnabled = useMemo(
