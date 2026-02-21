@@ -107,7 +107,7 @@ export function getImageOptimizationParams(options: {
   width: number;
   format: 'webp' | 'jpg';
   quality: number;
-  fit: 'contain' | 'cover';
+  fit: 'contain';
 } {
   const { isMobile, isHighDPR, is3G } = options;
 

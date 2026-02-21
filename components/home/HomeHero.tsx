@@ -53,21 +53,27 @@ const BOOK_IMAGES = [
     href: 'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele',
   },
   {
-    source: require('../../assets/images/cover_sorapiso.jpg'),
+    source: {
+      uri: 'https://metravel.by/gallery/540/gallery/79641dcc63dc476bb89dd66a9faa8527.JPG',
+    },
     alt: 'Озеро Сорапис — Доломиты',
     title: 'Озеро Сорапис',
     subtitle: 'Поход по Доломитам • Озеро • Италия',
     href: 'https://metravel.by/travels/ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
   },
   {
-    source: require('../../assets/images/cover_trecime.jpg'),
+    source: {
+      uri: 'https://metravel.by/travel-image/536/conversions/b254498810ab43fcb7749c3a51ecf3ee.JPG',
+    },
     alt: 'Tre Cime di Lavaredo — Доломиты',
     title: 'Tre Cime di Lavaredo',
     subtitle: 'Круговой маршрут 10 км • Горы • Италия',
     href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy',
   },
   {
-    source: require('../../assets/images/cover_bled.jpg'),
+    source: {
+      uri: 'https://metravel.by/gallery/532/gallery/ce0f0221a2ac42e08bc274c0f059dfc9.JPG',
+    },
     alt: 'Озеро Блед — Словения',
     title: 'Озеро Блед',
     subtitle: 'Что посмотреть за 1 день • Озеро • Словения',
@@ -75,7 +81,7 @@ const BOOK_IMAGES = [
   },
   {
     source: {
-      uri: 'https://metravel.by/travel-image/4864/conversions/iIGMjveCXmzwjZASHQTnPvEog7WURBjDEjYX7D3N-webpTravelMainImage_400.webp',
+      uri: 'https://metravel.by/travel-image/362/conversions/28160874221349509d697c8016c48464.webp',
     },
     alt: 'Морское око в мае — Польша',
     title: 'Морское око в мае',
@@ -379,10 +385,12 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       zIndex: 3,
     },
     sliderDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: 'rgba(255,255,255,0.4)',
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.35)',
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -392,7 +400,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     sliderDotActive: {
       backgroundColor: colors.textOnPrimary,
-      width: 24,
+      borderColor: colors.textOnPrimary,
     },
     badge: {
       flexDirection: 'row',
@@ -717,7 +725,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 onPress={() => handleOpenArticles(currentSlide.href)}
                 style={styles.sliderContainer}
                 accessibilityRole="link"
-                accessibilityLabel={currentSlide.title}
+                accessibilityLabel={`${currentSlide.title} ${currentSlide.subtitle}`}
               >
                 {/* Slides */}
                 {BOOK_IMAGES.map((image, index) => (
@@ -816,7 +824,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                     (pressed || hovered) && styles.moodChipHover,
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Идея поездки ${card.title}`}
+                  accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
                 >
                   <View style={styles.moodChipIcon}>
                     <Feather name={card.icon as any} size={14} color={colors.primary} />

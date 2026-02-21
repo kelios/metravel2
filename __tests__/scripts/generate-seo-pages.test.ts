@@ -11,6 +11,8 @@ const {
   injectMeta,
   escapeAttr,
   stripHtml,
+  buildTravelSeoDescription,
+  pickTravelSeoImage,
 } = require('@/scripts/generate-seo-pages');
 
 // ---------------------------------------------------------------------------
@@ -344,6 +346,56 @@ describe('stripHtml', () => {
     expect(stripHtml('')).toBe('');
     expect(stripHtml(null as any)).toBe('');
     expect(stripHtml(undefined as any)).toBe('');
+  });
+});
+
+describe('travel SEO fallback helpers', () => {
+  it('buildTravelSeoDescription prefers detailed description when available', () => {
+    const result = buildTravelSeoDescription(
+      {
+        name: 'Испания',
+        countryName: 'Испания',
+      },
+      '<p>Подробный гид по маршруту в Андалусии</p>'
+    );
+
+    expect(result).toBe('Подробный гид по маршруту в Андалусии');
+  });
+
+  it('buildTravelSeoDescription uses contextual fallback from travel name/country instead of generic text', () => {
+    const result = buildTravelSeoDescription(
+      {
+        name: 'Ронда и Малага',
+        countryName: 'Испания',
+      },
+      ''
+    );
+
+    expect(result).toContain('Ронда и Малага');
+    expect(result).toContain('Испания');
+    expect(result).not.toBe('Найди место для путешествия и поделись своим опытом.');
+  });
+
+  it('pickTravelSeoImage upgrades thumb_200 URL to detail_hd', () => {
+    const result = pickTravelSeoImage(
+      {
+        travel_image_thumb_url: 'https://metravel.by/travel-image/679/conversions/hash-thumb_200.jpg',
+      },
+      { gallery: [] }
+    );
+
+    expect(result).toBe('https://metravel.by/travel-image/679/conversions/hash-detail_hd.jpg');
+  });
+
+  it('pickTravelSeoImage falls back to site OG image when only media endpoint root is provided', () => {
+    const result = pickTravelSeoImage(
+      {
+        travel_image_thumb_url: '/travel-image/',
+      },
+      { gallery: [] }
+    );
+
+    expect(result).toBe('https://metravel.by/assets/icons/logo_yellow_512x512.png');
   });
 });
 

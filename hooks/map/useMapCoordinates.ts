@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import * as Location from 'expo-location';
+import { Platform } from 'react-native';
 import { logError, logMessage } from '@/utils/logger';
 
 export interface Coordinates {
@@ -27,7 +28,7 @@ function isValidCoordinate(lat: number, lng: number): boolean {
 export function useMapCoordinates() {
   // Initialize with default coordinates to prevent NaN errors
   const [coordinates, setCoordinates] = useState<Coordinates>(DEFAULT_COORDINATES);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(Platform.OS !== 'web');
   const [error, setError] = useState<string | null>(null);
 
   const requestLocation = useCallback(async (signal?: AbortSignal) => {
@@ -81,6 +82,11 @@ export function useMapCoordinates() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      setIsLoading(false);
+      return;
+    }
+
     const abortController = new AbortController();
     requestLocation(abortController.signal);
 

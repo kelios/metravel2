@@ -254,12 +254,12 @@ export class MapPageGenerator extends BasePageGenerator {
       <div style="
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
+        gap: 6px;
+        margin-top: 8px;
       ">
-        ${locations.map((loc, index) => {
+        ${locations.slice(0, 6).map((loc, index) => {
           const isFirst = index === 0;
-          const isLast = index === locations.length - 1;
+          const isLast = index === locations.length - 1 && locations.length <= 6;
           const bgColor = isFirst ? '#dcfce7' : isLast ? '#fee2e2' : colors.surfaceAlt;
           const textColor = isFirst ? '#16a34a' : isLast ? '#dc2626' : colors.text;
           const qr = qrCodes[index] || '';
@@ -291,13 +291,25 @@ export class MapPageGenerator extends BasePageGenerator {
               ">${index + 1}</span>
               <span style="max-width: 240px; word-break: break-word;">${this.escapeHtml(loc.name)}</span>
               ${qr ? `
-                <a href="${this.escapeHtml(this.buildGoogleMapsUrl(loc))}" style="display: inline-flex; margin-left: 6px;" target="_blank" rel="noreferrer">
-                  <img src="${this.escapeHtml(qr)}" alt="QR" style="width: 22mm; height: 22mm; border-radius: 6px; border: 1px solid ${colors.border}; background: #fff;" />
+                <a href="${this.escapeHtml(this.buildGoogleMapsUrl(loc))}" style="display: inline-flex; margin-left: 4px;" target="_blank" rel="noreferrer">
+                  <img src="${this.escapeHtml(qr)}" alt="QR" style="width: 14mm; height: 14mm; border-radius: 4px; border: 1px solid ${colors.border}; background: #fff;" />
                 </a>
               ` : ''}
             </div>
           `;
         }).join('')}
+        ${locations.length > 6 ? `
+          <div style="
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: ${colors.surfaceAlt};
+            border-radius: 8px;
+            font-size: ${typography.body.size};
+            color: ${colors.textMuted};
+            font-family: ${typography.bodyFont};
+          ">+${locations.length - 6} точек</div>
+        ` : ''}
       </div>
     `;
   }

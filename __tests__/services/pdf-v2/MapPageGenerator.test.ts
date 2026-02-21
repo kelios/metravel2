@@ -243,7 +243,7 @@ describe('MapPageGenerator', () => {
       expect(html).toBeTruthy();
     });
 
-    it('должен обработать большое количество локаций', async () => {
+    it('должен обработать большое количество локаций (показывает первые 6 + индикатор)', async () => {
       mockContext.metadata = {
         locations: Array.from({ length: 50 }, (_, i) => ({
           name: `Место ${i + 1}`,
@@ -254,7 +254,9 @@ describe('MapPageGenerator', () => {
 
       const html = await generator.generate(mockContext);
       expect(html).toContain('Место 1');
-      expect(html).toContain('Место 50');
+      expect(html).toContain('Место 6');
+      expect(html).not.toContain('Место 7');
+      expect(html).toContain('+44 точек');
     }, 15000);
 
     it('должен обработать невалидные координаты', async () => {

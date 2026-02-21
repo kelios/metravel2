@@ -608,7 +608,7 @@ const unifiedCard = (
     title={title}
     imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
     onPress={handlePress}
-    mediaFit={visualVariant === 'home-featured' ? 'cover' : 'contain'}
+    mediaFit="contain"
     visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
     heroTitleOverlay={true}
     testID={cardTestId}

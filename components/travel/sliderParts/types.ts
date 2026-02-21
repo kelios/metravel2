@@ -12,7 +12,7 @@ export interface SliderProps {
   showDots?: boolean;
   hideArrowsOnMobile?: boolean;
   aspectRatio?: number;
-  fit?: 'contain' | 'cover';
+  fit?: 'contain';
   fullBleed?: boolean;
   autoPlay?: boolean;
   autoPlayInterval?: number;

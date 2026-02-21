@@ -92,7 +92,7 @@ export function optimizeImageUrl(
           ? Math.min(window.devicePixelRatio || 1, 2)
           : window.devicePixelRatio || 1
         : 1,
-    fit = 'cover',
+    fit = 'contain',
     blur,
   } = options;
 
@@ -577,7 +577,7 @@ export function buildLqipUrl(
       width: options.width ?? 24,
       quality: options.quality ?? 35,
       format: 'jpg',
-      fit: 'cover',
+      fit: 'contain',
       blur: options.blur ?? 30,
     }) || baseUrl
   );

@@ -84,6 +84,75 @@ function stripHtml(html, maxLength = 160) {
   return plain.slice(0, maxLength) || '';
 }
 
+function toAbsoluteUrl(input) {
+  const value = String(input || '').trim();
+  if (!value) return '';
+  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  if (value.startsWith('/')) return `${SITE_URL}${value}`;
+  return value;
+}
+
+function isBareMediaEndpointUrl(input) {
+  const value = String(input || '').trim();
+  if (!value) return true;
+
+  let pathname = value;
+  try {
+    pathname = new URL(value).pathname || value;
+  } catch {
+    // ignore parse error for relative values
+  }
+
+  const cleanPath = pathname.split('?')[0].split('#')[0];
+  return /(?:^|\/)(travel-image|travel-description-image|address-image|gallery|uploads|media)\/?$/i.test(cleanPath);
+}
+
+function upgradeThumbToDetailUrl(input) {
+  const value = String(input || '').trim();
+  if (!value) return '';
+  return value.replace(/-thumb_200(?=\.[a-z0-9]+(?:$|[?#]))/i, '-detail_hd');
+}
+
+function buildTravelSeoDescription(travel, detailDescription) {
+  const primary = stripHtml(detailDescription || travel?.description || '', 160);
+  if (primary) return primary;
+
+  const travelName = String(travel?.name || '').trim();
+  const countryName = String(travel?.countryName || '').trim();
+  const fallbackParts = [travelName, countryName].filter(Boolean);
+  if (fallbackParts.length > 0) {
+    const contextual = `${fallbackParts.join(' — ')}. Маршрут, советы и впечатления путешественников в MeTravel.`;
+    return contextual.slice(0, 160);
+  }
+
+  return FALLBACK_DESC;
+}
+
+function pickTravelSeoImage(travel, detail) {
+  const galleryFirst = detail?.gallery?.[0];
+  const galleryUrl = galleryFirst
+    ? (typeof galleryFirst === 'string' ? galleryFirst : galleryFirst.url)
+    : '';
+  const galleryAbsolute = toAbsoluteUrl(galleryUrl);
+  if (galleryAbsolute && !isBareMediaEndpointUrl(galleryAbsolute)) return galleryAbsolute;
+
+  const detailHd = toAbsoluteUrl(travel?.travel_image_detail_hd_url || travel?.travelImageDetailHdUrl || '');
+  if (detailHd && !isBareMediaEndpointUrl(detailHd)) return detailHd;
+
+  const thumb = String(travel?.travel_image_thumb_url || travel?.travelImageThumbUrl || '').trim();
+  const upgradedThumb = toAbsoluteUrl(upgradeThumbToDetailUrl(thumb));
+  if (upgradedThumb && !upgradedThumb.includes('thumb_200') && !isBareMediaEndpointUrl(upgradedThumb)) return upgradedThumb;
+
+  const absoluteThumb = toAbsoluteUrl(thumb);
+  if (absoluteThumb && !absoluteThumb.includes('thumb_200') && !isBareMediaEndpointUrl(absoluteThumb)) return absoluteThumb;
+
+  const smallThumb = String(travel?.travel_image_thumb_small_url || travel?.travelImageThumbSmallUrl || '').trim();
+  const upgradedSmall = toAbsoluteUrl(upgradeThumbToDetailUrl(smallThumb));
+  if (upgradedSmall && !upgradedSmall.includes('thumb_200') && !isBareMediaEndpointUrl(upgradedSmall)) return upgradedSmall;
+
+  return OG_IMAGE;
+}
+
 /** Escape a string for safe insertion into HTML attribute values. */
 function escapeAttr(str) {
   return String(str || '')
@@ -255,6 +324,18 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   }
 
   return html;
+}
+
+function injectBreadcrumbJsonLd(baseHtml, breadcrumb) {
+  if (!breadcrumb || !Array.isArray(breadcrumb.itemListElement) || breadcrumb.itemListElement.length === 0) {
+    return baseHtml;
+  }
+
+  const breadcrumbScriptRe = /<script[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?"@type"\s*:\s*"BreadcrumbList"[\s\S]*?<\/script>\n?/gi;
+  const cleanedHtml = baseHtml.replace(breadcrumbScriptRe, '');
+  const payload = JSON.stringify(breadcrumb).replace(/<\/script/gi, '<\\/script');
+  const scriptTag = `<script type="application/ld+json">${payload}</script>`;
+  return cleanedHtml.replace('</head>', `${scriptTag}\n</head>`);
 }
 
 /** Write file, creating directories as needed. */
@@ -476,30 +557,14 @@ async function main() {
       const name = travel.name || '';
       const title = name ? `${name} | MeTravel` : 'MeTravel';
 
-      // Use description from detail endpoint (list endpoint doesn't include it)
+      // Use detail description when available, otherwise build contextual fallback
+      // from list payload fields to avoid generic, duplicate snippets.
       const detail = detailMap.get(id) || { description: '', gallery: [] };
-      const rawDesc = detail.description || travel.description || '';
-      const description = stripHtml(rawDesc, 160) || FALLBACK_DESC;
+      const description = buildTravelSeoDescription(travel, detail.description);
       const canonical = `${SITE_URL}/travels/${routeKey}`;
 
-      // Prefer HD gallery image (≥1200px) for og:image; fall back to thumb, then site OG
-      let image = OG_IMAGE;
-      const galleryFirst = detail.gallery[0];
-      const galleryUrl = galleryFirst
-        ? (typeof galleryFirst === 'string' ? galleryFirst : galleryFirst.url)
-        : '';
-      if (galleryUrl) {
-        image = galleryUrl.startsWith('http') ? galleryUrl
-              : galleryUrl.startsWith('/') ? `${SITE_URL}${galleryUrl}`
-              : galleryUrl;
-      } else {
-        const thumbUrl = travel.travel_image_thumb_url || travel.travelImageThumbUrl || '';
-        if (thumbUrl) {
-          image = thumbUrl.startsWith('http') ? thumbUrl
-                : thumbUrl.startsWith('/') ? `${SITE_URL}${thumbUrl}`
-                : thumbUrl;
-        }
-      }
+      // Prefer HD gallery/detail variants and avoid thumb_200 for social previews.
+      const image = pickTravelSeoImage(travel, detail);
 
       const html = injectMeta(travelBaseHtml, {
         title,
@@ -509,17 +574,42 @@ async function main() {
         ogType: 'article',
       });
 
+      const htmlWithBreadcrumb = injectBreadcrumbJsonLd(html, {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Главная',
+            item: `${SITE_URL}/`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Путешествия',
+            item: `${SITE_URL}/travelsby`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: name || routeKey,
+            item: canonical,
+          },
+        ],
+      });
+
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
       // it conflicts with creating `${routeKey}/index.html` on POSIX filesystems.
-      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), html);
-      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), html);
+      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), htmlWithBreadcrumb);
+      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), htmlWithBreadcrumb);
 
       // Also write to /travels/{id} when slug exists (id-based URLs still used by app)
       if (slug && id) {
         const idStr = String(id);
-        writeFileSafe(path.join(DIST_DIR, 'travels', `${idStr}.html`), html);
-        writeFileSafe(path.join(DIST_DIR, 'travels', idStr, 'index.html'), html);
+        writeFileSafe(path.join(DIST_DIR, 'travels', `${idStr}.html`), htmlWithBreadcrumb);
+        writeFileSafe(path.join(DIST_DIR, 'travels', idStr, 'index.html'), htmlWithBreadcrumb);
       }
 
       generated++;
@@ -625,7 +715,18 @@ async function main() {
 // Exports for testing (when required as a module, main() is NOT executed)
 // ---------------------------------------------------------------------------
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { replaceOrInsert, injectMeta, escapeAttr, stripHtml };
+  module.exports = {
+    replaceOrInsert,
+    injectMeta,
+    escapeAttr,
+    stripHtml,
+    toAbsoluteUrl,
+    isBareMediaEndpointUrl,
+    upgradeThumbToDetailUrl,
+    buildTravelSeoDescription,
+    pickTravelSeoImage,
+    injectBreadcrumbJsonLd,
+  };
 }
 
 if (require.main === module) {

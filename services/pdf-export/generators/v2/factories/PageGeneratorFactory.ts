@@ -15,7 +15,7 @@ import type { ImageProcessor } from '../processors/ImageProcessor';
  * Типы страниц
  */
 export enum PageType {
-  COVER = 'cover',
+  COVER = 'contain',
   TOC = 'toc',
   TRAVEL = 'travel',
   GALLERY = 'gallery',

@@ -42,7 +42,7 @@ export type BlockType =
   | 'divider'
   | 'spacer'
   | 'background-block'
-  | 'cover'
+  | 'contain'
   | 'toc'
   | 'author-block'
   | 'recommendations-block';

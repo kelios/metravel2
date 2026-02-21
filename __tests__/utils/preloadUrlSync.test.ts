@@ -30,7 +30,7 @@ describe('Preload URL synchronization', () => {
       widths: [640, 860],
       quality: 65,
       format: 'auto',
-      fit: 'cover',
+      fit: 'contain',
     });
 
     // In Jest we may intentionally skip CDN transforms for unknown hosts.
@@ -44,7 +44,7 @@ describe('Preload URL synchronization', () => {
       width: 860,
       quality: 65,
       format: 'webp',
-      fit: 'cover',
+      fit: 'contain',
     });
 
     // In Jest we may intentionally skip CDN transforms for unknown hosts.
@@ -67,7 +67,7 @@ describe('Preload URL synchronization', () => {
       widths: [640, 860],
       quality,
       format: 'auto',
-      fit: 'cover',
+      fit: 'contain',
     });
 
     // In Jest we may intentionally skip CDN transforms for unknown hosts.
@@ -91,7 +91,7 @@ describe('Preload URL synchronization', () => {
       widths: [320, 400],
       quality,
       format: 'auto',
-      fit: 'cover',
+      fit: 'contain',
     });
 
     // In Jest we may intentionally skip CDN transforms for unknown hosts.
