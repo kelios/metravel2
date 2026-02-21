@@ -52,12 +52,12 @@ describe('HomeHero Component', () => {
   describe('Rendering', () => {
     it('should render title correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Идеи для поездок/)).toBeTruthy();
+      expect(getByText(/Куда поехать/)).toBeTruthy();
     });
 
     it('should render subtitle correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Выбирай маршруты по расстоянию/)).toBeTruthy();
+      expect(getByText(/Открывайте готовые маршруты/)).toBeTruthy();
     });
 
     it('should render mood cards correctly', () => {
@@ -167,7 +167,7 @@ describe('HomeHero Component', () => {
   describe('Responsive Design', () => {
     it('should render on different screen sizes', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Идеи для поездок/)).toBeTruthy();
+      expect(getByText(/Куда поехать/)).toBeTruthy();
     });
   });
 
