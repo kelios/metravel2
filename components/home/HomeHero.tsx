@@ -22,38 +22,40 @@ const BOOK_IMAGES = [
     source: require('../../assets/images/pdf.webp'),
     alt: 'Тропа ведьм — Германия',
     title: 'Тропа ведьм',
-    subtitle: 'Пешком через туман и легенды Гарца • Германия',
+    subtitle: 'Хайкинг • Горный маршрут • Германия',
     href: 'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele',
   },
   {
     source: require('../../assets/images/cover_sorapiso.jpg'),
     alt: 'Озеро Сорапис — Доломиты',
     title: 'Озеро Сорапис',
-    subtitle: 'Поход по Доломитам • Италия',
+    subtitle: 'Поход по Доломитам • Озеро • Италия',
     href: 'https://metravel.by/travels/ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
   },
   {
     source: require('../../assets/images/cover_trecime.jpg'),
     alt: 'Tre Cime di Lavaredo — Доломиты',
     title: 'Tre Cime di Lavaredo',
-    subtitle: 'Круговой маршрут 10 км • Италия',
+    subtitle: 'Круговой маршрут 10 км • Горы • Италия',
     href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy',
   },
   {
     source: require('../../assets/images/cover_bled.jpg'),
     alt: 'Озеро Блед — Словения',
     title: 'Озеро Блед',
-    subtitle: 'Что посмотреть за 1 день • Словения',
+    subtitle: 'Что посмотреть за 1 день • Озеро • Словения',
     href: 'https://metravel.by/travels/vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
   },
 ];
+
+export const BOOK_IMAGES_FOR_TEST = BOOK_IMAGES;
 
 const MOOD_CARDS = [
   {
     title: 'У озера за выходные',
     meta: 'Природа • 2 дня • до 180 км',
     icon: 'sun',
-    filterParams: 'categories=2,21&over_nights_stay=1',
+    filterParams: 'categories=2,21&over_nights_stay=1&categoryTravelAddress=84',
   },
   {
     title: 'Город и кофе',
@@ -68,6 +70,8 @@ const MOOD_CARDS = [
     filterParams: 'categories=22,2',
   },
 ] as const;
+
+export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
 
 const FEATURE_PILLS = [
   { icon: 'map-pin', label: 'Готовые точки на карте' },
@@ -428,7 +432,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     moodPanel: {
       position: 'absolute',
-      left: -64,
+      left: -32,
       top: 32,
       width: 220,
       gap: 12,

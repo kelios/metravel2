@@ -229,7 +229,7 @@ function HomeFavoritesHistorySection() {
   const { isAuthenticated } = useAuth();
   const { favorites, viewHistory, ensureServerData } = useFavorites() as any;
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, DESIGN_TOKENS), [colors]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -336,7 +336,7 @@ function HomeFavoritesHistorySection() {
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+const createStyles = (colors: ReturnType<typeof useThemedColors>, tokens: typeof DESIGN_TOKENS) =>
   StyleSheet.create({
     band: {
       paddingVertical: 56,
@@ -380,7 +380,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: 6,
       paddingHorizontal: 16,
       paddingVertical: 10,
-      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderRadius: tokens.radii.pill,
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.borderLight,
@@ -396,7 +396,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       ...Platform.select({
         web: {
           transform: 'translateY(-2px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
+          boxShadow: tokens.shadows.medium,
         },
       }),
     },

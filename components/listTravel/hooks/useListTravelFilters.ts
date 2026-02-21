@@ -3,7 +3,7 @@
  * Вынесена логика фильтров для переиспользования и тестирования
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { FilterState, FilterOptions } from '../utils/listTravelTypes';
 import { INITIAL_FILTER, BELARUS_ID } from '../utils/listTravelConstants';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
@@ -85,6 +85,14 @@ export function useListTravelFilters({
   initialFilter,
 }: UseListTravelFiltersProps): UseListTravelFiltersReturn {
   const [filter, setFilter] = useState<FilterState>(initialFilter ?? INITIAL_FILTER);
+
+  // On web, search params can be empty on the first render during hydration/navigation.
+  // Apply `initialFilter` once it becomes available, but only if the user hasn't changed filters yet.
+  useEffect(() => {
+    if (!initialFilter) return;
+    if (Object.keys(filter).length > 0) return;
+    setFilter(initialFilter);
+  }, [initialFilter, filter]);
 
   const filterForQuery = useMemo(() => {
     const textualCategories = extractCategoryNames(filter.categories);

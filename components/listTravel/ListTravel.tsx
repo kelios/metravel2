@@ -64,8 +64,48 @@ function ListTravel({
     const route = useRoute();
     const pathname = usePathname();
 
-    const params = useLocalSearchParams<{ user_id?: string }>();
+    const params = useLocalSearchParams<{
+      user_id?: string;
+      categories?: string | string[];
+      over_nights_stay?: string | string[];
+      over__nights__stay?: string | string[];
+      categoryTravelAddress?: string | string[];
+      category_travel_address?: string | string[];
+      category__travel__address?: string | string[];
+      companions?: string | string[];
+      complexity?: string | string[];
+      month?: string | string[];
+    }>();
     const user_id = params.user_id;
+
+    const normalizeParam = (value?: string | string[]) => {
+      if (Array.isArray(value)) return value.filter(Boolean).join(',');
+      return value;
+    };
+
+    const initialFilter = useMemo(() => {
+      const f: Record<string, any> = {};
+      const categories = normalizeParam(params.categories);
+      const companions = normalizeParam(params.companions);
+      const complexity = normalizeParam(params.complexity);
+      const month = normalizeParam(params.month);
+      const overNightsStay = normalizeParam(params.over_nights_stay ?? params.over__nights__stay);
+      const categoryTravelAddress = normalizeParam(
+        params.categoryTravelAddress
+          ?? params.category_travel_address
+          ?? params.category__travel__address,
+      );
+
+      if (categories) f.categories = categories.split(',').map(Number).filter(Boolean);
+      if (overNightsStay) f.over_nights_stay = overNightsStay.split(',').map(Number).filter(Boolean);
+      if (categoryTravelAddress) {
+        f.categoryTravelAddress = categoryTravelAddress.split(',').map(Number).filter(Boolean);
+      }
+      if (companions) f.companions = companions.split(',').map(Number).filter(Boolean);
+      if (complexity) f.complexity = complexity.split(',').map(Number).filter(Boolean);
+      if (month) f.month = month.split(',').map(Number).filter(Boolean);
+      return Object.keys(f).length > 0 ? f : undefined;
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";
@@ -283,6 +323,7 @@ function ListTravel({
         isTravelBy,
         userId,
         user_id,
+        initialFilter,
     });
 
 

@@ -384,6 +384,13 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                         accessibilityRole={group.multiSelect !== false ? 'checkbox' : 'radio'}
                         accessibilityLabel={option.name}
                         accessibilityState={{ checked: isSelected }}
+                        {...(Platform.OS === 'web'
+                          ? ({
+                              // React Native Web sometimes fails to reflect accessibilityState into aria-checked
+                              // for custom pressables; set it explicitly so assistive tech + Playwright can rely on it.
+                              'aria-checked': isSelected,
+                            } as any)
+                          : null)}
                       >
                         {group.multiSelect !== false ? (
                           <FilterCheckbox checked={isSelected} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />

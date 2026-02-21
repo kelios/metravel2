@@ -30,7 +30,8 @@ jest.mock('@/constants/designSystem', () => ({
       surface: '#fff',
       borderLight: '#eee',
     },
-    radii: { md: 8 },
+    radii: { md: 8, pill: 999 },
+    shadows: { medium: '0 4px 6px rgba(0,0,0,0.1)' },
     spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20 },
     typography: {
       sizes: { sm: 12, md: 14, lg: 16 },

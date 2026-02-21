@@ -60,6 +60,11 @@ describe('HomeHero Component', () => {
       expect(getByText(/Выбирай маршруты по расстоянию/)).toBeTruthy();
     });
 
+    it('should include object category in book image subtitle data', () => {
+      const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero');
+      expect(BOOK_IMAGES_FOR_TEST[1].subtitle).toBe('Поход по Доломитам • Озеро • Италия');
+    });
+
     it('should not show hint for unauthenticated users', () => {
       const { queryByText } = render(<HomeHero travelsCount={0} />);
       expect(queryByText(/Добавь первую поездку и сразу получишь основу/)).toBeNull();
@@ -237,17 +242,17 @@ describe('HomeHero Component', () => {
         // filterParams are tested via HomeInspirationSection integration; skip if not exported
         return;
       }
-      expect(MOOD_CARDS_FOR_TEST[0].filterParams).toBe('categories=2,21&over_nights_stay=1');
+      expect(MOOD_CARDS_FOR_TEST[0].filterParams).toBe('categories=2,21&over_nights_stay=1&categoryTravelAddress=84');
       expect(MOOD_CARDS_FOR_TEST[1].filterParams).toBe('categories=19,20');
       expect(MOOD_CARDS_FOR_TEST[2].filterParams).toBe('categories=22,2');
     });
 
     it('handleQuickFilterPress builds correct path with filterParams', () => {
       const push = jest.fn();
-      const filterParams = 'categories=2,21&over_nights_stay=1';
+      const filterParams = 'categories=2,21&over_nights_stay=1&categoryTravelAddress=84';
       const path = filterParams ? `/search?${filterParams}` : '/search';
       push(path);
-      expect(push).toHaveBeenCalledWith('/search?categories=2,21&over_nights_stay=1');
+      expect(push).toHaveBeenCalledWith('/search?categories=2,21&over_nights_stay=1&categoryTravelAddress=84');
     });
 
     it('handleQuickFilterPress falls back to /search when no filterParams', () => {
@@ -260,11 +265,12 @@ describe('HomeHero Component', () => {
   });
 
   describe('Book cover BOOK_IMAGES — data integrity', () => {
-    it('first image (Тропа ведьм) has no href and no title', () => {
+    it('first image (Тропа ведьм) has valid href/title/subtitle', () => {
       const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero');
       if (!BOOK_IMAGES_FOR_TEST) return;
-      expect(BOOK_IMAGES_FOR_TEST[0].href).toBeNull();
-      expect(BOOK_IMAGES_FOR_TEST[0].title).toBeNull();
+      expect(BOOK_IMAGES_FOR_TEST[0].href).toMatch(/^https:\/\/metravel\.by\/travels\//);
+      expect(BOOK_IMAGES_FOR_TEST[0].title).toBeTruthy();
+      expect(BOOK_IMAGES_FOR_TEST[0].subtitle).toBeTruthy();
     });
 
     it('remaining images have href pointing to metravel.by', () => {

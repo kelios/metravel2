@@ -134,11 +134,6 @@ function HomeInspirationSection({
     router.push('/search' as any);
   }, [title, router]);
 
-  const handleOpenArticles = useCallback(() => {
-    sendAnalyticsEvent('HomeClick_OpenSearch', { section: title });
-    router.push('/search' as any);
-  }, [title, router]);
-
   const sectionBadge = useMemo(() => {
     if (queryKey === 'home-travels-of-month') return { icon: 'zap', label: 'Идеи сезона' };
     if (queryKey === 'home-popular-travels') return { icon: 'trending-up', label: 'Выбор сообщества' };
@@ -146,7 +141,6 @@ function HomeInspirationSection({
   }, [queryKey]);
 
   const viewMoreLabel = isMobile ? 'Все маршруты' : 'Смотреть все маршруты';
-  const articlesLabel = isMobile ? 'Все маршруты' : 'Смотреть все маршруты';
   const emptyState = EMPTY_STATE_TEXT[queryKey] ?? {
     title: 'Пока здесь пусто',
     subtitle: 'Попробуйте открыть каталог маршрутов.',
@@ -165,7 +159,6 @@ function HomeInspirationSection({
       borderRadius: DESIGN_TOKENS.radii.xl,
       backgroundColor: colors.surface,
       padding: isMobile ? 16 : 28,
-      overflow: 'hidden',
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.medium,
@@ -197,6 +190,8 @@ function HomeInspirationSection({
       top: 0,
       height: 4,
       backgroundColor: colors.primaryAlpha50,
+      borderTopLeftRadius: DESIGN_TOKENS.radii.xl,
+      borderTopRightRadius: DESIGN_TOKENS.radii.xl,
     },
     header: {
       flexDirection: 'row',
@@ -218,7 +213,7 @@ function HomeInspirationSection({
     },
     headerActions: {
       flexDirection: isMobile ? 'column' : 'row',
-      alignItems: 'stretch',
+      alignItems: isMobile ? 'stretch' : 'center',
       gap: 12,
       flexShrink: 0,
     },
@@ -477,18 +472,6 @@ function HomeInspirationSection({
               hoverStyle={styles.viewMoreButtonHover}
               pressedStyle={styles.viewMoreButtonHover}
             />
-
-            <Button
-              label={articlesLabel}
-              onPress={handleOpenArticles}
-              accessibilityLabel={`Открыть каталог маршрутов для секции «${title}»`}
-              icon={<Feather name="compass" size={15} color={colors.primaryText} />}
-              variant="secondary"
-              style={[styles.articlesButton, isMobile && styles.viewMoreButtonMobile]}
-              labelStyle={styles.articlesButtonText}
-              hoverStyle={styles.articlesButtonHover}
-              pressedStyle={styles.articlesButtonHover}
-            />
           </View>
         </View>
 
@@ -509,16 +492,6 @@ function HomeInspirationSection({
               labelStyle={styles.viewMoreText}
               hoverStyle={styles.viewMoreButtonHover}
               pressedStyle={styles.viewMoreButtonHover}
-            />
-            <Button
-              label="Смотреть все маршруты"
-              onPress={handleOpenArticles}
-              variant="secondary"
-              icon={<Feather name="compass" size={15} color={colors.primaryText} />}
-              style={[styles.articlesButton, isMobile && styles.viewMoreButtonMobile]}
-              labelStyle={styles.articlesButtonText}
-              hoverStyle={styles.articlesButtonHover}
-              pressedStyle={styles.articlesButtonHover}
             />
           </View>
         ) : (

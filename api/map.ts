@@ -109,7 +109,7 @@ const normalizeTravelCoordsItem = (raw: any) => {
   );
 
   const travelImageThumbUrl = normalizeImageUrl(
-    t.travelImageThumbUrl ?? t.travel_image_thumb_url ?? t.image ?? t.thumb
+    t.travelImageThumbUrl ?? t.travel_image_thumb_url ?? t.imageUrl ?? t.image_url ?? t.image ?? t.thumb
   );
 
   const urlTravel = normalizeString(t.urlTravel ?? t.url_travel ?? t.url, '');
@@ -123,6 +123,7 @@ const normalizeTravelCoordsItem = (raw: any) => {
     lat,
     lng,
     travelImageThumbUrl,
+    imageUrl: travelImageThumbUrl,
     urlTravel,
     articleUrl,
   };

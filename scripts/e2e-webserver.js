@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 const { spawn } = require('node:child_process');
+const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const rootDir = path.join(__dirname, '..');
 if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
@@ -105,6 +107,31 @@ function sanitizedEnv(baseEnv) {
   return nextEnv;
 }
 
+function getGitBuildStamp(cwd) {
+  const result = {
+    head: null,
+    statusHash: null,
+  };
+
+  try {
+    const head = String(execSync('git rev-parse HEAD', { cwd, stdio: ['ignore', 'pipe', 'ignore'] }) || '')
+      .trim();
+    result.head = head || null;
+  } catch {
+    // ignore (no git)
+  }
+
+  try {
+    const status = String(execSync('git status --porcelain', { cwd, stdio: ['ignore', 'pipe', 'ignore'] }) || '');
+    const hash = crypto.createHash('sha1').update(status).digest('hex');
+    result.statusHash = hash;
+  } catch {
+    // ignore (no git)
+  }
+
+  return result;
+}
+
 async function main() {
   const buildTimeoutMs = Number(process.env.E2E_BUILD_TIMEOUT_MS || '540000'); // 9 minutes
   const e2eWebPort = Number(process.env.E2E_WEB_PORT || '8085');
@@ -121,6 +148,7 @@ async function main() {
       EXPO_PUBLIC_IS_LOCAL_API: 'false',
       EXPO_PUBLIC_API_URL: e2eApiBase,
     },
+    git: getGitBuildStamp(rootDir),
     node: process.version,
     createdAt: new Date().toISOString(),
   };
@@ -134,7 +162,14 @@ async function main() {
     existingMeta.expoPublic &&
     existingMeta.expoPublic.EXPO_PUBLIC_E2E === buildMeta.expoPublic.EXPO_PUBLIC_E2E &&
     existingMeta.expoPublic.EXPO_PUBLIC_IS_LOCAL_API === buildMeta.expoPublic.EXPO_PUBLIC_IS_LOCAL_API &&
-    existingMeta.expoPublic.EXPO_PUBLIC_API_URL === buildMeta.expoPublic.EXPO_PUBLIC_API_URL;
+    existingMeta.expoPublic.EXPO_PUBLIC_API_URL === buildMeta.expoPublic.EXPO_PUBLIC_API_URL &&
+    // Prevent stale dist reuse when local source changes.
+    // If git info is missing (e.g. CI tarball), fallback to old env-only behavior.
+    (!buildMeta.git?.head ||
+      !buildMeta.git?.statusHash ||
+      (existingMeta.git &&
+        existingMeta.git.head === buildMeta.git.head &&
+        existingMeta.git.statusHash === buildMeta.git.statusHash));
 
   if (canReuseBuild) {
     console.log('[e2e-webserver] Reusing existing dist build');

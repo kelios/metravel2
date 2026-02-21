@@ -511,6 +511,27 @@ describe('ListTravel Integration Tests', () => {
     expect(screen.queryByText('Beach Vacation')).toBeNull();
   });
 
+  it('passes categoryTravelAddress from URL params into initialFilter', async () => {
+    (global as any).__mockLocalSearchParams = {
+      categories: '2,21',
+      over_nights_stay: '1',
+      categoryTravelAddress: '84',
+    };
+
+    renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(mockUseListTravelFilters).toHaveBeenCalled();
+    });
+
+    const lastCallArgs = mockUseListTravelFilters.mock.calls.at(-1)?.[0];
+    expect(lastCallArgs?.initialFilter).toEqual({
+      categories: [2, 21],
+      over_nights_stay: [1],
+      categoryTravelAddress: [84],
+    });
+  });
+
   it('handles search input correctly', async () => {
     const mockOnSelect = jest.fn();
     const mockResetFilters = jest.fn();

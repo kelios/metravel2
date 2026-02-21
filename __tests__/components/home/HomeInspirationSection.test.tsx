@@ -103,64 +103,39 @@ describe('HomeInspirationSections', () => {
       expect(getByText('До 100 км')).toBeTruthy();
     });
 
-    it('navigates to /search?categories=2,21 when "Поход / хайкинг" chip is pressed', () => {
+    it.each([
+      ['Поход / хайкинг', '/search?categories=2,21'],
+      ['Город', '/search?categories=19,20'],
+      ['Треккинг', '/search?categories=22'],
+      ['Велопоход', '/search?categories=7'],
+      ['Автопутешествие', '/search?categories=6'],
+      ['Без ночлега', '/search?over_nights_stay=8'],
+      ['Палатка', '/search?over_nights_stay=1'],
+      ['Гостиница', '/search?over_nights_stay=2'],
+      ['Квартира / дом', '/search?over_nights_stay=3,4'],
+      ['Весна', '/search?month=3,4,5'],
+      ['Лето', '/search?month=6,7,8'],
+      ['Осень', '/search?month=9,10,11'],
+      ['Зима', '/search?month=12,1,2'],
+      ['До 30 км', '/map?radius=30'],
+      ['До 60 км', '/map?radius=60'],
+      ['До 100 км', '/map?radius=100'],
+      ['До 200 км', '/map?radius=200'],
+    ])('navigates to %s filter link', (label, expectedPath) => {
       const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText(`Фильтр ${label}`));
+      expect(mockPush).toHaveBeenCalledWith(expectedPath);
+    });
+
+    it('does not keep previous filter params when another chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+
       fireEvent.press(getByLabelText('Фильтр Поход / хайкинг'));
-      expect(mockPush).toHaveBeenCalledWith('/search?categories=2,21');
-    });
-
-    it('navigates to /search?categories=19,20 when "Город" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр Город'));
-      expect(mockPush).toHaveBeenCalledWith('/search?categories=19,20');
-    });
-
-    it('navigates to /search?categories=22 when "Треккинг" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр Треккинг'));
-      expect(mockPush).toHaveBeenCalledWith('/search?categories=22');
-    });
-
-    it('navigates to /search?over_nights_stay=8 when "Без ночлега" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр Без ночлега'));
-      expect(mockPush).toHaveBeenCalledWith('/search?over_nights_stay=8');
-    });
-
-    it('navigates to /search?over_nights_stay=1 when "Палатка" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
       fireEvent.press(getByLabelText('Фильтр Палатка'));
-      expect(mockPush).toHaveBeenCalledWith('/search?over_nights_stay=1');
-    });
 
-    it('navigates to /search?month=6,7,8 when "Лето" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр Лето'));
-      expect(mockPush).toHaveBeenCalledWith('/search?month=6,7,8');
-    });
-
-    it('navigates to /search?month=3,4,5 when "Весна" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр Весна'));
-      expect(mockPush).toHaveBeenCalledWith('/search?month=3,4,5');
-    });
-
-    it('navigates to /map?radius=30 when "До 30 км" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр До 30 км'));
-      expect(mockPush).toHaveBeenCalledWith('/map?radius=30');
-    });
-
-    it('navigates to /map?radius=100 when "До 100 км" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр До 100 км'));
-      expect(mockPush).toHaveBeenCalledWith('/map?radius=100');
-    });
-
-    it('navigates to /map?radius=200 when "До 200 км" chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Фильтр До 200 км'));
-      expect(mockPush).toHaveBeenCalledWith('/map?radius=200');
+      const lastPath = mockPush.mock.calls.at(-1)?.[0] as string;
+      expect(lastPath).toBe('/search?over_nights_stay=1');
+      expect(lastPath).not.toContain('categories=');
     });
 
     it('"Смотреть маршруты" button navigates to /search without filters', () => {

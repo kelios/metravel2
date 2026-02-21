@@ -16,9 +16,47 @@ const fs = require('fs')
 const path = require('path')
 const { pipeline } = require('stream')
 
+// metro-config doesn't export exclusionList in all versions; load it via absolute path.
+const exclusionList = require(path.join(
+  path.dirname(require.resolve('metro-config')),
+  'defaults/exclusionList'
+)).default
+
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
 const previousEnhanceMiddleware = config.server && config.server.enhanceMiddleware
+
+// ✅ PERF: Don't watch or crawl large generated folders.
+// This repo contains sizeable build/test artifacts (dist, reports, etc.) that can
+// cause Metro's file crawling to balloon memory usage and crash with V8 OOM.
+const escapeForRegex = (value) => value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
+const ignoredDirs = [
+  'dist',
+  'coverage',
+  'output',
+  'tmp',
+  'test-results',
+  'playwright-report',
+  '.playwright-report-extracted',
+  '.pwtrace_tmp',
+  '.pwtrace_tmp_wizard',
+  'lighthouse-reports',
+  'e2e',
+]
+const ignoredRegexes = ignoredDirs.map((dir) => {
+  const abs = path.resolve(__dirname, dir)
+  // Metro uses regex paths; normalize both separators.
+  const normalized = escapeForRegex(abs).replaceAll('/', '[\\\\/]').replaceAll('\\\\', '[\\\\/]')
+  return new RegExp(`^${normalized}[\\\\/].*`)
+})
+config.resolver = config.resolver || {}
+const existingBlockList = config.resolver.blockList
+const existingPatterns = Array.isArray(existingBlockList)
+  ? existingBlockList
+  : existingBlockList
+    ? [existingBlockList]
+    : []
+config.resolver.blockList = exclusionList([...existingPatterns, ...ignoredRegexes])
 
 // ✅ PERF: Enable inline requires — defers module execution until first use.
 // This dramatically reduces TBT because heavy modules (reanimated, leaflet, PDF, quill, etc.)
