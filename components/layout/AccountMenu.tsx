@@ -9,6 +9,7 @@ import ThemeToggle from '@/components/layout/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/context/FiltersProvider';
+import { useUnreadCount } from '@/hooks/useMessages';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -19,6 +20,7 @@ function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavorites();
   const { updateFilters } = useFilters();
+  const { count: unreadCount } = useUnreadCount(isAuthenticated);
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -443,10 +445,32 @@ function AccountMenu() {
             <>
               <Menu.Item
                 onPress={() => handleNavigate('/messages')}
-                title="Сообщения"
-                leadingIcon={({ size }) => <Feather name="mail" size={size} color={styles.iconMuted.color} />}
+                title={unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения'}
+                leadingIcon={({ size }) => (
+                  <View style={{ position: 'relative' }}>
+                    <Feather name="mail" size={size} color={unreadCount > 0 ? colors.primary : styles.iconMuted.color} />
+                    {unreadCount > 0 && (
+                      <View style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -6,
+                        backgroundColor: colors.primary,
+                        borderRadius: 8,
+                        minWidth: 16,
+                        height: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 4,
+                      }}>
+                        <Text style={{ color: colors.textOnPrimary, fontSize: 10, fontWeight: '700' }}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
                 style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                titleStyle={unreadCount > 0 ? styles.menuItemTitleStrong : styles.menuItemTitle}
               />
               <Menu.Item
                 onPress={() => handleNavigate('/subscriptions')}

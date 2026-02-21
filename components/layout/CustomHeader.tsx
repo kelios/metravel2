@@ -12,6 +12,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive'; 
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+import { useUnreadCount } from '@/hooks/useMessages';
 
 const useFavoritesSafe = (): { favorites: { length: number } } => {
     try {
@@ -46,6 +47,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
     const { favorites } = useFavoritesSafe();
     const { updateFilters } = useFilters();
+    const { count: unreadCount } = useUnreadCount(isAuthenticated);
     const [avatarLoadError, setAvatarLoadError] = useState(false);
     const lastHeightRef = useRef(0);
 
@@ -641,6 +643,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                   isAuthenticated={isAuthenticated}
                   username={username}
                   favoritesCount={favorites.length}
+                  unreadCount={unreadCount}
                   themeToggleNode={null}
                 />
               </>
@@ -668,6 +671,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                   isAuthenticated={isAuthenticated}
                   username={username}
                   favoritesCount={favorites.length}
+                  unreadCount={unreadCount}
                   themeToggleNode={
                     <Suspense fallback={null}>
                       <ThemeToggleLazy compact layout="vertical" showLabels />

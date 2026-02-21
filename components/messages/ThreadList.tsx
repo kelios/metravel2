@@ -99,40 +99,52 @@ function ThreadList({
             const avatarUrl = getOtherParticipantAvatar(item);
             const time = formatDate(item.last_message_created_at);
             const isSelected = selectedThreadId != null && item.id === selectedThreadId;
+            const unreadCount = item.unread_count ?? 0;
+            const hasUnread = unreadCount > 0;
             return (
                 <Pressable
                     style={({ pressed }) => [
                         styles.threadItem,
                         { backgroundColor: isSelected ? colors.primarySoft : colors.surface, borderColor: isSelected ? colors.primary : colors.borderLight },
+                        hasUnread && !isSelected && { borderColor: colors.primary, borderWidth: 1.5 },
                         pressed && { opacity: 0.85 },
                     ]}
                     onPress={() => onSelectThread(item)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Диалог с ${name}`}
+                    accessibilityLabel={hasUnread ? `Диалог с ${name}, ${unreadCount} непрочитанных` : `Диалог с ${name}`}
                 >
-                    <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
+                    <View style={[styles.avatar, { backgroundColor: hasUnread ? colors.primary : colors.primarySoft }]}>
                         {avatarUrl ? (
                             <Image
                                 source={{ uri: avatarUrl }}
                                 style={styles.avatarImage}
                             />
                         ) : (
-                            <Feather name="user" size={20} color={colors.primary} />
+                            <Feather name="user" size={20} color={hasUnread ? colors.textInverse : colors.primary} />
                         )}
                     </View>
                     <View style={styles.threadInfo}>
                         <View style={styles.threadNameRow}>
-                            <Text style={[styles.threadName, { color: colors.text }]} numberOfLines={1}>
+                            <Text style={[styles.threadName, { color: colors.text }, hasUnread && styles.threadNameUnread]} numberOfLines={1}>
                                 {name}
                             </Text>
-                            {!!time && (
-                                <Text style={[styles.threadTime, { color: colors.textMuted }]}>
-                                    {time}
-                                </Text>
-                            )}
+                            <View style={styles.threadTimeRow}>
+                                {!!time && (
+                                    <Text style={[styles.threadTime, { color: hasUnread ? colors.primary : colors.textMuted }]}>
+                                        {time}
+                                    </Text>
+                                )}
+                                {hasUnread && (
+                                    <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+                                        <Text style={[styles.unreadBadgeText, { color: colors.textInverse }]}>
+                                            {unreadCount > 99 ? '99+' : unreadCount}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
                         </View>
                     </View>
-                    <Feather name="chevron-right" size={18} color={colors.textMuted} />
+                    <Feather name="chevron-right" size={18} color={hasUnread ? colors.primary : colors.textMuted} />
                 </Pressable>
             );
         },
@@ -296,6 +308,26 @@ const createStyles = (colors: ThemedColors) =>
         threadTime: {
             fontSize: DESIGN_TOKENS.typography.sizes.xs,
             marginLeft: DESIGN_TOKENS.spacing.xs,
+        },
+        threadTimeRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: DESIGN_TOKENS.spacing.xs,
+        },
+        threadNameUnread: {
+            fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
+        },
+        unreadBadge: {
+            minWidth: 20,
+            height: 20,
+            borderRadius: 10,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 6,
+        },
+        unreadBadgeText: {
+            fontSize: 11,
+            fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
         center: {
             flex: 1,

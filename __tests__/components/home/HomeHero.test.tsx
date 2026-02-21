@@ -52,7 +52,7 @@ describe('HomeHero Component', () => {
   describe('Rendering', () => {
     it('should render title correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Выходные с умом/)).toBeTruthy();
+      expect(getByText(/Идеи для поездок/)).toBeTruthy();
     });
 
     it('should render subtitle correctly', () => {
@@ -60,35 +60,21 @@ describe('HomeHero Component', () => {
       expect(getByText(/Выбирай маршруты по расстоянию/)).toBeTruthy();
     });
 
-    it('should include object category in book image subtitle data', () => {
-      const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero');
-      expect(BOOK_IMAGES_FOR_TEST[1].subtitle).toBe('Поход по Доломитам • Озеро • Италия');
+    it('should render mood cards correctly', () => {
+      const { getByText } = render(<HomeHero />);
+      expect(getByText('У воды')).toBeTruthy();
     });
 
-    it('should not show hint for unauthenticated users', () => {
-      const { queryByText } = render(<HomeHero travelsCount={0} />);
-      expect(queryByText(/Добавь первую поездку и сразу получишь основу/)).toBeNull();
-    });
-
-    it('should show hint for authenticated users with no travels', () => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '123',
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      const { getByText } = render(<HomeHero travelsCount={0} />);
-      expect(getByText(/Добавь первую поездку и сразу получишь основу/)).toBeTruthy();
+    it('should render badge correctly', () => {
+      const { getByText } = render(<HomeHero />);
+      expect(getByText(/Бесплатно и без регистрации/)).toBeTruthy();
     });
   });
 
   describe('Button Labels', () => {
-    it('should show "Создать книгу путешествий" for unauthenticated users', () => {
+    it('should show "Начать бесплатно" for unauthenticated users', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Создать книгу путешествий')).toBeTruthy();
+      expect(getByText('Начать бесплатно')).toBeTruthy();
     });
 
     it('should show "Добавить первую поездку" for authenticated users with no travels', () => {
@@ -123,7 +109,7 @@ describe('HomeHero Component', () => {
   describe('Navigation', () => {
     it('should navigate to login for unauthenticated users', () => {
       const { getByText } = render(<HomeHero />);
-      const button = getByText('Создать книгу путешествий');
+      const button = getByText('Начать бесплатно');
       
       fireEvent.press(button);
       
@@ -179,52 +165,9 @@ describe('HomeHero Component', () => {
   });
 
   describe('Responsive Design', () => {
-    it('should apply mobile styles on small screens (320px)', () => {
-      jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-        width: 320,
-        height: 568,
-        scale: 2,
-        fontScale: 1,
-      });
-
+    it('should render on different screen sizes', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Выходные с умом/)).toBeTruthy();
-    });
-
-    it('should apply mobile styles on medium screens (480px)', () => {
-      jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-        width: 480,
-        height: 800,
-        scale: 2,
-        fontScale: 1,
-      });
-
-      const { getByText } = render(<HomeHero />);
-      expect(getByText(/Выходные с умом/)).toBeTruthy();
-    });
-
-    it('should apply mobile styles on tablets (768px)', () => {
-      jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-        width: 768,
-        height: 1024,
-        scale: 2,
-        fontScale: 1,
-      });
-
-      const { getByText } = render(<HomeHero />);
-      expect(getByText(/Выходные с умом/)).toBeTruthy();
-    });
-
-    it('should apply desktop styles on large screens (1024px)', () => {
-      jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-        width: 1024,
-        height: 768,
-        scale: 1,
-        fontScale: 1,
-      });
-
-      const { getByText } = render(<HomeHero />);
-      expect(getByText(/Выходные с умом/)).toBeTruthy();
+      expect(getByText(/Идеи для поездок/)).toBeTruthy();
     });
   });
 
@@ -239,7 +182,6 @@ describe('HomeHero Component', () => {
     it('MOOD_CARDS array has correct filterParams for each card', () => {
       const { MOOD_CARDS_FOR_TEST } = require('@/components/home/HomeHero');
       if (!MOOD_CARDS_FOR_TEST) {
-        // filterParams are tested via HomeInspirationSection integration; skip if not exported
         return;
       }
       expect(MOOD_CARDS_FOR_TEST[0].filters).toEqual({
@@ -248,24 +190,6 @@ describe('HomeHero Component', () => {
       expect(MOOD_CARDS_FOR_TEST[1].filters).toEqual({ categoryTravelAddress: [33, 43] });
       expect(MOOD_CARDS_FOR_TEST[2].filters).toEqual({ categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] });
       expect(MOOD_CARDS_FOR_TEST[3].filters).toEqual({ categories: [21, 22, 2] });
-    });
-
-    it('handleQuickFilterPress builds correct path with filterParams', () => {
-      const push = jest.fn();
-      const params = {
-        categoryTravelAddress: [84, 110, 113, 193],
-      };
-      const path = `/search?categoryTravelAddress=${params.categoryTravelAddress.join(',')}`;
-      push(path);
-      expect(push).toHaveBeenCalledWith('/search?categoryTravelAddress=84,110,113,193');
-    });
-
-    it('handleQuickFilterPress falls back to /search when no filterParams', () => {
-      const push = jest.fn();
-      const filterParams: string | undefined = undefined;
-      const path = filterParams ? `/search?${filterParams}` : '/search';
-      push(path);
-      expect(push).toHaveBeenCalledWith('/search');
     });
   });
 

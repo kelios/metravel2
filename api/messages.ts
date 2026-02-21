@@ -50,6 +50,7 @@ export interface MessageThread {
     participants: number[];
     created_at: string | null;
     last_message_created_at: string | null;
+    unread_count: number;
 }
 
 export interface Message {
@@ -168,8 +169,35 @@ export const fetchMessages = async (
     }
 };
 
-export const markThreadRead = async (_threadId: number): Promise<null> => {
-    return null;
+export interface MarkThreadReadPayload {
+    last_read_message_id?: number;
+}
+
+export interface MarkThreadReadResponse {
+    thread_id: number;
+    last_read_message_id: number | null;
+    unread_count: number;
+}
+
+export const markThreadRead = async (
+    threadId: number,
+    payload?: MarkThreadReadPayload
+): Promise<MarkThreadReadResponse> => {
+    try {
+        return await messagingFetch<MarkThreadReadResponse>(
+            `/message-threads/${threadId}/mark-read/`,
+            {
+                method: 'POST',
+                body: JSON.stringify(payload ?? {}),
+            },
+        );
+    } catch (e: any) {
+        const status = e?.status ?? e?.response?.status;
+        if (status === 401 || status === 404) {
+            return { thread_id: threadId, last_read_message_id: null, unread_count: 0 };
+        }
+        throw e;
+    }
 };
 
 export interface UnreadCountResponse {
@@ -177,7 +205,13 @@ export interface UnreadCountResponse {
 }
 
 export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    return { count: 0 };
+    try {
+        const threads = await fetchMessageThreads();
+        const count = threads.reduce((sum, thread) => sum + (thread.unread_count ?? 0), 0);
+        return { count };
+    } catch {
+        return { count: 0 };
+    }
 };
 
 export const sendMessage = async (

@@ -19,6 +19,7 @@ type Props = {
   isAuthenticated: boolean
   username?: string | null
   favoritesCount: number
+  unreadCount?: number
   themeToggleNode?: React.ReactNode
 }
 
@@ -36,6 +37,7 @@ export default function CustomHeaderMobileMenu({
   isAuthenticated,
   username,
   favoritesCount,
+  unreadCount = 0,
   themeToggleNode,
 }: Props) {
   return (
@@ -158,12 +160,32 @@ export default function CustomHeaderMobileMenu({
                   onPress={() => onUserAction('/messages')}
                   style={styles.modalNavItem}
                   accessibilityRole="button"
-                  accessibilityLabel="Сообщения"
+                  accessibilityLabel={unreadCount > 0 ? `Сообщения, ${unreadCount} непрочитанных` : 'Сообщения'}
                 >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="mail" size={20} color={colors.textMuted} />
+                  <View style={[styles.iconSlot20, { position: 'relative' }]}>
+                    <Feather name="mail" size={20} color={unreadCount > 0 ? colors.primary : colors.textMuted} />
+                    {unreadCount > 0 && (
+                      <View style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -6,
+                        backgroundColor: colors.primary,
+                        borderRadius: 8,
+                        minWidth: 16,
+                        height: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        paddingHorizontal: 4,
+                      }}>
+                        <Text style={{ color: colors.textOnPrimary, fontSize: 10, fontWeight: '700' }}>
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  <Text style={styles.modalNavLabel}>Сообщения</Text>
+                  <Text style={[styles.modalNavLabel, unreadCount > 0 && { fontWeight: '600', color: colors.text }]}>
+                    {unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения'}
+                  </Text>
                 </Pressable>
 
                 <Pressable

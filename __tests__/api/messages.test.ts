@@ -51,6 +51,7 @@ describe('Messages API', () => {
                     participants: [1, 2],
                     created_at: '2024-01-01T00:00:00Z',
                     last_message_created_at: '2024-01-01T12:00:00Z',
+                    unread_count: 3,
                 },
             ];
 
@@ -203,17 +204,73 @@ describe('Messages API', () => {
         });
     });
 
-    describe('markThreadRead (stubbed — backend not deployed)', () => {
-        it('should return null (no-op stub)', async () => {
+    describe('markThreadRead', () => {
+        it('should mark thread as read and return response', async () => {
+            const expectedData = { thread_id: 7, last_read_message_id: 42, unread_count: 0 };
+            mockedFetch.mockResolvedValueOnce(mockResponse(expectedData, 200));
+
             const result = await markThreadRead(7);
-            expect(result).toBeNull();
+            expect(result).toEqual(expectedData);
+        });
+
+        it('should mark thread as read with specific message id', async () => {
+            const expectedData = { thread_id: 7, last_read_message_id: 35, unread_count: 2 };
+            mockedFetch.mockResolvedValueOnce(mockResponse(expectedData, 200));
+
+            const result = await markThreadRead(7, { last_read_message_id: 35 });
+            expect(result).toEqual(expectedData);
+        });
+
+        it('should return fallback on 401', async () => {
+            mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Unauthorized' }, 401));
+
+            const result = await markThreadRead(7);
+            expect(result).toEqual({ thread_id: 7, last_read_message_id: null, unread_count: 0 });
+        });
+
+        it('should return fallback on 404', async () => {
+            mockedFetch.mockResolvedValueOnce(mockResponse({ detail: 'Not found' }, 404));
+
+            const result = await markThreadRead(7);
+            expect(result).toEqual({ thread_id: 7, last_read_message_id: null, unread_count: 0 });
         });
     });
 
-    describe('fetchUnreadCount (stubbed — backend not deployed)', () => {
-        it('should return zero (no-op stub)', async () => {
+    describe('fetchUnreadCount', () => {
+        it('should sum unread_count from all threads', async () => {
+            const mockThreads: MessageThread[] = [
+                { id: 1, participants: [1, 2], created_at: null, last_message_created_at: null, unread_count: 3 },
+                { id: 2, participants: [1, 3], created_at: null, last_message_created_at: null, unread_count: 5 },
+            ];
+            mockedFetch.mockResolvedValueOnce(mockResponse(mockThreads));
+
+            const result = await fetchUnreadCount();
+            expect(result).toEqual({ count: 8 });
+        });
+
+        it('should return zero when no threads', async () => {
+            mockedFetch.mockResolvedValueOnce(mockResponse([]));
+
             const result = await fetchUnreadCount();
             expect(result).toEqual({ count: 0 });
+        });
+
+        it('should return zero on error', async () => {
+            mockedFetch.mockRejectedValueOnce(new Error('Network error'));
+
+            const result = await fetchUnreadCount();
+            expect(result).toEqual({ count: 0 });
+        });
+
+        it('should handle threads with missing unread_count', async () => {
+            const mockThreads = [
+                { id: 1, participants: [1, 2], created_at: null, last_message_created_at: null },
+                { id: 2, participants: [1, 3], created_at: null, last_message_created_at: null, unread_count: 2 },
+            ];
+            mockedFetch.mockResolvedValueOnce(mockResponse(mockThreads));
+
+            const result = await fetchUnreadCount();
+            expect(result).toEqual({ count: 2 });
         });
     });
 

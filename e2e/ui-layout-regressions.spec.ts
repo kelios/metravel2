@@ -30,6 +30,74 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
     { name: 'desktop', width: 1280, height: 800 },
   ] as const;
 
+  async function waitForNonNullBoundingBox(locator: any, timeoutMs = 15_000, stepMs = 100) {
+    const startedAt = Date.now();
+    let last: any | null = null;
+    while (Date.now() - startedAt < timeoutMs) {
+      last = await locator.boundingBox();
+      if (last) return last;
+      await locator.page().waitForTimeout(stepMs);
+    }
+    return last;
+  }
+
+  test('Home hero: title does not overlap right card (desktop)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await preacceptCookiesAndStabilize(page);
+
+    const guard = installNoConsoleErrorsGuard(page);
+    await gotoWithRetry(page, '/');
+
+    const hero = page.getByTestId('home-hero');
+    await expect(hero).toBeVisible({ timeout: 30_000 });
+    await expectNoHorizontalScroll(page);
+
+    const title = page.getByText('Выходные с умом — и книга поездок в подарок');
+    await expect(title).toBeVisible({ timeout: 30_000 });
+
+    const imageSlot = page.getByTestId('home-hero-image-slot');
+    // RNW can render the node in a hidden state briefly; wait for stable layout instead.
+    const imageBox = await waitForNonNullBoundingBox(imageSlot, 30_000, 150);
+    expect(imageBox, 'home hero image slot must have a bounding box (visible in layout)').not.toBeNull();
+    await expectNoOverlap(title, imageSlot, { labelA: 'home hero title', labelB: 'home hero image slot' });
+
+    guard.assertNoErrorsContaining('6000ms timeout exceeded');
+  });
+
+  test('Home hero: mood chips do not overlap CTAs (mobile)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 740 });
+    await preacceptCookiesAndStabilize(page);
+
+    const guard = installNoConsoleErrorsGuard(page);
+    await gotoWithRetry(page, '/');
+
+    const hero = page.getByTestId('home-hero');
+    await expect(hero).toBeVisible({ timeout: 30_000 });
+    await expectNoHorizontalScroll(page);
+
+    const primaryCta = page
+      .getByRole('button', { name: /Создать книгу путешествий|Добавить первую поездку|Открыть мою книгу/i })
+      .locator(':visible')
+      .first();
+    await expect(primaryCta).toBeVisible({ timeout: 30_000 });
+
+    // Chips are rendered on mobile web as pressables with aria-label "Идея поездки ...".
+    const firstChip = page.getByRole('button', { name: /Идея поездки/i }).first();
+    await expect(firstChip).toBeVisible({ timeout: 30_000 });
+
+    const [ctaBox, chipBox] = await Promise.all([primaryCta.boundingBox(), firstChip.boundingBox()]);
+    expect(ctaBox, 'primary CTA must have a bounding box').not.toBeNull();
+    expect(chipBox, 'first mood chip must have a bounding box').not.toBeNull();
+    if (ctaBox && chipBox) {
+      expect(
+        chipBox.y,
+        `mood chips must start below CTAs (chipTop=${chipBox.y}, ctaBottom=${ctaBox.y + ctaBox.height})`
+      ).toBeGreaterThanOrEqual(ctaBox.y + ctaBox.height - 1);
+    }
+
+    guard.assertNoErrorsContaining('6000ms timeout exceeded');
+  });
+
   for (const vp of VIEWPORTS) {
     test(`no horizontal scroll + key elements not clipped (${vp.name})`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });

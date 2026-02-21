@@ -22,22 +22,17 @@ type QuickFilterParams = Record<string, QuickFilterValue | undefined>;
 
 const normalizeQuickFilterValue = (value: QuickFilterValue | undefined): string | null => {
   if (value === undefined || value === null) return null;
-
   if (Array.isArray(value)) {
-    const cleaned = value
-      .map((item) => String(item ?? '').trim())
-      .filter((item) => item.length > 0);
+    const cleaned = value.map((item) => String(item ?? '').trim()).filter((item) => item.length > 0);
     if (!cleaned.length) return null;
     return cleaned.join(',');
   }
-
   const scalar = String(value).trim();
   return scalar.length > 0 ? scalar : null;
 };
 
 const buildFilterPath = (base: string, params?: QuickFilterParams) => {
   if (!params) return base;
-
   const query = Object.entries(params)
     .map(([key, value]) => {
       const normalized = normalizeQuickFilterValue(value);
@@ -46,7 +41,6 @@ const buildFilterPath = (base: string, params?: QuickFilterParams) => {
     })
     .filter((item): item is string => typeof item === 'string' && item.length > 0)
     .join('&');
-
   return query.length > 0 ? `${base}?${query}` : base;
 };
 
@@ -97,23 +91,23 @@ const MOOD_CARDS = [
     title: 'У воды',
     meta: 'Природа',
     icon: 'sun',
-    filters: { categoryTravelAddress: [84,110,113,193] },
+    filters: { categoryTravelAddress: [84, 110, 113, 193] },
   },
   {
     title: 'Дворцы и замки',
-    meta: 'Город • 1 день • спокойный темп',
+    meta: 'Город • 1 день',
     icon: 'coffee',
-    filters: { categoryTravelAddress: [33,43] },
+    filters: { categoryTravelAddress: [33, 43] },
   },
   {
     title: 'Руины',
     meta: 'История',
     icon: 'columns',
-    filters: { categoryTravelAddress: [114,115,116,117,118,119,120] },
+    filters: { categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] },
   },
   {
     title: 'Активный выезд',
-    meta: 'Треккинг • Хайкинг • больше движения',
+    meta: 'Треккинг • Хайкинг',
     icon: 'activity',
     filters: { categories: [21, 22, 2] },
   },
@@ -121,26 +115,27 @@ const MOOD_CARDS = [
 
 export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
 
-const FEATURE_PILLS = [
-  { icon: 'map-pin', label: 'Готовые точки на карте' },
-  { icon: 'clock', label: '1 день или выходные' },
-  { icon: 'navigation', label: 'До 200 км от дома' },
-  { icon: 'book-open', label: 'Личная книга поездок' },
-] as const;
-
-const STATS = [
-  { value: '200+', label: 'маршрутов' },
-  { value: '0 ₽', label: 'бесплатно' },
-  { value: '2 мин', label: 'до идеи' },
-] as const;
-
 const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
   const { isSmallPhone, isPhone, isTablet, width } = useResponsive();
 
+  const isMobile = isSmallPhone || isPhone;
   const isWeb = Platform.OS === 'web';
+  const isTabletRange = isTablet || (width >= 768 && width < 1024);
+  const isNarrowDesktop = !isMobile && width < 1200;
+  const shouldRenderImageSlot = isWeb && !isMobile && width >= 1024;
+
+  const [bookImageIndex, setBookImageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!shouldRenderImageSlot) return;
+    const timer = setInterval(() => {
+      setBookImageIndex((prev) => (prev + 1) % BOOK_IMAGES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [shouldRenderImageSlot]);
 
   const handleCreateBook = () => {
     queueAnalyticsEvent('HomeClick_CreateBook');
@@ -179,224 +174,77 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   };
 
   const primaryButtonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Создать книгу путешествий';
+    if (!isAuthenticated) return 'Начать бесплатно';
     if (travelsCount === 0) return 'Добавить первую поездку';
     return 'Открыть мою книгу';
   }, [isAuthenticated, travelsCount]);
 
-  const isMobile = isSmallPhone || isPhone;
-  const isCompactDesktop = !isMobile && width < 1400;
-  const isNarrowDesktop = !isMobile && width < 1240;
-  const isTabletRange = isTablet || (width >= 768 && width < 1024);
-  const shouldRenderImageSlot = isWeb && !isMobile;
-  const shouldRenderMobileMoodChips = isMobile && isWeb;
-
-  const handleMoodCardPress = (
-    e: any,
-    label: string,
-    filters?: QuickFilterParams,
-  ) => {
-    e?.preventDefault?.();
-    e?.stopPropagation?.();
-    handleQuickFilterPress(label, filters);
-  };
-
-  const [bookImageIndex, setBookImageIndex] = useState(0);
-
-  useEffect(() => {
-    if (!shouldRenderImageSlot) return;
-    const timer = setInterval(() => {
-      setBookImageIndex((prev) => (prev + 1) % BOOK_IMAGES.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [shouldRenderImageSlot]);
-
-  // Preload removed: the <img loading="eager"> already fetches the image.
-  // A separate <link rel="preload"> caused "preloaded but not used" warnings,
-  // especially on mobile where the image slot is CSS-hidden (<768px).
-
   const styles = useMemo(() => StyleSheet.create({
-    band: {
-      paddingTop: isMobile ? 40 : 64,
-      paddingBottom: isMobile ? 40 : 72,
-      backgroundColor: colors.background,
+    container: {
       width: '100%',
-      alignSelf: 'stretch',
-      overflow: 'hidden',
+      paddingTop: isMobile ? 40 : 64,
+      paddingBottom: isMobile ? 40 : 64,
+      backgroundColor: colors.background,
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 80% 60% at 75% 20%, ${colors.primarySoft} 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 10% 20%, ${colors.primaryLight} 0%, transparent 60%), linear-gradient(170deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: '100% 100%',
+          backgroundImage: `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
         },
       }),
-    },
-    bandMobile: {
-      paddingTop: 36,
-      paddingBottom: 40,
-      ...Platform.select({
-        web: {
-          backgroundImage: `radial-gradient(ellipse 120% 50% at 50% 15%, ${colors.primarySoft} 0%, transparent 60%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
-        },
-      }),
-    },
-    decorOrb: {
-      position: 'absolute',
-      borderRadius: DESIGN_TOKENS.radii.full,
-      ...Platform.select({
-        web: {
-          filter: 'blur(60px)',
-          pointerEvents: 'none',
-        } as any,
-      }),
-    },
-    decorOrbTop: {
-      width: 400,
-      height: 400,
-      top: -180,
-      right: -100,
-      backgroundColor: colors.primarySoft,
-      opacity: 0.5,
-    },
-    decorOrbBottom: {
-      width: 300,
-      height: 300,
-      bottom: -160,
-      left: -80,
-      backgroundColor: colors.primaryLight,
-      opacity: 0.4,
     },
     content: {
       flex: 1,
-      width: '100%',
-      maxWidth: isMobile ? '100%' : isTabletRange ? '100%' : isCompactDesktop ? 620 : 640,
-      gap: isMobile ? 16 : 24,
-      alignItems: 'flex-start',
-      justifyContent: 'center',
+      gap: isMobile ? 24 : 28,
+      maxWidth: isMobile ? '100%' : isNarrowDesktop ? '100%' : 560,
+      zIndex: 1,
     },
-    eyebrow: {
+    badge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
       alignSelf: 'flex-start',
-      borderRadius: DESIGN_TOKENS.radii.full,
-      backgroundColor: colors.primaryLight,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
+      gap: 6,
       paddingHorizontal: 14,
       paddingVertical: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
     },
-    eyebrowText: {
+    badgeText: {
       fontSize: 12,
       fontWeight: '700',
       color: colors.primaryText,
-      letterSpacing: 0.8,
+      letterSpacing: 0.5,
       textTransform: 'uppercase',
     },
-    titleWrap: {
-      gap: 0,
-      maxWidth: isMobile ? '100%' as const : isTabletRange ? '100%' as const : isCompactDesktop ? 620 : 640,
-    },
     title: {
-      color: colors.text,
-      letterSpacing: -1.2,
-      lineHeight: isMobile ? 42 : isCompactDesktop ? 56 : 62,
-      fontSize: isMobile ? 36 : isCompactDesktop ? 46 : 52,
+      fontSize: isMobile ? 32 : 48,
       fontWeight: '900',
+      color: colors.text,
+      letterSpacing: -1,
+      lineHeight: isMobile ? 40 : 56,
     },
     subtitle: {
-      color: colors.textMuted,
-      maxWidth: 540,
       fontSize: isMobile ? 16 : 18,
+      fontWeight: '400',
+      color: colors.textMuted,
       lineHeight: isMobile ? 24 : 28,
-      fontWeight: '400',
-      marginTop: isMobile ? 12 : 16,
-    },
-    featurePills: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      maxWidth: isMobile ? '100%' as const : 520,
-    },
-    featurePill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
-          transition: 'all 0.2s ease',
-        },
-      }),
-    },
-    featurePillText: {
-      color: colors.textMuted,
-      fontSize: 13,
-      lineHeight: 18,
-      fontWeight: '500',
-    },
-    statsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: isMobile ? 16 : 24,
-    },
-    statItem: {
-      gap: 2,
-      alignItems: 'flex-start',
-    },
-    statItemFirst: {},
-    statValue: {
-      color: colors.text,
-      fontSize: isMobile ? 20 : 24,
-      fontWeight: '800',
-      letterSpacing: -0.5,
-      lineHeight: isMobile ? 26 : 30,
-    },
-    statLabel: {
-      color: colors.textMuted,
-      fontSize: 12,
-      lineHeight: 16,
-      fontWeight: '400',
-    },
-    statWrapper: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: isMobile ? 16 : 24,
-    },
-    statDivider: {
-      width: 1,
-      height: 32,
-      backgroundColor: colors.border,
-      alignSelf: 'center',
-    },
-    hint: {
-      fontSize: isMobile ? 13 : 14,
-      color: colors.textMuted,
-      lineHeight: isMobile ? 20 : 22,
-      paddingLeft: 12,
-      borderLeftWidth: 2,
-      borderLeftColor: colors.primary,
-      maxWidth: 520,
+      maxWidth: 480,
     },
     buttonsContainer: {
-      width: '100%',
-      marginTop: 8,
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: 12,
+      width: isMobile ? '100%' : undefined,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 24 : 36,
-      paddingVertical: isMobile ? 16 : 18,
-      minHeight: isMobile ? 54 : 58,
+      paddingHorizontal: isMobile ? 28 : 32,
+      paddingVertical: isMobile ? 14 : 16,
+      minHeight: 52,
       borderRadius: DESIGN_TOKENS.radii.pill,
+      width: isMobile ? '100%' : undefined,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          transition: 'all 0.25s ease',
         },
       }),
     },
@@ -405,27 +253,27 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       ...Platform.select({
         web: {
           transform: 'translateY(-2px)',
-          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 8px 24px ${colors.primaryAlpha40}`,
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
         },
       }),
     },
     primaryButtonText: {
-      color: colors.textOnPrimary,
-      fontSize: isMobile ? 16 : 17,
+      fontSize: 15,
       fontWeight: '700',
-      letterSpacing: 0.2,
+      color: colors.textOnPrimary,
     },
     secondaryButton: {
-      borderWidth: 1.5,
-      borderColor: colors.borderLight,
-      paddingHorizontal: isMobile ? 24 : 32,
-      paddingVertical: isMobile ? 16 : 18,
-      minHeight: isMobile ? 54 : 58,
+      paddingHorizontal: isMobile ? 28 : 32,
+      paddingVertical: isMobile ? 14 : 16,
+      minHeight: 52,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.borderLight,
+      width: isMobile ? '100%' : undefined,
       ...Platform.select({
         web: {
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'all 0.25s ease',
         },
       }),
     },
@@ -435,129 +283,117 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       ...Platform.select({
         web: {
           transform: 'translateY(-2px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
         },
       }),
     },
     secondaryButtonText: {
-      color: colors.text,
-      fontSize: isMobile ? 16 : 17,
+      fontSize: 15,
       fontWeight: '600',
+      color: colors.text,
+    },
+    moodChipsContainer: {
+      marginTop: 8,
+    },
+    moodChipsRow: {
+      flexDirection: 'row',
+      flexWrap: isMobile ? 'nowrap' : 'wrap',
+      gap: 10,
+      paddingRight: isMobile ? 16 : 0,
+    },
+    moodChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    moodChipHover: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primaryAlpha30,
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-2px)',
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        },
+      }),
+    },
+    moodChipIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.primarySoft,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    moodChipText: {
+      gap: 2,
+    },
+    moodChipTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    moodChipMeta: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: colors.textMuted,
     },
     imageContainer: {
       flex: 0,
-      width: isTabletRange ? 260 : isNarrowDesktop ? 300 : isCompactDesktop ? 340 : 400,
-      minHeight: isTabletRange ? 380 : 460,
+      flexShrink: 0,
+      width: isTabletRange ? 240 : 280,
+      minHeight: isTabletRange ? 340 : 400,
       justifyContent: 'center',
       alignItems: 'center',
       position: 'relative',
     },
     imageDecor: {
       position: 'absolute',
-      width: isTabletRange ? 230 : isNarrowDesktop ? 270 : isCompactDesktop ? 300 : 340,
-      height: isTabletRange ? 340 : isNarrowDesktop ? 400 : isCompactDesktop ? 430 : 470,
+      width: isTabletRange ? 200 : 240,
+      height: isTabletRange ? 300 : 360,
       borderRadius: DESIGN_TOKENS.radii.xl,
       backgroundColor: colors.primarySoft,
-      opacity: 0.6,
+      opacity: 0.5,
       ...Platform.select({
         web: {
-          transform: 'rotate(5deg) translate(24px, 12px)',
-          filter: 'blur(1px)',
-          transition: 'all 0.4s ease',
+          transform: 'rotate(4deg) translate(20px, 10px)',
         } as any,
       }),
     },
-    imageDecor2: {
-      position: 'absolute',
-      width: isTabletRange ? 210 : isNarrowDesktop ? 250 : isCompactDesktop ? 280 : 310,
-      height: isTabletRange ? 320 : isNarrowDesktop ? 380 : isCompactDesktop ? 410 : 440,
-      borderRadius: DESIGN_TOKENS.radii.xl,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      opacity: 0.8,
+    bookImageWrap: {
+      position: 'relative',
       ...Platform.select({
         web: {
-          transform: 'rotate(-4deg) translate(-16px, 12px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          transition: 'all 0.4s ease',
-        } as any,
-      }),
-    },
-    moodPanel: {
-      position: 'absolute',
-      right: isTabletRange ? -6 : isNarrowDesktop ? -8 : isCompactDesktop ? -10 : -16,
-      top: isTabletRange ? 6 : isNarrowDesktop ? 10 : isCompactDesktop ? 16 : 24,
-      width: isTabletRange ? 155 : isNarrowDesktop ? 168 : isCompactDesktop ? 180 : 200,
-      gap: isTabletRange ? 6 : 10,
-      zIndex: 10,
-    },
-    moodCard: {
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.4)',
-      backgroundColor: 'rgba(255,255,255,0.8)',
-      paddingHorizontal: isTabletRange ? 8 : isNarrowDesktop ? 9 : 12,
-      paddingVertical: isTabletRange ? 6 : isNarrowDesktop ? 7 : 10,
-      ...Platform.select({
-        web: {
-          boxShadow: '0 8px 32px rgba(0,0,0,0.06)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'transform 0.3s ease',
         },
       }),
-    },
-    moodCardHover: {
-      borderColor: colors.primaryAlpha40,
-      backgroundColor: 'rgba(255,255,255,0.95)',
-      ...Platform.select({
-        web: {
-          transform: 'translateX(6px) translateY(-2px)',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
-        },
-      }),
-    },
-    moodCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 4,
-    },
-    moodCardTitle: {
-      color: '#1a1a1a', // Always dark for contrast on glass
-      fontSize: isTabletRange ? 11 : isNarrowDesktop ? 11 : 12,
-      fontWeight: '700',
-      lineHeight: isTabletRange ? 14 : isNarrowDesktop ? 15 : 16,
-    },
-    moodCardMeta: {
-      color: '#666666',
-      fontSize: isTabletRange ? 10 : isNarrowDesktop ? 10 : 11,
-      lineHeight: isTabletRange ? 13 : isNarrowDesktop ? 13 : 14,
-      fontWeight: '500',
     },
     bookImage: {
-      width: isTabletRange ? 180 : isNarrowDesktop ? 210 : isCompactDesktop ? 230 : 260,
-      height: isTabletRange ? 270 : isNarrowDesktop ? 315 : isCompactDesktop ? 345 : 390,
+      width: isTabletRange ? 180 : 220,
+      height: isTabletRange ? 270 : 330,
       borderRadius: DESIGN_TOKENS.radii.lg,
       ...Platform.select({
         web: {
-          boxShadow: `${DESIGN_TOKENS.shadows.modal}, 0 12px 40px ${colors.primaryAlpha30}`,
-          transition: 'transform 0.35s ease, box-shadow 0.35s ease',
-          transform: 'rotate(-1deg)',
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
         },
       }),
     },
     bookImageHover: {
       ...Platform.select({
         web: {
-          transform: 'rotate(0deg) scale(1.02)',
-          boxShadow: `${DESIGN_TOKENS.shadows.modal}, 0 16px 48px ${colors.primaryAlpha40}`,
+          transform: 'scale(1.02)',
         },
       }),
-    },
-    bookImageWrap: {
-      position: 'relative',
     },
     bookOverlay: {
       position: 'absolute',
@@ -566,35 +402,31 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       right: 0,
       borderBottomLeftRadius: DESIGN_TOKENS.radii.lg,
       borderBottomRightRadius: DESIGN_TOKENS.radii.lg,
-      paddingHorizontal: 14,
-      paddingTop: 32,
-      paddingBottom: 14,
-      gap: 3,
+      paddingHorizontal: 16,
+      paddingTop: 40,
+      paddingBottom: 16,
+      gap: 4,
       ...Platform.select({
         web: {
-          backgroundImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.72))',
+          backgroundImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.7))',
         },
       }),
     },
     bookOverlayTitle: {
       color: '#ffffff',
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '700',
-      lineHeight: 20,
-      letterSpacing: -0.2,
-      ...Platform.select({
-        web: { textShadow: '0 1px 4px rgba(0,0,0,0.5)' },
-      }),
+      lineHeight: 18,
     },
     bookOverlaySubtitle: {
       color: 'rgba(255,255,255,0.8)',
       fontSize: 11,
       fontWeight: '400',
-      lineHeight: 15,
+      lineHeight: 14,
     },
     bookDots: {
       position: 'absolute',
-      bottom: -20,
+      bottom: -24,
       left: 0,
       right: 0,
       flexDirection: 'row',
@@ -614,113 +446,32 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       width: 18,
       backgroundColor: colors.primary,
     },
-    moodChipsRow: {
-      flexDirection: 'row',
-      gap: 8,
-      paddingVertical: 4,
-      paddingRight: 16,
-    },
-    moodChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.primarySoft,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-        },
-      }),
-    },
-    moodChipPressed: {
-      backgroundColor: colors.primaryLight,
-      borderColor: colors.primaryAlpha40,
-      ...Platform.select({
-        web: {
-          transform: 'scale(0.97)',
-        },
-      }),
-    },
-    moodChipTitle: {
-      color: colors.primaryText,
-      fontSize: 13,
-      fontWeight: '700',
-      lineHeight: 18,
-    },
-  }), [colors, isCompactDesktop, isMobile, isNarrowDesktop, isTabletRange]);
-
-  const moodCardWebStyle = useMemo(() => {
-    if (!isWeb) return undefined;
-    const flat = StyleSheet.flatten(styles.moodCard) as any;
-    return {
-      ...(flat || {}),
-      cursor: 'pointer',
-    } as any;
-  }, [isWeb, styles.moodCard]);
+  }), [colors, isMobile, isTabletRange]);
 
   return (
-    <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>
-      <View style={[styles.decorOrb, styles.decorOrbTop]} />
-      <View style={[styles.decorOrb, styles.decorOrbBottom]} />
+    <View testID="home-hero" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
-        <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={isMobile ? 32 : isCompactDesktop ? 40 : 64} align="center">
+        <ResponsiveStack direction="responsive" gap={isMobile ? 32 : 64} align="center">
           <View style={styles.content}>
-            <View style={styles.eyebrow}>
-              <Feather name="zap" size={11} color={colors.primary} />
-              <Text style={styles.eyebrowText}>Бесплатно • Без регистрации</Text>
+            <View style={styles.badge}>
+              <Feather name="zap" size={12} color={colors.primary} />
+              <Text style={styles.badgeText}>Бесплатно и без регистрации</Text>
             </View>
 
-            <View style={styles.titleWrap}>
-              <Text style={styles.title}>
-                Выходные с умом — и книга поездок в подарок
-              </Text>
-              <Text style={styles.subtitle}>
-                Выбирай маршруты по расстоянию и формату. Сохраняй поездки с фото и заметками. Собирай книгу, которой хочется делиться.
-              </Text>
-            </View>
+            <Text style={styles.title}>
+              Идеи для поездок на выходные
+            </Text>
 
-            <View style={styles.featurePills}>
-              {FEATURE_PILLS.map((pill) => (
-                <View key={pill.label} style={styles.featurePill}>
-                  <Feather name={pill.icon as any} size={13} color={colors.primary} />
-                  <Text style={styles.featurePillText}>{pill.label}</Text>
-                </View>
-              ))}
-            </View>
+            <Text style={styles.subtitle}>
+              Выбирай маршруты по расстоянию и формату. Сохраняй поездки с фото. Собирай личную книгу путешествий.
+            </Text>
 
-            <View style={styles.statsRow}>
-              {STATS.map((stat, idx) => (
-                <View key={stat.value} style={styles.statWrapper}>
-                  {idx > 0 && <View style={styles.statDivider} />}
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{stat.value}</Text>
-                    <Text style={styles.statLabel}>{stat.label}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-
-            {travelsCount === 0 && isAuthenticated && (
-              <Text style={styles.hint}>
-                Добавь первую поездку и сразу получишь основу для личной книги путешествий.
-              </Text>
-            )}
-
-            <ResponsiveStack
-              direction={isMobile ? 'vertical' : 'horizontal'}
-              gap={isMobile ? 12 : 16}
-              style={styles.buttonsContainer}
-            >
+            <View style={styles.buttonsContainer}>
               <Button
                 onPress={handleCreateBook}
                 label={primaryButtonLabel}
                 variant="primary"
-                size={isMobile ? 'md' : 'lg'}
+                size="md"
                 fullWidth={isMobile}
                 style={styles.primaryButton}
                 labelStyle={styles.primaryButtonText}
@@ -728,12 +479,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 pressedStyle={styles.primaryButtonHover}
                 accessibilityLabel={primaryButtonLabel}
               />
-
               <Button
                 onPress={handleOpenSearch}
                 label="Смотреть маршруты"
                 variant="secondary"
-                size={isMobile ? 'md' : 'lg'}
+                size="md"
                 fullWidth={isMobile}
                 icon={<Feather name="compass" size={16} color={colors.text} />}
                 style={styles.secondaryButton}
@@ -742,32 +492,62 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 pressedStyle={styles.secondaryButtonHover}
                 accessibilityLabel="Смотреть маршруты"
               />
-            </ResponsiveStack>
+            </View>
 
-            {shouldRenderMobileMoodChips && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
-                contentContainerStyle={styles.moodChipsRow}
-              >
-                {MOOD_CARDS.map((card) => (
-                  <Pressable
-                    key={card.title}
-                    onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams)}
-                    style={({ pressed }) => [
-                      styles.moodChip,
-                      pressed && styles.moodChipPressed,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Идея поездки ${card.title}`}
-                  >
-                    <Feather name={card.icon as any} size={13} color={colors.primary} />
-                    <Text style={styles.moodChipTitle}>{card.title}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            )}
+            <View style={styles.moodChipsContainer}>
+              {isMobile ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
+                  contentContainerStyle={styles.moodChipsRow}
+                >
+                  {MOOD_CARDS.map((card) => (
+                    <Pressable
+                      key={card.title}
+                      onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams)}
+                      style={({ pressed, hovered }) => [
+                        styles.moodChip,
+                        (pressed || hovered) && styles.moodChipHover,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Идея поездки ${card.title}`}
+                    >
+                      <View style={styles.moodChipIcon}>
+                        <Feather name={card.icon as any} size={14} color={colors.primary} />
+                      </View>
+                      <View style={styles.moodChipText}>
+                        <Text style={styles.moodChipTitle}>{card.title}</Text>
+                        <Text style={styles.moodChipMeta}>{card.meta}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.moodChipsRow}>
+                  {MOOD_CARDS.map((card) => (
+                    <Pressable
+                      key={card.title}
+                      onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams)}
+                      style={({ pressed, hovered }) => [
+                        styles.moodChip,
+                        (pressed || hovered) && styles.moodChipHover,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Идея поездки ${card.title}`}
+                    >
+                      <View style={styles.moodChipIcon}>
+                        <Feather name={card.icon as any} size={14} color={colors.primary} />
+                      </View>
+                      <View style={styles.moodChipText}>
+                        <Text style={styles.moodChipTitle}>{card.title}</Text>
+                        <Text style={styles.moodChipMeta}>{card.meta}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
 
           {shouldRenderImageSlot && (
@@ -784,37 +564,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               {({ hovered }) => (
                 <>
                   <View style={styles.imageDecor} />
-                  <View style={styles.imageDecor2} />
-                  <View style={styles.moodPanel}>
-                    {MOOD_CARDS.slice(0, isTabletRange || isNarrowDesktop ? 3 : 4).map((card) => (
-                      <div
-                        key={card.title}
-                        role="button"
-                        tabIndex={0}
-                        data-card-action="true"
-                        aria-label={`Идея поездки ${card.title}`}
-                        onClick={(e: any) => handleMoodCardPress(e, card.title, card.filters)}
-                        onKeyDown={(e: any) => {
-                          if (e?.key === 'Enter' || e?.key === ' ') {
-                            handleMoodCardPress(e, card.title, card.filters);
-                          }
-                        }}
-                        style={moodCardWebStyle}
-                      >
-                        <View style={styles.moodCardHeader}>
-                          <Feather name={card.icon as any} size={12} color={colors.primary} />
-                          <Text style={styles.moodCardTitle}>{card.title}</Text>
-                        </View>
-                        <Text style={styles.moodCardMeta}>{card.meta}</Text>
-                      </div>
-                    ))}
-                  </View>
-
-                  <View style={styles.bookImageWrap}>
+                  <View style={[styles.bookImageWrap, hovered && styles.bookImageHover]}>
                     <ImageCardMedia
                       source={BOOK_IMAGES[bookImageIndex].source}
-                      width={isTabletRange ? 180 : isNarrowDesktop ? 210 : isCompactDesktop ? 230 : 260}
-                      height={isTabletRange ? 270 : isNarrowDesktop ? 315 : isCompactDesktop ? 345 : 390}
+                      width={isTabletRange ? 180 : 220}
+                      height={isTabletRange ? 270 : 330}
                       borderRadius={DESIGN_TOKENS.radii.lg}
                       fit="cover"
                       quality={90}
@@ -822,18 +576,16 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                       loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
                       priority={Platform.OS === 'web' ? 'high' : 'normal'}
                       transition={300}
-                      style={[styles.bookImage, hovered && styles.bookImageHover]}
+                      style={styles.bookImage}
                     />
-                    {BOOK_IMAGES[bookImageIndex].title && (
-                      <View style={styles.bookOverlay}>
-                        <Text style={styles.bookOverlayTitle} numberOfLines={2}>
-                          {BOOK_IMAGES[bookImageIndex].title}
-                        </Text>
-                        <Text style={styles.bookOverlaySubtitle} numberOfLines={1}>
-                          {BOOK_IMAGES[bookImageIndex].subtitle}
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.bookOverlay}>
+                      <Text style={styles.bookOverlayTitle} numberOfLines={2}>
+                        {BOOK_IMAGES[bookImageIndex].title}
+                      </Text>
+                      <Text style={styles.bookOverlaySubtitle} numberOfLines={1}>
+                        {BOOK_IMAGES[bookImageIndex].subtitle}
+                      </Text>
+                    </View>
                     <View style={styles.bookDots}>
                       {BOOK_IMAGES.map((_, i) => (
                         <View
@@ -852,6 +604,5 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     </View>
   );
 });
-
 
 export default HomeHero;
