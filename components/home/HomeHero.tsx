@@ -79,28 +79,43 @@ const BOOK_IMAGES = [
     subtitle: 'Что посмотреть за 1 день • Озеро • Словения',
     href: 'https://metravel.by/travels/vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
   },
+  {
+    source: {
+      uri: 'https://metravel.by/travel-image/4864/conversions/iIGMjveCXmzwjZASHQTnPvEog7WURBjDEjYX7D3N-webpTravelMainImage_400.webp',
+    },
+    alt: 'Морское око в мае — Польша',
+    title: 'Морское око в мае',
+    subtitle: 'Поход • Озеро • Польша',
+    href: 'https://metravel.by/travels/morskoe-oko-v-mae',
+  },
 ];
 
 export const BOOK_IMAGES_FOR_TEST = BOOK_IMAGES;
 
 const MOOD_CARDS = [
   {
-    title: 'У озера за выходные',
-    meta: 'Природа • 2 дня • до 180 км',
+    title: 'У воды',
+    meta: 'Природа',
     icon: 'sun',
-    filters: { categories: [2, 21], over_nights_stay: [1], categoryTravelAddress: [84] },
+    filters: { categoryTravelAddress: [84,110,113,193] },
   },
   {
-    title: 'Город и кофе',
+    title: 'Дворцы и замки',
     meta: 'Город • 1 день • спокойный темп',
     icon: 'coffee',
-    filters: { categories: [19, 20] },
+    filters: { categoryTravelAddress: [33,43] },
+  },
+  {
+    title: 'Руины',
+    meta: 'История',
+    icon: 'ruins',
+    filters: { categoryTravelAddress: [114,115,116,117,118,119,120] },
   },
   {
     title: 'Активный выезд',
-    meta: 'Треккинг • 2 дня • больше движения',
+    meta: 'Треккинг • Хайкинг • больше движения',
     icon: 'activity',
-    filters: { categories: [22, 2] },
+    filters: { categories: [21, 22, 2] },
   },
 ] as const;
 
@@ -171,6 +186,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const isMobile = isSmallPhone || isPhone;
   const isCompactDesktop = !isMobile && width < 1400;
+  const isNarrowDesktop = !isMobile && width < 1240;
   const shouldRenderImageSlot = isWeb && !isMobile;
 
   const handleMoodCardPress = (
@@ -428,7 +444,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     imageContainer: {
       flex: 0,
-      width: isCompactDesktop ? 380 : 440,
+      width: isNarrowDesktop ? 340 : isCompactDesktop ? 380 : 440,
       minHeight: 480,
       justifyContent: 'center',
       alignItems: 'center',
@@ -468,9 +484,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     moodPanel: {
       position: 'absolute',
-      left: isCompactDesktop ? -6 : -24,
-      top: isCompactDesktop ? 24 : 32,
-      width: isCompactDesktop ? 205 : 220,
+      left: isNarrowDesktop ? 10 : isCompactDesktop ? 8 : -24,
+      top: isNarrowDesktop ? 12 : isCompactDesktop ? 24 : 32,
+      width: isNarrowDesktop ? 188 : isCompactDesktop ? 205 : 220,
       gap: 12,
       zIndex: 10,
     },
@@ -479,8 +495,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.4)',
       backgroundColor: 'rgba(255,255,255,0.8)',
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+      paddingHorizontal: isNarrowDesktop ? 10 : 14,
+      paddingVertical: isNarrowDesktop ? 8 : 12,
       ...Platform.select({
         web: {
           boxShadow: '0 8px 32px rgba(0,0,0,0.06)',
@@ -508,14 +524,14 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     moodCardTitle: {
       color: '#1a1a1a', // Always dark for contrast on glass
-      fontSize: 13,
+      fontSize: isNarrowDesktop ? 12 : 13,
       fontWeight: '700',
-      lineHeight: 18,
+      lineHeight: isNarrowDesktop ? 16 : 18,
     },
     moodCardMeta: {
       color: '#666666',
-      fontSize: 12,
-      lineHeight: 16,
+      fontSize: isNarrowDesktop ? 11 : 12,
+      lineHeight: isNarrowDesktop ? 14 : 16,
       fontWeight: '500',
     },
     bookImage: {
@@ -596,7 +612,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       width: 18,
       backgroundColor: colors.primary,
     },
-  }), [colors, isCompactDesktop, isMobile]);
+  }), [colors, isCompactDesktop, isMobile, isNarrowDesktop]);
 
   const moodCardWebStyle = useMemo(() => {
     if (!isWeb) return undefined;
