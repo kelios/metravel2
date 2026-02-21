@@ -105,7 +105,17 @@ function ListTravel({
       if (complexity) f.complexity = complexity.split(',').map(Number).filter(Boolean);
       if (month) f.month = month.split(',').map(Number).filter(Boolean);
       return Object.keys(f).length > 0 ? f : undefined;
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [
+      params.categories,
+      params.companions,
+      params.complexity,
+      params.month,
+      params.over_nights_stay,
+      params.over__nights__stay,
+      params.categoryTravelAddress,
+      params.category_travel_address,
+      params.category__travel__address,
+    ]);
 
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";

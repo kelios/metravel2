@@ -314,7 +314,19 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           const isExpanded = expandedGroups.has(group.key);
           const rawSelected = selectedFilters[group.key];
           const selectedArray = Array.isArray(rawSelected) ? rawSelected : [];
+          const selectedSet = new Set(selectedArray.map(String));
           const selectedCount = selectedArray.length;
+          const selectedNames = group.options
+            .filter((option) => selectedSet.has(String(option.id)))
+            .map((option) => option.name);
+          const orderedOptions = group.options
+            .slice()
+            .sort((a, b) => {
+              const aSelected = selectedSet.has(String(a.id));
+              const bSelected = selectedSet.has(String(b.id));
+              if (aSelected === bSelected) return 0;
+              return aSelected ? -1 : 1;
+            });
           
           return (
             <View 
@@ -362,16 +374,20 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                     styles.groupContent as any,
                     {
                       opacity: animatedValues[group.key],
-                      maxHeight: animatedValues[group.key].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, 500],
-                      }),
                     } as any
                   ]}
                 >
-                  {group.options.map(option => {
+                  {selectedCount > 0 && (
+                    <View style={styles.selectedSummaryRow}>
+                      <Text style={styles.selectedSummaryLabel}>Выбрано:</Text>
+                      <Text style={styles.selectedSummaryText} numberOfLines={2}>
+                        {selectedNames.length > 0 ? selectedNames.join(', ') : selectedArray.join(', ')}
+                      </Text>
+                    </View>
+                  )}
+                  {orderedOptions.map(option => {
                     const optionId = String(option.id);
-                    const isSelected = selectedArray.map(String).includes(optionId);
+                    const isSelected = selectedSet.has(optionId);
                     
                     return (
                       <Pressable
@@ -775,6 +791,27 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       fontSize: typography.sizes.xs,
       fontWeight: typography.weights.semibold as any,
       color: colors.textOnPrimary,
+    },
+    selectedSummaryRow: {
+      marginBottom: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.md,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      gap: 2,
+    },
+    selectedSummaryLabel: {
+      fontSize: typography.sizes.xs,
+      fontWeight: typography.weights.semibold as any,
+      color: colors.primaryText,
+    },
+    selectedSummaryText: {
+      fontSize: typography.sizes.xs,
+      color: colors.textSecondary,
+      lineHeight: 16,
+      fontWeight: typography.weights.medium as any,
     },
     groupContent: {
       marginTop: spacing.xs,

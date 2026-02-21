@@ -136,8 +136,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                   ? c.value.trim()
                   : String(c || '').trim();
           if (!name) return null;
-          const qty = travelCategoriesCount[name];
-          if (!qty) return null;
+          const qty = travelCategoriesCount[name] || 0;
           return {
             id: typeof c === 'object' && c !== null && 'id' in c ? (c as any).id || name : name,
             label: `${name} (${qty})`,

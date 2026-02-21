@@ -17,6 +17,39 @@ interface HomeHeroProps {
   travelsCount?: number;
 }
 
+type QuickFilterValue = string | number | Array<string | number>;
+type QuickFilterParams = Record<string, QuickFilterValue | undefined>;
+
+const normalizeQuickFilterValue = (value: QuickFilterValue | undefined): string | null => {
+  if (value === undefined || value === null) return null;
+
+  if (Array.isArray(value)) {
+    const cleaned = value
+      .map((item) => String(item ?? '').trim())
+      .filter((item) => item.length > 0);
+    if (!cleaned.length) return null;
+    return cleaned.join(',');
+  }
+
+  const scalar = String(value).trim();
+  return scalar.length > 0 ? scalar : null;
+};
+
+const buildFilterPath = (base: string, params?: QuickFilterParams) => {
+  if (!params) return base;
+
+  const query = Object.entries(params)
+    .map(([key, value]) => {
+      const normalized = normalizeQuickFilterValue(value);
+      if (!normalized) return null;
+      return `${key}=${normalized}`;
+    })
+    .filter((item): item is string => typeof item === 'string' && item.length > 0)
+    .join('&');
+
+  return query.length > 0 ? `${base}?${query}` : base;
+};
+
 const BOOK_IMAGES = [
   {
     source: require('../../assets/images/pdf.webp'),
@@ -55,19 +88,19 @@ const MOOD_CARDS = [
     title: 'У озера за выходные',
     meta: 'Природа • 2 дня • до 180 км',
     icon: 'sun',
-    filterParams: 'categories=2,21&over_nights_stay=1&categoryTravelAddress=84',
+    filters: { categories: [2, 21], over_nights_stay: [1], categoryTravelAddress: [84] },
   },
   {
     title: 'Город и кофе',
     meta: 'Город • 1 день • спокойный темп',
     icon: 'coffee',
-    filterParams: 'categories=19,20',
+    filters: { categories: [19, 20] },
   },
   {
     title: 'Активный выезд',
     meta: 'Треккинг • 2 дня • больше движения',
     icon: 'activity',
-    filterParams: 'categories=22,2',
+    filters: { categories: [22, 2] },
   },
 ] as const;
 
@@ -90,7 +123,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone } = useResponsive();
+  const { isSmallPhone, isPhone, width } = useResponsive();
 
   const isWeb = Platform.OS === 'web';
 
@@ -110,9 +143,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     router.push('/search' as any);
   };
 
-  const handleQuickFilterPress = (label: string, filterParams?: string) => {
+  const handleQuickFilterPress = (label: string, filters?: QuickFilterParams) => {
     queueAnalyticsEvent('HomeClick_QuickFilter', { label, source: 'home-hero' });
-    const path = filterParams ? `/search?${filterParams}` : '/search';
+    const path = buildFilterPath('/search', filters);
     router.push(path as any);
   };
 
@@ -137,16 +170,17 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
+  const isCompactDesktop = !isMobile && width < 1400;
   const shouldRenderImageSlot = isWeb && !isMobile;
 
   const handleMoodCardPress = (
     e: any,
     label: string,
-    filterParams?: string,
+    filters?: QuickFilterParams,
   ) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    handleQuickFilterPress(label, filterParams);
+    handleQuickFilterPress(label, filters);
   };
 
   const [bookImageIndex, setBookImageIndex] = useState(0);
@@ -217,6 +251,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     content: {
       flex: 1,
       width: '100%',
+      maxWidth: isMobile ? '100%' : isCompactDesktop ? 560 : 620,
       gap: isMobile ? 16 : 24,
       alignItems: 'flex-start',
       justifyContent: 'center',
@@ -242,13 +277,13 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     titleWrap: {
       gap: 0,
-      maxWidth: isMobile ? '100%' as const : 640,
+      maxWidth: isMobile ? '100%' as const : isCompactDesktop ? 560 : 640,
     },
     title: {
       color: colors.text,
       letterSpacing: -1.2,
-      lineHeight: isMobile ? 42 : 62,
-      fontSize: isMobile ? 36 : 52,
+      lineHeight: isMobile ? 42 : isCompactDesktop ? 56 : 62,
+      fontSize: isMobile ? 36 : isCompactDesktop ? 46 : 52,
       fontWeight: '900',
     },
     subtitle: {
@@ -392,7 +427,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       fontWeight: '600',
     },
     imageContainer: {
-      flex: 1,
+      flex: 0,
+      width: isCompactDesktop ? 380 : 440,
       minHeight: 480,
       justifyContent: 'center',
       alignItems: 'center',
@@ -432,9 +468,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     moodPanel: {
       position: 'absolute',
-      left: -32,
-      top: 32,
-      width: 220,
+      left: isCompactDesktop ? -6 : -24,
+      top: isCompactDesktop ? 24 : 32,
+      width: isCompactDesktop ? 205 : 220,
       gap: 12,
       zIndex: 10,
     },
@@ -560,7 +596,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       width: 18,
       backgroundColor: colors.primary,
     },
-  }), [colors, isMobile]);
+  }), [colors, isCompactDesktop, isMobile]);
 
   const moodCardWebStyle = useMemo(() => {
     if (!isWeb) return undefined;
@@ -576,7 +612,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       <View style={[styles.decorOrb, styles.decorOrbTop]} />
       <View style={[styles.decorOrb, styles.decorOrbBottom]} />
       <ResponsiveContainer maxWidth="xl" padding>
-        <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={isMobile ? 32 : 64} align="center">
+        <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={isMobile ? 32 : isCompactDesktop ? 40 : 64} align="center">
           <View style={styles.content}>
             <View style={styles.eyebrow}>
               <Feather name="zap" size={11} color={colors.primary} />
@@ -676,10 +712,10 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                         tabIndex={0}
                         data-card-action="true"
                         aria-label={`Идея поездки ${card.title}`}
-                        onClick={(e: any) => handleMoodCardPress(e, card.meta, card.filterParams)}
+                        onClick={(e: any) => handleMoodCardPress(e, card.title, card.filters)}
                         onKeyDown={(e: any) => {
                           if (e?.key === 'Enter' || e?.key === ' ') {
-                            handleMoodCardPress(e, card.meta, card.filterParams);
+                            handleMoodCardPress(e, card.title, card.filters);
                           }
                         }}
                         style={moodCardWebStyle}

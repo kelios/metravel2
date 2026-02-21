@@ -23,46 +23,89 @@ interface HomeSectionProps {
   centerRowsOnWebDesktop?: boolean;
 }
 
+type QuickFilterValue = string | number | Array<string | number>;
+type QuickFilterParams = Record<string, QuickFilterValue | undefined>;
+
+const normalizeQuickFilterValue = (value: QuickFilterValue | undefined): string | null => {
+  if (value === undefined || value === null) return null;
+
+  if (Array.isArray(value)) {
+    const cleaned = value
+      .map((item) => String(item ?? '').trim())
+      .filter((item) => item.length > 0);
+    if (!cleaned.length) return null;
+    return cleaned.join(',');
+  }
+
+  const scalar = String(value).trim();
+  return scalar.length > 0 ? scalar : null;
+};
+
+const buildFilterPath = (base: string, params?: QuickFilterParams) => {
+  if (!params) return base;
+
+  const query = Object.entries(params)
+    .map(([key, value]) => {
+      const normalized = normalizeQuickFilterValue(value);
+      if (!normalized) return null;
+      return `${key}=${normalized}`;
+    })
+    .filter((item): item is string => typeof item === 'string' && item.length > 0)
+    .join('&');
+
+  return query.length > 0 ? `${base}?${query}` : base;
+};
+
 const FILTER_GROUPS = [
   {
     title: 'Тип маршрута',
     icon: 'layers',
     chips: [
-      { label: 'Поход / хайкинг', filterParams: 'categories=2,21' },
-      { label: 'Город',           filterParams: 'categories=19,20' },
-      { label: 'Треккинг',        filterParams: 'categories=22' },
-      { label: 'Велопоход',       filterParams: 'categories=7' },
-      { label: 'Автопутешествие', filterParams: 'categories=6' },
+      { label: 'Поход / хайкинг', filters: { categories: [2, 21] } },
+      { label: 'Город',           filters: { categories: [19, 20] } },
+      { label: 'Треккинг',        filters: { categories: [22] } },
+      { label: 'Велопоход',       filters: { categories: [7] } },
+      { label: 'Автопутешествие', filters: { categories: [6] } },
     ],
   },
   {
     title: 'Ночлег',
     icon: 'moon',
     chips: [
-      { label: 'Без ночлега',     filterParams: 'over_nights_stay=8',   route: '/search' },
-      { label: 'Палатка',         filterParams: 'over_nights_stay=1',   route: '/search' },
-      { label: 'Гостиница',       filterParams: 'over_nights_stay=2',   route: '/search' },
-      { label: 'Квартира / дом',  filterParams: 'over_nights_stay=3,4', route: '/search' },
+      { label: 'Без ночлега',     filters: { over_nights_stay: [8] }, route: '/search' },
+      { label: 'Палатка',         filters: { over_nights_stay: [1] }, route: '/search' },
+      { label: 'Гостиница',       filters: { over_nights_stay: [2] }, route: '/search' },
+      { label: 'Квартира / дом',  filters: { over_nights_stay: [3, 4] }, route: '/search' },
     ],
   },
   {
     title: 'Сезон',
     icon: 'calendar',
     chips: [
-      { label: 'Весна', filterParams: 'month=3,4,5',   route: '/search' },
-      { label: 'Лето',  filterParams: 'month=6,7,8',   route: '/search' },
-      { label: 'Осень', filterParams: 'month=9,10,11', route: '/search' },
-      { label: 'Зима',  filterParams: 'month=12,1,2',  route: '/search' },
+      { label: 'Весна', filters: { month: [3, 4, 5] }, route: '/search' },
+      { label: 'Лето',  filters: { month: [6, 7, 8] }, route: '/search' },
+      { label: 'Осень', filters: { month: [9, 10, 11] }, route: '/search' },
+      { label: 'Зима',  filters: { month: [12, 1, 2] }, route: '/search' },
+    ],
+  },
+  {
+    title: 'Объекты',
+    icon: 'map',
+    chips: [
+      { label: 'Озеро', filters: { categoryTravelAddress: [84] }, route: '/search' },
+      { label: 'Гора', filters: { categoryTravelAddress: [26] }, route: '/search' },
+      { label: 'Водопад', filters: { categoryTravelAddress: [20] }, route: '/search' },
+      { label: 'Бухта', filters: { categoryTravelAddress: [18] }, route: '/search' },
     ],
   },
   {
     title: 'Расстояние на карте',
     icon: 'map-pin',
     chips: [
-      { label: 'До 30 км',   filterParams: 'radius=30',  route: '/map' },
-      { label: 'До 60 км',   filterParams: 'radius=60',  route: '/map' },
-      { label: 'До 100 км',  filterParams: 'radius=100', route: '/map' },
-      { label: 'До 200 км',  filterParams: 'radius=200', route: '/map' },
+      { label: 'До 30 км',   filters: { radius: 30 }, route: '/map' },
+      { label: 'До 60 км',   filters: { radius: 60 }, route: '/map' },
+      { label: 'До 100 км',  filters: { radius: 100 }, route: '/map' },
+      { label: 'До 200 км',  filters: { radius: 200 }, route: '/map' },
     ],
   },
 ];
@@ -588,10 +631,10 @@ function HomeInspirationSections() {
   const isMobile = isPhone || isLargePhone;
 
   const handleFilterPress = useCallback(
-    (label: string, filterParams?: string, route?: string) => {
+    (label: string, filters?: QuickFilterParams, route?: string) => {
       sendAnalyticsEvent('HomeClick_QuickFilter', { label });
       const base = route ?? '/search';
-      const path = filterParams ? `${base}?${filterParams}` : base;
+      const path = buildFilterPath(base, filters);
       router.push(path as any);
     },
     [router],
@@ -836,7 +879,7 @@ function HomeInspirationSections() {
                     {group.chips.map((chip) => (
                       <Pressable
                         key={chip.label}
-                        onPress={() => handleFilterPress(chip.label, chip.filterParams, (chip as any).route)}
+                        onPress={() => handleFilterPress(chip.label, (chip as any).filters, (chip as any).route)}
                         style={({ pressed, hovered }) => [
                           styles.chip,
                           (pressed || hovered) && styles.chipHover,

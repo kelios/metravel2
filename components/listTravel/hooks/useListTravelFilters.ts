@@ -3,7 +3,7 @@
  * Вынесена логика фильтров для переиспользования и тестирования
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { FilterState, FilterOptions } from '../utils/listTravelTypes';
 import { INITIAL_FILTER, BELARUS_ID } from '../utils/listTravelConstants';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
@@ -27,6 +27,22 @@ export interface UseListTravelFiltersReturn {
   applyFilter: (filter: FilterState) => void;
   handleToggleCategory: (categoryName: string) => void;
 }
+
+const serializeFilterState = (value?: FilterState) => {
+  const source = value ?? INITIAL_FILTER;
+  const normalized: Record<string, unknown> = {};
+  Object.keys(source)
+    .sort()
+    .forEach((key) => {
+      const raw = (source as any)[key];
+      if (Array.isArray(raw)) {
+        normalized[key] = [...raw];
+        return;
+      }
+      normalized[key] = raw;
+    });
+  return JSON.stringify(normalized);
+};
 
 const isMeaningfulString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
@@ -85,14 +101,16 @@ export function useListTravelFilters({
   initialFilter,
 }: UseListTravelFiltersProps): UseListTravelFiltersReturn {
   const [filter, setFilter] = useState<FilterState>(initialFilter ?? INITIAL_FILTER);
+  const appliedInitialRef = useRef<string>(serializeFilterState(initialFilter));
 
-  // On web, search params can be empty on the first render during hydration/navigation.
-  // Apply `initialFilter` once it becomes available, but only if the user hasn't changed filters yet.
+  // Re-apply URL-derived initialFilter whenever query params actually change.
+  // This keeps quick filters on home deterministic and prevents stale filters.
   useEffect(() => {
-    if (!initialFilter) return;
-    if (Object.keys(filter).length > 0) return;
-    setFilter(initialFilter);
-  }, [initialFilter, filter]);
+    const nextSerialized = serializeFilterState(initialFilter);
+    if (appliedInitialRef.current === nextSerialized) return;
+    appliedInitialRef.current = nextSerialized;
+    setFilter(initialFilter ?? INITIAL_FILTER);
+  }, [initialFilter]);
 
   const filterForQuery = useMemo(() => {
     const textualCategories = extractCategoryNames(filter.categories);

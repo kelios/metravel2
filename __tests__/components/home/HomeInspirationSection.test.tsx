@@ -84,11 +84,12 @@ describe('HomeInspirationSections', () => {
   });
 
   describe('Quick filter chips — FILTER_GROUPS', () => {
-    it('renders all four filter group titles', () => {
+    it('renders all quick filter group titles', () => {
       const { getByText } = render(<HomeInspirationSections />);
       expect(getByText('Тип маршрута')).toBeTruthy();
       expect(getByText('Ночлег')).toBeTruthy();
       expect(getByText('Сезон')).toBeTruthy();
+      expect(getByText('Объекты')).toBeTruthy();
       expect(getByText('Расстояние на карте')).toBeTruthy();
     });
 
@@ -99,6 +100,8 @@ describe('HomeInspirationSections', () => {
       expect(getByText('Без ночлега')).toBeTruthy();
       expect(getByText('Палатка')).toBeTruthy();
       expect(getByText('Лето')).toBeTruthy();
+      expect(getByText('Озеро')).toBeTruthy();
+      expect(getByText('Водопад')).toBeTruthy();
       expect(getByText('До 30 км')).toBeTruthy();
       expect(getByText('До 100 км')).toBeTruthy();
     });
@@ -117,6 +120,10 @@ describe('HomeInspirationSections', () => {
       ['Лето', '/search?month=6,7,8'],
       ['Осень', '/search?month=9,10,11'],
       ['Зима', '/search?month=12,1,2'],
+      ['Озеро', '/search?categoryTravelAddress=84'],
+      ['Гора', '/search?categoryTravelAddress=26'],
+      ['Водопад', '/search?categoryTravelAddress=20'],
+      ['Бухта', '/search?categoryTravelAddress=18'],
       ['До 30 км', '/map?radius=30'],
       ['До 60 км', '/map?radius=60'],
       ['До 100 км', '/map?radius=100'],

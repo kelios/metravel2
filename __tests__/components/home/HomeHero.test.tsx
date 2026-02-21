@@ -242,15 +242,23 @@ describe('HomeHero Component', () => {
         // filterParams are tested via HomeInspirationSection integration; skip if not exported
         return;
       }
-      expect(MOOD_CARDS_FOR_TEST[0].filterParams).toBe('categories=2,21&over_nights_stay=1&categoryTravelAddress=84');
-      expect(MOOD_CARDS_FOR_TEST[1].filterParams).toBe('categories=19,20');
-      expect(MOOD_CARDS_FOR_TEST[2].filterParams).toBe('categories=22,2');
+      expect(MOOD_CARDS_FOR_TEST[0].filters).toEqual({
+        categories: [2, 21],
+        over_nights_stay: [1],
+        categoryTravelAddress: [84],
+      });
+      expect(MOOD_CARDS_FOR_TEST[1].filters).toEqual({ categories: [19, 20] });
+      expect(MOOD_CARDS_FOR_TEST[2].filters).toEqual({ categories: [22, 2] });
     });
 
     it('handleQuickFilterPress builds correct path with filterParams', () => {
       const push = jest.fn();
-      const filterParams = 'categories=2,21&over_nights_stay=1&categoryTravelAddress=84';
-      const path = filterParams ? `/search?${filterParams}` : '/search';
+      const params = {
+        categories: [2, 21],
+        over_nights_stay: [1],
+        categoryTravelAddress: [84],
+      };
+      const path = `/search?categories=${params.categories.join(',')}&over_nights_stay=${params.over_nights_stay.join(',')}&categoryTravelAddress=${params.categoryTravelAddress.join(',')}`;
       push(path);
       expect(push).toHaveBeenCalledWith('/search?categories=2,21&over_nights_stay=1&categoryTravelAddress=84');
     });

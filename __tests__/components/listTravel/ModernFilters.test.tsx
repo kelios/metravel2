@@ -187,4 +187,37 @@ describe('ModernFilters Component', () => {
 
     expect(screen.getByText('Только на модерации')).toBeTruthy();
   });
+
+  it('moves selected object option to top of the group list', () => {
+    const objectGroup = [
+      {
+        key: 'categoryTravelAddress',
+        title: 'ОБЪЕКТЫ',
+        options: [
+          { id: '1', name: 'Акведук' },
+          { id: '2', name: 'Амфитеатр' },
+          { id: '84', name: 'Озеро' },
+        ],
+        multiSelect: true,
+        icon: 'map-pin',
+      },
+    ];
+
+    renderWithProviders(
+      <ModernFilters
+        filterGroups={objectGroup as any}
+        selectedFilters={{ categoryTravelAddress: [84] as any }}
+        onFilterChange={mockOnFilterChange}
+        onClearAll={mockOnClearAll}
+        resultsCount={10}
+      />
+    );
+
+    fireEvent.press(screen.getByText('ОБЪЕКТЫ'));
+
+    const optionTexts = screen.getAllByText(/Акведук|Амфитеатр|Озеро/);
+    expect(optionTexts[0].props.children).toBe('Озеро');
+    expect(screen.getByText('Выбрано:')).toBeTruthy();
+    expect(screen.getAllByText('Озеро').length).toBeGreaterThan(1);
+  });
 });
