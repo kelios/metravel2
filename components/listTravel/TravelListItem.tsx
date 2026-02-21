@@ -6,8 +6,9 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/types/types";
 import OptimizedFavoriteButton from "@/components/travel/OptimizedFavoriteButton";
-import { fetchTravel, fetchTravelBySlug } from "@/api/travelsApi";
-import { queryKeys } from "@/queryKeys";
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import { queryKeys } from '@/queryKeys';
+import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import CardActionPressable from "@/components/ui/CardActionPressable";
 
@@ -157,9 +158,12 @@ function TravelListItem({
     }, [id, slug]);
 
     const travelUrl = useMemo(() => {
-        if (!travelKey) return '';
-        return `/travels/${travelKey}`;
-    }, [travelKey]);
+        return resolveTravelUrl({
+            id: Number(id) || 0,
+            slug: typeof slug === 'string' ? slug : undefined,
+            url: typeof (travel as any)?.url === 'string' ? (travel as any).url : undefined,
+        } as any);
+    }, [id, slug, travel]);
 
     const isDraft = useMemo(() => {
         const rawPublish = (travel as any)?.publish;

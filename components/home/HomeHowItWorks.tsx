@@ -120,21 +120,20 @@ function HomeHowItWorks() {
     },
     useCaseCard: {
       flex: 1,
-      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderRadius: DESIGN_TOKENS.radii.xl,
       borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
+      borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      padding: isMobile ? 18 : 24,
-      gap: 13,
+      padding: isMobile ? 20 : 28,
+      gap: 16,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.modal,
-          transition: 'all 0.3s ease',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         } as any,
       }),
     },
     useCaseCardIdea: {
-      borderColor: colors.primaryAlpha30,
       ...Platform.select({
         web: {
           backgroundImage: `linear-gradient(155deg, ${colors.primarySoft} 0%, ${colors.surface} 45%)`,
@@ -154,8 +153,8 @@ function HomeHowItWorks() {
       ...Platform.select({
         web: {
           transform: 'translateY(-4px)',
-          borderColor: colors.primary,
-          boxShadow: DESIGN_TOKENS.shadows.hover,
+          borderColor: colors.primaryAlpha30,
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
         },
       }),
     },
@@ -273,14 +272,14 @@ function HomeHowItWorks() {
     step: {
       flex: 1,
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      padding: isMobile ? 20 : 28,
-      gap: isMobile ? 10 : 16,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      padding: isMobile ? 24 : 32,
+      gap: isMobile ? 12 : 20,
       borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
+      borderColor: colors.borderLight,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
+          boxShadow: DESIGN_TOKENS.shadows.light,
           backgroundImage: `linear-gradient(165deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
           backgroundRepeat: 'no-repeat',
           transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -289,19 +288,19 @@ function HomeHowItWorks() {
       }),
     },
     stepNumber: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.primary,
-      letterSpacing: 0.8,
+      fontSize: 12,
+      fontWeight: '800',
+      color: colors.primaryText,
+      letterSpacing: 1,
       textTransform: 'uppercase',
-      marginBottom: isMobile ? 10 : 14,
+      marginBottom: isMobile ? 12 : 16,
     },
     stepHover: {
       ...Platform.select({
         web: {
           transform: 'translateY(-4px)',
-          boxShadow: DESIGN_TOKENS.shadows.hover,
-          borderColor: colors.primary,
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          borderColor: colors.primaryAlpha30,
         },
         default: {},
       }),

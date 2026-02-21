@@ -1,7 +1,8 @@
 import React, { Suspense, useMemo, useRef, useState, useCallback, lazy } from 'react';
-import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, ScrollView, Linking } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
+import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, ScrollView } from 'react-native';
+import { useRouter, usePathname } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites as _useFavorites } from '@/context/FavoritesContext';
@@ -108,9 +109,9 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const handleNavPress = (path: string, external?: boolean) => {
         if (external) {
             if (Platform.OS === 'web') {
-                window.open(path, '_blank', 'noopener,noreferrer');
+                openExternalUrlInNewTab(path);
             } else {
-                Linking.openURL(path);
+                openExternalUrl(path);
             }
             setMobileMenuVisible(false);
             return;

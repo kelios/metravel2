@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { queueAnalyticsEvent } from '@/utils/analytics';
+import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 interface HomeHeroProps {
   travelsCount?: number;
@@ -20,30 +21,30 @@ const BOOK_IMAGES = [
   {
     source: require('../../assets/images/pdf.webp'),
     alt: 'Тропа ведьм — Германия',
-    title: null,
-    subtitle: null,
-    href: null,
+    title: 'Тропа ведьм',
+    subtitle: 'Пешком через туман и легенды Гарца • Германия',
+    href: 'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele',
   },
   {
     source: require('../../assets/images/cover_sorapiso.jpg'),
     alt: 'Озеро Сорапис — Доломиты',
     title: 'Озеро Сорапис',
     subtitle: 'Поход по Доломитам • Италия',
-    href: 'https://metravel.by/travels/ozero-sorapiso-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
+    href: 'https://metravel.by/travels/ozero-sorapis-pokhod-po-marshrutam-215-i-217-v-dolomitakh',
   },
   {
     source: require('../../assets/images/cover_trecime.jpg'),
     alt: 'Tre Cime di Lavaredo — Доломиты',
     title: 'Tre Cime di Lavaredo',
     subtitle: 'Круговой маршрут 10 км • Италия',
-    href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km',
+    href: 'https://metravel.by/travels/tre-cime-di-lavaredo-krugovoi-marshrut-10-km-opisanie-i-vidy',
   },
   {
     source: require('../../assets/images/cover_bled.jpg'),
     alt: 'Озеро Блед — Словения',
     title: 'Озеро Блед',
     subtitle: 'Что посмотреть за 1 день • Словения',
-    href: 'https://metravel.by/travels/vintgarskoe-ushchelie-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
+    href: 'https://metravel.by/travels/vintgarskoe-ushchele-i-ozero-bled-chto-posmotret-v-slovenii-za-1-den',
   },
 ];
 
@@ -115,9 +116,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     if (href) {
       queueAnalyticsEvent('HomeClick_BookCover', { href });
       if (Platform.OS === 'web') {
-        window.open(href, '_blank', 'noopener');
+        openExternalUrlInNewTab(href);
       } else {
-        router.push(href as any);
+        openExternalUrl(href);
       }
     } else {
       queueAnalyticsEvent('HomeClick_OpenSearch');
@@ -133,6 +134,16 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const isMobile = isSmallPhone || isPhone;
   const shouldRenderImageSlot = isWeb && !isMobile;
+
+  const handleMoodCardPress = (
+    e: any,
+    label: string,
+    filterParams?: string,
+  ) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    handleQuickFilterPress(label, filterParams);
+  };
 
   const [bookImageIndex, setBookImageIndex] = useState(0);
 
@@ -150,26 +161,26 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
-      paddingTop: isMobile ? 32 : 52,
-      paddingBottom: isMobile ? 32 : 56,
+      paddingTop: isMobile ? 40 : 64,
+      paddingBottom: isMobile ? 40 : 72,
       backgroundColor: colors.background,
       width: '100%',
       alignSelf: 'stretch',
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 90% 70% at 68% 30%, ${colors.primarySoft} 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 5% 10%, ${colors.primaryLight} 0%, transparent 65%), linear-gradient(160deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 80% 60% at 75% 20%, ${colors.primarySoft} 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 10% 20%, ${colors.primaryLight} 0%, transparent 60%), linear-gradient(170deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: '100% 100%',
         },
       }),
     },
     bandMobile: {
-      paddingTop: 32,
-      paddingBottom: 32,
+      paddingTop: 36,
+      paddingBottom: 40,
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 130% 55% at 50% 18%, ${colors.primarySoft} 0%, transparent 65%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 120% 50% at 50% 15%, ${colors.primarySoft} 0%, transparent 60%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
         },
       }),
     },
@@ -202,7 +213,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     content: {
       flex: 1,
       width: '100%',
-      gap: isMobile ? 14 : 20,
+      gap: isMobile ? 16 : 24,
       alignItems: 'flex-start',
       justifyContent: 'center',
     },
@@ -215,60 +226,61 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primaryLight,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
     },
     eyebrowText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '700',
       color: colors.primaryText,
-      letterSpacing: 0.6,
+      letterSpacing: 0.8,
       textTransform: 'uppercase',
     },
     titleWrap: {
       gap: 0,
-      maxWidth: isMobile ? '100%' as const : 580,
+      maxWidth: isMobile ? '100%' as const : 640,
     },
     title: {
       color: colors.text,
-      letterSpacing: -1,
-      lineHeight: isMobile ? 40 : 56,
-      fontSize: isMobile ? 32 : 46,
-      fontWeight: '800',
+      letterSpacing: -1.2,
+      lineHeight: isMobile ? 42 : 62,
+      fontSize: isMobile ? 36 : 52,
+      fontWeight: '900',
     },
     subtitle: {
       color: colors.textMuted,
-      maxWidth: 500,
-      fontSize: isMobile ? 15 : 17,
-      lineHeight: isMobile ? 23 : 26,
+      maxWidth: 540,
+      fontSize: isMobile ? 16 : 18,
+      lineHeight: isMobile ? 24 : 28,
       fontWeight: '400',
-      marginTop: isMobile ? 10 : 14,
+      marginTop: isMobile ? 12 : 16,
     },
     featurePills: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 6,
-      maxWidth: isMobile ? '100%' as const : 480,
+      gap: 8,
+      maxWidth: isMobile ? '100%' as const : 520,
     },
     featurePill: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
+      gap: 6,
       borderRadius: DESIGN_TOKENS.radii.pill,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
+          transition: 'all 0.2s ease',
         },
       }),
     },
     featurePillText: {
       color: colors.textMuted,
-      fontSize: 12,
+      fontSize: 13,
       lineHeight: 18,
       fontWeight: '500',
     },
@@ -317,16 +329,17 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     buttonsContainer: {
       width: '100%',
+      marginTop: 8,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 24 : 32,
-      paddingVertical: isMobile ? 14 : 16,
-      minHeight: isMobile ? 50 : 54,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      paddingHorizontal: isMobile ? 24 : 36,
+      paddingVertical: isMobile ? 16 : 18,
+      minHeight: isMobile ? 54 : 58,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.heavy,
-          transition: 'all 0.2s ease',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
@@ -335,27 +348,27 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       ...Platform.select({
         web: {
           transform: 'translateY(-2px)',
-          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 0 28px ${colors.primaryAlpha30}`,
+          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 8px 24px ${colors.primaryAlpha40}`,
         },
       }),
     },
     primaryButtonText: {
       color: colors.textOnPrimary,
-      fontSize: isMobile ? 15 : 16,
-      fontWeight: '600',
-      letterSpacing: 0.1,
+      fontSize: isMobile ? 16 : 17,
+      fontWeight: '700',
+      letterSpacing: 0.2,
     },
     secondaryButton: {
       borderWidth: 1.5,
-      borderColor: colors.border,
-      paddingHorizontal: isMobile ? 20 : 28,
-      paddingVertical: isMobile ? 14 : 16,
-      minHeight: isMobile ? 50 : 54,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderColor: colors.borderLight,
+      paddingHorizontal: isMobile ? 24 : 32,
+      paddingVertical: isMobile ? 16 : 18,
+      minHeight: isMobile ? 54 : 58,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
       ...Platform.select({
         web: {
-          transition: 'all 0.2s ease',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
@@ -364,99 +377,106 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       borderColor: colors.primaryAlpha30,
       ...Platform.select({
         web: {
-          transform: 'translateY(-1px)',
+          transform: 'translateY(-2px)',
           boxShadow: DESIGN_TOKENS.shadows.medium,
         },
       }),
     },
     secondaryButtonText: {
       color: colors.text,
-      fontSize: isMobile ? 15 : 16,
-      fontWeight: '500',
+      fontSize: isMobile ? 16 : 17,
+      fontWeight: '600',
     },
     imageContainer: {
       flex: 1,
-      minHeight: 460,
+      minHeight: 480,
       justifyContent: 'center',
       alignItems: 'center',
       position: 'relative',
     },
     imageDecor: {
       position: 'absolute',
-      width: 320,
-      height: 450,
+      width: 340,
+      height: 470,
       borderRadius: DESIGN_TOKENS.radii.xl,
-      backgroundColor: colors.primaryLight,
-      opacity: 0.55,
+      backgroundColor: colors.primarySoft,
+      opacity: 0.6,
       ...Platform.select({
         web: {
-          transform: 'rotate(6deg) translate(22px, 8px)',
-          filter: 'blur(2px)',
+          transform: 'rotate(5deg) translate(24px, 12px)',
+          filter: 'blur(1px)',
+          transition: 'all 0.4s ease',
         } as any,
       }),
     },
     imageDecor2: {
       position: 'absolute',
-      width: 290,
-      height: 420,
+      width: 310,
+      height: 440,
       borderRadius: DESIGN_TOKENS.radii.xl,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border,
-      opacity: 0.7,
+      borderColor: colors.borderLight,
+      opacity: 0.8,
       ...Platform.select({
         web: {
-          transform: 'rotate(-3deg) translate(-12px, 16px)',
+          transform: 'rotate(-4deg) translate(-16px, 12px)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          transition: 'all 0.4s ease',
         } as any,
       }),
     },
     moodPanel: {
       position: 'absolute',
-      left: -52,
-      top: 24,
-      width: 200,
-      gap: 8,
+      left: -64,
+      top: 32,
+      width: 220,
+      gap: 12,
+      zIndex: 10,
     },
     moodCard: {
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      borderColor: 'rgba(255,255,255,0.4)',
+      backgroundColor: 'rgba(255,255,255,0.8)',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          backdropFilter: 'blur(12px)',
-          transition: 'all 0.2s ease',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.06)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
     moodCardHover: {
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.primarySoft,
+      borderColor: colors.primaryAlpha40,
+      backgroundColor: 'rgba(255,255,255,0.95)',
       ...Platform.select({
         web: {
-          transform: 'translateX(4px)',
+          transform: 'translateX(6px) translateY(-2px)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
         },
       }),
     },
     moodCardHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      marginBottom: 2,
+      gap: 8,
+      marginBottom: 4,
     },
     moodCardTitle: {
-      color: colors.text,
-      fontSize: 12,
-      fontWeight: '600',
-      lineHeight: 17,
+      color: '#1a1a1a', // Always dark for contrast on glass
+      fontSize: 13,
+      fontWeight: '700',
+      lineHeight: 18,
     },
     moodCardMeta: {
-      color: colors.textMuted,
-      fontSize: 11,
-      lineHeight: 15,
+      color: '#666666',
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '500',
     },
     bookImage: {
       width: 260,
@@ -537,6 +557,15 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primary,
     },
   }), [colors, isMobile]);
+
+  const moodCardWebStyle = useMemo(() => {
+    if (!isWeb) return undefined;
+    const flat = StyleSheet.flatten(styles.moodCard) as any;
+    return {
+      ...(flat || {}),
+      cursor: 'pointer',
+    } as any;
+  }, [isWeb, styles.moodCard]);
 
   return (
     <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>
@@ -637,22 +666,26 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                   <View style={styles.imageDecor2} />
                   <View style={styles.moodPanel}>
                     {MOOD_CARDS.map((card) => (
-                      <Pressable
+                      <div
                         key={card.title}
-                        onPress={() => handleQuickFilterPress(card.meta, card.filterParams)}
-                        style={({ pressed, hovered: h }) => [
-                          styles.moodCard,
-                          (pressed || h) && styles.moodCardHover,
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Идея поездки ${card.title}`}
+                        role="button"
+                        tabIndex={0}
+                        data-card-action="true"
+                        aria-label={`Идея поездки ${card.title}`}
+                        onClick={(e: any) => handleMoodCardPress(e, card.meta, card.filterParams)}
+                        onKeyDown={(e: any) => {
+                          if (e?.key === 'Enter' || e?.key === ' ') {
+                            handleMoodCardPress(e, card.meta, card.filterParams);
+                          }
+                        }}
+                        style={moodCardWebStyle}
                       >
                         <View style={styles.moodCardHeader}>
                           <Feather name={card.icon as any} size={12} color={colors.primary} />
                           <Text style={styles.moodCardTitle}>{card.title}</Text>
                         </View>
                         <Text style={styles.moodCardMeta}>{card.meta}</Text>
-                      </Pressable>
+                      </div>
                     ))}
                   </View>
 

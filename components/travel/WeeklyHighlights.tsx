@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { queryConfigs } from '@/utils/reactQueryConfig';
+import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -98,7 +99,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                 id: t.id,
                 title: t.name,
                 imageUrl: t.travel_image_thumb_url,
-                url: `/travels/${t.slug || t.id}`,
+                url: resolveTravelUrl({ id: Number(t.id) || 0, slug: t.slug, url: t.url } as any),
                 country: t.countryName,
             }));
     }, [popularTravels, viewHistory]);

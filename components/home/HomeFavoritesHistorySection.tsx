@@ -9,6 +9,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { ResponsiveContainer } from '@/components/layout';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Button from '@/components/ui/Button';
 
 type TravelLikeItem = {
@@ -361,14 +362,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       minWidth: 0,
     },
     sectionTitle: {
-      fontSize: 24,
-      fontWeight: '800',
+      fontSize: 26,
+      fontWeight: '900',
       color: colors.text,
-      lineHeight: 30,
+      lineHeight: 32,
+      letterSpacing: -0.5,
     },
     sectionSubtitle: {
       marginTop: 4,
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '500',
       color: colors.textMuted,
     },
@@ -376,16 +378,27 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 12,
+      paddingHorizontal: 16,
       paddingVertical: 10,
-      borderRadius: 12,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        },
+      }),
     },
     seeAllButtonHover: {
       backgroundColor: colors.primarySoft,
-      borderColor: colors.primary,
+      borderColor: colors.primaryAlpha30,
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-2px)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+        },
+      }),
     },
     seeAllButtonText: {
       fontSize: 14,

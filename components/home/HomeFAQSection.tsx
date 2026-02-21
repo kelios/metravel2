@@ -109,22 +109,24 @@ function HomeFAQSection() {
     },
     item: {
       width: '100%',
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.xl,
       backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.borderLight,
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
+          transition: 'border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease',
         },
       }),
     },
     itemOpen: {
-      borderColor: colors.primaryAlpha30,
+      borderColor: colors.primaryAlpha40,
+      backgroundColor: colors.primarySoft,
       ...Platform.select({
         web: {
-          boxShadow: `0 2px 12px ${colors.primaryAlpha30}`,
+          boxShadow: `0 8px 24px ${colors.primaryAlpha30}`,
+          transform: 'scale(1.01)',
         },
       }),
     },
@@ -132,9 +134,9 @@ function HomeFAQSection() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 18,
-      paddingHorizontal: 20,
-      minHeight: 52,
+      paddingVertical: isMobile ? 20 : 24,
+      paddingHorizontal: isMobile ? 20 : 28,
+      minHeight: 64,
       gap: 16,
       ...Platform.select({
         web: {
@@ -149,29 +151,34 @@ function HomeFAQSection() {
     },
     question: {
       flex: 1,
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: isMobile ? 16 : 18,
+      fontWeight: '800',
       color: colors.text,
-      lineHeight: 22,
+      lineHeight: isMobile ? 22 : 26,
+      letterSpacing: -0.3,
     },
     chevronWrap: {
-      width: 28,
-      height: 28,
+      width: 32,
+      height: 32,
       borderRadius: DESIGN_TOKENS.radii.full,
       backgroundColor: colors.backgroundSecondary,
       justifyContent: 'center',
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
     chevronWrapOpen: {
       backgroundColor: colors.primaryLight,
+      borderColor: colors.primaryAlpha30,
     },
     answerWrap: {
-      paddingHorizontal: 20,
-      paddingBottom: 20,
+      paddingHorizontal: isMobile ? 20 : 28,
+      paddingBottom: isMobile ? 24 : 28,
+      paddingTop: 4,
     },
     answer: {
-      fontSize: 15,
-      lineHeight: 24,
+      fontSize: isMobile ? 15 : 16,
+      lineHeight: isMobile ? 22 : 26,
       color: colors.textMuted,
     },
   }), [colors, isMobile]);
