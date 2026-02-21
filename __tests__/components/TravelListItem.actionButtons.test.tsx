@@ -141,7 +141,7 @@ describe('TravelListItem - Action Buttons', () => {
     fireEvent(card, 'click', mockEvent);
     
     // Should navigate to travel detail
-    expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
+    expect(router.push).toHaveBeenCalledWith('/test-travel');
   });
 
   it('should work correctly on mobile platform', () => {
@@ -157,7 +157,7 @@ describe('TravelListItem - Action Buttons', () => {
     fireEvent.press(cardTitle);
     
     // Should still navigate on mobile
-    expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
+    expect(router.push).toHaveBeenCalledWith('/test-travel');
   });
 
   it('should handle events correctly with stopPropagation and preventDefault', () => {

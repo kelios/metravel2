@@ -39,6 +39,7 @@ jest.mock('@/hooks/useDebouncedValue', () => ({
 // Мокаем expo-router/usePathname, чтобы не тянуть реальный роутер
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
+  useLocalSearchParams: () => ({}),
 }))
 
 // Мокаем useIsFocused, чтобы SEO-часть не отваливалась

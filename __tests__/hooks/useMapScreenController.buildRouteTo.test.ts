@@ -5,6 +5,7 @@ const mockBuildRouteTo = jest.fn()
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
+  useLocalSearchParams: () => ({}),
 }))
 
 jest.mock('react-native-safe-area-context', () => ({

@@ -108,7 +108,7 @@ const MOOD_CARDS = [
   {
     title: 'Руины',
     meta: 'История',
-    icon: 'ruins',
+    icon: 'columns',
     filters: { categoryTravelAddress: [114,115,116,117,118,119,120] },
   },
   {

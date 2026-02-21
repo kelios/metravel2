@@ -243,24 +243,21 @@ describe('HomeHero Component', () => {
         return;
       }
       expect(MOOD_CARDS_FOR_TEST[0].filters).toEqual({
-        categories: [2, 21],
-        over_nights_stay: [1],
-        categoryTravelAddress: [84],
+        categoryTravelAddress: [84, 110, 113, 193],
       });
-      expect(MOOD_CARDS_FOR_TEST[1].filters).toEqual({ categories: [19, 20] });
-      expect(MOOD_CARDS_FOR_TEST[2].filters).toEqual({ categories: [22, 2] });
+      expect(MOOD_CARDS_FOR_TEST[1].filters).toEqual({ categoryTravelAddress: [33, 43] });
+      expect(MOOD_CARDS_FOR_TEST[2].filters).toEqual({ categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] });
+      expect(MOOD_CARDS_FOR_TEST[3].filters).toEqual({ categories: [21, 22, 2] });
     });
 
     it('handleQuickFilterPress builds correct path with filterParams', () => {
       const push = jest.fn();
       const params = {
-        categories: [2, 21],
-        over_nights_stay: [1],
-        categoryTravelAddress: [84],
+        categoryTravelAddress: [84, 110, 113, 193],
       };
-      const path = `/search?categories=${params.categories.join(',')}&over_nights_stay=${params.over_nights_stay.join(',')}&categoryTravelAddress=${params.categoryTravelAddress.join(',')}`;
+      const path = `/search?categoryTravelAddress=${params.categoryTravelAddress.join(',')}`;
       push(path);
-      expect(push).toHaveBeenCalledWith('/search?categories=2,21&over_nights_stay=1&categoryTravelAddress=84');
+      expect(push).toHaveBeenCalledWith('/search?categoryTravelAddress=84,110,113,193');
     });
 
     it('handleQuickFilterPress falls back to /search when no filterParams', () => {
