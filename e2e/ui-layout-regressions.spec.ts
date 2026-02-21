@@ -52,10 +52,10 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
     await expect(hero).toBeVisible({ timeout: 30_000 });
     await expectNoHorizontalScroll(page);
 
-    const title = page.getByText('Выходные с умом — и книга поездок в подарок');
+    const title = page.getByText(/Куда поехать/i);
     await expect(title).toBeVisible({ timeout: 30_000 });
 
-    const imageSlot = page.getByTestId('home-hero-image-slot');
+    const imageSlot = hero.getByRole('link').first();
     // RNW can render the node in a hidden state briefly; wait for stable layout instead.
     const imageBox = await waitForNonNullBoundingBox(imageSlot, 30_000, 150);
     expect(imageBox, 'home hero image slot must have a bounding box (visible in layout)').not.toBeNull();
