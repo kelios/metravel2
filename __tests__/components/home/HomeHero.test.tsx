@@ -72,9 +72,9 @@ describe('HomeHero Component', () => {
   });
 
   describe('Button Labels', () => {
-    it('should show "Начать бесплатно" for unauthenticated users', () => {
+    it('should show "Добавить первую поездку" for unauthenticated users', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Начать бесплатно')).toBeTruthy();
+      expect(getByText('Добавить первую поездку')).toBeTruthy();
     });
 
     it('should show "Добавить первую поездку" for authenticated users with no travels', () => {
@@ -109,7 +109,7 @@ describe('HomeHero Component', () => {
   describe('Navigation', () => {
     it('should navigate to login for unauthenticated users', () => {
       const { getByText } = render(<HomeHero />);
-      const button = getByText('Начать бесплатно');
+      const button = getByText('Добавить первую поездку');
       
       fireEvent.press(button);
       

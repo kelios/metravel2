@@ -47,54 +47,86 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingVertical: isMobile ? 64 : 96,
+      paddingVertical: isMobile ? 56 : 88,
       backgroundColor: colors.background,
       alignItems: 'center',
       ...Platform.select({
         web: {
-          backgroundImage: `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.background} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 85% 70% at 50% 0%, ${colors.primarySoft} 0%, transparent 68%), linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.background} 100%)`,
         },
       }),
     },
     content: {
+      width: '100%',
       alignItems: 'center',
-      gap: isMobile ? 20 : 28,
-      maxWidth: 600,
+      gap: isMobile ? 18 : 24,
+      maxWidth: 720,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      paddingHorizontal: isMobile ? 18 : 32,
+      paddingVertical: isMobile ? 22 : 30,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          backgroundImage: `linear-gradient(165deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+        },
+      }),
+    },
+    eyebrow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      alignSelf: 'flex-start',
+    },
+    eyebrowText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: colors.primaryText,
+      letterSpacing: 0.7,
+      textTransform: 'uppercase',
     },
     iconWrap: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       backgroundColor: colors.primarySoft,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: 2,
     },
     title: {
-      fontSize: isMobile ? 28 : 40,
+      fontSize: isMobile ? 30 : 44,
       fontWeight: '900',
       color: colors.text,
       textAlign: 'center',
-      letterSpacing: -0.8,
-      lineHeight: isMobile ? 36 : 48,
+      letterSpacing: -1,
+      lineHeight: isMobile ? 38 : 52,
     },
     subtitle: {
-      fontSize: isMobile ? 16 : 18,
+      fontSize: isMobile ? 15 : 18,
       color: colors.textMuted,
       textAlign: 'center',
-      lineHeight: isMobile ? 24 : 28,
-      maxWidth: 480,
+      lineHeight: isMobile ? 22 : 28,
+      maxWidth: 520,
     },
     buttonsContainer: {
       flexDirection: isMobile ? 'column' : 'row',
       alignItems: 'center',
       gap: 12,
       width: isMobile ? '100%' : undefined,
-      marginTop: 8,
+      marginTop: 6,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 40 : 48,
-      paddingVertical: isMobile ? 18 : 20,
+      paddingHorizontal: isMobile ? 34 : 42,
+      paddingVertical: isMobile ? 17 : 19,
       minHeight: 60,
       borderRadius: DESIGN_TOKENS.radii.pill,
       width: isMobile ? '100%' : undefined,
@@ -120,8 +152,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       color: colors.textOnPrimary,
     },
     secondaryButton: {
-      paddingHorizontal: isMobile ? 32 : 40,
-      paddingVertical: isMobile ? 18 : 20,
+      paddingHorizontal: isMobile ? 28 : 36,
+      paddingVertical: isMobile ? 17 : 19,
       minHeight: 60,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
@@ -154,6 +186,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     <View style={styles.container}>
       <ResponsiveContainer maxWidth="lg" padding>
         <View style={styles.content}>
+          <View style={styles.eyebrow}>
+            <Feather name="star" size={12} color={colors.primary} />
+            <Text style={styles.eyebrowText}>Ваш travel space</Text>
+          </View>
+
           <View style={styles.iconWrap}>
             <Feather name="book-open" size={28} color={colors.primary} />
           </View>

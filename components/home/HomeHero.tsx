@@ -1,4 +1,4 @@
-import { useMemo, memo, useState, useEffect } from 'react';
+import { useMemo, memo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
+import { ResponsiveContainer } from '@/components/layout';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { buildLoginHref } from '@/utils/authNavigation';
@@ -92,25 +92,42 @@ const MOOD_CARDS = [
     meta: 'Природа',
     icon: 'sun',
     filters: { categoryTravelAddress: [84, 110, 113, 193] },
+    route: '/search',
   },
   {
     title: 'Дворцы и замки',
     meta: 'Город • 1 день',
     icon: 'coffee',
     filters: { categoryTravelAddress: [33, 43] },
+    route: '/search',
   },
   {
     title: 'Руины',
     meta: 'История',
     icon: 'columns',
     filters: { categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] },
+    route: '/search',
   },
   {
     title: 'Активный выезд',
     meta: 'Треккинг • Хайкинг',
     icon: 'activity',
     filters: { categories: [21, 22, 2] },
+    route: '/search',
   },
+  {
+    title: 'Карта до 60 км',
+    meta: 'Рядом с вами',
+    icon: 'map-pin',
+    filters: { radius: 60 },
+    route: '/map',
+  },
+] as const;
+
+const HERO_HIGHLIGHTS = [
+  { icon: 'clock', title: 'За 2 минуты', subtitle: 'подборка под ваш ритм' },
+  { icon: 'book-open', title: 'Личная книга', subtitle: 'фото, заметки и PDF' },
+  { icon: 'map-pin', title: 'Маршруты рядом', subtitle: 'фильтры по дистанции и формату' },
 ] as const;
 
 export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
@@ -119,25 +136,37 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone, isTablet, width } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop, width } = useResponsive();
 
-  const isMobile = isSmallPhone || isPhone;
+  const isMobile = isSmallPhone || isPhone || isLargePhone;
   const isWeb = Platform.OS === 'web';
-  const isTabletRange = isTablet || (width >= 768 && width < 1024);
-  const isNarrowDesktop = !isMobile && width < 1200;
-  const shouldRenderImageSlot = isWeb && !isMobile && width >= 1024;
+  const isNarrowLayout = isMobile || (isWeb && width <= 860);
+  const showSideSlider = isWeb && (isDesktop || isLargeTablet || isTablet);
+  const sliderHeight = isDesktop ? 500 : 430;
+  const sliderMediaWidth = isDesktop ? 500 : 380;
 
-  const [bookImageIndex, setBookImageIndex] = useState(0);
+  // Slider state
+  const [activeSlide, setActiveSlide] = useState(0);
+  const totalSlides = BOOK_IMAGES.length;
 
+  // Auto-advance slider
   useEffect(() => {
-    if (!shouldRenderImageSlot) return;
-    const timer = setInterval(() => {
-      setBookImageIndex((prev) => (prev + 1) % BOOK_IMAGES.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [shouldRenderImageSlot]);
+    if (!showSideSlider) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % totalSlides);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [showSideSlider, totalSlides]);
 
-  const handleCreateBook = () => {
+  const handlePrevSlide = useCallback(() => {
+    setActiveSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  }, [totalSlides]);
+
+  const handleNextSlide = useCallback(() => {
+    setActiveSlide((prev) => (prev + 1) % totalSlides);
+  }, [totalSlides]);
+
+  const handleCreateBook = useCallback(() => {
     queueAnalyticsEvent('HomeClick_CreateBook');
     if (!isAuthenticated) {
       router.push(buildLoginHref({ redirect: '/', intent: 'create-book' }) as any);
@@ -146,20 +175,20 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     } else {
       router.push('/export' as any);
     }
-  };
+  }, [isAuthenticated, travelsCount, router]);
 
-  const handleOpenSearch = () => {
+  const handleOpenSearch = useCallback(() => {
     queueAnalyticsEvent('HomeClick_OpenSearch');
     router.push('/search' as any);
-  };
+  }, [router]);
 
-  const handleQuickFilterPress = (label: string, filters?: QuickFilterParams) => {
+  const handleQuickFilterPress = useCallback((label: string, filters?: QuickFilterParams, route: string = '/search') => {
     queueAnalyticsEvent('HomeClick_QuickFilter', { label, source: 'home-hero' });
-    const path = buildFilterPath('/search', filters);
+    const path = buildFilterPath(route, filters);
     router.push(path as any);
-  };
+  }, [router]);
 
-  const handleOpenArticles = (href?: string | null) => {
+  const handleOpenArticles = useCallback((href?: string | null) => {
     if (href) {
       queueAnalyticsEvent('HomeClick_BookCover', { href });
       if (Platform.OS === 'web') {
@@ -171,10 +200,10 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       queueAnalyticsEvent('HomeClick_OpenSearch');
       router.push('/search' as any);
     }
-  };
+  }, [router]);
 
   const primaryButtonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Начать бесплатно';
+    if (!isAuthenticated) return 'Добавить первую поездку';
     if (travelsCount === 0) return 'Добавить первую поездку';
     return 'Открыть мою книгу';
   }, [isAuthenticated, travelsCount]);
@@ -182,69 +211,281 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingTop: isMobile ? 40 : 64,
-      paddingBottom: isMobile ? 40 : 64,
+      paddingTop: isMobile ? 20 : 36,
+      paddingBottom: isMobile ? 36 : 56,
       backgroundColor: colors.background,
       ...Platform.select({
         web: {
-          backgroundImage: `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 90% 70% at 50% -10%, ${colors.primarySoft} 0%, transparent 65%)`,
+          backgroundRepeat: 'no-repeat',
         },
       }),
     },
-    content: {
+    heroShell: {
+      width: '100%',
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      paddingHorizontal: isMobile ? 14 : 26,
+      paddingVertical: isMobile ? 14 : 24,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          backgroundImage: `linear-gradient(160deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+        },
+      }),
+    },
+    heroRow: {
+      flexDirection: showSideSlider ? 'row' : 'column',
+      alignItems: showSideSlider ? 'stretch' : 'stretch',
+      justifyContent: showSideSlider ? 'space-between' : 'flex-start',
+      gap: showSideSlider ? 30 : 16,
+      width: '100%',
+    },
+    heroSection: {
+      alignItems: isMobile ? 'stretch' : 'flex-start',
+      gap: isMobile ? 16 : 20,
+      width: showSideSlider ? '47%' : '100%',
+      maxWidth: showSideSlider ? 540 : (isMobile ? '100%' : 720),
+      flexShrink: 0,
+      paddingHorizontal: isMobile ? 10 : 12,
+      paddingVertical: isMobile ? 12 : 14,
+    },
+    sliderSection: {
       flex: 1,
-      gap: isMobile ? 24 : 28,
-      maxWidth: isMobile ? '100%' : isNarrowDesktop ? '100%' : 560,
-      zIndex: 1,
+      minWidth: 0,
+      width: showSideSlider ? '53%' : 320,
+      maxWidth: 600,
+      position: 'relative' as const,
+      justifyContent: 'center',
+    },
+    sliderContainer: {
+      width: '100%',
+      height: sliderHeight,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          backgroundImage: `linear-gradient(155deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+        },
+      }),
+    },
+    slideWrapper: {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    slideImage: {
+      width: '100%',
+      height: '100%',
+      ...Platform.select({
+        web: {
+          filter: 'saturate(1.15) contrast(1.05)',
+        },
+      }),
+    },
+    slideOverlay: {
+      position: 'absolute' as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 2,
+      paddingHorizontal: 18,
+      paddingTop: 40,
+      paddingBottom: 16,
+      pointerEvents: 'none' as const,
+      ...Platform.select({
+        web: {
+          backgroundImage: 'linear-gradient(to top, rgba(7, 17, 29, 0.88) 0%, rgba(7, 17, 29, 0.52) 52%, rgba(7, 17, 29, 0) 100%)',
+        },
+      }),
+    },
+    slideCaption: {
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: 'rgba(9, 20, 33, 0.42)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.24)',
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      maxWidth: '92%',
+      alignSelf: 'flex-start',
+      ...Platform.select({
+        web: {
+          backdropFilter: 'blur(6px)',
+        },
+      }),
+    },
+    slideTitle: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      marginBottom: 4,
+      textShadowColor: 'rgba(0,0,0,0.45)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
+    },
+    slideSubtitle: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: 'rgba(255,255,255,0.92)',
+    },
+    sliderNav: {
+      position: 'absolute' as const,
+      top: '50%',
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingHorizontal: 12,
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-50%)',
+        },
+      }),
+    },
+    sliderNavBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(17, 24, 39, 0.45)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          backdropFilter: 'blur(8px)',
+        },
+      }),
+    },
+    sliderNavBtnHover: {
+      backgroundColor: 'rgba(17, 24, 39, 0.7)',
+    },
+    sliderDots: {
+      position: 'absolute' as const,
+      bottom: 14,
+      left: 0,
+      right: 0,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 8,
+      zIndex: 3,
+    },
+    sliderDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: 'rgba(255,255,255,0.4)',
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        },
+      }),
+    },
+    sliderDotActive: {
+      backgroundColor: colors.textOnPrimary,
+      width: 24,
     },
     badge: {
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'flex-start',
       gap: 6,
-      paddingHorizontal: 14,
-      paddingVertical: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
     },
     badgeText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
       color: colors.primaryText,
-      letterSpacing: 0.5,
+      letterSpacing: 0.8,
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: isMobile ? 32 : 48,
+      fontSize: isMobile ? 31 : isTablet ? 38 : (isDesktop ? 48 : 42),
       fontWeight: '900',
       color: colors.text,
       letterSpacing: -1,
-      lineHeight: isMobile ? 40 : 56,
+      lineHeight: isMobile ? 39 : isTablet ? 46 : (isDesktop ? 54 : 48),
+      textAlign: 'left',
     },
     subtitle: {
-      fontSize: isMobile ? 16 : 18,
+      fontSize: isMobile ? 15 : 18,
       fontWeight: '400',
       color: colors.textMuted,
-      lineHeight: isMobile ? 24 : 28,
-      maxWidth: 480,
+      lineHeight: isMobile ? 22 : 27,
+      textAlign: 'left',
+      maxWidth: 520,
+      alignSelf: 'flex-start',
+    },
+    highlightsGrid: {
+      flexDirection: isNarrowLayout ? 'column' : 'row',
+      gap: 8,
+      width: '100%',
+      marginTop: 4,
+    },
+    highlightCard: {
+      flex: isMobile ? undefined : 1,
+      minWidth: 0,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.backgroundSecondary,
+      paddingVertical: 9,
+      paddingHorizontal: 10,
+      gap: 5,
+    },
+    highlightIconWrap: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+    },
+    highlightTitle: {
+      color: colors.text,
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '700',
+    },
+    highlightSubtitle: {
+      color: colors.textMuted,
+      fontSize: 11,
+      lineHeight: 14,
     },
     buttonsContainer: {
-      flexDirection: isMobile ? 'column' : 'row',
+      flexDirection: isNarrowLayout ? 'column' : 'row',
+      justifyContent: 'flex-start',
+      alignItems: 'center',
       gap: 12,
-      width: isMobile ? '100%' : undefined,
+      width: isNarrowLayout ? '100%' : undefined,
+      marginTop: 4,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 28 : 32,
+      paddingHorizontal: isMobile ? 24 : 28,
       paddingVertical: isMobile ? 14 : 16,
-      minHeight: 52,
+      minHeight: 50,
       borderRadius: DESIGN_TOKENS.radii.pill,
       width: isMobile ? '100%' : undefined,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          transition: 'all 0.25s ease',
+          transition: 'all 0.2s ease',
+          boxShadow: DESIGN_TOKENS.shadows.light,
         },
       }),
     },
@@ -252,39 +493,33 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
         web: {
-          transform: 'translateY(-2px)',
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          transform: 'translateY(-1px)',
         },
       }),
     },
     primaryButtonText: {
       fontSize: 15,
-      fontWeight: '700',
+      fontWeight: '600',
       color: colors.textOnPrimary,
     },
     secondaryButton: {
-      paddingHorizontal: isMobile ? 28 : 32,
+      paddingHorizontal: isMobile ? 24 : 28,
       paddingVertical: isMobile ? 14 : 16,
-      minHeight: 52,
+      minHeight: 50,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
-      borderWidth: 1.5,
+      borderWidth: 1,
       borderColor: colors.borderLight,
       width: isMobile ? '100%' : undefined,
       ...Platform.select({
         web: {
-          transition: 'all 0.25s ease',
+          transition: 'all 0.2s ease',
         },
       }),
     },
     secondaryButtonHover: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primaryAlpha30,
-      ...Platform.select({
-        web: {
-          transform: 'translateY(-2px)',
-        },
-      }),
     },
     secondaryButtonText: {
       fontSize: 15,
@@ -292,22 +527,27 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       color: colors.text,
     },
     moodChipsContainer: {
-      marginTop: 8,
+      marginTop: 14,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      width: '100%',
     },
-    moodChipsRow: {
+    moodChipsScrollContent: {
       flexDirection: 'row',
-      flexWrap: isMobile ? 'nowrap' : 'wrap',
-      gap: 10,
-      paddingRight: isMobile ? 16 : 0,
+      gap: 8,
+      paddingHorizontal: isMobile ? 0 : 0,
+      justifyContent: showSideSlider ? 'flex-start' : 'center',
+      flexWrap: showSideSlider ? 'wrap' : 'nowrap',
     },
     moodChip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...Platform.select({
@@ -320,151 +560,125 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     moodChipHover: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primaryAlpha30,
-      ...Platform.select({
-        web: {
-          transform: 'translateY(-2px)',
-          boxShadow: DESIGN_TOKENS.shadows.light,
-        },
-      }),
     },
     moodChipIcon: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       backgroundColor: colors.primarySoft,
       justifyContent: 'center',
       alignItems: 'center',
     },
     moodChipText: {
-      gap: 2,
+      gap: 0,
     },
     moodChipTitle: {
       fontSize: 13,
-      fontWeight: '700',
+      fontWeight: '600',
       color: colors.text,
     },
     moodChipMeta: {
       fontSize: 11,
-      fontWeight: '500',
+      fontWeight: '400',
       color: colors.textMuted,
     },
-    imageContainer: {
-      flex: 0,
-      flexShrink: 0,
-      width: isTabletRange ? 240 : 280,
-      minHeight: isTabletRange ? 340 : 400,
-      justifyContent: 'center',
-      alignItems: 'center',
-      position: 'relative',
+    popularSection: {
+      marginTop: isMobile ? 28 : 44,
+      width: '100%',
     },
-    imageDecor: {
-      position: 'absolute',
-      width: isTabletRange ? 200 : 240,
-      height: isTabletRange ? 300 : 360,
-      borderRadius: DESIGN_TOKENS.radii.xl,
-      backgroundColor: colors.primarySoft,
-      opacity: 0.5,
-      ...Platform.select({
-        web: {
-          transform: 'rotate(4deg) translate(20px, 10px)',
-        } as any,
-      }),
+    popularTitle: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginBottom: 14,
+      textTransform: 'uppercase',
+      letterSpacing: 0.8,
     },
-    bookImageWrap: {
-      position: 'relative',
-      ...Platform.select({
-        web: {
-          transition: 'transform 0.3s ease',
-        },
-      }),
+    popularScrollContent: {
+      flexDirection: 'row',
+      gap: 16,
+      paddingRight: 16,
     },
-    bookImage: {
-      width: isTabletRange ? 180 : 220,
-      height: isTabletRange ? 270 : 330,
+    imageCard: {
+      width: isMobile ? 180 : 200,
       borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      overflow: 'hidden',
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          boxShadow: DESIGN_TOKENS.shadows.light,
         },
       }),
     },
-    bookImageHover: {
+    imageCardHover: {
       ...Platform.select({
         web: {
-          transform: 'scale(1.02)',
+          transform: 'translateY(-2px)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          borderColor: colors.primaryAlpha30,
         },
       }),
     },
-    bookOverlay: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      borderBottomLeftRadius: DESIGN_TOKENS.radii.lg,
-      borderBottomRightRadius: DESIGN_TOKENS.radii.lg,
-      paddingHorizontal: 16,
-      paddingTop: 40,
-      paddingBottom: 16,
+    imageCardImage: {
+      width: isMobile ? 180 : 200,
+      height: isMobile ? 120 : 140,
+    },
+    imageCardContent: {
+      padding: 12,
       gap: 4,
-      ...Platform.select({
-        web: {
-          backgroundImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.7))',
-        },
-      }),
     },
-    bookOverlayTitle: {
-      color: '#ffffff',
+    imageCardTitle: {
       fontSize: 14,
-      fontWeight: '700',
+      fontWeight: '600',
+      color: colors.text,
       lineHeight: 18,
     },
-    bookOverlaySubtitle: {
-      color: 'rgba(255,255,255,0.8)',
-      fontSize: 11,
+    imageCardSubtitle: {
+      fontSize: 12,
       fontWeight: '400',
-      lineHeight: 14,
+      color: colors.textMuted,
+      lineHeight: 16,
     },
-    bookDots: {
-      position: 'absolute',
-      bottom: -24,
-      left: 0,
-      right: 0,
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 6,
-    },
-    bookDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.border,
-      ...Platform.select({
-        web: { transition: 'all 0.3s ease' },
-      }),
-    },
-    bookDotActive: {
-      width: 18,
-      backgroundColor: colors.primary,
-    },
-  }), [colors, isMobile, isTabletRange]);
+  }), [colors, isMobile, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight]);
+
+  const currentSlide = BOOK_IMAGES[activeSlide];
 
   return (
     <View testID="home-hero" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
-        <ResponsiveStack direction="responsive" gap={isMobile ? 32 : 64} align="center">
-          <View style={styles.content}>
+        <View style={styles.heroShell}>
+          {/* Hero Row: Text left, Slider right on desktop */}
+          <View style={styles.heroRow}>
+          {/* Hero Section - Text */}
+          <View style={styles.heroSection}>
             <View style={styles.badge}>
               <Feather name="zap" size={12} color={colors.primary} />
               <Text style={styles.badgeText}>Бесплатно и без регистрации</Text>
             </View>
 
             <Text style={styles.title}>
-              Идеи для поездок на выходные
+              Куда поехать{isNarrowLayout ? ' ' : '\n'}в эти выходные?
             </Text>
 
             <Text style={styles.subtitle}>
-              Выбирай маршруты по расстоянию и формату. Сохраняй поездки с фото. Собирай личную книгу путешествий.
+              Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.
             </Text>
+
+            <View style={styles.highlightsGrid}>
+              {HERO_HIGHLIGHTS.map((item) => (
+                <View key={item.title} style={styles.highlightCard}>
+                  <View style={styles.highlightIconWrap}>
+                    <Feather name={item.icon as any} size={14} color={colors.primary} />
+                  </View>
+                  <Text style={styles.highlightTitle}>{item.title}</Text>
+                  <Text style={styles.highlightSubtitle}>{item.subtitle}</Text>
+                </View>
+              ))}
+            </View>
 
             <View style={styles.buttonsContainer}>
               <Button
@@ -472,7 +686,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 label={primaryButtonLabel}
                 variant="primary"
                 size="md"
-                fullWidth={isMobile}
+                fullWidth={isNarrowLayout}
                 style={styles.primaryButton}
                 labelStyle={styles.primaryButtonText}
                 hoverStyle={styles.primaryButtonHover}
@@ -484,7 +698,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 label="Смотреть маршруты"
                 variant="secondary"
                 size="md"
-                fullWidth={isMobile}
+                fullWidth={isNarrowLayout}
                 icon={<Feather name="compass" size={16} color={colors.text} />}
                 style={styles.secondaryButton}
                 labelStyle={styles.secondaryButtonText}
@@ -494,112 +708,175 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               />
             </View>
 
-            <View style={styles.moodChipsContainer}>
-              {isMobile ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
-                  contentContainerStyle={styles.moodChipsRow}
-                >
-                  {MOOD_CARDS.map((card) => (
-                    <Pressable
-                      key={card.title}
-                      onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams)}
-                      style={({ pressed, hovered }) => [
-                        styles.moodChip,
-                        (pressed || hovered) && styles.moodChipHover,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Идея поездки ${card.title}`}
-                    >
-                      <View style={styles.moodChipIcon}>
-                        <Feather name={card.icon as any} size={14} color={colors.primary} />
-                      </View>
-                      <View style={styles.moodChipText}>
-                        <Text style={styles.moodChipTitle}>{card.title}</Text>
-                        <Text style={styles.moodChipMeta}>{card.meta}</Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              ) : (
-                <View style={styles.moodChipsRow}>
-                  {MOOD_CARDS.map((card) => (
-                    <Pressable
-                      key={card.title}
-                      onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams)}
-                      style={({ pressed, hovered }) => [
-                        styles.moodChip,
-                        (pressed || hovered) && styles.moodChipHover,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Идея поездки ${card.title}`}
-                    >
-                      <View style={styles.moodChipIcon}>
-                        <Feather name={card.icon as any} size={14} color={colors.primary} />
-                      </View>
-                      <View style={styles.moodChipText}>
-                        <Text style={styles.moodChipTitle}>{card.title}</Text>
-                        <Text style={styles.moodChipMeta}>{card.meta}</Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </View>
           </View>
 
-          {shouldRenderImageSlot && (
-            <Pressable
-              testID="home-hero-image-slot"
-              onPress={() => handleOpenArticles(BOOK_IMAGES[bookImageIndex].href)}
-              accessibilityRole="button"
-              accessibilityLabel="Открыть раздел статей и маршрутов"
-              style={[
-                styles.imageContainer,
-                isWeb && ({ cursor: 'pointer' } as any),
-              ]}
-            >
-              {({ hovered }) => (
-                <>
-                  <View style={styles.imageDecor} />
-                  <View style={[styles.bookImageWrap, hovered && styles.bookImageHover]}>
+          {/* Slider Section - Right side on desktop */}
+          {showSideSlider && (
+            <View style={styles.sliderSection}>
+              <Pressable
+                onPress={() => handleOpenArticles(currentSlide.href)}
+                style={styles.sliderContainer}
+                accessibilityRole="link"
+                accessibilityLabel={currentSlide.title}
+              >
+                {/* Slides */}
+                {BOOK_IMAGES.map((image, index) => (
+                  <View
+                    key={image.title}
+                    style={[
+                      styles.slideWrapper,
+                      {
+                        opacity: index === activeSlide ? 1 : 0,
+                        zIndex: index === activeSlide ? 1 : 0,
+                        ...(Platform.OS === 'web' ? { transition: 'opacity 0.5s ease' } : {}),
+                      } as any,
+                    ]}
+                  >
                     <ImageCardMedia
-                      source={BOOK_IMAGES[bookImageIndex].source}
-                      width={isTabletRange ? 180 : 220}
-                      height={isTabletRange ? 270 : 330}
-                      borderRadius={DESIGN_TOKENS.radii.lg}
-                      fit="cover"
+                      source={image.source}
+                      width={sliderMediaWidth}
+                      height={sliderHeight}
+                      borderRadius={0}
+                      fit="contain"
+                      blurBackground
                       quality={90}
-                      alt={BOOK_IMAGES[bookImageIndex].alt}
-                      loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
-                      priority={Platform.OS === 'web' ? 'high' : 'normal'}
-                      transition={300}
-                      style={styles.bookImage}
+                      alt={image.alt}
+                      loading={index === 0 ? 'eager' : 'lazy'}
+                      style={styles.slideImage}
                     />
-                    <View style={styles.bookOverlay}>
-                      <Text style={styles.bookOverlayTitle} numberOfLines={2}>
-                        {BOOK_IMAGES[bookImageIndex].title}
-                      </Text>
-                      <Text style={styles.bookOverlaySubtitle} numberOfLines={1}>
-                        {BOOK_IMAGES[bookImageIndex].subtitle}
-                      </Text>
-                    </View>
-                    <View style={styles.bookDots}>
-                      {BOOK_IMAGES.map((_, i) => (
-                        <View
-                          key={i}
-                          style={[styles.bookDot, i === bookImageIndex && styles.bookDotActive]}
-                        />
-                      ))}
-                    </View>
                   </View>
-                </>
-              )}
-            </Pressable>
+                ))}
+
+                {/* Overlay with title */}
+                <View style={styles.slideOverlay}>
+                  <View style={styles.slideCaption}>
+                    <Text style={styles.slideTitle}>{currentSlide.title}</Text>
+                    <Text style={styles.slideSubtitle}>{currentSlide.subtitle}</Text>
+                  </View>
+                </View>
+              </Pressable>
+
+              {/* Navigation dots - outside Pressable to avoid nested buttons */}
+              <View style={styles.sliderDots}>
+                {BOOK_IMAGES.map((_, index) => (
+                  <Pressable
+                    key={index}
+                    onPress={() => setActiveSlide(index)}
+                    style={[
+                      styles.sliderDot,
+                      index === activeSlide && styles.sliderDotActive,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Слайд ${index + 1}`}
+                  />
+                ))}
+              </View>
+
+              {/* Navigation arrows */}
+              <View style={styles.sliderNav}>
+                <Pressable
+                  onPress={handlePrevSlide}
+                  style={({ hovered }) => [
+                    styles.sliderNavBtn,
+                    hovered && styles.sliderNavBtnHover,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Предыдущий слайд"
+                >
+                  <Feather name="chevron-left" size={20} color="#fff" />
+                </Pressable>
+                <Pressable
+                  onPress={handleNextSlide}
+                  style={({ hovered }) => [
+                    styles.sliderNavBtn,
+                    hovered && styles.sliderNavBtnHover,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Следующий слайд"
+                >
+                  <Feather name="chevron-right" size={20} color="#fff" />
+                </Pressable>
+              </View>
+            </View>
           )}
-        </ResponsiveStack>
+          </View>
+          <View style={styles.moodChipsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
+              contentContainerStyle={styles.moodChipsScrollContent}
+            >
+              {MOOD_CARDS.map((card) => (
+                <Pressable
+                  key={card.title}
+                  onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams, card.route)}
+                  style={({ pressed, hovered }) => [
+                    styles.moodChip,
+                    (pressed || hovered) && styles.moodChipHover,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Идея поездки ${card.title}`}
+                >
+                  <View style={styles.moodChipIcon}>
+                    <Feather name={card.icon as any} size={14} color={colors.primary} />
+                  </View>
+                  <View style={styles.moodChipText}>
+                    <Text style={styles.moodChipTitle}>{card.title}</Text>
+                    <Text style={styles.moodChipMeta}>{card.meta}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+
+        {/* Popular Routes Section - only on mobile */}
+        {!showSideSlider && (
+          <View style={styles.popularSection}>
+            <Text style={styles.popularTitle}>Популярные маршруты</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
+              contentContainerStyle={styles.popularScrollContent}
+            >
+              {BOOK_IMAGES.map((image) => (
+                <Pressable
+                  key={image.title}
+                  onPress={() => handleOpenArticles(image.href)}
+                  style={({ pressed, hovered }) => [
+                    styles.imageCard,
+                    (pressed || hovered) && styles.imageCardHover,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={image.title}
+                >
+                <ImageCardMedia
+                  source={image.source}
+                  width={isMobile ? 180 : 200}
+                  height={isMobile ? 120 : 140}
+                  borderRadius={0}
+                  fit="contain"
+                  blurBackground
+                  quality={85}
+                  alt={image.alt}
+                  loading="lazy"
+                  style={styles.imageCardImage}
+                />
+                <View style={styles.imageCardContent}>
+                  <Text style={styles.imageCardTitle} numberOfLines={1}>
+                    {image.title}
+                  </Text>
+                  <Text style={styles.imageCardSubtitle} numberOfLines={1}>
+                    {image.subtitle}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+        )}
       </ResponsiveContainer>
     </View>
   );

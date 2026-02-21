@@ -170,6 +170,9 @@ function ImageCardMedia({
     if (src) return { uri: src };
     return null;
   }, [source, src]);
+
+  // For require() sources (numbers), we use OptimizedImage with ExpoImage
+  // which handles them natively. No need to resolve URI manually.
   const shouldDisableNetwork = useMemo(() => {
     if (!disableRemoteImages) return false;
     if (!resolvedSource || typeof resolvedSource === 'number') return false;
@@ -180,6 +183,8 @@ function ImageCardMedia({
   const webOptimizedSource = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    // Handle local asset string from require() on web
+    if (typeof resolvedSource === 'string') return resolvedSource;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
     const numericWidth = typeof width === 'number' ? width : undefined;
@@ -198,7 +203,11 @@ function ImageCardMedia({
   }, [resolvedSource, width, height, contentFit, quality]);
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
-    if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    // For require() sources (numbers), return null to use OptimizedImage/ExpoImage
+    if (typeof resolvedSource === 'number') return null;
+    if (!resolvedSource) return null;
+    // Handle local asset string from require() on web
+    if (typeof resolvedSource === 'string') return resolvedSource;
     if (shouldDisableNetwork) return null;
     if (webOptimizedSource) return webOptimizedSource;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
@@ -208,6 +217,8 @@ function ImageCardMedia({
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
+    // Skip srcset for local assets
+    if (typeof resolvedSource === 'string') return undefined;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
     return generateSrcSet(uri, [160, 320, 480, 640], { quality, fit: contentFit === 'contain' ? 'contain' : 'cover', dpr: 1 }) || undefined;
@@ -342,7 +353,7 @@ function ImageCardMedia({
               onError={onError}
               showImmediately={showImmediately}
             />
-          ) : (!blurOnly || Platform.OS !== 'web') && (
+          ) : !blurOnly && (
             <OptimizedImage
               source={
                 Platform.OS === 'web' && webOptimizedSource
