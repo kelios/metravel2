@@ -175,6 +175,24 @@ function HomeFAQSection() {
       paddingHorizontal: isMobile ? 20 : 28,
       paddingBottom: isMobile ? 24 : 28,
       paddingTop: 4,
+      ...Platform.select({
+        web: {
+          overflow: 'hidden',
+          maxHeight: 300,
+          opacity: 1,
+          transition: 'max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, padding 0.3s ease',
+        },
+      }),
+    },
+    answerWrapCollapsed: {
+      ...Platform.select({
+        web: {
+          maxHeight: 0,
+          opacity: 0,
+          paddingBottom: 0,
+          paddingTop: 0,
+        },
+      }),
     },
     answer: {
       fontSize: isMobile ? 15 : 16,
@@ -222,7 +240,11 @@ function HomeFAQSection() {
                     </View>
                   </Pressable>
 
-                  {isOpen ? (
+                  {Platform.OS === 'web' ? (
+                    <View style={[styles.answerWrap, !isOpen && styles.answerWrapCollapsed]}>
+                      <Text style={styles.answer}>{item.a}</Text>
+                    </View>
+                  ) : isOpen ? (
                     <View style={styles.answerWrap}>
                       <Text style={styles.answer}>{item.a}</Text>
                     </View>

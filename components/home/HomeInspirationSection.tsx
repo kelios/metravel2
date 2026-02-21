@@ -372,7 +372,7 @@ function HomeInspirationSection({
     },
     grid: {
       width: '100%',
-      gap: 18,
+      gap: isMobile ? 14 : 18,
       ...Platform.select({
         web: {
           touchAction: 'pan-y',
@@ -381,7 +381,7 @@ function HomeInspirationSection({
     },
     row: {
       flexDirection: 'row',
-      gap: 18,
+      gap: isMobile ? 14 : 18,
       justifyContent: 'flex-start',
       alignItems: 'stretch',
       width: '100%',
@@ -427,25 +427,28 @@ function HomeInspirationSection({
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 14 : 20,
-      paddingVertical: isMobile ? 16 : 22,
-      alignItems: 'flex-start',
-      gap: 10,
+      paddingHorizontal: isMobile ? 20 : 28,
+      paddingVertical: isMobile ? 24 : 32,
+      alignItems: 'center',
+      gap: 12,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
+          backgroundImage: `radial-gradient(ellipse 60% 60% at 50% 100%, ${colors.primarySoft} 0%, transparent 70%)`,
+          backgroundRepeat: 'no-repeat',
         },
       }),
     },
     emptyStateIconWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
+      marginBottom: 4,
     },
     emptyStateTitle: {
       color: colors.text,
@@ -521,10 +524,10 @@ function HomeInspirationSection({
         {travelsList.length === 0 ? (
           <View style={styles.emptyState} testID={`home-empty-${queryKey}`}>
             <View style={styles.emptyStateIconWrap}>
-              <Feather name="compass" size={16} color={colors.primary} />
+              <Feather name="compass" size={22} color={colors.primary} />
             </View>
-            <Text style={styles.emptyStateTitle}>{emptyState.title}</Text>
-            <Text style={styles.emptyStateSubtitle}>{emptyState.subtitle}</Text>
+            <Text style={[styles.emptyStateTitle, { textAlign: 'center' }]}>{emptyState.title}</Text>
+            <Text style={[styles.emptyStateSubtitle, { textAlign: 'center' }]}>{emptyState.subtitle}</Text>
             <Button
               label="Открыть каталог"
               onPress={handleViewMore}

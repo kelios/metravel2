@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ResponsiveContainer } from '@/components/layout';
@@ -108,6 +108,15 @@ function HomeTrustBlock() {
         },
       }),
     },
+    itemHover: {
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-3px)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
+          borderColor: colors.primaryAlpha30,
+        },
+      }),
+    },
     iconWrap: {
       width: isMobile ? 48 : 56,
       height: isMobile ? 48 : 56,
@@ -160,7 +169,14 @@ function HomeTrustBlock() {
         </View>
         <View style={styles.items}>
           {ITEMS.map((item) => (
-            <View key={item.title} style={styles.item}>
+            <Pressable
+              key={item.title}
+              style={({ hovered }) => [
+                styles.item,
+                hovered && styles.itemHover,
+              ]}
+              accessibilityRole="none"
+            >
               <View style={styles.iconWrap}>
                 <Feather name={item.icon as any} size={isMobile ? 20 : 22} color={colors.primary} />
               </View>
@@ -168,7 +184,7 @@ function HomeTrustBlock() {
                 <Text style={styles.title}>{item.title}</Text>
                 <Text style={styles.subtitle}>{item.subtitle}</Text>
               </View>
-            </View>
+            </Pressable>
           ))}
         </View>
       </ResponsiveContainer>

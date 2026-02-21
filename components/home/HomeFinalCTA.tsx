@@ -26,6 +26,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const { isAuthenticated } = useAuth();
   const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
   const isMobile = isSmallPhone || isPhone || isLargePhone;
+  // isSmallPhone used for benefit chips column layout
   const colors = useThemedColors();
 
   const handleAction = () => {
@@ -98,6 +99,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     containerMobile: {
       paddingVertical: 48,
+      ...Platform.select({
+        web: {
+          backgroundImage: `radial-gradient(ellipse 90% 60% at 50% 110%, ${colors.primarySoft} 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 50% -20%, ${colors.primaryLight} 0%, transparent 50%), linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 100%)`,
+        },
+      }),
     },
     content: {
       alignItems: 'center',
@@ -149,10 +155,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     benefitsRow: {
       width: '100%',
-      flexDirection: 'row',
+      flexDirection: isSmallPhone ? 'column' : 'row',
       flexWrap: 'wrap',
       justifyContent: 'center',
-      gap: 12,
+      alignItems: isSmallPhone ? 'stretch' : 'center',
+      gap: isMobile ? 8 : 12,
       marginTop: 4,
     },
     benefitChip: {
@@ -242,7 +249,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       fontWeight: '800',
       letterSpacing: 0.2,
     },
-  }), [colors, isMobile]);
+  }), [colors, isMobile, isSmallPhone]);
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>

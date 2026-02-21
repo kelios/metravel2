@@ -1,5 +1,5 @@
 import { useMemo, memo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
@@ -138,7 +138,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone, width } = useResponsive();
+  const { isSmallPhone, isPhone, isTablet, width } = useResponsive();
 
   const isWeb = Platform.OS === 'web';
 
@@ -187,7 +187,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const isMobile = isSmallPhone || isPhone;
   const isCompactDesktop = !isMobile && width < 1400;
   const isNarrowDesktop = !isMobile && width < 1240;
+  const isTabletRange = isTablet || (width >= 768 && width < 1024);
   const shouldRenderImageSlot = isWeb && !isMobile;
+  const shouldRenderMobileMoodChips = isMobile && isWeb;
 
   const handleMoodCardPress = (
     e: any,
@@ -267,7 +269,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     content: {
       flex: 1,
       width: '100%',
-      maxWidth: isMobile ? '100%' : isCompactDesktop ? 560 : 620,
+      maxWidth: isMobile ? '100%' : isTabletRange ? '100%' : isCompactDesktop ? 620 : 640,
       gap: isMobile ? 16 : 24,
       alignItems: 'flex-start',
       justifyContent: 'center',
@@ -293,7 +295,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     titleWrap: {
       gap: 0,
-      maxWidth: isMobile ? '100%' as const : isCompactDesktop ? 560 : 640,
+      maxWidth: isMobile ? '100%' as const : isTabletRange ? '100%' as const : isCompactDesktop ? 620 : 640,
     },
     title: {
       color: colors.text,
@@ -444,16 +446,16 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     imageContainer: {
       flex: 0,
-      width: isNarrowDesktop ? 340 : isCompactDesktop ? 380 : 440,
-      minHeight: 480,
+      width: isTabletRange ? 260 : isNarrowDesktop ? 300 : isCompactDesktop ? 340 : 400,
+      minHeight: isTabletRange ? 380 : 460,
       justifyContent: 'center',
       alignItems: 'center',
       position: 'relative',
     },
     imageDecor: {
       position: 'absolute',
-      width: 340,
-      height: 470,
+      width: isTabletRange ? 230 : isNarrowDesktop ? 270 : isCompactDesktop ? 300 : 340,
+      height: isTabletRange ? 340 : isNarrowDesktop ? 400 : isCompactDesktop ? 430 : 470,
       borderRadius: DESIGN_TOKENS.radii.xl,
       backgroundColor: colors.primarySoft,
       opacity: 0.6,
@@ -467,8 +469,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     imageDecor2: {
       position: 'absolute',
-      width: 310,
-      height: 440,
+      width: isTabletRange ? 210 : isNarrowDesktop ? 250 : isCompactDesktop ? 280 : 310,
+      height: isTabletRange ? 320 : isNarrowDesktop ? 380 : isCompactDesktop ? 410 : 440,
       borderRadius: DESIGN_TOKENS.radii.xl,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -484,10 +486,10 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     moodPanel: {
       position: 'absolute',
-      left: isNarrowDesktop ? 10 : isCompactDesktop ? 8 : -24,
-      top: isNarrowDesktop ? 12 : isCompactDesktop ? 24 : 32,
-      width: isNarrowDesktop ? 188 : isCompactDesktop ? 205 : 220,
-      gap: 12,
+      right: isTabletRange ? -6 : isNarrowDesktop ? -8 : isCompactDesktop ? -10 : -16,
+      top: isTabletRange ? 6 : isNarrowDesktop ? 10 : isCompactDesktop ? 16 : 24,
+      width: isTabletRange ? 155 : isNarrowDesktop ? 168 : isCompactDesktop ? 180 : 200,
+      gap: isTabletRange ? 6 : 10,
       zIndex: 10,
     },
     moodCard: {
@@ -495,8 +497,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.4)',
       backgroundColor: 'rgba(255,255,255,0.8)',
-      paddingHorizontal: isNarrowDesktop ? 10 : 14,
-      paddingVertical: isNarrowDesktop ? 8 : 12,
+      paddingHorizontal: isTabletRange ? 8 : isNarrowDesktop ? 9 : 12,
+      paddingVertical: isTabletRange ? 6 : isNarrowDesktop ? 7 : 10,
       ...Platform.select({
         web: {
           boxShadow: '0 8px 32px rgba(0,0,0,0.06)',
@@ -524,19 +526,19 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     moodCardTitle: {
       color: '#1a1a1a', // Always dark for contrast on glass
-      fontSize: isNarrowDesktop ? 12 : 13,
+      fontSize: isTabletRange ? 11 : isNarrowDesktop ? 11 : 12,
       fontWeight: '700',
-      lineHeight: isNarrowDesktop ? 16 : 18,
+      lineHeight: isTabletRange ? 14 : isNarrowDesktop ? 15 : 16,
     },
     moodCardMeta: {
       color: '#666666',
-      fontSize: isNarrowDesktop ? 11 : 12,
-      lineHeight: isNarrowDesktop ? 14 : 16,
+      fontSize: isTabletRange ? 10 : isNarrowDesktop ? 10 : 11,
+      lineHeight: isTabletRange ? 13 : isNarrowDesktop ? 13 : 14,
       fontWeight: '500',
     },
     bookImage: {
-      width: 260,
-      height: 390,
+      width: isTabletRange ? 180 : isNarrowDesktop ? 210 : isCompactDesktop ? 230 : 260,
+      height: isTabletRange ? 270 : isNarrowDesktop ? 315 : isCompactDesktop ? 345 : 390,
       borderRadius: DESIGN_TOKENS.radii.lg,
       ...Platform.select({
         web: {
@@ -612,7 +614,45 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       width: 18,
       backgroundColor: colors.primary,
     },
-  }), [colors, isCompactDesktop, isMobile, isNarrowDesktop]);
+    moodChipsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingVertical: 4,
+      paddingRight: 16,
+    },
+    moodChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+        },
+      }),
+    },
+    moodChipPressed: {
+      backgroundColor: colors.primaryLight,
+      borderColor: colors.primaryAlpha40,
+      ...Platform.select({
+        web: {
+          transform: 'scale(0.97)',
+        },
+      }),
+    },
+    moodChipTitle: {
+      color: colors.primaryText,
+      fontSize: 13,
+      fontWeight: '700',
+      lineHeight: 18,
+    },
+  }), [colors, isCompactDesktop, isMobile, isNarrowDesktop, isTabletRange]);
 
   const moodCardWebStyle = useMemo(() => {
     if (!isWeb) return undefined;
@@ -703,6 +743,31 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 accessibilityLabel="Смотреть маршруты"
               />
             </ResponsiveStack>
+
+            {shouldRenderMobileMoodChips && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
+                contentContainerStyle={styles.moodChipsRow}
+              >
+                {MOOD_CARDS.map((card) => (
+                  <Pressable
+                    key={card.title}
+                    onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams)}
+                    style={({ pressed }) => [
+                      styles.moodChip,
+                      pressed && styles.moodChipPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Идея поездки ${card.title}`}
+                  >
+                    <Feather name={card.icon as any} size={13} color={colors.primary} />
+                    <Text style={styles.moodChipTitle}>{card.title}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           {shouldRenderImageSlot && (
@@ -721,7 +786,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                   <View style={styles.imageDecor} />
                   <View style={styles.imageDecor2} />
                   <View style={styles.moodPanel}>
-                    {MOOD_CARDS.map((card) => (
+                    {MOOD_CARDS.slice(0, isTabletRange || isNarrowDesktop ? 3 : 4).map((card) => (
                       <div
                         key={card.title}
                         role="button"
@@ -748,8 +813,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                   <View style={styles.bookImageWrap}>
                     <ImageCardMedia
                       source={BOOK_IMAGES[bookImageIndex].source}
-                      width={260}
-                      height={390}
+                      width={isTabletRange ? 180 : isNarrowDesktop ? 210 : isCompactDesktop ? 230 : 260}
+                      height={isTabletRange ? 270 : isNarrowDesktop ? 315 : isCompactDesktop ? 345 : 390}
                       borderRadius={DESIGN_TOKENS.radii.lg}
                       fit="cover"
                       quality={90}
