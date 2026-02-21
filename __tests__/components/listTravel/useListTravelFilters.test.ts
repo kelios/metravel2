@@ -141,4 +141,72 @@ describe('useListTravelFilters', () => {
     expect(resultMeTravel.current.queryParams.publish).toBeUndefined();
     expect(resultMeTravel.current.queryParams.moderation).toBeUndefined();
   });
+
+  describe('initialFilter', () => {
+    it('uses INITIAL_FILTER (empty) when initialFilter is not provided', () => {
+      const { result } = setup();
+      expect(result.current.filter).toEqual({});
+    });
+
+    it('initialises filter state from initialFilter when provided', () => {
+      const { result } = setup({
+        initialFilter: { categories: [2, 21], over_nights_stay: [1] },
+      });
+      expect(result.current.filter.categories).toEqual([2, 21]);
+      expect(result.current.filter.over_nights_stay).toEqual([1]);
+    });
+
+    it('reflects initialFilter in queryParams immediately', () => {
+      const { result } = setup({
+        initialFilter: { month: [6, 7, 8] },
+      });
+      expect(result.current.queryParams.month).toEqual([6, 7, 8]);
+    });
+
+    it('allows overriding initialFilter values via onSelect', () => {
+      const { result } = setup({
+        initialFilter: { categories: [2, 21] },
+      });
+
+      act(() => {
+        result.current.onSelect('categories', [22]);
+      });
+
+      expect(result.current.filter.categories).toEqual([22]);
+      expect(result.current.queryParams.categories).toEqual([22]);
+    });
+
+    it('allows resetting to empty state via resetFilters even when initialFilter was set', () => {
+      const { result } = setup({
+        initialFilter: { categories: [2], month: [6, 7, 8] },
+      });
+
+      act(() => {
+        result.current.resetFilters();
+      });
+
+      expect(result.current.filter).toEqual({});
+    });
+
+    it('handles initialFilter with multiple filter types simultaneously', () => {
+      const { result } = setup({
+        initialFilter: {
+          categories: [22, 2],
+          over_nights_stay: [1, 8],
+          month: [9, 10, 11],
+        },
+      });
+
+      expect(result.current.filter.categories).toEqual([22, 2]);
+      expect(result.current.filter.over_nights_stay).toEqual([1, 8]);
+      expect(result.current.filter.month).toEqual([9, 10, 11]);
+      expect(result.current.queryParams.over_nights_stay).toEqual([1, 8]);
+      expect(result.current.queryParams.month).toEqual([9, 10, 11]);
+    });
+
+    it('ignores undefined initialFilter (falls back to empty filter)', () => {
+      const { result } = setup({ initialFilter: undefined });
+      expect(result.current.filter).toEqual({});
+    });
+  });
 });

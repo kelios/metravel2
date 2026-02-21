@@ -25,26 +25,47 @@ interface HomeSectionProps {
 
 const FILTER_GROUPS = [
   {
-    title: 'Формат',
+    title: 'Тип маршрута',
     icon: 'layers',
-    chips: ['Природа', 'Город', 'Активный отдых', 'Романтика', 'Спокойный ритм'],
+    chips: [
+      { label: 'Поход / хайкинг', filterParams: 'categories=2,21' },
+      { label: 'Город',           filterParams: 'categories=19,20' },
+      { label: 'Треккинг',        filterParams: 'categories=22' },
+      { label: 'Велопоход',       filterParams: 'categories=7' },
+      { label: 'Автопутешествие', filterParams: 'categories=6' },
+    ],
   },
   {
-    title: 'Длительность',
-    icon: 'clock',
-    chips: ['1 день', '2 дня', 'Уикенд'],
+    title: 'Ночлег',
+    icon: 'moon',
+    chips: [
+      { label: 'Без ночлега',     filterParams: 'over_nights_stay=8',   route: '/search' },
+      { label: 'Палатка',         filterParams: 'over_nights_stay=1',   route: '/search' },
+      { label: 'Гостиница',       filterParams: 'over_nights_stay=2',   route: '/search' },
+      { label: 'Квартира / дом',  filterParams: 'over_nights_stay=3,4', route: '/search' },
+    ],
   },
   {
     title: 'Сезон',
     icon: 'calendar',
-    chips: ['Весна', 'Лето', 'Осень', 'Зима'],
+    chips: [
+      { label: 'Весна', filterParams: 'month=3,4,5',   route: '/search' },
+      { label: 'Лето',  filterParams: 'month=6,7,8',   route: '/search' },
+      { label: 'Осень', filterParams: 'month=9,10,11', route: '/search' },
+      { label: 'Зима',  filterParams: 'month=12,1,2',  route: '/search' },
+    ],
   },
   {
-    title: 'Расстояние',
-    icon: 'navigation',
-    chips: ['До 100 км', '100-250 км', '250+ км'],
+    title: 'Расстояние на карте',
+    icon: 'map-pin',
+    chips: [
+      { label: 'До 30 км',   filterParams: 'radius=30',  route: '/map' },
+      { label: 'До 60 км',   filterParams: 'radius=60',  route: '/map' },
+      { label: 'До 100 км',  filterParams: 'radius=100', route: '/map' },
+      { label: 'До 200 км',  filterParams: 'radius=200', route: '/map' },
+    ],
   },
-] as const;
+];
 
 const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
   'home-travels-of-month': {
@@ -599,9 +620,11 @@ function HomeInspirationSections() {
   const isMobile = isPhone || isLargePhone;
 
   const handleFilterPress = useCallback(
-    (label: string) => {
+    (label: string, filterParams?: string, route?: string) => {
       sendAnalyticsEvent('HomeClick_QuickFilter', { label });
-      router.push('/search' as any);
+      const base = route ?? '/search';
+      const path = filterParams ? `${base}?${filterParams}` : base;
+      router.push(path as any);
     },
     [router],
   );
@@ -850,16 +873,16 @@ function HomeInspirationSections() {
                   <View style={styles.chipsWrap}>
                     {group.chips.map((chip) => (
                       <Pressable
-                        key={chip}
-                        onPress={() => handleFilterPress(chip)}
+                        key={chip.label}
+                        onPress={() => handleFilterPress(chip.label, chip.filterParams, (chip as any).route)}
                         style={({ pressed, hovered }) => [
                           styles.chip,
                           (pressed || hovered) && styles.chipHover,
                         ]}
                         accessibilityRole="button"
-                        accessibilityLabel={`Фильтр ${chip}`}
+                        accessibilityLabel={`Фильтр ${chip.label}`}
                       >
-                        <Text style={styles.chipText}>{chip}</Text>
+                        <Text style={styles.chipText}>{chip.label}</Text>
                       </Pressable>
                     ))}
                   </View>

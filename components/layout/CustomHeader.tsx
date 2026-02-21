@@ -1,5 +1,5 @@
 import React, { Suspense, useMemo, useRef, useState, useCallback, lazy } from 'react';
-import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, ScrollView } from 'react-native';
+import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, ScrollView, Linking } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import Logo from './Logo';
@@ -101,10 +101,20 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         if (pathname.startsWith('/export')) return '/export';
         if (pathname.startsWith('/map')) return '/map';
         if (pathname.startsWith('/quests')) return '/quests';
+        if (pathname.startsWith('/roulette')) return '/roulette';
         return pathname;
     }, [pathname]);
 
-    const handleNavPress = (path: string) => {
+    const handleNavPress = (path: string, external?: boolean) => {
+        if (external) {
+            if (Platform.OS === 'web') {
+                window.open(path, '_blank', 'noopener,noreferrer');
+            } else {
+                Linking.openURL(path);
+            }
+            setMobileMenuVisible(false);
+            return;
+        }
         router.push(path as any);
         setMobileMenuVisible(false);
     };
@@ -493,11 +503,11 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                           alwaysBounceHorizontal={false}
                       >
                           {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
-                              const isActive = activePath === item.path;
+                              const isActive = !item.external && activePath === item.path;
                               return (
                                   <Pressable
                                       key={item.path}
-                                      onPress={() => handleNavPress(item.path)}
+                                      onPress={() => handleNavPress(item.path, item.external)}
                                       style={[
                                           styles.navItem, 
                                           isActive && styles.navItemActive,

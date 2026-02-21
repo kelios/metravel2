@@ -1,12 +1,14 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { useQuery } from '@tanstack/react-query';
 import HomeInspirationSections from '@/components/home/HomeInspirationSection';
 import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/api/map';
 
+const mockPush = jest.fn();
+
 jest.mock('@tanstack/react-query');
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 jest.mock('@/components/listTravel/RenderTravelItem', () => {
@@ -16,6 +18,7 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
 });
 
 jest.mock('@/api/map');
+jest.mock('@/utils/analytics', () => ({ sendAnalyticsEvent: jest.fn() }));
 
 const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
 const mockFetchTravelsPopular = fetchTravelsPopular as jest.MockedFunction<typeof fetchTravelsPopular>;
@@ -78,5 +81,92 @@ describe('HomeInspirationSections', () => {
     expect(mockFetchTravelsOfMonth).toHaveBeenCalled();
     expect(mockFetchTravelsPopular).toHaveBeenCalled();
     expect(mockFetchTravelsRandom).toHaveBeenCalled();
+  });
+
+  describe('Quick filter chips — FILTER_GROUPS', () => {
+    it('renders all four filter group titles', () => {
+      const { getByText } = render(<HomeInspirationSections />);
+      expect(getByText('Тип маршрута')).toBeTruthy();
+      expect(getByText('Ночлег')).toBeTruthy();
+      expect(getByText('Сезон')).toBeTruthy();
+      expect(getByText('Расстояние на карте')).toBeTruthy();
+    });
+
+    it('renders chip labels for each group', () => {
+      const { getByText } = render(<HomeInspirationSections />);
+      expect(getByText('Поход / хайкинг')).toBeTruthy();
+      expect(getByText('Велопоход')).toBeTruthy();
+      expect(getByText('Без ночлега')).toBeTruthy();
+      expect(getByText('Палатка')).toBeTruthy();
+      expect(getByText('Лето')).toBeTruthy();
+      expect(getByText('До 30 км')).toBeTruthy();
+      expect(getByText('До 100 км')).toBeTruthy();
+    });
+
+    it('navigates to /search?categories=2,21 when "Поход / хайкинг" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр Поход / хайкинг'));
+      expect(mockPush).toHaveBeenCalledWith('/search?categories=2,21');
+    });
+
+    it('navigates to /search?categories=19,20 when "Город" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр Город'));
+      expect(mockPush).toHaveBeenCalledWith('/search?categories=19,20');
+    });
+
+    it('navigates to /search?categories=22 when "Треккинг" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр Треккинг'));
+      expect(mockPush).toHaveBeenCalledWith('/search?categories=22');
+    });
+
+    it('navigates to /search?over_nights_stay=8 when "Без ночлега" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр Без ночлега'));
+      expect(mockPush).toHaveBeenCalledWith('/search?over_nights_stay=8');
+    });
+
+    it('navigates to /search?over_nights_stay=1 when "Палатка" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр Палатка'));
+      expect(mockPush).toHaveBeenCalledWith('/search?over_nights_stay=1');
+    });
+
+    it('navigates to /search?month=6,7,8 when "Лето" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр Лето'));
+      expect(mockPush).toHaveBeenCalledWith('/search?month=6,7,8');
+    });
+
+    it('navigates to /search?month=3,4,5 when "Весна" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр Весна'));
+      expect(mockPush).toHaveBeenCalledWith('/search?month=3,4,5');
+    });
+
+    it('navigates to /map?radius=30 when "До 30 км" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр До 30 км'));
+      expect(mockPush).toHaveBeenCalledWith('/map?radius=30');
+    });
+
+    it('navigates to /map?radius=100 when "До 100 км" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр До 100 км'));
+      expect(mockPush).toHaveBeenCalledWith('/map?radius=100');
+    });
+
+    it('navigates to /map?radius=200 when "До 200 км" chip is pressed', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Фильтр До 200 км'));
+      expect(mockPush).toHaveBeenCalledWith('/map?radius=200');
+    });
+
+    it('"Смотреть маршруты" button navigates to /search without filters', () => {
+      const { getByLabelText } = render(<HomeInspirationSections />);
+      fireEvent.press(getByLabelText('Смотреть маршруты'));
+      expect(mockPush).toHaveBeenCalledWith('/search');
+    });
   });
 });

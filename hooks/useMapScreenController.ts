@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { FiltersProvider } from '@/context/MapFiltersContext';
@@ -38,13 +39,22 @@ export function useMapScreenController() {
     []
   );
 
+  // URL params → initial filter values
+  const params = useLocalSearchParams<{ categories?: string; radius?: string }>();
+  const initialCategories = useMemo(
+    () => (params.categories ? params.categories.split(',').map((s) => s.trim()).filter(Boolean) : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const initialRadius = useMemo(() => params.radius ?? undefined, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
   // Filters
   const {
     filters,
     filterValues,
     handleFilterChangeForPanel,
     resetFilters: resetFiltersBase,
-  } = useMapFilters();
+  } = useMapFilters({ initialCategories, initialRadius });
 
   // UI Controller
   const uiController = useMapUIController();

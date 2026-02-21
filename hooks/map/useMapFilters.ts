@@ -46,11 +46,17 @@ function normalizeCategory(cat: unknown, idx: number): { id: string; name: strin
   };
 }
 
+export interface UseMapFiltersOptions {
+  initialCategories?: string[];
+  initialRadius?: string;
+}
+
 /**
  * Хук для управления фильтрами карты.
  * Загружает доступные фильтры с сервера и сохраняет выбранные значения в localStorage.
+ * URL-параметры (initialCategories, initialRadius) имеют приоритет над localStorage.
  */
-export function useMapFilters() {
+export function useMapFilters(options?: UseMapFiltersOptions) {
   const webStorage = useMemo(() => getWebStorage(), []);
 
   const [filters, setFilters] = useState<FiltersData>({
@@ -60,8 +66,12 @@ export function useMapFilters() {
   });
 
   const [filterValues, setFilterValues] = useState<MapFilterValues>(() => {
-    if (!webStorage) return DEFAULT_FILTER_VALUES;
-    return loadMapFilterValues(webStorage);
+    const stored = webStorage ? loadMapFilterValues(webStorage) : DEFAULT_FILTER_VALUES;
+    return {
+      ...stored,
+      ...(options?.initialCategories?.length ? { categories: options.initialCategories } : {}),
+      ...(options?.initialRadius ? { radius: options.initialRadius } : {}),
+    };
   });
 
   const [isLoading, setIsLoading] = useState(true);

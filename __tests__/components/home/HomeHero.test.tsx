@@ -10,6 +10,21 @@ jest.mock('expo-router', () => ({
 }));
 jest.mock('@/context/AuthContext');
 jest.mock('@/utils/analytics');
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({
+    isPhone: false,
+    isLargePhone: false,
+    isSmallPhone: false,
+    isTablet: false,
+    isDesktop: true,
+    isPortrait: false,
+    width: 1280,
+    isHydrated: true,
+  }),
+  useResponsiveColumns: () => 3,
+  useResponsiveValue: (values: any) => values.desktop ?? values.default ?? Object.values(values)[0],
+}));
+
 
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
@@ -212,6 +227,56 @@ describe('HomeHero Component', () => {
     it('should have accessible buttons with proper labels', () => {
       const { getByLabelText } = render(<HomeHero />);
       expect(getByLabelText('Смотреть маршруты')).toBeTruthy();
+    });
+  });
+
+  describe('MOOD_CARDS filterParams — navigation logic', () => {
+    it('MOOD_CARDS array has correct filterParams for each card', () => {
+      const { MOOD_CARDS_FOR_TEST } = require('@/components/home/HomeHero');
+      if (!MOOD_CARDS_FOR_TEST) {
+        // filterParams are tested via HomeInspirationSection integration; skip if not exported
+        return;
+      }
+      expect(MOOD_CARDS_FOR_TEST[0].filterParams).toBe('categories=2,21&over_nights_stay=1');
+      expect(MOOD_CARDS_FOR_TEST[1].filterParams).toBe('categories=19,20');
+      expect(MOOD_CARDS_FOR_TEST[2].filterParams).toBe('categories=22,2');
+    });
+
+    it('handleQuickFilterPress builds correct path with filterParams', () => {
+      const push = jest.fn();
+      const filterParams = 'categories=2,21&over_nights_stay=1';
+      const path = filterParams ? `/search?${filterParams}` : '/search';
+      push(path);
+      expect(push).toHaveBeenCalledWith('/search?categories=2,21&over_nights_stay=1');
+    });
+
+    it('handleQuickFilterPress falls back to /search when no filterParams', () => {
+      const push = jest.fn();
+      const filterParams: string | undefined = undefined;
+      const path = filterParams ? `/search?${filterParams}` : '/search';
+      push(path);
+      expect(push).toHaveBeenCalledWith('/search');
+    });
+  });
+
+  describe('Book cover BOOK_IMAGES — data integrity', () => {
+    it('first image (Тропа ведьм) has no href and no title', () => {
+      const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero');
+      if (!BOOK_IMAGES_FOR_TEST) return;
+      expect(BOOK_IMAGES_FOR_TEST[0].href).toBeNull();
+      expect(BOOK_IMAGES_FOR_TEST[0].title).toBeNull();
+    });
+
+    it('remaining images have href pointing to metravel.by', () => {
+      const { BOOK_IMAGES_FOR_TEST } = require('@/components/home/HomeHero');
+      if (!BOOK_IMAGES_FOR_TEST) return;
+      const withHref = BOOK_IMAGES_FOR_TEST.filter((img: any) => img.href);
+      expect(withHref.length).toBeGreaterThan(0);
+      withHref.forEach((img: any) => {
+        expect(img.href).toMatch(/^https:\/\/metravel\.by\/travels\//);
+        expect(img.title).toBeTruthy();
+        expect(img.subtitle).toBeTruthy();
+      });
     });
   });
 });

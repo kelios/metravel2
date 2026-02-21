@@ -320,6 +320,7 @@ function ListTravelBase({
       companions?: string;
       complexity?: string;
       month?: string;
+      search?: string;
     }>();
     const user_id = params.user_id;
 
@@ -494,7 +495,7 @@ function ListTravelBase({
     const { userId, isSuperuser: isSuper } = useAuth();
 
     /* Top-bar state */
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(params.search ?? "");
     const debSearch = useDebouncedValue(search, 400);
 
     const onMomentumRef = useRef(false);

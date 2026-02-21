@@ -9,7 +9,7 @@ type Props = {
   visible: boolean
   onRequestClose: () => void
   onOverlayPress: () => void
-  onNavPress: (path: string) => void
+  onNavPress: (path: string, external?: boolean) => void
   onUserAction: (path: string, extraAction?: () => void) => void
   onMyTravels?: () => void
   onLogout: () => void
@@ -195,11 +195,11 @@ export default function CustomHeaderMobileMenu({
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>Навигация</Text>
             {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
-              const isActive = activePath === item.path
+              const isActive = !item.external && activePath === item.path
               return (
                 <Pressable
                   key={item.path}
-                  onPress={() => onNavPress(item.path)}
+                  onPress={() => onNavPress(item.path, item.external)}
                   style={({ hovered, pressed }) => [
                     styles.modalNavItem,
                     (hovered || pressed) && styles.modalNavItemHover,
