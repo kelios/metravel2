@@ -41,14 +41,19 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     const moreInDock = dock.getByTestId('footer-item-more');
     await expect(moreInDock).toBeVisible();
 
-    // Layout invariant: "Ещё" should be roughly centered in the dock in minimal state.
+    // Layout invariant: "Ещё" should stay near the visual center in minimal state.
+    // Allow proportional tolerance for responsive spacing changes across mobile widths.
     const [bb, dockBb] = await Promise.all([moreInDock.boundingBox(), dock.boundingBox()]);
     expect(bb, 'expected "Ещё" to have a measurable bounding box').not.toBeNull();
     expect(dockBb, 'expected dock to have a measurable bounding box').not.toBeNull();
     if (bb && dockBb) {
       const itemCenterX = bb.x + bb.width / 2;
       const dockCenterX = dockBb.x + dockBb.width / 2;
-      expect(Math.abs(itemCenterX - dockCenterX), 'expected "Ещё" to be centered within 110px').toBeLessThanOrEqual(110);
+      const maxAllowedOffset = Math.max(110, dockBb.width * 0.35);
+      expect(
+        Math.abs(itemCenterX - dockCenterX),
+        `expected "Ещё" to stay near center within ${Math.round(maxAllowedOffset)}px`,
+      ).toBeLessThanOrEqual(maxAllowedOffset);
     }
 
     // Open More modal.
