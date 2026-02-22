@@ -180,7 +180,7 @@ const getStyles = (
     container: {
       position: 'absolute',
       ...positionStyles[position],
-      zIndex: 1000,
+      zIndex: 800,
     },
     backdrop: {
       ...StyleSheet.absoluteFillObject,

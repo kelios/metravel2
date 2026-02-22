@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { preacceptCookies } from './helpers/navigation';
+import { expectFullyInViewport, expectTopmostAtCenter } from './helpers/layoutAsserts';
 
 async function installTileMock(page: any) {
   const pngBase64 =
@@ -920,6 +921,25 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       await page.getByTestId('map-panel-open').click({ force: true });
     }
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('mobile: panel close button is topmost and FAB does not overlay panel', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 720 });
+
+    await gotoMapWithRecovery(page);
+
+    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId('map-panel-open').click();
+
+    const close = page.getByTestId('map-panel-close');
+    await expect(close).toBeVisible({ timeout: 20_000 });
+
+    await expectFullyInViewport(close, page, { label: 'map panel close', margin: 2 });
+    await expectTopmostAtCenter(page, close, 'map panel close');
+
+    // FAB must not be visible above the panel when the panel is open.
+    const fab = page.locator('[data-testid="map-mobile-fab"], [testID="map-mobile-fab"]');
+    await expect(fab).toHaveCount(0);
   });
 
   test('mobile: overlay click closes panel', async ({ page }) => {

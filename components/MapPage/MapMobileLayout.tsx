@@ -81,6 +81,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
   const [, startTransition] = useTransition();
   const sheetStateRef = useRef<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed');
+  const [sheetState, setSheetState] = useState<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed');
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
@@ -91,6 +92,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'quarter' | 'half' | 'full') => {
     sheetStateRef.current = state;
+    setSheetState(state);
     setBottomSheetState(state); // Синхронизация с store
   }, [setBottomSheetState]);
 
@@ -398,7 +400,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       </View>
 
       {/* FAB for mobile web */}
-      {Platform.OS === 'web' && bottomSheetState === 'collapsed' && (
+      {Platform.OS === 'web' && bottomSheetState === 'collapsed' && sheetState === 'collapsed' && (
         <MapFAB
           mainAction={{
             icon: 'my-location',

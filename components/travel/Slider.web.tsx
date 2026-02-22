@@ -628,6 +628,86 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       node.style.scrollSnapType = '';
     };
 
+    // Touch / pointer swipe (mobile web)
+    const isTouchPointerEvent = (e: PointerEvent) => {
+      // Some browsers report touch as pointerType === 'touch'.
+      // Safari may omit pointer events entirely; we also attach touch handlers below.
+      return (e as any).pointerType === 'touch' || (e as any).pointerType === 'pen';
+    };
+
+    const settleToNearestSlide = () => {
+      const cw = containerWRef.current || 1;
+      const idx = Math.round(node.scrollLeft / cw);
+      const target = clamp(idx, 0, Math.max(0, images.length - 1));
+      snapToSlide(target);
+      node.style.scrollSnapType = '';
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (!isTouchPointerEvent(e)) return;
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.pageX;
+      dragScrollLeftRef.current = node.scrollLeft;
+      dragStartIndexRef.current = indexRef.current;
+      node.style.scrollSnapType = 'none';
+      // Prevent vertical scroll gesture from stealing the interaction.
+      // Must be non-passive.
+      try {
+        e.preventDefault();
+      } catch {
+        // noop
+      }
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      if (!isTouchPointerEvent(e)) return;
+      try {
+        e.preventDefault();
+      } catch {
+        // noop
+      }
+      const dx = e.pageX - dragStartXRef.current;
+      node.scrollLeft = dragScrollLeftRef.current - dx;
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      if (!isTouchPointerEvent(e)) return;
+      isDraggingRef.current = false;
+      settleToNearestSlide();
+    };
+
+    const onPointerCancel = (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      if (!isTouchPointerEvent(e)) return;
+      isDraggingRef.current = false;
+      settleToNearestSlide();
+    };
+
+    // iOS Safari fallback (no PointerEvent)
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.touches[0].pageX;
+      dragScrollLeftRef.current = node.scrollLeft;
+      dragStartIndexRef.current = indexRef.current;
+      node.style.scrollSnapType = 'none';
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRef.current) return;
+      if (e.touches.length !== 1) return;
+      const dx = e.touches[0].pageX - dragStartXRef.current;
+      node.scrollLeft = dragScrollLeftRef.current - dx;
+    };
+
+    const onTouchEnd = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      settleToNearestSlide();
+    };
+
     const onScrollEnd = () => {
       const cw = containerWRef.current || 1;
       const idx = Math.round(node.scrollLeft / cw);
@@ -642,6 +722,17 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     node.addEventListener('mouseleave', onMouseLeave);
     node.addEventListener('scrollend', onScrollEnd);
 
+    // Pointer/touch swipe handlers
+    // Use non-passive so preventDefault works when needed.
+    node.addEventListener('pointerdown', onPointerDown as EventListener, { passive: false } as any);
+    node.addEventListener('pointermove', onPointerMove as EventListener, { passive: false } as any);
+    node.addEventListener('pointerup', onPointerUp as EventListener, { passive: true } as any);
+    node.addEventListener('pointercancel', onPointerCancel as EventListener, { passive: true } as any);
+
+    node.addEventListener('touchstart', onTouchStart as EventListener, { passive: true } as any);
+    node.addEventListener('touchmove', onTouchMove as EventListener, { passive: true } as any);
+    node.addEventListener('touchend', onTouchEnd as EventListener, { passive: true } as any);
+
     return () => {
       parent?.removeEventListener('keydown', handleKeyDown as EventListener);
       node.removeEventListener('mousedown', onMouseDown);
@@ -649,6 +740,16 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       window.removeEventListener('mouseup', onMouseUp);
       node.removeEventListener('mouseleave', onMouseLeave);
       node.removeEventListener('scrollend', onScrollEnd);
+
+      node.removeEventListener('pointerdown', onPointerDown as EventListener);
+      node.removeEventListener('pointermove', onPointerMove as EventListener);
+      node.removeEventListener('pointerup', onPointerUp as EventListener);
+      node.removeEventListener('pointercancel', onPointerCancel as EventListener);
+
+      node.removeEventListener('touchstart', onTouchStart as EventListener);
+      node.removeEventListener('touchmove', onTouchMove as EventListener);
+      node.removeEventListener('touchend', onTouchEnd as EventListener);
+
       if (scrollIdleTimerRef.current) {
         clearTimeout(scrollIdleTimerRef.current);
         scrollIdleTimerRef.current = null;
@@ -709,6 +810,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           <ScrollView
             ref={scrollRef}
             horizontal
+            pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={100}
             style={[styles.scrollView, styles.scrollSnap]}

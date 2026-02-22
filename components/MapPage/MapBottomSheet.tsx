@@ -214,8 +214,12 @@ const getStyles = (colors: ThemedColors) =>
     sheet: {
       ...Platform.select({
         web: {
-          zIndex: 50,
+          zIndex: 2000,
           boxShadow: 'none',
+          left: 0,
+          right: 0,
+          width: '100%',
+          maxWidth: '100vw',
         } as any,
         default: {
           ...(colors.shadows?.light ?? {}),

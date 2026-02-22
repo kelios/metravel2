@@ -74,7 +74,11 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
         return () => clearInterval(id);
     }, [enabled, pollEnabled, silentRefresh]);
 
-    return { threads, loading, error, refresh: load };
+    const setThreadUnreadCount = useCallback((threadId: number, unreadCount: number) => {
+        setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, unread_count: unreadCount } : t)));
+    }, []);
+
+    return { threads, loading, error, refresh: load, setThreadUnreadCount };
 }
 
 // ---- useThreadMessages ----

@@ -37,7 +37,13 @@ export default function MessagesScreen() {
     const userDismissedDeepLink = useRef(false);
 
     const canFetch = authReady && isAuthenticated;
-    const { threads, loading: threadsLoading, error: threadsError, refresh: refreshThreads } = useThreads(canFetch, isFocused);
+    const {
+        threads,
+        loading: threadsLoading,
+        error: threadsError,
+        refresh: refreshThreads,
+        setThreadUnreadCount,
+    } = useThreads(canFetch, isFocused);
     const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore, optimisticRemove } = useThreadMessages(
         selectedThread?.id ?? null, isFocused
     );
@@ -143,15 +149,24 @@ export default function MessagesScreen() {
         const tid = Number(params.threadId);
         if (isNaN(tid)) return;
         const found = threads.find((t) => t.id === tid);
-        if (found) setSelectedThread(found);
-    }, [params.threadId, isAuthenticated, authReady, threads]);
+        if (found) {
+            setSelectedThread(found);
+            if (found.id >= 0) {
+                setThreadUnreadCount(found.id, 0);
+                markRead(found.id);
+                refreshThreads();
+            }
+        }
+    }, [params.threadId, isAuthenticated, authReady, threads, markRead, refreshThreads, setThreadUnreadCount]);
 
     const handleSelectThread = useCallback((thread: MessageThread) => {
         setSelectedThread(thread);
         if (thread.id >= 0) {
+            setThreadUnreadCount(thread.id, 0);
             markRead(thread.id);
+            refreshThreads();
         }
-    }, [markRead]);
+    }, [markRead, refreshThreads, setThreadUnreadCount]);
 
     const handleBack = useCallback(() => {
         userDismissedDeepLink.current = true;
