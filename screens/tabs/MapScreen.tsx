@@ -32,6 +32,7 @@ const LazyMapMobileLayout = lazy(() =>
 
 const MAP_SEO_DESCRIPTION =
     'Интерактивная карта путешествий Metravel: находите маршруты, достопримечательности и идеи поездок, фильтруйте точки и стройте свой путь.';
+const MAP_SEO_TITLE = 'Карта маршрутов и достопримечательностей Беларуси | Metravel';
 
 export default function MapScreen() {
     const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
@@ -259,7 +260,7 @@ export default function MapScreen() {
                 {isFocused && Platform.OS === 'web' && (
                     <InstantSEO
                         headKey="map"
-                        title="Карта путешествий | MeTravel"
+                        title={MAP_SEO_TITLE}
                         description={MAP_SEO_DESCRIPTION}
                         canonical={canonical}
                     />
@@ -402,7 +403,7 @@ export default function MapScreen() {
                 {isFocused && Platform.OS === 'web' && (
                     <InstantSEO
                         headKey="map-error"
-                        title="Карта путешествий | MeTravel"
+                        title={MAP_SEO_TITLE}
                         description={MAP_SEO_DESCRIPTION}
                         canonical={canonical}
                     />
@@ -424,7 +425,7 @@ export default function MapScreen() {
             {isFocused && Platform.OS === 'web' && (
                 <InstantSEO
                     headKey="map"
-                    title="Карта путешествий | MeTravel"
+                    title={MAP_SEO_TITLE}
                     description={MAP_SEO_DESCRIPTION}
                     canonical={canonical}
                 />

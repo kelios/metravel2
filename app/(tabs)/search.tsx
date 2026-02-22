@@ -11,11 +11,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton';
-import { queryClient } from '@/queryClient';
 import { fetchTravels } from '@/api/travelsApi';
-import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
-
-const DEFAULT_QUERY_KEY = ['travels', { perPage: PER_PAGE, search: '', params: JSON.stringify({ moderation: 1, publish: 1 }) }];
 
 const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
@@ -38,26 +34,50 @@ function SearchScreen() {
         if (!canMountContent) return;
         if (typeof window === 'undefined') return;
 
-        const existing = queryClient.getQueryState(DEFAULT_QUERY_KEY);
-        if (existing?.data || existing?.status === 'pending') return;
+        const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
+        const conn = nav?.connection;
+        const saveData = Boolean(conn?.saveData);
+        const effectiveType = String(conn?.effectiveType || '').toLowerCase();
+        const isSlowConnection =
+            effectiveType === 'slow-2g' ||
+            effectiveType === '2g' ||
+            effectiveType === '3g';
+        const lowMemoryDevice =
+            typeof nav?.deviceMemory === 'number' && nav.deviceMemory <= 4;
+
+        // Speculative prefetch is useful on fast networks, but on constrained
+        // devices it can compete with critical resources and hurt LCP/TBT.
+        if (saveData || isSlowConnection || lowMemoryDevice) return;
 
         let cancelled = false;
         let timer: ReturnType<typeof setTimeout> | null = null;
         let idleId: number | null = null;
 
-        const doPrefetch = () => {
+        const doPrefetch = async () => {
             if (cancelled) return;
+
+            const [{ queryClient }, { PER_PAGE }] = await Promise.all([
+                import('@/queryClient'),
+                import('@/components/listTravel/utils/listTravelConstants'),
+            ]);
+
+            if (cancelled) return;
+
+            const queryKey = ['travels', { perPage: PER_PAGE, search: '', params: JSON.stringify({ moderation: 1, publish: 1 }) }];
+            const existing = queryClient.getQueryState(queryKey);
+            if (existing?.data || existing?.status === 'pending') return;
+
             queryClient.prefetchInfiniteQuery({
-                queryKey: DEFAULT_QUERY_KEY,
+                queryKey,
                 queryFn: ({ pageParam = 0 }) => fetchTravels(pageParam, PER_PAGE, '', { moderation: 1, publish: 1 }),
                 initialPageParam: 0,
             }).catch(() => undefined);
         };
 
         if ('requestIdleCallback' in window) {
-            idleId = (window as any).requestIdleCallback(doPrefetch, { timeout: 2400 });
+            idleId = (window as any).requestIdleCallback(doPrefetch, { timeout: 6000 });
         } else {
-            timer = setTimeout(doPrefetch, 300);
+            timer = setTimeout(doPrefetch, 1200);
         }
 
         return () => {
@@ -69,7 +89,7 @@ function SearchScreen() {
         };
     }, [canMountContent, isFocused]);
 
-    const title = 'Поиск путешествий | Metravel';
+    const title = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel';
     const description = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.';
 
     const styles = useMemo(() => StyleSheet.create({

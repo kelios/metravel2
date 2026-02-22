@@ -73,7 +73,7 @@ export default function TabLayout() {
     const tabBarHiddenStyle = useMemo(() => ({ display: 'none' as const }), []);
     const travelDetailsOptions =
       Platform.OS === 'web'
-        ? { title: '', href: undefined, lazy: false }
+        ? { title: '', href: undefined, lazy: true }
         : { ...HIDDEN, lazy: false, freezeOnBlur: false };
 
     return (

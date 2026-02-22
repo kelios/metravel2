@@ -765,22 +765,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               </Pressable>
 
               {/* Navigation dots - outside Pressable to avoid nested buttons */}
-              {process.env.EXPO_PUBLIC_SHOW_SLIDER_DOTS === '1' ? (
-                <View style={styles.sliderDots}>
-                  {BOOK_IMAGES.map((_, index) => (
-                    <Pressable
-                      key={index}
-                      onPress={() => setActiveSlide(index)}
-                      style={[
-                        styles.sliderDot,
-                        index === activeSlide && styles.sliderDotActive,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Слайд ${index + 1}`}
-                    />
-                  ))}
-                </View>
-              ) : null}
+              {null}
 
               {/* Navigation arrows */}
               <View style={styles.sliderNav}>

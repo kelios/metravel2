@@ -320,13 +320,19 @@ export default function RootLayout() {
           if (event.data?.type === 'SW_PENDING_UPDATE') {
             (window as any).__metravelUpdatePending = true;
           } else if (event.data?.type === 'SW_STALE_CHUNK') {
-            // Reload to recover from missing chunk, but with cooldown to prevent loops.
+            // Reload to recover from missing chunk, but with cooldown + retry cap
+            // to prevent infinite reload loops when a stale asset is persistently unavailable.
             const STALE_KEY = '__metravel_sw_stale_reload';
+            const STALE_COUNT_KEY = '__metravel_sw_stale_reload_count';
             const STALE_COOLDOWN = 30000;
+            const STALE_MAX_RETRIES = 2;
             try {
+              const retryCount = parseInt(sessionStorage.getItem(STALE_COUNT_KEY) || '0', 10);
+              if (retryCount >= STALE_MAX_RETRIES) return;
               const last = sessionStorage.getItem(STALE_KEY);
               if (last && Date.now() - parseInt(last, 10) < STALE_COOLDOWN) return;
               sessionStorage.setItem(STALE_KEY, Date.now().toString());
+              sessionStorage.setItem(STALE_COUNT_KEY, String(retryCount + 1));
             } catch { /* sessionStorage unavailable */ }
             window.location.reload();
           }

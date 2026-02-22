@@ -20,11 +20,11 @@ function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavorites();
   const { updateFilters } = useFilters();
-  const { count: unreadCount } = useUnreadCount(isAuthenticated);
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [avatarLoadError, setAvatarLoadError] = useState(false);
+  const { count: unreadCount } = useUnreadCount(isAuthenticated && visible, visible);
   const [expandedSections, setExpandedSections] = useState({
     navigation: true,
     travels: true,

@@ -47,7 +47,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
     const { favorites } = useFavoritesSafe();
     const { updateFilters } = useFilters();
-    const { count: unreadCount } = useUnreadCount(isAuthenticated);
+    const { count: unreadCount } = useUnreadCount(isAuthenticated && mobileMenuVisible, mobileMenuVisible);
     const [avatarLoadError, setAvatarLoadError] = useState(false);
     const lastHeightRef = useRef(0);
 
