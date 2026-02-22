@@ -725,7 +725,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 onPress={() => handleOpenArticles(currentSlide.href)}
                 style={styles.sliderContainer}
                 accessibilityRole="link"
-                accessibilityLabel={`${currentSlide.title} ${currentSlide.subtitle}`}
+                accessibilityHint="Открыть маршрут"
               >
                 {/* Slides */}
                 {BOOK_IMAGES.map((image, index) => (
@@ -765,20 +765,22 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               </Pressable>
 
               {/* Navigation dots - outside Pressable to avoid nested buttons */}
-              <View style={styles.sliderDots}>
-                {BOOK_IMAGES.map((_, index) => (
-                  <Pressable
-                    key={index}
-                    onPress={() => setActiveSlide(index)}
-                    style={[
-                      styles.sliderDot,
-                      index === activeSlide && styles.sliderDotActive,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Слайд ${index + 1}`}
-                  />
-                ))}
-              </View>
+              {false && (
+                <View style={styles.sliderDots}>
+                  {BOOK_IMAGES.map((_, index) => (
+                    <Pressable
+                      key={index}
+                      onPress={() => setActiveSlide(index)}
+                      style={[
+                        styles.sliderDot,
+                        index === activeSlide && styles.sliderDotActive,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Слайд ${index + 1}`}
+                    />
+                  ))}
+                </View>
+              )}
 
               {/* Navigation arrows */}
               <View style={styles.sliderNav}>

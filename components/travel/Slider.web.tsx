@@ -213,6 +213,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // State
   const [containerW, setContainerWState] = useState(winW);
   const [currentIndex, setCurrentIndex] = useState(0);
+  // Track whether onLayout has fired so we can use CSS '100%' width before the first measurement
+  const [layoutMeasured, setLayoutMeasured] = useState(false);
 
   // Refs
   const indexRef = useRef(0);
@@ -313,9 +315,26 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [images.length, onIndexChanged]
   );
 
+  // Extract underlying DOM element from a React Native Web ref
+  const getDomNode = useCallback((ref: React.RefObject<any>): HTMLElement | null => {
+    const r = ref.current;
+    if (!r) return null;
+    if (r instanceof HTMLElement) return r;
+    if (r._nativeNode instanceof HTMLElement) return r._nativeNode;
+    if (r._domNode instanceof HTMLElement) return r._domNode;
+    if (typeof r.getNode === 'function') {
+      const n = r.getNode();
+      if (n instanceof HTMLElement) return n;
+    }
+    return null;
+  }, []);
+
   // Resolve cached DOM nodes — try ref-captured nodes first, fall back to querySelector with escaped ID
   const resolveNodes = useCallback(() => {
     if (typeof document === 'undefined') return;
+    if (!scrollNodeRef.current) {
+      scrollNodeRef.current = getDomNode(scrollRef);
+    }
     if (!scrollNodeRef.current) {
       // Try querySelector with CSS.escape to handle special chars in useId() output
       try {
@@ -334,6 +353,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       }
     }
     if (!wrapperNodeRef.current) {
+      wrapperNodeRef.current = getDomNode(wrapperRef);
+    }
+    if (!wrapperNodeRef.current) {
       try {
         const escaped = typeof CSS !== 'undefined' && CSS.escape
           ? CSS.escape(sliderInstanceId)
@@ -348,7 +370,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         wrapperNodeRef.current = document.querySelector('[data-testid="slider-wrapper"]') as HTMLElement | null;
       }
     }
-  }, [sliderInstanceId]);
+  }, [sliderInstanceId, getDomNode]);
 
   const snapScrollToIndex = useCallback(
     (idx: number, widthOverride?: number) => {
@@ -462,6 +484,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (e: LayoutChangeEvent) => {
       const w = e.nativeEvent.layout.width;
       setContainerWidth(w);
+      setLayoutMeasured(true);
       resolveNodes();
       snapScrollToIndex(indexRef.current, w);
     },
@@ -686,7 +709,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           <ScrollView
             ref={scrollRef}
             horizontal
-            pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={100}
             style={[styles.scrollView, styles.scrollSnap]}
@@ -706,7 +728,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               return (
                 <View
                   key={`${String(item.id)}|${index}`}
-                  style={[styles.slide, { width: containerW, height: containerH }, styles.slideSnap]}
+                  style={[styles.slide, { width: layoutMeasured ? containerW : '100%', height: containerH }, styles.slideSnap]}
                 >
                   {inWindow ? (
                     <Slide
