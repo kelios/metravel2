@@ -68,6 +68,7 @@ const CardActionPressable = ({
           role: accessibilityRole,
           tabIndex: disabled ? -1 : 0,
           title: title ?? accessibilityLabel,
+          'data-testid': testID,
           'aria-disabled': disabled || undefined,
           'aria-checked': ariaChecked !== undefined ? ariaChecked : undefined,
           'aria-selected': canUseAriaSelected && ariaSelected !== undefined ? ariaSelected : undefined,

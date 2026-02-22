@@ -12,7 +12,6 @@ import { MapPeekPreview } from './MapPeekPreview';
 import TravelListPanel from './TravelListPanel';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
-import IconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
 import { MapFAB } from './MapFAB';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
@@ -394,7 +393,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     uiTab,
     contentTab,
     bottomSheetRef,
+    colors.borderLight,
+    colors.primary,
+    colors.primaryDark,
     colors.textMuted,
+    colors.textOnPrimary,
     buildRouteTo,
     coordinates,
     favorites,
@@ -407,9 +410,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onLoadMore,
     onRefresh,
     onToggleFavorite,
+    handleOpenList,
     setTabDeferred,
     setFiltersMode,
-    styles.sheetIconButton,
     styles.sheetToolbarActions,
     styles.sheetCloseButton,
     styles.sheetShowResultsButton,
@@ -420,7 +423,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     styles.sheetRoot,
     styles.sheetToolbar,
     styles.sheetToolbarInline,
-    styles.sheetToolbarStacked,
     styles.sheetToolbarFullWidth,
     transportMode,
     travelsData,

@@ -959,7 +959,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     const panel = page.getByTestId('filters-panel');
     const opened = await panel.isVisible({ timeout: 20_000 }).catch(() => false);
     if (!opened) {
-      await expect(page.getByTestId('segmented-radius')).toBeVisible({ timeout: 20_000 });
+      // On mobile, panel can open with the list tab by default. Radius/route toggle is only
+      // shown inside the filters tab, so for this regression we assert the always-present
+      // list/filters segmented control is visible.
+      await expect(page.getByTestId('segmented-list')).toBeVisible({ timeout: 20_000 });
     }
 
     // Give the UI a moment: if there is flicker, it would have collapsed by now.
@@ -967,7 +970,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     if (opened) {
       await expect(panel).toBeVisible();
     } else {
-      await expect(page.getByTestId('segmented-radius')).toBeVisible();
+      await expect(page.getByTestId('segmented-list')).toBeVisible();
     }
   });
 

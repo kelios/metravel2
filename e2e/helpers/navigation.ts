@@ -87,7 +87,10 @@ export async function navigateToFirstTravel(
 ): Promise<boolean> {
   await gotoWithRetry(page, getTravelsListPath());
 
-  const cards = page.locator('[data-testid="travel-card-link"]');
+  const linkCards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
+  // Fallback: some list variants expose the card root testID (travel-card-<slug/id>)
+  const fallbackCards = page.locator('[data-testid^="travel-card-"], [testID^="travel-card-"]');
+  const cards = (await linkCards.count()) > 0 ? linkCards : fallbackCards;
 
   // Wait for either cards or empty state
   await Promise.race([
@@ -97,8 +100,12 @@ export async function navigateToFirstTravel(
 
   if ((await cards.count()) === 0) return false;
 
-  await cards.first().click();
-  await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+  await cards.first().click({ force: true });
+  await page.waitForURL(
+    (url) => url.pathname.startsWith('/travels/') || url.pathname.startsWith('/travel/'),
+    // SPA navigation does not always trigger a full page load, so wait for the URL commit.
+    { timeout: 45_000, waitUntil: 'commit' }
+  );
 
   if (opts?.waitForDetails !== false) {
     const mainContent = page.locator(

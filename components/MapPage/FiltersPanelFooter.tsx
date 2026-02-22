@@ -30,11 +30,9 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   onReset,
   onBuildRoute,
   totalPoints,
-  onOpenList,
+  onOpenList: _onOpenList,
 }) => {
   const showMobileApply = isMobile && mode === 'radius';
-  const safeTotalPoints = typeof totalPoints === 'number' ? totalPoints : 0;
-  const canOpenList = typeof onOpenList === 'function' && safeTotalPoints > 0;
 
   if (showMobileApply) return null;
 
