@@ -2,6 +2,185 @@
 
 ---
 
+## v22 — Full Post-Deploy Audit (2026-02-22)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### Lighthouse Scores (Current Production)
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v21 |
+|----------|-------|----------|
+| Performance | **81** | = |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **74** | = ⚠️ (Yandex cookies + inspector-issues) |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 0.6 s | ✅ |
+| LCP | 2.8 s | ⚠️ |
+| TBT | 10 ms | ✅ |
+| CLS | 0.006 | ✅ |
+| SI | 2.0 s | ✅ |
+| TTFB | 90 ms | ✅ |
+
+#### Desktop — Search (`/search`)
+| Category | Score |
+|----------|-------|
+| Performance | **77** |
+| Accessibility | **100** |
+| Best Practices | **74** |
+| SEO | **100** |
+
+| Metric | Value |
+|--------|-------|
+| FCP | 0.6 s |
+| LCP | 3.3 s |
+| TBT | 10 ms |
+| CLS | 0.007 |
+| SI | 2.2 s |
+
+#### Desktop — Map (`/map`)
+| Category | Score | Note |
+|----------|-------|------|
+| Performance | **79** | |
+| Accessibility | **100** | ⚠️ `label-content-name-mismatch` — **FIXED** |
+| Best Practices | **74** | ⚠️ Yandex cookies |
+| SEO | **100** | ✅ |
+
+| Metric | Value |
+|--------|-------|
+| FCP | 0.5 s |
+| LCP | 2.8 s |
+| TBT | 20 ms |
+| CLS | 0.024 |
+| SI | 2.6 s |
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v21 |
+|----------|-------|----------|
+| Performance | **60** | +12 ✅ (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **79** | = |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 1.3 s | ✅ |
+| LCP | 11.7 s | 🔴 Structural (bundle size) |
+| TBT | 390 ms | ⚠️ |
+| CLS | 0.04 | ✅ |
+| SI | 6.1 s | ⚠️ |
+| TTFB | 170 ms | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| `label-content-name-mismatch` on `/` — HomeHero slider card (title+subtitle as separate Text nodes) | P2 | **FIXED** |
+| `label-content-name-mismatch` on `/map` — MapPeekPreview card (number prefix missing from aria-label) | P2 | **FIXED** |
+| Unused JS ~922 KiB (`__common` + `entry` chunks) | P1 | Structural — requires arch change |
+| `errors-in-console` — Yandex Metrika 400 (sync_cookie) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 12-15 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+| `font-display` — Feather icon font (90-170ms) | P3 | Mitigated by swap script in +html.tsx |
+| `uses-responsive-images` on `/map` — address-image 195 KiB savings | P3 | Dynamic API images, server-side resize needed |
+
+### Fixes Applied (v22)
+
+#### 1. `label-content-name-mismatch` — HomeHero slider card (P2 — Accessibility)
+- **File:** `components/home/HomeHero.tsx`
+- **Root cause:** `accessibilityLabel={\`${title} ${subtitle}\`}` joined title and subtitle with a space, but RNW renders them as separate `<div>` elements (two Text nodes). Axe sees a newline between them in the DOM, not a space, causing mismatch.
+- **Fix:** Removed explicit `accessibilityLabel`. Accessible name now computed from children (title + subtitle Text nodes), which always matches visible text. Added `accessibilityHint="Открыть маршрут"` for screen reader context.
+- **Impact:** Fixes A11y audit item on desktop home page.
+
+#### 2. `label-content-name-mismatch` — MapPeekPreview (P2 — Accessibility)
+- **File:** `components/MapPage/MapPeekPreview.tsx`
+- **Root cause:** `accessibilityLabel={place.address}` but visible text includes number prefix (`{index + 1}`) + address. Axe requires accessible name to contain visible text.
+- **Fix:** Changed to `accessibilityLabel={\`${index + 1} ${place.address || 'Место'}\`}` to include the number prefix.
+- **Impact:** Fixes A11y audit item on /map page.
+
+#### 3. SW cache version bump (P3)
+- **File:** `public/sw.js`
+- **Change:** `v3.23.0` → `v3.24.0`
+- **Impact:** Forces cache purge on next SW activation.
+
+### Validation
+- `npx eslint components/MapPage/MapPeekPreview.tsx public/sw.js` — **0 errors** ✅
+- `npx jest --testPathPattern="HomeHero|MapPeekPreview|MapScreen|Map.web|MapPage|CollapsibleSection|AddressListItem|QuickRecommendations|home"` — **205 tests passed, 24 suites** ✅
+
+### Server & Infrastructure ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 |
+| Brotli | ✅ | Active |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` |
+| SW cache | ✅ | `no-cache, no-store, must-revalidate` |
+| TTFB | ✅ | 80-220 ms |
+| robots.txt | ✅ | 200, correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200, 66KB, `Cache-Control: public, max-age=3600` |
+| CSP | ✅ | Full policy with mc.yandex.com/by in frame-src |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive |
+| Rate limiting | ✅ | API 30r/s, Login 5r/m, General 50r/s |
+
+### SEO ✅ 100/100
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий \| Metravel" (35 chars) |
+| Description | ✅ | Present in static HTML |
+| H1 | ✅ | Single H1, correct hierarchy |
+| Canonical | ✅ | `https://metravel.by/` |
+| OG tags | ✅ | og:locale, og:type, og:title, og:description, og:url, og:image, og:site_name |
+| robots.txt | ✅ | Correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200 OK, 66KB |
+| Schema.org | ✅ | Organization + WebSite + Service (JSON-LD) |
+| Images alt | ✅ | All images have alt text |
+| lang | ✅ | `ru` |
+
+### Analytics ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — active |
+| Yandex Metrika | ✅ | `62803912` — active |
+| send_page_view | ✅ | `false` (no duplicate pageviews) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+
+### Remaining Structural Blockers (unchanged, require arch changes)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 11.7s / Perf 60 | ~922 KiB unused JS (RNW + Leaflet bundle) | SSR/ISR or native app |
+| Best Practices 74-79 | Yandex Metrika 3rd-party cookies + inspector-issues | Cannot fix |
+| Missing source maps | Intentionally disabled | Security trade-off |
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 60 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ |
+| Load time < 2.5s mobile | ~11.7s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 (after fixes) | ✅ |
+| Desktop Performance ≥ 70 | 77-81 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+
+**Last updated:** 2026-02-22
+**SW Version:** v3.24.0
+**Audit Version:** v22
+**Status:** ✅ P2 a11y fixes (HomeHero slider label + MapPeekPreview number prefix) applied — requires redeploy to take effect
+
+---
+
 ## v21 — Full Post-Deploy Audit (2026-02-19)
 
 **Auditor:** Automated (Cascade)
