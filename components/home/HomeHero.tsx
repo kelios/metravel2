@@ -765,7 +765,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               </Pressable>
 
               {/* Navigation dots - outside Pressable to avoid nested buttons */}
-              {false && (
+              {process.env.EXPO_PUBLIC_SHOW_SLIDER_DOTS === '1' ? (
                 <View style={styles.sliderDots}>
                   {BOOK_IMAGES.map((_, index) => (
                     <Pressable
@@ -780,7 +780,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                     />
                   ))}
                 </View>
-              )}
+              ) : null}
 
               {/* Navigation arrows */}
               <View style={styles.sliderNav}>

@@ -51,7 +51,7 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
     // Открываем меню аккаунта
-    const accountButton = page.getByTestId('account-menu-anchor');
+    const accountButton = page.locator('[data-testid="account-menu-anchor"]:visible').first();
     await expect(accountButton).toBeVisible({ timeout: 10_000 });
     await accountButton.click();
 
@@ -79,7 +79,7 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
     // Открываем меню аккаунта
-    const accountButton = page.getByTestId('account-menu-anchor');
+    const accountButton = page.locator('[data-testid="account-menu-anchor"]:visible').first();
     await expect(accountButton).toBeVisible({ timeout: 10_000 });
     await accountButton.click();
 

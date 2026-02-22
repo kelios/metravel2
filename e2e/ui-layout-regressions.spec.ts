@@ -110,7 +110,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
       await expectNoHorizontalScroll(page);
 
       // Header should be present and on top.
-      const header = page.getByTestId('main-header');
+      const header = page.locator('[data-testid="main-header"]:visible').first();
       await expect(header).toBeVisible({ timeout: 30_000 });
       await expectFullyInViewport(header, page, { label: 'main header', margin: 2 });
 
@@ -198,7 +198,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
       // Baseline: before opening menu there should be no horizontal overflow.
       await expectNoHorizontalScroll(page);
 
-      const header = page.getByTestId('main-header');
+      const header = page.locator('[data-testid="main-header"]:visible').first();
       await expect(header).toBeVisible({ timeout: 30_000 });
 
       if (vp.name === 'desktop') {
@@ -210,7 +210,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
           };
         });
 
-        const accountMenu = page.getByTestId('account-menu-anchor');
+        const accountMenu = page.locator('[data-testid="account-menu-anchor"]:visible').first();
         await expect(accountMenu).toBeVisible({ timeout: 30_000 });
         await accountMenu.click();
 
@@ -256,7 +256,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
       }
 
       // Use stable testIDs from CustomHeader mobile menu.
-      const burger = page.getByTestId('mobile-menu-open');
+      const burger = page.locator('[data-testid="mobile-menu-open"]:visible').first();
       await expect(burger).toBeVisible({ timeout: 30_000 });
 
       await burger.click();

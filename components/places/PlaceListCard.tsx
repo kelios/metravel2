@@ -82,7 +82,7 @@ const PlaceListCard: React.FC<Props> = ({
       metaText={categoryLabel ?? undefined}
       onPress={onCardPress ?? (() => {})}
       onMediaPress={onMediaPress}
-      imageHeight={imageUrl ? imageHeight : 0}
+      imageHeight={imageHeight}
       width={width}
       testID={testID}
       style={style}

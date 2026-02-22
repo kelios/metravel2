@@ -10,7 +10,7 @@ test.describe('Mobile menu navigation', () => {
     await gotoWithRetry(page, getTravelsListPath());
 
     // Wait for the burger menu to appear — no need to wait for the full list render.
-    const burger = page.getByTestId('mobile-menu-open');
+    const burger = page.locator('[data-testid="mobile-menu-open"]:visible').first();
     await expect(burger).toBeVisible({ timeout: 30_000 });
     await burger.click();
 

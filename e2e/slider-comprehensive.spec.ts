@@ -100,7 +100,69 @@ async function navigateToTravelWithSlider(
     if (counter) return counter;
   }
 
-  return null;
+  const fallbackId = 990001;
+  const fallbackSlug = 'e2e-slider-multi-fallback';
+  const fallbackGallery = [
+    {
+      id: 1,
+      url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    },
+    {
+      id: 2,
+      url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    },
+    {
+      id: 3,
+      url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    },
+  ];
+
+  const fallbackTravel = {
+    id: fallbackId,
+    slug: fallbackSlug,
+    url: `/travels/${fallbackSlug}`,
+    name: 'E2E slider fallback travel',
+    description: '<p>Fallback travel for slider E2E</p>',
+    publish: true,
+    moderation: true,
+    travel_image_thumb_url: fallbackGallery[0]?.url,
+    travel_image_thumb_small_url: fallbackGallery[0]?.url,
+    gallery: fallbackGallery,
+    categories: [],
+    countries: [],
+    travelAddress: [],
+    coordsMeTravel: [],
+  };
+
+  const fallbackRoute = async (route: import('@playwright/test').Route) => {
+    const url = route.request().url();
+    if (url.includes(`/api/travels/by-slug/${fallbackSlug}/`) || url.includes(`/api/travels/${fallbackId}/`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fallbackTravel),
+      });
+      return;
+    }
+    await route.continue();
+  };
+
+  await page.route('**/api/travels/by-slug/**', fallbackRoute);
+  await page.route(`**/api/travels/${fallbackId}/`, fallbackRoute);
+
+  await gotoWithRetry(page, `/travels/${fallbackSlug}`);
+  const nextBtn = page.locator('[aria-label="Next slide"]').first();
+  const hasNext = await nextBtn
+    .waitFor({ state: 'attached', timeout: 15_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!hasNext) return null;
+
+  const counter = await waitForCounterValue(page, 1, 10_000);
+  return counter;
 }
 
 /**

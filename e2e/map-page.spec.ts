@@ -896,16 +896,17 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await gotoMapWithRecovery(page);
 
     // На мобильном панель закрыта по умолчанию, должна быть видна кнопка меню
-    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId('map-panel-open').click();
+    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await toggle.click();
 
     // Menu toggle should open the panel with the list/filters segmented control.
     await expect(page.getByTestId('segmented-list')).toBeVisible({ timeout: 20_000 });
 
     // Закрытие через крестик (если доступен) либо повторный toggle кнопкой меню
     // Close via the header menu button (toggle).
-    await page.getByTestId('map-panel-open').click({ force: true });
-    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
+    await toggle.click({ force: true });
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
   });
 
   test('mobile: panel close button is topmost and FAB does not overlay panel', async ({ page }) => {
@@ -913,8 +914,9 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await gotoMapWithRecovery(page);
 
-    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId('map-panel-open').click();
+    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await toggle.click();
 
     const close = page.getByTestId('map-panel-close');
     await expect(close).toBeVisible({ timeout: 20_000 });
@@ -932,14 +934,15 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await gotoMapWithRecovery(page);
 
-    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId('map-panel-open').click();
+    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await toggle.click();
 
     // Закрываем панель повторным нажатием на кнопку меню (toggle).
     await page.getByTestId('segmented-radius').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => null);
-    await page.getByTestId('map-panel-open').click({ force: true });
+    await toggle.click({ force: true });
 
-    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
   });
 
   test('mobile: double click on menu does not cause panel flicker (stays open)', async ({ page }) => {
@@ -947,7 +950,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await gotoMapWithRecovery(page);
 
-    const toggle = page.getByTestId('map-panel-open');
+    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
     await expect(toggle).toBeVisible({ timeout: 20_000 });
 
     // Regression: RN-web Pressable can emit double events; panel should not open then immediately close.
@@ -974,8 +977,9 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await gotoMapWithRecovery(page);
 
     // Open the panel
-    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId('map-panel-open').click();
+    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await toggle.click();
 
     // Wait for panel to open - check for list/filters toggle which should always be visible
     const listToggle = page.getByTestId('segmented-list');

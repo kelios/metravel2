@@ -139,7 +139,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           <View style={styles.dragHandle} />
         </Pressable>
 
-        {sheetIndex > 0 && (!!title || !!subtitle) && (
+        {sheetIndex >= 0 && (
           <View style={styles.header}>
             <View style={styles.headerContent}>
               {!!title && (
