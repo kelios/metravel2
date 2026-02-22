@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
-import { View, StyleSheet, Platform, InteractionManager, useWindowDimensions } from 'react-native';
+import { View, Text as RNText, StyleSheet, Platform, InteractionManager, useWindowDimensions, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { usePathname } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -68,7 +68,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrow = viewportWidth <= 390;
   const isVeryNarrow = viewportWidth <= 350;
-  const stackSheetToolbar = Platform.OS === 'web' || viewportWidth <= 460;
+  const stackSheetToolbar = viewportWidth <= 330;
   const styles = useMemo(
     () => getStyles(colors, { isNarrow, stackSheetToolbar }),
     [colors, isNarrow, stackSheetToolbar]
@@ -272,6 +272,20 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
           return (
             <ProviderComponent {...mergedProviderProps}>
+              {showModeToggle && (
+                <View style={styles.filtersModeBar} testID="map-mobile-mode-toggle">
+                  <SegmentedControl
+                    options={modeTabsOptions}
+                    value={filtersMode}
+                    onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
+                    compact={true}
+                    dense={isNarrow}
+                    noOuterMargins={true}
+                    tone="subtle"
+                    accessibilityLabel="Выбор режима поиска"
+                  />
+                </View>
+              )}
               <PanelComponent
                 hideTopControls={true}
                 hideFooterCta={filtersMode === 'route'}
@@ -300,7 +314,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
     return (
       <View style={styles.sheetRoot}>
-        <View style={[styles.sheetToolbar, stackSheetToolbar ? styles.sheetToolbarStacked : styles.sheetToolbarInline]}>
+        <View style={[styles.sheetToolbar, styles.sheetToolbarInline]}>
           <View style={[styles.sheetToolbarLeft, stackSheetToolbar && styles.sheetToolbarFullWidth]}>
             <SegmentedControl
               options={listTabsOptions}
@@ -312,38 +326,65 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               }}
               compact={true}
               dense={isNarrow}
+              noOuterMargins={true}
               tone="subtle"
               accessibilityLabel="Переключение между фильтрами и списком"
             />
           </View>
 
-          {showModeToggle && (
-            <View style={[styles.sheetToolbarRight, stackSheetToolbar && styles.sheetToolbarFullWidth]}>
-              <SegmentedControl
-                options={modeTabsOptions}
-                value={filtersMode}
-                onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
-                compact={true}
-                dense={isNarrow}
-                tone="subtle"
-                accessibilityLabel="Выбор режима поиска"
-              />
-            </View>
-          )}
-
-          {uiTab === 'filters' && !showModeToggle && typeof filtersContextProps?.resetFilters === 'function' && (
-            <IconButton
-              testID="map-panel-reset"
-              icon={<Feather name="rotate-cw" size={18} color={colors.textMuted} />}
-              label="Сбросить"
-              size="sm"
-              showLabel={false}
-              onPress={() => {
-                filtersContextProps?.resetFilters?.();
-              }}
-              style={styles.sheetIconButton}
-            />
-          )}
+          <View style={styles.sheetToolbarActions}>
+            {uiTab === 'filters' && filtersMode === 'radius' && (
+              <>
+                {typeof filtersContextProps?.resetFilters === 'function' && (
+                  <Pressable
+                    testID="map-panel-reset"
+                    onPress={() => filtersContextProps?.resetFilters?.()}
+                    accessibilityRole="button"
+                    accessibilityLabel="Сбросить фильтры"
+                    hitSlop={6}
+                    style={({ pressed }) => [
+                      styles.sheetCloseButton,
+                      { borderColor: colors.borderLight },
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Feather name="rotate-cw" size={15} color={colors.textMuted} />
+                  </Pressable>
+                )}
+                <Pressable
+                  testID="map-panel-show-results"
+                  onPress={handleOpenList}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Показать ${travelsData.length} мест`}
+                  hitSlop={6}
+                  style={({ pressed }) => [
+                    styles.sheetShowResultsButton,
+                    { backgroundColor: pressed ? colors.primaryDark : colors.primary },
+                  ]}
+                >
+                  <Feather name="list" size={15} color={colors.textOnPrimary} />
+                  {travelsData.length > 0 && (
+                    <RNText style={[styles.sheetResultsBadge, { color: colors.primary }]} numberOfLines={1}>
+                      {travelsData.length > 999 ? '999+' : String(travelsData.length)}
+                    </RNText>
+                  )}
+                </Pressable>
+              </>
+            )}
+            <Pressable
+              testID="map-panel-close"
+              onPress={() => bottomSheetRef.current?.snapToCollapsed()}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть панель"
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.sheetCloseButton,
+                pressed && { opacity: 0.6 },
+              ]}
+            >
+              <Feather name="x" size={16} color={colors.textMuted} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.sheetBody}>{body}</View>
@@ -369,8 +410,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     setTabDeferred,
     setFiltersMode,
     styles.sheetIconButton,
+    styles.sheetToolbarActions,
+    styles.sheetCloseButton,
+    styles.sheetShowResultsButton,
+    styles.sheetResultsBadge,
+    styles.filtersModeBar,
     styles.sheetToolbarLeft,
-    styles.sheetToolbarRight,
     styles.sheetBody,
     styles.sheetRoot,
     styles.sheetToolbar,
@@ -472,10 +517,11 @@ const getStyles = (
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
       alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
-      gap: options.isNarrow ? 6 : 8,
-      minHeight: options.stackSheetToolbar ? undefined : 44,
-      paddingVertical: Platform.OS === 'web' ? (options.isNarrow ? 6 : 8) : (options.isNarrow ? 4 : 6),
-      paddingHorizontal: options.isNarrow ? 4 : 8,
+      gap: options.isNarrow ? 4 : 6,
+      minHeight: options.stackSheetToolbar ? undefined : (options.isNarrow ? 34 : 36),
+      paddingVertical: Platform.OS === 'web' ? (options.isNarrow ? 2 : 3) : (options.isNarrow ? 2 : 3),
+      paddingLeft: options.isNarrow ? 4 : 6,
+      paddingRight: options.isNarrow ? 6 : 8,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
@@ -487,9 +533,56 @@ const getStyles = (
         },
       }),
     },
+    sheetToolbarActions: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 4,
+      flexShrink: 0,
+    },
+    sheetCloseButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: 'transparent',
+      flexShrink: 0,
+      marginHorizontal: 0,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
+    },
+    sheetShowResultsButton: {
+      flexDirection: 'row' as const,
+      height: 28,
+      minWidth: 28,
+      paddingHorizontal: 8,
+      gap: 4,
+      borderRadius: 8,
+      borderWidth: 0,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      flexShrink: 0,
+      ...(Platform.OS === 'web' ? ({ boxShadow: 'none', cursor: 'pointer' } as any) : null),
+    },
+    sheetResultsBadge: {
+      fontSize: 11,
+      fontWeight: '700' as const,
+      lineHeight: 14,
+      backgroundColor: 'rgba(255,255,255,0.9)',
+      borderRadius: 6,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+      overflow: 'hidden' as const,
+    },
     sheetToolbarLeft: {
       flex: options.stackSheetToolbar ? 0 : 1,
       minWidth: 0,
+      flexShrink: 1,
     },
     sheetToolbarRight: {
       flex: options.stackSheetToolbar ? 0 : 1,
@@ -505,11 +598,11 @@ const getStyles = (
     },
     sheetToolbarFullWidth: {
       width: '100%',
-      minHeight: 40,
+      minHeight: 34,
     },
     sheetIconButton: {
-      width: 36,
-      height: 36,
+      width: 32,
+      height: 32,
       borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
@@ -554,21 +647,26 @@ const getStyles = (
       minHeight: 0,
       ...Platform.select({
         web: {
-          paddingHorizontal: options.isNarrow ? 8 : 16,
+          paddingHorizontal: options.isNarrow ? 8 : 14,
         },
       }),
     },
     filtersPeek: {
       gap: 8,
       paddingHorizontal: options.isNarrow ? 8 : 12,
-      paddingBottom: 4,
+      paddingBottom: 2,
+    },
+    filtersModeBar: {
+      paddingHorizontal: options.isNarrow ? 8 : 12,
+      paddingTop: options.isNarrow ? 4 : 6,
+      paddingBottom: options.isNarrow ? 2 : 2,
     },
     filtersPeekCtaRow: {
       paddingHorizontal: options.isNarrow ? 0 : 2,
-      paddingBottom: 4,
+      paddingBottom: 2,
     },
     fab: {
-      bottom: options.isNarrow ? 124 : 140,
+      bottom: options.isNarrow ? 112 : 124,
       right: options.isNarrow ? 10 : 12,
     },
   });

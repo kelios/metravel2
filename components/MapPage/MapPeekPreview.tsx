@@ -173,7 +173,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      paddingVertical: 8,
+      paddingVertical: 4,
     },
     emptyContainer: {
       paddingVertical: 2,
@@ -181,7 +181,7 @@ const getStyles = (colors: ThemedColors) =>
     },
     scrollContent: {
       paddingRight: 16,
-      gap: 12,
+      gap: 10,
     },
     scroll: {
       ...(Platform.OS === 'web'
@@ -205,19 +205,19 @@ const getStyles = (colors: ThemedColors) =>
     placeCard: {
       backgroundColor: colors.backgroundSecondary,
       borderRadius: 12,
-      padding: 10,
-      minWidth: 140,
+      padding: 8,
+      minWidth: 132,
       maxWidth: 220,
       borderWidth: 1,
       borderColor: colors.border,
     },
     cardRow: {
       flexDirection: 'row',
-      gap: 10,
+      gap: 8,
     },
     thumbnail: {
-      width: 40,
-      height: 40,
+      width: 36,
+      height: 36,
       borderRadius: 8,
       overflow: 'hidden',
       backgroundColor: colors.primaryLight,
@@ -228,7 +228,7 @@ const getStyles = (colors: ThemedColors) =>
     cardContent: {
       flex: 1,
       minWidth: 0,
-      gap: 6,
+      gap: 5,
     },
     cardHeader: {
       flexDirection: 'row',
@@ -248,7 +248,7 @@ const getStyles = (colors: ThemedColors) =>
     },
     placeName: {
       flex: 1,
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
       color: colors.text,
     },
@@ -261,8 +261,8 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       gap: 4,
       backgroundColor: colors.primaryLight,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
       borderRadius: 8,
     },
     distanceText: {
@@ -275,8 +275,8 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       gap: 4,
       backgroundColor: colors.accentLight,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
       borderRadius: 8,
     },
     timeText: {

@@ -111,7 +111,15 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
     // Sync routing state to parent callbacks (only when changed)
     // Use coordsKey to prevent infinite loops from array reference changes
-    const coordsKeyForSync = JSON.stringify(routingState.coords)
+    const coordsKeyForSync = useMemo(() => {
+        const coords = routingState.coords
+        if (!Array.isArray(coords) || coords.length < 2) return ''
+        const first = coords[0]
+        const last = coords[coords.length - 1]
+        const safeNum = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0)
+        const fmt = (v: any) => safeNum(v).toFixed(5)
+        return `${coords.length}:${fmt(first?.[0])},${fmt(first?.[1])}:${fmt(last?.[0])},${fmt(last?.[1])}`
+    }, [routingState.coords])
     
     // Если точек меньше двух — сбрасываем состояние и выходим (без лишних setState на каждом рендере)
     useEffect(() => {

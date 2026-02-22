@@ -20,6 +20,7 @@ interface SegmentedControlProps {
   accessibilityLabel?: string;
   compact?: boolean;
   dense?: boolean;
+  noOuterMargins?: boolean;
   disabled?: boolean;
   disabledKeys?: string[];
   role?: 'radio' | 'button';
@@ -33,13 +34,17 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   accessibilityLabel,
   compact = false,
   dense = false,
+  noOuterMargins = false,
   disabled = false,
   disabledKeys = [],
   role = 'radio',
   tone = 'default',
 }) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors, compact, tone, dense), [colors, compact, tone, dense]);
+  const styles = useMemo(
+    () => getStyles(colors, compact, tone, dense, noOuterMargins),
+    [colors, compact, tone, dense, noOuterMargins]
+  );
 
   const activeIndex = options.findIndex((o) => o.key === value);
   const pillAnim = useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
@@ -148,14 +153,15 @@ const getStyles = (
   compact: boolean,
   tone: 'default' | 'subtle',
   dense: boolean,
+  noOuterMargins: boolean,
 ) => StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
     backgroundColor: tone === 'subtle' ? colors.backgroundSecondary : colors.surface,
     borderRadius: compact && dense ? 10 : 12,
     padding: compact ? 1 : 2,
-    marginHorizontal: compact ? 0 : 12,
-    marginVertical: compact ? (dense ? 2 : 4) : 8,
+    marginHorizontal: noOuterMargins ? 0 : (compact ? 0 : 12),
+    marginVertical: noOuterMargins ? 0 : (compact ? (dense ? 2 : 4) : 8),
     borderWidth: 1,
     borderColor: tone === 'subtle' ? colors.borderLight : colors.border,
     position: 'relative',

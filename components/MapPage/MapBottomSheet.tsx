@@ -6,9 +6,7 @@
 import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
-import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import IconButton from '@/components/ui/IconButton';
 
 interface MapBottomSheetProps {
   children: React.ReactNode;
@@ -138,15 +136,6 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       []
     );
 
-    const handleClosePress = useCallback(() => {
-      if (Platform.OS === 'web') {
-        setSheetIndex(-1);
-        onStateChange?.('collapsed');
-        return;
-      }
-      bottomSheetRef.current?.close();
-    }, [onStateChange]);
-
     return (
       <BottomSheet
         ref={bottomSheetRef}
@@ -160,29 +149,18 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         backgroundStyle={styles.background}
         style={styles.sheet}
       >
-        {/* Header - always visible */}
-        <View style={[styles.header, !hasHeaderText && styles.headerNoTitle]}>
-          <View style={styles.headerContent}>
-            {!!title && (
-              <View style={styles.titleContainer}>
-                <Text style={styles.title}>{title}</Text>
-                {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-              </View>
-            )}
+        {hasHeaderText && (
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              {!!title && (
+                <View style={styles.titleContainer}>
+                  <Text style={styles.title}>{title}</Text>
+                  {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                </View>
+              )}
+            </View>
           </View>
-
-          {/* Quick actions */}
-          <View style={styles.headerActions}>
-            <IconButton
-              icon={<Feather name="x" size={20} color={colors.textMuted} />}
-              label="Закрыть панель"
-              size="sm"
-              onPress={handleClosePress}
-              testID="map-panel-close"
-              style={styles.headerButton}
-            />
-          </View>
-        </View>
+        )}
 
         {/* Peek content - shown in collapsed state */}
         {peekContent && sheetIndex < 0 && (
@@ -228,14 +206,14 @@ const getStyles = (colors: ThemedColors) =>
     },
     background: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: 18,
+      borderTopRightRadius: 18,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
     },
     indicator: {
       backgroundColor: colors.borderLight,
-      width: 28,
+      width: 24,
       height: 2,
       borderRadius: 2,
     },
@@ -244,15 +222,10 @@ const getStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 10,
+      paddingTop: 4,
+      paddingBottom: 4,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
-    },
-    headerNoTitle: {
-      paddingTop: 8,
-      paddingBottom: 8,
-      borderBottomWidth: 0,
     },
     headerContent: {
       flex: 1,
@@ -272,29 +245,9 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.textMuted,
       marginTop: 2,
     },
-    headerActions: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    headerButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginHorizontal: 0,
-      shadowColor: 'transparent',
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
-    },
     peekContent: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
     },
     contentContainer: {
       paddingHorizontal: 16,

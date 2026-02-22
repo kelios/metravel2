@@ -54,11 +54,12 @@
 .leaflet-popup-content {
   margin: 0 !important;
   padding: 14px !important;
+  padding-right: 44px !important;
   color: var(--color-text) !important;
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
   font-size: 14px !important;
   line-height: 20px !important;
-  max-width: min(420px, calc(100vw - 32px)) !important;
+  max-width: min(520px, calc(100vw - 32px)) !important;
 }
 
 .leaflet-popup {
@@ -149,6 +150,8 @@
   height: 32px !important;
   border-radius: 999px !important;
   margin: 6px !important;
+  top: 8px !important;
+  right: 8px !important;
   color: var(--color-textMuted) !important;
   display: inline-flex !important;
   align-items: center !important;

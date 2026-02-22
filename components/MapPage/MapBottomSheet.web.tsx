@@ -7,9 +7,7 @@
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import IconButton from '@/components/ui/IconButton';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 
 interface MapBottomSheetProps {
@@ -139,7 +137,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           <View style={styles.dragHandle} />
         </Pressable>
 
-        {sheetIndex >= 0 && (
+        {sheetIndex >= 0 && !!(title || subtitle) && (
           <View style={styles.header}>
             <View style={styles.headerContent}>
               {!!title && (
@@ -148,17 +146,6 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
                   {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
                 </View>
               )}
-            </View>
-
-            <View style={styles.headerActions}>
-              <IconButton
-                icon={<Feather name="x" size={20} color={colors.textMuted} />}
-                label="Закрыть панель"
-                size="sm"
-                onPress={handleClose}
-                testID="map-panel-close"
-                style={styles.headerButton}
-              />
             </View>
           </View>
         )}
@@ -202,12 +189,12 @@ const getStyles = (colors: ThemedColors) =>
     dragHandleArea: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 8,
+      paddingVertical: 5,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', touchAction: 'manipulation' } as any) : null),
     },
     dragHandle: {
-      width: 36,
-      height: 4,
+      width: 28,
+      height: 3,
       borderRadius: 2,
       backgroundColor: colors.borderStrong,
     },
