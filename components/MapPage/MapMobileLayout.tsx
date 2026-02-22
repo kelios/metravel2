@@ -106,9 +106,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   useEffect(() => {
     if (!toggleNonce) return;
     if (sheetStateRef.current === 'collapsed') {
-      setUiTab('filters');
-      setContentTab('filters');
-      bottomSheetRef.current?.snapToFull();
+      setUiTab('list');
+      setContentTab('list');
+      bottomSheetRef.current?.snapToHalf();
       return;
     }
     bottomSheetRef.current?.snapToCollapsed();

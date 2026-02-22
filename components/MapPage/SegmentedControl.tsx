@@ -132,7 +132,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
                   styles.badgeText,
                   active && styles.badgeTextActive,
                 ]}>
-                  {badge > 99 ? '99+' : badge}
+                  {badge}
                 </Text>
               </View>
             )}

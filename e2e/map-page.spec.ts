@@ -890,7 +890,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-reset-filters-button')).toBeVisible();
   });
 
-  test('mobile: menu button opens filters panel', async ({ page }) => {
+  test('mobile: menu button opens list panel', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
 
     await gotoMapWithRecovery(page);
@@ -899,27 +899,12 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('map-panel-open').click();
 
-    // On mobile layout, the panel can render either as full filters panel or as a layout wrapper.
-    const filtersPanel = page.getByTestId('filters-panel');
-    const hasFiltersPanel = await filtersPanel.isVisible({ timeout: 20_000 }).catch(() => false);
-    if (!hasFiltersPanel) {
-      // Fallback: verify any of the expected controls exist.
-      await expect(page.getByTestId('segmented-radius')).toBeVisible({ timeout: 20_000 });
-    }
+    // Menu toggle should open the panel with the list/filters segmented control.
+    await expect(page.getByTestId('segmented-list')).toBeVisible({ timeout: 20_000 });
 
     // Закрытие через крестик (если доступен) либо повторный toggle кнопкой меню
-    const closeButton = page.getByTestId('filters-panel-close-button');
-    const panelCloseButton = page.getByTestId('map-close-panel-button');
-    const hasCloseButton = await closeButton.isVisible({ timeout: 2_000 }).catch(() => false);
-    const hasPanelCloseButton = await panelCloseButton.isVisible({ timeout: 2_000 }).catch(() => false);
-
-    if (hasCloseButton) {
-      await closeButton.click({ force: true });
-    } else if (hasPanelCloseButton) {
-      await panelCloseButton.click({ force: true });
-    } else {
-      await page.getByTestId('map-panel-open').click({ force: true });
-    }
+    // Close via the header menu button (toggle).
+    await page.getByTestId('map-panel-open').click({ force: true });
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
   });
 

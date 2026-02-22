@@ -181,7 +181,7 @@ const getStyles = (colors: ThemedColors) =>
       position: 'fixed',
       left: 0,
       right: 0,
-      zIndex: 50,
+      zIndex: 2000,
       backgroundColor: colors.surface,
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
@@ -257,7 +257,6 @@ const getStyles = (colors: ThemedColors) =>
       minWidth: 0,
       ...(Platform.OS === 'web'
         ? ({
-            flex: '1 1 auto',
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
