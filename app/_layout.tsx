@@ -255,6 +255,9 @@ export default function RootLayout() {
           const newPath = resolved.pathname + resolved.search + resolved.hash;
           const currentPath = window.location.pathname + window.location.search + window.location.hash;
           if (newPath === currentPath) return false;
+          // One-shot: clear the flag BEFORE navigating so the destination
+          // page doesn't see it and loop.
+          (window as any).__metravelUpdatePending = false;
           // Hard navigate — browser will load fresh HTML + new SW chunks.
           window.location.href = resolved.href;
           return true;
@@ -336,9 +339,18 @@ export default function RootLayout() {
         // after stale-chunk recovery unregisters the SW and the page re-registers it).
         const hadController = !!navigator.serviceWorker.controller;
         const onControllerChange = () => {
-          if (hadController) {
-            (window as any).__metravelUpdatePending = true;
-          }
+          if (!hadController) return;
+          // If we recently reloaded due to stale chunks or inline recovery,
+          // this controllerchange is from re-registration, not a genuine update.
+          // Do not set the pending flag — the page already has fresh content.
+          try {
+            const staleTs = sessionStorage.getItem('__metravel_sw_stale_reload');
+            const chunkTs = sessionStorage.getItem('__metravel_chunk_reload');
+            const now = Date.now();
+            if (staleTs && now - parseInt(staleTs, 10) < 60000) return;
+            if (chunkTs && now - parseInt(chunkTs, 10) < 60000) return;
+          } catch { /* sessionStorage unavailable */ }
+          (window as any).__metravelUpdatePending = true;
         };
         navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
