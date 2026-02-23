@@ -503,9 +503,9 @@ const getStyles = (
     },
     mapContainer: {
       flex: 1,
+      minHeight: 220,
       ...(Platform.OS === 'web'
         ? ({
-            minHeight: 0,
             overflow: 'hidden',
           } as any)
         : null),

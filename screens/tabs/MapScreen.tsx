@@ -256,7 +256,7 @@ export default function MapScreen() {
 
     if (useMobileLayout) {
         return (
-            <>
+            <View style={styles.container}>
                 {isFocused && Platform.OS === 'web' && (
                     <InstantSEO
                         headKey="map"
@@ -286,7 +286,7 @@ export default function MapScreen() {
                         onExpandRadius={handleExpandRadius}
                     />
                 </Suspense>
-            </>
+            </View>
         );
     }
 

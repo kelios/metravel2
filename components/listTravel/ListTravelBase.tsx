@@ -530,7 +530,9 @@ function ListTravelBase({
     const { userId, isSuperuser: isSuper } = useAuth();
 
     /* Top-bar state */
-    const [search, setSearch] = useState(params.search ?? "");
+    const [search, setSearch] = useState<string>(
+      Array.isArray(params.search) ? params.search.filter(Boolean).join(',') : (params.search ?? "")
+    );
     const debSearch = useDebouncedValue(search, 400);
 
     const onMomentumRef = useRef(false);

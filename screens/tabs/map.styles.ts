@@ -79,7 +79,7 @@ export const getStyles = (
               isolation: 'isolate',
               display: 'flex',
               height: '100%',
-              minHeight: 0,
+              minHeight: isMobile ? 220 : 0,
               minWidth: 0,
             } as any)
           : null),
