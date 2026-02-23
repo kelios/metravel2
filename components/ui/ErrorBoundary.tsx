@@ -97,6 +97,14 @@ function isLikelyReact130ModuleMismatch(msg: string): boolean {
   );
 }
 
+/** Check if the current page already went through stale-chunk recovery
+ *  (indicated by the _cb cache-busting param in the URL). */
+function isAlreadyInRecoveryLoop(): boolean {
+  try {
+    return new URL(window.location.href).searchParams.has('_cb');
+  } catch { return false; }
+}
+
 /** Unregister SW, purge caches, then hard-navigate with cache-busting. */
 function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void {
   const cleanup = async () => {
@@ -120,7 +128,12 @@ function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void 
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('_cb', String(Date.now()));
-      window.location.replace(url.toString());
+      const target = url.toString();
+      // Pre-fetch the target with no-store to bust mobile Safari HTTP cache
+      // before actually navigating. This ensures the browser gets fresh HTML.
+      fetch(target, { cache: 'no-store', credentials: 'same-origin' })
+        .catch(() => {})
+        .finally(() => { window.location.replace(target); });
     } catch {
       window.location.reload();
     }
@@ -237,6 +250,12 @@ export default class ErrorBoundary extends Component<Props, State> {
       typeof window !== 'undefined'
     ) {
       if (isStaleModuleError(msg, error?.name)) {
+        // If the URL already has _cb, a previous recovery cycle didn't help.
+        // Don't auto-retry — let the user see an actionable error instead.
+        if (isAlreadyInRecoveryLoop()) {
+          this.setState({ recoveryExhausted: true });
+          return;
+        }
         if (!shouldReload()) {
           if (tryEmergencyRecovery()) {
             return;
@@ -289,21 +308,31 @@ export default class ErrorBoundary extends Component<Props, State> {
 
       // Show a friendly updating UI for stale chunk errors while auto-recovery runs
       if (this.state.isStaleChunk && Platform.OS === 'web') {
-        // If auto-recovery exhausted retries, show an actionable error instead
-        // of the misleading "updating" message
+        // If auto-recovery exhausted retries (or we're already in a recovery loop
+        // indicated by _cb param), show an actionable error with manual reload button
         if (this.state.recoveryExhausted) {
+          const inLoop = isAlreadyInRecoveryLoop();
           return (
             <View style={styles.container}>
               <View style={styles.content}>
                 <Text style={styles.title}>Не удалось загрузить обновление</Text>
                 <Text style={styles.message}>
-                  Запускаем повторное автоматическое восстановление. Если через несколько секунд экран не обновится, нажмите кнопку ниже.
+                  {inLoop
+                    ? 'Автоматическое восстановление не помогло. Нажмите кнопку ниже или очистите кеш браузера вручную.'
+                    : 'Запускаем повторное автоматическое восстановление. Если через несколько секунд экран не обновится, нажмите кнопку ниже.'}
                 </Text>
                 <Button
                   label="Перезагрузить страницу"
                   onPress={() => {
                     clearRecoverySessionKeys(true, true);
-                    doStaleChunkRecovery({ purgeAllCaches: true });
+                    // Strip _cb param and navigate to clean URL to break the loop
+                    try {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('_cb');
+                      window.location.replace(url.toString());
+                    } catch {
+                      window.location.reload();
+                    }
                   }}
                   style={[styles.button, styles.primaryButton]}
                   accessibilityLabel="Перезагрузить страницу"
