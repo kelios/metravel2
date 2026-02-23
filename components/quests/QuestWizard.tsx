@@ -23,6 +23,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { openExternalUrl } from '@/utils/externalLinks';
+import { safeGetYoutubeId } from '@/utils/travelDetailsSecure';
 
 // ⚡️ Heavy deps lazy-loaded to keep chunk small
 const BelkrajWidgetLazy = lazy(() => import("@/components/belkraj/BelkrajWidget"));
@@ -573,6 +574,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const [videoOk, setVideoOk] = useState(true);
     const videoUri = useMemo(() => resolveUri(finale.video), [finale.video]);
     const posterUri = useMemo(() => resolveUri(finale.poster), [finale.poster]);
+    const youtubeEmbedUri = useMemo(() => {
+        if (!videoUri) return undefined;
+        const youtubeId = safeGetYoutubeId(videoUri);
+        if (!youtubeId) return undefined;
+        return `https://www.youtube.com/embed/${youtubeId}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+    }, [videoUri]);
     const handleVideoError = useMemo(() => () => setVideoOk(false), []);
     useEffect(() => { setVideoOk(true); }, [finale.video]);
 
@@ -744,18 +751,30 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
                                         {/* Видео: web = DOM <video>, native = expo-av */}
                                         {finale.video && (
-                                            <View style={[styles.videoFrame, { width: frameW, height: frameH }]}>
+                                            <View style={[styles.videoFrame, { width: frameW, height: frameH }]}> 
                                                 {Platform.OS === 'web' ? (
-                                                    videoOk ? (
+                                                    youtubeEmbedUri ? (
+                                                        <iframe
+                                                            src={youtubeEmbedUri}
+                                                            width="100%"
+                                                            height="100%"
+                                                            style={{ border: 'none', display: 'block' }}
+                                                            loading="lazy"
+                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                            allowFullScreen
+                                                            title="Видео квеста"
+                                                        />
+                                                    ) : videoOk ? (
                                                         <WebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
                                                     ) : (
                                                         <>
                                                             {posterUri ? <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" /> : null}
-                                                            {videoUri && (
-                                                                <Pressable onPress={() => void openExternalUrl(videoUri)} style={styles.openExternBtn} hitSlop={8}>
-                                                                    <Text style={styles.openExternText}>Открыть видео</Text>
+                                                            <View style={styles.videoFallbackOverlay}>
+                                                                <Text style={styles.videoFallbackText}>Не удалось воспроизвести видео. Попробуйте ещё раз.</Text>
+                                                                <Pressable onPress={() => setVideoOk(true)} style={styles.videoRetryBtn} hitSlop={8}>
+                                                                    <Text style={styles.videoRetryText}>Повторить</Text>
                                                                 </Pressable>
-                                                            )}
+                                                            </View>
                                                         </>
                                                     )
                                                 ) : (
@@ -1078,16 +1097,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: SPACING.md,
         position: 'relative',
     },
-    openExternBtn: {
-        position: 'absolute',
-        bottom: 12,
-        left: 12,
+    videoFallbackOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.overlay,
+        paddingHorizontal: SPACING.md,
+        gap: 10,
+    },
+    videoFallbackText: {
+        color: colors.textOnDark,
+        fontWeight: '500',
+        fontSize: 14,
+        lineHeight: 20,
+        textAlign: 'center',
+    },
+    videoRetryBtn: {
         paddingVertical: 8,
         paddingHorizontal: 12,
-        backgroundColor: colors.overlay,
+        backgroundColor: colors.surface,
         borderRadius: 8,
+        ...Platform.select({ web: { cursor: 'pointer' } }),
     },
-    openExternText: { color: colors.textOnDark, fontWeight: '700', fontSize: 14 },
+    videoRetryText: { color: colors.text, fontWeight: '700', fontSize: 14 },
 
     modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center' },
     gestureContainer: { flex: 1, width: '100%' },

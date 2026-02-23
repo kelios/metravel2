@@ -128,12 +128,7 @@ function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void 
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('_cb', String(Date.now()));
-      const target = url.toString();
-      // Pre-fetch the target with no-store to bust mobile Safari HTTP cache
-      // before actually navigating. This ensures the browser gets fresh HTML.
-      fetch(target, { cache: 'no-store', credentials: 'same-origin' })
-        .catch(() => {})
-        .finally(() => { window.location.replace(target); });
+      window.location.replace(url.toString());
     } catch {
       window.location.reload();
     }
