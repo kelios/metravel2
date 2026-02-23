@@ -163,8 +163,6 @@ describe('ErrorBoundary', () => {
       'ChunkLoadError: Loading chunk 42 failed.',
       'Spread syntax requires ...iterable not be null or undefined',
       'someValue is not iterable',
-      'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
-      'Element type is invalid: expected a string (for built-in components) or a class/function but got: undefined',
     ];
 
     it.each(staleChunkMessages)(
@@ -210,13 +208,21 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should NOT trigger reload for regular errors', () => {
+    it.each([
+      'Test error',
+      'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
+      'Element type is invalid: expected a string (for built-in components) or a class/function but got: undefined',
+    ])('should NOT trigger reload for non-stale errors: %s', (message) => {
       const consoleError = console.error;
       console.error = jest.fn();
 
+      const ThrowNonStaleError = () => {
+        throw new Error(message);
+      };
+
       render(
         <ErrorBoundary>
-          <ThrowError shouldThrow={true} />
+          <ThrowNonStaleError />
         </ErrorBoundary>
       );
 

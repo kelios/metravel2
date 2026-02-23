@@ -27,9 +27,6 @@ function isStaleModuleError(msg: string, name?: string): boolean {
     msg.includes('iterable') ||
     msg.includes('is not iterable') ||
     msg.includes('spread') ||
-    /Minified React error #130/i.test(msg) ||
-    /Minified React error #423/i.test(msg) ||
-    /Element type is invalid.*expected a string.*but got.*undefined/i.test(msg) ||
     /loading module.*failed/i.test(msg) ||
     /failed to fetch dynamically imported module/i.test(msg) ||
     /ChunkLoadError/i.test(msg) ||
