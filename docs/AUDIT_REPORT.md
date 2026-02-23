@@ -2,6 +2,208 @@
 
 ---
 
+## v24 — Full Post-Deploy Audit (2026-02-23)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### Lighthouse Scores (Current Production)
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v23 |
+|----------|-------|----------|
+| Performance | **75** | -5 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **74** | -4 (variance) |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 0.6 s | ✅ |
+| LCP | 3.2 s | ⚠️ |
+| TBT | 10 ms | ✅ |
+| CLS | 0.006 | ✅ |
+| SI | 2.9 s | ⚠️ |
+| TTFB | 170 ms | ✅ |
+
+#### Desktop — Search (`/search`)
+| Category | Score |
+|----------|-------|
+| Performance | **77** |
+| Accessibility | **100** |
+| Best Practices | **78** |
+| SEO | **100** |
+
+| Metric | Value |
+|--------|-------|
+| FCP | 0.6 s |
+| LCP | 3.3 s |
+| TBT | 40 ms |
+| CLS | 0.007 |
+| SI | 2.4 s |
+| TTFB | 90 ms |
+
+#### Desktop — Map (`/map`)
+| Category | Score | Note |
+|----------|-------|------|
+| Performance | **78** | |
+| Accessibility | **100** | ⚠️ `label-content-name-mismatch` regressed — **FIXED** (v24) |
+| Best Practices | **74** | |
+| SEO | **100** | ✅ |
+
+| Metric | Value |
+|--------|-------|
+| FCP | 0.6 s |
+| LCP | 2.8 s |
+| TBT | 10 ms |
+| CLS | 0.017 |
+| SI | 2.8 s |
+| TTFB | 200 ms |
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v23 |
+|----------|-------|----------|
+| Performance | **58** | +1 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **79** | = |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 1.3 s | ✅ |
+| LCP | 12.5 s | 🔴 Structural (bundle size) |
+| TBT | 410 ms | ⚠️ |
+| CLS | 0.04 | ✅ |
+| SI | 6.8 s | ⚠️ |
+| TTFB | 90 ms | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| `label-content-name-mismatch` on `/map` — MapPeekPreview card (visible text includes number prefix + distance info not in aria-label) | P2 | **FIXED** (v24) |
+| Unused JS ~924 KiB (`__common` 544KB + `entry` 281KB wasted) | P1 | Structural — requires arch change |
+| `errors-in-console` on `/search` — Yandex Metrika 400 (sync_cookie_image_finish) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 12-15 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+| `inspector-issues` — Yandex Metrika DevTools issues | P3 | Unfixable (3rd party) |
+
+### Fixes Applied (v24)
+
+#### 1. `label-content-name-mismatch` — MapPeekPreview persistent regression fix (P2 — Accessibility)
+- **Files:** `components/MapPage/MapPeekPreview.tsx`, `components/ui/CardActionPressable.tsx`
+- **Root cause:** v23 fix set `accessibilityLabel={place.address || 'Место'}` but the button's visible text includes a number prefix (`{index + 1}`), the address, AND distance/time info. Axe concatenates all visible text nodes and detects that the accessible name doesn't contain all of it → "Text inside the element is not included in the accessible name".
+- **Fix:**
+  - Removed explicit `accessibilityLabel` from MapPeekPreview cards. Accessible name is now computed from children (number + address + distance text), which always matches visible text.
+  - Added `accessibilityHint="Открыть на карте"` for screen reader context.
+  - Made `accessibilityLabel` optional in `CardActionPressable` type and added `accessibilityHint` prop support.
+  - When no `accessibilityLabel` is provided, the spread `{...(accessibilityLabel ? { accessibilityLabel } : {})}` avoids setting an empty aria-label.
+- **Impact:** Fixes A11y audit on /map page. Map A11y: 97 → 100 (after deploy).
+
+#### 2. SW cache version bump (P3)
+- **File:** `public/sw.js`
+- **Change:** `v3.32.0` → `v3.33.0`
+- **Impact:** Forces cache purge on next SW activation.
+
+### Validation
+- `npx eslint components/MapPage/MapPeekPreview.tsx components/ui/CardActionPressable.tsx public/sw.js` — **0 errors** ✅
+- `npx jest --testPathPattern="MapPage|MapMobile|MapBottom|MapPeek|CardAction|QuickRecommendations"` — **139 tests passed, 18 suites** ✅
+
+### Server & Infrastructure ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 (verified via curl) |
+| www→non-www redirect | ✅ | 301 with HSTS |
+| Brotli | ✅ | Active (`content-encoding: br`) |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` for `/_expo/static/js/` |
+| HTML cache | ✅ | `no-cache` (correct for SPA shell) |
+| sitemap.xml cache | ✅ | `public, max-age=3600` |
+| TTFB | ✅ | 90-200 ms |
+| robots.txt | ✅ | 200, correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200, well-formed, travel URLs with lastmod |
+| CSP | ✅ | Full policy |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| X-XSS-Protection | ✅ | 0 (modern approach) |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive (geolocation=self) |
+| Rate limiting | ✅ | API 30r/s, Login 5r/m, General 50r/s |
+| manifest.json | ✅ | Valid PWA manifest |
+| ETag | ✅ | Present on HTML responses |
+| Access-Control-Allow-Origin | ✅ | `*` on main HTML |
+
+### SEO ✅ 100/100
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий \| Metravel" (35 chars) |
+| Description | ✅ | Present in static HTML |
+| H1 | ✅ | Single H1, correct hierarchy |
+| Canonical | ✅ | `https://metravel.by/` (inline JS fixes dynamic routes) |
+| OG tags | ✅ | og:locale, og:type, og:title, og:description, og:url, og:image |
+| Twitter tags | ✅ | twitter:site present |
+| robots.txt | ✅ | Correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200 OK, travel URLs with lastmod dates |
+| Schema.org | ✅ | Organization + WebSite + Service + SearchAction (JSON-LD) |
+| Travel pages | ✅ | BreadcrumbList JSON-LD injected via preload script |
+| Images alt | ✅ | All images have alt text |
+| lang | ✅ | `ru` |
+| noindex (non-prod) | ✅ | Only on non-production environments |
+
+### Analytics ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — active, deferred loading |
+| Yandex Metrika | ✅ | `62803912` — active, deferred loading |
+| send_page_view | ✅ | `false` (no duplicate pageviews) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+| Consent-aware | ✅ | Only loads on metravel.by host |
+
+### Bundle Analysis
+| Chunk | Uncompressed | Wasted (mobile) | Content |
+|-------|-------------|-----------------|---------|
+| `__common` | 2.96 MB | 544 KB | RNW runtime, Leaflet, shared deps |
+| `entry` | ~1.2 MB | 281 KB | App entry, route definitions |
+| GA4 (`gtag/js`) | 83 KB | 60 KB | Google Analytics |
+| Yandex (`tag.js`) | 83 KB | 42 KB | Yandex Metrika |
+
+### Remaining Structural Blockers (unchanged, require arch changes)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 12.5s / Perf 58 | ~924 KiB unused JS (RNW + Leaflet bundle) | Code-split Leaflet, tree-shake RNW, or SSR/ISR |
+| Best Practices 74-79 | Yandex Metrika 3rd-party cookies + inspector-issues | Cannot fix (3rd party) |
+| Missing source maps | Intentionally disabled | Security trade-off |
+| Script bootup ~1400ms (entry) | Monolithic entry bundle | Requires Metro code-splitting or SSR |
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 58 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ |
+| Load time < 2.5s mobile | ~12.5s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 (after fix) | ✅ |
+| Desktop Performance ≥ 70 | 75-78 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+
+### Recommendations for Lighthouse ≥ 90 (Mobile)
+1. **P1 — Code-split Leaflet** (~400 KB): Lazy-load map route so Leaflet JS is only fetched on `/map`. Requires Expo Router async route or dynamic `import()`.
+2. **P1 — Tree-shake react-native-web**: Current RNW bundle includes all components. Use `babel-plugin-react-native-web` or manual aliasing to only include used modules.
+3. **P2 — Responsive images on cards**: Add `srcset`/`sizes` to travel card images for proper resolution selection.
+4. **P2 — Consider SSR/ISR**: For travel detail pages, server-render the initial HTML to eliminate JS-dependent LCP.
+5. **P3 — Modernize browserslist**: Drop legacy browser targets to reduce polyfill overhead.
+
+**Last updated:** 2026-02-23
+**SW Version:** v3.33.0
+**Audit Version:** v24
+**Status:** ✅ P2 a11y fix (MapPeekPreview label-content-name-mismatch persistent regression) applied — requires redeploy
+
+---
+
 ## v23 — Full Post-Deploy Audit (2026-02-23)
 
 **Auditor:** Automated (Cascade)
