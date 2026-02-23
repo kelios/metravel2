@@ -409,8 +409,14 @@ export default function RootLayout() {
         // SW_PENDING_UPDATE: new SW activated after a normal deploy.
         // We defer the reload to the next navigation so the user isn't interrupted.
         // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
+        const swEffectStartTs = Date.now();
         const onSWMessage = (event: MessageEvent) => {
           if (event.data?.type === 'SW_PENDING_UPDATE') {
+            // Ignore SW_PENDING_UPDATE within the first 15s of page load.
+            // After a hard navigation the new SW activates and sends this message;
+            // setting the flag immediately would cause the next Expo Router
+            // pushState to hard-navigate again (redirect loop /map → /).
+            if (Date.now() - swEffectStartTs < 15000) return;
             (window as any).__metravelUpdatePending = true;
           } else if (event.data?.type === 'SW_STALE_CHUNK') {
             // Reload to recover from missing chunk, but with cooldown + retry cap
@@ -450,8 +456,15 @@ export default function RootLayout() {
         // is a genuine SW update, not the first-ever registration (which happens
         // after stale-chunk recovery unregisters the SW and the page re-registers it).
         const hadController = !!navigator.serviceWorker.controller;
+        const pageLoadTs = Date.now();
         const onControllerChange = () => {
           if (!hadController) return;
+          // Grace period: ignore controllerchange within the first 15s of page load.
+          // After a hard navigation (triggered by hardNavigateIfPending), the new page
+          // re-registers the SW which fires controllerchange. Without this guard the
+          // __metravelUpdatePending flag gets re-set immediately, causing Expo Router's
+          // next pushState/replaceState to hard-navigate again (redirect loop from /map → /).
+          if (Date.now() - pageLoadTs < 15000) return;
           // If we recently reloaded due to stale chunks or inline recovery,
           // this controllerchange is from re-registration, not a genuine update.
           // Do not set the pending flag — the page already has fresh content.
