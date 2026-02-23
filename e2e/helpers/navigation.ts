@@ -101,11 +101,25 @@ export async function navigateToFirstTravel(
   if ((await cards.count()) === 0) return false;
 
   await cards.first().click({ force: true });
-  await page.waitForURL(
-    (url) => url.pathname.startsWith('/travels/') || url.pathname.startsWith('/travel/'),
-    // SPA navigation does not always trigger a full page load, so wait for the URL commit.
-    { timeout: 45_000, waitUntil: 'commit' }
-  );
+  // SPA navigation does not always trigger a full page load/commit event.
+  // Rely on URL change, with a fallback poll in case navigation happens without a full commit.
+  await page
+    .waitForURL((url) => url.pathname.startsWith('/travels/') || url.pathname.startsWith('/travel/'), {
+      timeout: 45_000,
+    })
+    .catch(async () => {
+      const started = Date.now();
+      while (Date.now() - started < 45_000) {
+        try {
+          const u = new URL(page.url());
+          if (u.pathname.startsWith('/travels/') || u.pathname.startsWith('/travel/')) return;
+        } catch {
+          // ignore
+        }
+        await page.waitForTimeout(200);
+      }
+      throw new Error('navigateToFirstTravel: URL did not change to /travels/* within timeout');
+    });
 
   if (opts?.waitForDetails !== false) {
     const mainContent = page.locator(

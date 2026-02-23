@@ -475,13 +475,17 @@ test.describe('ArticleEditor (Якоря в описании)', () => {
     await expect(anchorButton.first()).toBeVisible({ timeout: 30_000 });
     await anchorButton.first().click({ force: true });
 
-    const anchorDialog = page.getByRole('dialog').filter({ hasText: /Вставить якорь/i }).first();
-    await expect(anchorDialog).toBeVisible({ timeout: 10_000 });
-    const anchorInput = anchorDialog.getByRole('textbox').first();
+    // RN <Modal> on web does not always expose role="dialog". Use visible modal content as anchor.
+    const anchorInput = page.getByPlaceholder('day-3').first();
     await expect(anchorInput).toBeVisible({ timeout: 15_000 });
     await anchorInput.fill('day-3');
 
-    const insertButton = anchorDialog.getByRole('button', { name: 'Вставить' }).first();
+    const anchorDialog = anchorInput.locator(
+      'xpath=ancestor::*[.//*[normalize-space()="Вставить якорь"]][1]'
+    );
+    await expect(anchorDialog).toBeVisible({ timeout: 10_000 });
+
+    const insertButton = anchorDialog.getByRole('button', { name: 'Вставить', exact: true }).first();
     await expect(insertButton).toBeVisible({ timeout: 10_000 });
     await insertButton.click({ force: true });
 

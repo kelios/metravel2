@@ -141,19 +141,11 @@ test.describe('Slider navigation on web', () => {
     expect(counter.current).toBe(1);
 
     // Dispatch mouse drag events directly on the scroll container DOM node.
-    // Playwright's page.mouse targets the topmost element (the absolutely-positioned
-    // image), but the mousedown handler is attached to the scroll container via
-    // addEventListener. We use page.evaluate with async delays between events so
-    // the browser can process scroll position changes between frames.
+    // Avoid relying on image alt text or overflow detection (both can change with
+    // virtualization / placeholder rendering).
     const dragOk = await page.evaluate(async () => {
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const img = document.querySelector('img[alt^="Фотография путешествия 1 из"]');
-      if (!img) return false;
-      let node: HTMLElement | null = img.parentElement;
-      while (node) {
-        if (getComputedStyle(node).overflowX === 'scroll' || getComputedStyle(node).overflowX === 'auto') break;
-        node = node.parentElement;
-      }
+      const node = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
       if (!node) return false;
 
       const rect = node.getBoundingClientRect();
@@ -162,7 +154,7 @@ test.describe('Slider navigation on web', () => {
       const endX = rect.left + rect.width * 0.1;
 
       node.dispatchEvent(new MouseEvent('mousedown', {
-        button: 0, pageX: startX, pageY: centerY, clientX: startX, clientY: centerY, bubbles: true,
+        button: 0, clientX: startX, clientY: centerY, bubbles: true,
       }));
       await delay(50);
 
@@ -170,13 +162,13 @@ test.describe('Slider navigation on web', () => {
       for (let i = 1; i <= steps; i++) {
         const x = startX + (endX - startX) * (i / steps);
         window.dispatchEvent(new MouseEvent('mousemove', {
-          pageX: x, pageY: centerY, clientX: x, clientY: centerY, bubbles: true,
+          clientX: x, clientY: centerY, bubbles: true,
         }));
         await delay(16);
       }
 
       window.dispatchEvent(new MouseEvent('mouseup', {
-        button: 0, pageX: endX, pageY: centerY, clientX: endX, clientY: centerY, bubbles: true,
+        button: 0, clientX: endX, clientY: centerY, bubbles: true,
       }));
 
       return true;
@@ -190,13 +182,7 @@ test.describe('Slider navigation on web', () => {
     // Drag back: left to right (swipe right → previous slide)
     const dragBackOk = await page.evaluate(async () => {
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const img = document.querySelector('img[alt^="Фотография путешествия"]');
-      if (!img) return false;
-      let node: HTMLElement | null = img.parentElement;
-      while (node) {
-        if (getComputedStyle(node).overflowX === 'scroll' || getComputedStyle(node).overflowX === 'auto') break;
-        node = node.parentElement;
-      }
+      const node = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
       if (!node) return false;
 
       const rect = node.getBoundingClientRect();
@@ -205,7 +191,7 @@ test.describe('Slider navigation on web', () => {
       const endX = rect.left + rect.width * 0.9;
 
       node.dispatchEvent(new MouseEvent('mousedown', {
-        button: 0, pageX: startX, pageY: centerY, clientX: startX, clientY: centerY, bubbles: true,
+        button: 0, clientX: startX, clientY: centerY, bubbles: true,
       }));
       await delay(50);
 
@@ -213,13 +199,13 @@ test.describe('Slider navigation on web', () => {
       for (let i = 1; i <= steps; i++) {
         const x = startX + (endX - startX) * (i / steps);
         window.dispatchEvent(new MouseEvent('mousemove', {
-          pageX: x, pageY: centerY, clientX: x, clientY: centerY, bubbles: true,
+          clientX: x, clientY: centerY, bubbles: true,
         }));
         await delay(16);
       }
 
       window.dispatchEvent(new MouseEvent('mouseup', {
-        button: 0, pageX: endX, pageY: centerY, clientX: endX, clientY: centerY, bubbles: true,
+        button: 0, clientX: endX, clientY: centerY, bubbles: true,
       }));
 
       return true;
@@ -241,16 +227,14 @@ test.describe('Slider navigation on web', () => {
 
     expect(counter.current).toBe(1);
 
-    // Focus the slider area by clicking on the first slider image
-    const sliderImage = page.locator('img[alt^="Фотография путешествия 1 из"]').first();
-    const imgVisible = await sliderImage.isVisible().catch(() => false);
-    if (imgVisible) {
-      await sliderImage.click();
-    } else {
-      // Fallback: click the "Previous slide" button area to focus the slider
-      const prevBtn = page.locator('[aria-label="Previous slide"]').first();
-      await prevBtn.click();
-    }
+    // Focus the slider wrapper: Slider.web sets tabindex=0 on a wrapper element.
+    // Wait until it's present, then focus it so keydown handler is active.
+    const wrapper = page.locator('[data-testid="slider-wrapper"]').first();
+    await expect(wrapper).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(async () => wrapper.getAttribute('tabindex'), { timeout: 10_000 })
+      .toBe('0');
+    await wrapper.focus();
 
     // Press ArrowRight → next slide
     await page.keyboard.press('ArrowRight');
