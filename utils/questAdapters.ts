@@ -10,6 +10,7 @@ import type {
     ApiQuestCity,
     ApiQuestFinale,
 } from '@/api/quests';
+import { getCountryCodeByCoords } from '@/utils/geoCountry';
 
 // ===================== ТИПЫ ФРОНТЕНДА =====================
 
@@ -174,10 +175,14 @@ export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
 
 /** Конвертирует город из API формата */
 export function adaptCity(apiCity: ApiQuestCity): QuestCity {
+    const lat = parseFloat(String(apiCity.lat));
+    const lng = parseFloat(String(apiCity.lng));
+    const countryCode = apiCity.country_code || getCountryCodeByCoords(lat, lng);
     return {
         name: apiCity.name || undefined,
-        lat: parseFloat(String(apiCity.lat)),
-        lng: parseFloat(String(apiCity.lng)),
+        lat,
+        lng,
+        countryCode: countryCode || undefined,
     };
 }
 

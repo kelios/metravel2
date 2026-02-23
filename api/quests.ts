@@ -10,6 +10,7 @@ export type ApiQuestCity = {
     name: string | null;
     lat: string; // decimal string from backend
     lng: string;
+    country_code?: string | null;
 };
 
 /** Финал квеста (из бэкенда) */

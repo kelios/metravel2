@@ -716,7 +716,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 <Suspense fallback={null}>
                                     <BelkrajWidgetLazy
                                         points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                        countryCode={city.countryCode ?? 'BY'}
+                                        countryCode={city.countryCode}
                                         collapsedHeight={compactNav ? 320 : 520}
                                         expandedHeight={compactNav ? 600 : 1200}
                                         className="belkraj-slot"
