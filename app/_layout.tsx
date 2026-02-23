@@ -343,10 +343,19 @@ export default function RootLayout() {
             const STALE_COOLDOWN = 30000;
             const STALE_MAX_RETRIES = 2;
             try {
-              const retryCount = parseInt(sessionStorage.getItem(STALE_COUNT_KEY) || '0', 10);
-              if (retryCount >= STALE_MAX_RETRIES) return;
+              let retryCount = parseInt(sessionStorage.getItem(STALE_COUNT_KEY) || '0', 10);
               const last = sessionStorage.getItem(STALE_KEY);
-              if (last && Date.now() - parseInt(last, 10) < STALE_COOLDOWN) return;
+              const elapsed = last ? Date.now() - parseInt(last, 10) : Infinity;
+              // Reset counters after cooldown so users aren't permanently stuck
+              if (retryCount >= STALE_MAX_RETRIES) {
+                if (elapsed >= STALE_COOLDOWN) {
+                  retryCount = 0;
+                  sessionStorage.setItem(STALE_COUNT_KEY, '0');
+                } else {
+                  return;
+                }
+              }
+              if (elapsed < STALE_COOLDOWN) return;
               sessionStorage.setItem(STALE_KEY, Date.now().toString());
               sessionStorage.setItem(STALE_COUNT_KEY, String(retryCount + 1));
             } catch { /* sessionStorage unavailable */ }

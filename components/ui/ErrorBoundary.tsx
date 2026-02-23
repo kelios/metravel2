@@ -14,6 +14,7 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  isStaleChunk?: boolean;
 }
 
 /** Shared detection for stale-chunk / module-mismatch errors after deploy. */
@@ -71,11 +72,11 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, isStaleChunk: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, isStaleChunk: isStaleModuleError(String(error?.message ?? ''), error?.name) };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -100,13 +101,23 @@ export default class ErrorBoundary extends Component<Props, State> {
         const now = Date.now();
 
         // Check retry counter — give up after MAX_EB_RETRIES to prevent infinite loops
-        const count = parseInt(sessionStorage.getItem(EB_COUNT_KEY) || '0', 10);
-        if (count >= MAX_EB_RETRIES) return false;
-
-        // Check cooldown — don't reload more than once per 30s
+        let count = parseInt(sessionStorage.getItem(EB_COUNT_KEY) || '0', 10);
         const prevRaw = sessionStorage.getItem(EB_KEY);
         const prev = prevRaw ? Number(prevRaw) : 0;
-        if (prev && Number.isFinite(prev) && now - prev < EB_COOLDOWN) return false;
+        const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
+
+        // Reset counters after cooldown so users aren't permanently stuck
+        if (count >= MAX_EB_RETRIES) {
+          if (elapsed >= EB_COOLDOWN) {
+            count = 0;
+            sessionStorage.setItem(EB_COUNT_KEY, '0');
+          } else {
+            return false;
+          }
+        }
+
+        // Check cooldown — don't reload more than once per 30s
+        if (elapsed < EB_COOLDOWN) return false;
 
         sessionStorage.setItem(EB_KEY, String(now));
         sessionStorage.setItem(EB_COUNT_KEY, String(count + 1));
@@ -159,6 +170,37 @@ export default class ErrorBoundary extends Component<Props, State> {
       const styles = getStyles(colors);
       if (this.props.fallback) {
         return this.props.fallback;
+      }
+
+      // Show a friendly updating UI for stale chunk errors while auto-recovery runs
+      if (this.state.isStaleChunk && Platform.OS === 'web') {
+        return (
+          <View style={styles.container}>
+            <View style={styles.content}>
+              <Text style={styles.title}>Обновление приложения…</Text>
+              <Text style={styles.message}>
+                Загружается новая версия. Пожалуйста, подождите.
+              </Text>
+              <Button
+                label="Перезагрузить"
+                onPress={() => {
+                  try {
+                    sessionStorage.removeItem('metravel:eb:reload_ts');
+                    sessionStorage.removeItem('metravel:eb:reload_count');
+                    sessionStorage.removeItem('__metravel_chunk_reload');
+                    sessionStorage.removeItem('__metravel_chunk_reload_count');
+                    sessionStorage.removeItem('__metravel_sw_stale_reload');
+                    sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+                  } catch { /* noop */ }
+                  doStaleChunkRecovery();
+                }}
+                variant="ghost"
+                style={[styles.button, styles.secondaryButton]}
+                accessibilityLabel="Перезагрузить страницу"
+              />
+            </View>
+          </View>
+        );
       }
 
       return (

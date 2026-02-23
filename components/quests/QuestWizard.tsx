@@ -18,6 +18,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
 import { generatePrintableQuest } from './QuestPrintable';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
+import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { openExternalUrl } from '@/utils/externalLinks';
 
 // ⚡️ Heavy deps lazy-loaded to keep chunk small
 const BelkrajWidgetLazy = lazy(() => import("@/components/belkraj/BelkrajWidget"));
@@ -42,11 +47,20 @@ const NativeVideoLazy = lazy(() =>
         }),
     }))
 );
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { openExternalUrl } from '@/utils/externalLinks';
+
+// Stable module-level web video component — must NOT be defined inside render
+const WebVideo = memo(function WebVideo({ src, poster, onError }: { src?: string; poster?: string; onError: () => void }) {
+    // @ts-ignore - RNW allows direct DOM element creation
+    return React.createElement('video', {
+        src,
+        poster,
+        controls: true,
+        playsInline: true,
+        // @ts-ignore
+        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' },
+        onError,
+    });
+});
 
 const QuestFullMap = lazy(() => import("@/components/quests/QuestFullMap"));
 
@@ -312,7 +326,11 @@ const StepCard = memo((props: StepCardProps) => {
                         )
                 )}
 
-                {hintVisible && step.hint && (<View style={styles.hintContainer}><Text style={styles.hintText}>Подсказка: {step.hint}</Text></View>)}
+                {step.hint && (
+                    <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
+                        <Text style={styles.hintText}>Подсказка: {step.hint}</Text>
+                    </View>
+                )}
 
                 {isPassed && (
                     <View style={styles.answerContainer}>
@@ -555,20 +573,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const [videoOk, setVideoOk] = useState(true);
     const videoUri = useMemo(() => resolveUri(finale.video), [finale.video]);
     const posterUri = useMemo(() => resolveUri(finale.poster), [finale.poster]);
-
-    // нативный WEB <video>
-    const WebVideo = ({ src, poster }: { src?: string; poster?: string }) => {
-        // @ts-ignore - RNW позволяет напрямую создавать DOM-элементы
-        return React.createElement('video', {
-            src,
-            poster,
-            controls: true,
-            playsInline: true,
-            // @ts-ignore
-            style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' },
-            onError: () => setVideoOk(false),
-        });
-    };
+    const handleVideoError = useMemo(() => () => setVideoOk(false), []);
+    useEffect(() => { setVideoOk(true); }, [finale.video]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -711,8 +717,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         )}
 
                         {(!showFinaleOnly) && currentStep && city && (
-                            <>
-                                <View style={{ height: SPACING.xl - 4 }} />
+                            <View style={styles.excursionsSection}>
+                                <View style={styles.excursionsDivider} />
+                                <View style={styles.excursionsHeader}>
+                                    <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
+                                    <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                                </View>
                                 <Suspense fallback={null}>
                                     <BelkrajWidgetLazy
                                         points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
@@ -722,7 +732,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         className="belkraj-slot"
                                     />
                                 </Suspense>
-                            </>
+                            </View>
                         )}
 
                         {/* Финал — доступен всегда; видео — когда всё пройдено */}
@@ -737,7 +747,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                             <View style={[styles.videoFrame, { width: frameW, height: frameH }]}>
                                                 {Platform.OS === 'web' ? (
                                                     videoOk ? (
-                                                        <WebVideo src={videoUri} poster={posterUri} />
+                                                        <WebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
                                                     ) : (
                                                         <>
                                                             {posterUri ? <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" /> : null}
@@ -1032,6 +1042,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     printButtonText: { color: colors.text, fontSize: 14, fontWeight: '600' },
 
     fullMapSection: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.md, marginBottom: SPACING.md },
+
+    excursionsSection: {
+        marginTop: SPACING.xl,
+    },
+    excursionsDivider: {
+        height: 1,
+        backgroundColor: colors.border,
+        marginBottom: SPACING.lg,
+    },
+    excursionsHeader: {
+        marginBottom: SPACING.md,
+    },
+    excursionsTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: colors.text,
+        marginBottom: 4,
+    },
+    excursionsSubtitle: {
+        fontSize: 13,
+        color: colors.textSecondary,
+    },
 
     completionScreen: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.lg, alignItems: 'center', marginTop: SPACING.md },
     completionTitle: { fontSize: 20, fontWeight: '700', color: colors.success, marginBottom: SPACING.md, textAlign: 'center' },

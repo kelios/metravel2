@@ -57,6 +57,16 @@ export default function QuestsMapScreen() {
         return { data };
     }, [quests]);
 
+    const questsCenter = useMemo(() => {
+        const valid = quests.filter(
+            q => Number.isFinite(q.lat) && Number.isFinite(q.lng),
+        );
+        if (!valid.length) return { latitude: 53.9, longitude: 27.56 }; // fallback Minsk
+        const lat = valid.reduce((s, q) => s + q.lat, 0) / valid.length;
+        const lng = valid.reduce((s, q) => s + q.lng, 0) / valid.length;
+        return { latitude: lat, longitude: lng };
+    }, [quests]);
+
     const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
 
     const handleBack = () => {
@@ -101,8 +111,8 @@ export default function QuestsMapScreen() {
             }>
                 <LazyMap
                     travel={travel}
-                    coordinates={{ latitude: 53.9, longitude: 27.56 }}
-                    mode="radius"
+                    coordinates={questsCenter}
+                    mode="route"
                     transportMode="foot"
                     routePoints={routePoints}
                     setRoutePoints={setRoutePoints}

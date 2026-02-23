@@ -97,8 +97,16 @@ function BelkrajWidget({
     if (!firstCoord) return null;
 
     return (
-        <div className={className ?? 'belkraj-slot'}>
-            {/* сам контейнер без overflow — скролл будет внутри iframe */}
+        <div
+            className={className ?? 'belkraj-slot'}
+            style={{
+                borderRadius: 12,
+                overflow: 'hidden',
+                border: '1px solid var(--color-border, #e8e4df)',
+                background: 'var(--color-surface, #ffffff)',
+                boxShadow: 'var(--shadow-light, 0 1px 4px rgba(0,0,0,0.06))',
+            }}
+        >
             <div ref={containerRef} style={{ width: '100%' }} />
         </div>
     );

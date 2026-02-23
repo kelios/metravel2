@@ -87,10 +87,16 @@ export async function navigateToFirstTravel(
 ): Promise<boolean> {
   await gotoWithRetry(page, getTravelsListPath());
 
+  const roleCards = page.getByRole('link', { name: /^Открыть маршрут/ });
   const linkCards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
   // Fallback: some list variants expose the card root testID (travel-card-<slug/id>)
   const fallbackCards = page.locator('[data-testid^="travel-card-"], [testID^="travel-card-"]');
-  const cards = (await linkCards.count()) > 0 ? linkCards : fallbackCards;
+  const cards =
+    (await roleCards.count()) > 0
+      ? roleCards
+      : (await linkCards.count()) > 0
+        ? linkCards
+        : fallbackCards;
 
   // Wait for either cards or empty state
   await Promise.race([
@@ -100,7 +106,69 @@ export async function navigateToFirstTravel(
 
   if ((await cards.count()) === 0) return false;
 
-  await cards.first().click({ force: true });
+  const firstCard = cards.first();
+  await firstCard.scrollIntoViewIfNeeded();
+
+  const isOnDetails = () => {
+    try {
+      const u = new URL(page.url());
+      return u.pathname.startsWith('/travels/') || u.pathname.startsWith('/travel/');
+    } catch {
+      return false;
+    }
+  };
+
+  // Some card variants contain nested action buttons inside the link.
+  // Clicking the center can hit those buttons and prevent navigation.
+  const box = await firstCard.boundingBox();
+  if (box) {
+    await firstCard.click({ position: { x: 8, y: 8 } });
+  } else {
+    await firstCard.click({ force: true });
+  }
+
+  // If the click got intercepted, retry with increasingly aggressive activation.
+  await page.waitForTimeout(150);
+  if (!isOnDetails()) {
+    try {
+      await firstCard.click({ force: true });
+    } catch {
+      // ignore
+    }
+  }
+
+  await page.waitForTimeout(150);
+  if (!isOnDetails()) {
+    try {
+      await firstCard.evaluate((el: any) => {
+        if (typeof el?.click === 'function') el.click();
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  // Fallback: if the click was intercepted, try keyboard activation.
+  // TravelListItem's web wrapper handles Enter/Space.
+  await page.waitForTimeout(150);
+  if (!isOnDetails()) {
+    try {
+      await firstCard.focus();
+      await page.keyboard.press('Enter');
+    } catch {
+      // ignore
+    }
+  }
+
+  await page.waitForTimeout(150);
+  if (!isOnDetails()) {
+    try {
+      await firstCard.focus();
+      await page.keyboard.press(' ');
+    } catch {
+      // ignore
+    }
+  }
   // SPA navigation does not always trigger a full page load/commit event.
   // Rely on URL change, with a fallback poll in case navigation happens without a full commit.
   await page

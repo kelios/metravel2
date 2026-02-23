@@ -11,9 +11,6 @@
 const TOKEN = '5281f4cc17ab9f6f6cdaf2150a09ae9999c277c5';
 const API = 'https://metravel.by';
 const QUEST_DB_ID = 5;
-const FINALE_DB_ID = 5; // will fetch
-
-const OLD_STEP_IDS = [35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45]; // includes intro id=45
 
 const headers = (extra = {}) => ({
     'Content-Type': 'application/json',
@@ -78,7 +75,7 @@ const NEW_STEPS = [
         task: 'Осмотрись вокруг. Найди любую скульптуру или арт-объект рядом с Каскадом и опиши его одним словом.',
         hint: 'Ищи необычные формы и современные скульптуры.',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.19265', lng: '44.51245',
+        lat: '40.18920', lng: '44.51520',
         maps_url: 'https://maps.google.com/?q=Cascade+Yerevan',
         input_type: 'text', order: 1, is_intro: false,
     },
@@ -102,7 +99,7 @@ const NEW_STEPS = [
         task: 'Зайди во двор и опиши одним словом атмосферу этого места.',
         hint: 'Спокойный? Шумный? Уютный?',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.18375', lng: '44.51485',
+        lat: '40.18132', lng: '44.51631',
         maps_url: 'https://maps.google.com/?q=Abovyan+street+Yerevan',
         input_type: 'text', order: 3, is_intro: false,
     },
@@ -114,7 +111,7 @@ const NEW_STEPS = [
         task: 'Найди любой предмет с изображением граната. Из какого он материала?',
         hint: 'Гранат здесь изображают почти на всём.',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.17975', lng: '44.51405',
+        lat: '40.17598', lng: '44.51818',
         maps_url: 'https://maps.google.com/?q=Vernissage+Market+Yerevan',
         input_type: 'text', order: 4, is_intro: false,
     },
@@ -126,7 +123,7 @@ const NEW_STEPS = [
         task: 'Зайди в кафе и закажи армянский кофе. Как называется посуда, в которой его варят?',
         hint: 'Маленький медный сосуд с длинной ручкой.',
         answer_pattern: JSON.stringify({ type: 'exact_any', value: JSON.stringify(['джезве','турка','jezve','cezve','джезва']) }),
-        lat: '40.18375', lng: '44.51485',
+        lat: '40.18507', lng: '44.51418',
         maps_url: 'https://maps.google.com/?q=Jazzve+Yerevan',
         input_type: 'text', order: 5, is_intro: false,
     },
@@ -138,7 +135,7 @@ const NEW_STEPS = [
         task: 'Посмотри на здания вокруг площади. Какого цвета камень ты видишь?',
         hint: 'Обрати внимание на оттенки.',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.17715', lng: '44.50985',
+        lat: '40.17720', lng: '44.51520',
         maps_url: 'https://maps.google.com/?q=Republic+Square+Yerevan',
         input_type: 'text', order: 6, is_intro: false,
     },
@@ -150,7 +147,7 @@ const NEW_STEPS = [
         task: 'Посмотри на армянские буквы вокруг. Какая из них кажется тебе самой необычной? Опиши её.',
         hint: 'Форма букв сильно отличается от латиницы.',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.18975', lng: '44.50935',
+        lat: '40.19208', lng: '44.52106',
         maps_url: 'https://maps.google.com/?q=Matenadaran+Yerevan',
         input_type: 'text', order: 7, is_intro: false,
     },
@@ -162,7 +159,7 @@ const NEW_STEPS = [
         task: 'Найди старую дверь или ворота и опиши их одним словом.',
         hint: 'Обрати внимание на цвет или состояние.',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.18855', lng: '44.51525',
+        lat: '40.18313', lng: '44.50223',
         maps_url: 'https://maps.google.com/?q=Kond+Yerevan',
         input_type: 'text', order: 8, is_intro: false,
     },
@@ -170,11 +167,11 @@ const NEW_STEPS = [
         step_id: '9-blue-mosque',
         title: 'Голубая мечеть — персидское наследие',
         location: 'Голубая мечеть',
-        story: 'Ереван всегда был городом разных культур. Голубая мечеть — единственная действующая мечеть города.\n\nОна построена в XVIII веке и украшена голубыми изразцами.',
-        task: 'Посмотри на купол мечети. Какого цвета изразцы?',
-        hint: 'Название подсказывает.',
+        story: 'Ереван всегда был городом разных культур. Голубая мечеть — единственная действующая мечеть города.\n\nОна построена в XVIII веке и украшена узорными изразцами, которые дали ей название.',
+        task: 'Посмотри на купол мечети. Какого цвета изразцы его украшают?',
+        hint: 'Название мечети — прямая подсказка.',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.17755', lng: '44.50705',
+        lat: '40.17788', lng: '44.50556',
         maps_url: 'https://maps.google.com/?q=Blue+Mosque+Yerevan',
         input_type: 'text', order: 9, is_intro: false,
     },
@@ -186,7 +183,7 @@ const NEW_STEPS = [
         task: 'Посмотри на город сверху. Опиши одним словом, каким тебе запомнился Ереван.',
         hint: 'Какое чувство вызывает город?',
         answer_pattern: JSON.stringify({ type: 'any_text', value: JSON.stringify({ min_length: 3 }) }),
-        lat: '40.19435', lng: '44.50895',
+        lat: '40.19516', lng: '44.52467',
         maps_url: 'https://maps.google.com/?q=Mother+Armenia+Monument',
         input_type: 'text', order: 10, is_intro: false,
     },
@@ -194,17 +191,34 @@ const NEW_STEPS = [
 
 const NEW_FINALE_TEXT = 'Ты прошёл через разные слои Еревана.\n\nТы увидел современный город и древние кварталы, попробовал армянский кофе, услышал легенды и почувствовал атмосферу улиц.\n\nЕреван — это не только здания и история. Это люди, традиции, камень, музыка и память.\n\nТеперь ты знаешь этот город немного ближе.';
 
+async function getAllSteps(questId) {
+    const r = await fetch(`${API}/api/quest-steps/?quest=${questId}`, {
+        headers: { 'Authorization': `Token ${TOKEN}` }
+    });
+    if (!r.ok) throw new Error(`GET quest-steps: HTTP ${r.status}`);
+    const data = await r.json();
+    return Array.isArray(data) ? data : (data.results ?? []);
+}
+
 async function main() {
     console.log('🚀 Обновление квеста «Ереван» на проде\n');
 
-    // 1. Удаляем старые шаги
-    console.log('🗑  Удаляем старые шаги...');
-    for (const id of OLD_STEP_IDS) {
+    // 1. Получаем все текущие шаги и удаляем их
+    console.log('🗑  Удаляем все текущие шаги квеста...');
+    let existingSteps;
+    try {
+        existingSteps = await getAllSteps(QUEST_DB_ID);
+        console.log(`  Найдено шагов: ${existingSteps.length}`);
+    } catch (e) {
+        console.error(`  ❌ Не удалось получить шаги: ${e.message}`);
+        existingSteps = [];
+    }
+    for (const step of existingSteps) {
         try {
-            await del(`/api/quest-steps/${id}/`);
-            console.log(`  ✅ Удалён step id=${id}`);
+            await del(`/api/quest-steps/${step.id}/`);
+            console.log(`  ✅ Удалён step id=${step.id} (step_id=${step.step_id})`);
         } catch (e) {
-            console.error(`  ❌ step id=${id}: ${e.message}`);
+            console.error(`  ❌ step id=${step.id}: ${e.message}`);
         }
     }
 
@@ -231,16 +245,32 @@ async function main() {
     // 4. Обновляем финал — сначала получаем его ID
     console.log('\n📝 Обновляем финал...');
     try {
+        // Try to get finale ID from quest bundle
         const br = await fetch(`${API}/api/quests/${QUEST_DB_ID}/`, {
             headers: { 'Authorization': `Token ${TOKEN}` }
         });
         const bundle = await br.json();
-        const finaleId = bundle.finale?.id;
+        console.log(`  bundle.finale keys =`, Object.keys(bundle.finale ?? {}));
+        let finaleId = bundle.finale?.id ?? bundle.finale_id ?? null;
+
+        if (!finaleId) {
+            // Fallback: fetch all finales and find by quest
+            const fr = await fetch(`${API}/api/quest-finales/`, {
+                headers: { 'Authorization': `Token ${TOKEN}` }
+            });
+            const fdata = await fr.json();
+            console.log(`  /api/quest-finales/ response type=${Array.isArray(fdata) ? 'array' : 'object'}, keys=`, Object.keys(fdata));
+            const finales = Array.isArray(fdata) ? fdata : (fdata.results ?? []);
+            console.log(`  Всего финалов: ${finales.length}`, finales.map(f => `id=${f.id} quest=${f.quest}`));
+            const match = finales.find(f => f.quest === QUEST_DB_ID || String(f.quest) === String(QUEST_DB_ID));
+            finaleId = match?.id ?? null;
+            if (finaleId) console.log(`  Финал найден через список id=${finaleId}`);
+        }
+
         if (finaleId) {
             await patch(`/api/quest-finales/${finaleId}/`, { text: NEW_FINALE_TEXT });
             console.log(`  ✅ Финал обновлён id=${finaleId}`);
         } else {
-            // Создаём финал если нет
             const fr = await post('/api/quest-finales/', { quest: QUEST_DB_ID, text: NEW_FINALE_TEXT });
             console.log(`  ✅ Финал создан id=${fr.id}`);
         }
