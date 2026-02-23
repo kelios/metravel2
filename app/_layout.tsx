@@ -144,9 +144,6 @@ export default function RootLayout() {
         let rafId: number | null = null;
 
         // Strip the _cb cache-busting param added by stale-chunk recovery.
-        // Do NOT reset retry counters here — lazy components haven't loaded yet,
-        // so a reset would allow the ErrorBoundary to reload infinitely.
-        // Counters expire naturally via the 30s cooldown in the inline script.
         if (isWeb && typeof window !== 'undefined') {
           try {
             const url = new URL(window.location.href);
@@ -157,6 +154,27 @@ export default function RootLayout() {
               History.prototype.replaceState.call(window.history, window.history.state, '', url.toString());
             }
           } catch { /* noop */ }
+        }
+
+        // After the page loads and stays stable for 10s, clear ALL recovery
+        // session keys. This ensures that future errors (e.g. from lazy-loaded
+        // chunks on /map) get a fresh set of recovery attempts instead of being
+        // blocked by stale counters from a previous recovery cycle.
+        let stableTimer: ReturnType<typeof setTimeout> | null = null;
+        if (isWeb && typeof window !== 'undefined') {
+          stableTimer = setTimeout(() => {
+            try {
+              sessionStorage.removeItem('metravel:eb:reload_ts');
+              sessionStorage.removeItem('metravel:eb:reload_count');
+              sessionStorage.removeItem('__metravel_chunk_reload');
+              sessionStorage.removeItem('__metravel_chunk_reload_count');
+              sessionStorage.removeItem('__metravel_sw_stale_reload');
+              sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+              sessionStorage.removeItem('__metravel_emergency_recovery_ts');
+              sessionStorage.removeItem('__metravel_exhausted_autoretry_ts');
+              sessionStorage.removeItem('__metravel_exhausted_autoretry_count');
+            } catch { /* noop */ }
+          }, 10000);
         }
 
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
@@ -174,6 +192,7 @@ export default function RootLayout() {
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
           if (consentTimer) clearTimeout(consentTimer);
+          if (stableTimer) clearTimeout(stableTimer);
           if (rafId != null) cancelAnimationFrame(rafId);
         };
     }, []);
@@ -330,7 +349,7 @@ export default function RootLayout() {
       // --- Service Worker registration + update listener ---
       if ('serviceWorker' in navigator) {
         const GLOBAL_EMERGENCY_KEY = '__metravel_emergency_recovery_ts';
-        const GLOBAL_EMERGENCY_COOLDOWN = 5 * 60 * 1000;
+        const GLOBAL_EMERGENCY_COOLDOWN = 60 * 1000;
 
         const clearRecoverySessionKeys = (clearEmergencyKey = false) => {
           try {

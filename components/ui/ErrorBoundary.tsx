@@ -19,11 +19,11 @@ interface State {
 }
 
 const EMERGENCY_RECOVERY_KEY = '__metravel_emergency_recovery_ts';
-const EMERGENCY_RECOVERY_COOLDOWN = 5 * 60 * 1000;
+const EMERGENCY_RECOVERY_COOLDOWN = 60 * 1000;
 const EXHAUSTED_AUTORETRY_TS_KEY = '__metravel_exhausted_autoretry_ts';
 const EXHAUSTED_AUTORETRY_COUNT_KEY = '__metravel_exhausted_autoretry_count';
-const EXHAUSTED_AUTORETRY_COOLDOWN = 60 * 1000;
-const EXHAUSTED_AUTORETRY_MAX = 2;
+const EXHAUSTED_AUTORETRY_COOLDOWN = 30 * 1000;
+const EXHAUSTED_AUTORETRY_MAX = 3;
 const EXHAUSTED_AUTORETRY_DELAY_MS = 2500;
 
 function shouldScheduleExhaustedAutoRetry(): boolean {
