@@ -15,6 +15,7 @@ interface State {
   hasError: boolean;
   error: Error | null;
   isStaleChunk?: boolean;
+  recoveryExhausted?: boolean;
 }
 
 /** Shared detection for stale-chunk / module-mismatch errors after deploy. */
@@ -72,7 +73,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, isStaleChunk: false };
+    this.state = { hasError: false, error: null, isStaleChunk: false, recoveryExhausted: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
@@ -134,7 +135,10 @@ export default class ErrorBoundary extends Component<Props, State> {
       typeof window !== 'undefined'
     ) {
       if (isStaleModuleError(msg, error?.name)) {
-        if (!shouldReload()) return;
+        if (!shouldReload()) {
+          this.setState({ recoveryExhausted: true });
+          return;
+        }
         doStaleChunkRecovery();
         return; // skip further recovery attempts
       }
@@ -174,6 +178,36 @@ export default class ErrorBoundary extends Component<Props, State> {
 
       // Show a friendly updating UI for stale chunk errors while auto-recovery runs
       if (this.state.isStaleChunk && Platform.OS === 'web') {
+        // If auto-recovery exhausted retries, show an actionable error instead
+        // of the misleading "updating" message
+        if (this.state.recoveryExhausted) {
+          return (
+            <View style={styles.container}>
+              <View style={styles.content}>
+                <Text style={styles.title}>Не удалось загрузить обновление</Text>
+                <Text style={styles.message}>
+                  Попробуйте перезагрузить страницу. Если проблема сохраняется, очистите кэш браузера.
+                </Text>
+                <Button
+                  label="Перезагрузить страницу"
+                  onPress={() => {
+                    try {
+                      sessionStorage.removeItem('metravel:eb:reload_ts');
+                      sessionStorage.removeItem('metravel:eb:reload_count');
+                      sessionStorage.removeItem('__metravel_chunk_reload');
+                      sessionStorage.removeItem('__metravel_chunk_reload_count');
+                      sessionStorage.removeItem('__metravel_sw_stale_reload');
+                      sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+                    } catch { /* noop */ }
+                    doStaleChunkRecovery();
+                  }}
+                  style={[styles.button, styles.primaryButton]}
+                  accessibilityLabel="Перезагрузить страницу"
+                />
+              </View>
+            </View>
+          );
+        }
         return (
           <View style={styles.container}>
             <View style={styles.content}>

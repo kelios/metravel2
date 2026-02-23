@@ -102,7 +102,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
               key={place.id || index}
               style={styles.placeCard}
               onPress={() => onPlacePress(place)}
-              accessibilityLabel={place.address || 'Место'}
+              accessibilityHint="Открыть на карте"
             >
               <View style={styles.cardRow}>
                 <View style={styles.thumbnail}>

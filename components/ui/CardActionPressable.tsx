@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 
 type CardActionPressableProps = {
-  accessibilityLabel: string;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
   title?: string;
   onPress?: () => void;
   onLongPress?: () => void;
@@ -23,6 +24,7 @@ type CardActionPressableProps = {
 
 const CardActionPressable = ({
   accessibilityLabel,
+  accessibilityHint,
   title,
   onPress,
   onLongPress,
@@ -62,7 +64,8 @@ const CardActionPressable = ({
       <View
         style={resolvedStyle}
         accessibilityRole={accessibilityRole}
-        accessibilityLabel={accessibilityLabel}
+        {...(accessibilityLabel ? { accessibilityLabel } : {})}
+        accessibilityHint={accessibilityHint}
         accessibilityState={resolvedState}
         {...({
           role: accessibilityRole,
@@ -93,7 +96,8 @@ const CardActionPressable = ({
     <Pressable
       style={style}
       accessibilityRole={accessibilityRole}
-      accessibilityLabel={accessibilityLabel}
+      {...(accessibilityLabel ? { accessibilityLabel } : {})}
+      accessibilityHint={accessibilityHint}
       accessibilityState={accessibilityState ?? { disabled }}
       disabled={disabled}
       onPress={activate}
