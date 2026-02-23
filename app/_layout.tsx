@@ -39,6 +39,11 @@ LogBox.ignoreLogs([
 /** ===== Helpers ===== */
 const isWeb = Platform.OS === "web";
 
+/** SessionStorage key written by hardNavigateIfPending before doing window.location.href.
+ *  The fresh page checks this on load and suppresses __metravelUpdatePending
+ *  from SW events to prevent redirect loops (especially on mobile Safari). */
+const HARD_NAV_TS_KEY = '__metravel_hard_nav_ts';
+
 const useAppFonts: any = isWeb
   ? () => [true, null]
   : require('expo-font').useFonts;
@@ -293,6 +298,9 @@ export default function RootLayout() {
           // One-shot: clear the flag BEFORE navigating so the destination
           // page doesn't see it and loop.
           (window as any).__metravelUpdatePending = false;
+          // Mark in sessionStorage so the fresh page knows it was a hard nav
+          // and won't re-set __metravelUpdatePending from SW events.
+          try { sessionStorage.setItem(HARD_NAV_TS_KEY, String(Date.now())); } catch { /* noop */ }
           // Hard navigate — browser will load fresh HTML + new SW chunks.
           window.location.href = resolved.href;
           return true;
@@ -409,14 +417,25 @@ export default function RootLayout() {
         // SW_PENDING_UPDATE: new SW activated after a normal deploy.
         // We defer the reload to the next navigation so the user isn't interrupted.
         // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
-        const swEffectStartTs = Date.now();
+        // Check if this page load resulted from a hardNavigateIfPending redirect.
+        // If so, the page already has fresh code — suppress __metravelUpdatePending
+        // for the entire session to prevent redirect loops (especially on mobile).
+        let suppressUpdateFlag = false;
+        try {
+          const hardNavTs = sessionStorage.getItem(HARD_NAV_TS_KEY);
+          if (hardNavTs && Date.now() - parseInt(hardNavTs, 10) < 60000) {
+            suppressUpdateFlag = true;
+            // Clean up the marker so future page loads (manual refresh, etc.) are not affected.
+            sessionStorage.removeItem(HARD_NAV_TS_KEY);
+          }
+        } catch { /* noop */ }
+
         const onSWMessage = (event: MessageEvent) => {
           if (event.data?.type === 'SW_PENDING_UPDATE') {
-            // Ignore SW_PENDING_UPDATE within the first 15s of page load.
-            // After a hard navigation the new SW activates and sends this message;
-            // setting the flag immediately would cause the next Expo Router
-            // pushState to hard-navigate again (redirect loop /map → /).
-            if (Date.now() - swEffectStartTs < 15000) return;
+            // After a hard navigation the page already has fresh code.
+            // Don't re-set the flag or the next Expo Router pushState will
+            // hard-navigate again (redirect loop /map → /).
+            if (suppressUpdateFlag) return;
             (window as any).__metravelUpdatePending = true;
           } else if (event.data?.type === 'SW_STALE_CHUNK') {
             // Reload to recover from missing chunk, but with cooldown + retry cap
@@ -456,15 +475,10 @@ export default function RootLayout() {
         // is a genuine SW update, not the first-ever registration (which happens
         // after stale-chunk recovery unregisters the SW and the page re-registers it).
         const hadController = !!navigator.serviceWorker.controller;
-        const pageLoadTs = Date.now();
         const onControllerChange = () => {
           if (!hadController) return;
-          // Grace period: ignore controllerchange within the first 15s of page load.
-          // After a hard navigation (triggered by hardNavigateIfPending), the new page
-          // re-registers the SW which fires controllerchange. Without this guard the
-          // __metravelUpdatePending flag gets re-set immediately, causing Expo Router's
-          // next pushState/replaceState to hard-navigate again (redirect loop from /map → /).
-          if (Date.now() - pageLoadTs < 15000) return;
+          // After a hard navigation the page already has fresh code.
+          if (suppressUpdateFlag) return;
           // If we recently reloaded due to stale chunks or inline recovery,
           // this controllerchange is from re-registration, not a genuine update.
           // Do not set the pending flag — the page already has fresh content.
