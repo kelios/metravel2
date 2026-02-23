@@ -20,8 +20,42 @@ interface State {
 
 const EMERGENCY_RECOVERY_KEY = '__metravel_emergency_recovery_ts';
 const EMERGENCY_RECOVERY_COOLDOWN = 5 * 60 * 1000;
+const EXHAUSTED_AUTORETRY_TS_KEY = '__metravel_exhausted_autoretry_ts';
+const EXHAUSTED_AUTORETRY_COUNT_KEY = '__metravel_exhausted_autoretry_count';
+const EXHAUSTED_AUTORETRY_COOLDOWN = 60 * 1000;
+const EXHAUSTED_AUTORETRY_MAX = 2;
+const EXHAUSTED_AUTORETRY_DELAY_MS = 2500;
 
-function clearRecoverySessionKeys(clearEmergencyKey = false): void {
+function shouldScheduleExhaustedAutoRetry(): boolean {
+  try {
+    const now = Date.now();
+    let count = parseInt(sessionStorage.getItem(EXHAUSTED_AUTORETRY_COUNT_KEY) || '0', 10);
+    const prevRaw = sessionStorage.getItem(EXHAUSTED_AUTORETRY_TS_KEY);
+    const prev = prevRaw ? Number(prevRaw) : 0;
+    const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
+
+    if (count >= EXHAUSTED_AUTORETRY_MAX) {
+      if (elapsed >= EXHAUSTED_AUTORETRY_COOLDOWN) {
+        count = 0;
+        sessionStorage.setItem(EXHAUSTED_AUTORETRY_COUNT_KEY, '0');
+      } else {
+        return false;
+      }
+    }
+
+    sessionStorage.setItem(EXHAUSTED_AUTORETRY_TS_KEY, String(now));
+    sessionStorage.setItem(EXHAUSTED_AUTORETRY_COUNT_KEY, String(count + 1));
+  } catch {
+    // If sessionStorage is unavailable, allow one attempt for this runtime.
+  }
+
+  return true;
+}
+
+function clearRecoverySessionKeys(
+  clearEmergencyKey = false,
+  clearExhaustedAutoRetryKeys = false,
+): void {
   try {
     sessionStorage.removeItem('metravel:eb:reload_ts');
     sessionStorage.removeItem('metravel:eb:reload_count');
@@ -29,6 +63,10 @@ function clearRecoverySessionKeys(clearEmergencyKey = false): void {
     sessionStorage.removeItem('__metravel_chunk_reload_count');
     sessionStorage.removeItem('__metravel_sw_stale_reload');
     sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+    if (clearExhaustedAutoRetryKeys) {
+      sessionStorage.removeItem(EXHAUSTED_AUTORETRY_TS_KEY);
+      sessionStorage.removeItem(EXHAUSTED_AUTORETRY_COUNT_KEY);
+    }
     if (clearEmergencyKey) {
       sessionStorage.removeItem(EMERGENCY_RECOVERY_KEY);
     }
@@ -93,14 +131,39 @@ export default class ErrorBoundary extends Component<Props, State> {
   static contextType = ThemeContext;
   override context: React.ContextType<typeof ThemeContext> | null = null;
   private _leafletAutoRetryCount = 0;
+  private _exhaustedAutoRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null, isStaleChunk: false, recoveryExhausted: false };
   }
 
+  componentWillUnmount(): void {
+    if (this._exhaustedAutoRetryTimer != null) {
+      clearTimeout(this._exhaustedAutoRetryTimer);
+      this._exhaustedAutoRetryTimer = null;
+    }
+  }
+
+  private scheduleExhaustedAutoRecovery = () => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (this._exhaustedAutoRetryTimer != null) return;
+    if (!shouldScheduleExhaustedAutoRetry()) return;
+
+    this._exhaustedAutoRetryTimer = setTimeout(() => {
+      this._exhaustedAutoRetryTimer = null;
+      clearRecoverySessionKeys(true);
+      doStaleChunkRecovery({ purgeAllCaches: true });
+    }, EXHAUSTED_AUTORETRY_DELAY_MS);
+  };
+
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, isStaleChunk: isStaleModuleError(String(error?.message ?? ''), error?.name) };
+    const msg = String(error?.message ?? '');
+    return {
+      hasError: true,
+      error,
+      isStaleChunk: isStaleModuleError(msg, error?.name) || isLikelyReact130ModuleMismatch(msg),
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -178,7 +241,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           if (tryEmergencyRecovery()) {
             return;
           }
-          this.setState({ recoveryExhausted: true });
+          this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
           return;
         }
         doStaleChunkRecovery();
@@ -234,12 +297,12 @@ export default class ErrorBoundary extends Component<Props, State> {
               <View style={styles.content}>
                 <Text style={styles.title}>Не удалось загрузить обновление</Text>
                 <Text style={styles.message}>
-                  Мы уже попробовали автоматическое восстановление. Нажмите кнопку ниже, чтобы запустить его повторно.
+                  Запускаем повторное автоматическое восстановление. Если через несколько секунд экран не обновится, нажмите кнопку ниже.
                 </Text>
                 <Button
                   label="Перезагрузить страницу"
                   onPress={() => {
-                    clearRecoverySessionKeys(true);
+                    clearRecoverySessionKeys(true, true);
                     doStaleChunkRecovery({ purgeAllCaches: true });
                   }}
                   style={[styles.button, styles.primaryButton]}
@@ -259,7 +322,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               <Button
                 label="Перезагрузить"
                 onPress={() => {
-                  clearRecoverySessionKeys(true);
+                  clearRecoverySessionKeys(true, true);
                   doStaleChunkRecovery();
                 }}
                 variant="ghost"
@@ -285,7 +348,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                   const errMsg = String(this.state.error?.message ?? '');
                   if (isStaleModuleError(errMsg, this.state.error?.name)) {
                     // Reset retry counters so the manual retry always works
-                    clearRecoverySessionKeys(true);
+                    clearRecoverySessionKeys(true, true);
                     doStaleChunkRecovery({ purgeAllCaches: true });
                     return;
                   }
@@ -300,7 +363,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                 label="Перезагрузить страницу"
                 onPress={() => {
                   // Reset ALL retry counters and do full cleanup + cache-busting reload
-                  clearRecoverySessionKeys(true);
+                  clearRecoverySessionKeys(true, true);
                   doStaleChunkRecovery({ purgeAllCaches: true });
                 }}
                 variant="ghost"

@@ -275,6 +275,42 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
+    it('should auto-retry deep recovery after exhausted state without manual click', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      const now = Date.now();
+      sessionStorage.setItem('metravel:eb:reload_count', '3');
+      sessionStorage.setItem('metravel:eb:reload_ts', String(now));
+      sessionStorage.setItem('__metravel_emergency_recovery_ts', String(now));
+
+      const cacheDelete = jest.fn().mockResolvedValue(true);
+      (global as any).caches = {
+        keys: jest.fn().mockResolvedValue(['metravel-static-v1']),
+        delete: cacheDelete,
+      };
+
+      const ThrowChunkError = () => {
+        throw new Error('ChunkLoadError: Loading chunk 99 failed.');
+      };
+
+      const { toJSON } = render(
+        <ErrorBoundary>
+          <ThrowChunkError />
+        </ErrorBoundary>
+      );
+
+      const treeStr = JSON.stringify(toJSON());
+      expect(treeStr).toContain('Не удалось загрузить обновление');
+
+      await waitFor(() => {
+        expect(cacheDelete).toHaveBeenCalledWith('metravel-static-v1');
+        expect(mockReplace).toHaveBeenCalled();
+      }, { timeout: 5000 });
+
+      console.error = consoleError;
+    });
+
     it.each([
       'Test error',
       'Element type is invalid: expected a string (for built-in components) or a class/function but got: undefined',
