@@ -143,23 +143,19 @@ export default function RootLayout() {
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
         let rafId: number | null = null;
 
-        // If the page loaded successfully after a stale-chunk recovery, clean up:
-        // 1. Strip the _cb cache-busting param from the URL
-        // 2. Reset retry counters so future deploys can recover again
+        // Strip the _cb cache-busting param added by stale-chunk recovery.
+        // Do NOT reset retry counters here — lazy components haven't loaded yet,
+        // so a reset would allow the ErrorBoundary to reload infinitely.
+        // Counters expire naturally via the 30s cooldown in the inline script.
         if (isWeb && typeof window !== 'undefined') {
           try {
             const url = new URL(window.location.href);
             if (url.searchParams.has('_cb')) {
               url.searchParams.delete('_cb');
-              window.history.replaceState(window.history.state, '', url.toString());
+              // Use the native replaceState to bypass our patched version,
+              // which would convert this to pushState or trigger hardNavigateIfPending.
+              History.prototype.replaceState.call(window.history, window.history.state, '', url.toString());
             }
-            // Page loaded successfully — reset all stale-chunk retry counters
-            sessionStorage.removeItem('metravel:eb:reload_ts');
-            sessionStorage.removeItem('metravel:eb:reload_count');
-            sessionStorage.removeItem('__metravel_chunk_reload');
-            sessionStorage.removeItem('__metravel_chunk_reload_count');
-            sessionStorage.removeItem('__metravel_sw_stale_reload');
-            sessionStorage.removeItem('__metravel_sw_stale_reload_count');
           } catch { /* noop */ }
         }
 
@@ -378,9 +374,11 @@ export default function RootLayout() {
           try {
             const staleTs = sessionStorage.getItem('__metravel_sw_stale_reload');
             const chunkTs = sessionStorage.getItem('__metravel_chunk_reload');
+            const ebTs = sessionStorage.getItem('metravel:eb:reload_ts');
             const now = Date.now();
             if (staleTs && now - parseInt(staleTs, 10) < 60000) return;
             if (chunkTs && now - parseInt(chunkTs, 10) < 60000) return;
+            if (ebTs && now - parseInt(ebTs, 10) < 60000) return;
           } catch { /* sessionStorage unavailable */ }
           (window as any).__metravelUpdatePending = true;
         };
