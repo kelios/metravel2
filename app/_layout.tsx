@@ -44,6 +44,14 @@ const isWeb = Platform.OS === "web";
  *  from SW events to prevent redirect loops (especially on mobile Safari). */
 const HARD_NAV_TS_KEY = '__metravel_hard_nav_ts';
 
+/** Timestamp of when this JS module was first evaluated (≈ page load).
+ *  Used to suppress hardNavigateIfPending during the initial routing phase
+ *  so Expo Router can finish setting up routes without being redirected. */
+const PAGE_LOAD_TS = Date.now();
+/** Grace period (ms) after page load during which hardNavigateIfPending is a no-op.
+ *  10 s is long enough for Expo Router to finish initial routing + SW to settle. */
+const HARD_NAV_GRACE_MS = 10_000;
+
 const useAppFonts: any = isWeb
   ? () => [true, null]
   : require('expo-font').useFonts;
@@ -288,6 +296,11 @@ export default function RootLayout() {
       const hardNavigateIfPending = (url?: string | URL | null): boolean => {
         if (!(window as any).__metravelUpdatePending) return false;
         if (url == null) return false;
+        // Don't intercept navigation during the initial page-load grace period.
+        // The JS is already loaded (fresh or stale); a hard navigate now would
+        // just redirect the user away from the page they requested (e.g. /map → /).
+        // Stale chunks are handled separately by ErrorBoundary / inline scripts.
+        if (Date.now() - PAGE_LOAD_TS < HARD_NAV_GRACE_MS) return false;
         try {
           const resolved = new URL(String(url), window.location.href);
           // Only intercept same-origin navigations to a different path.
