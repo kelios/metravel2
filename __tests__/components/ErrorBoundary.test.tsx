@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { Text } from 'react-native';
 
@@ -11,13 +11,14 @@ jest.mock('@/utils/logger', () => ({
 // Mock window.location.reload for web platform stale-chunk tests.
 // Do NOT overwrite global.window — jsdom already provides it and other tests depend on it.
 const mockReload = jest.fn();
+const mockReplace = jest.fn();
 let origLocation: Location;
 
 beforeAll(() => {
   origLocation = (global as any).window?.location;
   // @ts-ignore – jsdom location is not configurable by default
   delete ((global as any).window as any).location;
-  (global as any).window.location = { ...origLocation, reload: mockReload };
+  (global as any).window.location = { ...origLocation, reload: mockReload, replace: mockReplace };
 });
 
 afterAll(() => {
@@ -144,6 +145,7 @@ describe('ErrorBoundary', () => {
       origPlatformOS = Platform.OS;
       Platform.OS = 'web';
       delete (global as any).window.__metravelModuleReloadTriggered;
+      sessionStorage.clear();
       // Provide minimal stubs for caches + navigator.serviceWorker used by cleanup()
       (global as any).caches = { keys: jest.fn().mockResolvedValue([]), delete: jest.fn() };
       (global as any).navigator = {
@@ -155,6 +157,7 @@ describe('ErrorBoundary', () => {
     afterEach(() => {
       Platform.OS = origPlatformOS;
       delete (global as any).window.__metravelModuleReloadTriggered;
+      mockReplace.mockReset();
     });
 
     const staleChunkMessages = [
@@ -208,9 +211,72 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
+    it('should run emergency deep recovery when stale retry budget is exhausted', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      const now = Date.now();
+      sessionStorage.setItem('metravel:eb:reload_count', '3');
+      sessionStorage.setItem('metravel:eb:reload_ts', String(now));
+
+      const cacheDelete = jest.fn().mockResolvedValue(true);
+      (global as any).caches = {
+        keys: jest.fn().mockResolvedValue(['metravel-static-v1', 'third-party-cache']),
+        delete: cacheDelete,
+      };
+
+      const ThrowChunkError = () => {
+        throw new Error('ChunkLoadError: Loading chunk 42 failed.');
+      };
+
+      render(
+        <ErrorBoundary>
+          <ThrowChunkError />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        expect(cacheDelete).toHaveBeenCalledWith('third-party-cache');
+      });
+
+      expect(sessionStorage.getItem('__metravel_emergency_recovery_ts')).toBeTruthy();
+      expect(mockReplace).toHaveBeenCalled();
+
+      console.error = consoleError;
+    });
+
+    it('should run one-shot emergency recovery for likely React #130 stale mismatch', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      const cacheDelete = jest.fn().mockResolvedValue(true);
+      (global as any).caches = {
+        keys: jest.fn().mockResolvedValue(['third-party-cache']),
+        delete: cacheDelete,
+      };
+
+      const ThrowReact130 = () => {
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+      };
+
+      render(
+        <ErrorBoundary>
+          <ThrowReact130 />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        expect(cacheDelete).toHaveBeenCalledWith('third-party-cache');
+      });
+
+      expect(sessionStorage.getItem('__metravel_emergency_recovery_ts')).toBeTruthy();
+      expect(mockReplace).toHaveBeenCalled();
+
+      console.error = consoleError;
+    });
+
     it.each([
       'Test error',
-      'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
       'Element type is invalid: expected a string (for built-in components) or a class/function but got: undefined',
     ])('should NOT trigger reload for non-stale errors: %s', (message) => {
       const consoleError = console.error;

@@ -329,6 +329,64 @@ export default function RootLayout() {
 
       // --- Service Worker registration + update listener ---
       if ('serviceWorker' in navigator) {
+        const GLOBAL_EMERGENCY_KEY = '__metravel_emergency_recovery_ts';
+        const GLOBAL_EMERGENCY_COOLDOWN = 5 * 60 * 1000;
+
+        const clearRecoverySessionKeys = (clearEmergencyKey = false) => {
+          try {
+            sessionStorage.removeItem('metravel:eb:reload_ts');
+            sessionStorage.removeItem('metravel:eb:reload_count');
+            sessionStorage.removeItem('__metravel_chunk_reload');
+            sessionStorage.removeItem('__metravel_chunk_reload_count');
+            sessionStorage.removeItem('__metravel_sw_stale_reload');
+            sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+            if (clearEmergencyKey) {
+              sessionStorage.removeItem(GLOBAL_EMERGENCY_KEY);
+            }
+          } catch { /* noop */ }
+        };
+
+        const tryEmergencyRecovery = () => {
+          try {
+            const now = Date.now();
+            const prevRaw = sessionStorage.getItem(GLOBAL_EMERGENCY_KEY);
+            const prev = prevRaw ? Number(prevRaw) : 0;
+            const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
+            if (elapsed < GLOBAL_EMERGENCY_COOLDOWN) return false;
+            sessionStorage.setItem(GLOBAL_EMERGENCY_KEY, String(now));
+          } catch {
+            // If sessionStorage is unavailable, still attempt one deep cleanup.
+          }
+          clearRecoverySessionKeys();
+          return true;
+        };
+
+        const triggerStaleRecovery = (purgeAllCaches = false) => {
+          const cleanup = async () => {
+            try {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map((r) => r.unregister()));
+            } catch { /* noop */ }
+            try {
+              const keys = await caches.keys();
+              const keysToDelete = purgeAllCaches
+                ? keys
+                : keys.filter((k) => k.startsWith('metravel-'));
+              await Promise.all(keysToDelete.map((k) => caches.delete(k)));
+            } catch { /* noop */ }
+          };
+
+          cleanup().catch(() => {}).finally(() => {
+            try {
+              const cbUrl = new URL(window.location.href);
+              cbUrl.searchParams.set('_cb', String(Date.now()));
+              window.location.replace(cbUrl.toString());
+            } catch {
+              window.location.reload();
+            }
+          });
+        };
+
         // SW_PENDING_UPDATE: new SW activated after a normal deploy.
         // We defer the reload to the next navigation so the user isn't interrupted.
         // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
@@ -344,14 +402,18 @@ export default function RootLayout() {
             const STALE_MAX_RETRIES = 2;
             try {
               let retryCount = parseInt(sessionStorage.getItem(STALE_COUNT_KEY) || '0', 10);
-              const last = sessionStorage.getItem(STALE_KEY);
-              const elapsed = last ? Date.now() - parseInt(last, 10) : Infinity;
+              const lastRaw = sessionStorage.getItem(STALE_KEY);
+              const last = lastRaw ? Number(lastRaw) : 0;
+              const elapsed = (last && Number.isFinite(last)) ? Date.now() - last : Infinity;
               // Reset counters after cooldown so users aren't permanently stuck
               if (retryCount >= STALE_MAX_RETRIES) {
                 if (elapsed >= STALE_COOLDOWN) {
                   retryCount = 0;
                   sessionStorage.setItem(STALE_COUNT_KEY, '0');
                 } else {
+                  if (tryEmergencyRecovery()) {
+                    triggerStaleRecovery(true);
+                  }
                   return;
                 }
               }
@@ -359,13 +421,7 @@ export default function RootLayout() {
               sessionStorage.setItem(STALE_KEY, Date.now().toString());
               sessionStorage.setItem(STALE_COUNT_KEY, String(retryCount + 1));
             } catch { /* sessionStorage unavailable */ }
-            try {
-              const cbUrl = new URL(window.location.href);
-              cbUrl.searchParams.set('_cb', String(Date.now()));
-              window.location.replace(cbUrl.toString());
-            } catch {
-              window.location.reload();
-            }
+            triggerStaleRecovery();
           }
         };
         navigator.serviceWorker.addEventListener('message', onSWMessage);

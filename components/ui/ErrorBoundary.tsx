@@ -18,6 +18,23 @@ interface State {
   recoveryExhausted?: boolean;
 }
 
+const EMERGENCY_RECOVERY_KEY = '__metravel_emergency_recovery_ts';
+const EMERGENCY_RECOVERY_COOLDOWN = 5 * 60 * 1000;
+
+function clearRecoverySessionKeys(clearEmergencyKey = false): void {
+  try {
+    sessionStorage.removeItem('metravel:eb:reload_ts');
+    sessionStorage.removeItem('metravel:eb:reload_count');
+    sessionStorage.removeItem('__metravel_chunk_reload');
+    sessionStorage.removeItem('__metravel_chunk_reload_count');
+    sessionStorage.removeItem('__metravel_sw_stale_reload');
+    sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+    if (clearEmergencyKey) {
+      sessionStorage.removeItem(EMERGENCY_RECOVERY_KEY);
+    }
+  } catch { /* noop */ }
+}
+
 /** Shared detection for stale-chunk / module-mismatch errors after deploy. */
 function isStaleModuleError(msg: string, name?: string): boolean {
   return (
@@ -34,8 +51,16 @@ function isStaleModuleError(msg: string, name?: string): boolean {
   );
 }
 
-/** Unregister SW, purge metravel caches, then hard-navigate with cache-busting. */
-function doStaleChunkRecovery(): void {
+/** Conservative one-shot heuristic for stale bundles that surface as React #130 in prod. */
+function isLikelyReact130ModuleMismatch(msg: string): boolean {
+  return (
+    /Minified React error #130/i.test(msg) &&
+    /args\[\]=undefined/i.test(msg)
+  );
+}
+
+/** Unregister SW, purge caches, then hard-navigate with cache-busting. */
+function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void {
   const cleanup = async () => {
     try {
       if ('serviceWorker' in navigator) {
@@ -45,9 +70,10 @@ function doStaleChunkRecovery(): void {
     } catch { /* noop */ }
     try {
       const keys = await caches.keys();
-      await Promise.all(
-        keys.filter((k) => k.startsWith('metravel-')).map((k) => caches.delete(k)),
-      );
+      const keysToDelete = options.purgeAllCaches
+        ? keys
+        : keys.filter((k) => k.startsWith('metravel-'));
+      await Promise.all(keysToDelete.map((k) => caches.delete(k)));
     } catch { /* noop */ }
   };
   cleanup().catch(() => {}).finally(() => {
@@ -87,15 +113,15 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
 
     const msg = String(error?.message ?? '');
+    const EB_KEY = 'metravel:eb:reload_ts';
+    const EB_COUNT_KEY = 'metravel:eb:reload_count';
+    const EB_COOLDOWN = 30000;
+    const MAX_EB_RETRIES = 3;
 
     const shouldReload = () => {
       if ((window as any).__metravelModuleReloadTriggered) return false;
       (window as any).__metravelModuleReloadTriggered = true;
       try {
-        const EB_KEY = 'metravel:eb:reload_ts';
-        const EB_COUNT_KEY = 'metravel:eb:reload_count';
-        const EB_COOLDOWN = 30000;
-        const MAX_EB_RETRIES = 3;
         const now = Date.now();
 
         // Check retry counter — give up after MAX_EB_RETRIES to prevent infinite loops
@@ -123,6 +149,22 @@ export default class ErrorBoundary extends Component<Props, State> {
       return true;
     };
 
+    const tryEmergencyRecovery = () => {
+      try {
+        const now = Date.now();
+        const prevRaw = sessionStorage.getItem(EMERGENCY_RECOVERY_KEY);
+        const prev = prevRaw ? Number(prevRaw) : 0;
+        const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
+        if (elapsed < EMERGENCY_RECOVERY_COOLDOWN) return false;
+        sessionStorage.setItem(EMERGENCY_RECOVERY_KEY, String(now));
+      } catch {
+        // If sessionStorage is unavailable, still try one deep cleanup.
+      }
+      clearRecoverySessionKeys();
+      doStaleChunkRecovery({ purgeAllCaches: true });
+      return true;
+    };
+
     // Auto-recover from stale-bundle module mismatch errors.
     // When the SW serves cached JS chunks from a previous build, module IDs can
     // shift and named exports resolve to undefined (e.g. "useFilters is not a function").
@@ -133,11 +175,20 @@ export default class ErrorBoundary extends Component<Props, State> {
     ) {
       if (isStaleModuleError(msg, error?.name)) {
         if (!shouldReload()) {
+          if (tryEmergencyRecovery()) {
+            return;
+          }
           this.setState({ recoveryExhausted: true });
           return;
         }
         doStaleChunkRecovery();
         return; // skip further recovery attempts
+      }
+
+      // #130 with undefined args can be a stale module/chunk mismatch on production.
+      // Run one deep auto-recovery attempt with long cooldown to avoid loops.
+      if (isLikelyReact130ModuleMismatch(msg) && tryEmergencyRecovery()) {
+        return;
       }
     }
 
@@ -183,20 +234,13 @@ export default class ErrorBoundary extends Component<Props, State> {
               <View style={styles.content}>
                 <Text style={styles.title}>Не удалось загрузить обновление</Text>
                 <Text style={styles.message}>
-                  Попробуйте перезагрузить страницу. Если проблема сохраняется, очистите кэш браузера.
+                  Мы уже попробовали автоматическое восстановление. Нажмите кнопку ниже, чтобы запустить его повторно.
                 </Text>
                 <Button
                   label="Перезагрузить страницу"
                   onPress={() => {
-                    try {
-                      sessionStorage.removeItem('metravel:eb:reload_ts');
-                      sessionStorage.removeItem('metravel:eb:reload_count');
-                      sessionStorage.removeItem('__metravel_chunk_reload');
-                      sessionStorage.removeItem('__metravel_chunk_reload_count');
-                      sessionStorage.removeItem('__metravel_sw_stale_reload');
-                      sessionStorage.removeItem('__metravel_sw_stale_reload_count');
-                    } catch { /* noop */ }
-                    doStaleChunkRecovery();
+                    clearRecoverySessionKeys(true);
+                    doStaleChunkRecovery({ purgeAllCaches: true });
                   }}
                   style={[styles.button, styles.primaryButton]}
                   accessibilityLabel="Перезагрузить страницу"
@@ -215,14 +259,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               <Button
                 label="Перезагрузить"
                 onPress={() => {
-                  try {
-                    sessionStorage.removeItem('metravel:eb:reload_ts');
-                    sessionStorage.removeItem('metravel:eb:reload_count');
-                    sessionStorage.removeItem('__metravel_chunk_reload');
-                    sessionStorage.removeItem('__metravel_chunk_reload_count');
-                    sessionStorage.removeItem('__metravel_sw_stale_reload');
-                    sessionStorage.removeItem('__metravel_sw_stale_reload_count');
-                  } catch { /* noop */ }
+                  clearRecoverySessionKeys(true);
                   doStaleChunkRecovery();
                 }}
                 variant="ghost"
@@ -248,13 +285,8 @@ export default class ErrorBoundary extends Component<Props, State> {
                   const errMsg = String(this.state.error?.message ?? '');
                   if (isStaleModuleError(errMsg, this.state.error?.name)) {
                     // Reset retry counters so the manual retry always works
-                    try {
-                      sessionStorage.removeItem('metravel:eb:reload_ts');
-                      sessionStorage.removeItem('metravel:eb:reload_count');
-                      sessionStorage.removeItem('__metravel_chunk_reload');
-                      sessionStorage.removeItem('__metravel_chunk_reload_count');
-                    } catch { /* noop */ }
-                    doStaleChunkRecovery();
+                    clearRecoverySessionKeys(true);
+                    doStaleChunkRecovery({ purgeAllCaches: true });
                     return;
                   }
                 }
@@ -268,15 +300,8 @@ export default class ErrorBoundary extends Component<Props, State> {
                 label="Перезагрузить страницу"
                 onPress={() => {
                   // Reset ALL retry counters and do full cleanup + cache-busting reload
-                  try {
-                    sessionStorage.removeItem('metravel:eb:reload_ts');
-                    sessionStorage.removeItem('metravel:eb:reload_count');
-                    sessionStorage.removeItem('__metravel_chunk_reload');
-                    sessionStorage.removeItem('__metravel_chunk_reload_count');
-                    sessionStorage.removeItem('__metravel_sw_stale_reload');
-                    sessionStorage.removeItem('__metravel_sw_stale_reload_count');
-                  } catch { /* noop */ }
-                  doStaleChunkRecovery();
+                  clearRecoverySessionKeys(true);
+                  doStaleChunkRecovery({ purgeAllCaches: true });
                 }}
                 variant="ghost"
                 style={[styles.button, styles.secondaryButton]}
