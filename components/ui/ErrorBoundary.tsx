@@ -16,6 +16,54 @@ interface State {
   error: Error | null;
 }
 
+/** Shared detection for stale-chunk / module-mismatch errors after deploy. */
+function isStaleModuleError(msg: string, name?: string): boolean {
+  return (
+    msg.includes('is not a function') ||
+    msg.includes('is undefined') ||
+    msg.includes('Requiring unknown module') ||
+    msg.includes('iterable') ||
+    msg.includes('is not iterable') ||
+    msg.includes('spread') ||
+    /Minified React error #130/i.test(msg) ||
+    /Minified React error #423/i.test(msg) ||
+    /Element type is invalid.*expected a string.*but got.*undefined/i.test(msg) ||
+    /loading module.*failed/i.test(msg) ||
+    /failed to fetch dynamically imported module/i.test(msg) ||
+    /ChunkLoadError/i.test(msg) ||
+    name === 'AsyncRequireError'
+  );
+}
+
+/** Unregister SW, purge metravel caches, then hard-navigate with cache-busting. */
+function doStaleChunkRecovery(): void {
+  const cleanup = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch { /* noop */ }
+    try {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((k) => k.startsWith('metravel-')).map((k) => caches.delete(k)),
+      );
+    } catch { /* noop */ }
+  };
+  cleanup().catch(() => {}).finally(() => {
+    // Navigate with cache-busting param to bypass browser HTTP cache.
+    // This ensures the server returns fresh HTML with new chunk hashes.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_cb', String(Date.now()));
+      window.location.replace(url.toString());
+    } catch {
+      window.location.reload();
+    }
+  });
+}
+
 export default class ErrorBoundary extends Component<Props, State> {
   static contextType = ThemeContext;
   override context: React.ContextType<typeof ThemeContext> | null = null;
@@ -45,16 +93,23 @@ export default class ErrorBoundary extends Component<Props, State> {
       if ((window as any).__metravelModuleReloadTriggered) return false;
       (window as any).__metravelModuleReloadTriggered = true;
       try {
-        // Use a separate key from the SW_UPDATED handler (metravel:sw:reload_ts)
-        // so the 60s SW cooldown doesn't block ErrorBoundary recovery.
-        const key = 'metravel:eb:reload_ts';
+        const EB_KEY = 'metravel:eb:reload_ts';
+        const EB_COUNT_KEY = 'metravel:eb:reload_count';
+        const EB_COOLDOWN = 30000;
+        const MAX_EB_RETRIES = 3;
         const now = Date.now();
-        const prevRaw = sessionStorage.getItem(key);
+
+        // Check retry counter — give up after MAX_EB_RETRIES to prevent infinite loops
+        const count = parseInt(sessionStorage.getItem(EB_COUNT_KEY) || '0', 10);
+        if (count >= MAX_EB_RETRIES) return false;
+
+        // Check cooldown — don't reload more than once per 30s
+        const prevRaw = sessionStorage.getItem(EB_KEY);
         const prev = prevRaw ? Number(prevRaw) : 0;
-        if (prev && Number.isFinite(prev) && now - prev < 30000) return false;
-        sessionStorage.setItem(key, String(now));
-        sessionStorage.setItem('metravel:sw:reload_url', window.location.href);
-        sessionStorage.removeItem('metravel:sw:recovered');
+        if (prev && Number.isFinite(prev) && now - prev < EB_COOLDOWN) return false;
+
+        sessionStorage.setItem(EB_KEY, String(now));
+        sessionStorage.setItem(EB_COUNT_KEY, String(count + 1));
       } catch { /* noop */ }
       return true;
     };
@@ -62,48 +117,14 @@ export default class ErrorBoundary extends Component<Props, State> {
     // Auto-recover from stale-bundle module mismatch errors.
     // When the SW serves cached JS chunks from a previous build, module IDs can
     // shift and named exports resolve to undefined (e.g. "useFilters is not a function").
-    // Unregister the SW, purge JS caches, and hard-reload once.
+    // Unregister the SW, purge JS caches, and hard-navigate with cache-busting.
     if (
       Platform.OS === 'web' &&
       typeof window !== 'undefined'
     ) {
-      const isModuleError =
-        msg.includes('is not a function') ||
-        msg.includes('is undefined') ||
-        msg.includes('Requiring unknown module') ||
-        msg.includes('iterable') ||
-        msg.includes('is not iterable') ||
-        msg.includes('spread') ||
-        /Minified React error #130/i.test(msg) ||
-        /Element type is invalid.*expected a string.*but got.*undefined/i.test(msg) ||
-        /loading module.*failed/i.test(msg) ||
-        /failed to fetch dynamically imported module/i.test(msg) ||
-        /ChunkLoadError/i.test(msg) ||
-        (error?.name === 'AsyncRequireError');
-      if (isModuleError) {
+      if (isStaleModuleError(msg, error?.name)) {
         if (!shouldReload()) return;
-        const cleanup = async () => {
-          try {
-            if ('serviceWorker' in navigator) {
-              const regs = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(regs.map((r) => r.unregister()));
-            }
-          } catch { /* noop */ }
-          try {
-            const keys = await caches.keys();
-            await Promise.all(
-              keys.filter((k) => k.startsWith('metravel-')).map((k) => caches.delete(k)),
-            );
-          } catch { /* noop */ }
-        };
-        cleanup().finally(() => {
-          try {
-            // Clear SW reload cooldown so SW_UPDATED handler can fire on next load
-            sessionStorage.removeItem('metravel:sw:reload_ts');
-            sessionStorage.removeItem('metravel:eb:reload_ts');
-          } catch { /* noop */ }
-          window.location.reload();
-        });
+        doStaleChunkRecovery();
         return; // skip further recovery attempts
       }
     }
@@ -151,25 +172,16 @@ export default class ErrorBoundary extends Component<Props, State> {
               label="Попробовать снова"
               onPress={() => {
                 if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                  const isModuleErr =
-                    this.state.error?.message?.includes('is not a function') ||
-                    this.state.error?.message?.includes('is undefined') ||
-                    this.state.error?.message?.includes('Requiring unknown module') ||
-                    this.state.error?.name === 'AsyncRequireError';
-                  if (isModuleErr) {
-                    const unregSW = 'serviceWorker' in navigator
-                      ? navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))
-                      : Promise.resolve();
-                    const purge = typeof caches !== 'undefined'
-                      ? caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('metravel-')).map((k) => caches.delete(k))))
-                      : Promise.resolve();
-                    Promise.all([unregSW, purge]).catch(() => {}).finally(() => {
-                      try {
-                        sessionStorage.removeItem('metravel:sw:reload_ts');
-                        sessionStorage.removeItem('metravel:eb:reload_ts');
-                      } catch { /* noop */ }
-                      location.reload();
-                    });
+                  const errMsg = String(this.state.error?.message ?? '');
+                  if (isStaleModuleError(errMsg, this.state.error?.name)) {
+                    // Reset retry counters so the manual retry always works
+                    try {
+                      sessionStorage.removeItem('metravel:eb:reload_ts');
+                      sessionStorage.removeItem('metravel:eb:reload_count');
+                      sessionStorage.removeItem('__metravel_chunk_reload');
+                      sessionStorage.removeItem('__metravel_chunk_reload_count');
+                    } catch { /* noop */ }
+                    doStaleChunkRecovery();
                     return;
                   }
                 }
@@ -182,14 +194,16 @@ export default class ErrorBoundary extends Component<Props, State> {
               <Button
                 label="Перезагрузить страницу"
                 onPress={() => {
-                  // Unregister SW + purge all caches to break stale chunk cycle
-                  const unregSW = 'serviceWorker' in navigator
-                    ? navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))
-                    : Promise.resolve();
-                  const purge = typeof caches !== 'undefined'
-                    ? caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k))))
-                    : Promise.resolve();
-                  Promise.all([unregSW, purge]).catch(() => {}).finally(() => { location.reload(); });
+                  // Reset ALL retry counters and do full cleanup + cache-busting reload
+                  try {
+                    sessionStorage.removeItem('metravel:eb:reload_ts');
+                    sessionStorage.removeItem('metravel:eb:reload_count');
+                    sessionStorage.removeItem('__metravel_chunk_reload');
+                    sessionStorage.removeItem('__metravel_chunk_reload_count');
+                    sessionStorage.removeItem('__metravel_sw_stale_reload');
+                    sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+                  } catch { /* noop */ }
+                  doStaleChunkRecovery();
                 }}
                 variant="ghost"
                 style={[styles.button, styles.secondaryButton]}

@@ -143,6 +143,26 @@ export default function RootLayout() {
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
         let rafId: number | null = null;
 
+        // If the page loaded successfully after a stale-chunk recovery, clean up:
+        // 1. Strip the _cb cache-busting param from the URL
+        // 2. Reset retry counters so future deploys can recover again
+        if (isWeb && typeof window !== 'undefined') {
+          try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('_cb')) {
+              url.searchParams.delete('_cb');
+              window.history.replaceState(window.history.state, '', url.toString());
+            }
+            // Page loaded successfully — reset all stale-chunk retry counters
+            sessionStorage.removeItem('metravel:eb:reload_ts');
+            sessionStorage.removeItem('metravel:eb:reload_count');
+            sessionStorage.removeItem('__metravel_chunk_reload');
+            sessionStorage.removeItem('__metravel_chunk_reload_count');
+            sessionStorage.removeItem('__metravel_sw_stale_reload');
+            sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+          } catch { /* noop */ }
+        }
+
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
@@ -334,7 +354,13 @@ export default function RootLayout() {
               sessionStorage.setItem(STALE_KEY, Date.now().toString());
               sessionStorage.setItem(STALE_COUNT_KEY, String(retryCount + 1));
             } catch { /* sessionStorage unavailable */ }
-            window.location.reload();
+            try {
+              const cbUrl = new URL(window.location.href);
+              cbUrl.searchParams.set('_cb', String(Date.now()));
+              window.location.replace(cbUrl.toString());
+            } catch {
+              window.location.reload();
+            }
           }
         };
         navigator.serviceWorker.addEventListener('message', onSWMessage);
