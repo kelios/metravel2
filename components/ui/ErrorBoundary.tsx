@@ -40,6 +40,10 @@ function isReact130LikeError(msg: string): boolean {
   return /Minified React error #130/i.test(msg) || /Element type is invalid/i.test(msg);
 }
 
+function isReact130UndefinedArgsError(msg: string): boolean {
+  return /react\.dev\/errors\/130\?[^\s]*args\[\]=undefined/i.test(msg);
+}
+
 function shouldAttemptReact130Recovery(): boolean {
   return shouldAllowRecoveryAttempt({
     timestampKey: REACT_130_RECOVERY_TS_KEY,
@@ -208,16 +212,29 @@ export default class ErrorBoundary extends Component<Props, State> {
       if (isReact130LikeError(msg)) {
         if (isAlreadyInRecoveryLoop()) return;
 
+        const hasSwController =
+          typeof navigator !== 'undefined' &&
+          !!(navigator as any)?.serviceWorker?.controller;
+
+        const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
+
         void hasFreshHtmlBundleMismatch()
           .then((hasMismatch) => {
-            if (!hasMismatch) return;
+            if (!hasMismatch && !(isUndefinedArgs130 && hasSwController)) return;
             if ((window as any).__metravelModuleReloadTriggered) return;
             if (!shouldAttemptReact130Recovery()) return;
             (window as any).__metravelModuleReloadTriggered = true;
             clearRecoverySessionKeys(true, true);
             doStaleChunkRecovery({ purgeAllCaches: true });
           })
-          .catch(() => {});
+          .catch(() => {
+            if (!isUndefinedArgs130 || !hasSwController) return;
+            if ((window as any).__metravelModuleReloadTriggered) return;
+            if (!shouldAttemptReact130Recovery()) return;
+            (window as any).__metravelModuleReloadTriggered = true;
+            clearRecoverySessionKeys(true, true);
+            doStaleChunkRecovery({ purgeAllCaches: true });
+          });
       }
 
       // Intentionally avoid auto-recovery for generic React #130 errors.

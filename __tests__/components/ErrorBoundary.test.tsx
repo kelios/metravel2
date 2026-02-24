@@ -233,9 +233,17 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should NOT classify React #130 args[]=undefined as stale chunk (prevents false-positive cache purge loops)', async () => {
+    it('should NOT auto-recover for React #130 args[]=undefined when no SW controller is present and HTML bundle scripts match', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
+
+      (global as any).navigator = {
+        ...(global as any).navigator,
+        serviceWorker: {
+          ...(global as any).navigator?.serviceWorker,
+          controller: undefined,
+        },
+      };
 
       (global as any).fetch = jest.fn().mockResolvedValue({
         ok: true,
