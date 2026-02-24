@@ -6,26 +6,27 @@ type RuntimeRecoveryOptions = {
 };
 
 /**
- * Simple reload without _cb parameter.
- * SW already uses network-first with cache:'no-store' for documents,
- * so a plain reload fetches fresh HTML from server.
- * Removes any existing _cb parameter to clean up URLs.
+ * Hard reload with cache-busting to bypass browser HTTP cache.
+ * 
+ * Problem: JS files served with `Cache-Control: immutable` stay in browser
+ * HTTP cache even after SW unregister + Cache Storage purge. A simple
+ * `location.reload()` still loads stale JS from HTTP cache.
+ * 
+ * Solution: Navigate to a URL with a fresh `_cb` timestamp parameter.
+ * This forces the browser to fetch fresh HTML (which references new JS chunks).
+ * The new JS chunk URLs have different hashes, so they bypass HTTP cache.
  */
-function navigateClean(): void {
+function navigateWithCacheBust(): void {
   if (typeof window === 'undefined') return;
   
   try {
-    // Remove _cb parameter if present to clean up URL
     const url = new URL(window.location.href);
-    if (url.searchParams.has('_cb')) {
-      url.searchParams.delete('_cb');
-      window.location.replace(url.toString());
-      return;
-    }
-    // Simple reload - SW handles cache bypass
-    window.location.reload();
+    // Always set fresh cache-bust parameter to force new HTML fetch
+    url.searchParams.set('_cb', String(Date.now()));
+    window.location.replace(url.toString());
   } catch {
     try {
+      // Fallback: simple reload (may not bypass HTTP cache)
       window.location.reload();
     } catch { /* noop */ }
   }
@@ -70,7 +71,7 @@ export function runStaleChunkRecovery(
     (window as any).__metravelModuleReloadTriggered = true;
   }
 
-  const safetyTimer = setTimeout(navigateClean, safetyTimeoutMs);
+  const safetyTimer = setTimeout(navigateWithCacheBust, safetyTimeoutMs);
 
   Promise.all([
     unregisterAllServiceWorkers(),
@@ -79,6 +80,6 @@ export function runStaleChunkRecovery(
     .catch(() => {})
     .finally(() => {
       clearTimeout(safetyTimer);
-      navigateClean();
+      navigateWithCacheBust();
     });
 }
