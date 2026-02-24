@@ -1,10 +1,14 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import { Dimensions, LayoutAnimation } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getFiltersPanelStyles } from '@/components/MapPage/filtersPanelStyles';
+import * as filtersPanelStylesModule from '@/components/MapPage/filtersPanelStyles';
 import { showRouteModeTip, showFiltersResetToast } from '@/utils/mapToasts';
 import { useRouteStore } from '@/stores/routeStore';
 import type { RoutePoint } from '@/types/route';
+
+const getFiltersPanelStylesSafe =
+  (filtersPanelStylesModule as any).getFiltersPanelStyles ??
+  (filtersPanelStylesModule as any).default;
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 
@@ -50,7 +54,10 @@ const useFiltersPanelModel = ({
   const windowWidth = Dimensions.get('window').width;
   const colors = useThemedColors();
   const styles = useMemo(
-    () => getFiltersPanelStyles(colors, isMobile, windowWidth) as any,
+    () =>
+      typeof getFiltersPanelStylesSafe === 'function'
+        ? (getFiltersPanelStylesSafe(colors, isMobile, windowWidth) as any)
+        : ({} as any),
     [colors, isMobile, windowWidth]
   );
 

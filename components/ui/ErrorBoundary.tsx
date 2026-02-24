@@ -110,7 +110,7 @@ function isAlreadyInRecoveryLoop(): boolean {
 }
 
 /** Unregister SW, purge caches, then hard-navigate with cache-busting. */
-function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void {
+function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = { purgeAllCaches: true }): void {
   const navigate = () => {
     try {
       const url = new URL(window.location.href);
@@ -133,9 +133,9 @@ function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void 
     } catch { /* noop */ }
     try {
       const keys = await caches.keys();
-      const keysToDelete = options.purgeAllCaches
-        ? keys
-        : keys.filter((k) => k.startsWith('metravel-'));
+      const keysToDelete = options.purgeAllCaches === false
+        ? keys.filter((k) => k.startsWith('metravel-'))
+        : keys;
       await Promise.all(keysToDelete.map((k) => caches.delete(k)));
     } catch { /* noop */ }
   };
@@ -166,9 +166,6 @@ export default class ErrorBoundary extends Component<Props, State> {
   private scheduleExhaustedAutoRecovery = () => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     if (this._exhaustedAutoRetryTimer != null) return;
-    // If _cb is already in URL, a previous recovery cycle didn't help.
-    // Do NOT auto-retry — the error is likely a real bug, not stale cache.
-    if (isAlreadyInRecoveryLoop()) return;
     if (!shouldScheduleExhaustedAutoRetry()) return;
 
     this._exhaustedAutoRetryTimer = setTimeout(() => {
@@ -259,9 +256,12 @@ export default class ErrorBoundary extends Component<Props, State> {
     ) {
       if (isStaleModuleError(msg, error?.name)) {
         // If the URL already has _cb, a previous recovery cycle didn't help.
-        // Don't auto-retry — let the user see an actionable error instead.
+        // Try one deep emergency recovery before surfacing fallback UI.
         if (isAlreadyInRecoveryLoop()) {
-          this.setState({ recoveryExhausted: true });
+          if (tryEmergencyRecovery()) {
+            return;
+          }
+          this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
           return;
         }
         if (!shouldReload()) {
@@ -282,9 +282,9 @@ export default class ErrorBoundary extends Component<Props, State> {
           return;
         }
         // Emergency recovery failed (cooldown). If _cb is already in URL,
-        // recovery already ran and didn't help — show actionable error immediately.
+        // recovery already ran recently and didn't help — schedule one more auto-attempt.
         if (isAlreadyInRecoveryLoop()) {
-          this.setState({ recoveryExhausted: true });
+          this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
           return;
         }
       }
@@ -334,7 +334,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                 <Text style={styles.title}>Не удалось загрузить обновление</Text>
                 <Text style={styles.message}>
                   {inLoop
-                    ? 'Автоматическое восстановление не помогло. Нажмите кнопку ниже или очистите кеш браузера вручную.'
+                    ? 'Автоматическое восстановление продолжается. Если экран не обновится, нажмите кнопку ниже.'
                     : 'Запускаем повторное автоматическое восстановление. Если через несколько секунд экран не обновится, нажмите кнопку ниже.'}
                 </Text>
                 <Button

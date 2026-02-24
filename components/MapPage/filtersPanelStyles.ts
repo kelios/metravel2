@@ -760,3 +760,5 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
   });
 };
+
+export default getFiltersPanelStyles;

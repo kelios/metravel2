@@ -3,7 +3,10 @@
 import { renderHook, act } from '@testing-library/react-native'
 import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
-import { useSingleTravelExport, buildDefaultSettingsForTravel } from '@/components/travel/hooks/useSingleTravelExport'
+import useSingleTravelExportDefault, {
+  useSingleTravelExport,
+  buildDefaultSettingsForTravel,
+} from '@/components/travel/hooks/useSingleTravelExport'
 
 const mockOpenPrintBook = jest.fn(() => Promise.resolve())
 
@@ -27,6 +30,10 @@ const baseTravel = {
 describe('useSingleTravelExport', () => {
   beforeEach(() => {
     mockOpenPrintBook.mockClear()
+  })
+
+  it('keeps default export alias for bundle interop safety', () => {
+    expect(useSingleTravelExportDefault).toBe(useSingleTravelExport)
   })
 
   it('buildDefaultSettingsForTravel uses travel meta', () => {

@@ -10,7 +10,9 @@ import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
+import useSingleTravelExportDefault, {
+  useSingleTravelExport as useSingleTravelExportNamed,
+} from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/types/pdf-export';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -28,6 +30,9 @@ interface ShareButtonsProps {
 }
 
 function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
+  const useSingleTravelExport =
+    useSingleTravelExportNamed ?? useSingleTravelExportDefault;
+
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isSticky = variant === 'sticky';

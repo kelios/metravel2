@@ -54,3 +54,5 @@ export function useSingleTravelExport(travel?: Travel) {
     handleOpenPrintBookWithSettings,
   }
 }
+
+export default useSingleTravelExport

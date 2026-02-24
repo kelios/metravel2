@@ -4,7 +4,9 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
-import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport'
+import useSingleTravelExportDefault, {
+  useSingleTravelExport as useSingleTravelExportNamed,
+} from '@/components/travel/hooks/useSingleTravelExport'
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'))
 
@@ -23,6 +25,9 @@ function TravelPdfExportControl({
   actionBtnPressedStyle,
   actionBtnDisabledStyle,
 }: Props) {
+  const useSingleTravelExport =
+    useSingleTravelExportNamed ?? useSingleTravelExportDefault
+
   const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   const { pdfExport, lastSettings, handleOpenPrintBookWithSettings } = useSingleTravelExport(travel)

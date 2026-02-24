@@ -335,6 +335,8 @@ export default function RootLayout() {
             sessionStorage.removeItem('__metravel_chunk_reload_count');
             sessionStorage.removeItem('__metravel_sw_stale_reload');
             sessionStorage.removeItem('__metravel_sw_stale_reload_count');
+            sessionStorage.removeItem('__metravel_exhausted_autoretry_ts');
+            sessionStorage.removeItem('__metravel_exhausted_autoretry_count');
             if (clearEmergencyKey) {
               sessionStorage.removeItem(GLOBAL_EMERGENCY_KEY);
             }
@@ -356,7 +358,7 @@ export default function RootLayout() {
           return true;
         };
 
-        const triggerStaleRecovery = (purgeAllCaches = false) => {
+        const triggerStaleRecovery = (purgeAllCaches = true) => {
           const navigate = () => {
             try {
               const cbUrl = new URL(window.location.href);
