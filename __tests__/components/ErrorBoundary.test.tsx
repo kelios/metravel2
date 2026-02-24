@@ -186,6 +186,7 @@ describe('ErrorBoundary', () => {
       'ChunkLoadError: Loading chunk 42 failed.',
       'Cannot find module "./SomeComponent"',
       '(0 , r(...).getFiltersPanelStyles) is not a function',
+      '(0 , r(...).useBreadcrumbModel) is not a function',
       "Class constructors cannot be invoked without 'new'",
     ];
 

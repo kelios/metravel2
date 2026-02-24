@@ -10,11 +10,28 @@ import { usePathname, useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
+import useBreadcrumbModelDefault, {
+  useBreadcrumbModel as useBreadcrumbModelNamed,
+  type BreadcrumbModel,
+} from '@/hooks/useBreadcrumbModel';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useTravelSectionsStore } from '@/stores/travelSectionsStore';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import BreadcrumbsJsonLd from '@/components/seo/BreadcrumbsJsonLd';
+
+const useBreadcrumbModelSafe: () => BreadcrumbModel =
+  typeof useBreadcrumbModelNamed === 'function'
+    ? useBreadcrumbModelNamed
+    : typeof useBreadcrumbModelDefault === 'function'
+      ? (useBreadcrumbModelDefault as any)
+      : (() => ({
+          items: [],
+          depth: 1,
+          currentTitle: 'Путешествия',
+          pageContextTitle: 'Путешествия',
+          backToPath: null,
+          showBreadcrumbs: false,
+        }) as BreadcrumbModel);
 
 type HeaderContextBarProps = {
   testID?: string;
@@ -29,7 +46,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
   const requestToggleMapPanel = useMapPanelStore((s) => s.requestToggle);
 
-  const model = useBreadcrumbModel();
+  const model = useBreadcrumbModelSafe();
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 

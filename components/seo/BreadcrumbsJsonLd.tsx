@@ -1,8 +1,25 @@
 import React, { useMemo } from 'react';
 import Head from 'expo-router/head';
 import { usePathname } from 'expo-router';
-import { useBreadcrumbModel, type BreadcrumbModel } from '@/hooks/useBreadcrumbModel';
+import useBreadcrumbModelDefault, {
+  useBreadcrumbModel as useBreadcrumbModelNamed,
+  type BreadcrumbModel,
+} from '@/hooks/useBreadcrumbModel';
 import { getSiteBaseUrl } from '@/utils/seo';
+
+const useBreadcrumbModelSafe: () => BreadcrumbModel =
+  typeof useBreadcrumbModelNamed === 'function'
+    ? useBreadcrumbModelNamed
+    : typeof useBreadcrumbModelDefault === 'function'
+      ? (useBreadcrumbModelDefault as any)
+      : (() => ({
+          items: [],
+          depth: 1,
+          currentTitle: 'Путешествия',
+          pageContextTitle: 'Путешествия',
+          backToPath: null,
+          showBreadcrumbs: false,
+        }) as BreadcrumbModel);
 
 const normalizePath = (path: string) => {
   if (!path) return '/';
@@ -22,7 +39,7 @@ type BreadcrumbsJsonLdProps = {
 
 export default function BreadcrumbsJsonLd({ model: modelProp, pathname: pathnameProp }: BreadcrumbsJsonLdProps) {
   const hookPathname = usePathname();
-  const hookModel = useBreadcrumbModel();
+  const hookModel = useBreadcrumbModelSafe();
   const pathname = pathnameProp ?? hookPathname;
   const model = modelProp ?? hookModel;
 

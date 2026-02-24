@@ -93,4 +93,9 @@ describe('useBreadcrumbModel', () => {
     ]);
     expect(result.current.currentTitle).toBe('Подписки');
   });
+
+  it('exports default hook alias for module interop stability', () => {
+    const mod = require('@/hooks/useBreadcrumbModel');
+    expect(mod.default).toBe(mod.useBreadcrumbModel);
+  });
 });

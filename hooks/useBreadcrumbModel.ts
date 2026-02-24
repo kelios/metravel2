@@ -396,3 +396,5 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     };
   }, [resolvedPathname, normalizedReturnToParam, travelData?.name, travelSlug, questApiTitle, userProfileName]);
 }
+
+export default useBreadcrumbModel;
