@@ -318,6 +318,10 @@ export default class ErrorBoundary extends Component<Props, State> {
         );
       }
 
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
       return (
         <View style={styles.container}>
           <View style={styles.content}>
