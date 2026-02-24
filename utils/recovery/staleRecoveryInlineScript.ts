@@ -10,6 +10,7 @@ export const getStaleRecoveryInlineScript = () => String.raw`
   var COUNT_KEY = ${JSON.stringify(RECOVERY_SESSION_KEYS.chunkReloadCount)};
   var COOLDOWN = ${RECOVERY_COOLDOWNS.staleMs};
   var MAX_RETRIES = ${RECOVERY_RETRY_LIMITS.stale};
+  var HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
 
   function hasRecoveryParam() {
     try {
@@ -64,11 +65,27 @@ export const getStaleRecoveryInlineScript = () => String.raw`
     return true;
   }
 
-  function navigateWithCacheBust() {
+  // Hard reload: fetch fresh HTML bypassing disk cache, then navigate
+  function hardReloadWithCacheBust() {
     try {
       var url = new URL(window.location.href);
       url.searchParams.set('_cb', String(Date.now()));
-      window.location.replace(url.toString());
+      var targetUrl = url.toString();
+
+      // Mark that we're doing a hard reload to prevent loops
+      try { sessionStorage.setItem(HARD_RELOAD_KEY, '1'); } catch (_e) {}
+
+      // Fetch fresh HTML with cache: 'reload' to bypass disk cache
+      // This ensures the browser gets the latest HTML with correct chunk references
+      fetch(targetUrl, { cache: 'reload', credentials: 'same-origin' })
+        .then(function() {
+          // After fetching fresh HTML, navigate to it
+          window.location.replace(targetUrl);
+        })
+        .catch(function() {
+          // Fallback: just navigate (browser will use disk cache but _cb param helps)
+          window.location.replace(targetUrl);
+        });
       return;
     } catch (_e) {}
 
@@ -78,7 +95,7 @@ export const getStaleRecoveryInlineScript = () => String.raw`
   }
 
   function cleanupAndRecover() {
-    var safetyTimer = setTimeout(navigateWithCacheBust, ${RECOVERY_TIMEOUTS.staleCleanupSafetyMs});
+    var safetyTimer = setTimeout(hardReloadWithCacheBust, ${RECOVERY_TIMEOUTS.staleCleanupSafetyMs});
 
     var swCleanup = ('serviceWorker' in navigator)
       ? navigator.serviceWorker.getRegistrations().then(function(registrations){
@@ -98,19 +115,50 @@ export const getStaleRecoveryInlineScript = () => String.raw`
       .catch(function(){})
       .finally(function(){
         clearTimeout(safetyTimer);
-        navigateWithCacheBust();
+        hardReloadWithCacheBust();
       });
+  }
+
+  // Check if a script load failed (404 returning HTML instead of JS)
+  function isScriptLoadError(event) {
+    try {
+      if (!event || !event.target) return false;
+      var target = event.target;
+      if (target.tagName !== 'SCRIPT') return false;
+      var src = target.src || '';
+      // Check if it's an Expo chunk that failed to load
+      return src.indexOf('/_expo/static/js/') !== -1;
+    } catch (_e) {
+      return false;
+    }
   }
 
   function handleRecoverySignal(payload) {
     var message = extractMessage(payload);
+    
+    // Check for script load errors (chunk 404s)
+    if (payload && payload.target && isScriptLoadError(payload)) {
+      if (hasRecoveryParam()) return;
+      if (!shouldAttemptRecovery()) return;
+      cleanupAndRecover();
+      return;
+    }
+    
     if (!isStale(message)) return;
     if (hasRecoveryParam()) return;
     if (!shouldAttemptRecovery()) return;
     cleanupAndRecover();
   }
 
+  // Listen for script load errors (captures chunk 404s before they become runtime errors)
   window.addEventListener('error', handleRecoverySignal, true);
   window.addEventListener('unhandledrejection', handleRecoverySignal);
+
+  // Clear hard reload flag on successful page load
+  try {
+    if (sessionStorage.getItem(HARD_RELOAD_KEY) === '1') {
+      sessionStorage.removeItem(HARD_RELOAD_KEY);
+    }
+  } catch (_e) {}
 })();
 `;

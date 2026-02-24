@@ -64,10 +64,11 @@ deploy_prod() {
     rm -rf static/dist.new
     mv dist/$ENV static/dist.new
     mv static/dist static/dist.old || true
-    if [ -d static/dist.old/_expo/static ]; then
-      mkdir -p static/dist.new/_expo/static
-      rsync -a --ignore-existing static/dist.old/_expo/static/ static/dist.new/_expo/static/
-    fi
+    # IMPORTANT: Do NOT copy old chunks to new build.
+    # Old rsync --ignore-existing caused stale chunk issues where browser disk cache
+    # held old _layout chunk referencing non-existent CustomHeader chunk.
+    # Each deploy should be self-contained with only its own chunks.
+    # Old chunks are intentionally NOT preserved to avoid version conflicts.
     mv static/dist.new static/dist
     rm -rf static/dist.old
     mkdir -p static/dist/assets/icons static/dist/assets/images

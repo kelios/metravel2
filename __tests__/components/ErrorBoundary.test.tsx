@@ -517,6 +517,62 @@ describe('ErrorBoundary', () => {
 
       console.error = consoleError;
     });
+
+    it('should detect AsyncRequireError as stale chunk error and trigger recovery', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      // Clear any previous state
+      sessionStorage.clear();
+      (global as any).window.__metravelModuleReloadTriggered = undefined;
+
+      const ThrowAsyncRequireError = () => {
+        const error = new Error(
+          'AsyncRequireError: Loading module https://metravel.by/_expo/static/js/web/CustomHeader-35c08b6fda505a901ff6d2adcd502571.js failed.'
+        );
+        error.name = 'AsyncRequireError';
+        throw error;
+      };
+
+      render(
+        <ErrorBoundary>
+          <ThrowAsyncRequireError />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+      });
+
+      console.error = consoleError;
+    });
+
+    it('should detect React #130 with args[]=undefined as stale chunk error', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      // Clear any previous state
+      sessionStorage.clear();
+      (global as any).window.__metravelModuleReloadTriggered = undefined;
+
+      const ThrowReact130UndefinedArgs = () => {
+        throw new Error(
+          'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message'
+        );
+      };
+
+      render(
+        <ErrorBoundary>
+          <ThrowReact130UndefinedArgs />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+      });
+
+      console.error = consoleError;
+    });
   });
 });
 

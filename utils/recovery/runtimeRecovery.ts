@@ -6,12 +6,36 @@ type RuntimeRecoveryOptions = {
   safetyTimeoutMs?: number;
 };
 
+const HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
+
+/**
+ * Hard reload that bypasses browser disk cache.
+ * 1. Fetches fresh HTML with cache: 'reload' to ensure we get latest chunk references
+ * 2. Navigates to the URL with cache-busting parameter
+ */
 function navigateWithCacheBust(): void {
   if (typeof window === 'undefined') return;
+  
   try {
-    window.location.replace(withCacheBust(window.location.href));
+    const targetUrl = withCacheBust(window.location.href);
+    
+    // Mark that we're doing a hard reload
+    try { sessionStorage.setItem(HARD_RELOAD_KEY, '1'); } catch { /* noop */ }
+    
+    // Fetch fresh HTML with cache: 'reload' to bypass disk cache
+    // This ensures the browser gets the latest HTML with correct chunk references
+    fetch(targetUrl, { cache: 'reload', credentials: 'same-origin' })
+      .then(() => {
+        window.location.replace(targetUrl);
+      })
+      .catch(() => {
+        // Fallback: just navigate
+        window.location.replace(targetUrl);
+      });
   } catch {
-    window.location.reload();
+    try {
+      window.location.reload();
+    } catch { /* noop */ }
   }
 }
 
