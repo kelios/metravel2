@@ -11,6 +11,9 @@ const STALE_ERROR_PATTERN_PARTS = [
   'usesafeareainsets.*is not a function',
   'usebreadcrumbmodel.*is not a function',
   "class constructors?.*cannot be invoked without 'new'",
+  // Layout constants access errors (stale chunk accessing changed exports)
+  "cannot read properties of undefined.*tabbarheight",
+  "cannot read properties of undefined.*headerheight",
 ] as const;
 
 export const STALE_ERROR_PATTERN_SOURCE = STALE_ERROR_PATTERN_PARTS.join('|');

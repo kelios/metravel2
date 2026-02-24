@@ -15,7 +15,6 @@ import { STALE_ERROR_REGEX } from '@/utils/recovery/staleErrorPattern';
 import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
 import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS, RECOVERY_TIMEOUTS } from '@/utils/recovery/recoveryConfig';
 import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
-import { openWebWindow } from '@/utils/externalLinks';
 
 interface Props {
   children: ReactNode;
@@ -202,10 +201,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         }
         const reloadDecision = getReloadDecision();
         if (!reloadDecision.allowed) {
-          // If we're already in recovery loop (_cb in URL) and recovery is blocked,
-          // mark as exhausted so the UI can show cache clear instructions or auto-retry.
-          const inRecoveryLoop = _isAlreadyInRecoveryLoop();
-          if (reloadDecision.reason === 'max_retries' || inRecoveryLoop) {
+          if (reloadDecision.reason === 'max_retries') {
             this.setState({ isStaleChunk: true, recoveryExhausted: true });
           }
           return;
@@ -310,49 +306,37 @@ export default class ErrorBoundary extends Component<Props, State> {
       // "Не удалось загрузить..." message that doesn't trigger cache recovery.
       if (this.state.isStaleChunk && Platform.OS === 'web') {
         // If auto-recovery exhausted retries (from inline script flag or _cb param),
-        // show an actionable error with cache clearing instructions
+        // schedule automatic clean reload and show a brief message
         if (this.state.recoveryExhausted || checkRecoveryExhausted()) {
-          // Schedule auto-recovery after a short delay to break the dead-end state
+          // Schedule automatic recovery: clear all state and reload with clean URL
           this.scheduleExhaustedAutoRecovery();
           return (
             <View style={styles.container}>
               <View style={styles.content}>
-                <Text style={styles.title}>Требуется очистка кэша браузера</Text>
+                <Text style={styles.title}>Обновление приложения…</Text>
                 <Text style={styles.message}>
-                  Ваш браузер сохранил устаревшую версию сайта. Для продолжения работы необходимо очистить кэш:
-                </Text>
-                <Text style={styles.instructions}>
-                  <Text style={styles.instructionsBold}>Компьютер:{'\n'}</Text>
-                  • Chrome/Edge: Ctrl+Shift+Delete → Кэш → Удалить{'\n'}
-                  • Firefox: Ctrl+Shift+Delete → Кэш → Очистить{'\n'}
-                  • Safari: Cmd+Option+E{'\n\n'}
-                  <Text style={styles.instructionsBold}>Телефон:{'\n'}</Text>
-                  • iPhone Safari: Настройки → Safari → Очистить историю и данные{'\n'}
-                  • Android Chrome: ⋮ → История → Очистить данные браузера{'\n\n'}
-                  <Text style={styles.instructionsBold}>Или:</Text> Откройте сайт в режиме инкогнито
+                  Автоматическая перезагрузка через несколько секунд.
                 </Text>
                 <Button
-                  label="Открыть в инкогнито"
+                  label="Перезагрузить сейчас"
                   onPress={() => {
-                    // Can't open incognito programmatically, but we can suggest it
-                    openWebWindow('https://metravel.by', { target: '_blank' });
+                    clearRecoverySessionKeys(true, true);
+                    try {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete('_cb');
+                      window.location.replace(url.toString());
+                    } catch {
+                      window.location.reload();
+                    }
                   }}
                   style={[styles.button, styles.primaryButton]}
-                  accessibilityLabel="Открыть в новой вкладке"
-                />
-                <Button
-                  label="Связаться с поддержкой"
-                  onPress={() => {
-                    window.location.href = 'mailto:support@metravel.by?subject=Проблема с кэшем браузера';
-                  }}
-                  variant="ghost"
-                  style={[styles.button, styles.secondaryButton]}
-                  accessibilityLabel="Связаться с поддержкой"
+                  accessibilityLabel="Перезагрузить страницу"
                 />
               </View>
             </View>
           );
         }
+        // Show updating UI while auto-recovery runs
         return (
           <View style={styles.container}>
             <View style={styles.content}>

@@ -130,9 +130,9 @@ describe('questAdapters', () => {
       expect(fixMediaUrl(url)).toBe(url);
     });
 
-    it('strips invalid S3 signed parameters from public bucket URLs', () => {
+    it('does not strip S3 signed parameters from already-valid URLs', () => {
       const signedUrl = 'https://metravelprod.s3.amazonaws.com/quests/5/poster/video.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAJ2XBPKC6ITB3S5RQ%2F20260224%2Feu-north-1%2Fs3%2Faws4_request&X-Amz-Date=20260224T184046Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=abc123';
-      expect(fixMediaUrl(signedUrl)).toBe('https://metravelprod.s3.amazonaws.com/quests/5/poster/video.mp4');
+      expect(fixMediaUrl(signedUrl)).toBe(signedUrl);
     });
 
     it('fixes double-host AND strips S3 signed params in one pass', () => {

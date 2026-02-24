@@ -345,11 +345,10 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
-      // Should show cache clear instructions instead of trying recovery
+      // Should show auto-reload UI instead of manual cache clear instructions
       const treeStr = JSON.stringify(toJSON());
-      expect(treeStr).toContain('Требуется очистка кэша браузера');
-      // Should NOT trigger reload when exhausted
-      expect(mockReplace).not.toHaveBeenCalled();
+      expect(treeStr).toContain('Обновление приложения');
+      expect(treeStr).toContain('Автоматическая перезагрузка');
 
       console.error = consoleError;
     });
@@ -371,11 +370,10 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
-      // Should show cache clear instructions for React #130 with undefined args when exhausted
+      // Should show auto-reload UI for React #130 with undefined args when exhausted
       const treeStr = JSON.stringify(toJSON());
-      expect(treeStr).toContain('Требуется очистка кэша браузера');
-      // Should NOT trigger reload when exhausted
-      expect(mockReplace).not.toHaveBeenCalled();
+      expect(treeStr).toContain('Обновление приложения');
+      expect(treeStr).toContain('Автоматическая перезагрузка');
 
       console.error = consoleError;
     });
@@ -514,10 +512,9 @@ describe('ErrorBoundary', () => {
       );
 
       const treeStr = JSON.stringify(toJSON());
-      // Should show cache clear instructions when exhausted flag is set
-      expect(treeStr).toContain('Требуется очистка кэша браузера');
-      // Should NOT trigger another reload
-      expect(mockReplace).not.toHaveBeenCalled();
+      // Should show auto-reload UI when exhausted flag is set
+      expect(treeStr).toContain('Обновление приложения');
+      expect(treeStr).toContain('Автоматическая перезагрузка');
 
       // Reset location
       Object.defineProperty(window, 'location', {
@@ -565,9 +562,9 @@ describe('ErrorBoundary', () => {
       );
 
       const treeStr = JSON.stringify(toJSON());
-      // Should NOT show cache clear instructions when exhausted flag is not set
+      // Should NOT show auto-reload message when exhausted flag is not set
       // (even if _cb is in URL - user might have cleared cache)
-      expect(treeStr).not.toContain('Требуется очистка кэша браузера');
+      expect(treeStr).not.toContain('Автоматическая перезагрузка');
       // Should show the updating UI instead
       expect(treeStr).toContain('Обновление приложения');
 

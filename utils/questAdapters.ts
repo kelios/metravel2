@@ -140,6 +140,7 @@ export function fixMediaUrl(url: string | null | undefined): string | undefined 
 
     let result = url.trim();
     const lower = result.toLowerCase();
+    let didFixDoubleHost = false;
 
     // Паттерн из прода: https://hosthttps://real-url (без слеша между host и второй схемой)
     // а также старый вариант: http://host:porthttp(s)://real-url
@@ -157,6 +158,7 @@ export function fixMediaUrl(url: string | null | undefined): string | undefined 
             // Это исключает валидные URL вида /path?next=https://...
             if (firstSlashAfterHost === -1 || secondProtocolIndex < firstSlashAfterHost) {
                 result = result.slice(secondProtocolIndex);
+                didFixDoubleHost = true;
             }
         }
     }
@@ -164,7 +166,7 @@ export function fixMediaUrl(url: string | null | undefined): string | undefined 
     // Удаляем невалидные S3 signed параметры для публичных файлов.
     // Бэкенд генерирует signed URL, но подпись невалидна из-за приклеенного хоста.
     // Файлы в metravelprod.s3.amazonaws.com публично доступны без подписи.
-    if (result.includes('.s3.amazonaws.com/') && result.includes('X-Amz-Signature=')) {
+    if (didFixDoubleHost && result.includes('.s3.amazonaws.com/') && result.includes('X-Amz-Signature=')) {
         const urlObj = new URL(result);
         // Удаляем все AWS signed параметры
         urlObj.searchParams.delete('X-Amz-Algorithm');
