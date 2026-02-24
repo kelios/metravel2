@@ -41,15 +41,9 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames
           .filter((name) => {
-            // Keep only STATIC_CACHE across activations.
-            // Everything else is purged to guarantee consistency after deploy:
-            // - JS_CACHE: stale chunks cause module errors (MUST DELETE)
-            // - DYNAMIC_CACHE: stale HTML references old chunk URLs
-            // - IMAGE_CACHE: cleared to prevent stale images
-            // - Old-version caches: no longer needed
-            if (name === STATIC_CACHE) {
-              return false;
-            }
+            // Delete ALL caches on activation to ensure clean state.
+            // Even STATIC_CACHE must be recreated to avoid version conflicts.
+            // Aggressive purge guarantees no stale chunks after deploy.
             return name.startsWith('metravel-');
           })
           .map((name) => caches.delete(name))
@@ -210,18 +204,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // JS chunks з hash в імені (immutable) — агресивне кешування
+  // JS chunks — bypass SW cache entirely, rely on nginx immutable headers.
+  // Why: SW caching of hashed chunks creates version skew after deploys.
+  // Old SW may serve stale chunks from JS_CACHE even after activate event.
+  // Browser HTTP cache + nginx immutable headers provide sufficient performance.
   if (request.destination === 'script') {
-    const isExpoWebJs = url.pathname.startsWith('/_expo/static/js/web/');
-    const isHashedChunk = isExpoWebJs && /-[a-f0-9]{8,}\.js$/i.test(url.pathname);
-    
-    if (isHashedChunk) {
-      // Immutable chunks — cache-first з довгим TTL
-      event.respondWith(cacheFirstLongTerm(request, JS_CACHE, MAX_JS_CACHE_SIZE));
-      return;
-    }
-
-    event.respondWith(staleWhileRevalidate(request, JS_CACHE));
+    // Network-only for all JS to guarantee fresh chunks after deploy
+    event.respondWith(fetch(request));
     return;
   }
 
