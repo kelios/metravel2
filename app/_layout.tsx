@@ -357,6 +357,19 @@ export default function RootLayout() {
         };
 
         const triggerStaleRecovery = (purgeAllCaches = false) => {
+          const navigate = () => {
+            try {
+              const cbUrl = new URL(window.location.href);
+              cbUrl.searchParams.set('_cb', String(Date.now()));
+              window.location.replace(cbUrl.toString());
+            } catch {
+              window.location.reload();
+            }
+          };
+
+          // Safety timeout: if cleanup hangs (mobile Safari), navigate anyway.
+          const safetyTimer = setTimeout(navigate, 3000);
+
           const cleanup = async () => {
             try {
               const regs = await navigator.serviceWorker.getRegistrations();
@@ -372,13 +385,8 @@ export default function RootLayout() {
           };
 
           cleanup().catch(() => {}).finally(() => {
-            try {
-              const cbUrl = new URL(window.location.href);
-              cbUrl.searchParams.set('_cb', String(Date.now()));
-              window.location.replace(cbUrl.toString());
-            } catch {
-              window.location.reload();
-            }
+            clearTimeout(safetyTimer);
+            navigate();
           });
         };
 

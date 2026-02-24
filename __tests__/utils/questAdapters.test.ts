@@ -118,6 +118,17 @@ describe('questAdapters', () => {
         'https://s3.aws.com/img.jpg',
       );
     });
+
+    it('fixes malformed https://hosthttps://real-url shape from backend', () => {
+      expect(fixMediaUrl('https://metravel.byhttps://cdn.example.com/video.mp4')).toBe(
+        'https://cdn.example.com/video.mp4',
+      );
+    });
+
+    it('does not alter valid urls that contain https in query params', () => {
+      const url = 'https://metravel.by/media/video.mp4?next=https://example.com/watch';
+      expect(fixMediaUrl(url)).toBe(url);
+    });
   });
 
   describe('adaptStep', () => {

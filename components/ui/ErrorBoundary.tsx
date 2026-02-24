@@ -74,18 +74,22 @@ function clearRecoverySessionKeys(
 }
 
 /** Shared detection for stale-chunk / module-mismatch errors after deploy.
- *  IMPORTANT: patterns must be specific enough to avoid false positives from
- *  normal runtime errors (e.g. "X is not a function" from a null ref). */
+ *  Includes both chunk-loading errors and runtime symptoms of module version
+ *  mismatch (e.g. spread on undefined when an export signature changed). */
 function isStaleModuleError(msg: string, name?: string): boolean {
   return (
-    // Module system errors — highly specific to stale chunks
+    // Module / chunk loading errors
     msg.includes('Requiring unknown module') ||
     /loading chunk/i.test(msg) ||
     /loading module.*failed/i.test(msg) ||
     /failed to fetch dynamically imported module/i.test(msg) ||
     /ChunkLoadError/i.test(msg) ||
     /Cannot find module/i.test(msg) ||
-    name === 'AsyncRequireError'
+    name === 'AsyncRequireError' ||
+    // Runtime symptoms of stale-module mismatch after deploy:
+    // old cached JS tries to spread/iterate a value that changed type in new modules.
+    /iterable/i.test(msg) ||
+    /spread/i.test(msg)
   );
 }
 
@@ -107,6 +111,19 @@ function isAlreadyInRecoveryLoop(): boolean {
 
 /** Unregister SW, purge caches, then hard-navigate with cache-busting. */
 function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void {
+  const navigate = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_cb', String(Date.now()));
+      window.location.replace(url.toString());
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  // Safety timeout: if cleanup hangs (mobile Safari), navigate anyway after 3s.
+  const safetyTimer = setTimeout(navigate, 3000);
+
   const cleanup = async () => {
     try {
       if ('serviceWorker' in navigator) {
@@ -123,15 +140,8 @@ function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = {}): void 
     } catch { /* noop */ }
   };
   cleanup().catch(() => {}).finally(() => {
-    // Navigate with cache-busting param to bypass browser HTTP cache.
-    // This ensures the server returns fresh HTML with new chunk hashes.
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('_cb', String(Date.now()));
-      window.location.replace(url.toString());
-    } catch {
-      window.location.reload();
-    }
+    clearTimeout(safetyTimer);
+    navigate();
   });
 }
 
