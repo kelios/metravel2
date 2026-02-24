@@ -7,6 +7,8 @@ describe('staleErrorPattern', () => {
     '(0 , r(...).getFiltersPanelStyles) is not a function',
     '(0 , r(...).useBreadcrumbModel) is not a function',
     "Class constructors cannot be invoked without 'new'",
+    // React #130 with args[]=undefined is a strong signal of stale chunk (component resolved to undefined)
+    'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
   ]
 
   it.each(staleMessages)('matches stale runtime signature: %s', (message) => {
@@ -16,7 +18,6 @@ describe('staleErrorPattern', () => {
   it('does not match generic app errors', () => {
     expect(STALE_ERROR_REGEX.test('Test error')).toBe(false)
     expect(STALE_ERROR_REGEX.test('Network timeout while loading profile')).toBe(false)
-    expect(STALE_ERROR_REGEX.test('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message')).toBe(false)
     // React #130 without args[]=undefined should NOT match (could be a real runtime bug)
     expect(STALE_ERROR_REGEX.test('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]=SomeComponent for the full message')).toBe(false)
   })
