@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.57.0';
+const CACHE_VERSION = 'v3.58.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
