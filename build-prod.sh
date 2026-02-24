@@ -99,6 +99,7 @@ node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by 
 }
 
 echo "Постобработка билда..."
+node scripts/copy-public-files.js "dist/$ENV"
 node scripts/stamp-sw-version.js "dist/$ENV"
 
 if [[ "$DEPLOY" == "1" ]]; then

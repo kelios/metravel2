@@ -80,3 +80,4 @@ build/
 .swc/
 .turbo/
 .parcel-cache/
+/playwright-screenshots/
