@@ -7,8 +7,6 @@ describe('staleErrorPattern', () => {
     '(0 , r(...).getFiltersPanelStyles) is not a function',
     '(0 , r(...).useBreadcrumbModel) is not a function',
     "Class constructors cannot be invoked without 'new'",
-    // React #130 with args[]=undefined is a strong signal of stale chunk (component resolved to undefined)
-    'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
   ]
 
   it.each(staleMessages)('matches stale runtime signature: %s', (message) => {

@@ -42,14 +42,10 @@ describe('staleRecoveryInlineScript', () => {
     expect(script).toContain('/_expo/static/js/')
   })
 
-  it('stale pattern includes React #130 with args[]=undefined', () => {
-    // Verify the pattern source includes React #130 detection
-    expect(STALE_ERROR_PATTERN_SOURCE).toContain('react error #130')
-    expect(STALE_ERROR_PATTERN_SOURCE).toContain('args')
-
-    // Test the actual regex
+  it('stale pattern does NOT include React #130 (to avoid recovery loops for real bugs)', () => {
     const staleRegex = new RegExp(STALE_ERROR_PATTERN_SOURCE, 'i')
-    expect(staleRegex.test('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]=')).toBe(true)
+    // React #130 should NOT trigger stale recovery - it could be a real runtime bug
+    expect(staleRegex.test('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]=')).toBe(false)
   })
 
   it('stale pattern includes AsyncRequireError', () => {

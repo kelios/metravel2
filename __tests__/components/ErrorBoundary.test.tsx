@@ -546,33 +546,6 @@ describe('ErrorBoundary', () => {
 
       console.error = consoleError;
     });
-
-    it('should detect React #130 with args[]=undefined as stale chunk error', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      // Clear any previous state
-      sessionStorage.clear();
-      (global as any).window.__metravelModuleReloadTriggered = undefined;
-
-      const ThrowReact130UndefinedArgs = () => {
-        throw new Error(
-          'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message'
-        );
-      };
-
-      render(
-        <ErrorBoundary>
-          <ThrowReact130UndefinedArgs />
-        </ErrorBoundary>
-      );
-
-      await waitFor(() => {
-        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
-      });
-
-      console.error = consoleError;
-    });
   });
 });
 
