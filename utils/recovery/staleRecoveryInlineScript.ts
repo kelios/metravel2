@@ -90,11 +90,7 @@ export const getStaleRecoveryInlineScript = () => String.raw`
 
     var cacheCleanup = (typeof caches !== 'undefined')
       ? caches.keys().then(function(keys){
-          return Promise.all(
-            keys
-              .filter(function(key){ return key.indexOf('metravel-') === 0; })
-              .map(function(key){ return caches.delete(key); })
-          );
+          return Promise.all(keys.map(function(key){ return caches.delete(key); }));
         })
       : Promise.resolve();
 

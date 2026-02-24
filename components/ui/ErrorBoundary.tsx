@@ -30,10 +30,6 @@ interface State {
 
 const EMERGENCY_RECOVERY_KEY = RECOVERY_SESSION_KEYS.emergencyRecoveryTs;
 const EMERGENCY_RECOVERY_COOLDOWN = RECOVERY_COOLDOWNS.emergencyMs;
-const EXHAUSTED_AUTORETRY_TS_KEY = RECOVERY_SESSION_KEYS.exhaustedAutoRetryTs;
-const EXHAUSTED_AUTORETRY_COUNT_KEY = RECOVERY_SESSION_KEYS.exhaustedAutoRetryCount;
-const EXHAUSTED_AUTORETRY_COOLDOWN = RECOVERY_COOLDOWNS.exhaustedAutoRetryMs;
-const EXHAUSTED_AUTORETRY_MAX = RECOVERY_RETRY_LIMITS.exhaustedAutoRetry;
 const EXHAUSTED_AUTORETRY_DELAY_MS = RECOVERY_TIMEOUTS.staleAutoRetryDelayMs;
 const REACT_130_RECOVERY_TS_KEY = RECOVERY_SESSION_KEYS.react130RecoveryTs;
 const REACT_130_RECOVERY_COUNT_KEY = RECOVERY_SESSION_KEYS.react130RecoveryCount;
@@ -53,14 +49,6 @@ function shouldAttemptReact130Recovery(): boolean {
   });
 }
 
-function shouldScheduleExhaustedAutoRetry(): boolean {
-  return shouldAllowRecoveryAttempt({
-    timestampKey: EXHAUSTED_AUTORETRY_TS_KEY,
-    countKey: EXHAUSTED_AUTORETRY_COUNT_KEY,
-    cooldownMs: EXHAUSTED_AUTORETRY_COOLDOWN,
-    maxRetries: EXHAUSTED_AUTORETRY_MAX,
-  });
-}
 
 function clearRecoverySessionKeys(
   clearEmergencyKey = false,
@@ -117,12 +105,20 @@ export default class ErrorBoundary extends Component<Props, State> {
   private scheduleExhaustedAutoRecovery = () => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     if (this._exhaustedAutoRetryTimer != null) return;
-    if (!shouldScheduleExhaustedAutoRetry()) return;
 
+    // When recovery is exhausted, do a clean URL reload after a short delay.
+    // Clear ALL recovery state and strip _cb so the browser starts completely fresh.
+    // This avoids the dead-end "Не удалось загрузить обновление" screen.
     this._exhaustedAutoRetryTimer = setTimeout(() => {
       this._exhaustedAutoRetryTimer = null;
-      clearRecoverySessionKeys(true);
-      doStaleChunkRecovery({ purgeAllCaches: true });
+      clearRecoverySessionKeys(true, true);
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('_cb');
+        window.location.replace(url.toString());
+      } catch {
+        window.location.reload();
+      }
     }, EXHAUSTED_AUTORETRY_DELAY_MS);
   };
 

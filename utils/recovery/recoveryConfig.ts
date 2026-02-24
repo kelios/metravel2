@@ -1,16 +1,16 @@
 export const RECOVERY_COOLDOWNS = {
-  emergencyMs: 60 * 1000,
-  staleMs: 30 * 1000,
-  exhaustedAutoRetryMs: 30 * 1000,
-  react130Ms: 30 * 1000,
-  controllerChangeMs: 60 * 1000,
+  emergencyMs: 30 * 1000,
+  staleMs: 20 * 1000,
+  exhaustedAutoRetryMs: 20 * 1000,
+  react130Ms: 20 * 1000,
+  controllerChangeMs: 45 * 1000,
 } as const;
 
 export const RECOVERY_RETRY_LIMITS = {
-  stale: 2,
-  errorBoundary: 3,
-  exhaustedAutoRetry: 3,
-  react130: 1,
+  stale: 4,
+  errorBoundary: 5,
+  exhaustedAutoRetry: 5,
+  react130: 2,
 } as const;
 
 export const RECOVERY_TIMEOUTS = {
