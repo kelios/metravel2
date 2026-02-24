@@ -1,17 +1,18 @@
 import { useMemo, useCallback, useEffect } from 'react';
 import { Dimensions, LayoutAnimation } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
-import * as filtersPanelStylesModule from '@/components/MapPage/filtersPanelStyles';
 import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { showRouteModeTip, showFiltersResetToast } from '@/utils/mapToasts';
 import { useRouteStore } from '@/stores/routeStore';
 import type { RoutePoint } from '@/types/route';
 
-const getFiltersPanelStylesSafe =
-  resolveExportedFunction<typeof filtersPanelStylesModule.getFiltersPanelStyles>(
-    filtersPanelStylesModule as unknown as Record<string, unknown>,
-    'getFiltersPanelStyles'
-  );
+let getFiltersPanelStylesSafe: ((...args: any[]) => any) | null = null;
+try {
+  const mod = require('@/components/MapPage/filtersPanelStyles');
+  getFiltersPanelStylesSafe = resolveExportedFunction(mod, 'getFiltersPanelStyles');
+} catch {
+  getFiltersPanelStylesSafe = null;
+}
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 

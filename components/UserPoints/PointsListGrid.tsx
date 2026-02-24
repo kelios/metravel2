@@ -7,7 +7,6 @@ import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
-import * as filtersPanelStylesModule from '@/components/MapPage/filtersPanelStyles'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
 import type { MapUiApi } from '@/types/mapUi'
@@ -15,11 +14,13 @@ import { resolveExportedFunction } from '@/utils/moduleInterop'
 
 import type { PointsListStyles } from './PointsList'
 
-const getFiltersPanelStylesSafe =
-  resolveExportedFunction<typeof filtersPanelStylesModule.getFiltersPanelStyles>(
-    filtersPanelStylesModule as unknown as Record<string, unknown>,
-    'getFiltersPanelStyles'
-  )
+let getFiltersPanelStylesSafe: ((...args: any[]) => any) | null = null
+try {
+  const mod = require('@/components/MapPage/filtersPanelStyles')
+  getFiltersPanelStylesSafe = resolveExportedFunction(mod, 'getFiltersPanelStyles')
+} catch {
+  getFiltersPanelStylesSafe = null
+}
 
 type ViewMode = 'list' | 'map'
 
