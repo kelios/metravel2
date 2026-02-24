@@ -64,16 +64,11 @@ deploy_prod() {
     rm -rf static/dist.new
     mv dist/$ENV static/dist.new
     mv static/dist static/dist.old || true
-    # IMPORTANT: Preserve old JS chunks for grace period.
-    # Browser HTTP disk cache stores JS chunks with 'immutable' header for up to 1 year.
-    # If we delete old chunks, users with cached _layout chunk will get 404s for
-    # dependencies like CustomHeader-xxx.js that no longer exist.
-    # Solution: Copy old _expo/static/js chunks to new build so they remain accessible.
-    # This is safe because chunk filenames include content hashes - no conflicts.
-    if [ -d static/dist.old/_expo/static/js ]; then
-      mkdir -p static/dist.new/_expo/static/js
-      cp -rn static/dist.old/_expo/static/js/. static/dist.new/_expo/static/js/ 2>/dev/null || true
-    fi
+    # CRITICAL: Do NOT copy old JS chunks to new build.
+    # Old chunks with different hashes MUST be removed to prevent version skew.
+    # Client-side stale chunk recovery (SW_STALE_CHUNK message) handles 404s
+    # by forcing immediate reload with cache bust.
+    # This guarantees users always get the correct chunk versions after deploy.
     mv static/dist.new static/dist
     rm -rf static/dist.old
     mkdir -p static/dist/assets/icons static/dist/assets/images
