@@ -16,4 +16,5 @@ export const RECOVERY_RETRY_LIMITS = {
 export const RECOVERY_TIMEOUTS = {
   staleAutoRetryDelayMs: 2500,
   staleCleanupSafetyMs: 3000,
+  bundleMismatchFetchTimeoutMs: 4000,
 } as const;

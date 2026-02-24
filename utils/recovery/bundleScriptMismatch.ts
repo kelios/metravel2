@@ -1,3 +1,5 @@
+import { RECOVERY_TIMEOUTS } from '@/utils/recovery/recoveryConfig';
+
 const CORE_BUNDLE_SCRIPT_RE =
   /\/(_expo\/static\/js\/web\/(?:__expo-metro-runtime-|__common-|entry-|_layout-|index-)[^"'\s>]+\.js)/i;
 
@@ -43,12 +45,25 @@ export async function hasFreshHtmlBundleMismatch(currentUrl?: string): Promise<b
   const currentScripts = extractCoreBundleScriptsFromDocument(document, origin);
   if (currentScripts.length === 0) return false;
 
-  const response = await fetch(href, {
-    method: 'GET',
-    cache: 'no-store',
-    credentials: 'same-origin',
-    headers: { Accept: 'text/html' },
-  });
+  const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = abortController
+    ? setTimeout(() => abortController.abort(), RECOVERY_TIMEOUTS.bundleMismatchFetchTimeoutMs)
+    : null;
+
+  let response: Response;
+  try {
+    response = await fetch(href, {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { Accept: 'text/html' },
+      ...(abortController ? { signal: abortController.signal } : {}),
+    });
+  } catch {
+    return false;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 
   if (!response.ok) return false;
 
