@@ -93,14 +93,6 @@ function isStaleModuleError(msg: string, name?: string): boolean {
   );
 }
 
-/** Conservative one-shot heuristic for stale bundles that surface as React #130 in prod. */
-function isLikelyReact130ModuleMismatch(msg: string): boolean {
-  return (
-    /Minified React error #130/i.test(msg) &&
-    /args\[\]=undefined/i.test(msg)
-  );
-}
-
 /** Check if the current page already went through stale-chunk recovery
  *  (indicated by the _cb cache-busting param in the URL). */
 function isAlreadyInRecoveryLoop(): boolean {
@@ -180,7 +172,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     return {
       hasError: true,
       error,
-      isStaleChunk: isStaleModuleError(msg, error?.name) || isLikelyReact130ModuleMismatch(msg),
+      isStaleChunk: isStaleModuleError(msg, error?.name),
     };
   }
 
@@ -275,19 +267,9 @@ export default class ErrorBoundary extends Component<Props, State> {
         return; // skip further recovery attempts
       }
 
-      // #130 with undefined args can be a stale module/chunk mismatch on production.
-      // Run one deep auto-recovery attempt with long cooldown to avoid loops.
-      if (isLikelyReact130ModuleMismatch(msg)) {
-        if (tryEmergencyRecovery()) {
-          return;
-        }
-        // Emergency recovery failed (cooldown). If _cb is already in URL,
-        // recovery already ran recently and didn't help — schedule one more auto-attempt.
-        if (isAlreadyInRecoveryLoop()) {
-          this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
-          return;
-        }
-      }
+      // Intentionally avoid auto-recovery for generic React #130 errors.
+      // #130 can represent real runtime regressions (invalid/undefined element type),
+      // and treating it as stale-chunk caused false-positive recovery loops.
     }
 
     // Auto-recover from Leaflet "Map container is being reused by another instance"

@@ -246,7 +246,7 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should run one-shot emergency recovery for likely React #130 stale mismatch', async () => {
+    it('should NOT auto-recover for generic React #130 errors', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -260,18 +260,21 @@ describe('ErrorBoundary', () => {
         throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowReact130 />
         </ErrorBoundary>
       );
 
       await waitFor(() => {
-        expect(cacheDelete).toHaveBeenCalledWith('third-party-cache');
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Что-то пошло не так');
       });
 
-      expect(sessionStorage.getItem('__metravel_emergency_recovery_ts')).toBeTruthy();
-      expect(mockReplace).toHaveBeenCalled();
+      expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
+      expect(cacheDelete).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem('__metravel_emergency_recovery_ts')).toBeNull();
+      expect(mockReplace).not.toHaveBeenCalled();
 
       console.error = consoleError;
     });
