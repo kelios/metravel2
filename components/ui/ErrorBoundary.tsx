@@ -291,33 +291,42 @@ export default class ErrorBoundary extends Component<Props, State> {
       // "Не удалось загрузить..." message that doesn't trigger cache recovery.
       if (this.state.isStaleChunk && Platform.OS === 'web') {
         // If auto-recovery exhausted retries (or we're already in a recovery loop
-        // indicated by _cb param), show an actionable error with manual reload button
-        if (this.state.recoveryExhausted) {
-          const inLoop = isAlreadyInRecoveryLoop();
+        // indicated by _cb param), show an actionable error with cache clearing instructions
+        if (this.state.recoveryExhausted || isAlreadyInRecoveryLoop()) {
           return (
             <View style={styles.container}>
               <View style={styles.content}>
-                <Text style={styles.title}>Не удалось загрузить обновление</Text>
+                <Text style={styles.title}>Требуется очистка кэша браузера</Text>
                 <Text style={styles.message}>
-                  {inLoop
-                    ? 'Автоматическое восстановление продолжается. Если экран не обновится, нажмите кнопку ниже.'
-                    : 'Запускаем повторное автоматическое восстановление. Если через несколько секунд экран не обновится, нажмите кнопку ниже.'}
+                  Ваш браузер сохранил устаревшую версию сайта. Для продолжения работы необходимо очистить кэш:
+                </Text>
+                <Text style={styles.instructions}>
+                  <Text style={styles.instructionsBold}>Компьютер:{'\n'}</Text>
+                  • Chrome/Edge: Ctrl+Shift+Delete → Кэш → Удалить{'\n'}
+                  • Firefox: Ctrl+Shift+Delete → Кэш → Очистить{'\n'}
+                  • Safari: Cmd+Option+E{'\n\n'}
+                  <Text style={styles.instructionsBold}>Телефон:{'\n'}</Text>
+                  • iPhone Safari: Настройки → Safari → Очистить историю и данные{'\n'}
+                  • Android Chrome: ⋮ → История → Очистить данные браузера{'\n\n'}
+                  <Text style={styles.instructionsBold}>Или:</Text> Откройте сайт в режиме инкогнито
                 </Text>
                 <Button
-                  label="Перезагрузить страницу"
+                  label="Открыть в инкогнито"
                   onPress={() => {
-                    clearRecoverySessionKeys(true, true);
-                    // Strip _cb param and navigate to clean URL to break the loop
-                    try {
-                      const url = new URL(window.location.href);
-                      url.searchParams.delete('_cb');
-                      window.location.replace(url.toString());
-                    } catch {
-                      window.location.reload();
-                    }
+                    // Can't open incognito programmatically, but we can suggest it
+                    window.open('https://metravel.by', '_blank');
                   }}
                   style={[styles.button, styles.primaryButton]}
-                  accessibilityLabel="Перезагрузить страницу"
+                  accessibilityLabel="Открыть в новой вкладке"
+                />
+                <Button
+                  label="Связаться с поддержкой"
+                  onPress={() => {
+                    window.location.href = 'mailto:support@metravel.by?subject=Проблема с кэшем браузера';
+                  }}
+                  variant="ghost"
+                  style={[styles.button, styles.secondaryButton]}
+                  accessibilityLabel="Связаться с поддержкой"
                 />
               </View>
             </View>
@@ -421,6 +430,21 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  instructions: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginBottom: 24,
+    textAlign: 'left',
+    lineHeight: 22,
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    width: '100%',
+  },
+  instructionsBold: {
+    fontWeight: '600',
+    color: colors.text,
   },
   button: {
     paddingHorizontal: 24,

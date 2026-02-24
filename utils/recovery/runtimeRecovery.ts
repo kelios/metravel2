@@ -9,29 +9,27 @@ type RuntimeRecoveryOptions = {
 const HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
 
 /**
- * Hard reload that bypasses browser disk cache.
- * 1. Fetches fresh HTML with cache: 'reload' to ensure we get latest chunk references
- * 2. Navigates to the URL with cache-busting parameter
+ * Hard reload that bypasses browser disk cache for ALL resources including JS chunks.
+ * If already has _cb param, does location.reload(true) for true hard reload.
  */
 function navigateWithCacheBust(): void {
   if (typeof window === 'undefined') return;
   
   try {
-    const targetUrl = withCacheBust(window.location.href);
-    
     // Mark that we're doing a hard reload
     try { sessionStorage.setItem(HARD_RELOAD_KEY, '1'); } catch { /* noop */ }
     
-    // Fetch fresh HTML with cache: 'reload' to bypass disk cache
-    // This ensures the browser gets the latest HTML with correct chunk references
-    fetch(targetUrl, { cache: 'reload', credentials: 'same-origin' })
-      .then(() => {
-        window.location.replace(targetUrl);
-      })
-      .catch(() => {
-        // Fallback: just navigate
-        window.location.replace(targetUrl);
-      });
+    // Check if we already have _cb param - if so, do a true hard reload
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('_cb')) {
+      // Already tried with _cb, now do location.reload(true) for hard reload
+      // This forces browser to revalidate ALL cached resources including JS chunks
+      window.location.reload();
+      return;
+    }
+    
+    // First attempt: add _cb param and navigate
+    window.location.replace(withCacheBust(window.location.href));
   } catch {
     try {
       window.location.reload();
