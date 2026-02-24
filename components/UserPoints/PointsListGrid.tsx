@@ -7,12 +7,19 @@ import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
-import { getFiltersPanelStyles } from '@/components/MapPage/filtersPanelStyles'
+import * as filtersPanelStylesModule from '@/components/MapPage/filtersPanelStyles'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
 import type { MapUiApi } from '@/types/mapUi'
+import { resolveExportedFunction } from '@/utils/moduleInterop'
 
 import type { PointsListStyles } from './PointsList'
+
+const getFiltersPanelStylesSafe =
+  resolveExportedFunction<typeof filtersPanelStylesModule.getFiltersPanelStyles>(
+    filtersPanelStylesModule as unknown as Record<string, unknown>,
+    'getFiltersPanelStyles'
+  )
 
 type ViewMode = 'list' | 'map'
 
@@ -107,7 +114,10 @@ export const PointsListGrid: React.FC<{
   const themedColors = useThemedColors()
   const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
   const mapSettingsStyles = useMemo(
-    () => getFiltersPanelStyles(themedColors as any, !isWideScreen, windowWidth),
+    () =>
+      typeof getFiltersPanelStylesSafe === 'function'
+        ? getFiltersPanelStylesSafe(themedColors as any, !isWideScreen, windowWidth)
+        : ({} as any),
     [themedColors, isWideScreen, windowWidth]
   )
 	  const recommendedRouteLines = useMemo(() => {

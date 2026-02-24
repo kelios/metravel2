@@ -2,13 +2,16 @@ import { useMemo, useCallback, useEffect } from 'react';
 import { Dimensions, LayoutAnimation } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import * as filtersPanelStylesModule from '@/components/MapPage/filtersPanelStyles';
+import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { showRouteModeTip, showFiltersResetToast } from '@/utils/mapToasts';
 import { useRouteStore } from '@/stores/routeStore';
 import type { RoutePoint } from '@/types/route';
 
 const getFiltersPanelStylesSafe =
-  (filtersPanelStylesModule as any).getFiltersPanelStyles ??
-  (filtersPanelStylesModule as any).default;
+  resolveExportedFunction<typeof filtersPanelStylesModule.getFiltersPanelStyles>(
+    filtersPanelStylesModule as unknown as Record<string, unknown>,
+    'getFiltersPanelStyles'
+  );
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 

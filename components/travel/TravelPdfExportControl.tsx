@@ -4,11 +4,36 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
-import useSingleTravelExportDefault, {
-  useSingleTravelExport as useSingleTravelExportNamed,
-} from '@/components/travel/hooks/useSingleTravelExport'
+import * as useSingleTravelExportModule from '@/components/travel/hooks/useSingleTravelExport'
+import { resolveExportedFunction } from '@/utils/moduleInterop'
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'))
+
+const FALLBACK_BOOK_SETTINGS: BookSettings = {
+  title: 'Мои путешествия',
+  subtitle: '',
+  coverType: 'auto',
+  template: 'minimal',
+  sortOrder: 'date-desc',
+  includeToc: true,
+  includeGallery: true,
+  includeMap: true,
+  includeChecklists: false,
+  checklistSections: ['clothing', 'food', 'electronics'],
+}
+
+const fallbackUseSingleTravelExport: typeof useSingleTravelExportModule.useSingleTravelExport = () => ({
+  pdfExport: { isGenerating: false } as any,
+  lastSettings: FALLBACK_BOOK_SETTINGS,
+  settingsSummary: 'minimal',
+  handleOpenPrintBookWithSettings: async () => {},
+})
+
+const useSingleTravelExportSafe =
+  resolveExportedFunction<typeof useSingleTravelExportModule.useSingleTravelExport>(
+    useSingleTravelExportModule as unknown as Record<string, unknown>,
+    'useSingleTravelExport'
+  ) ?? fallbackUseSingleTravelExport
 
 type Props = {
   travel: Travel
@@ -25,12 +50,9 @@ function TravelPdfExportControl({
   actionBtnPressedStyle,
   actionBtnDisabledStyle,
 }: Props) {
-  const useSingleTravelExport =
-    useSingleTravelExportNamed ?? useSingleTravelExportDefault
-
   const [showSettingsModal, setShowSettingsModal] = useState(false)
 
-  const { pdfExport, lastSettings, handleOpenPrintBookWithSettings } = useSingleTravelExport(travel)
+  const { pdfExport, lastSettings, handleOpenPrintBookWithSettings } = useSingleTravelExportSafe(travel)
 
   const handleOpenExport = useCallback(() => {
     if (Platform.OS !== 'web') {

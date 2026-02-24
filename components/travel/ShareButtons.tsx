@@ -10,18 +10,47 @@ import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import useSingleTravelExportDefault, {
-  useSingleTravelExport as useSingleTravelExportNamed,
-} from '@/components/travel/hooks/useSingleTravelExport';
+import * as useSingleTravelExportModule from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/types/pdf-export';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { showToast } from '@/utils/toast';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
+
+const FALLBACK_BOOK_SETTINGS: BookSettings = {
+  title: 'Мои путешествия',
+  subtitle: '',
+  coverType: 'auto',
+  template: 'minimal',
+  sortOrder: 'date-desc',
+  includeToc: true,
+  includeGallery: true,
+  includeMap: true,
+  includeChecklists: false,
+  checklistSections: ['clothing', 'food', 'electronics'],
+};
+
+const fallbackUseSingleTravelExport: typeof useSingleTravelExportModule.useSingleTravelExport = () => ({
+  pdfExport: {
+    isGenerating: false,
+    progress: 0,
+    currentStage: ExportStage.ERROR,
+  } as any,
+  lastSettings: FALLBACK_BOOK_SETTINGS,
+  settingsSummary: 'minimal',
+  handleOpenPrintBookWithSettings: async () => {},
+});
+
+const useSingleTravelExportSafe =
+  resolveExportedFunction<typeof useSingleTravelExportModule.useSingleTravelExport>(
+    useSingleTravelExportModule as unknown as Record<string, unknown>,
+    'useSingleTravelExport'
+  ) ?? fallbackUseSingleTravelExport;
 
 interface ShareButtonsProps {
   travel: Travel;
@@ -30,9 +59,6 @@ interface ShareButtonsProps {
 }
 
 function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
-  const useSingleTravelExport =
-    useSingleTravelExportNamed ?? useSingleTravelExportDefault;
-
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isSticky = variant === 'sticky';
@@ -45,7 +71,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     pdfExport,
     lastSettings,
     handleOpenPrintBookWithSettings,
-  } = useSingleTravelExport(travel);
+  } = useSingleTravelExportSafe(travel);
   const { isGenerating, progress, currentStage } = pdfExport;
 
   // Формируем URL для поделиться
