@@ -1,4 +1,3 @@
-// withCacheBust no longer used - we now always set new _cb timestamp directly
 import { RECOVERY_TIMEOUTS } from '@/utils/recovery/recoveryConfig';
 
 type RuntimeRecoveryOptions = {
@@ -6,24 +5,25 @@ type RuntimeRecoveryOptions = {
   safetyTimeoutMs?: number;
 };
 
-const HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
-
 /**
- * Hard reload that bypasses browser disk cache for ALL resources including JS chunks.
- * Always uses NEW _cb timestamp to force fresh fetch even if _cb already exists.
+ * Simple reload without _cb parameter.
+ * SW already uses network-first with cache:'no-store' for documents,
+ * so a plain reload fetches fresh HTML from server.
+ * Removes any existing _cb parameter to clean up URLs.
  */
-function navigateWithCacheBust(): void {
+function navigateClean(): void {
   if (typeof window === 'undefined') return;
   
   try {
-    // Mark that we're doing a hard reload
-    try { sessionStorage.setItem(HARD_RELOAD_KEY, '1'); } catch { /* noop */ }
-    
-    // Always use NEW _cb timestamp to bypass browser disk cache.
-    // Even if _cb already exists, a new timestamp forces fresh fetch.
+    // Remove _cb parameter if present to clean up URL
     const url = new URL(window.location.href);
-    url.searchParams.set('_cb', String(Date.now()));
-    window.location.replace(url.toString());
+    if (url.searchParams.has('_cb')) {
+      url.searchParams.delete('_cb');
+      window.location.replace(url.toString());
+      return;
+    }
+    // Simple reload - SW handles cache bypass
+    window.location.reload();
   } catch {
     try {
       window.location.reload();
@@ -65,7 +65,12 @@ export function runStaleChunkRecovery(
     safetyTimeoutMs = RECOVERY_TIMEOUTS.staleCleanupSafetyMs,
   } = options;
 
-  const safetyTimer = setTimeout(navigateWithCacheBust, safetyTimeoutMs);
+  // Flag for tests to verify recovery was triggered
+  if (typeof window !== 'undefined') {
+    (window as any).__metravelModuleReloadTriggered = true;
+  }
+
+  const safetyTimer = setTimeout(navigateClean, safetyTimeoutMs);
 
   Promise.all([
     unregisterAllServiceWorkers(),
@@ -74,6 +79,6 @@ export function runStaleChunkRecovery(
     .catch(() => {})
     .finally(() => {
       clearTimeout(safetyTimer);
-      navigateWithCacheBust();
+      navigateClean();
     });
 }

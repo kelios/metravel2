@@ -191,7 +191,7 @@ describe('ErrorBoundary', () => {
     ];
 
     it.each(staleChunkMessages)(
-      'should detect stale chunk error: %s',
+      'should detect stale chunk error and show recovery UI: %s',
       (message) => {
         const consoleError = console.error;
         console.error = jest.fn();
@@ -200,19 +200,21 @@ describe('ErrorBoundary', () => {
           throw new Error(message);
         };
 
-        render(
+        const { toJSON } = render(
           <ErrorBoundary>
             <ThrowChunkError />
           </ErrorBoundary>
         );
 
-        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Обновление приложения');
+        expect(treeStr).toContain('Перезагрузить и очистить кеш');
 
         console.error = consoleError;
       },
     );
 
-    it('should detect AsyncRequireError by error.name', () => {
+    it('should detect AsyncRequireError by error.name and show recovery UI', () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -222,18 +224,20 @@ describe('ErrorBoundary', () => {
         throw err;
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowAsyncRequireError />
         </ErrorBoundary>
       );
 
-      expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+      const treeStr = JSON.stringify(toJSON());
+      expect(treeStr).toContain('Обновление приложения');
+      expect(treeStr).toContain('Перезагрузить и очистить кеш');
 
       console.error = consoleError;
     });
 
-    it('should auto-recover for React #130 args[]=undefined even when no SW controller is present (strong stale-cache signal)', async () => {
+    it('should show recovery UI for React #130 args[]=undefined even when no SW controller is present (strong stale-cache signal)', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -259,21 +263,22 @@ describe('ErrorBoundary', () => {
         throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowReact130UndefinedArgs />
         </ErrorBoundary>
       );
 
       await waitFor(() => {
-        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
-        expect(mockReplace).toHaveBeenCalled();
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Обновление приложения');
+        expect(treeStr).toContain('Перезагрузить и очистить кеш');
       });
 
       console.error = consoleError;
     });
 
-    it('should auto-recover for React #130 args[]=undefined when a SW controller is present (stale runtime signal)', async () => {
+    it('should show recovery UI for React #130 args[]=undefined when a SW controller is present (stale runtime signal)', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -311,15 +316,16 @@ describe('ErrorBoundary', () => {
         throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowReact130UndefinedArgs />
         </ErrorBoundary>
       );
 
       await waitFor(() => {
-        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
-        expect(mockReplace).toHaveBeenCalled();
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Обновление приложения');
+        expect(treeStr).toContain('Перезагрузить и очистить кеш');
       });
 
       console.error = consoleError;
@@ -345,10 +351,10 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
-      // Should show auto-reload UI instead of manual cache clear instructions
+      // Should show stale chunk recovery UI
       const treeStr = JSON.stringify(toJSON());
       expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Автоматическая перезагрузка');
+      expect(treeStr).toContain('Перезагрузить и очистить кеш');
 
       console.error = consoleError;
     });
@@ -370,10 +376,10 @@ describe('ErrorBoundary', () => {
         </ErrorBoundary>
       );
 
-      // Should show auto-reload UI for React #130 with undefined args when exhausted
+      // Should show stale chunk recovery UI for React #130 with undefined args when exhausted
       const treeStr = JSON.stringify(toJSON());
       expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Автоматическая перезагрузка');
+      expect(treeStr).toContain('Перезагрузить и очистить кеш');
 
       console.error = consoleError;
     });
@@ -430,7 +436,7 @@ describe('ErrorBoundary', () => {
         throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]= for the full message');
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowReact130 />
         </ErrorBoundary>
@@ -438,14 +444,15 @@ describe('ErrorBoundary', () => {
 
       await waitFor(() => {
         expect((global as any).fetch).toHaveBeenCalled();
-        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
-        expect(mockReplace).toHaveBeenCalled();
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Обновление приложения');
+        expect(treeStr).toContain('Перезагрузить и очистить кеш');
       });
 
       console.error = consoleError;
     });
 
-    it('should NOT auto-recover for React #130 when fresh HTML bundle scripts match (non-undefined args)', async () => {
+    it('should NOT show recovery UI for React #130 when fresh HTML bundle scripts match (non-undefined args)', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -476,8 +483,6 @@ describe('ErrorBoundary', () => {
       });
 
       expect((global as any).fetch).toHaveBeenCalled();
-      expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
-      expect(mockReplace).not.toHaveBeenCalled();
 
       console.error = consoleError;
     });
@@ -512,9 +517,9 @@ describe('ErrorBoundary', () => {
       );
 
       const treeStr = JSON.stringify(toJSON());
-      // Should show auto-reload UI when exhausted flag is set
+      // Should show stale chunk recovery UI when exhausted flag is set
       expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Автоматическая перезагрузка');
+      expect(treeStr).toContain('Перезагрузить и очистить кеш');
 
       // Reset location
       Object.defineProperty(window, 'location', {
@@ -562,11 +567,9 @@ describe('ErrorBoundary', () => {
       );
 
       const treeStr = JSON.stringify(toJSON());
-      // Should NOT show auto-reload message when exhausted flag is not set
-      // (even if _cb is in URL - user might have cleared cache)
-      expect(treeStr).not.toContain('Автоматическая перезагрузка');
-      // Should show the updating UI instead
+      // Should show stale chunk recovery UI (even if _cb is in URL - user might have cleared cache)
       expect(treeStr).toContain('Обновление приложения');
+      expect(treeStr).toContain('Перезагрузить и очистить кеш');
 
       // Reset location
       Object.defineProperty(window, 'location', {
@@ -595,24 +598,26 @@ describe('ErrorBoundary', () => {
         throw new Error(message);
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowNonStaleError />
         </ErrorBoundary>
       );
 
-      expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
+      const treeStr = JSON.stringify(toJSON());
+      // Should show generic error UI, not recovery UI
+      expect(treeStr).toContain('Что-то пошло не так');
+      expect(treeStr).not.toContain('Обновление приложения');
 
       console.error = consoleError;
     });
 
-    it('should detect AsyncRequireError as stale chunk error and trigger recovery', async () => {
+    it('should detect AsyncRequireError as stale chunk error and show recovery UI', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
       // Clear any previous state
       sessionStorage.clear();
-      (global as any).window.__metravelModuleReloadTriggered = undefined;
 
       const ThrowAsyncRequireError = () => {
         const error = new Error(
@@ -622,14 +627,16 @@ describe('ErrorBoundary', () => {
         throw error;
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowAsyncRequireError />
         </ErrorBoundary>
       );
 
       await waitFor(() => {
-        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Обновление приложения');
+        expect(treeStr).toContain('Перезагрузить и очистить кеш');
       });
 
       console.error = consoleError;

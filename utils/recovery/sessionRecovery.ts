@@ -63,25 +63,16 @@ export function clearRecoverySessionState(
   }
 }
 
-export function isRecoveryLoopUrl(url: string): boolean {
+/** Remove _cb parameter from URL if present */
+export function cleanCacheBustParam(url: string): string {
   try {
-    return new URL(url).searchParams.has('_cb');
+    const parsed = new URL(url);
+    if (parsed.searchParams.has('_cb')) {
+      parsed.searchParams.delete('_cb');
+      return parsed.toString();
+    }
+    return url;
   } catch {
-    return false;
+    return url;
   }
-}
-
-/** Check if inline script has exhausted recovery attempts */
-export function isRecoveryExhausted(): boolean {
-  try {
-    return sessionStorage.getItem(RECOVERY_SESSION_KEYS.recoveryExhausted) === '1';
-  } catch {
-    return false;
-  }
-}
-
-export function withCacheBust(url: string, value = String(Date.now())): string {
-  const parsed = new URL(url);
-  parsed.searchParams.set('_cb', value);
-  return parsed.toString();
 }

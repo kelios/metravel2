@@ -1,8 +1,7 @@
 import {
   clearRecoverySessionState,
-  isRecoveryLoopUrl,
   RECOVERY_SESSION_KEYS,
-  withCacheBust,
+  cleanCacheBustParam,
 } from '@/utils/recovery/sessionRecovery';
 
 describe('sessionRecovery', () => {
@@ -53,14 +52,13 @@ describe('sessionRecovery', () => {
     expect(sessionStorage.getItem(RECOVERY_SESSION_KEYS.emergencyRecoveryTs)).toBeNull();
   });
 
-  it('detects recovery loop URLs by _cb query param', () => {
-    expect(isRecoveryLoopUrl('https://metravel.by/map?_cb=123')).toBe(true);
-    expect(isRecoveryLoopUrl('https://metravel.by/map')).toBe(false);
-    expect(isRecoveryLoopUrl('not-a-url')).toBe(false);
+  it('removes _cb query param from URL', () => {
+    const url = cleanCacheBustParam('https://metravel.by/map?foo=bar&_cb=999');
+    expect(url).toBe('https://metravel.by/map?foo=bar');
   });
 
-  it('adds cache-busting query param', () => {
-    const url = withCacheBust('https://metravel.by/map?foo=bar', '999');
-    expect(url).toBe('https://metravel.by/map?foo=bar&_cb=999');
+  it('returns URL unchanged if no _cb param', () => {
+    const url = cleanCacheBustParam('https://metravel.by/map?foo=bar');
+    expect(url).toBe('https://metravel.by/map?foo=bar');
   });
 });
