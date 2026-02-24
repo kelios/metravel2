@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button';
 import {
   clearRecoverySessionState,
   isRecoveryLoopUrl,
+  isRecoveryExhausted,
   RECOVERY_SESSION_KEYS,
 } from '@/utils/recovery/sessionRecovery';
 import { evaluateRecoveryAttempt, shouldAllowRecoveryAttempt } from '@/utils/recovery/recoveryThrottle';
@@ -14,6 +15,7 @@ import { STALE_ERROR_REGEX } from '@/utils/recovery/staleErrorPattern';
 import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
 import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS, RECOVERY_TIMEOUTS } from '@/utils/recovery/recoveryConfig';
 import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
+import { openWebWindow } from '@/utils/externalLinks';
 
 interface Props {
   children: ReactNode;
@@ -83,6 +85,13 @@ function isAlreadyInRecoveryLoop(): boolean {
   } catch { return false; }
 }
 
+/** Check if recovery attempts are exhausted (set by inline script or ErrorBoundary) */
+function checkRecoveryExhausted(): boolean {
+  try {
+    return isRecoveryExhausted() || isAlreadyInRecoveryLoop();
+  } catch { return false; }
+}
+
 /** Unregister SW, purge caches, then hard-navigate with cache-busting. */
 function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = { purgeAllCaches: true }): void {
   runStaleChunkRecovery({ purgeAllCaches: options.purgeAllCaches });
@@ -128,10 +137,14 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     const msg = String(error?.message ?? '');
+    const isStale = isStaleModuleError(msg, error?.name);
+    // Check if recovery is already exhausted (from inline script or previous attempts)
+    const exhausted = isStale && checkRecoveryExhausted();
     return {
       hasError: true,
       error,
-      isStaleChunk: isStaleModuleError(msg, error?.name),
+      isStaleChunk: isStale,
+      recoveryExhausted: exhausted,
     };
   }
 
@@ -177,9 +190,9 @@ export default class ErrorBoundary extends Component<Props, State> {
         // Mark as stale chunk error so we show the cache clearing instructions
         this.setState({ isStaleChunk: true });
         
-        // If the URL already has _cb, a previous recovery cycle didn't help.
-        // Show cache clearing instructions instead of trying again.
-        if (isAlreadyInRecoveryLoop()) {
+        // If recovery is already exhausted (from inline script or _cb param),
+        // show cache clearing instructions instead of trying again.
+        if (checkRecoveryExhausted()) {
           this.setState({ isStaleChunk: true, recoveryExhausted: true });
           return;
         }
@@ -277,9 +290,9 @@ export default class ErrorBoundary extends Component<Props, State> {
       // (e.g. Home, Search) still show the stale recovery UI instead of a generic
       // "Не удалось загрузить..." message that doesn't trigger cache recovery.
       if (this.state.isStaleChunk && Platform.OS === 'web') {
-        // If auto-recovery exhausted retries (or we're already in a recovery loop
-        // indicated by _cb param), show an actionable error with cache clearing instructions
-        if (this.state.recoveryExhausted || isAlreadyInRecoveryLoop()) {
+        // If auto-recovery exhausted retries (from inline script flag or _cb param),
+        // show an actionable error with cache clearing instructions
+        if (this.state.recoveryExhausted || checkRecoveryExhausted()) {
           return (
             <View style={styles.container}>
               <View style={styles.content}>
@@ -301,7 +314,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                   label="Открыть в инкогнито"
                   onPress={() => {
                     // Can't open incognito programmatically, but we can suggest it
-                    window.open('https://metravel.by', '_blank');
+                    openWebWindow('https://metravel.by', { target: '_blank' });
                   }}
                   style={[styles.button, styles.primaryButton]}
                   accessibilityLabel="Открыть в новой вкладке"

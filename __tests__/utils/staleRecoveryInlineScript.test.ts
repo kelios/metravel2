@@ -26,12 +26,13 @@ describe('staleRecoveryInlineScript', () => {
     expect(script).toContain('__metravel_hard_reload_pending')
   })
 
-  it('uses fetch with cache reload to bypass disk cache', () => {
+  it('uses hard reload with cache bust param to bypass disk cache', () => {
     const script = getStaleRecoveryInlineScript()
 
-    // Should use fetch with cache: 'reload' to bypass browser disk cache
-    expect(script).toContain("cache: 'reload'")
+    // Should use hardReloadWithCacheBust to force fresh load
     expect(script).toContain('hardReloadWithCacheBust')
+    // Should add _cb param for cache busting
+    expect(script).toContain('_cb')
   })
 
   it('detects script load errors for chunk 404s', () => {

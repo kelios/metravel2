@@ -31,13 +31,21 @@ echo "🔄 Применяю билд на сервере..."
 ssh $SERVER "set -e
   cd $REMOTE_DIR
   
-  # Полностью удаляем старый static/dist
+  # Сохраняем старые JS chunks для grace period
   rm -rf static/dist.old static/dist.new
-  rm -rf static/dist
-  
-  # Создаём новый static/dist из загруженного билда
   mkdir -p static
-  mv dist/prod static/dist
+  mv dist/prod static/dist.new
+  
+  # Копируем старые JS chunks в новый билд (для пользователей с закэшированными старыми chunks)
+  if [ -d static/dist/_expo/static/js/web ]; then
+    mkdir -p static/dist.new/_expo/static/js/web
+    cp -n static/dist/_expo/static/js/web/*.js static/dist.new/_expo/static/js/web/ 2>/dev/null || true
+  fi
+  
+  # Заменяем старый билд новым
+  mv static/dist static/dist.old 2>/dev/null || true
+  mv static/dist.new static/dist
+  rm -rf static/dist.old
   
   # Копируем иконки и изображения
   mkdir -p static/dist/assets/icons static/dist/assets/images

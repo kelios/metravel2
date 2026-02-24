@@ -11,6 +11,7 @@ export const getStaleRecoveryInlineScript = () => String.raw`
   var COOLDOWN = ${RECOVERY_COOLDOWNS.staleMs};
   var MAX_RETRIES = ${RECOVERY_RETRY_LIMITS.stale};
   var HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
+  var EXHAUSTED_FLAG = '__metravel_recovery_exhausted';
 
   function hasRecoveryParam() {
     try {
@@ -49,7 +50,10 @@ export const getStaleRecoveryInlineScript = () => String.raw`
         if (elapsed >= COOLDOWN) {
           count = 0;
           sessionStorage.setItem(COUNT_KEY, '0');
+          sessionStorage.removeItem(EXHAUSTED_FLAG);
         } else {
+          // Set exhausted flag so ErrorBoundary shows cache clear instructions
+          sessionStorage.setItem(EXHAUSTED_FLAG, '1');
           return false;
         }
       }
@@ -138,14 +142,20 @@ export const getStaleRecoveryInlineScript = () => String.raw`
     // Check for script load errors (chunk 404s)
     if (payload && payload.target && isScriptLoadError(payload)) {
       if (hasRecoveryParam()) return;
-      if (!shouldAttemptRecovery()) return;
+      if (!shouldAttemptRecovery()) {
+        // Recovery exhausted - don't reload, let ErrorBoundary show instructions
+        return;
+      }
       cleanupAndRecover();
       return;
     }
     
     if (!isStale(message)) return;
     if (hasRecoveryParam()) return;
-    if (!shouldAttemptRecovery()) return;
+    if (!shouldAttemptRecovery()) {
+      // Recovery exhausted - don't reload, let ErrorBoundary show instructions
+      return;
+    }
     cleanupAndRecover();
   }
 

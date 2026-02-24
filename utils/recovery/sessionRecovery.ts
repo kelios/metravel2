@@ -11,6 +11,7 @@ export const RECOVERY_SESSION_KEYS = {
   react130RecoveryTs: '__metravel_react130_recovery_ts',
   react130RecoveryCount: '__metravel_react130_recovery_count',
   controllerChangeReloadTs: '__metravel_sw_controllerchange_reload_ts',
+  recoveryExhausted: '__metravel_recovery_exhausted',
 } as const;
 
 export type ClearRecoverySessionStateOptions = {
@@ -37,6 +38,8 @@ export function clearRecoverySessionState(
     sessionStorage.removeItem(RECOVERY_SESSION_KEYS.chunkReloadCount);
     sessionStorage.removeItem(RECOVERY_SESSION_KEYS.swStaleReloadTs);
     sessionStorage.removeItem(RECOVERY_SESSION_KEYS.swStaleReloadCount);
+    // Always clear the exhausted flag when clearing recovery state
+    sessionStorage.removeItem(RECOVERY_SESSION_KEYS.recoveryExhausted);
 
     if (clearExhaustedAutoRetryKeys) {
       sessionStorage.removeItem(RECOVERY_SESSION_KEYS.exhaustedAutoRetryTs);
@@ -63,6 +66,15 @@ export function clearRecoverySessionState(
 export function isRecoveryLoopUrl(url: string): boolean {
   try {
     return new URL(url).searchParams.has('_cb');
+  } catch {
+    return false;
+  }
+}
+
+/** Check if inline script has exhausted recovery attempts */
+export function isRecoveryExhausted(): boolean {
+  try {
+    return sessionStorage.getItem(RECOVERY_SESSION_KEYS.recoveryExhausted) === '1';
   } catch {
     return false;
   }

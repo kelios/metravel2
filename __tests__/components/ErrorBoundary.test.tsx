@@ -325,36 +325,31 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should run emergency deep recovery when stale retry budget is exhausted', async () => {
+    it('should show cache clear instructions when stale retry budget is exhausted', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
       const now = Date.now();
       sessionStorage.setItem('metravel:eb:reload_count', '5');
       sessionStorage.setItem('metravel:eb:reload_ts', String(now));
-
-      const cacheDelete = jest.fn().mockResolvedValue(true);
-      (global as any).caches = {
-        keys: jest.fn().mockResolvedValue(['metravel-static-v1', 'third-party-cache']),
-        delete: cacheDelete,
-      };
+      // Set exhausted flag (as inline script would do)
+      sessionStorage.setItem('__metravel_recovery_exhausted', '1');
 
       const ThrowChunkError = () => {
         throw new Error('ChunkLoadError: Loading chunk 42 failed.');
       };
 
-      render(
+      const { toJSON } = render(
         <ErrorBoundary>
           <ThrowChunkError />
         </ErrorBoundary>
       );
 
-      await waitFor(() => {
-        expect(cacheDelete).toHaveBeenCalledWith('third-party-cache');
-      });
-
-      expect(sessionStorage.getItem('__metravel_emergency_recovery_ts')).toBeTruthy();
-      expect(mockReplace).toHaveBeenCalled();
+      // Should show cache clear instructions instead of trying recovery
+      const treeStr = JSON.stringify(toJSON());
+      expect(treeStr).toContain('Требуется очистка кэша браузера');
+      // Should NOT trigger reload when exhausted
+      expect(mockReplace).not.toHaveBeenCalled();
 
       console.error = consoleError;
     });
@@ -463,14 +458,22 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should auto-retry with clean URL reload after exhausted state without manual click', async () => {
+    it('should show cache clear instructions when _cb param indicates recovery loop', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
-      const now = Date.now();
-      sessionStorage.setItem('metravel:eb:reload_count', '5');
-      sessionStorage.setItem('metravel:eb:reload_ts', String(now));
-      sessionStorage.setItem('__metravel_emergency_recovery_ts', String(now));
+      // Simulate being in recovery loop (URL has _cb param)
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: 'https://metravel.by/map?_cb=123456',
+          hostname: 'metravel.by',
+          pathname: '/map',
+          search: '?_cb=123456',
+          replace: mockReplace,
+          reload: jest.fn(),
+        },
+        writable: true,
+      });
 
       const ThrowChunkError = () => {
         throw new Error('ChunkLoadError: Loading chunk 99 failed.');
@@ -483,15 +486,23 @@ describe('ErrorBoundary', () => {
       );
 
       const treeStr = JSON.stringify(toJSON());
-      expect(treeStr).toContain('Не удалось загрузить обновление');
+      // Should show cache clear instructions when in recovery loop
+      expect(treeStr).toContain('Требуется очистка кэша браузера');
+      // Should NOT trigger another reload
+      expect(mockReplace).not.toHaveBeenCalled();
 
-      // Exhausted auto-recovery does a clean URL reload (strips _cb, clears state)
-      await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalled();
-      }, { timeout: 5000 });
-
-      // Verify recovery session state was cleared
-      expect(sessionStorage.getItem('metravel:eb:reload_count')).toBeNull();
+      // Reset location
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: 'https://metravel.by/',
+          hostname: 'metravel.by',
+          pathname: '/',
+          search: '',
+          replace: mockReplace,
+          reload: jest.fn(),
+        },
+        writable: true,
+      });
 
       console.error = consoleError;
     });
