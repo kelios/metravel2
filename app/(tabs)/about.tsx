@@ -1,7 +1,8 @@
 // app/about/index.tsx
-import { useCallback, useMemo, useRef, useState, memo } from 'react';
+import { useCallback, useMemo, useRef, useState, memo, useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { AboutHeader } from '@/components/about/AboutHeader';
 import { AboutIntroCard } from '@/components/about/AboutIntroCard';
@@ -32,6 +33,32 @@ function AboutAndContactScreen() {
   const styles = useAboutStyles();
   const { width } = useResponsive();
   const isWide = width >= 900;
+
+  const appVersion =
+    (Constants as any)?.expoConfig?.version ||
+    (Constants as any)?.manifest?.version ||
+    'unknown';
+
+  const [webBuildVersion, setWebBuildVersion] = useState<string>('');
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let isMounted = true;
+    void fetch(`/sw.js?cb=${Date.now()}`, { cache: 'no-store' })
+      .then((r) => (r && r.ok ? r.text() : ''))
+      .then((text) => {
+        if (!isMounted) return;
+        const match = /const\s+CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/i.exec(text || '');
+        setWebBuildVersion(match?.[1] || 'unknown');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setWebBuildVersion('unknown');
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const router = useRouter();
 
@@ -174,6 +201,10 @@ function AboutAndContactScreen() {
                       onOpenPrivacy={() => router.push('/privacy' as any)}
                       onOpenCookies={() => router.push('/cookies' as any)}
                       socialLinks={SOCIAL_LINKS}
+                      versionInfo={{
+                        appVersion: String(appVersion),
+                        ...(Platform.OS === 'web' ? { webBuildVersion } : {}),
+                      }}
                     />
                     <View style={[isWide ? styles.column : null, !isWide && styles.videoColumnMobile]}>
                       <VideoCard youtubeThumb={YT_THUMB} onOpenYoutube={openYoutube} />

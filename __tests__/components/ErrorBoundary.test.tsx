@@ -276,6 +276,59 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
+    it('should auto-recover for React #130 args[]=undefined when a SW controller is present (stale runtime signal)', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      try {
+        Object.defineProperty((global as any).window.navigator, 'serviceWorker', {
+          value: {
+            getRegistrations: jest.fn().mockResolvedValue([]),
+            controller: {},
+          },
+          configurable: true,
+        });
+      } catch {
+        // noop
+      }
+
+      (global as any).navigator = {
+        ...(global as any).navigator,
+        serviceWorker: {
+          ...(global as any).navigator?.serviceWorker,
+          controller: {},
+        },
+      };
+
+      (global as any).fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        text: async () =>
+          '<html><head><script src="/_expo/static/js/web/__common-same.js"></script><script src="/_expo/static/js/web/entry-same.js"></script></head></html>',
+      });
+      addBundleScripts([
+        '/_expo/static/js/web/__common-same.js',
+        '/_expo/static/js/web/entry-same.js',
+      ]);
+
+      const ThrowReact130UndefinedArgs = () => {
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+      };
+
+      render(
+        <ErrorBoundary>
+          <ThrowReact130UndefinedArgs />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        expect((global as any).fetch).toHaveBeenCalled();
+        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+        expect(mockReplace).toHaveBeenCalled();
+      });
+
+      console.error = consoleError;
+    });
+
     it('should run emergency deep recovery when stale retry budget is exhausted', async () => {
       const consoleError = console.error;
       console.error = jest.fn();

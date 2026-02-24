@@ -41,7 +41,7 @@ function isReact130LikeError(msg: string): boolean {
 }
 
 function isReact130UndefinedArgsError(msg: string): boolean {
-  return /react\.dev\/errors\/130\?[^\s]*args\[\]=undefined/i.test(msg);
+  return /args\[\]=undefined/i.test(msg);
 }
 
 function shouldAttemptReact130Recovery(): boolean {
@@ -213,8 +213,10 @@ export default class ErrorBoundary extends Component<Props, State> {
         if (isAlreadyInRecoveryLoop()) return;
 
         const hasSwController =
-          typeof navigator !== 'undefined' &&
-          !!(navigator as any)?.serviceWorker?.controller;
+          !!(
+            (typeof window !== 'undefined' && (window as any)?.navigator?.serviceWorker?.controller) ||
+            (typeof globalThis !== 'undefined' && (globalThis as any)?.navigator?.serviceWorker?.controller)
+          );
 
         const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
 
@@ -224,6 +226,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             if ((window as any).__metravelModuleReloadTriggered) return;
             if (!shouldAttemptReact130Recovery()) return;
             (window as any).__metravelModuleReloadTriggered = true;
+            this.setState({ isStaleChunk: true });
             clearRecoverySessionKeys(true, true);
             doStaleChunkRecovery({ purgeAllCaches: true });
           })
@@ -232,6 +235,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             if ((window as any).__metravelModuleReloadTriggered) return;
             if (!shouldAttemptReact130Recovery()) return;
             (window as any).__metravelModuleReloadTriggered = true;
+            this.setState({ isStaleChunk: true });
             clearRecoverySessionKeys(true, true);
             doStaleChunkRecovery({ purgeAllCaches: true });
           });
