@@ -12,6 +12,7 @@ const STALE_ERROR_PATTERN_PARTS = [
   'usesingletravelexport.*is not a function',
   'usesafeareainsets.*is not a function',
   'r[(].*[)][.].*[)] is not a function',
+  'react error #130.*args.*=undefined',
   "class constructors?.*cannot be invoked without 'new'",
 ] as const;
 
