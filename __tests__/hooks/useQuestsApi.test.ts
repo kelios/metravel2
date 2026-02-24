@@ -177,6 +177,7 @@ describe('useQuestsApi hooks', () => {
       expect(result.current.bundle).not.toBeNull();
       expect(result.current.bundle!.title).toBe('Тайна дракона');
       expect(result.current.error).toBeNull();
+      expect(typeof result.current.refetch).toBe('function');
     });
 
     it('sets error when API fails (no fallback)', async () => {
@@ -197,6 +198,27 @@ describe('useQuestsApi hooks', () => {
 
       expect(result.current.bundle).toBeNull();
       expect(mockFetchQuestByQuestId).not.toHaveBeenCalled();
+      expect(typeof result.current.refetch).toBe('function');
+    });
+
+    it('refetch triggers a second API request and updates bundle', async () => {
+      mockFetchQuestByQuestId
+        .mockResolvedValueOnce({ ...API_BUNDLE, title: 'Тайна дракона (v1)' })
+        .mockResolvedValueOnce({ ...API_BUNDLE, title: 'Тайна дракона (v2)' });
+
+      const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.bundle?.title).toBe('Тайна дракона (v1)');
+      expect(mockFetchQuestByQuestId).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        result.current.refetch();
+      });
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.bundle?.title).toBe('Тайна дракона (v2)');
+      expect(mockFetchQuestByQuestId).toHaveBeenCalledTimes(2);
     });
   });
 

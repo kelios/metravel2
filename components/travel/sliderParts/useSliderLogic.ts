@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, AppState, AccessibilityInfo } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { prefetchImage } from '@/components/ui/ImageCardMedia';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { SliderImage } from './types';

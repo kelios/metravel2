@@ -1,6 +1,7 @@
 // components/quests/QuestWizard.tsx
 import React, {
     memo,
+    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -90,6 +91,8 @@ export type QuestWizardProps = {
         answers: Record<string, string>; attempts: Record<string, number>;
         hints: Record<string, boolean>; showMap: boolean;
     };
+    /** Web: обновить бандл (и signed video URL) перед повторной попыткой проигрывания */
+    onFinaleVideoRetry?: () => void;
 };
 
 // ===================== ТЕМА =====================
@@ -405,7 +408,7 @@ const StepCard = memo((props: StepCardProps) => {
 });
 
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, onProgressChange, onProgressReset, initialProgress }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry }: QuestWizardProps) {
     const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
@@ -581,6 +584,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         return `https://www.youtube.com/embed/${youtubeId}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
     }, [videoUri]);
     const handleVideoError = useMemo(() => () => setVideoOk(false), []);
+    const handleVideoRetry = useCallback(() => {
+        if (Platform.OS === 'web') {
+            onFinaleVideoRetry?.();
+        }
+        setVideoOk(true);
+    }, [onFinaleVideoRetry]);
     useEffect(() => { setVideoOk(true); }, [finale.video]);
 
     return (
@@ -771,7 +780,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                             {posterUri ? <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" /> : null}
                                                             <View style={styles.videoFallbackOverlay}>
                                                                 <Text style={styles.videoFallbackText}>Не удалось воспроизвести видео. Попробуйте ещё раз.</Text>
-                                                                <Pressable onPress={() => setVideoOk(true)} style={styles.videoRetryBtn} hitSlop={8}>
+                                                                <Pressable onPress={handleVideoRetry} style={styles.videoRetryBtn} hitSlop={8}>
                                                                     <Text style={styles.videoRetryText}>Повторить</Text>
                                                                 </Pressable>
                                                             </View>

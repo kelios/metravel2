@@ -97,6 +97,11 @@ export function useQuestBundle(questId: string | undefined) {
     const [bundle, setBundle] = useState<FrontendQuestBundle | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [reloadToken, setReloadToken] = useState(0);
+
+    const refetch = useCallback(() => {
+        setReloadToken((t) => t + 1);
+    }, []);
 
     useEffect(() => {
         if (!questId) {
@@ -124,9 +129,9 @@ export function useQuestBundle(questId: string | undefined) {
             });
 
         return () => { cancelled = true; };
-    }, [questId]);
+    }, [questId, reloadToken]);
 
-    return { bundle, loading, error };
+    return { bundle, loading, error, refetch };
 }
 
 const PROGRESS_SYNC_DEBOUNCE_MS = 2000;

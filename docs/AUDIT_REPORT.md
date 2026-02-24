@@ -2,6 +2,191 @@
 
 ---
 
+## v25 — Full Post-Deploy Audit (2026-02-24)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### 🔴 CRITICAL: `/map` page crash on production
+
+The `/map` page is **completely broken** — crashes immediately with:
+```
+TypeError: (0 , r(...).useSafeAreaInsets) is not a function
+```
+The ErrorBoundary catches it and shows "Что-то пошло не так". Users cannot access the map.
+
+**Root cause:** `react-native-safe-area-context` v5.6.2 module export resolves incorrectly in the production web bundle. The `useSafeAreaInsets` function is `undefined` when the minified chunk containing `useMapUIController` executes. This is likely caused by Metro's `inlineRequires` + chunk splitting interacting poorly with the module's CommonJS/ESM dual exports.
+
+**Fix:** Created `hooks/useSafeAreaInsetsSafe.ts` — a safe wrapper that:
+1. Lazily resolves `useSafeAreaInsets` via `require()` with try-catch
+2. On web, falls back to `{ top: 0, bottom: 0, left: 0, right: 0 }` (correct — no notch on web)
+3. On native, delegates to the real hook
+
+Applied the safe wrapper to all web-facing callers:
+- `hooks/map/useMapUIController.ts` — **P0** (map page crash)
+- `components/travel/sliderParts/useSliderLogic.ts` — preventive
+- `components/travel/Slider.web.tsx` — preventive
+- `components/layout/ConsentBanner.tsx` — preventive
+
+### Lighthouse Scores (Current Production)
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v24 |
+|----------|-------|----------|
+| Performance | **74** | -1 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **74** | = |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 0.6 s | ✅ |
+| LCP | 3.5 s | ⚠️ |
+| TBT | 10 ms | ✅ |
+| CLS | 0.006 | ✅ |
+| SI | 2.7 s | ⚠️ |
+| TTFB | 90 ms | ✅ |
+
+#### Desktop — Search (`/search`)
+| Category | Score |
+|----------|-------|
+| Performance | **77** |
+| Accessibility | **100** |
+| Best Practices | **78** |
+| SEO | **100** |
+
+| Metric | Value |
+|--------|-------|
+| FCP | 0.6 s |
+| LCP | 3.3 s |
+| TBT | 10 ms |
+| CLS | 0.007 |
+| SI | 2.3 s |
+| TTFB | 80 ms |
+
+#### Desktop — Map (`/map`)
+| Category | Score | Note |
+|----------|-------|------|
+| Performance | **76** | |
+| Accessibility | **100** | |
+| Best Practices | **78** | |
+| SEO | **100** | ✅ |
+
+| Metric | Value |
+|--------|-------|
+| FCP | 0.6 s |
+| LCP | 2.9 s |
+| TBT | 10 ms |
+| CLS | 0.017 |
+| SI | 3.1 s |
+| TTFB | 220 ms |
+
+> ⚠️ Note: Lighthouse was able to run on `/map` because it loads the initial HTML + JS before the crash occurs at component mount time. The crash happens at React render, not at page load.
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v24 |
+|----------|-------|----------|
+| Performance | **61** | +3 |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **75** | -4 (variance) |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 1.3 s | ✅ |
+| LCP | 11.4 s | 🔴 Structural (bundle size) |
+| TBT | 330 ms | ⚠️ |
+| CLS | 0.04 | ✅ |
+| SI | 6.5 s | ⚠️ |
+| TTFB | 170 ms | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| 🔴 `/map` page crash — `useSafeAreaInsets is not a function` | **P0** | **FIXED** (v25) |
+| `label-content-name-mismatch` on `/map` — MapPeekPreview card | P2 | Persists (same as v24, blocked by crash) |
+| Unused JS ~924 KiB (`__common` 544KB + `entry` 281KB wasted) | P1 | Structural — requires arch change |
+| `errors-in-console` — Yandex Metrika 400 (sync_cookie_image_finish) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 12-15 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+| `font-display` — 80-170ms font blocking time | P3 | Minor |
+| `image-delivery` — Est savings of 423 KiB on home | P2 | WebP/AVIF conversion needed |
+
+### Fixes Applied (v25)
+
+#### 1. P0 — `/map` crash: `useSafeAreaInsets` broken in production web bundle
+
+- **New file:** `hooks/useSafeAreaInsetsSafe.ts`
+  - Safe wrapper resolves `useSafeAreaInsets` via lazy `require()` with try-catch
+  - On web: falls back to `{ top: 0, bottom: 0, left: 0, right: 0 }` (always correct — no notch)
+  - On native: delegates to real hook
+- **Changed files:**
+  - `hooks/map/useMapUIController.ts` — use `useSafeAreaInsetsSafe` (fixes crash)
+  - `components/travel/sliderParts/useSliderLogic.ts` — preventive
+  - `components/travel/Slider.web.tsx` — preventive
+  - `components/layout/ConsentBanner.tsx` — preventive
+- **Impact:** Unblocks `/map` page entirely. After redeploy, map will load again.
+
+#### 2. SW cache version bump (P3)
+- **File:** `public/sw.js`
+- **Change:** `v3.44.0` → `v3.45.0`
+- **Impact:** Forces cache purge on next SW activation, clears stale chunks.
+
+### Validation
+- `npx eslint` on all changed files — **0 errors, 0 warnings** ✅
+- `npx jest` targeted (MapPage + Slider + map) — **129 tests passed, 19 suites** ✅
+- `npm run test:run` full suite — **3919 tests passed, 450 suites** ✅
+
+### Server & Infrastructure ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 with HSTS |
+| TTFB | ✅ | 80-220 ms |
+| robots.txt | ✅ | 200, correct disallows + sitemap |
+| sitemap.xml | ✅ | 200, `public, max-age=3600` |
+| CSP | ✅ | Full policy |
+| Security headers | ✅ | X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy |
+| Rate limiting | ✅ | Configured |
+| ETag | ✅ | Present |
+
+### SEO ✅ 100/100
+All pages score SEO 100. Titles, descriptions, canonical, OG/Twitter tags, Schema.org JSON-LD, robots.txt, sitemap.xml — all correct.
+
+### Analytics ✅
+GA4 (`G-GBT9YNPXKB`) and Yandex Metrika (`62803912`) — active, deferred, consent-aware, `send_page_view: false`.
+
+### Remaining Structural Blockers (unchanged)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 11.4s / Perf 61 | ~924 KiB unused JS (RNW + Leaflet) | Code-split Leaflet, tree-shake RNW, or SSR/ISR |
+| Best Practices 74-78 | Yandex Metrika 3rd-party cookies | Cannot fix (3rd party) |
+| Missing source maps | Intentionally disabled | Security trade-off |
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 61 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ (after P0 fix deploy) | ✅ |
+| Load time < 2.5s mobile | ~11.4s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 | ✅ |
+| Desktop Performance ≥ 70 | 74-77 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+| `/map` page functional | 🔴 **CRASHED** → ✅ **FIXED** | ✅ after redeploy |
+
+**Last updated:** 2026-02-24
+**SW Version:** v3.45.0
+**Audit Version:** v25
+**Status:** 🔴 **P0 fix (map crash) applied — REQUIRES IMMEDIATE REDEPLOY**
+
+---
+
 ## v24 — Full Post-Deploy Audit (2026-02-23)
 
 **Auditor:** Automated (Cascade)

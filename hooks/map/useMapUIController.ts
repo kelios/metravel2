@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMapPanelState, useMapResponsive } from './useMapPanelState';
 import { getStyles } from '@/screens/tabs/map.styles';
