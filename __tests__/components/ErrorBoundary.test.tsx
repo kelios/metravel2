@@ -189,6 +189,7 @@ describe('ErrorBoundary', () => {
       "Class constructors cannot be invoked without 'new'",
       'Spread syntax requires ...iterable not be null or undefined',
       'someValue is not iterable',
+      'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
     ];
 
     it.each(staleChunkMessages)(
@@ -268,7 +269,7 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should NOT auto-recover for generic React #130 errors', async () => {
+    it('should NOT auto-recover for React #130 errors without args[]=undefined', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -279,7 +280,7 @@ describe('ErrorBoundary', () => {
       };
 
       const ThrowReact130 = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]=SomeComponent for the full message');
       };
 
       const { toJSON } = render(
@@ -301,7 +302,7 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should auto-recover for React #130 when fresh HTML has mismatched bundle scripts', async () => {
+    it('should auto-recover for React #130 when fresh HTML has mismatched bundle scripts (non-undefined args)', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -317,7 +318,7 @@ describe('ErrorBoundary', () => {
       });
 
       const ThrowReact130 = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]= for the full message');
       };
 
       render(
@@ -335,7 +336,7 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should NOT auto-recover for React #130 when fresh HTML bundle scripts match', async () => {
+    it('should NOT auto-recover for React #130 when fresh HTML bundle scripts match (non-undefined args)', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -351,7 +352,7 @@ describe('ErrorBoundary', () => {
       });
 
       const ThrowReact130 = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]= for the full message');
       };
 
       const { toJSON } = render(

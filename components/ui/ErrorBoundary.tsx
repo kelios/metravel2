@@ -257,11 +257,11 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       const colors = getThemedColors(this.context?.isDark ?? false);
       const styles = getStyles(colors);
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
 
-      // Show a friendly updating UI for stale chunk errors while auto-recovery runs
+      // Show a friendly updating UI for stale chunk errors while auto-recovery runs.
+      // This MUST be checked BEFORE props.fallback so that pages with custom fallback
+      // (e.g. Home, Search) still show the stale recovery UI instead of a generic
+      // "Не удалось загрузить..." message that doesn't trigger cache recovery.
       if (this.state.isStaleChunk && Platform.OS === 'web') {
         // If auto-recovery exhausted retries (or we're already in a recovery loop
         // indicated by _cb param), show an actionable error with manual reload button
