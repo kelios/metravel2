@@ -11,7 +11,7 @@ export const getStaleRecoveryInlineScript = () => String.raw`
   var COOLDOWN = ${RECOVERY_COOLDOWNS.staleMs};
   var MAX_RETRIES = ${RECOVERY_RETRY_LIMITS.stale};
   var HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
-  var EXHAUSTED_FLAG = '__metravel_recovery_exhausted';
+  var EXHAUSTED_FLAG = ${JSON.stringify(RECOVERY_SESSION_KEYS.recoveryExhausted)};
 
   function hasRecoveryParam() {
     try {
@@ -76,9 +76,9 @@ export const getStaleRecoveryInlineScript = () => String.raw`
       try { sessionStorage.setItem(HARD_RELOAD_KEY, '1'); } catch (_e) {}
 
       // Check if we already have _cb param - if so, do a true hard reload
-      var hasRecoveryParam = new URL(window.location.href).searchParams.has('_cb');
+      var alreadyHasRecoveryParam = new URL(window.location.href).searchParams.has('_cb');
       
-      if (hasRecoveryParam) {
+      if (alreadyHasRecoveryParam) {
         // Already tried with _cb, now do location.reload() for hard reload
         // This forces browser to revalidate ALL cached resources including JS chunks
         window.location.reload();

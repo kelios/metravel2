@@ -309,6 +309,8 @@ export default class ErrorBoundary extends Component<Props, State> {
         // If auto-recovery exhausted retries (from inline script flag or _cb param),
         // show an actionable error with cache clearing instructions
         if (this.state.recoveryExhausted || checkRecoveryExhausted()) {
+          // Schedule auto-recovery after a short delay to break the dead-end state
+          this.scheduleExhaustedAutoRecovery();
           return (
             <View style={styles.container}>
               <View style={styles.content}>
