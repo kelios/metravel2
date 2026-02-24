@@ -4,14 +4,33 @@ import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import AppProviders from "@/components/layout/AppProviders";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
-const SkipLinksLazy = React.lazy(() => import('@/components/layout/SkipLinks'));
-const NetworkStatusLazy = React.lazy(() => import('@/components/ui/NetworkStatus').then(m => ({ default: m.NetworkStatus })));
+// Defensive lazy imports: fallback to empty component if module resolution fails
+const EmptyFallback = () => null;
+const safeLazy = <T extends React.ComponentType<any>>(
+  loader: () => Promise<{ default: T }>,
+  name?: string
+) => React.lazy(() =>
+  loader().catch((err) => {
+    if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err);
+    return { default: EmptyFallback as unknown as T };
+  })
+);
+
+const SkipLinksLazy = safeLazy(() => import('@/components/layout/SkipLinks'), 'SkipLinks');
+const NetworkStatusLazy = safeLazy(
+  () => import('@/components/ui/NetworkStatus').then(m => {
+    const Component = m.NetworkStatus ?? (m as any).default;
+    if (!Component) throw new Error('NetworkStatus export not found');
+    return { default: Component };
+  }),
+  'NetworkStatus'
+);
 const ReactQueryDevtoolsLazy: any = React.lazy(() =>
   import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
 );
-const FooterLazy = React.lazy(() => import('@/components/layout/Footer'));
-const ConsentBannerLazy = React.lazy(() => import('@/components/layout/ConsentBanner'));
-const ToastLazy = React.lazy(() => import('@/components/ui/ToastHost'));
+const FooterLazy = safeLazy(() => import('@/components/layout/Footer'), 'Footer');
+const ConsentBannerLazy = safeLazy(() => import('@/components/layout/ConsentBanner'), 'ConsentBanner');
+const ToastLazy = safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost');
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";

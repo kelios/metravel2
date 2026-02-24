@@ -2,8 +2,21 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { Platform, View, Animated } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
-const CustomHeaderLazy = React.lazy(() => import('@/components/layout/CustomHeader'));
-const ScrollToTopButtonLazy = React.lazy(() => import('@/components/ui/ScrollToTopButton'));
+
+// Defensive lazy imports: fallback to empty component if module resolution fails
+const EmptyFallback = () => null;
+const safeLazy = <T extends React.ComponentType<any>>(
+  loader: () => Promise<{ default: T }>,
+  name?: string
+) => React.lazy(() =>
+  loader().catch((err) => {
+    if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err);
+    return { default: EmptyFallback as unknown as T };
+  })
+);
+
+const CustomHeaderLazy = safeLazy(() => import('@/components/layout/CustomHeader'), 'CustomHeader');
+const ScrollToTopButtonLazy = safeLazy(() => import('@/components/ui/ScrollToTopButton'), 'ScrollToTopButton');
 
 const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
     const pathname = usePathname();

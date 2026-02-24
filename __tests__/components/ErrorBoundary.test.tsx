@@ -354,6 +354,32 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
+    it('should show cache clear instructions for React #130 undefined args when exhausted', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      // Set exhausted flag
+      sessionStorage.setItem('__metravel_recovery_exhausted', '1');
+
+      const ThrowReact130UndefinedArgs = () => {
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+      };
+
+      const { toJSON } = render(
+        <ErrorBoundary>
+          <ThrowReact130UndefinedArgs />
+        </ErrorBoundary>
+      );
+
+      // Should show cache clear instructions for React #130 with undefined args when exhausted
+      const treeStr = JSON.stringify(toJSON());
+      expect(treeStr).toContain('Требуется очистка кэша браузера');
+      // Should NOT trigger reload when exhausted
+      expect(mockReplace).not.toHaveBeenCalled();
+
+      console.error = consoleError;
+    });
+
     it('should NOT auto-recover for React #130 errors without args[]=undefined', async () => {
       const consoleError = console.error;
       console.error = jest.fn();

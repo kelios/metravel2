@@ -137,7 +137,9 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     const msg = String(error?.message ?? '');
-    const isStale = isStaleModuleError(msg, error?.name);
+    // Check for stale module errors OR React #130 with undefined args (stale chunk symptom)
+    const isStale = isStaleModuleError(msg, error?.name) ||
+      (isReact130LikeError(msg) && isReact130UndefinedArgsError(msg));
     // Check if recovery is already exhausted (from inline script or previous attempts)
     const exhausted = isStale && checkRecoveryExhausted();
     return {
@@ -210,13 +212,23 @@ export default class ErrorBoundary extends Component<Props, State> {
       // Safe one-shot auto-recovery for React #130 only when we can confirm
       // a stale HTML ↔ bundle script mismatch in the freshly fetched document.
       if (isReact130LikeError(msg)) {
-        if (isAlreadyInRecoveryLoop()) return;
-
         const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
+
+        // If recovery is already exhausted, show cache clear instructions
+        if (isUndefinedArgs130 && checkRecoveryExhausted()) {
+          this.setState({ isStaleChunk: true, recoveryExhausted: true });
+          return;
+        }
+
+        if (isAlreadyInRecoveryLoop()) return;
 
         if (isUndefinedArgs130) {
           if ((window as any).__metravelModuleReloadTriggered) return;
-          if (!shouldAttemptReact130Recovery()) return;
+          if (!shouldAttemptReact130Recovery()) {
+            // Max retries reached - show cache clear instructions
+            this.setState({ isStaleChunk: true, recoveryExhausted: true });
+            return;
+          }
           (window as any).__metravelModuleReloadTriggered = true;
           this.setState({ isStaleChunk: true });
           clearRecoverySessionState({ clearEmergencyKey: true, clearExhaustedAutoRetryKeys: true });
