@@ -6,7 +6,6 @@ describe('staleErrorPattern', () => {
     'ChunkLoadError: Loading chunk 42 failed.',
     '(0 , r(...).getFiltersPanelStyles) is not a function',
     '(0 , r(...).useSomeHook) is not a function',
-    'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
     "Class constructors cannot be invoked without 'new'",
   ]
 
@@ -17,6 +16,9 @@ describe('staleErrorPattern', () => {
   it('does not match generic app errors', () => {
     expect(STALE_ERROR_REGEX.test('Test error')).toBe(false)
     expect(STALE_ERROR_REGEX.test('Network timeout while loading profile')).toBe(false)
+    // React #130 with args[]=undefined is NOT a reliable stale-chunk signal by itself.
+    // It can represent real runtime regressions and must not trigger cache purges.
+    expect(STALE_ERROR_REGEX.test('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message')).toBe(false)
     // React #130 without args[]=undefined should NOT match (could be a real runtime bug)
     expect(STALE_ERROR_REGEX.test('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]=SomeComponent for the full message')).toBe(false)
   })
