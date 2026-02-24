@@ -138,8 +138,8 @@ export function buildAnswerChecker(answerType: string, answerValue: string): (in
 export function fixMediaUrl(url: string | null | undefined): string | undefined {
     if (!url) return undefined;
 
-    const normalized = url.trim();
-    const lower = normalized.toLowerCase();
+    let result = url.trim();
+    const lower = result.toLowerCase();
 
     // Паттерн из прода: https://hosthttps://real-url (без слеша между host и второй схемой)
     // а также старый вариант: http://host:porthttp(s)://real-url
@@ -156,12 +156,27 @@ export function fixMediaUrl(url: string | null | undefined): string | undefined 
             // Чиним только если вторая схема появилась до первого path-слеша.
             // Это исключает валидные URL вида /path?next=https://...
             if (firstSlashAfterHost === -1 || secondProtocolIndex < firstSlashAfterHost) {
-                return normalized.slice(secondProtocolIndex);
+                result = result.slice(secondProtocolIndex);
             }
         }
     }
 
-    return normalized;
+    // Удаляем невалидные S3 signed параметры для публичных файлов.
+    // Бэкенд генерирует signed URL, но подпись невалидна из-за приклеенного хоста.
+    // Файлы в metravelprod.s3.amazonaws.com публично доступны без подписи.
+    if (result.includes('.s3.amazonaws.com/') && result.includes('X-Amz-Signature=')) {
+        const urlObj = new URL(result);
+        // Удаляем все AWS signed параметры
+        urlObj.searchParams.delete('X-Amz-Algorithm');
+        urlObj.searchParams.delete('X-Amz-Credential');
+        urlObj.searchParams.delete('X-Amz-Date');
+        urlObj.searchParams.delete('X-Amz-Expires');
+        urlObj.searchParams.delete('X-Amz-SignedHeaders');
+        urlObj.searchParams.delete('X-Amz-Signature');
+        result = urlObj.toString();
+    }
+
+    return result;
 }
 
 /** Конвертирует шаг из API формата во фронтенд формат */

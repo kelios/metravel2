@@ -484,11 +484,11 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should show cache clear instructions when _cb param indicates recovery loop', async () => {
+    it('should show cache clear instructions when _cb param AND exhausted flag are set', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
-      // Simulate being in recovery loop (URL has _cb param)
+      // Simulate being in recovery loop (URL has _cb param) AND exhausted flag set
       Object.defineProperty(window, 'location', {
         value: {
           href: 'https://metravel.by/map?_cb=123456',
@@ -500,6 +500,8 @@ describe('ErrorBoundary', () => {
         },
         writable: true,
       });
+      // Set exhausted flag - this is what actually triggers the instructions
+      sessionStorage.setItem('__metravel_recovery_exhausted', '1');
 
       const ThrowChunkError = () => {
         throw new Error('ChunkLoadError: Loading chunk 99 failed.');
@@ -512,10 +514,62 @@ describe('ErrorBoundary', () => {
       );
 
       const treeStr = JSON.stringify(toJSON());
-      // Should show cache clear instructions when in recovery loop
+      // Should show cache clear instructions when exhausted flag is set
       expect(treeStr).toContain('Требуется очистка кэша браузера');
       // Should NOT trigger another reload
       expect(mockReplace).not.toHaveBeenCalled();
+
+      // Reset location
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: 'https://metravel.by/',
+          hostname: 'metravel.by',
+          pathname: '/',
+          search: '',
+          replace: mockReplace,
+          reload: jest.fn(),
+        },
+        writable: true,
+      });
+
+      console.error = consoleError;
+    });
+
+    it('should NOT show cache clear instructions when _cb param is set but exhausted flag is NOT set (user cleared cache)', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      // Simulate _cb in URL but NO exhausted flag (user cleared cache including sessionStorage)
+      Object.defineProperty(window, 'location', {
+        value: {
+          href: 'https://metravel.by/map?_cb=123456',
+          hostname: 'metravel.by',
+          pathname: '/map',
+          search: '?_cb=123456',
+          replace: mockReplace,
+          reload: jest.fn(),
+        },
+        writable: true,
+      });
+      // Ensure exhausted flag is NOT set (simulates user cleared sessionStorage)
+      sessionStorage.removeItem('__metravel_recovery_exhausted');
+
+      const ThrowChunkError = () => {
+        throw new Error('ChunkLoadError: Loading chunk 99 failed.');
+      };
+
+      const { toJSON } = render(
+        <ErrorBoundary>
+          <ThrowChunkError />
+        </ErrorBoundary>
+      );
+
+      const treeStr = JSON.stringify(toJSON());
+      // Should NOT show cache clear instructions when exhausted flag is not set
+      // (even if _cb is in URL - user might have cleared cache)
+      expect(treeStr).not.toContain('Требуется очистка кэша браузера');
+      // Should show the updating UI instead
+      expect(treeStr).toContain('Обновление приложения');
 
       // Reset location
       Object.defineProperty(window, 'location', {

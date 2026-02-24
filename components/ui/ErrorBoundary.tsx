@@ -79,7 +79,7 @@ function isStaleModuleError(msg: string, name?: string): boolean {
 
 /** Check if the current page already went through stale-chunk recovery
  *  (indicated by the _cb cache-busting param in the URL). */
-function isAlreadyInRecoveryLoop(): boolean {
+function _isAlreadyInRecoveryLoop(): boolean {
   try {
     return isRecoveryLoopUrl(window.location.href);
   } catch { return false; }
@@ -88,7 +88,9 @@ function isAlreadyInRecoveryLoop(): boolean {
 /** Check if recovery attempts are exhausted (set by inline script or ErrorBoundary) */
 function checkRecoveryExhausted(): boolean {
   try {
-    return isRecoveryExhausted() || isAlreadyInRecoveryLoop();
+    // Only check the sessionStorage flag - _cb in URL alone doesn't mean exhausted,
+    // it just means we tried recovery. User might have cleared cache and reloaded.
+    return isRecoveryExhausted();
   } catch { return false; }
 }
 
@@ -214,13 +216,15 @@ export default class ErrorBoundary extends Component<Props, State> {
       if (isReact130LikeError(msg)) {
         const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
 
-        // If recovery is already exhausted, show cache clear instructions
+        // If recovery is already exhausted (sessionStorage flag set), show cache clear instructions
         if (isUndefinedArgs130 && checkRecoveryExhausted()) {
           this.setState({ isStaleChunk: true, recoveryExhausted: true });
           return;
         }
 
-        if (isAlreadyInRecoveryLoop()) return;
+        // Note: We don't block on isAlreadyInRecoveryLoop() here anymore.
+        // If _cb is in URL but sessionStorage is clear (user cleared cache),
+        // we should try recovery again. The retry budget will prevent infinite loops.
 
         if (isUndefinedArgs130) {
           if ((window as any).__metravelModuleReloadTriggered) return;
