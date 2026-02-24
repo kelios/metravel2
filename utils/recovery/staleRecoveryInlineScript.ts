@@ -13,14 +13,6 @@ export const getStaleRecoveryInlineScript = () => String.raw`
   var HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
   var EXHAUSTED_FLAG = ${JSON.stringify(RECOVERY_SESSION_KEYS.recoveryExhausted)};
 
-  function hasRecoveryParam() {
-    try {
-      return new URL(window.location.href).searchParams.has('_cb');
-    } catch (_e) {
-      return false;
-    }
-  }
-
   function extractMessage(payload) {
     try {
       return String(
@@ -75,17 +67,8 @@ export const getStaleRecoveryInlineScript = () => String.raw`
       // Mark that we're doing a hard reload to prevent loops
       try { sessionStorage.setItem(HARD_RELOAD_KEY, '1'); } catch (_e) {}
 
-      // Check if we already have _cb param - if so, do a true hard reload
-      var alreadyHasRecoveryParam = new URL(window.location.href).searchParams.has('_cb');
-      
-      if (alreadyHasRecoveryParam) {
-        // Already tried with _cb, now do location.reload() for hard reload
-        // This forces browser to revalidate ALL cached resources including JS chunks
-        window.location.reload();
-        return;
-      }
-
-      // First attempt: add _cb param and navigate
+      // Always use NEW _cb timestamp to bypass browser disk cache.
+      // Even if _cb already exists, a new timestamp forces fresh fetch.
       var url = new URL(window.location.href);
       url.searchParams.set('_cb', String(Date.now()));
       window.location.replace(url.toString());
@@ -141,7 +124,8 @@ export const getStaleRecoveryInlineScript = () => String.raw`
     
     // Check for script load errors (chunk 404s)
     if (payload && payload.target && isScriptLoadError(payload)) {
-      if (hasRecoveryParam()) return;
+      // Don't block on hasRecoveryParam() - retry budget handles loops.
+      // Old _cb may have failed, new _cb with fresh timestamp can succeed.
       if (!shouldAttemptRecovery()) {
         // Recovery exhausted - don't reload, let ErrorBoundary show instructions
         return;
@@ -151,7 +135,7 @@ export const getStaleRecoveryInlineScript = () => String.raw`
     }
     
     if (!isStale(message)) return;
-    if (hasRecoveryParam()) return;
+    // Don't block on hasRecoveryParam() - retry budget handles loops.
     if (!shouldAttemptRecovery()) {
       // Recovery exhausted - don't reload, let ErrorBoundary show instructions
       return;

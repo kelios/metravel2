@@ -1,4 +1,4 @@
-import { withCacheBust } from '@/utils/recovery/sessionRecovery';
+// withCacheBust no longer used - we now always set new _cb timestamp directly
 import { RECOVERY_TIMEOUTS } from '@/utils/recovery/recoveryConfig';
 
 type RuntimeRecoveryOptions = {
@@ -10,7 +10,7 @@ const HARD_RELOAD_KEY = '__metravel_hard_reload_pending';
 
 /**
  * Hard reload that bypasses browser disk cache for ALL resources including JS chunks.
- * If already has _cb param, does location.reload(true) for true hard reload.
+ * Always uses NEW _cb timestamp to force fresh fetch even if _cb already exists.
  */
 function navigateWithCacheBust(): void {
   if (typeof window === 'undefined') return;
@@ -19,17 +19,11 @@ function navigateWithCacheBust(): void {
     // Mark that we're doing a hard reload
     try { sessionStorage.setItem(HARD_RELOAD_KEY, '1'); } catch { /* noop */ }
     
-    // Check if we already have _cb param - if so, do a true hard reload
+    // Always use NEW _cb timestamp to bypass browser disk cache.
+    // Even if _cb already exists, a new timestamp forces fresh fetch.
     const url = new URL(window.location.href);
-    if (url.searchParams.has('_cb')) {
-      // Already tried with _cb, now do location.reload(true) for hard reload
-      // This forces browser to revalidate ALL cached resources including JS chunks
-      window.location.reload();
-      return;
-    }
-    
-    // First attempt: add _cb param and navigate
-    window.location.replace(withCacheBust(window.location.href));
+    url.searchParams.set('_cb', String(Date.now()));
+    window.location.replace(url.toString());
   } catch {
     try {
       window.location.reload();

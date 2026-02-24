@@ -120,15 +120,16 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     if (this._exhaustedAutoRetryTimer != null) return;
 
-    // When recovery is exhausted, do a clean URL reload after a short delay.
-    // Clear ALL recovery state and strip _cb so the browser starts completely fresh.
-    // This avoids the dead-end "Не удалось загрузить обновление" screen.
+    // When recovery is exhausted, do a hard reload with NEW _cb timestamp.
+    // Removing _cb doesn't help because browser disk cache may still serve old chunks.
+    // Using a new _cb forces browser to bypass disk cache for all resources.
     this._exhaustedAutoRetryTimer = setTimeout(() => {
       this._exhaustedAutoRetryTimer = null;
       clearRecoverySessionKeys(true, true);
       try {
         const url = new URL(window.location.href);
-        url.searchParams.delete('_cb');
+        // Use NEW timestamp to bypass browser disk cache
+        url.searchParams.set('_cb', String(Date.now()));
         window.location.replace(url.toString());
       } catch {
         window.location.reload();
@@ -323,7 +324,8 @@ export default class ErrorBoundary extends Component<Props, State> {
                     clearRecoverySessionKeys(true, true);
                     try {
                       const url = new URL(window.location.href);
-                      url.searchParams.delete('_cb');
+                      // Use NEW timestamp to bypass browser disk cache
+                      url.searchParams.set('_cb', String(Date.now()));
                       window.location.replace(url.toString());
                     } catch {
                       window.location.reload();
