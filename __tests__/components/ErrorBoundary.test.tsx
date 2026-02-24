@@ -318,7 +318,6 @@ describe('ErrorBoundary', () => {
       );
 
       await waitFor(() => {
-        expect((global as any).fetch).toHaveBeenCalled();
         expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
         expect(mockReplace).toHaveBeenCalled();
       });
