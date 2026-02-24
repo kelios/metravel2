@@ -171,6 +171,14 @@ function clearRecoverySessionKeys(
 /** Shared detection for stale-chunk / module-mismatch errors after deploy.
  *  Includes both chunk-loading errors and runtime symptoms of module version
  *  mismatch (e.g. spread on undefined when an export signature changed). */
+function isKnownStaleFunctionMismatch(msg: string): boolean {
+  if (!/is not a function/i.test(msg)) return false;
+  return (
+    /(getFiltersPanelStyles|useSingleTravelExport|useSafeAreaInsets)\)\s+is not a function/i.test(msg) ||
+    /(getFiltersPanelStyles|useSingleTravelExport|useSafeAreaInsets)\s+is not a function/i.test(msg)
+  );
+}
+
 function isStaleModuleError(msg: string, name?: string): boolean {
   return (
     // Module / chunk loading errors
@@ -183,6 +191,8 @@ function isStaleModuleError(msg: string, name?: string): boolean {
     name === 'AsyncRequireError' ||
     // Runtime symptoms of stale-module mismatch after deploy:
     // old cached JS tries to spread/iterate a value that changed type in new modules.
+    isKnownStaleFunctionMismatch(msg) ||
+    /Class constructors?(?:\s+.*)?\s+cannot be invoked without 'new'/i.test(msg) ||
     /iterable/i.test(msg) ||
     /spread/i.test(msg)
   );
