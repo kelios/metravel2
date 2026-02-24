@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
 
 interface Props {
   children: ReactNode;
@@ -107,9 +108,7 @@ class TravelFormErrorBoundary extends Component<Props, State> {
               <Button
                 label="Обновить страницу"
                 onPress={() => {
-                  if (typeof window !== 'undefined') {
-                    window.location.reload();
-                  }
+                  runStaleChunkRecovery({ purgeAllCaches: true });
                 }}
                 variant="primary"
                 size="md"
