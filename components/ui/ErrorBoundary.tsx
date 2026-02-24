@@ -6,14 +6,9 @@ import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useThe
 import Button from '@/components/ui/Button';
 import {
   clearRecoverySessionState,
-  isRecoveryLoopUrl,
-  isRecoveryExhausted,
-  RECOVERY_SESSION_KEYS,
 } from '@/utils/recovery/sessionRecovery';
-import { evaluateRecoveryAttempt, shouldAllowRecoveryAttempt } from '@/utils/recovery/recoveryThrottle';
 import { STALE_ERROR_REGEX } from '@/utils/recovery/staleErrorPattern';
 import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
-import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS, RECOVERY_TIMEOUTS } from '@/utils/recovery/recoveryConfig';
 import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
 
 interface Props {
@@ -29,14 +24,6 @@ interface State {
   recoveryExhausted?: boolean;
 }
 
-const _EMERGENCY_RECOVERY_KEY = RECOVERY_SESSION_KEYS.emergencyRecoveryTs;
-const _EMERGENCY_RECOVERY_COOLDOWN = RECOVERY_COOLDOWNS.emergencyMs;
-const EXHAUSTED_AUTORETRY_DELAY_MS = RECOVERY_TIMEOUTS.staleAutoRetryDelayMs;
-const REACT_130_RECOVERY_TS_KEY = RECOVERY_SESSION_KEYS.react130RecoveryTs;
-const REACT_130_RECOVERY_COUNT_KEY = RECOVERY_SESSION_KEYS.react130RecoveryCount;
-const REACT_130_RECOVERY_COOLDOWN = RECOVERY_COOLDOWNS.react130Ms;
-const REACT_130_RECOVERY_MAX = RECOVERY_RETRY_LIMITS.react130;
-
 function isReact130LikeError(msg: string): boolean {
   return /Minified React error #130/i.test(msg) || /Element type is invalid/i.test(msg);
 }
@@ -44,16 +31,6 @@ function isReact130LikeError(msg: string): boolean {
 function isReact130UndefinedArgsError(msg: string): boolean {
   return /args\[\]=undefined/i.test(msg);
 }
-
-function shouldAttemptReact130Recovery(): boolean {
-  return shouldAllowRecoveryAttempt({
-    timestampKey: REACT_130_RECOVERY_TS_KEY,
-    countKey: REACT_130_RECOVERY_COUNT_KEY,
-    cooldownMs: REACT_130_RECOVERY_COOLDOWN,
-    maxRetries: REACT_130_RECOVERY_MAX,
-  });
-}
-
 
 function clearRecoverySessionKeys(
   clearEmergencyKey = false,
@@ -76,23 +53,6 @@ function isStaleModuleError(msg: string, name?: string): boolean {
   );
 }
 
-/** Check if the current page already went through stale-chunk recovery
- *  (indicated by the _cb cache-busting param in the URL). */
-function _isAlreadyInRecoveryLoop(): boolean {
-  try {
-    return isRecoveryLoopUrl(window.location.href);
-  } catch { return false; }
-}
-
-/** Check if recovery attempts are exhausted (set by inline script or ErrorBoundary) */
-function checkRecoveryExhausted(): boolean {
-  try {
-    // Only check the sessionStorage flag - _cb in URL alone doesn't mean exhausted,
-    // it just means we tried recovery. User might have cleared cache and reloaded.
-    return isRecoveryExhausted();
-  } catch { return false; }
-}
-
 /** Unregister SW, purge caches, then hard-navigate with cache-busting. */
 function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = { purgeAllCaches: true }): void {
   runStaleChunkRecovery({ purgeAllCaches: options.purgeAllCaches });
@@ -102,53 +62,22 @@ export default class ErrorBoundary extends Component<Props, State> {
   static contextType = ThemeContext;
   override context: React.ContextType<typeof ThemeContext> | null = null;
   private _leafletAutoRetryCount = 0;
-  private _exhaustedAutoRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null, isStaleChunk: false, recoveryExhausted: false };
   }
 
-  componentWillUnmount(): void {
-    if (this._exhaustedAutoRetryTimer != null) {
-      clearTimeout(this._exhaustedAutoRetryTimer);
-      this._exhaustedAutoRetryTimer = null;
-    }
-  }
-
-  private scheduleExhaustedAutoRecovery = () => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    if (this._exhaustedAutoRetryTimer != null) return;
-
-    // When recovery is exhausted, do a hard reload with NEW _cb timestamp.
-    // Removing _cb doesn't help because browser disk cache may still serve old chunks.
-    // Using a new _cb forces browser to bypass disk cache for all resources.
-    this._exhaustedAutoRetryTimer = setTimeout(() => {
-      this._exhaustedAutoRetryTimer = null;
-      clearRecoverySessionKeys(true, true);
-      try {
-        const url = new URL(window.location.href);
-        // Use NEW timestamp to bypass browser disk cache
-        url.searchParams.set('_cb', String(Date.now()));
-        window.location.replace(url.toString());
-      } catch {
-        window.location.reload();
-      }
-    }, EXHAUSTED_AUTORETRY_DELAY_MS);
-  };
-
   static getDerivedStateFromError(error: Error): State {
     const msg = String(error?.message ?? '');
     // Check for stale module errors OR React #130 with undefined args (stale chunk symptom)
     const isStale = isStaleModuleError(msg, error?.name) ||
       (isReact130LikeError(msg) && isReact130UndefinedArgsError(msg));
-    // Check if recovery is already exhausted (from inline script or previous attempts)
-    const exhausted = isStale && checkRecoveryExhausted();
     return {
       hasError: true,
       error,
       isStaleChunk: isStale,
-      recoveryExhausted: exhausted,
+      recoveryExhausted: false,
     };
   }
 
@@ -162,26 +91,6 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
 
     const msg = String(error?.message ?? '');
-    const EB_KEY = RECOVERY_SESSION_KEYS.errorBoundaryReloadTs;
-    const EB_COUNT_KEY = RECOVERY_SESSION_KEYS.errorBoundaryReloadCount;
-    const EB_COOLDOWN = RECOVERY_COOLDOWNS.staleMs;
-    const MAX_EB_RETRIES = RECOVERY_RETRY_LIMITS.errorBoundary;
-
-    const getReloadDecision = () => {
-      if ((window as any).__metravelModuleReloadTriggered) {
-        return { allowed: false, reason: 'cooldown' as const };
-      }
-      const decision = evaluateRecoveryAttempt({
-        timestampKey: EB_KEY,
-        countKey: EB_COUNT_KEY,
-        cooldownMs: EB_COOLDOWN,
-        maxRetries: MAX_EB_RETRIES,
-      });
-      if (!decision.allowed) return decision;
-      (window as any).__metravelModuleReloadTriggered = true;
-      return decision;
-    };
-
     // Auto-recover from stale-bundle module mismatch errors.
     // When the SW serves cached JS chunks from a previous build, module IDs can
     // shift and named exports resolve to undefined (e.g. "useFilters is not a function").
@@ -191,54 +100,15 @@ export default class ErrorBoundary extends Component<Props, State> {
       typeof window !== 'undefined'
     ) {
       if (isStaleModuleError(msg, error?.name)) {
-        // Mark as stale chunk error so we show the cache clearing instructions
-        this.setState({ isStaleChunk: true });
-        
-        // If recovery is already exhausted (from inline script or _cb param),
-        // show cache clearing instructions instead of trying again.
-        if (checkRecoveryExhausted()) {
-          this.setState({ isStaleChunk: true, recoveryExhausted: true });
-          return;
-        }
-        const reloadDecision = getReloadDecision();
-        if (!reloadDecision.allowed) {
-          if (reloadDecision.reason === 'max_retries') {
-            this.setState({ isStaleChunk: true, recoveryExhausted: true });
-          }
-          return;
-        }
-        doStaleChunkRecovery();
-        return; // skip further recovery attempts
+        // Simplified behavior: show stable UI; user can trigger a single hard reload.
+        this.setState({ isStaleChunk: true, recoveryExhausted: true });
+        return;
       }
 
       // Safe one-shot auto-recovery for React #130 only when we can confirm
       // a stale HTML ↔ bundle script mismatch in the freshly fetched document.
       if (isReact130LikeError(msg)) {
         const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
-
-        // If recovery is already exhausted (sessionStorage flag set), show cache clear instructions
-        if (isUndefinedArgs130 && checkRecoveryExhausted()) {
-          this.setState({ isStaleChunk: true, recoveryExhausted: true });
-          return;
-        }
-
-        // Note: We don't block on isAlreadyInRecoveryLoop() here anymore.
-        // If _cb is in URL but sessionStorage is clear (user cleared cache),
-        // we should try recovery again. The retry budget will prevent infinite loops.
-
-        if (isUndefinedArgs130) {
-          if ((window as any).__metravelModuleReloadTriggered) return;
-          if (!shouldAttemptReact130Recovery()) {
-            // Max retries reached - show cache clear instructions
-            this.setState({ isStaleChunk: true, recoveryExhausted: true });
-            return;
-          }
-          (window as any).__metravelModuleReloadTriggered = true;
-          this.setState({ isStaleChunk: true });
-          clearRecoverySessionState({ clearEmergencyKey: true, clearExhaustedAutoRetryKeys: true });
-          doStaleChunkRecovery({ purgeAllCaches: true });
-          return;
-        }
 
         const hasSwController =
           !!(
@@ -249,21 +119,11 @@ export default class ErrorBoundary extends Component<Props, State> {
         void hasFreshHtmlBundleMismatch()
           .then((hasMismatch) => {
             if (!hasMismatch && !(isUndefinedArgs130 && hasSwController)) return;
-            if ((window as any).__metravelModuleReloadTriggered) return;
-            if (!shouldAttemptReact130Recovery()) return;
-            (window as any).__metravelModuleReloadTriggered = true;
-            this.setState({ isStaleChunk: true });
-            clearRecoverySessionState({ clearEmergencyKey: true, clearExhaustedAutoRetryKeys: true });
-            doStaleChunkRecovery({ purgeAllCaches: true });
+            this.setState({ isStaleChunk: true, recoveryExhausted: true });
           })
           .catch(() => {
             if (!isUndefinedArgs130 || !hasSwController) return;
-            if ((window as any).__metravelModuleReloadTriggered) return;
-            if (!shouldAttemptReact130Recovery()) return;
-            (window as any).__metravelModuleReloadTriggered = true;
-            this.setState({ isStaleChunk: true });
-            clearRecoverySessionState({ clearEmergencyKey: true, clearExhaustedAutoRetryKeys: true });
-            doStaleChunkRecovery({ purgeAllCaches: true });
+            this.setState({ isStaleChunk: true, recoveryExhausted: true });
           });
       }
 
@@ -306,54 +166,20 @@ export default class ErrorBoundary extends Component<Props, State> {
       // (e.g. Home, Search) still show the stale recovery UI instead of a generic
       // "Не удалось загрузить..." message that doesn't trigger cache recovery.
       if (this.state.isStaleChunk && Platform.OS === 'web') {
-        // If auto-recovery exhausted retries (from inline script flag or _cb param),
-        // schedule automatic clean reload and show a brief message
-        if (this.state.recoveryExhausted || checkRecoveryExhausted()) {
-          // Schedule automatic recovery: clear all state and reload with clean URL
-          this.scheduleExhaustedAutoRecovery();
-          return (
-            <View style={styles.container}>
-              <View style={styles.content}>
-                <Text style={styles.title}>Обновление приложения…</Text>
-                <Text style={styles.message}>
-                  Автоматическая перезагрузка через несколько секунд.
-                </Text>
-                <Button
-                  label="Перезагрузить сейчас"
-                  onPress={() => {
-                    clearRecoverySessionKeys(true, true);
-                    try {
-                      const url = new URL(window.location.href);
-                      // Use NEW timestamp to bypass browser disk cache
-                      url.searchParams.set('_cb', String(Date.now()));
-                      window.location.replace(url.toString());
-                    } catch {
-                      window.location.reload();
-                    }
-                  }}
-                  style={[styles.button, styles.primaryButton]}
-                  accessibilityLabel="Перезагрузить страницу"
-                />
-              </View>
-            </View>
-          );
-        }
-        // Show updating UI while auto-recovery runs
         return (
           <View style={styles.container}>
             <View style={styles.content}>
               <Text style={styles.title}>Обновление приложения…</Text>
               <Text style={styles.message}>
-                Загружается новая версия. Пожалуйста, подождите.
+                Требуется перезагрузка, чтобы применить новую версию.
               </Text>
               <Button
-                label="Перезагрузить"
+                label="Перезагрузить и очистить кеш"
                 onPress={() => {
                   clearRecoverySessionKeys(true, true);
-                  doStaleChunkRecovery();
+                  doStaleChunkRecovery({ purgeAllCaches: true });
                 }}
-                variant="ghost"
-                style={[styles.button, styles.secondaryButton]}
+                style={[styles.button, styles.primaryButton]}
                 accessibilityLabel="Перезагрузить страницу"
               />
             </View>

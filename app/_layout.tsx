@@ -37,16 +37,6 @@ import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
-import {
-  clearRecoverySessionState,
-  isRecoveryLoopUrl,
-  RECOVERY_SESSION_KEYS,
-  withCacheBust,
-} from '@/utils/recovery/sessionRecovery';
-import { evaluateRecoveryAttempt, shouldAllowRecoveryAttempt } from '@/utils/recovery/recoveryThrottle';
-import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS } from '@/utils/recovery/recoveryConfig';
-import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
-import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -346,94 +336,8 @@ export default function RootLayout() {
       const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
       if (!isProd) return;
 
-      // --- Service Worker registration + update listener ---
+      // --- Service Worker registration (minimal; no custom recovery wiring) ---
       if ('serviceWorker' in navigator) {
-        const GLOBAL_EMERGENCY_KEY = RECOVERY_SESSION_KEYS.emergencyRecoveryTs;
-        const GLOBAL_EMERGENCY_COOLDOWN = RECOVERY_COOLDOWNS.emergencyMs;
-        const CONTROLLERCHANGE_RELOAD_KEY = RECOVERY_SESSION_KEYS.controllerChangeReloadTs;
-        const CONTROLLERCHANGE_RELOAD_COOLDOWN = RECOVERY_COOLDOWNS.controllerChangeMs;
-
-        const clearRecoverySessionKeys = (clearEmergencyKey = false) => {
-          clearRecoverySessionState({
-            clearEmergencyKey,
-            clearExhaustedAutoRetryKeys: true,
-            clearReact130RecoveryKeys: true,
-            clearControllerChangeReloadKey: true,
-          });
-        };
-
-        const tryEmergencyRecovery = () => {
-          if (!shouldAllowRecoveryAttempt({
-            timestampKey: GLOBAL_EMERGENCY_KEY,
-            cooldownMs: GLOBAL_EMERGENCY_COOLDOWN,
-          })) return false;
-          clearRecoverySessionKeys();
-          return true;
-        };
-
-        const triggerStaleRecovery = (purgeAllCaches = true) => {
-          runStaleChunkRecovery({ purgeAllCaches });
-        };
-
-        const shouldReloadOnControllerChange = () => {
-          return shouldAllowRecoveryAttempt({
-            timestampKey: CONTROLLERCHANGE_RELOAD_KEY,
-            cooldownMs: CONTROLLERCHANGE_RELOAD_COOLDOWN,
-          });
-        };
-
-        const onControllerChange = () => {
-          if (typeof window === 'undefined') return;
-          try {
-            if (isRecoveryLoopUrl(window.location.href)) return;
-          } catch { /* noop */ }
-          if (!shouldReloadOnControllerChange()) return;
-
-          void hasFreshHtmlBundleMismatch(window.location.href)
-            .then((hasMismatch) => {
-              if (!hasMismatch) return;
-              try {
-                window.location.replace(withCacheBust(window.location.href));
-              } catch {
-                window.location.reload();
-              }
-            })
-            .catch(() => {});
-        };
-
-        // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
-        // SW_PENDING_UPDATE: ignored — stale chunks are handled by ErrorBoundary
-        // and inline recovery scripts. No need to set __metravelUpdatePending.
-        const onSWMessage = (event: MessageEvent) => {
-          if (event.data?.type === 'SW_STALE_CHUNK') {
-            // Reload to recover from missing chunk, but with cooldown + retry cap
-            // to prevent infinite reload loops when a stale asset is persistently unavailable.
-            const STALE_KEY = RECOVERY_SESSION_KEYS.swStaleReloadTs;
-            const STALE_COUNT_KEY = RECOVERY_SESSION_KEYS.swStaleReloadCount;
-            const STALE_COOLDOWN = RECOVERY_COOLDOWNS.staleMs;
-            const STALE_MAX_RETRIES = RECOVERY_RETRY_LIMITS.stale;
-            const decision = evaluateRecoveryAttempt({
-              timestampKey: STALE_KEY,
-              countKey: STALE_COUNT_KEY,
-              cooldownMs: STALE_COOLDOWN,
-              maxRetries: STALE_MAX_RETRIES,
-            });
-            if (!decision.allowed) {
-              if (decision.reason === 'max_retries' && tryEmergencyRecovery()) {
-                triggerStaleRecovery(true);
-              }
-              return;
-            }
-            triggerStaleRecovery();
-          }
-        };
-        navigator.serviceWorker.addEventListener('message', onSWMessage);
-        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-
-        // controllerchange: no longer sets __metravelUpdatePending.
-        // Stale chunks are handled reactively by ErrorBoundary and inline scripts.
-        // Setting the flag caused redirect loops (/map → /) on mobile after deploy.
-
         const registerSW = () => {
           navigator.serviceWorker
             .register('/sw.js', { updateViaCache: 'none' as any })
@@ -455,11 +359,6 @@ export default function RootLayout() {
         } else {
           window.addEventListener('load', onLoad, { once: true });
         }
-
-        return () => {
-          navigator.serviceWorker.removeEventListener('message', onSWMessage);
-          navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
-        };
       }
       return undefined;
     }, []);

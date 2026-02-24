@@ -1,28 +1,10 @@
 const CACHE_VERSION = '__STAMPED_AT_BUILD__';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
-const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
-const JS_CACHE = `metravel-js-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `metravel-runtime-${CACHE_VERSION}`;
 
-const STATIC_ASSETS = [
-  '/manifest.json',
-  '/favicon.ico',
-];
+const STATIC_ASSETS = ['/manifest.json', '/favicon.ico'];
 
-const CRITICAL_JS_CHUNKS = [
-  'TravelDetailsContainer',
-  'GallerySection',
-  'TravelDescription',
-  'Map',
-  'NetworkStatus',
-  'ConsentBanner',
-];
-
-const MAX_CACHE_SIZE = 100;
-const MAX_IMAGE_CACHE_SIZE = 80;
-const MAX_JS_CACHE_SIZE = 200;
-const CACHE_EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
-const JS_CACHE_EXPIRATION_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days для JS chunks
+const MAX_RUNTIME_ENTRIES = 150;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -40,34 +22,12 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => {
-            // Delete ALL caches on activation to ensure clean state.
-            // Even STATIC_CACHE must be recreated to avoid version conflicts.
-            // Aggressive purge guarantees no stale chunks after deploy.
-            return name.startsWith('metravel-');
-          })
+          .filter((name) => name.startsWith('metravel-') && name !== STATIC_CACHE && name !== RUNTIME_CACHE)
           .map((name) => caches.delete(name))
       );
-    }).then(() => {
-      // Notify open tabs that a new version is ready.
-      // SW_PENDING_UPDATE = soft signal: client will reload on next navigation.
-      // This avoids interrupting the user mid-session.
-      return self.clients.matchAll({ type: 'window' }).then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({ type: 'SW_PENDING_UPDATE' });
-        });
-      });
     })
   );
   self.clients.claim();
-});
-
-// Prefetch критичних ресурсів для travel pages
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'PREFETCH_TRAVEL_RESOURCES') {
-    const url = event.data.url;
-    event.waitUntil(prefetchCriticalResources(url));
-  }
 });
 
 function buildOfflineHTML() {
@@ -146,25 +106,23 @@ function fallbackResponse(request) {
   return new Response('Network error', { status: 503 });
 }
 
+async function networkFirst(request) {
+  try {
+    return await fetch(request);
+  } catch {
+    const cached = await caches.match(request).catch(() => null);
+    return cached || fallbackResponse(request);
+  }
+}
+
 async function networkFirstDocument(request) {
   try {
     // cache:'no-store' bypasses the browser HTTP cache entirely.
     // Without it, fetch() respects Cache-Control headers and can return
     // stale HTML from the HTTP cache — causing old chunk URLs to load.
     const response = await fetch(request, { cache: 'no-store' });
-    // Cache successful document responses for offline fallback
-    if (response && response.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, response.clone()).catch(() => {});
-    }
     return response;
   } catch {
-    // Try to serve cached version of the page
-    const cached = await caches.match(request).catch(() => null);
-    if (cached) return cached;
-    // Try to serve cached root page as fallback for any navigation
-    const rootCached = await caches.match(new Request(self.location.origin + '/')).catch(() => null);
-    if (rootCached) return rootCached;
     return offlineResponse();
   }
 }
@@ -199,284 +157,55 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (request.destination === 'image') {
-    event.respondWith(cacheFirst(request, IMAGE_CACHE, MAX_IMAGE_CACHE_SIZE));
-    return;
-  }
-
-  // JS chunks — bypass SW cache entirely, rely on nginx immutable headers.
-  // Why: SW caching of hashed chunks creates version skew after deploys.
-  // Old SW may serve stale chunks from JS_CACHE even after activate event.
-  // Browser HTTP cache + nginx immutable headers provide sufficient performance.
   if (request.destination === 'script') {
-    // Network-only for all JS to guarantee fresh chunks after deploy
     event.respondWith(fetch(request));
     return;
   }
 
-  if (request.destination === 'font') {
-    event.respondWith(cacheFirstLongTerm(request, STATIC_CACHE, MAX_CACHE_SIZE));
+  if (request.destination === 'image' || request.destination === 'font' || request.destination === 'style') {
+    event.respondWith(cacheFirstRuntime(request));
     return;
   }
 
-  if (request.destination === 'style') {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
-    return;
-  }
-
-  event.respondWith(networkFirst(request));
+  event.respondWith(staleWhileRevalidateRuntime(request));
 });
 
-async function cacheFirst(request, cacheName = DYNAMIC_CACHE, maxSize = MAX_CACHE_SIZE) {
+async function cacheFirstRuntime(request) {
   try {
-    const url = new URL(request.url);
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      return fetch(request);
-    }
-    const cache = await caches.open(cacheName);
+    const cache = await caches.open(RUNTIME_CACHE);
     const cached = await cache.match(request);
-    const maxAge = cacheName === JS_CACHE ? JS_CACHE_EXPIRATION_TIME : CACHE_EXPIRATION_TIME;
-    
-    if (cached) {
-      const cacheDate = cached.headers.get('sw-cache-date');
-      if (cacheDate) {
-        const age = Date.now() - parseInt(cacheDate, 10);
-        if (age > maxAge) {
-          cache.delete(request);
-        } else {
-          return cached;
-        }
-      } else {
-        return cached;
-      }
-    }
-
-    const response = await fetch(request);
-    
-    if (response && response.status === 200) {
-      const responseToCache = response.clone();
-      const headers = new Headers(responseToCache.headers);
-      headers.append('sw-cache-date', Date.now().toString());
-      
-      const blob = await responseToCache.blob();
-      const cachedResponse = new Response(blob, {
-        status: responseToCache.status,
-        statusText: responseToCache.statusText,
-        headers: headers,
-      });
-      
-      cache.put(request, cachedResponse);
-      
-      limitCacheSize(cacheName, maxSize);
-    }
-
-    return response;
-  } catch {
-    const cached = await caches.match(request);
-    return cached || fallbackResponse(request);
-  }
-}
-
-async function networkFirst(request) {
-  try {
-    const response = await fetch(request);
-    
-    if (response && response.status === 200) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, response.clone());
-      limitCacheSize(DYNAMIC_CACHE, MAX_CACHE_SIZE);
-    }
-    
-    return response;
-  } catch {
-    const cached = await caches.match(request);
     if (cached) return cached;
 
-    return fallbackResponse(request);
-  }
-}
-
-async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_JS_CACHE_SIZE) {
-  try {
-    const cache = await caches.open(cacheName);
-    const cached = await cache.match(request);
-
-    if (cached) {
-      // Validate that the cached response is actual JS, not an HTML fallback
-      // (nginx SPA fallback can serve index.html with 200 for missing chunks).
-      const ct = cached.headers.get('content-type') || '';
-      if (ct.includes('text/html')) {
-        cache.delete(request);
-        // Fall through to network fetch below
-      } else {
-        return cached;
-      }
-    }
-
     const response = await fetch(request);
-
-    // If the server returns 404 for a hashed chunk, the build has changed.
-    // Do NOT cache the 404 response — trigger an immediate reload (stale chunk).
-    if (response && response.status === 404) {
-      cache.delete(request);
-      // SW_STALE_CHUNK = urgent signal: a JS chunk is missing, reload immediately.
-      self.clients.matchAll({ type: 'window' }).then((clients) => {
-        clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
-      });
-      return response;
+    if (response && response.ok) {
+      cache.put(request, response.clone()).catch(() => {});
+      limitCacheSize(RUNTIME_CACHE, MAX_RUNTIME_ENTRIES);
     }
-
-    if (response && response.status === 200) {
-      // Verify the response is actually JS, not an HTML SPA fallback
-      const ct = response.headers.get('content-type') || '';
-      if (ct.includes('text/html') && request.url.endsWith('.js')) {
-        // Server returned HTML for a .js request — chunk doesn't exist.
-        self.clients.matchAll({ type: 'window' }).then((clients) => {
-          clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
-        });
-        return response;
-      }
-
-      const responseToCache = response.clone();
-      const headers = new Headers(responseToCache.headers);
-      headers.append('sw-cache-date', Date.now().toString());
-      headers.append('Cache-Control', 'public, max-age=31536000, immutable');
-
-      const blob = await responseToCache.blob();
-      const cachedResponse = new Response(blob, {
-        status: responseToCache.status,
-        statusText: responseToCache.statusText,
-        headers: headers,
-      });
-
-      cache.put(request, cachedResponse);
-      limitCacheSize(cacheName, maxSize);
-    }
-
     return response;
   } catch {
-    const cached = await caches.match(request);
+    const cached = await caches.match(request).catch(() => null);
     return cached || fallbackResponse(request);
   }
 }
 
-// Stale-while-revalidate для entry bundle та динамічних ресурсів
-async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
+async function staleWhileRevalidateRuntime(request) {
   try {
-    const cache = await caches.open(cacheName);
-    try {
-      // Bypass browser HTTP cache for non-hashed scripts (entry bundle etc.)
-      // whose URL stays the same across deploys but content changes.
-      const response = await fetch(request, { cache: 'no-store' });
-
-      if (response && response.status === 404) {
-        cache.delete(request);
-        self.clients.matchAll({ type: 'window' }).then((clients) => {
-          clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
-        });
+    const cache = await caches.open(RUNTIME_CACHE);
+    const cached = await cache.match(request);
+    const fetchPromise = fetch(request)
+      .then((response) => {
+        if (response && response.ok) {
+          cache.put(request, response.clone()).catch(() => {});
+          limitCacheSize(RUNTIME_CACHE, MAX_RUNTIME_ENTRIES);
+        }
         return response;
-      }
+      })
+      .catch(() => null);
 
-      if (response && response.status === 200) {
-        const ct = response.headers.get('content-type') || '';
-        if (ct.includes('text/html') && request.url.endsWith('.js')) {
-          self.clients.matchAll({ type: 'window' }).then((clients) => {
-            clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
-          });
-          return response;
-        }
-
-        const responseToCache = response.clone();
-        const headers = new Headers(responseToCache.headers);
-        headers.append('sw-cache-date', Date.now().toString());
-
-        const blob = await responseToCache.blob();
-        const cachedResponse = new Response(blob, {
-          status: responseToCache.status,
-          statusText: responseToCache.statusText,
-          headers: headers,
-        });
-        cache.put(request, cachedResponse);
-        limitCacheSize(cacheName, MAX_JS_CACHE_SIZE);
-      }
-      return response;
-    } catch {
-      const cached = await cache.match(request);
-      if (cached) {
-        const ct = cached.headers.get('content-type') || '';
-        if (!(ct.includes('text/html') && request.url.endsWith('.js'))) {
-          return cached;
-        }
-        cache.delete(request);
-      }
-      return fallbackResponse(request);
-    }
+    return cached || (await fetchPromise) || fallbackResponse(request);
   } catch {
-    const cached = await caches.match(request);
+    const cached = await caches.match(request).catch(() => null);
     return cached || fallbackResponse(request);
-  }
-}
-
-// Prefetch критичних JS chunks для travel pages
-async function prefetchCriticalResources(pageUrl) {
-  try {
-    // NOTE: CRITICAL_CACHE is kept for backwards compatibility, but scripts are stored in JS_CACHE
-    // so they are actually served by the SW fetch handler.
-    const cache = await caches.open(JS_CACHE);
-    await self.clients.matchAll().catch(() => []);
-    
-    const safeUrl = (() => {
-      try {
-        const base = self.location && self.location.origin ? self.location.origin : '';
-        const u = new URL(pageUrl || '/', base);
-        // Only allow same-origin prefetch.
-        if (base && u.origin !== base) return new URL('/', base).toString();
-        return u.toString();
-      } catch {
-        return '/';
-      }
-    })();
-
-    // Знаходимо всі JS chunks на сторінці (для поточної сторінки, а не лише '/')
-    const response = await fetch(safeUrl, { method: 'GET', credentials: 'omit' });
-    const html = await response.text();
-    const scriptMatches = html.matchAll(/<script[^>]+src="([^"]+)"/g);
-    
-    const criticalUrls = [];
-    for (const match of scriptMatches) {
-      const src = match[1];
-      if (!src) continue;
-      // Keep it tight: only same-origin Expo web JS.
-      if (!src.startsWith('/_expo/static/js/web/')) continue;
-      if (!src.endsWith('.js')) continue;
-
-      // Перевіряємо чи це критичний chunk (або entry/common)
-      const isCriticalNamed = CRITICAL_JS_CHUNKS.some((chunk) => src.includes(chunk));
-      const isEntryOrCommon = src.includes('/entry-') || src.includes('/__common-');
-      if (isCriticalNamed || isEntryOrCommon) criticalUrls.push(src);
-    }
-
-    // Prefetch критичних ресурсів
-    const uniq = Array.from(new Set(criticalUrls));
-    await Promise.all(
-      uniq.map((url) =>
-        fetch(url, { method: 'GET', credentials: 'omit' })
-          .then((res) => {
-            if (res && res.status === 200) {
-              const ct = res.headers.get('content-type') || '';
-              if (!ct.includes('text/html')) {
-                cache.put(url, res.clone());
-              }
-            }
-          })
-          .catch(() => {})
-      )
-    );
-
-    // Keep JS cache size bounded.
-    limitCacheSize(JS_CACHE, MAX_JS_CACHE_SIZE);
-  } catch (error) {
-    console.info('SW: Prefetch failed', error);
   }
 }
 

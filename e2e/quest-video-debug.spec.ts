@@ -1,6 +1,6 @@
 // e2e/quest-video-debug.spec.ts
 // Детальная отладка загрузки видео в квестах
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test.describe('Quest Video Debug', () => {
     test('should debug video loading step by step', async ({ page }) => {

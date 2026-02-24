@@ -122,7 +122,7 @@ test.describe('Quest Video Loading', () => {
         }
     });
 
-    test('should check video URL from API', async ({ page, request }) => {
+    test('should check video URL from API', async ({ page: _page, request }) => {
         // Получаем список квестов через API
         const questsResponse = await request.get('/api/quests/');
         expect(questsResponse.ok()).toBeTruthy();
