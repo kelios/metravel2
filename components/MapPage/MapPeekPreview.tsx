@@ -97,11 +97,19 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
 
           const thumbUrl = place.travelImageThumbUrl || null;
 
+          const addressText = place.address || 'Неизвестное место';
+          const labelParts = [`${index + 1}`, addressText];
+          if (distanceInfo) {
+            labelParts.push(distanceInfo.distanceText, distanceInfo.travelTimeText);
+          }
+          const fullLabel = labelParts.join(' ');
+
           return (
             <CardActionPressable
               key={place.id || index}
               style={styles.placeCard}
               onPress={() => onPlacePress(place)}
+              accessibilityLabel={fullLabel}
               accessibilityHint="Открыть на карте"
             >
               <View style={styles.cardRow}>

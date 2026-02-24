@@ -166,6 +166,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   private scheduleExhaustedAutoRecovery = () => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     if (this._exhaustedAutoRetryTimer != null) return;
+    // If _cb is already in URL, a previous recovery cycle didn't help.
+    // Do NOT auto-retry — the error is likely a real bug, not stale cache.
+    if (isAlreadyInRecoveryLoop()) return;
     if (!shouldScheduleExhaustedAutoRetry()) return;
 
     this._exhaustedAutoRetryTimer = setTimeout(() => {
@@ -274,8 +277,16 @@ export default class ErrorBoundary extends Component<Props, State> {
 
       // #130 with undefined args can be a stale module/chunk mismatch on production.
       // Run one deep auto-recovery attempt with long cooldown to avoid loops.
-      if (isLikelyReact130ModuleMismatch(msg) && tryEmergencyRecovery()) {
-        return;
+      if (isLikelyReact130ModuleMismatch(msg)) {
+        if (tryEmergencyRecovery()) {
+          return;
+        }
+        // Emergency recovery failed (cooldown). If _cb is already in URL,
+        // recovery already ran and didn't help — show actionable error immediately.
+        if (isAlreadyInRecoveryLoop()) {
+          this.setState({ recoveryExhausted: true });
+          return;
+        }
       }
     }
 
