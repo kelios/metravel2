@@ -18,6 +18,16 @@ import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+import {
+  clearRecoverySessionState,
+  isRecoveryLoopUrl,
+  RECOVERY_SESSION_KEYS,
+  withCacheBust,
+} from '@/utils/recovery/sessionRecovery';
+import { evaluateRecoveryAttempt, shouldAllowRecoveryAttempt } from '@/utils/recovery/recoveryThrottle';
+import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS } from '@/utils/recovery/recoveryConfig';
+import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
+import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -164,17 +174,12 @@ export default function RootLayout() {
         let stableTimer: ReturnType<typeof setTimeout> | null = null;
         if (isWeb && typeof window !== 'undefined') {
           stableTimer = setTimeout(() => {
-            try {
-              sessionStorage.removeItem('metravel:eb:reload_ts');
-              sessionStorage.removeItem('metravel:eb:reload_count');
-              sessionStorage.removeItem('__metravel_chunk_reload');
-              sessionStorage.removeItem('__metravel_chunk_reload_count');
-              sessionStorage.removeItem('__metravel_sw_stale_reload');
-              sessionStorage.removeItem('__metravel_sw_stale_reload_count');
-              sessionStorage.removeItem('__metravel_emergency_recovery_ts');
-              sessionStorage.removeItem('__metravel_exhausted_autoretry_ts');
-              sessionStorage.removeItem('__metravel_exhausted_autoretry_count');
-            } catch { /* noop */ }
+            clearRecoverySessionState({
+              clearEmergencyKey: true,
+              clearExhaustedAutoRetryKeys: true,
+              clearReact130RecoveryKeys: true,
+              clearControllerChangeReloadKey: true,
+            });
           }, 10000);
         }
 
@@ -324,103 +329,57 @@ export default function RootLayout() {
 
       // --- Service Worker registration + update listener ---
       if ('serviceWorker' in navigator) {
-        const GLOBAL_EMERGENCY_KEY = '__metravel_emergency_recovery_ts';
-        const GLOBAL_EMERGENCY_COOLDOWN = 60 * 1000;
-        const CONTROLLERCHANGE_RELOAD_KEY = '__metravel_sw_controllerchange_reload_ts';
-        const CONTROLLERCHANGE_RELOAD_COOLDOWN = 60 * 1000;
+        const GLOBAL_EMERGENCY_KEY = RECOVERY_SESSION_KEYS.emergencyRecoveryTs;
+        const GLOBAL_EMERGENCY_COOLDOWN = RECOVERY_COOLDOWNS.emergencyMs;
+        const CONTROLLERCHANGE_RELOAD_KEY = RECOVERY_SESSION_KEYS.controllerChangeReloadTs;
+        const CONTROLLERCHANGE_RELOAD_COOLDOWN = RECOVERY_COOLDOWNS.controllerChangeMs;
 
         const clearRecoverySessionKeys = (clearEmergencyKey = false) => {
-          try {
-            sessionStorage.removeItem('metravel:eb:reload_ts');
-            sessionStorage.removeItem('metravel:eb:reload_count');
-            sessionStorage.removeItem('__metravel_chunk_reload');
-            sessionStorage.removeItem('__metravel_chunk_reload_count');
-            sessionStorage.removeItem('__metravel_sw_stale_reload');
-            sessionStorage.removeItem('__metravel_sw_stale_reload_count');
-            sessionStorage.removeItem('__metravel_exhausted_autoretry_ts');
-            sessionStorage.removeItem('__metravel_exhausted_autoretry_count');
-            if (clearEmergencyKey) {
-              sessionStorage.removeItem(GLOBAL_EMERGENCY_KEY);
-            }
-          } catch { /* noop */ }
+          clearRecoverySessionState({
+            clearEmergencyKey,
+            clearExhaustedAutoRetryKeys: true,
+            clearReact130RecoveryKeys: true,
+            clearControllerChangeReloadKey: true,
+          });
         };
 
         const tryEmergencyRecovery = () => {
-          try {
-            const now = Date.now();
-            const prevRaw = sessionStorage.getItem(GLOBAL_EMERGENCY_KEY);
-            const prev = prevRaw ? Number(prevRaw) : 0;
-            const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
-            if (elapsed < GLOBAL_EMERGENCY_COOLDOWN) return false;
-            sessionStorage.setItem(GLOBAL_EMERGENCY_KEY, String(now));
-          } catch {
-            // If sessionStorage is unavailable, still attempt one deep cleanup.
-          }
+          if (!shouldAllowRecoveryAttempt({
+            timestampKey: GLOBAL_EMERGENCY_KEY,
+            cooldownMs: GLOBAL_EMERGENCY_COOLDOWN,
+          })) return false;
           clearRecoverySessionKeys();
           return true;
         };
 
         const triggerStaleRecovery = (purgeAllCaches = true) => {
-          const navigate = () => {
-            try {
-              const cbUrl = new URL(window.location.href);
-              cbUrl.searchParams.set('_cb', String(Date.now()));
-              window.location.replace(cbUrl.toString());
-            } catch {
-              window.location.reload();
-            }
-          };
-
-          // Safety timeout: if cleanup hangs (mobile Safari), navigate anyway.
-          const safetyTimer = setTimeout(navigate, 3000);
-
-          const cleanup = async () => {
-            try {
-              const regs = await navigator.serviceWorker.getRegistrations();
-              await Promise.all(regs.map((r) => r.unregister()));
-            } catch { /* noop */ }
-            try {
-              const keys = await caches.keys();
-              const keysToDelete = purgeAllCaches
-                ? keys
-                : keys.filter((k) => k.startsWith('metravel-'));
-              await Promise.all(keysToDelete.map((k) => caches.delete(k)));
-            } catch { /* noop */ }
-          };
-
-          cleanup().catch(() => {}).finally(() => {
-            clearTimeout(safetyTimer);
-            navigate();
-          });
+          runStaleChunkRecovery({ purgeAllCaches });
         };
 
         const shouldReloadOnControllerChange = () => {
-          try {
-            const now = Date.now();
-            const prevRaw = sessionStorage.getItem(CONTROLLERCHANGE_RELOAD_KEY);
-            const prev = prevRaw ? Number(prevRaw) : 0;
-            const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
-            if (elapsed < CONTROLLERCHANGE_RELOAD_COOLDOWN) return false;
-            sessionStorage.setItem(CONTROLLERCHANGE_RELOAD_KEY, String(now));
-          } catch {
-            // If sessionStorage is unavailable, still do one best-effort reload.
-          }
-          return true;
+          return shouldAllowRecoveryAttempt({
+            timestampKey: CONTROLLERCHANGE_RELOAD_KEY,
+            cooldownMs: CONTROLLERCHANGE_RELOAD_COOLDOWN,
+          });
         };
 
         const onControllerChange = () => {
           if (typeof window === 'undefined') return;
           try {
-            if (new URL(window.location.href).searchParams.has('_cb')) return;
+            if (isRecoveryLoopUrl(window.location.href)) return;
           } catch { /* noop */ }
           if (!shouldReloadOnControllerChange()) return;
-          try {
-            const url = new URL(window.location.href);
-            url.searchParams.set('_cb', String(Date.now()));
-            window.location.replace(url.toString());
-          } catch {
-            window.location.reload();
-          }
+
+          void hasFreshHtmlBundleMismatch(window.location.href)
+            .then((hasMismatch) => {
+              if (!hasMismatch) return;
+              try {
+                window.location.replace(withCacheBust(window.location.href));
+              } catch {
+                window.location.reload();
+              }
+            })
+            .catch(() => {});
         };
 
         // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
@@ -430,31 +389,22 @@ export default function RootLayout() {
           if (event.data?.type === 'SW_STALE_CHUNK') {
             // Reload to recover from missing chunk, but with cooldown + retry cap
             // to prevent infinite reload loops when a stale asset is persistently unavailable.
-            const STALE_KEY = '__metravel_sw_stale_reload';
-            const STALE_COUNT_KEY = '__metravel_sw_stale_reload_count';
-            const STALE_COOLDOWN = 30000;
-            const STALE_MAX_RETRIES = 2;
-            try {
-              let retryCount = parseInt(sessionStorage.getItem(STALE_COUNT_KEY) || '0', 10);
-              const lastRaw = sessionStorage.getItem(STALE_KEY);
-              const last = lastRaw ? Number(lastRaw) : 0;
-              const elapsed = (last && Number.isFinite(last)) ? Date.now() - last : Infinity;
-              // Reset counters after cooldown so users aren't permanently stuck
-              if (retryCount >= STALE_MAX_RETRIES) {
-                if (elapsed >= STALE_COOLDOWN) {
-                  retryCount = 0;
-                  sessionStorage.setItem(STALE_COUNT_KEY, '0');
-                } else {
-                  if (tryEmergencyRecovery()) {
-                    triggerStaleRecovery(true);
-                  }
-                  return;
-                }
+            const STALE_KEY = RECOVERY_SESSION_KEYS.swStaleReloadTs;
+            const STALE_COUNT_KEY = RECOVERY_SESSION_KEYS.swStaleReloadCount;
+            const STALE_COOLDOWN = RECOVERY_COOLDOWNS.staleMs;
+            const STALE_MAX_RETRIES = RECOVERY_RETRY_LIMITS.stale;
+            const decision = evaluateRecoveryAttempt({
+              timestampKey: STALE_KEY,
+              countKey: STALE_COUNT_KEY,
+              cooldownMs: STALE_COOLDOWN,
+              maxRetries: STALE_MAX_RETRIES,
+            });
+            if (!decision.allowed) {
+              if (decision.reason === 'max_retries' && tryEmergencyRecovery()) {
+                triggerStaleRecovery(true);
               }
-              if (elapsed < STALE_COOLDOWN) return;
-              sessionStorage.setItem(STALE_KEY, Date.now().toString());
-              sessionStorage.setItem(STALE_COUNT_KEY, String(retryCount + 1));
-            } catch { /* sessionStorage unavailable */ }
+              return;
+            }
             triggerStaleRecovery();
           }
         };

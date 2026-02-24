@@ -4,6 +4,16 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import {
+  clearRecoverySessionState,
+  isRecoveryLoopUrl,
+  RECOVERY_SESSION_KEYS,
+} from '@/utils/recovery/sessionRecovery';
+import { evaluateRecoveryAttempt, shouldAllowRecoveryAttempt } from '@/utils/recovery/recoveryThrottle';
+import { STALE_ERROR_REGEX } from '@/utils/recovery/staleErrorPattern';
+import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
+import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS, RECOVERY_TIMEOUTS } from '@/utils/recovery/recoveryConfig';
+import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
 
 interface Props {
   children: ReactNode;
@@ -18,183 +28,58 @@ interface State {
   recoveryExhausted?: boolean;
 }
 
-const EMERGENCY_RECOVERY_KEY = '__metravel_emergency_recovery_ts';
-const EMERGENCY_RECOVERY_COOLDOWN = 60 * 1000;
-const EXHAUSTED_AUTORETRY_TS_KEY = '__metravel_exhausted_autoretry_ts';
-const EXHAUSTED_AUTORETRY_COUNT_KEY = '__metravel_exhausted_autoretry_count';
-const EXHAUSTED_AUTORETRY_COOLDOWN = 30 * 1000;
-const EXHAUSTED_AUTORETRY_MAX = 3;
-const EXHAUSTED_AUTORETRY_DELAY_MS = 2500;
-const REACT_130_RECOVERY_TS_KEY = '__metravel_react130_recovery_ts';
-const REACT_130_RECOVERY_COUNT_KEY = '__metravel_react130_recovery_count';
-const REACT_130_RECOVERY_COOLDOWN = 30 * 1000;
-const REACT_130_RECOVERY_MAX = 1;
-
-const CORE_BUNDLE_SCRIPT_RE =
-  /\/(_expo\/static\/js\/web\/(?:__expo-metro-runtime-|__common-|entry-|_layout-|index-)[^"'\s>]+\.js)/i;
+const EMERGENCY_RECOVERY_KEY = RECOVERY_SESSION_KEYS.emergencyRecoveryTs;
+const EMERGENCY_RECOVERY_COOLDOWN = RECOVERY_COOLDOWNS.emergencyMs;
+const EXHAUSTED_AUTORETRY_TS_KEY = RECOVERY_SESSION_KEYS.exhaustedAutoRetryTs;
+const EXHAUSTED_AUTORETRY_COUNT_KEY = RECOVERY_SESSION_KEYS.exhaustedAutoRetryCount;
+const EXHAUSTED_AUTORETRY_COOLDOWN = RECOVERY_COOLDOWNS.exhaustedAutoRetryMs;
+const EXHAUSTED_AUTORETRY_MAX = RECOVERY_RETRY_LIMITS.exhaustedAutoRetry;
+const EXHAUSTED_AUTORETRY_DELAY_MS = RECOVERY_TIMEOUTS.staleAutoRetryDelayMs;
+const REACT_130_RECOVERY_TS_KEY = RECOVERY_SESSION_KEYS.react130RecoveryTs;
+const REACT_130_RECOVERY_COUNT_KEY = RECOVERY_SESSION_KEYS.react130RecoveryCount;
+const REACT_130_RECOVERY_COOLDOWN = RECOVERY_COOLDOWNS.react130Ms;
+const REACT_130_RECOVERY_MAX = RECOVERY_RETRY_LIMITS.react130;
 
 function isReact130LikeError(msg: string): boolean {
   return /Minified React error #130/i.test(msg) || /Element type is invalid/i.test(msg);
 }
 
-function normalizeBundleScriptSrc(src: string): string {
-  if (!src) return '';
-  try {
-    const url = new URL(src, window.location.origin);
-    return `${url.pathname}${url.search}`;
-  } catch {
-    return src;
-  }
-}
-
-function getCurrentCoreBundleScripts(): string[] {
-  if (typeof document === 'undefined') return [];
-  const scripts = Array.from(document.querySelectorAll('script[src]'))
-    .map((el) => normalizeBundleScriptSrc(el.getAttribute('src') || ''))
-    .filter((src) => CORE_BUNDLE_SCRIPT_RE.test(src));
-  return Array.from(new Set(scripts)).sort();
-}
-
-function getCoreBundleScriptsFromHtml(html: string): string[] {
-  const scripts: string[] = [];
-  const re = /<script[^>]+src=["']([^"']+)["']/gi;
-  let match: RegExpExecArray | null = null;
-  while ((match = re.exec(html)) != null) {
-    const src = normalizeBundleScriptSrc(match[1] || '');
-    if (src && CORE_BUNDLE_SCRIPT_RE.test(src)) {
-      scripts.push(src);
-    }
-  }
-  return Array.from(new Set(scripts)).sort();
-}
-
 function shouldAttemptReact130Recovery(): boolean {
-  try {
-    const now = Date.now();
-    let count = parseInt(sessionStorage.getItem(REACT_130_RECOVERY_COUNT_KEY) || '0', 10);
-    const prevRaw = sessionStorage.getItem(REACT_130_RECOVERY_TS_KEY);
-    const prev = prevRaw ? Number(prevRaw) : 0;
-    const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
-
-    if (count >= REACT_130_RECOVERY_MAX) {
-      if (elapsed >= REACT_130_RECOVERY_COOLDOWN) {
-        count = 0;
-        sessionStorage.setItem(REACT_130_RECOVERY_COUNT_KEY, '0');
-      } else {
-        return false;
-      }
-    }
-
-    sessionStorage.setItem(REACT_130_RECOVERY_TS_KEY, String(now));
-    sessionStorage.setItem(REACT_130_RECOVERY_COUNT_KEY, String(count + 1));
-  } catch {
-    // If sessionStorage is unavailable, allow one best-effort attempt.
-  }
-
-  return true;
-}
-
-async function hasFreshHtmlBundleMismatch(): Promise<boolean> {
-  if (typeof window === 'undefined' || typeof fetch === 'undefined') return false;
-
-  const currentScripts = getCurrentCoreBundleScripts();
-  if (currentScripts.length === 0) return false;
-
-  const response = await fetch(window.location.href, {
-    method: 'GET',
-    cache: 'no-store',
-    credentials: 'same-origin',
-    headers: { Accept: 'text/html' },
+  return shouldAllowRecoveryAttempt({
+    timestampKey: REACT_130_RECOVERY_TS_KEY,
+    countKey: REACT_130_RECOVERY_COUNT_KEY,
+    cooldownMs: REACT_130_RECOVERY_COOLDOWN,
+    maxRetries: REACT_130_RECOVERY_MAX,
   });
-
-  if (!response.ok) return false;
-  const freshHtml = await response.text();
-  const freshScripts = getCoreBundleScriptsFromHtml(freshHtml);
-  if (freshScripts.length === 0) return false;
-
-  if (currentScripts.length !== freshScripts.length) return true;
-
-  const currentSet = new Set(currentScripts);
-  for (const src of freshScripts) {
-    if (!currentSet.has(src)) return true;
-  }
-  return false;
 }
 
 function shouldScheduleExhaustedAutoRetry(): boolean {
-  try {
-    const now = Date.now();
-    let count = parseInt(sessionStorage.getItem(EXHAUSTED_AUTORETRY_COUNT_KEY) || '0', 10);
-    const prevRaw = sessionStorage.getItem(EXHAUSTED_AUTORETRY_TS_KEY);
-    const prev = prevRaw ? Number(prevRaw) : 0;
-    const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
-
-    if (count >= EXHAUSTED_AUTORETRY_MAX) {
-      if (elapsed >= EXHAUSTED_AUTORETRY_COOLDOWN) {
-        count = 0;
-        sessionStorage.setItem(EXHAUSTED_AUTORETRY_COUNT_KEY, '0');
-      } else {
-        return false;
-      }
-    }
-
-    sessionStorage.setItem(EXHAUSTED_AUTORETRY_TS_KEY, String(now));
-    sessionStorage.setItem(EXHAUSTED_AUTORETRY_COUNT_KEY, String(count + 1));
-  } catch {
-    // If sessionStorage is unavailable, allow one attempt for this runtime.
-  }
-
-  return true;
+  return shouldAllowRecoveryAttempt({
+    timestampKey: EXHAUSTED_AUTORETRY_TS_KEY,
+    countKey: EXHAUSTED_AUTORETRY_COUNT_KEY,
+    cooldownMs: EXHAUSTED_AUTORETRY_COOLDOWN,
+    maxRetries: EXHAUSTED_AUTORETRY_MAX,
+  });
 }
 
 function clearRecoverySessionKeys(
   clearEmergencyKey = false,
   clearExhaustedAutoRetryKeys = false,
 ): void {
-  try {
-    sessionStorage.removeItem('metravel:eb:reload_ts');
-    sessionStorage.removeItem('metravel:eb:reload_count');
-    sessionStorage.removeItem('__metravel_chunk_reload');
-    sessionStorage.removeItem('__metravel_chunk_reload_count');
-    sessionStorage.removeItem('__metravel_sw_stale_reload');
-    sessionStorage.removeItem('__metravel_sw_stale_reload_count');
-    if (clearExhaustedAutoRetryKeys) {
-      sessionStorage.removeItem(EXHAUSTED_AUTORETRY_TS_KEY);
-      sessionStorage.removeItem(EXHAUSTED_AUTORETRY_COUNT_KEY);
-    }
-    if (clearEmergencyKey) {
-      sessionStorage.removeItem(EMERGENCY_RECOVERY_KEY);
-    }
-  } catch { /* noop */ }
+  clearRecoverySessionState({
+    clearEmergencyKey,
+    clearExhaustedAutoRetryKeys,
+    clearReact130RecoveryKeys: clearExhaustedAutoRetryKeys,
+  });
 }
 
 /** Shared detection for stale-chunk / module-mismatch errors after deploy.
  *  Includes both chunk-loading errors and runtime symptoms of module version
  *  mismatch (e.g. spread on undefined when an export signature changed). */
-function isKnownStaleFunctionMismatch(msg: string): boolean {
-  if (!/is not a function/i.test(msg)) return false;
-  return (
-    /(getFiltersPanelStyles|useSingleTravelExport|useSafeAreaInsets)\)\s+is not a function/i.test(msg) ||
-    /(getFiltersPanelStyles|useSingleTravelExport|useSafeAreaInsets)\s+is not a function/i.test(msg)
-  );
-}
-
 function isStaleModuleError(msg: string, name?: string): boolean {
   return (
-    // Module / chunk loading errors
-    msg.includes('Requiring unknown module') ||
-    /loading chunk/i.test(msg) ||
-    /loading module.*failed/i.test(msg) ||
-    /failed to fetch dynamically imported module/i.test(msg) ||
-    /ChunkLoadError/i.test(msg) ||
-    /Cannot find module/i.test(msg) ||
-    name === 'AsyncRequireError' ||
-    // Runtime symptoms of stale-module mismatch after deploy:
-    // old cached JS tries to spread/iterate a value that changed type in new modules.
-    isKnownStaleFunctionMismatch(msg) ||
-    /Class constructors?(?:\s+.*)?\s+cannot be invoked without 'new'/i.test(msg) ||
-    /iterable/i.test(msg) ||
-    /spread/i.test(msg)
+    STALE_ERROR_REGEX.test(msg) ||
+    name === 'AsyncRequireError'
   );
 }
 
@@ -202,44 +87,13 @@ function isStaleModuleError(msg: string, name?: string): boolean {
  *  (indicated by the _cb cache-busting param in the URL). */
 function isAlreadyInRecoveryLoop(): boolean {
   try {
-    return new URL(window.location.href).searchParams.has('_cb');
+    return isRecoveryLoopUrl(window.location.href);
   } catch { return false; }
 }
 
 /** Unregister SW, purge caches, then hard-navigate with cache-busting. */
 function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = { purgeAllCaches: true }): void {
-  const navigate = () => {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('_cb', String(Date.now()));
-      window.location.replace(url.toString());
-    } catch {
-      window.location.reload();
-    }
-  };
-
-  // Safety timeout: if cleanup hangs (mobile Safari), navigate anyway after 3s.
-  const safetyTimer = setTimeout(navigate, 3000);
-
-  const cleanup = async () => {
-    try {
-      if ('serviceWorker' in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
-      }
-    } catch { /* noop */ }
-    try {
-      const keys = await caches.keys();
-      const keysToDelete = options.purgeAllCaches === false
-        ? keys.filter((k) => k.startsWith('metravel-'))
-        : keys;
-      await Promise.all(keysToDelete.map((k) => caches.delete(k)));
-    } catch { /* noop */ }
-  };
-  cleanup().catch(() => {}).finally(() => {
-    clearTimeout(safetyTimer);
-    navigate();
-  });
+  runStaleChunkRecovery({ purgeAllCaches: options.purgeAllCaches });
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -291,53 +145,31 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
 
     const msg = String(error?.message ?? '');
-    const EB_KEY = 'metravel:eb:reload_ts';
-    const EB_COUNT_KEY = 'metravel:eb:reload_count';
-    const EB_COOLDOWN = 30000;
-    const MAX_EB_RETRIES = 3;
+    const EB_KEY = RECOVERY_SESSION_KEYS.errorBoundaryReloadTs;
+    const EB_COUNT_KEY = RECOVERY_SESSION_KEYS.errorBoundaryReloadCount;
+    const EB_COOLDOWN = RECOVERY_COOLDOWNS.staleMs;
+    const MAX_EB_RETRIES = RECOVERY_RETRY_LIMITS.errorBoundary;
 
-    const shouldReload = () => {
-      if ((window as any).__metravelModuleReloadTriggered) return false;
+    const getReloadDecision = () => {
+      if ((window as any).__metravelModuleReloadTriggered) {
+        return { allowed: false, reason: 'cooldown' as const };
+      }
+      const decision = evaluateRecoveryAttempt({
+        timestampKey: EB_KEY,
+        countKey: EB_COUNT_KEY,
+        cooldownMs: EB_COOLDOWN,
+        maxRetries: MAX_EB_RETRIES,
+      });
+      if (!decision.allowed) return decision;
       (window as any).__metravelModuleReloadTriggered = true;
-      try {
-        const now = Date.now();
-
-        // Check retry counter — give up after MAX_EB_RETRIES to prevent infinite loops
-        let count = parseInt(sessionStorage.getItem(EB_COUNT_KEY) || '0', 10);
-        const prevRaw = sessionStorage.getItem(EB_KEY);
-        const prev = prevRaw ? Number(prevRaw) : 0;
-        const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
-
-        // Reset counters after cooldown so users aren't permanently stuck
-        if (count >= MAX_EB_RETRIES) {
-          if (elapsed >= EB_COOLDOWN) {
-            count = 0;
-            sessionStorage.setItem(EB_COUNT_KEY, '0');
-          } else {
-            return false;
-          }
-        }
-
-        // Check cooldown — don't reload more than once per 30s
-        if (elapsed < EB_COOLDOWN) return false;
-
-        sessionStorage.setItem(EB_KEY, String(now));
-        sessionStorage.setItem(EB_COUNT_KEY, String(count + 1));
-      } catch { /* noop */ }
-      return true;
+      return decision;
     };
 
     const tryEmergencyRecovery = () => {
-      try {
-        const now = Date.now();
-        const prevRaw = sessionStorage.getItem(EMERGENCY_RECOVERY_KEY);
-        const prev = prevRaw ? Number(prevRaw) : 0;
-        const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
-        if (elapsed < EMERGENCY_RECOVERY_COOLDOWN) return false;
-        sessionStorage.setItem(EMERGENCY_RECOVERY_KEY, String(now));
-      } catch {
-        // If sessionStorage is unavailable, still try one deep cleanup.
-      }
+      if (!shouldAllowRecoveryAttempt({
+        timestampKey: EMERGENCY_RECOVERY_KEY,
+        cooldownMs: EMERGENCY_RECOVERY_COOLDOWN,
+      })) return false;
       clearRecoverySessionKeys();
       doStaleChunkRecovery({ purgeAllCaches: true });
       return true;
@@ -361,11 +193,14 @@ export default class ErrorBoundary extends Component<Props, State> {
           this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
           return;
         }
-        if (!shouldReload()) {
-          if (tryEmergencyRecovery()) {
-            return;
+        const reloadDecision = getReloadDecision();
+        if (!reloadDecision.allowed) {
+          if (reloadDecision.reason === 'max_retries') {
+            if (tryEmergencyRecovery()) {
+              return;
+            }
+            this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
           }
-          this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
           return;
         }
         doStaleChunkRecovery();
@@ -376,12 +211,12 @@ export default class ErrorBoundary extends Component<Props, State> {
       // a stale HTML ↔ bundle script mismatch in the freshly fetched document.
       if (isReact130LikeError(msg)) {
         if (isAlreadyInRecoveryLoop()) return;
-        if (!shouldAttemptReact130Recovery()) return;
 
         void hasFreshHtmlBundleMismatch()
           .then((hasMismatch) => {
             if (!hasMismatch) return;
             if ((window as any).__metravelModuleReloadTriggered) return;
+            if (!shouldAttemptReact130Recovery()) return;
             (window as any).__metravelModuleReloadTriggered = true;
             clearRecoverySessionKeys(true, true);
             doStaleChunkRecovery({ purgeAllCaches: true });

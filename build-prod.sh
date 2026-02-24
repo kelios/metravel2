@@ -64,6 +64,10 @@ deploy_prod() {
     rm -rf static/dist.new
     mv dist/$ENV static/dist.new
     mv static/dist static/dist.old || true
+    if [ -d static/dist.old/_expo/static ]; then
+      mkdir -p static/dist.new/_expo/static
+      rsync -a --ignore-existing static/dist.old/_expo/static/ static/dist.new/_expo/static/
+    fi
     mv static/dist.new static/dist
     rm -rf static/dist.old
     mkdir -p static/dist/assets/icons static/dist/assets/images
