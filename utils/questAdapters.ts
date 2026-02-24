@@ -212,7 +212,7 @@ export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
         console.warn('[Quest] Failed to fix video URL:', apiFinale.video_url);
     }
     if (videoUrl) {
-        console.log('[Quest] Finale video URL:', videoUrl);
+        console.info('[Quest] Finale video URL:', videoUrl);
     }
     
     return {
