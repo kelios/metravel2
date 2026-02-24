@@ -28,8 +28,8 @@ interface State {
   recoveryExhausted?: boolean;
 }
 
-const EMERGENCY_RECOVERY_KEY = RECOVERY_SESSION_KEYS.emergencyRecoveryTs;
-const EMERGENCY_RECOVERY_COOLDOWN = RECOVERY_COOLDOWNS.emergencyMs;
+const _EMERGENCY_RECOVERY_KEY = RECOVERY_SESSION_KEYS.emergencyRecoveryTs;
+const _EMERGENCY_RECOVERY_COOLDOWN = RECOVERY_COOLDOWNS.emergencyMs;
 const EXHAUSTED_AUTORETRY_DELAY_MS = RECOVERY_TIMEOUTS.staleAutoRetryDelayMs;
 const REACT_130_RECOVERY_TS_KEY = RECOVERY_SESSION_KEYS.react130RecoveryTs;
 const REACT_130_RECOVERY_COUNT_KEY = RECOVERY_SESSION_KEYS.react130RecoveryCount;
@@ -165,16 +165,6 @@ export default class ErrorBoundary extends Component<Props, State> {
       return decision;
     };
 
-    const tryEmergencyRecovery = () => {
-      if (!shouldAllowRecoveryAttempt({
-        timestampKey: EMERGENCY_RECOVERY_KEY,
-        cooldownMs: EMERGENCY_RECOVERY_COOLDOWN,
-      })) return false;
-      clearRecoverySessionKeys();
-      doStaleChunkRecovery({ purgeAllCaches: true });
-      return true;
-    };
-
     // Auto-recover from stale-bundle module mismatch errors.
     // When the SW serves cached JS chunks from a previous build, module IDs can
     // shift and named exports resolve to undefined (e.g. "useFilters is not a function").
@@ -184,22 +174,19 @@ export default class ErrorBoundary extends Component<Props, State> {
       typeof window !== 'undefined'
     ) {
       if (isStaleModuleError(msg, error?.name)) {
+        // Mark as stale chunk error so we show the cache clearing instructions
+        this.setState({ isStaleChunk: true });
+        
         // If the URL already has _cb, a previous recovery cycle didn't help.
-        // Try one deep emergency recovery before surfacing fallback UI.
+        // Show cache clearing instructions instead of trying again.
         if (isAlreadyInRecoveryLoop()) {
-          if (tryEmergencyRecovery()) {
-            return;
-          }
-          this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
+          this.setState({ isStaleChunk: true, recoveryExhausted: true });
           return;
         }
         const reloadDecision = getReloadDecision();
         if (!reloadDecision.allowed) {
           if (reloadDecision.reason === 'max_retries') {
-            if (tryEmergencyRecovery()) {
-              return;
-            }
-            this.setState({ recoveryExhausted: true }, this.scheduleExhaustedAutoRecovery);
+            this.setState({ isStaleChunk: true, recoveryExhausted: true });
           }
           return;
         }
