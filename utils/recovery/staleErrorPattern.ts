@@ -6,12 +6,9 @@ const STALE_ERROR_PATTERN_PARTS = [
   'loading module.*failed',
   'chunkloaderror',
   'asyncrequireerror',
-  'iterable',
-  'spread',
   'getfilterspanelstyles.*is not a function',
   'usesingletravelexport.*is not a function',
   'usesafeareainsets.*is not a function',
-  'r[(].*[)][.].*[)] is not a function',
   "class constructors?.*cannot be invoked without 'new'",
 ] as const;
 

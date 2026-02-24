@@ -189,7 +189,6 @@ describe('ErrorBoundary', () => {
       "Class constructors cannot be invoked without 'new'",
       'Spread syntax requires ...iterable not be null or undefined',
       'someValue is not iterable',
-      'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
     ];
 
     it.each(staleChunkMessages)(
@@ -231,6 +230,41 @@ describe('ErrorBoundary', () => {
       );
 
       expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+
+      console.error = consoleError;
+    });
+
+    it('should NOT classify React #130 args[]=undefined as stale chunk (prevents false-positive cache purge loops)', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      (global as any).fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        text: async () =>
+          '<html><head><script src="/_expo/static/js/web/__common-same.js"></script><script src="/_expo/static/js/web/entry-same.js"></script></head></html>',
+      });
+      addBundleScripts([
+        '/_expo/static/js/web/__common-same.js',
+        '/_expo/static/js/web/entry-same.js',
+      ]);
+
+      const ThrowReact130UndefinedArgs = () => {
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+      };
+
+      const { toJSON } = render(
+        <ErrorBoundary>
+          <ThrowReact130UndefinedArgs />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Что-то пошло не так');
+      });
+
+      expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
+      expect(mockReplace).not.toHaveBeenCalled();
 
       console.error = consoleError;
     });
