@@ -9,6 +9,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton';
+import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
 
 const Home = lazy(() => import('@/components/home/Home'));
 
@@ -80,8 +81,8 @@ function HomeScreen() {
                             <ErrorDisplay
                                 message="Не удалось загрузить главную страницу"
                                 onRetry={() => {
-                                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                                        window.location.reload();
+                                    if (Platform.OS === 'web') {
+                                        runStaleChunkRecovery({ purgeAllCaches: true });
                                     }
                                 }}
                                 variant="error"

@@ -5,6 +5,7 @@ import { Platform, Pressable, StyleSheet } from 'react-native'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery'
 
 type ErrorScreenProps = {
   error: Error
@@ -43,7 +44,7 @@ export default function ErrorScreen({ error, retry }: ErrorScreenProps) {
           <Pressable
             style={styles.tertiaryButton}
             accessibilityRole="button"
-            onPress={() => window.location.reload()}
+            onPress={() => runStaleChunkRecovery({ purgeAllCaches: true })}
           >
             <Text style={styles.tertiaryButtonText}>Перезагрузить страницу</Text>
           </Pressable>

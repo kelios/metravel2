@@ -12,6 +12,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton';
 import { fetchTravels } from '@/api/travelsApi';
+import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
 
 const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
@@ -141,8 +142,8 @@ function SearchScreen() {
                             <ErrorDisplay
                                 message="Не удалось загрузить поиск путешествий"
                                 onRetry={() => {
-                                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                                        window.location.reload();
+                                    if (Platform.OS === 'web') {
+                                        runStaleChunkRecovery({ purgeAllCaches: true });
                                     }
                                 }}
                                 variant="error"
