@@ -39,18 +39,6 @@ LogBox.ignoreLogs([
 /** ===== Helpers ===== */
 const isWeb = Platform.OS === "web";
 
-/** SessionStorage key written by hardNavigateIfPending before doing window.location.href.
- *  The fresh page checks this on load and suppresses __metravelUpdatePending
- *  from SW events to prevent redirect loops (especially on mobile Safari). */
-const HARD_NAV_TS_KEY = '__metravel_hard_nav_ts';
-
-/** Timestamp of when this JS module was first evaluated (≈ page load).
- *  Used to suppress hardNavigateIfPending during the initial routing phase
- *  so Expo Router can finish setting up routes without being redirected. */
-const PAGE_LOAD_TS = Date.now();
-/** Grace period (ms) after page load during which hardNavigateIfPending is a no-op.
- *  10 s is long enough for Expo Router to finish initial routing + SW to settle. */
-const HARD_NAV_GRACE_MS = 10_000;
 
 const useAppFonts: any = isWeb
   ? () => [true, null]
@@ -291,43 +279,11 @@ export default function RootLayout() {
       const originalReplace = window.history.replaceState.bind(window.history);
       const originalPush = window.history.pushState.bind(window.history);
 
-      // Helper: if a pending SW update exists, do a hard navigation to the target
-      // URL so the browser loads the new build cleanly. Returns true if intercepted.
-      const hardNavigateIfPending = (url?: string | URL | null): boolean => {
-        if (!(window as any).__metravelUpdatePending) return false;
-        if (url == null) return false;
-        // Don't intercept navigation during the initial page-load grace period.
-        // The JS is already loaded (fresh or stale); a hard navigate now would
-        // just redirect the user away from the page they requested (e.g. /map → /).
-        // Stale chunks are handled separately by ErrorBoundary / inline scripts.
-        if (Date.now() - PAGE_LOAD_TS < HARD_NAV_GRACE_MS) return false;
-        try {
-          const resolved = new URL(String(url), window.location.href);
-          // Only intercept same-origin navigations to a different path.
-          if (resolved.origin !== window.location.origin) return false;
-          const newPath = resolved.pathname + resolved.search + resolved.hash;
-          const currentPath = window.location.pathname + window.location.search + window.location.hash;
-          if (newPath === currentPath) return false;
-          // One-shot: clear the flag BEFORE navigating so the destination
-          // page doesn't see it and loop.
-          (window as any).__metravelUpdatePending = false;
-          // Mark in sessionStorage so the fresh page knows it was a hard nav
-          // and won't re-set __metravelUpdatePending from SW events.
-          try { sessionStorage.setItem(HARD_NAV_TS_KEY, String(Date.now())); } catch { /* noop */ }
-          // Hard navigate — browser will load fresh HTML + new SW chunks.
-          window.location.href = resolved.href;
-          return true;
-        } catch {
-          return false;
-        }
-      };
-
       window.history.pushState = function patchedPushState(
         data: any,
         unused: string,
         url?: string | URL | null,
       ) {
-        if (hardNavigateIfPending(url)) return;
         return originalPush(data, unused, url);
       };
 
@@ -346,7 +302,6 @@ export default function RootLayout() {
             newPath = String(url);
           }
           if (newPath !== currentPath) {
-            if (hardNavigateIfPending(url)) return;
             // Path changed — push instead of replace so browser back button works
             return window.history.pushState(data, unused, url);
           }
@@ -427,30 +382,11 @@ export default function RootLayout() {
           });
         };
 
-        // SW_PENDING_UPDATE: new SW activated after a normal deploy.
-        // We defer the reload to the next navigation so the user isn't interrupted.
         // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
-        // Check if this page load resulted from a hardNavigateIfPending redirect.
-        // If so, the page already has fresh code — suppress __metravelUpdatePending
-        // for the entire session to prevent redirect loops (especially on mobile).
-        let suppressUpdateFlag = false;
-        try {
-          const hardNavTs = sessionStorage.getItem(HARD_NAV_TS_KEY);
-          if (hardNavTs && Date.now() - parseInt(hardNavTs, 10) < 60000) {
-            suppressUpdateFlag = true;
-            // Clean up the marker so future page loads (manual refresh, etc.) are not affected.
-            sessionStorage.removeItem(HARD_NAV_TS_KEY);
-          }
-        } catch { /* noop */ }
-
+        // SW_PENDING_UPDATE: ignored — stale chunks are handled by ErrorBoundary
+        // and inline recovery scripts. No need to set __metravelUpdatePending.
         const onSWMessage = (event: MessageEvent) => {
-          if (event.data?.type === 'SW_PENDING_UPDATE') {
-            // After a hard navigation the page already has fresh code.
-            // Don't re-set the flag or the next Expo Router pushState will
-            // hard-navigate again (redirect loop /map → /).
-            if (suppressUpdateFlag) return;
-            (window as any).__metravelUpdatePending = true;
-          } else if (event.data?.type === 'SW_STALE_CHUNK') {
+          if (event.data?.type === 'SW_STALE_CHUNK') {
             // Reload to recover from missing chunk, but with cooldown + retry cap
             // to prevent infinite reload loops when a stale asset is persistently unavailable.
             const STALE_KEY = '__metravel_sw_stale_reload';
@@ -483,30 +419,9 @@ export default function RootLayout() {
         };
         navigator.serviceWorker.addEventListener('message', onSWMessage);
 
-        // controllerchange fires when a new SW takes control.
-        // Only flag a pending update if there was already a controller — i.e. this
-        // is a genuine SW update, not the first-ever registration (which happens
-        // after stale-chunk recovery unregisters the SW and the page re-registers it).
-        const hadController = !!navigator.serviceWorker.controller;
-        const onControllerChange = () => {
-          if (!hadController) return;
-          // After a hard navigation the page already has fresh code.
-          if (suppressUpdateFlag) return;
-          // If we recently reloaded due to stale chunks or inline recovery,
-          // this controllerchange is from re-registration, not a genuine update.
-          // Do not set the pending flag — the page already has fresh content.
-          try {
-            const staleTs = sessionStorage.getItem('__metravel_sw_stale_reload');
-            const chunkTs = sessionStorage.getItem('__metravel_chunk_reload');
-            const ebTs = sessionStorage.getItem('metravel:eb:reload_ts');
-            const now = Date.now();
-            if (staleTs && now - parseInt(staleTs, 10) < 60000) return;
-            if (chunkTs && now - parseInt(chunkTs, 10) < 60000) return;
-            if (ebTs && now - parseInt(ebTs, 10) < 60000) return;
-          } catch { /* sessionStorage unavailable */ }
-          (window as any).__metravelUpdatePending = true;
-        };
-        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+        // controllerchange: no longer sets __metravelUpdatePending.
+        // Stale chunks are handled reactively by ErrorBoundary and inline scripts.
+        // Setting the flag caused redirect loops (/map → /) on mobile after deploy.
 
         const registerSW = () => {
           navigator.serviceWorker
@@ -532,7 +447,6 @@ export default function RootLayout() {
 
         return () => {
           navigator.serviceWorker.removeEventListener('message', onSWMessage);
-          navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
         };
       }
       return undefined;

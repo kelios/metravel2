@@ -73,18 +73,18 @@ function clearRecoverySessionKeys(
   } catch { /* noop */ }
 }
 
-/** Shared detection for stale-chunk / module-mismatch errors after deploy. */
+/** Shared detection for stale-chunk / module-mismatch errors after deploy.
+ *  IMPORTANT: patterns must be specific enough to avoid false positives from
+ *  normal runtime errors (e.g. "X is not a function" from a null ref). */
 function isStaleModuleError(msg: string, name?: string): boolean {
   return (
-    msg.includes('is not a function') ||
-    msg.includes('is undefined') ||
+    // Module system errors — highly specific to stale chunks
     msg.includes('Requiring unknown module') ||
-    msg.includes('iterable') ||
-    msg.includes('is not iterable') ||
-    msg.includes('spread') ||
+    /loading chunk/i.test(msg) ||
     /loading module.*failed/i.test(msg) ||
     /failed to fetch dynamically imported module/i.test(msg) ||
     /ChunkLoadError/i.test(msg) ||
+    /Cannot find module/i.test(msg) ||
     name === 'AsyncRequireError'
   );
 }
