@@ -52,15 +52,29 @@ const NativeVideoLazy = lazy(() =>
 
 // Stable module-level web video component — must NOT be defined inside render
 const WebVideo = memo(function WebVideo({ src, poster, onError }: { src?: string; poster?: string; onError: () => void }) {
+    useEffect(() => {
+        if (src) {
+            console.log('[WebVideo] Rendering video with src:', src);
+        }
+    }, [src]);
+    
     // @ts-ignore - RNW allows direct DOM element creation
     return React.createElement('video', {
         src,
         poster,
         controls: true,
         playsInline: true,
+        preload: 'metadata',
+        crossOrigin: 'anonymous',
         // @ts-ignore
-        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' },
-        onError,
+        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' },
+        onError: (e: any) => {
+            console.error('[WebVideo] Video error:', e?.target?.error);
+            onError();
+        },
+        onLoadStart: () => console.log('[WebVideo] Video load started'),
+        onLoadedMetadata: () => console.log('[WebVideo] Video metadata loaded'),
+        onCanPlay: () => console.log('[WebVideo] Video can play'),
     });
 });
 
@@ -575,22 +589,44 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     // ====== видео веб/нэйтив
     const [videoOk, setVideoOk] = useState(true);
-    const videoUri = useMemo(() => resolveUri(finale.video), [finale.video]);
+    const videoUri = useMemo(() => {
+        const uri = resolveUri(finale.video);
+        if (finale.video) {
+            console.log('[QuestWizard] Video source:', finale.video);
+            console.log('[QuestWizard] Resolved video URI:', uri);
+        }
+        return uri;
+    }, [finale.video]);
     const posterUri = useMemo(() => resolveUri(finale.poster), [finale.poster]);
     const youtubeEmbedUri = useMemo(() => {
-        if (!videoUri) return undefined;
+        if (!videoUri) {
+            console.log('[QuestWizard] No video URI for YouTube check');
+            return undefined;
+        }
         const youtubeId = safeGetYoutubeId(videoUri);
+        if (youtubeId) {
+            console.log('[QuestWizard] YouTube ID detected:', youtubeId);
+        } else {
+            console.log('[QuestWizard] Not a YouTube URL:', videoUri);
+        }
         if (!youtubeId) return undefined;
         return `https://www.youtube.com/embed/${youtubeId}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
     }, [videoUri]);
-    const handleVideoError = useMemo(() => () => setVideoOk(false), []);
+    const handleVideoError = useMemo(() => () => {
+        console.error('[QuestWizard] Video playback error');
+        setVideoOk(false);
+    }, []);
     const handleVideoRetry = useCallback(() => {
+        console.log('[QuestWizard] Retrying video playback');
         if (Platform.OS === 'web') {
             onFinaleVideoRetry?.();
         }
         setVideoOk(true);
     }, [onFinaleVideoRetry]);
-    useEffect(() => { setVideoOk(true); }, [finale.video]);
+    useEffect(() => { 
+        console.log('[QuestWizard] Video changed, resetting videoOk state');
+        setVideoOk(true); 
+    }, [finale.video]);
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>

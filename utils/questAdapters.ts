@@ -205,10 +205,20 @@ export function adaptStep(apiStep: ApiQuestStep): QuestStep {
 
 /** Конвертирует финал из API формата */
 export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
+    const videoUrl = fixMediaUrl(apiFinale.video_url);
+    const posterUrl = fixMediaUrl(apiFinale.poster_url);
+    
+    if (apiFinale.video_url && !videoUrl) {
+        console.warn('[Quest] Failed to fix video URL:', apiFinale.video_url);
+    }
+    if (videoUrl) {
+        console.log('[Quest] Finale video URL:', videoUrl);
+    }
+    
     return {
         text: apiFinale.text,
-        video: fixMediaUrl(apiFinale.video_url),
-        poster: fixMediaUrl(apiFinale.poster_url),
+        video: videoUrl,
+        poster: posterUrl,
     };
 }
 
