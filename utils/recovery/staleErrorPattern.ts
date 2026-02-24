@@ -10,6 +10,8 @@ const STALE_ERROR_PATTERN_PARTS = [
   'usesingletravelexport.*is not a function',
   'usesafeareainsets.*is not a function',
   'usebreadcrumbmodel.*is not a function',
+  'usemapscreencontroller.*is not a function',
+  '\\(0\\s*,\\s*[a-z_$][a-z0-9_$]*\\(\\.\\.\\.\\)\\.[a-z0-9_$]+\\)\\s*is not a function',
   "class constructors?.*cannot be invoked without 'new'",
   // Layout constants access errors (stale chunk accessing changed exports)
   "cannot read properties of undefined.*tabbarheight",
