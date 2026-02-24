@@ -202,7 +202,10 @@ export default class ErrorBoundary extends Component<Props, State> {
         }
         const reloadDecision = getReloadDecision();
         if (!reloadDecision.allowed) {
-          if (reloadDecision.reason === 'max_retries') {
+          // If we're already in recovery loop (_cb in URL) and recovery is blocked,
+          // mark as exhausted so the UI can show cache clear instructions or auto-retry.
+          const inRecoveryLoop = _isAlreadyInRecoveryLoop();
+          if (reloadDecision.reason === 'max_retries' || inRecoveryLoop) {
             this.setState({ isStaleChunk: true, recoveryExhausted: true });
           }
           return;
