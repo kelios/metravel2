@@ -140,12 +140,30 @@ describe('ErrorBoundary', () => {
   describe('stale chunk / AsyncRequireError detection', () => {
     const { Platform } = require('react-native');
     let origPlatformOS: string;
+    let origFetch: any;
+
+    const addBundleScripts = (scripts: string[]) => {
+      scripts.forEach((src) => {
+        const el = document.createElement('script');
+        el.setAttribute('src', src);
+        el.setAttribute('data-test-react130-bundle', '1');
+        document.head.appendChild(el);
+      });
+    };
+
+    const cleanupBundleScripts = () => {
+      document
+        .querySelectorAll('script[data-test-react130-bundle="1"]')
+        .forEach((el) => el.parentNode?.removeChild(el));
+    };
 
     beforeEach(() => {
       origPlatformOS = Platform.OS;
+      origFetch = (global as any).fetch;
       Platform.OS = 'web';
       delete (global as any).window.__metravelModuleReloadTriggered;
       sessionStorage.clear();
+      cleanupBundleScripts();
       // Provide minimal stubs for caches + navigator.serviceWorker used by cleanup()
       (global as any).caches = { keys: jest.fn().mockResolvedValue([]), delete: jest.fn() };
       (global as any).navigator = {
@@ -156,7 +174,9 @@ describe('ErrorBoundary', () => {
 
     afterEach(() => {
       Platform.OS = origPlatformOS;
+      (global as any).fetch = origFetch;
       delete (global as any).window.__metravelModuleReloadTriggered;
+      cleanupBundleScripts();
       mockReplace.mockReset();
     });
 
@@ -274,6 +294,77 @@ describe('ErrorBoundary', () => {
       expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
       expect(cacheDelete).not.toHaveBeenCalled();
       expect(sessionStorage.getItem('__metravel_emergency_recovery_ts')).toBeNull();
+      expect(mockReplace).not.toHaveBeenCalled();
+
+      console.error = consoleError;
+    });
+
+    it('should auto-recover for React #130 when fresh HTML has mismatched bundle scripts', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      addBundleScripts([
+        '/_expo/static/js/web/__common-old.js',
+        '/_expo/static/js/web/entry-old.js',
+      ]);
+
+      (global as any).fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        text: async () =>
+          '<html><head><script src="/_expo/static/js/web/__common-new.js"></script><script src="/_expo/static/js/web/entry-new.js"></script></head></html>',
+      });
+
+      const ThrowReact130 = () => {
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+      };
+
+      render(
+        <ErrorBoundary>
+          <ThrowReact130 />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        expect((global as any).fetch).toHaveBeenCalled();
+        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+        expect(mockReplace).toHaveBeenCalled();
+      });
+
+      console.error = consoleError;
+    });
+
+    it('should NOT auto-recover for React #130 when fresh HTML bundle scripts match', async () => {
+      const consoleError = console.error;
+      console.error = jest.fn();
+
+      addBundleScripts([
+        '/_expo/static/js/web/__common-same.js',
+        '/_expo/static/js/web/entry-same.js',
+      ]);
+
+      (global as any).fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        text: async () =>
+          '<html><head><script src="/_expo/static/js/web/__common-same.js"></script><script src="/_expo/static/js/web/entry-same.js"></script></head></html>',
+      });
+
+      const ThrowReact130 = () => {
+        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
+      };
+
+      const { toJSON } = render(
+        <ErrorBoundary>
+          <ThrowReact130 />
+        </ErrorBoundary>
+      );
+
+      await waitFor(() => {
+        const treeStr = JSON.stringify(toJSON());
+        expect(treeStr).toContain('Что-то пошло не так');
+      });
+
+      expect((global as any).fetch).toHaveBeenCalled();
+      expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
       expect(mockReplace).not.toHaveBeenCalled();
 
       console.error = consoleError;

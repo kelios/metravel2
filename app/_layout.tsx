@@ -326,6 +326,8 @@ export default function RootLayout() {
       if ('serviceWorker' in navigator) {
         const GLOBAL_EMERGENCY_KEY = '__metravel_emergency_recovery_ts';
         const GLOBAL_EMERGENCY_COOLDOWN = 60 * 1000;
+        const CONTROLLERCHANGE_RELOAD_KEY = '__metravel_sw_controllerchange_reload_ts';
+        const CONTROLLERCHANGE_RELOAD_COOLDOWN = 60 * 1000;
 
         const clearRecoverySessionKeys = (clearEmergencyKey = false) => {
           try {
@@ -392,6 +394,35 @@ export default function RootLayout() {
           });
         };
 
+        const shouldReloadOnControllerChange = () => {
+          try {
+            const now = Date.now();
+            const prevRaw = sessionStorage.getItem(CONTROLLERCHANGE_RELOAD_KEY);
+            const prev = prevRaw ? Number(prevRaw) : 0;
+            const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
+            if (elapsed < CONTROLLERCHANGE_RELOAD_COOLDOWN) return false;
+            sessionStorage.setItem(CONTROLLERCHANGE_RELOAD_KEY, String(now));
+          } catch {
+            // If sessionStorage is unavailable, still do one best-effort reload.
+          }
+          return true;
+        };
+
+        const onControllerChange = () => {
+          if (typeof window === 'undefined') return;
+          try {
+            if (new URL(window.location.href).searchParams.has('_cb')) return;
+          } catch { /* noop */ }
+          if (!shouldReloadOnControllerChange()) return;
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('_cb', String(Date.now()));
+            window.location.replace(url.toString());
+          } catch {
+            window.location.reload();
+          }
+        };
+
         // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
         // SW_PENDING_UPDATE: ignored — stale chunks are handled by ErrorBoundary
         // and inline recovery scripts. No need to set __metravelUpdatePending.
@@ -428,6 +459,7 @@ export default function RootLayout() {
           }
         };
         navigator.serviceWorker.addEventListener('message', onSWMessage);
+        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
         // controllerchange: no longer sets __metravelUpdatePending.
         // Stale chunks are handled reactively by ErrorBoundary and inline scripts.
@@ -457,6 +489,7 @@ export default function RootLayout() {
 
         return () => {
           navigator.serviceWorker.removeEventListener('message', onSWMessage);
+          navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
         };
       }
       return undefined;

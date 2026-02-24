@@ -25,6 +25,101 @@ const EXHAUSTED_AUTORETRY_COUNT_KEY = '__metravel_exhausted_autoretry_count';
 const EXHAUSTED_AUTORETRY_COOLDOWN = 30 * 1000;
 const EXHAUSTED_AUTORETRY_MAX = 3;
 const EXHAUSTED_AUTORETRY_DELAY_MS = 2500;
+const REACT_130_RECOVERY_TS_KEY = '__metravel_react130_recovery_ts';
+const REACT_130_RECOVERY_COUNT_KEY = '__metravel_react130_recovery_count';
+const REACT_130_RECOVERY_COOLDOWN = 30 * 1000;
+const REACT_130_RECOVERY_MAX = 1;
+
+const CORE_BUNDLE_SCRIPT_RE =
+  /\/(_expo\/static\/js\/web\/(?:__expo-metro-runtime-|__common-|entry-|_layout-|index-)[^"'\s>]+\.js)/i;
+
+function isReact130LikeError(msg: string): boolean {
+  return /Minified React error #130/i.test(msg) || /Element type is invalid/i.test(msg);
+}
+
+function normalizeBundleScriptSrc(src: string): string {
+  if (!src) return '';
+  try {
+    const url = new URL(src, window.location.origin);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return src;
+  }
+}
+
+function getCurrentCoreBundleScripts(): string[] {
+  if (typeof document === 'undefined') return [];
+  const scripts = Array.from(document.querySelectorAll('script[src]'))
+    .map((el) => normalizeBundleScriptSrc(el.getAttribute('src') || ''))
+    .filter((src) => CORE_BUNDLE_SCRIPT_RE.test(src));
+  return Array.from(new Set(scripts)).sort();
+}
+
+function getCoreBundleScriptsFromHtml(html: string): string[] {
+  const scripts: string[] = [];
+  const re = /<script[^>]+src=["']([^"']+)["']/gi;
+  let match: RegExpExecArray | null = null;
+  while ((match = re.exec(html)) != null) {
+    const src = normalizeBundleScriptSrc(match[1] || '');
+    if (src && CORE_BUNDLE_SCRIPT_RE.test(src)) {
+      scripts.push(src);
+    }
+  }
+  return Array.from(new Set(scripts)).sort();
+}
+
+function shouldAttemptReact130Recovery(): boolean {
+  try {
+    const now = Date.now();
+    let count = parseInt(sessionStorage.getItem(REACT_130_RECOVERY_COUNT_KEY) || '0', 10);
+    const prevRaw = sessionStorage.getItem(REACT_130_RECOVERY_TS_KEY);
+    const prev = prevRaw ? Number(prevRaw) : 0;
+    const elapsed = (prev && Number.isFinite(prev)) ? now - prev : Infinity;
+
+    if (count >= REACT_130_RECOVERY_MAX) {
+      if (elapsed >= REACT_130_RECOVERY_COOLDOWN) {
+        count = 0;
+        sessionStorage.setItem(REACT_130_RECOVERY_COUNT_KEY, '0');
+      } else {
+        return false;
+      }
+    }
+
+    sessionStorage.setItem(REACT_130_RECOVERY_TS_KEY, String(now));
+    sessionStorage.setItem(REACT_130_RECOVERY_COUNT_KEY, String(count + 1));
+  } catch {
+    // If sessionStorage is unavailable, allow one best-effort attempt.
+  }
+
+  return true;
+}
+
+async function hasFreshHtmlBundleMismatch(): Promise<boolean> {
+  if (typeof window === 'undefined' || typeof fetch === 'undefined') return false;
+
+  const currentScripts = getCurrentCoreBundleScripts();
+  if (currentScripts.length === 0) return false;
+
+  const response = await fetch(window.location.href, {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'same-origin',
+    headers: { Accept: 'text/html' },
+  });
+
+  if (!response.ok) return false;
+  const freshHtml = await response.text();
+  const freshScripts = getCoreBundleScriptsFromHtml(freshHtml);
+  if (freshScripts.length === 0) return false;
+
+  if (currentScripts.length !== freshScripts.length) return true;
+
+  const currentSet = new Set(currentScripts);
+  for (const src of freshScripts) {
+    if (!currentSet.has(src)) return true;
+  }
+  return false;
+}
 
 function shouldScheduleExhaustedAutoRetry(): boolean {
   try {
@@ -265,6 +360,23 @@ export default class ErrorBoundary extends Component<Props, State> {
         }
         doStaleChunkRecovery();
         return; // skip further recovery attempts
+      }
+
+      // Safe one-shot auto-recovery for React #130 only when we can confirm
+      // a stale HTML ↔ bundle script mismatch in the freshly fetched document.
+      if (isReact130LikeError(msg)) {
+        if (isAlreadyInRecoveryLoop()) return;
+        if (!shouldAttemptReact130Recovery()) return;
+
+        void hasFreshHtmlBundleMismatch()
+          .then((hasMismatch) => {
+            if (!hasMismatch) return;
+            if ((window as any).__metravelModuleReloadTriggered) return;
+            (window as any).__metravelModuleReloadTriggered = true;
+            clearRecoverySessionKeys(true, true);
+            doStaleChunkRecovery({ purgeAllCaches: true });
+          })
+          .catch(() => {});
       }
 
       // Intentionally avoid auto-recovery for generic React #130 errors.
