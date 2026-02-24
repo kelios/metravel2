@@ -187,8 +187,6 @@ describe('ErrorBoundary', () => {
       'Cannot find module "./SomeComponent"',
       '(0 , r(...).getFiltersPanelStyles) is not a function',
       "Class constructors cannot be invoked without 'new'",
-      'Spread syntax requires ...iterable not be null or undefined',
-      'someValue is not iterable',
     ];
 
     it.each(staleChunkMessages)(

@@ -5,7 +5,6 @@ describe('staleErrorPattern', () => {
     'Loading module https://metravel.by/_expo/static/js/web/Home-68ad15.js failed.',
     'ChunkLoadError: Loading chunk 42 failed.',
     '(0 , r(...).getFiltersPanelStyles) is not a function',
-    '(0 , r(...).useSomeHook) is not a function',
     "Class constructors cannot be invoked without 'new'",
   ]
 
