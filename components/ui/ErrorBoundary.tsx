@@ -212,13 +212,23 @@ export default class ErrorBoundary extends Component<Props, State> {
       if (isReact130LikeError(msg)) {
         if (isAlreadyInRecoveryLoop()) return;
 
+        const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
+
+        if (isUndefinedArgs130) {
+          if ((window as any).__metravelModuleReloadTriggered) return;
+          if (!shouldAttemptReact130Recovery()) return;
+          (window as any).__metravelModuleReloadTriggered = true;
+          this.setState({ isStaleChunk: true });
+          clearRecoverySessionState({ clearEmergencyKey: true, clearExhaustedAutoRetryKeys: true });
+          doStaleChunkRecovery({ purgeAllCaches: true });
+          return;
+        }
+
         const hasSwController =
           !!(
             (typeof window !== 'undefined' && (window as any)?.navigator?.serviceWorker?.controller) ||
             (typeof globalThis !== 'undefined' && (globalThis as any)?.navigator?.serviceWorker?.controller)
           );
-
-        const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
 
         void hasFreshHtmlBundleMismatch()
           .then((hasMismatch) => {
@@ -227,7 +237,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             if (!shouldAttemptReact130Recovery()) return;
             (window as any).__metravelModuleReloadTriggered = true;
             this.setState({ isStaleChunk: true });
-            clearRecoverySessionKeys(true, true);
+            clearRecoverySessionState({ clearEmergencyKey: true, clearExhaustedAutoRetryKeys: true });
             doStaleChunkRecovery({ purgeAllCaches: true });
           })
           .catch(() => {
@@ -236,7 +246,7 @@ export default class ErrorBoundary extends Component<Props, State> {
             if (!shouldAttemptReact130Recovery()) return;
             (window as any).__metravelModuleReloadTriggered = true;
             this.setState({ isStaleChunk: true });
-            clearRecoverySessionKeys(true, true);
+            clearRecoverySessionState({ clearEmergencyKey: true, clearExhaustedAutoRetryKeys: true });
             doStaleChunkRecovery({ purgeAllCaches: true });
           });
       }

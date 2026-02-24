@@ -233,7 +233,7 @@ describe('ErrorBoundary', () => {
       console.error = consoleError;
     });
 
-    it('should NOT auto-recover for React #130 args[]=undefined when no SW controller is present and HTML bundle scripts match', async () => {
+    it('should auto-recover for React #130 args[]=undefined even when no SW controller is present (strong stale-cache signal)', async () => {
       const consoleError = console.error;
       console.error = jest.fn();
 
@@ -259,19 +259,16 @@ describe('ErrorBoundary', () => {
         throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
       };
 
-      const { toJSON } = render(
+      render(
         <ErrorBoundary>
           <ThrowReact130UndefinedArgs />
         </ErrorBoundary>
       );
 
       await waitFor(() => {
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Что-то пошло не так');
+        expect((global as any).window.__metravelModuleReloadTriggered).toBe(true);
+        expect(mockReplace).toHaveBeenCalled();
       });
-
-      expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
-      expect(mockReplace).not.toHaveBeenCalled();
 
       console.error = consoleError;
     });
