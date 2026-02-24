@@ -41,12 +41,13 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames
           .filter((name) => {
-            // Keep only STATIC_CACHE and IMAGE_CACHE across activations.
+            // Keep only STATIC_CACHE across activations.
             // Everything else is purged to guarantee consistency after deploy:
-            // - JS_CACHE: stale chunks cause module errors
+            // - JS_CACHE: stale chunks cause module errors (MUST DELETE)
             // - DYNAMIC_CACHE: stale HTML references old chunk URLs
+            // - IMAGE_CACHE: cleared to prevent stale images
             // - Old-version caches: no longer needed
-            if (name === STATIC_CACHE || name === IMAGE_CACHE) {
+            if (name === STATIC_CACHE) {
               return false;
             }
             return name.startsWith('metravel-');
