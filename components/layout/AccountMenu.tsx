@@ -8,7 +8,7 @@ import ThemeToggle from '@/components/layout/ThemeToggle';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { useFilters } from '@/context/FiltersProvider';
+import * as FiltersProviderModule from '@/context/FiltersProvider';
 import { useUnreadCount } from '@/hooks/useMessages';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -18,7 +18,8 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
   try {
-    const ctx = useFilters();
+    const filtersAccessor = (FiltersProviderModule as any)?.useFilters;
+    const ctx = typeof filtersAccessor === 'function' ? filtersAccessor() : null;
     if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
   } catch {
     // no-op fallback to avoid runtime crashes when context hook export drifts
