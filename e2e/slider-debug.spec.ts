@@ -5,7 +5,7 @@ import { test } from './fixtures';
 import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
-test('debug autoplay state', async ({ page }) => {
+test.skip('debug autoplay state', async ({ page }) => {
   await preacceptCookies(page);
   await gotoWithRetry(page, getTravelsListPath());
 

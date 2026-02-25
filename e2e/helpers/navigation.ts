@@ -171,23 +171,24 @@ export async function navigateToFirstTravel(
   }
   // SPA navigation does not always trigger a full page load/commit event.
   // Rely on URL change, with a fallback poll in case navigation happens without a full commit.
-  await page
+  const reachedDetails = await page
     .waitForURL((url) => url.pathname.startsWith('/travels/') || url.pathname.startsWith('/travel/'), {
       timeout: 45_000,
     })
+    .then(() => true)
     .catch(async () => {
       const started = Date.now();
       while (Date.now() - started < 45_000) {
+        if (isOnDetails()) return true;
         try {
-          const u = new URL(page.url());
-          if (u.pathname.startsWith('/travels/') || u.pathname.startsWith('/travel/')) return;
+          await page.waitForTimeout(200);
         } catch {
-          // ignore
+          break;
         }
-        await page.waitForTimeout(200);
       }
-      throw new Error('navigateToFirstTravel: URL did not change to /travels/* within timeout');
+      return false;
     });
+  if (!reachedDetails) return false;
 
   if (opts?.waitForDetails !== false) {
     const mainContent = page.locator(

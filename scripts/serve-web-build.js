@@ -62,7 +62,26 @@ function sendCompressed(req, res, contentType, data, fileExt) {
 }
 
 const defaultProxyTarget = (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || '').trim()
-const apiProxyTarget = process.env.E2E_API_PROXY_TARGET || defaultProxyTarget || 'https://metravel.by'
+const requestedProxyTarget = (process.env.E2E_API_PROXY_TARGET || defaultProxyTarget || 'https://metravel.by').trim()
+const resolveApiProxyTarget = () => {
+  try {
+    const parsed = new URL(requestedProxyTarget)
+    const parsedPort = Number(parsed.port || (parsed.protocol === 'https:' ? '443' : '80'))
+    const serverPort = Number(port)
+    const samePort = Number.isFinite(parsedPort) && Number.isFinite(serverPort) && parsedPort === serverPort
+    const sameHost =
+      parsed.hostname === host ||
+      (parsed.hostname === 'localhost' && host === '127.0.0.1') ||
+      (parsed.hostname === '127.0.0.1' && host === 'localhost')
+
+    // Guard against accidental self-proxying (e.g. EXPO_PUBLIC_API_URL points to the local E2E server).
+    if (sameHost && samePort) return 'https://metravel.by'
+    return parsed.toString()
+  } catch {
+    return 'https://metravel.by'
+  }
+}
+const apiProxyTarget = resolveApiProxyTarget()
 const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLowerCase() === 'true'
 const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/']
 // Default timeout is intentionally generous: in CI/local E2E the upstream can be slow,

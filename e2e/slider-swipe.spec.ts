@@ -60,9 +60,80 @@ async function navigateToTravelWithSlider(
   page: import('@playwright/test').Page,
   maxCards = 5
 ): Promise<{ current: number; total: number } | null> {
+  const fallbackId = 990011;
+  const fallbackSlug = 'e2e-slider-swipe-fallback';
+  const fallbackGallery = [
+    {
+      id: 1,
+      url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    },
+    {
+      id: 2,
+      url: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    },
+    {
+      id: 3,
+      url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    },
+  ];
+
+  const fallbackTravel = {
+    id: fallbackId,
+    slug: fallbackSlug,
+    url: `/travels/${fallbackSlug}`,
+    name: 'E2E slider swipe fallback travel',
+    description: '<p>Fallback travel details used by slider swipe tests.</p>',
+    publish: true,
+    moderation: true,
+    travel_image_thumb_url: fallbackGallery[0]?.url,
+    travel_image_thumb_small_url: fallbackGallery[0]?.url,
+    gallery: fallbackGallery,
+    categories: [],
+    countries: [],
+    travelAddress: [],
+    coordsMeTravel: [],
+  };
+
+  const fallbackRoute = async (route: import('@playwright/test').Route) => {
+    const url = route.request().url();
+    if (
+      url.includes(`/api/travels/by-slug/${fallbackSlug}/`) ||
+      url.includes(`/travels/by-slug/${fallbackSlug}/`) ||
+      url.includes(`/api/travels/${fallbackId}/`)
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(fallbackTravel),
+      });
+      return;
+    }
+    await route.continue();
+  };
+
+  await page.route('**/api/travels/by-slug/**', fallbackRoute);
+  await page.route('**/travels/by-slug/**', fallbackRoute);
+  await page.route(`**/api/travels/${fallbackId}/`, fallbackRoute);
+
+  await gotoWithRetry(page, `/travels/${fallbackSlug}`);
+  const fallbackNext = await page
+    .locator('[aria-label="Next slide"]')
+    .first()
+    .waitFor({ state: 'visible', timeout: 15_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (fallbackNext) {
+    const fallbackCounter = await waitForCounterValue(page, 1, 10_000);
+    if (fallbackCounter) return fallbackCounter;
+  }
+
+  // Last resort: try list-driven navigation.
   await gotoWithRetry(page, getTravelsListPath());
 
-  const cards = page.locator('[data-testid="travel-card-link"]');
+  const cards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
   await cards.first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
   const count = await cards.count();
   if (count === 0) return null;
