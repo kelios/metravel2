@@ -161,15 +161,55 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     try { window['ga-disable-' + GA_ID] = true; } catch(_e) {}
   }
 
-  // Автозагрузка:
-  // - GA + Метрика: по idle (если не было явного opt-out)
-  // Defer all analytics to avoid blocking the main thread during initial render.
-  if (isAnalyticsAllowed()) {
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
-    } else {
-      setTimeout(loadAnalytics, 3000);
+  function scheduleAnalyticsBootstrap() {
+    var started = false;
+    var fallbackTimer = null;
+    var loadTimer = null;
+    var events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+
+    function cleanup() {
+      for (var i = 0; i < events.length; i++) {
+        try { window.removeEventListener(events[i], trigger, { capture: true }); } catch (_e) {}
+      }
+      if (fallbackTimer) {
+        try { clearTimeout(fallbackTimer); } catch (_e2) {}
+      }
+      if (loadTimer) {
+        try { clearTimeout(loadTimer); } catch (_e3) {}
+      }
     }
+
+    function runDeferred() {
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(loadAnalytics, { timeout: 5000 });
+      } else {
+        setTimeout(loadAnalytics, 0);
+      }
+    }
+
+    function trigger() {
+      if (started) return;
+      started = true;
+      cleanup();
+      runDeferred();
+    }
+
+    for (var i = 0; i < events.length; i++) {
+      try { window.addEventListener(events[i], trigger, { passive: true, capture: true }); } catch (_e4) {}
+    }
+    // Safety net for no-interaction sessions and bots.
+    fallbackTimer = setTimeout(trigger, 10000);
+    // Also schedule shortly after full load.
+    window.addEventListener('load', function() {
+      loadTimer = setTimeout(trigger, 1500);
+    }, { once: true });
+  }
+
+  // Автозагрузка:
+  // - После первого взаимодействия пользователя или по fallback-таймеру.
+  // Это снижает влияние аналитики на LCP/TBT в initial render.
+  if (isAnalyticsAllowed()) {
+    scheduleAnalyticsBootstrap();
   }
 })();
 `;

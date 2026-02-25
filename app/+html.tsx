@@ -544,7 +544,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
           injects them per-page at build time. The inline JS above fixes [param] canonical URLs.
           Only tags that React Helmet does NOT inject on every page are kept as fallbacks. */}
       <meta property="og:locale" content="ru_RU" />
-      <meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow_512x512.png" />
       <meta name="twitter:site" content="@metravel_by" />
 
       {!isProduction && <meta name="robots" content="noindex,nofollow" />}

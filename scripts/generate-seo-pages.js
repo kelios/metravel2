@@ -521,8 +521,10 @@ async function main() {
       // Overwrite root index.html with correct home meta
       writeFileSafe(indexPath, html);
     } else {
-      const outPath = path.join(DIST_DIR, page.route, 'index.html');
-      writeFileSafe(outPath, html);
+      const routePath = page.route.replace(/^\/+/, '');
+      // Keep both variants to match nginx try_files order and avoid stale route shells.
+      writeFileSafe(path.join(DIST_DIR, `${routePath}.html`), html);
+      writeFileSafe(path.join(DIST_DIR, routePath, 'index.html'), html);
     }
     totalPages++;
     console.log(`  ✅ ${page.route}`);
