@@ -1,82 +1,86 @@
 #!/bin/bash
-# Скрипт для гарантированного восстановления прода
-# Запускать один раз когда прод сломан, потом можно использовать обычный build-prod.sh
+# Скрипт аварийного восстановления web-прода без смешивания старых и новых chunks.
+# ВАЖНО: старые chunks НЕ копируются в новый релиз, иначе возможен module/version skew.
 
-set -e
+set -euo pipefail
 
-SERVER="sx3@178.172.137.129"
-REMOTE_DIR="/home/sx3/metravel"
+SERVER="${SERVER:-sx3@178.172.137.129}"
+REMOTE_DIR="${REMOTE_DIR:-/home/sx3/metravel}"
+SITE_URL="${SITE_URL:-https://metravel.by}"
+ENV="${ENV:-prod}"
 
-echo "🔧 FIX-PROD: Гарантированное восстановление продакшена"
-echo "=================================================="
+echo "FIX-PROD: safe web redeploy"
+echo "server=$SERVER"
+echo "remote_dir=$REMOTE_DIR"
+echo "site_url=$SITE_URL"
+echo "env=$ENV"
+echo
 
-# 1. Проверяем что локальный билд существует
-if [ ! -d "dist/prod/_expo/static/js/web" ]; then
-  echo "📦 Локальный билд не найден, собираю..."
+if [ "$ENV" != "prod" ] && [ "$ENV" != "preprod" ] && [ "$ENV" != "dev" ]; then
+  echo "ERROR: ENV must be one of: dev | preprod | prod"
+  exit 1
+fi
+
+if [ ! -d "dist/$ENV/_expo/static/js/web" ]; then
+  echo "Local build not found, running npm run build:web:prod ..."
   npm run build:web:prod
 fi
 
-CHUNK_COUNT=$(ls dist/prod/_expo/static/js/web/ | wc -l | tr -d ' ')
-echo "✅ Локальный билд готов: $CHUNK_COUNT JS chunks"
+if [ ! -d "dist/$ENV/_expo/static/js/web" ]; then
+  echo "ERROR: build output dist/$ENV/_expo/static/js/web is missing"
+  exit 1
+fi
 
-# 2. Полностью удаляем старый dist на сервере и загружаем новый
-echo ""
-echo "🚀 Загружаю билд на сервер..."
-rsync -avzhe "ssh" --delete \
-  ./dist/ \
-  $SERVER:$REMOTE_DIR/dist/
+chunk_count="$(ls "dist/$ENV/_expo/static/js/web/" | wc -l | tr -d ' ')"
+echo "Local build ready: $chunk_count web chunks"
 
-echo ""
-echo "🔄 Применяю билд на сервере..."
-ssh $SERVER "set -e
-  cd $REMOTE_DIR
-  
-  # Сохраняем старые JS chunks для grace period
-  rm -rf static/dist.old static/dist.new
+echo "Uploading build payload to server..."
+rsync -avzhe "ssh" --delete ./dist/ "$SERVER:$REMOTE_DIR/dist/"
+rsync -avzhe "ssh" --delete ./assets/icons/ "$SERVER:$REMOTE_DIR/icons/"
+rsync -avzhe "ssh" --delete ./assets/images/ "$SERVER:$REMOTE_DIR/images/"
+
+echo "Applying release atomically on server..."
+ssh "$SERVER" "set -euo pipefail
+  cd '$REMOTE_DIR'
+
+  test -d dist/$ENV
   mkdir -p static
-  mv dist/prod static/dist.new
-  
-  # Копируем старые JS chunks в новый билд (для пользователей с закэшированными старыми chunks)
-  if [ -d static/dist/_expo/static/js/web ]; then
-    mkdir -p static/dist.new/_expo/static/js/web
-    cp -n static/dist/_expo/static/js/web/*.js static/dist.new/_expo/static/js/web/ 2>/dev/null || true
-  fi
-  
-  # Заменяем старый билд новым
+  rm -rf static/dist.new
+  mv dist/$ENV static/dist.new
+
+  # Strict: never mix old/new JS chunks.
+  rm -rf static/dist.new/_expo/static/js/web.old
+  find static/dist.new/_expo/static/js/web -type f -name '*.js' >/dev/null
+
   mv static/dist static/dist.old 2>/dev/null || true
   mv static/dist.new static/dist
   rm -rf static/dist.old
-  
-  # Копируем иконки и изображения
+
   mkdir -p static/dist/assets/icons static/dist/assets/images
-  if [ -d icons ]; then cp -R icons/. static/dist/assets/icons/; fi
-  if [ -d images ]; then cp -R images/. static/dist/assets/images/; fi
-  
-  # Перезапускаем nginx
+  cp -R icons/. static/dist/assets/icons/
+  cp -R images/. static/dist/assets/images/
+
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     docker compose restart nginx
   else
     docker-compose restart nginx
   fi
-  
-  # Очищаем временные файлы
+
   rm -rf dist icons images
-  
-  echo '✅ Сервер обновлён'
 "
 
-echo ""
-echo "🧪 Проверяю что chunks доступны..."
-ENTRY_CHUNK=$(cat dist/prod/index.html | grep -oE 'entry-[a-f0-9]+\.js' | head -1)
-STATUS=$(curl -sI "https://metravel.by/_expo/static/js/web/$ENTRY_CHUNK" | head -1 | awk '{print $2}')
-
-if [ "$STATUS" = "200" ]; then
-  echo "✅ Entry chunk доступен: $ENTRY_CHUNK"
-  echo ""
-  echo "🎉 ПРОД ВОССТАНОВЛЕН!"
-  echo "   Теперь можно использовать обычный ./build-prod.sh"
-else
-  echo "❌ Entry chunk недоступен (статус: $STATUS)"
-  echo "   Проверь nginx конфигурацию на сервере"
+echo "Validating deployed entry chunk..."
+entry_chunk="$(grep -oE 'entry-[a-f0-9]+\\.js' "dist/$ENV/index.html" | head -1)"
+if [ -z "$entry_chunk" ]; then
+  echo "ERROR: cannot detect entry chunk in dist/$ENV/index.html"
   exit 1
 fi
+
+entry_status="$(curl -sI "$SITE_URL/_expo/static/js/web/$entry_chunk" | head -1 | awk '{print $2}')"
+if [ "$entry_status" != "200" ]; then
+  echo "ERROR: entry chunk is not available: $entry_chunk (status=$entry_status)"
+  exit 1
+fi
+
+echo "OK: entry chunk available: $entry_chunk"
+echo "Done: production web assets replaced without old-chunk carryover."
