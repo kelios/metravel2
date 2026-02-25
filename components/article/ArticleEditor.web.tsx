@@ -332,6 +332,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 : null),
             backgroundColor: colors.background,
         },
+        fullInner: {
+            flex: 1,
+            width: '100%',
+            maxWidth: isWeb ? 1400 : '100%',
+            alignSelf: 'center',
+            paddingHorizontal: isWeb ? DESIGN_TOKENS.spacing.sm : 0,
+            paddingBottom: isWeb ? DESIGN_TOKENS.spacing.sm : 0,
+        },
     }), [colors, fullscreen]);
 
     useEffect(() => {
@@ -354,6 +362,43 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             console.error = originalError;
         };
     }, []);
+
+    useEffect(() => {
+        if (!isWeb || !win) return;
+        if (!fullscreen && !anchorModalVisible && !linkModalVisible) return;
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            const key = String(event.key ?? '').toLowerCase();
+
+            if (key === 'escape') {
+                event.preventDefault();
+                if (linkModalVisible) {
+                    setLinkModalVisible(false);
+                    tmpStoredRange.current = null;
+                    tmpStoredLinkQuill.current = null;
+                    return;
+                }
+                if (anchorModalVisible) {
+                    setAnchorModalVisible(false);
+                    return;
+                }
+                if (fullscreen) {
+                    setFullscreen(false);
+                }
+                return;
+            }
+
+            if ((event.metaKey || event.ctrlKey) && key === 'enter' && fullscreen) {
+                event.preventDefault();
+                setFullscreen(false);
+            }
+        };
+
+        win.addEventListener('keydown', onKeyDown);
+        return () => {
+            win.removeEventListener('keydown', onKeyDown);
+        };
+    }, [anchorModalVisible, fullscreen, linkModalVisible]);
 
     const debouncedParentChangeRaw = useDebounce(onChange, 250);
     const debouncedParentChange = useCallback(
@@ -515,10 +560,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         // ✅ ДИЗАЙН: CSS-переменные синхронизированы с DESIGN_TOKENS
         style.innerHTML = `
       :root{--bg:${colors.surface};--fg:${colors.text};--bar:${colors.surfaceElevated};--border:${colors.border}}
-      .quill{display:flex;flex-direction:column;height:100%}
-      .ql-editor{background:var(--bg);color:var(--fg)}
-      .ql-toolbar{background:var(--bar);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;max-width:100%}
-      .ql-toolbar.ql-snow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+      .quill{display:flex;flex-direction:column;height:100%;min-height:0}
+      .ql-editor{background:var(--bg);color:var(--fg);padding:16px 20px;line-height:1.65}
+      .ql-toolbar{background:var(--bar);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;max-width:100%;display:flex}
+      .quill > .ql-toolbar{display:flex !important;visibility:visible !important;opacity:1 !important}
+      .ql-toolbar.ql-snow{display:flex !important;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
       .ql-toolbar.ql-snow .ql-formats{display:flex;flex-wrap:wrap;gap:4px;margin-right:6px}
       .ql-toolbar.ql-snow .ql-picker{max-width:100%}
       .ql-toolbar.ql-snow button{flex:0 0 auto}
@@ -526,6 +572,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
       .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;border:none}
       .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
+      .ql-toolbar.ql-snow::-webkit-scrollbar{height:8px}
+      .ql-toolbar.ql-snow::-webkit-scrollbar-thumb{background:rgba(120,120,120,0.35);border-radius:999px}
+      @media (max-width: 900px) {.ql-editor{padding:14px 16px}}
+      @media (max-width: 640px) {.ql-editor{padding:12px 14px;font-size:15px}.ql-toolbar.ql-snow{padding:7px 8px;gap:4px}.ql-toolbar.ql-snow .ql-formats{margin-right:4px}}
 	      /* We use our own link/anchor modals; hide Quill's built-in tooltip to avoid stray rectangles on web. */
 	      .ql-tooltip{display:none !important}
       .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
@@ -1496,7 +1546,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
 return fullscreen ? (
     <Modal visible animationType="slide">
-        <SafeAreaView style={dynamicStyles.fullWrap}>{body}</SafeAreaView>
+        <SafeAreaView style={dynamicStyles.fullWrap}>
+            <View style={dynamicStyles.fullInner}>{body}</View>
+        </SafeAreaView>
     </Modal>
 ) : (
     <View style={dynamicStyles.wrap}>{body}</View>

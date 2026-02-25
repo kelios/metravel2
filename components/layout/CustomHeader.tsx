@@ -6,7 +6,7 @@ import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks'
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites as _useFavorites } from '@/context/FavoritesContext';
-import { useFilters } from '@/context/FiltersProvider';
+import * as FiltersProviderModule from '@/context/FiltersProvider';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -24,7 +24,8 @@ const useFavoritesSafe = (): { favorites: { length: number } } => {
 
 const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
     try {
-        const ctx = useFilters();
+        const filtersAccessor = (FiltersProviderModule as any)?.useFilters;
+        const ctx = typeof filtersAccessor === 'function' ? filtersAccessor() : null;
         if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
     } catch {
         // no-op fallback to avoid runtime crashes when chunk exports drift

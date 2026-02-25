@@ -120,6 +120,32 @@ const getTravelHeroPreloadScript = () => String.raw`
 })();
 `;
 
+const getLegacyParamRedirectScript = () => String.raw`
+(function(){
+  try {
+    if (typeof window === 'undefined') return;
+    var path = String(window.location && window.location.pathname || '');
+    if (path !== '/' && path !== '/index') return;
+
+    var search = String(window.location && window.location.search || '');
+    if (!search) return;
+    var sp = new URLSearchParams(search);
+    var raw = String(sp.get('param') || '').trim();
+    if (!raw) return;
+
+    var value = raw;
+    try { value = decodeURIComponent(raw); } catch (_e) {}
+    if (!value) return;
+    // Guard against malformed values: allow only simple slug/id tokens.
+    if (/[/?#\\]/.test(value)) return;
+
+    var target = '/travels/' + encodeURIComponent(value);
+    if (target === path) return;
+    window.location.replace(target);
+  } catch (_e) {}
+})();
+`;
+
 export default function Root({ children }: { children: React.ReactNode }) {
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
@@ -133,7 +159,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorDark} media="(prefers-color-scheme: dark)" />
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
-	      <meta name="color-scheme" content="light dark" />
+      <meta name="color-scheme" content="light dark" />
+
+      {/* Legacy URL guard: /?param=<id|slug> -> /travels/<id|slug> */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getLegacyParamRedirectScript() }}
+      />
 
 	      {/* Consolidated critical head script: title fallback + theme detection + canonical fix */}
       <script

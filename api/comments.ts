@@ -94,13 +94,16 @@ export const commentsApi = {
     travelId: number;
     threadId?: number | null;
   }): Promise<TravelComment[]> => {
-    const { travelId, threadId } = params;
+    const { threadId } = params;
 
     let rootComments: TravelComment[];
     if (typeof threadId === 'number' && threadId > 0) {
       rootComments = await commentsApi.getComments(threadId);
     } else {
-      rootComments = await commentsApi.getCommentsByTravel(travelId);
+      // Avoid guaranteed 4xx noise on deployments where /travel-comments?travel_id
+      // is not supported and main thread endpoint returned null.
+      // We only load comments when the backend provides a valid thread id.
+      return [];
     }
 
     // The backend uses a sub-thread model: a comment's `sub_thread` field

@@ -160,6 +160,40 @@ describe('TravelListItem - Action Buttons', () => {
     expect(router.push).toHaveBeenCalledWith('/test-travel');
   });
 
+  it('should open view mode from metravel even for drafts', () => {
+    const { router } = require('expo-router');
+
+    const draftTravel = {
+      ...mockTravel,
+      publish: 0,
+      moderation: 0,
+    };
+
+    render(
+      <TravelListItem
+        {...mockProps}
+        travel={draftTravel as any}
+        isMetravel={true}
+      />
+    );
+
+    const card = screen.getByTestId('travel-card-link');
+    const mockEvent = {
+      stopPropagation: jest.fn(),
+      preventDefault: jest.fn(),
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+      button: 0,
+    };
+
+    fireEvent(card, 'click', mockEvent);
+
+    expect(router.push).toHaveBeenCalledWith('/test-travel?returnTo=%2Fmetravel');
+    expect(router.push).not.toHaveBeenCalledWith('/travel/1');
+  });
+
   it('should handle events correctly with stopPropagation and preventDefault', () => {
     // Test the behavior through component interaction
     render(<TravelListItem {...mockProps} />);

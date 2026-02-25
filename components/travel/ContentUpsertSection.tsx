@@ -416,31 +416,46 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                 onRequestClose={() => setIsDescriptionFullscreen(false)}
                             >
                                 <SafeAreaView style={styles.modalSafeArea}>
-                                    <View style={styles.modalHeader}>
-                                        <TouchableOpacity
-                                            onPress={() => setIsDescriptionFullscreen(false)}
-                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        >
-                                            <Text style={styles.modalHeaderAction}>Закрыть</Text>
-                                        </TouchableOpacity>
-                                        <Text style={styles.modalHeaderTitle}>Описание</Text>
-                                        <TouchableOpacity
-                                            onPress={() => setIsDescriptionFullscreen(false)}
-                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        >
-                                            <Text style={styles.modalHeaderAction}>Готово</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <View style={styles.modalBody}>
-                                        <Suspense fallback={<View style={{ padding: 20 }}><Text>Загрузка редактора...</Text></View>}>
-                                            <ArticleEditor
-                                                key={`description-fullscreen-${idTravelStr ?? 'new'}`}
-                                                label={title}
-                                                content={content ?? ''}
-                                                onChange={onChange}
-                                                placeholder={hint}
-                                            />
-                                        </Suspense>
+                                    <View style={styles.modalShell}>
+                                        <View style={styles.modalHeader}>
+                                            <View style={styles.modalHeaderSide}>
+                                                <TouchableOpacity
+                                                    onPress={() => setIsDescriptionFullscreen(false)}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    style={styles.modalActionButton}
+                                                >
+                                                    <Text style={styles.modalHeaderAction}>Закрыть</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                            <View style={styles.modalHeaderCenter}>
+                                                <Text style={styles.modalHeaderTitle}>Описание</Text>
+                                                <Text style={styles.modalHeaderSubtitle}>{descriptionPlainLength} символов</Text>
+                                            </View>
+                                            <View style={[styles.modalHeaderSide, styles.modalHeaderSideRight]}>
+                                                <TouchableOpacity
+                                                    onPress={() => setIsDescriptionFullscreen(false)}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    style={[styles.modalActionButton, styles.modalActionButtonPrimary]}
+                                                >
+                                                    <Text style={[styles.modalHeaderAction, styles.modalHeaderActionPrimary]}>Готово</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                        <View style={styles.modalBody}>
+                                            <View style={styles.modalEditorCard}>
+                                                <Suspense fallback={<View style={{ padding: 20 }}><Text>Загрузка редактора...</Text></View>}>
+                                                    <ArticleEditor
+                                                        key={`description-fullscreen-${idTravelStr ?? 'new'}`}
+                                                        label={title}
+                                                        content={content ?? ''}
+                                                        onChange={onChange}
+                                                        placeholder={hint}
+                                                        idTravel={idTravelStr}
+                                                        variant="default"
+                                                    />
+                                                </Suspense>
+                                            </View>
+                                        </View>
                                     </View>
                                 </SafeAreaView>
                             </Modal>
@@ -532,6 +547,44 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         onAnchorHandled?.();
     }, [fieldPositions, focusAnchorId, onAnchorHandled]);
 
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!isDescriptionFullscreen) return;
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            const key = String(event.key ?? '').toLowerCase();
+
+            if (key === 'escape') {
+                event.preventDefault();
+                setIsDescriptionFullscreen(false);
+                return;
+            }
+
+            if ((event.metaKey || event.ctrlKey) && key === 'enter') {
+                event.preventDefault();
+                setIsDescriptionFullscreen(false);
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+        };
+    }, [isDescriptionFullscreen]);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!isDescriptionFullscreen) return;
+        if (typeof document === 'undefined') return;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isDescriptionFullscreen]);
+
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView
@@ -611,12 +664,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.background, // ✅ ДИЗАЙН: Динамический цвет фона
     },
     container: {
-        padding: DESIGN_TOKENS.spacing.xxs,
+        padding: DESIGN_TOKENS.spacing.xs,
         paddingBottom: 40
     },
     modalSafeArea: {
         flex: 1,
         backgroundColor: colors.background, // ✅ ДИЗАЙН: Динамический цвет фона
+    },
+    modalShell: {
+        flex: 1,
+        width: '100%',
+        maxWidth: 1200,
+        alignSelf: 'center',
     },
     modalHeader: {
         paddingHorizontal: DESIGN_TOKENS.spacing.md,
@@ -627,20 +686,76 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
+        ...(Platform.OS === 'web'
+            ? ({
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 20,
+                  boxShadow: DESIGN_TOKENS.shadows.light,
+              } as any)
+            : null),
+    },
+    modalHeaderSide: {
+        width: 96,
+        alignItems: 'flex-start',
+    },
+    modalHeaderSideRight: {
+        alignItems: 'flex-end',
+    },
+    modalHeaderCenter: {
+        flex: 1,
+        alignItems: 'center',
     },
     modalHeaderTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
         color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
+        lineHeight: 20,
+    },
+    modalHeaderSubtitle: {
+        marginTop: 2,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
     },
     modalHeaderAction: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
         color: colors.primaryText, // ✅ ДИЗАЙН: Динамический цвет текста
     },
+    modalHeaderActionPrimary: {
+        color: colors.textOnPrimary,
+    },
+    modalActionButton: {
+        minHeight: 36,
+        minWidth: 78,
+        borderRadius: DESIGN_TOKENS.radii.pill,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surfaceElevated,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+    modalActionButtonPrimary: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
     modalBody: {
         flex: 1,
-        padding: DESIGN_TOKENS.spacing.xxs,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+        paddingTop: DESIGN_TOKENS.spacing.sm,
+        paddingBottom: DESIGN_TOKENS.spacing.md,
+    },
+    modalEditorCard: {
+        flex: 1,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        overflow: 'hidden',
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        ...(Platform.OS === 'web'
+            ? ({ boxShadow: DESIGN_TOKENS.shadows.modal } as any)
+            : (DESIGN_TOKENS.shadowsNative.medium as any)),
     },
     descriptionPreview: {
         borderWidth: 1,

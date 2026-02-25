@@ -14,6 +14,7 @@ import { rIC } from '@/utils/rIC'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
+import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
 
 const TravelDetailsMapSection = withLazy(() =>
   import('./sections/TravelDetailsMapSection').then((m) => ({
@@ -25,12 +26,6 @@ const TravelDetailsSidebarSection = withLazy(() =>
     default: m.TravelDetailsSidebarSection,
   }))
 )
-const TravelDetailsFooterSection = withLazy(() =>
-  import('./sections/TravelDetailsFooterSection').then((m) => ({
-    default: m.TravelDetailsFooterSection,
-  }))
-)
-
 const CommentsSection = withLazy(() =>
   import('@/components/travel/CommentsSection').then((m) => ({
     default: m.CommentsSection,

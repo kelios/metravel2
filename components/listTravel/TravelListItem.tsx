@@ -165,24 +165,12 @@ function TravelListItem({
         } as any);
     }, [id, slug, travel]);
 
-    const isDraft = useMemo(() => {
-        const rawPublish = (travel as any)?.publish;
-        const rawModeration = (travel as any)?.moderation;
-        const isTruthyFlag = (v: unknown) =>
-            v === true || v === 1 || v === '1';
-        const publishOk = rawPublish === undefined || rawPublish === null || isTruthyFlag(rawPublish);
-        const moderationOk = rawModeration === undefined || rawModeration === null || isTruthyFlag(rawModeration);
-        // Treat missing flags as "not explicitly draft" for older payloads.
-        return !(publishOk && moderationOk);
-    }, [travel]);
-
     const navigationUrl = useMemo(() => {
         if (!travelUrl) return '';
         if (!_isMetravel) return travelUrl;
-        // Drafts are not publicly viewable at /travels/:slug, so open the editor.
-        if (isDraft && id != null) return `/travel/${id}`;
-        return `${travelUrl}?returnTo=${encodeURIComponent('/metravel')}`;
-    }, [_isMetravel, travelUrl, isDraft, id]);
+        const separator = travelUrl.includes('?') ? '&' : '?';
+        return `${travelUrl}${separator}returnTo=${encodeURIComponent('/metravel')}`;
+    }, [_isMetravel, travelUrl]);
 
     const cardTestId = useMemo(() => {
         const suffix = travelKey || 'unknown';
