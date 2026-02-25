@@ -18,11 +18,6 @@
       "src": "/assets/icons/logo_yellow_512x512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/assets/icons/logo_yellow.ico",
-      "sizes": "any",
-      "type": "image/x-icon"
     }
   ],
   "categories": ["travel", "lifestyle"],

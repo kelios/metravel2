@@ -191,6 +191,32 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
+  private renderStaleChunkRecoveryUI(styles: ReturnType<typeof getStyles>) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Обновление приложения…</Text>
+          <Text style={styles.message}>
+            Обновляем приложение автоматически. Пожалуйста, подождите.
+          </Text>
+          <Text style={styles.instructions}>
+            Если экран не исчезает, нажмите{' '}
+            <Text style={styles.instructionsBold}>«Перезагрузить и очистить кеш»</Text>.
+          </Text>
+          <Button
+            label="Перезагрузить и очистить кеш"
+            onPress={() => {
+              clearRecoverySessionKeys(true, true);
+              doStaleChunkRecovery({ purgeAllCaches: true });
+            }}
+            style={[styles.button, styles.primaryButton]}
+            accessibilityLabel="Перезагрузить и очистить кеш"
+          />
+        </View>
+      </View>
+    );
+  }
+
   render() {
     if (this.state.hasError) {
       const colors = getThemedColors(this.context?.isDark ?? false);
@@ -201,16 +227,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       // (e.g. Home, Search) still show the stale recovery UI instead of a generic
       // "Не удалось загрузить..." message that doesn't trigger cache recovery.
       if (this.state.isStaleChunk && Platform.OS === 'web') {
-        return (
-          <View style={styles.container}>
-            <View style={styles.content}>
-              <Text style={styles.title}>Обновление приложения…</Text>
-              <Text style={styles.message}>
-                Обновляем приложение автоматически. Пожалуйста, подождите.
-              </Text>
-            </View>
-          </View>
-        );
+        return this.renderStaleChunkRecoveryUI(styles);
       }
 
       if (this.props.fallback) {

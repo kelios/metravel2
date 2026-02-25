@@ -1,3 +1,4 @@
+/* eslint-disable no-empty, no-unused-vars */
 (function(){
   try {
     var host = window.location && window.location.hostname;
@@ -409,4 +410,3 @@
     run();
   } catch (_e) {}
 })();
-

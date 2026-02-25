@@ -616,7 +616,7 @@ test.describe('Travel Rating - API Integration', () => {
       description: `Before click: hadNoRating=${hadNoRating}, After click: hasUserRating=${hasUserRating}, hasRatingNumber=${hasRatingNumber}`,
     });
 
-    if (hadNoRating && !Boolean(hasUserRating || hasRatingNumber)) {
+    if (hadNoRating && !(hasUserRating || hasRatingNumber)) {
       test.info().annotations.push({
         type: 'note',
         description: 'Optimistic rating text was not rendered in this build; mutation path was still exercised.',

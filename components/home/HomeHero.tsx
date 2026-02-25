@@ -727,33 +727,27 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 accessibilityRole="link"
                 accessibilityHint="Открыть маршрут"
               >
-                {/* Slides */}
-                {BOOK_IMAGES.map((image, index) => (
-                  <View
-                    key={image.title}
-                    style={[
-                      styles.slideWrapper,
-                      {
-                        opacity: index === activeSlide ? 1 : 0,
-                        zIndex: index === activeSlide ? 1 : 0,
-                        ...(Platform.OS === 'web' ? { transition: 'opacity 0.5s ease' } : {}),
-                      } as any,
-                    ]}
-                  >
-                    <ImageCardMedia
-                      source={image.source}
-                      width={sliderMediaWidth}
-                      height={sliderHeight}
-                      borderRadius={0}
-                      fit="contain"
-                      blurBackground
-                      quality={90}
-                      alt={image.alt}
-                      loading={index === 0 ? 'eager' : 'lazy'}
-                      style={styles.slideImage}
-                    />
-                  </View>
-                ))}
+                {/* Render only active slide to avoid eager loading hidden images on first paint */}
+                <View
+                  key={currentSlide.title}
+                  style={[
+                    styles.slideWrapper,
+                    Platform.OS === 'web' ? ({ transition: 'opacity 0.5s ease' } as any) : null,
+                  ]}
+                >
+                  <ImageCardMedia
+                    source={currentSlide.source}
+                    width={sliderMediaWidth}
+                    height={sliderHeight}
+                    borderRadius={0}
+                    fit="contain"
+                    blurBackground
+                    quality={90}
+                    alt={currentSlide.alt}
+                    loading={activeSlide === 0 ? 'eager' : 'lazy'}
+                    style={styles.slideImage}
+                  />
+                </View>
 
                 {/* Overlay with title */}
                 <View style={styles.slideOverlay}>

@@ -197,6 +197,10 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     for (var i = 0; i < events.length; i++) {
       try { window.addEventListener(events[i], trigger, { passive: true, capture: true }); } catch (_e4) {}
     }
+    if (document.readyState === 'complete') {
+      trigger();
+      return;
+    }
     // Safety net for no-interaction sessions and bots.
     fallbackTimer = setTimeout(trigger, 10000);
     // Also schedule shortly after full load.

@@ -34,6 +34,45 @@ npm run lighthouse:travel:desktop
   - Do not add user-facing flows that ask to "clear cache" after deploy.
   - Update rollout must be automatic (server headers + fresh build artifacts only).
 
+### Code quality and simplicity (mandatory)
+
+- Do not overcomplicate solutions. Prefer the simplest clear implementation that solves the task.
+- Write code to be easy to read and maintain:
+  - clear naming
+  - small focused functions/components
+  - predictable control flow
+- Reuse existing components, hooks, helpers, and utilities before creating new ones.
+- If you see clear duplication or overgrown logic, refactor to a simpler structure as part of the task.
+- If you find unused code (dead imports, unused functions/components/files), remove it.
+- If you find real errors or broken behavior during the task, fix them (or explicitly document blockers if fix is impossible in current scope).
+
+### Server path safety (mandatory)
+
+- Never change server file paths in configs unless existence is verified on the target host.
+- This applies to all critical directives, including:
+  - `ssl_certificate`, `ssl_certificate_key`, `ssl_trusted_certificate`
+  - `root`, `alias`, `include`
+  - `proxy_pass` targets and unix socket paths
+- If path existence cannot be verified, do not modify the path; keep current value and mark as `needs server verification`.
+- Before editing Nginx/Apache paths, run checks on the server first:
+
+```bash
+# Example for SSL files:
+sudo test -f /path/to/fullchain.pem && echo OK || echo MISSING
+sudo test -f /path/to/privkey.pem && echo OK || echo MISSING
+sudo test -f /path/to/chain.pem && echo OK || echo MISSING
+
+# Example for web root:
+sudo test -d /path/to/web/root && echo OK || echo MISSING
+```
+
+- Any config change with path updates must be followed by:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
 ### Performance testing with metravel.by
 
 Run Lighthouse directly against `https://metravel.by` to test real production performance.
