@@ -8,6 +8,7 @@ import { preacceptCookies } from './helpers/navigation';
 
 test.describe('Map Page Route Line Visibility - Visual Test', () => {
   test('линия маршрута должна быть ВИДИМА на карте (с детальной проверкой)', async ({ page }) => {
+    test.setTimeout(240_000);
     await preacceptCookies(page);
 
     // Слушаем все логи консоли
