@@ -470,19 +470,42 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletControlRef,
   });
 
+  const isFallbackMinskCenter = useCallback((lat: number, lng: number) => {
+    const fallbackCandidates: Array<[number, number]> = [
+      [53.9006, 27.559],
+      [53.8828449, 27.7273595],
+    ];
+    return fallbackCandidates.some(([fLat, fLng]) => (
+      Math.abs(lat - fLat) < 0.02 && Math.abs(lng - fLng) < 0.02
+    ));
+  }, []);
 
-  // Get user location
+
+  // Sync user location from incoming coordinates (screen-level source of truth).
+  // This removes stale fallback center while waiting for map-internal geolocation.
+  useEffect(() => {
+    const lat = Number((coordinates as any)?.latitude);
+    const lng = Number((coordinates as any)?.longitude);
+    if (!isValidCoordinate(lat, lng)) return;
+    if (isFallbackMinskCenter(lat, lng)) return;
+    setUserLocation((prev) => {
+      if (
+        prev &&
+        Math.abs(prev.latitude - lat) < 0.00001 &&
+        Math.abs(prev.longitude - lng) < 0.00001
+      ) {
+        return prev;
+      }
+      return { latitude: lat, longitude: lng };
+    });
+  }, [coordinates, isFallbackMinskCenter]);
+
+  // Get user location (fallback/refresh for web map session)
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-
-    // Avoid requesting geolocation before the map is ready.
-    // This reduces early main-thread work and prevents unnecessary permission prompts.
     if (!L || !rl) return;
 
     let cancelled = false;
-
-    let idleHandle: any = null;
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
     const loadLocation = () => {
       ;(async () => {
@@ -509,49 +532,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
       })();
     };
 
-    if (isTestEnv) {
-      loadLocation();
-    } else {
-      // Defer geolocation until after a user interaction to avoid the
-      // Lighthouse "geolocation-on-start" Best Practices penalty.
-      // The first pointer/touch/keyboard event indicates the user is actively
-      // engaging with the page, at which point requesting location is expected.
-      const interactionEvents = ['pointerdown', 'touchstart', 'keydown'] as const;
-      let triggered = false;
-      const onInteraction = () => {
-        if (triggered) return;
-        triggered = true;
-        interactionEvents.forEach(ev => window.removeEventListener(ev, onInteraction));
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          idleHandle = (window as any).requestIdleCallback(loadLocation, { timeout: 3500 });
-        } else {
-          timeoutHandle = setTimeout(loadLocation, 500);
-        }
-      };
-      interactionEvents.forEach(ev => window.addEventListener(ev, onInteraction, { once: true, passive: true }));
-      timeoutHandle = setTimeout(() => {
-        if (!triggered) {
-          triggered = true;
-          interactionEvents.forEach(ev => window.removeEventListener(ev, onInteraction));
-          loadLocation();
-        }
-      }, 60000);
-    }
+    loadLocation();
 
     return () => {
       cancelled = true;
-
-      try {
-        if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-          (window as any).cancelIdleCallback(idleHandle);
-        }
-      } catch {
-        // noop
-      }
-
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
     };
   }, [L, rl]);
 
@@ -942,12 +926,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return createMapPopupComponent({ useMap: rl.useMap, userLocation: userLocationLatLng });
   }, [rl, userLocationLatLng]);
 
-  const popupAutoPanPadding = useMemo(() => ({
-    autoPan: true,
-    keepInView: true,
-    autoPanPaddingTopLeft: [24, 140],
-    autoPanPaddingBottomRight: [360, 220],
-  }), []);
+  const popupAutoPanPadding = useMemo(() => {
+    const isNarrowViewport = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+    return {
+      autoPan: true,
+      keepInView: true,
+      maxWidth: isNarrowViewport ? 360 : 560,
+      minWidth: isNarrowViewport ? 280 : 420,
+      className: 'metravel-place-popup',
+      autoPanPaddingTopLeft: [24, 140],
+      autoPanPaddingBottomRight: [400, 240],
+    };
+  }, []);
 
   const fitBoundsPadding = useMemo(() => {
     // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.

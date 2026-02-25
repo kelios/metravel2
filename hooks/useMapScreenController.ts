@@ -173,7 +173,22 @@ export function useMapScreenController() {
   const mapPanelCoordinates = useMemo(() => {
     const source = queryCoordinates ?? coordinates;
     if (!source || !Number.isFinite(source.latitude) || !Number.isFinite(source.longitude)) {
-      // Default to Minsk coordinates
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = window.localStorage.getItem('metravel:lastKnownCoords');
+          if (raw) {
+            const parsed = JSON.parse(raw) as Partial<{ latitude: number; longitude: number }>;
+            const lat = Number(parsed?.latitude);
+            const lng = Number(parsed?.longitude);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              return { latitude: lat, longitude: lng };
+            }
+          }
+        } catch {
+          // noop
+        }
+      }
+      // Fallback to Minsk when no cached or current location is available.
       return { latitude: 53.9006, longitude: 27.559 };
     }
     return { latitude: source.latitude, longitude: source.longitude };

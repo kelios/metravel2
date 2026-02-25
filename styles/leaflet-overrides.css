@@ -66,6 +66,18 @@
   max-width: calc(100vw - 24px) !important;
 }
 
+.leaflet-popup.metravel-place-popup .leaflet-popup-content-wrapper {
+  border-radius: 18px !important;
+}
+
+.leaflet-popup.metravel-place-popup .leaflet-popup-content {
+  padding: 16px !important;
+  padding-right: 48px !important;
+  font-size: 15px !important;
+  line-height: 22px !important;
+  max-width: min(560px, calc(100vw - 28px)) !important;
+}
+
 /* Tooltip для маркеров старта/финиша маршрута */
 .leaflet-tooltip.metravel-route-marker-tooltip {
   background: var(--color-surface) !important;

@@ -16,10 +16,20 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
+const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
+  try {
+    const ctx = useFilters();
+    if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
+  } catch {
+    // no-op fallback to avoid runtime crashes when context hook export drifts
+  }
+  return { updateFilters: () => {} };
+};
+
 function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavorites();
-  const { updateFilters } = useFilters();
+  const { updateFilters } = useFiltersSafe();
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);

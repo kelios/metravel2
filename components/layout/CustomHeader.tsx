@@ -22,6 +22,16 @@ const useFavoritesSafe = (): { favorites: { length: number } } => {
     }
 };
 
+const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
+    try {
+        const ctx = useFilters();
+        if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
+    } catch {
+        // no-op fallback to avoid runtime crashes when chunk exports drift
+    }
+    return { updateFilters: () => {} };
+};
+
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
 
@@ -46,7 +56,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const mobileMenuOpenedAtRef = useRef(0);
     const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
     const { favorites } = useFavoritesSafe();
-    const { updateFilters } = useFilters();
+    const { updateFilters } = useFiltersSafe();
     const { count: unreadCount } = useUnreadCount(isAuthenticated && mobileMenuVisible, mobileMenuVisible);
     const [avatarLoadError, setAvatarLoadError] = useState(false);
     const lastHeightRef = useRef(0);

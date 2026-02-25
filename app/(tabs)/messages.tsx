@@ -115,6 +115,7 @@ export default function MessagesScreen() {
                             participants: [Number(userId), targetUserId],
                             created_at: null,
                             last_message_created_at: null,
+                            unread_count: 0,
                         });
                     }
                 } else {
@@ -124,6 +125,7 @@ export default function MessagesScreen() {
                         participants: [Number(userId), targetUserId],
                         created_at: null,
                         last_message_created_at: null,
+                        unread_count: 0,
                     });
                 }
             } catch (e) {
@@ -134,6 +136,7 @@ export default function MessagesScreen() {
                     participants: [Number(userId), targetUserId],
                     created_at: null,
                     last_message_created_at: null,
+                    unread_count: 0,
                 });
             } finally {
                 if (!cancelled) setInitialLoading(false);
@@ -199,6 +202,7 @@ export default function MessagesScreen() {
                             participants: [Number(userId), targetUserId],
                             created_at: null,
                             last_message_created_at: null,
+                            unread_count: 0,
                         });
                     }
                 } else {
@@ -207,6 +211,7 @@ export default function MessagesScreen() {
                         participants: [Number(userId), targetUserId],
                         created_at: null,
                         last_message_created_at: null,
+                        unread_count: 0,
                     });
                 }
             } catch (e) {
@@ -216,6 +221,7 @@ export default function MessagesScreen() {
                     participants: [Number(userId), targetUserId],
                     created_at: null,
                     last_message_created_at: null,
+                    unread_count: 0,
                 });
             }
         },
@@ -242,6 +248,7 @@ export default function MessagesScreen() {
                                 participants: selectedThread.participants,
                                 created_at: null,
                                 last_message_created_at: null,
+                                unread_count: 0,
                             });
                         }
                     } catch (e) {

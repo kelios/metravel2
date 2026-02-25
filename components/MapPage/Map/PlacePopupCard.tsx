@@ -194,15 +194,15 @@ const getBreakpoint = (viewportWidth: number): BreakpointKey => {
 };
 
 const FONT_SIZES: Record<BreakpointKey, { title: number; small: number }> = {
-  narrow: { title: 11, small: 9 },
-  compact: { title: 12, small: 10 },
-  default: { title: 13, small: 11 },
+  narrow: { title: 14, small: 12 },
+  compact: { title: 15, small: 13 },
+  default: { title: 16, small: 14 },
 };
 
 const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: number; radius: number; thumbSize: number }> = {
-  narrow: { gap: 4, btnPadV: 3, btnPadH: 5, radius: 6, thumbSize: 60 },
-  compact: { gap: 6, btnPadV: 4, btnPadH: 6, radius: 7, thumbSize: 68 },
-  default: { gap: 8, btnPadV: 5, btnPadH: 7, radius: 8, thumbSize: 72 },
+  narrow: { gap: 8, btnPadV: 7, btnPadH: 9, radius: 10, thumbSize: 72 },
+  compact: { gap: 10, btnPadV: 8, btnPadH: 10, radius: 11, thumbSize: 80 },
+  default: { gap: 12, btnPadV: 9, btnPadH: 12, radius: 12, thumbSize: 88 },
 };
 
 const PlacePopupCard: React.FC<Props> = ({
@@ -223,7 +223,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Мои точки',
-  width = 480,
+  width = 560,
   imageHeight: _imageHeight = 72,
 }) => {
   const colors = useThemedColors();
@@ -249,7 +249,7 @@ const PlacePopupCard: React.FC<Props> = ({
   const isNarrow = bp === 'narrow';
   const _fs = FONT_SIZES[bp];
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
-  const maxPopupWidth = Math.min(width, Math.max(260, viewportWidth - (isNarrow ? 28 : 56)));
+  const maxPopupWidth = Math.min(width, Math.max(320, viewportWidth - (isNarrow ? 28 : 56)));
 
   const styles = useMemo(() => getStyles(colors, bp), [colors, bp]);
 
@@ -289,7 +289,7 @@ const PlacePopupCard: React.FC<Props> = ({
               style={StyleSheet.absoluteFillObject}
             />
             <View style={styles.expandIcon}>
-              <Feather name="maximize-2" size={12} color={colors.textOnDark} />
+              <Feather name="maximize-2" size={14} color={colors.textOnDark} />
             </View>
           </CardActionPressable>
         </View>
@@ -312,7 +312,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
           {(isDrivingLoading || hasDrivingInfo) && (
             <View testID="popup-driving-info" style={styles.drivingRow}>
-              <Feather name="navigation" size={11} color={colors.textMuted} />
+              <Feather name="navigation" size={14} color={colors.textMuted} />
               {isDrivingLoading ? (
                 <ActivityIndicator size="small" color={colors.textMuted} />
               ) : (
@@ -334,7 +334,7 @@ const PlacePopupCard: React.FC<Props> = ({
           style={styles.coordRow}
         >
           <Text style={styles.coordText} numberOfLines={1} selectable>{coord}</Text>
-          {onCopyCoord && <Feather name="copy" size={12} color={colors.textMuted} />}
+          {onCopyCoord && <Feather name="copy" size={14} color={colors.textMuted} />}
         </CardActionPressable>
       )}
 
@@ -348,7 +348,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title="Google Maps"
             style={actionBtnStyle}
           >
-            <Feather name="map" size={14} color={colors.textMuted} />
+            <Feather name="map" size={16} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -359,7 +359,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title="Organic Maps"
             style={actionBtnStyle}
           >
-            <Feather name="compass" size={14} color={colors.textMuted} />
+            <Feather name="compass" size={16} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -370,7 +370,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title="Телеграм"
             style={actionBtnStyle}
           >
-            <Feather name="send" size={14} color={colors.textMuted} />
+            <Feather name="send" size={16} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -381,7 +381,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title="Статья"
             style={actionBtnStyle}
           >
-            <Feather name="book-open" size={14} color={colors.textMuted} />
+            <Feather name="book-open" size={16} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -397,7 +397,7 @@ const PlacePopupCard: React.FC<Props> = ({
               pressed && styles.actionBtnPressed,
             ]}
           >
-            <Feather name="corner-up-right" size={14} color={colors.primary} />
+            <Feather name="corner-up-right" size={16} color={colors.primary} />
           </CardActionPressable>
         )}
       </View>
@@ -417,7 +417,7 @@ const PlacePopupCard: React.FC<Props> = ({
           {isAdding ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <Feather name="map-pin" size={13} color={colors.primary} />
+            <Feather name="map-pin" size={16} color={colors.primary} />
           )}
           <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
@@ -464,19 +464,19 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     },
     expandIcon: {
       position: 'absolute',
-      bottom: 5,
-      right: 5,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      bottom: 8,
+      right: 8,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
       backgroundColor: 'rgba(0,0,0,0.4)',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 2,
     },
     infoSection: {
-      gap: 3,
-      paddingHorizontal: 2,
+      gap: 6,
+      paddingHorizontal: 4,
     },
     metaRow: {
       flexDirection: 'row',
@@ -485,10 +485,10 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
       gap: 6,
     },
     titleText: {
-      fontSize: fs.title + 1,
+      fontSize: fs.title,
       fontWeight: '600',
       color: colors.text,
-      lineHeight: (fs.title + 1) * 1.3,
+      lineHeight: fs.title * 1.32,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
@@ -512,14 +512,14 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     drivingRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      gap: 6,
       flexWrap: 'wrap',
     },
     coordRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 2,
+      gap: 8,
+      paddingHorizontal: 4,
     },
     coordText: {
       fontSize: fs.small,
@@ -532,24 +532,24 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     actionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 4,
-      paddingHorizontal: 2,
+      gap: 6,
+      paddingHorizontal: 4,
     },
     iconBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      width: 38,
+      height: 38,
+      borderRadius: 10,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      width: 38,
+      height: 38,
+      borderRadius: 10,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
@@ -563,9 +563,9 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 6,
-      paddingVertical: sp.btnPadV + 1,
-      paddingHorizontal: sp.btnPadH + 4,
+      gap: 8,
+      paddingVertical: sp.btnPadV + 2,
+      paddingHorizontal: sp.btnPadH + 6,
       borderRadius: sp.radius,
       borderWidth: 1,
       borderColor: colors.primary,

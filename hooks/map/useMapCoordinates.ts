@@ -9,6 +9,7 @@ export interface Coordinates {
 }
 
 export const DEFAULT_COORDINATES: Coordinates = { latitude: 53.9006, longitude: 27.559 };
+const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
 
 function isValidCoordinate(lat: number, lng: number): boolean {
   return (
@@ -26,16 +27,104 @@ function isValidCoordinate(lat: number, lng: number): boolean {
  * Запрашивает геолокацию при монтировании.
  */
 export function useMapCoordinates() {
-  // Initialize with default coordinates to prevent NaN errors
-  const [coordinates, setCoordinates] = useState<Coordinates>(DEFAULT_COORDINATES);
-  const [isLoading, setIsLoading] = useState(Platform.OS !== 'web');
+  const readWebCachedCoordinates = useCallback((): Coordinates | null => {
+    if (Platform.OS !== 'web') return null;
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<Coordinates>;
+      const lat = Number(parsed?.latitude);
+      const lng = Number(parsed?.longitude);
+      if (!isValidCoordinate(lat, lng)) return null;
+      return { latitude: lat, longitude: lng };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Initialize with last known coordinates on web to avoid default-center flicker.
+  const [coordinates, setCoordinates] = useState<Coordinates>(() => {
+    const cached = Platform.OS === 'web' ? (() => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as Partial<Coordinates>;
+        const lat = Number(parsed?.latitude);
+        const lng = Number(parsed?.longitude);
+        return isValidCoordinate(lat, lng) ? { latitude: lat, longitude: lng } : null;
+      } catch {
+        return null;
+      }
+    })() : null;
+    return cached ?? DEFAULT_COORDINATES;
+  });
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const requestWebLocation = useCallback(async (signal?: AbortSignal) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      const cached = readWebCachedCoordinates();
+      if (cached) setCoordinates(cached);
+      setIsLoading(false);
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
+      if (signal?.aborted) {
+        resolve();
+        return;
+      }
+
+      const handleSuccess = (position: any) => {
+        if (signal?.aborted) {
+          resolve();
+          return;
+        }
+        const { latitude, longitude } = position.coords;
+        if (isValidCoordinate(latitude, longitude)) {
+          const next = { latitude, longitude };
+          setCoordinates(next);
+          try {
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem(WEB_LAST_COORDS_KEY, JSON.stringify(next));
+            }
+          } catch {
+            // noop
+          }
+        }
+        resolve();
+      };
+
+      const handleError = () => {
+        const cached = readWebCachedCoordinates();
+        if (cached) {
+          setCoordinates(cached);
+        } else {
+          setCoordinates(DEFAULT_COORDINATES);
+        }
+        resolve();
+      };
+
+      navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
+        enableHighAccuracy: false,
+        timeout: 12000,
+        maximumAge: 60000,
+      });
+    });
+  }, [readWebCachedCoordinates]);
 
   const requestLocation = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
 
     try {
+      if (Platform.OS === 'web') {
+        await requestWebLocation(signal);
+        return;
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (signal?.aborted) return;
@@ -79,14 +168,9 @@ export function useMapCoordinates() {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [requestWebLocation]);
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      setIsLoading(false);
-      return;
-    }
-
     const abortController = new AbortController();
     requestLocation(abortController.signal);
 
@@ -115,4 +199,3 @@ export function useMapCoordinates() {
     refreshLocation: requestLocation,
   }), [coordinates, isLoading, error, updateCoordinates, requestLocation]);
 }
-
