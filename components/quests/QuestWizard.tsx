@@ -732,10 +732,10 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         onToggleMap={toggleMap}
                                     />
 
-                                    {currentStep.id === 'intro' && Platform.OS === 'web' && (
+                                    {Platform.OS === 'web' && (
                                         <View style={styles.printSection}>
                                             <Text style={styles.printHint}>
-                                                Вы также можете скачать бумажную версию квеста с картой и заданиями. Ответы можно записать от руки и проверить позднее на сайте.
+                                                Скачайте подарочную печатную версию: маршрут, задания и место для ответов.
                                             </Text>
                                             <Pressable
                                                 style={styles.printButton}

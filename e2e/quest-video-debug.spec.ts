@@ -1,6 +1,6 @@
 // e2e/quest-video-debug.spec.ts
 // Детальная отладка загрузки видео в квестах
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 test.describe('Quest Video Debug', () => {
     test('should debug video loading step by step', async ({ page }) => {
@@ -47,10 +47,16 @@ test.describe('Quest Video Debug', () => {
             krakowLink = questLinks[0];
         }
 
+        if (!krakowLink) {
+            test.skip(true, 'No quests found on /quests page');
+            return;
+        }
+
         // Переходим на страницу квеста
         console.log('\n=== Step 3: Open quest ===');
         await krakowLink.click();
         await page.waitForLoadState('networkidle');
+        await expect(page).toHaveURL(/\/quests\//);
         await page.screenshot({ path: 'playwright-screenshots/quest-page.png', fullPage: true });
 
         // Проверяем наличие кнопки "Финал"

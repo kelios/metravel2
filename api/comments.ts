@@ -57,10 +57,6 @@ export const commentsApi = {
       if (status === 404) {
         return [];
       }
-      // Some deployments protect comments behind auth; treat as empty.
-      if (status === 401 || status === 403) {
-        return [];
-      }
       throw error;
     }
   },
@@ -94,16 +90,14 @@ export const commentsApi = {
     travelId: number;
     threadId?: number | null;
   }): Promise<TravelComment[]> => {
-    const { threadId } = params;
+    const { threadId, travelId } = params;
 
     let rootComments: TravelComment[];
     if (typeof threadId === 'number' && threadId > 0) {
       rootComments = await commentsApi.getComments(threadId);
     } else {
-      // Avoid guaranteed 4xx noise on deployments where /travel-comments?travel_id
-      // is not supported and main thread endpoint returned null.
-      // We only load comments when the backend provides a valid thread id.
-      return [];
+      // Fallback when thread id is unavailable.
+      rootComments = await commentsApi.getCommentsByTravel(travelId);
     }
 
     // The backend uses a sub-thread model: a comment's `sub_thread` field

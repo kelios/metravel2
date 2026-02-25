@@ -206,6 +206,28 @@ export default function QuestsScreen() {
         })();
     }, []);
 
+    const handleSelectCity = useCallback(async (id: string) => {
+        setSelectedCityId(id);
+        try {
+            await AsyncStorage.setItem(STORAGE_SELECTED_CITY, id);
+        } catch (error) {
+            // ✅ FIX-009: Логируем ошибки вместо пустого catch
+            const { devError } = await import('@/utils/logger');
+            devError('Error saving selected city:', error);
+        }
+    }, []);
+
+    const handleSetRadius = useCallback(async (km: number) => {
+        setNearbyRadiusKm(km);
+        try {
+            await AsyncStorage.setItem(STORAGE_NEARBY_RADIUS, String(km));
+        } catch (error) {
+            // ✅ FIX-009: Логируем ошибки вместо пустого catch
+            const { devError } = await import('@/utils/logger');
+            devError('Error saving radius:', error);
+        }
+    }, []);
+
     useEffect(() => {
         if (!dataLoaded) return;
         if (!CITIES.length) return;
@@ -251,28 +273,6 @@ export default function QuestsScreen() {
             })();
         return () => { cancelled = true; };
     }, [selectedCityId]);
-
-    const handleSelectCity = useCallback(async (id: string) => {
-        setSelectedCityId(id);
-        try { 
-            await AsyncStorage.setItem(STORAGE_SELECTED_CITY, id); 
-        } catch (error) {
-            // ✅ FIX-009: Логируем ошибки вместо пустого catch
-            const { devError } = await import('@/utils/logger');
-            devError('Error saving selected city:', error);
-        }
-    }, []);
-
-    const handleSetRadius = useCallback(async (km: number) => {
-        setNearbyRadiusKm(km);
-        try { 
-            await AsyncStorage.setItem(STORAGE_NEARBY_RADIUS, String(km)); 
-        } catch (error) {
-            // ✅ FIX-009: Логируем ошибки вместо пустого catch
-            const { devError } = await import('@/utils/logger');
-            devError('Error saving radius:', error);
-        }
-    }, []);
 
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
         () => [{ id: NEARBY_ID, name: 'Рядом', country: 'BY', isNearby: true } as NearbyCity, ...CITIES],

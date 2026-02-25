@@ -40,6 +40,8 @@ export type FrontendQuestBundle = {
     coverUrl?: string;
 };
 
+const INTRO_STEP_ID = 'intro';
+
 // ===================== АДАПТЕРЫ: API → Frontend =====================
 
 /** Нормализация ответа пользователя (дублирует логику из data файлов) */
@@ -237,12 +239,23 @@ export function adaptCity(apiCity: ApiQuestCity): QuestCity {
 
 /** Конвертирует полный бандл из API формата */
 export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
+    const normalizeStepKey = (step: Partial<ApiQuestStep> | null | undefined): string => {
+        const key = step?.step_id ?? step?.id;
+        return String(key ?? '').trim().toLowerCase();
+    };
+    const isIntroStep = (step: Partial<ApiQuestStep> | null | undefined): boolean => {
+        if (!step) return false;
+        return Boolean(step.is_intro) || normalizeStepKey(step) === INTRO_STEP_ID;
+    };
+
+    let rawSteps: ApiQuestStep[] = [];
     let steps: QuestStep[] = [];
     try {
-        const rawSteps: ApiQuestStep[] = typeof apiBundle.steps === 'string'
+        const parsedSteps = typeof apiBundle.steps === 'string'
             ? JSON.parse(apiBundle.steps)
             : apiBundle.steps;
-        steps = rawSteps.map(adaptStep);
+        rawSteps = Array.isArray(parsedSteps) ? parsedSteps : [];
+        steps = rawSteps.filter((s) => !isIntroStep(s)).map(adaptStep);
     } catch (e) {
         console.error('Error parsing quest steps:', e);
     }
@@ -253,10 +266,33 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             const rawIntro: ApiQuestStep = typeof apiBundle.intro === 'string'
                 ? JSON.parse(apiBundle.intro)
                 : apiBundle.intro;
-            intro = { ...adaptStep(rawIntro), id: 'intro' };
+            intro = { ...adaptStep(rawIntro), id: INTRO_STEP_ID };
+        } else {
+            const introFromSteps = rawSteps.find((s) => isIntroStep(s));
+            if (introFromSteps) {
+                intro = { ...adaptStep(introFromSteps), id: INTRO_STEP_ID };
+            }
         }
     } catch (e) {
         console.error('Error parsing quest intro:', e);
+    }
+
+    // Fallback: always provide an intro so each quest starts with a dedicated start screen.
+    if (!intro) {
+        const cityName = apiBundle.city?.name || 'город';
+        const stepCount = steps.length;
+        intro = {
+            id: INTRO_STEP_ID,
+            title: `Старт квеста: ${apiBundle.title}`,
+            location: cityName,
+            story: `В этом маршруте ${stepCount} ${stepCount === 1 ? 'шаг' : stepCount < 5 ? 'шага' : 'шагов'}. Нажмите «Начать квест», чтобы перейти к первому заданию.`,
+            task: 'Нажмите кнопку «Начать квест».',
+            answer: () => true,
+            lat: parseFloat(String(apiBundle.city?.lat || 0)),
+            lng: parseFloat(String(apiBundle.city?.lng || 0)),
+            mapsUrl: 'https://metravel.by/quests',
+            inputType: 'text',
+        };
     }
 
     return {

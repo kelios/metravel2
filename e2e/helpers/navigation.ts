@@ -90,7 +90,9 @@ export async function navigateToFirstTravel(
   const roleCards = page.getByRole('link', { name: /^Открыть маршрут/ });
   const linkCards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
   // Fallback: some list variants expose the card root testID (travel-card-<slug/id>)
-  const fallbackCards = page.locator('[data-testid^="travel-card-"], [testID^="travel-card-"]');
+  const fallbackCards = page.locator(
+    '[data-testid^="travel-card-"]:not([data-testid*="skeleton"]), [testID^="travel-card-"]:not([testID*="skeleton"])'
+  );
   const cards =
     (await roleCards.count()) > 0
       ? roleCards
@@ -106,9 +108,6 @@ export async function navigateToFirstTravel(
 
   if ((await cards.count()) === 0) return false;
 
-  const firstCard = cards.first();
-  await firstCard.scrollIntoViewIfNeeded();
-
   const isOnDetails = () => {
     try {
       const u = new URL(page.url());
@@ -118,20 +117,40 @@ export async function navigateToFirstTravel(
     }
   };
 
-  // Some card variants contain nested action buttons inside the link.
-  // Clicking the center can hit those buttons and prevent navigation.
-  const box = await firstCard.boundingBox();
-  if (box) {
-    await firstCard.click({ position: { x: 8, y: 8 } });
-  } else {
-    await firstCard.click({ force: true });
+  const clickFirstCard = async (force = false) => {
+    const firstCard = cards.first();
+    await firstCard.waitFor({ state: 'visible', timeout: 5_000 });
+    await firstCard.scrollIntoViewIfNeeded();
+    if (force) {
+      await firstCard.click({ force: true });
+      return;
+    }
+    // Some card variants contain nested action buttons inside the link.
+    // Clicking the center can hit those buttons and prevent navigation.
+    const box = await firstCard.boundingBox();
+    if (box) {
+      await firstCard.click({ position: { x: 8, y: 8 } });
+    } else {
+      await firstCard.click({ force: true });
+    }
+  };
+
+  try {
+    await clickFirstCard(false);
+  } catch {
+    try {
+      await page.waitForTimeout(150);
+      await clickFirstCard(true);
+    } catch {
+      // ignore
+    }
   }
 
   // If the click got intercepted, retry with increasingly aggressive activation.
   await page.waitForTimeout(150);
   if (!isOnDetails()) {
     try {
-      await firstCard.click({ force: true });
+      await clickFirstCard(true);
     } catch {
       // ignore
     }
@@ -140,6 +159,7 @@ export async function navigateToFirstTravel(
   await page.waitForTimeout(150);
   if (!isOnDetails()) {
     try {
+      const firstCard = cards.first();
       await firstCard.evaluate((el: any) => {
         if (typeof el?.click === 'function') el.click();
       });
@@ -153,6 +173,7 @@ export async function navigateToFirstTravel(
   await page.waitForTimeout(150);
   if (!isOnDetails()) {
     try {
+      const firstCard = cards.first();
       await firstCard.focus();
       await page.keyboard.press('Enter');
     } catch {
@@ -163,6 +184,7 @@ export async function navigateToFirstTravel(
   await page.waitForTimeout(150);
   if (!isOnDetails()) {
     try {
+      const firstCard = cards.first();
       await firstCard.focus();
       await page.keyboard.press(' ');
     } catch {

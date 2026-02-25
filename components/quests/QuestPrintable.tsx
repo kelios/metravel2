@@ -74,63 +74,126 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
 <meta charset="utf-8">
 <title>${escHtml(title)} — Подарочная версия</title>
 <style>
+    :root {
+        --ink: #1d2430;
+        --muted: #5e6a78;
+        --soft: #edf2f7;
+        --line: #d4dde8;
+        --brand: #1f6f8b;
+        --brand-soft: #ecf6fa;
+        --accent: #ffb703;
+    }
     @page { margin: 14mm 10mm; size: A4; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Georgia', 'Times New Roman', serif; color: #2c2c2c; line-height: 1.55; font-size: 10.5pt; background: #fff; }
+    body { font-family: 'Avenir Next', 'Segoe UI', sans-serif; color: var(--ink); line-height: 1.55; font-size: 10.5pt; background: #fff; }
+    h1, h2, h3 { font-family: 'Merriweather', 'Georgia', serif; }
 
-    /* === ОБЛОЖКА === */
-    .cover { text-align: center; padding: 40px 20px 30px; border: 3px double #2d6a4f; border-radius: 12px; margin-bottom: 24px; position: relative; }
-    .cover::before { content: ''; position: absolute; inset: 6px; border: 1px solid #c5ddd2; border-radius: 8px; pointer-events: none; }
-    .cover .gift-label { font-size: 9pt; text-transform: uppercase; letter-spacing: 3px; color: #888; margin-bottom: 8px; }
-    .cover h1 { font-size: 24pt; color: #2d6a4f; margin-bottom: 4px; font-weight: 700; }
-    .cover .subtitle { font-size: 10pt; color: #777; margin-bottom: 16px; }
-    .cover .gift-line { width: 60px; height: 2px; background: #2d6a4f; margin: 0 auto 16px; border-radius: 1px; }
+    .cover {
+        text-align: center;
+        padding: 34px 22px 28px;
+        border-radius: 16px;
+        margin-bottom: 22px;
+        border: 1px solid #cdd8e5;
+        background: linear-gradient(160deg, #f5faff 0%, #ffffff 55%, #fff8ea 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    .cover::after {
+        content: '';
+        position: absolute;
+        width: 280px;
+        height: 280px;
+        right: -120px;
+        top: -160px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(31,111,139,0.12) 0%, rgba(31,111,139,0) 70%);
+        pointer-events: none;
+    }
+    .cover .gift-label {
+        display: inline-block;
+        font-size: 8.5pt;
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        color: var(--brand);
+        border: 1px solid #b9d5e1;
+        background: #ffffffb3;
+        border-radius: 999px;
+        padding: 3px 11px;
+        margin-bottom: 10px;
+    }
+    .cover h1 { font-size: 23pt; color: #153f52; margin-bottom: 6px; line-height: 1.24; }
+    .cover .subtitle { font-size: 10pt; color: var(--muted); margin-bottom: 14px; }
+    .cover .gift-line { width: 76px; height: 3px; background: var(--accent); margin: 0 auto 14px; border-radius: 99px; }
     .cover .site-qr { display: inline-block; }
-    .cover .site-qr img { border-radius: 8px; border: 1px solid #e0e0e0; }
-    .cover .site-qr p { font-size: 8pt; color: #999; margin-top: 6px; }
-    .cover .for-line { margin-top: 20px; font-size: 11pt; color: #555; }
-    .cover .for-line span { display: inline-block; border-bottom: 1px solid #bbb; min-width: 200px; margin-left: 6px; }
+    .cover .site-qr img { border-radius: 10px; border: 1px solid #d6dce5; background: #fff; }
+    .cover .site-qr p { font-size: 8pt; color: var(--muted); margin-top: 6px; }
+    .cover .for-line { margin-top: 16px; font-size: 10pt; color: var(--muted); }
+    .cover .for-line span { display: inline-block; border-bottom: 1px solid #aeb7c4; min-width: 210px; margin-left: 6px; }
 
-    /* === ИНСТРУКЦИЯ === */
-    .intro { background: #f7faf8; border: 1px solid #d4e5dc; border-radius: 10px; padding: 16px 18px; margin-bottom: 22px; }
-    .intro h2 { font-size: 11pt; color: #2d6a4f; margin-bottom: 6px; font-family: -apple-system, sans-serif; font-weight: 700; }
-    .intro p { font-size: 9.5pt; color: #555; font-family: -apple-system, sans-serif; }
-    .intro .note { margin-top: 8px; font-weight: 600; color: #2d6a4f; font-size: 9.5pt; }
+    .intro {
+        background: var(--brand-soft);
+        border: 1px solid #cde4ee;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+    }
+    .intro h2 { font-size: 11.5pt; color: #0f4c62; margin-bottom: 6px; }
+    .intro p { font-size: 9.5pt; color: #344355; }
+    .intro .note { margin-top: 8px; font-weight: 600; color: #0f4c62; font-size: 9pt; }
 
-    /* === КАРТА === */
-    .map-section { margin-bottom: 22px; page-break-inside: avoid; }
-    .map-section h2 { font-size: 11pt; color: #2d6a4f; margin-bottom: 8px; font-family: -apple-system, sans-serif; font-weight: 700; }
-    .map-screenshot { width: 100%; border-radius: 10px; border: 1px solid #d4e5dc; }
-    #quest-map { width: 100%; height: 380px; border-radius: 10px; border: 1px solid #d4e5dc; margin-bottom: 10px; z-index: 0; }
-    .coords-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 10px; font-family: -apple-system, sans-serif; }
-    .coords-table th { text-align: left; padding: 5px 8px; border-bottom: 2px solid #2d6a4f; color: #2d6a4f; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5px; }
-    .coords-table td { padding: 4px 8px; border-bottom: 1px solid #eee; }
-    .coords-table .mono { font-family: 'Courier New', monospace; font-size: 7.5pt; color: #999; }
+    .map-section { margin-bottom: 20px; page-break-inside: avoid; }
+    .map-section h2 { font-size: 11.5pt; color: #0f4c62; margin-bottom: 8px; }
+    #quest-map { width: 100%; height: 380px; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 10px; z-index: 0; }
+    .coords-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 10px; }
+    .coords-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #9ab4c3; color: #3c4f63; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.6px; }
+    .coords-table td { padding: 5px 8px; border-bottom: 1px solid #edf0f4; }
+    .coords-table .mono { font-family: 'Menlo', 'Consolas', monospace; font-size: 7.5pt; color: #6f7c8d; }
 
-    /* === ШАГ === */
-    .step { page-break-inside: avoid; margin-bottom: 16px; border: 1px solid #d4e5dc; border-radius: 10px; padding: 14px 16px; background: #fefefe; }
+    .step {
+        page-break-inside: avoid;
+        margin-bottom: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 14px 12px;
+        background: #fff;
+    }
     .step-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 12px; }
     .step-header { display: flex; align-items: flex-start; gap: 10px; flex: 1; }
-    .step-num { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: #2d6a4f; color: #fff; font-weight: 700; font-size: 13pt; flex-shrink: 0; font-family: -apple-system, sans-serif; }
-    .step-header h3 { font-size: 11pt; color: #1a1a1a; margin-bottom: 1px; }
-    .location { font-size: 9pt; color: #2d6a4f; font-weight: 500; font-family: -apple-system, sans-serif; }
-    .story { font-size: 9.5pt; color: #555; margin-bottom: 10px; }
+    .step-num {
+        display: flex; align-items: center; justify-content: center;
+        width: 30px; height: 30px; border-radius: 50%;
+        background: var(--brand); color: #fff; font-weight: 700; font-size: 12pt; flex-shrink: 0;
+    }
+    .step-header h3 { font-size: 11pt; color: var(--ink); margin-bottom: 1px; line-height: 1.25; }
+    .location { font-size: 8.8pt; color: #3e5c74; font-weight: 600; }
+    .story { font-size: 9.3pt; color: #3e4b5b; margin-bottom: 10px; }
+    .task-box {
+        background: #f8fafc;
+        border: 1px solid #dfe7f1;
+        border-left: 4px solid var(--accent);
+        padding: 9px 11px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .task { font-size: 9.8pt; font-weight: 700; color: #223042; }
+    .hint { font-size: 8.4pt; color: #6b7685; margin-top: 5px; font-style: italic; }
 
-    .task-box { background: #f7faf8; border-left: 3px solid #2d6a4f; padding: 10px 12px; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
-    .task { font-size: 10pt; font-weight: 600; color: #1a1a1a; font-family: -apple-system, sans-serif; }
-    .hint { font-size: 8.5pt; color: #999; margin-top: 5px; font-style: italic; font-family: -apple-system, sans-serif; }
+    .qr-nav { display: flex; gap: 6px; flex-shrink: 0; }
+    .qr-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .qr-item img { border-radius: 6px; border: 1px solid #d9e2ee; background: #fff; }
+    .qr-item span { font-size: 7pt; color: #5d6d7e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
 
-    .qr-nav { display: flex; gap: 8px; flex-shrink: 0; }
-    .qr-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .qr-item img { border-radius: 4px; border: 1px solid #eee; }
-    .qr-item span { font-size: 7pt; color: #888; font-weight: 500; font-family: -apple-system, sans-serif; }
+    .answer-box {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-top: 1px dashed #c8d3e1;
+        padding-top: 9px;
+    }
+    .answer-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; color: #6a7789; font-weight: 700; white-space: nowrap; }
+    .answer-line { flex: 1; border-bottom: 1px solid #8ea0b6; height: 22px; }
 
-    .answer-box { display: flex; align-items: center; gap: 8px; border-top: 1px dashed #d4e5dc; padding-top: 10px; }
-    .answer-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; color: #aaa; font-weight: 600; font-family: -apple-system, sans-serif; white-space: nowrap; }
-    .answer-line { flex: 1; border-bottom: 1px solid #ccc; height: 22px; }
-
-    /* === ПОДВАЛ === */
-    .footer { text-align: center; margin-top: 28px; padding-top: 14px; border-top: 2px double #d4e5dc; font-size: 8pt; color: #aaa; font-family: -apple-system, sans-serif; }
+    .footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #d9e1ec; font-size: 8pt; color: #768397; }
 
     @media print {
         .no-print { display: none !important; }
@@ -139,8 +202,8 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
 </style>
 </head>
 <body>
-    <div class="no-print" style="text-align:center;padding:14px;background:#2d6a4f;color:#fff;font-family:-apple-system,sans-serif;">
-        <button onclick="window.print()" style="background:#fff;color:#2d6a4f;border:none;padding:12px 28px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;margin-right:12px;">
+    <div class="no-print" style="text-align:center;padding:14px;background:#153f52;color:#fff;font-family:'Avenir Next','Segoe UI',sans-serif;">
+        <button onclick="window.print()" style="background:#fff;color:#153f52;border:none;padding:12px 28px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer;margin-right:12px;">
             Распечатать / Сохранить PDF
         </button>
     </div>

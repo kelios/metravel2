@@ -16,6 +16,13 @@ const tokenArg = args.find(a => a.startsWith('--token='));
 const API_BASE = apiUrlArg ? apiUrlArg.split('=')[1] : 'https://metravel.by';
 const TOKEN = tokenArg ? tokenArg.split('=').slice(1).join('=') : null;
 
+function toBackendDecimal(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '0';
+    // Keep precision but satisfy DecimalField(max_digits=10)
+    return Number(num.toFixed(6)).toString();
+}
+
 async function apiPost(endpoint, payload) {
     const url = `${API_BASE}${endpoint}`;
     const headers = { 'Content-Type': 'application/json' };
@@ -28,6 +35,18 @@ async function apiPost(endpoint, payload) {
     if (!response.ok) {
         const text = await response.text();
         throw new Error(`HTTP ${response.status} POST ${endpoint}: ${text}`);
+    }
+    return response.json();
+}
+
+async function apiGet(endpoint) {
+    const url = `${API_BASE}${endpoint}`;
+    const headers = {};
+    if (TOKEN) headers['Authorization'] = `Token ${TOKEN}`;
+    const response = await fetch(url, { method: 'GET', headers });
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`HTTP ${response.status} GET ${endpoint}: ${text}`);
     }
     return response.json();
 }
@@ -69,48 +88,73 @@ async function main() {
     for (const q of QUESTS) {
         console.log(`\n📋 ${q.quest_id}: "${q.title}"`);
 
-        // 1. Create city
-        let cityId;
+        // 0. Reuse existing quest when present
+        let questDbId;
+        let existingBundle = null;
         try {
-            const city = await apiPost('/api/quest-cities/', {
-                name: q.city.name,
-                country: q.city.country,
-                lat: String(q.city.lat),
-                lng: String(q.city.lng),
-                status: 1,
-            });
-            cityId = city.id;
-            console.log(`  ✅ City: id=${cityId}`);
-        } catch (e) {
-            console.error(`  ❌ City: ${e.message}`);
-            continue;
+            existingBundle = await apiGet(`/api/quests/by-quest-id/${encodeURIComponent(q.quest_id)}/`);
+            questDbId = existingBundle?.id;
+            if (questDbId) {
+                console.log(`  ℹ️ Quest already exists: id=${questDbId}`);
+            }
+        } catch {
+            // Not found or temporary error — we try create flow below.
         }
 
-        // 2. Create quest
-        let questDbId;
-        try {
-            const quest = await apiPost('/api/quests/', {
-                quest_id: q.quest_id,
-                title: q.title,
-                city: cityId,
-                lat: String(q.meta.lat),
-                lng: String(q.meta.lng),
-                duration_min: q.meta.duration_min,
-                difficulty: q.meta.difficulty,
-                tags: q.meta.tags ? q.meta.tags.reduce((a, t) => { a[t] = true; return a; }, {}) : {},
-                pet_friendly: q.meta.pet_friendly,
-                storage_key: q.storage_key,
-                status: 1,
-            });
-            questDbId = quest.id;
-            console.log(`  ✅ Quest: id=${questDbId}`);
-        } catch (e) {
-            console.error(`  ❌ Quest: ${e.message}`);
-            continue;
+        // 1. Create city (only when quest does not exist)
+        let cityId;
+        if (!questDbId) {
+            try {
+                const city = await apiPost('/api/quest-cities/', {
+                    name: q.city.name,
+                    country: q.city.country,
+                    lat: String(q.city.lat),
+                    lng: String(q.city.lng),
+                    status: 1,
+                });
+                cityId = city.id;
+                console.log(`  ✅ City: id=${cityId}`);
+            } catch (e) {
+                console.error(`  ❌ City: ${e.message}`);
+                continue;
+            }
         }
+
+        // 2. Create quest (if missing)
+        if (!questDbId) {
+            try {
+                const quest = await apiPost('/api/quests/', {
+                    quest_id: q.quest_id,
+                    title: q.title,
+                    city: cityId,
+                    lat: String(q.meta.lat),
+                    lng: String(q.meta.lng),
+                    duration_min: q.meta.duration_min,
+                    difficulty: q.meta.difficulty,
+                    tags: q.meta.tags ? q.meta.tags.reduce((a, t) => { a[t] = true; return a; }, {}) : {},
+                    pet_friendly: q.meta.pet_friendly,
+                    storage_key: q.storage_key,
+                    status: 1,
+                });
+                questDbId = quest.id;
+                console.log(`  ✅ Quest: id=${questDbId}`);
+            } catch (e) {
+                console.error(`  ❌ Quest: ${e.message}`);
+                continue;
+            }
+        }
+
+        const existingStepIds = new Set(
+            Array.isArray(existingBundle?.steps)
+                ? existingBundle.steps.map((s) => s?.step_id).filter(Boolean)
+                : []
+        );
 
         // 3. Create intro step
-        if (q.intro) {
+        const hasIntro = Array.isArray(existingBundle?.steps)
+            ? existingBundle.steps.some((s) => s?.is_intro === true || s?.step_id === 'intro')
+            : false;
+        if (q.intro && !hasIntro) {
             try {
                 await apiPost('/api/quest-steps/', {
                     quest: questDbId,
@@ -121,9 +165,9 @@ async function main() {
                     task: q.intro.task,
                     hint: q.intro.hint || null,
                     answer_pattern: serializeAnswer(q.intro.answer),
-                    lat: String(q.intro.lat || 0),
-                    lng: String(q.intro.lng || 0),
-                    maps_url: q.intro.mapsUrl || '',
+                    lat: toBackendDecimal(q.intro.lat || 0),
+                    lng: toBackendDecimal(q.intro.lng || 0),
+                    maps_url: q.intro.mapsUrl || `https://metravel.by/quests/${encodeURIComponent(q.quest_id)}`,
                     input_type: 'text',
                     order: 0,
                     is_intro: true,
@@ -132,11 +176,17 @@ async function main() {
             } catch (e) {
                 console.error(`  ❌ Intro: ${e.message}`);
             }
+        } else if (q.intro && hasIntro) {
+            console.log('  ℹ️ Intro already exists, skip');
         }
 
         // 4. Create regular steps
         for (let i = 0; i < q.steps.length; i++) {
             const s = q.steps[i];
+            if (existingStepIds.has(s.step_id)) {
+                console.log(`  ℹ️ Step ${s.step_id} already exists, skip`);
+                continue;
+            }
             try {
                 await apiPost('/api/quest-steps/', {
                     quest: questDbId,
@@ -147,8 +197,8 @@ async function main() {
                     task: s.task,
                     hint: s.hint || null,
                     answer_pattern: serializeAnswer(s.answer),
-                    lat: String(s.lat),
-                    lng: String(s.lng),
+                    lat: toBackendDecimal(s.lat),
+                    lng: toBackendDecimal(s.lng),
                     maps_url: s.mapsUrl,
                     input_type: s.inputType || 'text',
                     order: i + 1,
@@ -161,14 +211,18 @@ async function main() {
         }
 
         // 5. Create finale
-        try {
-            await apiPost('/api/quest-finales/', {
-                quest: questDbId,
-                text: q.finale.text,
-            });
-            console.log(`  ✅ Finale`);
-        } catch (e) {
-            console.error(`  ❌ Finale: ${e.message}`);
+        if (existingBundle?.finale?.text) {
+            console.log('  ℹ️ Finale already exists, skip');
+        } else {
+            try {
+                await apiPost('/api/quest-finales/', {
+                    quest: questDbId,
+                    text: q.finale.text,
+                });
+                console.log(`  ✅ Finale`);
+            } catch (e) {
+                console.error(`  ❌ Finale: ${e.message}`);
+            }
         }
     }
 
