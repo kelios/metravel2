@@ -66,9 +66,7 @@ deploy_prod() {
     mv static/dist static/dist.old || true
     # CRITICAL: Do NOT copy old JS chunks to new build.
     # Old chunks with different hashes MUST be removed to prevent version skew.
-    # Client-side stale chunk recovery (SW_STALE_CHUNK message) handles 404s
-    # by forcing immediate reload with cache bust.
-    # This guarantees users always get the correct chunk versions after deploy.
+    # Web stability policy: no SW cache recovery flows, only clean atomic deploy.
     mv static/dist.new static/dist
     rm -rf static/dist.old
     mkdir -p static/dist/assets/icons static/dist/assets/images
@@ -100,7 +98,6 @@ node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by 
 
 echo "Постобработка билда..."
 node scripts/copy-public-files.js "dist/$ENV"
-node scripts/stamp-sw-version.js "dist/$ENV"
 node scripts/add-cache-bust-meta.js "dist/$ENV"
 
 if [[ "$DEPLOY" == "1" ]]; then

@@ -36,7 +36,6 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
-import { clearRecoverySessionState } from "@/utils/recovery/sessionRecovery";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
 if (__DEV__) {
@@ -164,35 +163,6 @@ export default function RootLayout() {
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
         let rafId: number | null = null;
 
-        // Strip the _cb cache-busting param added by stale-chunk recovery.
-        if (isWeb && typeof window !== 'undefined') {
-          try {
-            const url = new URL(window.location.href);
-            if (url.searchParams.has('_cb')) {
-              url.searchParams.delete('_cb');
-              // Use the native replaceState to bypass our patched version,
-              // which would convert this to pushState or trigger hardNavigateIfPending.
-              History.prototype.replaceState.call(window.history, window.history.state, '', url.toString());
-            }
-          } catch { /* noop */ }
-        }
-
-        // After the page loads and stays stable for 10s, clear ALL recovery
-        // session keys. This ensures that future errors (e.g. from lazy-loaded
-        // chunks on /map) get a fresh set of recovery attempts instead of being
-        // blocked by stale counters from a previous recovery cycle.
-        let stableTimer: ReturnType<typeof setTimeout> | null = null;
-        if (isWeb && typeof window !== 'undefined') {
-          stableTimer = setTimeout(() => {
-            clearRecoverySessionState({
-              clearEmergencyKey: true,
-              clearExhaustedAutoRetryKeys: true,
-              clearReact130RecoveryKeys: true,
-              clearControllerChangeReloadKey: true,
-            });
-          }, 10000);
-        }
-
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
@@ -208,9 +178,50 @@ export default function RootLayout() {
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
           if (consentTimer) clearTimeout(consentTimer);
-          if (stableTimer) clearTimeout(stableTimer);
           if (rafId != null) cancelAnimationFrame(rafId);
         };
+    }, []);
+
+    // One-time web migration: remove legacy Service Worker registrations/caches
+    // from older releases after SW support was disabled.
+    useEffect(() => {
+      if (!isWeb) return;
+      if (typeof window === 'undefined') return;
+      if (typeof navigator === 'undefined') return;
+      if (!('serviceWorker' in navigator)) return;
+
+      const MIGRATION_KEY = '__metravel_sw_disabled_migration_v1';
+
+      const runMigration = async () => {
+        try {
+          try {
+            if (window.localStorage.getItem(MIGRATION_KEY) === '1') return;
+          } catch {
+            // localStorage may be unavailable in some private modes
+          }
+
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+
+          if (typeof caches !== 'undefined') {
+            const keys = await caches.keys();
+            const legacyKeys = keys.filter(
+              (key) => key.startsWith('metravel-') || key.startsWith('workbox-')
+            );
+            await Promise.all(legacyKeys.map((key) => caches.delete(key)));
+          }
+
+          try {
+            window.localStorage.setItem(MIGRATION_KEY, '1');
+          } catch {
+            // noop
+          }
+        } catch {
+          // noop
+        }
+      };
+
+      void runMigration();
     }, []);
 
 
@@ -230,8 +241,6 @@ export default function RootLayout() {
     );
 
     // Font timeout suppression (web only).
-    // Module error recovery is handled by the inline script in +html.tsx
-    // to catch errors before React mounts.
     useEffect(() => {
       if (!isWeb) return;
       const onUnhandled = (e: PromiseRejectionEvent) => {
@@ -328,37 +337,6 @@ export default function RootLayout() {
         window.history.replaceState = originalReplace;
         window.history.pushState = originalPush;
       };
-    }, []);
-
-    useEffect(() => {
-      if (!isWeb) return;
-      if (typeof window === 'undefined') return;
-
-      const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
-      if (!isProd) return;
-
-      const disableServiceWorkerCaching = async () => {
-        try {
-          if (!('serviceWorker' in navigator)) return;
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map((registration) => registration.unregister()));
-        } catch {
-          // noop
-        }
-
-        try {
-          if (typeof caches === 'undefined') return;
-          const keys = await caches.keys();
-          const targets = keys.filter((key) => key.startsWith('metravel-'));
-          await Promise.all(targets.map((key) => caches.delete(key)));
-        } catch {
-          // noop
-        }
-      };
-
-      void disableServiceWorkerCaching();
-
-      return () => {};
     }, []);
 
     if (!fontsLoaded && !isWeb) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Ensures critical public files (manifest.json, robots.txt, sw.js, etc.)
+ * Ensures critical public files (manifest.json, robots.txt, etc.)
  * are copied to the build output directory.
  * 
  * Expo should auto-copy /public files, but this script provides a safety net
@@ -24,7 +24,6 @@ const publicDir = path.join(__dirname, '..', 'public');
 const filesToCopy = [
   'manifest.json',
   'robots.txt',
-  'sw.js',
   'icon.svg',
 ];
 

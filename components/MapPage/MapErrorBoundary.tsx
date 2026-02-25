@@ -4,7 +4,6 @@ import { View, Text, StyleSheet } from 'react-native';
 import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import Feather from '@expo/vector-icons/Feather';
-import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
 
 interface Props {
   children: ReactNode;
@@ -62,11 +61,11 @@ class MapErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    // Module resolution errors cannot be fixed by resetting React state —
-    // the JS bundle is broken. Clear SW caches and reload to fetch fresh chunks.
+    // Module resolution errors cannot be fixed by resetting React state.
     if (this.isModuleError(this.state.error)) {
-      // Use centralized recovery with cache-busting to bypass browser HTTP cache
-      runStaleChunkRecovery({ purgeAllCaches: true });
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
       return;
     }
 

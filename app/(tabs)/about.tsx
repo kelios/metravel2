@@ -43,21 +43,10 @@ function AboutAndContactScreen() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    let isMounted = true;
-    void fetch(`/sw.js?cb=${Date.now()}`, { cache: 'no-store' })
-      .then((r) => (r && r.ok ? r.text() : ''))
-      .then((text) => {
-        if (!isMounted) return;
-        const match = /const\s+CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/i.exec(text || '');
-        setWebBuildVersion(match?.[1] || 'unknown');
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setWebBuildVersion('unknown');
-      });
-    return () => {
-      isMounted = false;
-    };
+    if (typeof document === 'undefined') return;
+    const buildVersionMeta = document.querySelector('meta[name="build-version"]');
+    const buildVersion = buildVersionMeta?.getAttribute('content') || '';
+    setWebBuildVersion(buildVersion || 'unknown');
   }, []);
 
   const router = useRouter();

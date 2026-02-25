@@ -1,24 +1,20 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
-import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { fireEvent, render } from '@testing-library/react-native';
 import { Text } from 'react-native';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
-// Mock logger
 jest.mock('@/utils/logger', () => ({
   logError: jest.fn(),
 }));
 
-// Mock window.location.reload for web platform stale-chunk tests.
-// Do NOT overwrite global.window — jsdom already provides it and other tests depend on it.
 const mockReload = jest.fn();
-const mockReplace = jest.fn();
 let origLocation: Location;
 
 beforeAll(() => {
   origLocation = (global as any).window?.location;
-  // @ts-ignore – jsdom location is not configurable by default
+  // @ts-ignore
   delete ((global as any).window as any).location;
-  (global as any).window.location = { ...origLocation, reload: mockReload, replace: mockReplace };
+  (global as any).window.location = { ...origLocation, reload: mockReload };
 });
 
 afterAll(() => {
@@ -28,619 +24,110 @@ afterAll(() => {
 });
 
 describe('ErrorBoundary', () => {
-  // Компонент, который выбрасывает ошибку
-  const ThrowError = ({ shouldThrow }: { shouldThrow?: boolean }) => {
-    if (shouldThrow) {
-      throw new Error('Test error');
-    }
-    return <Text>No error</Text>;
+  const { Platform } = require('react-native');
+  let originalPlatform: string;
+
+  const ThrowError = ({ message = 'Test error' }: { message?: string }) => {
+    throw new Error(message);
   };
 
-  it('should render children when there is no error', () => {
+  beforeEach(() => {
+    originalPlatform = Platform.OS;
+    mockReload.mockReset();
+  });
+
+  afterEach(() => {
+    Platform.OS = originalPlatform;
+  });
+
+  it('renders children when no error occurs', () => {
     const { toJSON } = render(
       <ErrorBoundary>
-        <Text>Test Content</Text>
+        <Text>OK</Text>
       </ErrorBoundary>
     );
 
-    const tree = toJSON();
-    expect(tree).toBeTruthy();
-    const treeStr = JSON.stringify(tree);
-    expect(treeStr).toContain('Test Content');
+    expect(JSON.stringify(toJSON())).toContain('OK');
   });
 
-  it('should render error UI when error occurs', () => {
-    // Подавляем ошибку в консоли для теста
+  it('renders generic error UI when child throws', () => {
     const consoleError = console.error;
     console.error = jest.fn();
 
     const { toJSON } = render(
       <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
+        <ThrowError />
       </ErrorBoundary>
     );
 
-    const tree = toJSON();
-    expect(tree).toBeTruthy();
-    const treeStr = JSON.stringify(tree);
-    expect(treeStr).toContain('Что-то пошло не так');
+    const tree = JSON.stringify(toJSON());
+    expect(tree).toContain('Что-то пошло не так');
+    expect(tree).toContain('Test error');
+    expect(tree).toContain('Попробовать снова');
+    expect(tree).not.toContain('Обновление приложения');
+    expect(tree).not.toContain('Перезагрузить и очистить кеш');
 
     console.error = consoleError;
   });
 
-  it('should call onError callback when error occurs', () => {
+  it('calls onError callback', () => {
     const consoleError = console.error;
     console.error = jest.fn();
-
     const onError = jest.fn();
+
     render(
       <ErrorBoundary onError={onError}>
-        <ThrowError shouldThrow={true} />
+        <ThrowError />
       </ErrorBoundary>
     );
 
-    // onError вызывается в componentDidCatch
-    expect(onError).toHaveBeenCalled();
-
+    expect(onError).toHaveBeenCalledTimes(1);
     console.error = consoleError;
   });
 
-  it('should render custom fallback when provided', () => {
-    const consoleError = console.error;
-    console.error = jest.fn();
-
-    const customFallback = <Text>Custom Error</Text>;
-    const { toJSON } = render(
-      <ErrorBoundary fallback={customFallback}>
-        <ThrowError shouldThrow={true} />
-      </ErrorBoundary>
-    );
-
-    const tree = toJSON();
-    const treeStr = JSON.stringify(tree);
-    expect(treeStr).toContain('Custom Error');
-
-    console.error = consoleError;
-  });
-
-  it('should show error message in error UI', () => {
+  it('renders custom fallback if provided', () => {
     const consoleError = console.error;
     console.error = jest.fn();
 
     const { toJSON } = render(
+      <ErrorBoundary fallback={<Text>Custom fallback</Text>}>
+        <ThrowError />
+      </ErrorBoundary>
+    );
+
+    expect(JSON.stringify(toJSON())).toContain('Custom fallback');
+    console.error = consoleError;
+  });
+
+  it('shows reload button on web and triggers location.reload', () => {
+    const consoleError = console.error;
+    console.error = jest.fn();
+    Platform.OS = 'web';
+
+    const { getByLabelText } = render(
       <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
+        <ThrowError message="ChunkLoadError: Loading chunk 42 failed." />
       </ErrorBoundary>
     );
 
-    const tree = toJSON();
-    const treeStr = JSON.stringify(tree);
-    expect(treeStr).toContain('Test error');
+    fireEvent.press(getByLabelText('Перезагрузить страницу'));
+    expect(mockReload).toHaveBeenCalledTimes(1);
 
     console.error = consoleError;
   });
 
-  it('should have reset button', () => {
+  it('hides reload button on native platforms', () => {
     const consoleError = console.error;
     console.error = jest.fn();
+    Platform.OS = 'ios';
 
-    const { toJSON } = render(
+    const { queryByLabelText } = render(
       <ErrorBoundary>
-        <ThrowError shouldThrow={true} />
+        <ThrowError />
       </ErrorBoundary>
     );
 
-    const tree = toJSON();
-    const treeStr = JSON.stringify(tree);
-    expect(treeStr).toContain('Попробовать снова');
-
+    expect(queryByLabelText('Перезагрузить страницу')).toBeNull();
     console.error = consoleError;
-  });
-
-  describe('stale chunk / AsyncRequireError detection', () => {
-    const { Platform } = require('react-native');
-    let origPlatformOS: string;
-    let origFetch: any;
-
-    const addBundleScripts = (scripts: string[]) => {
-      scripts.forEach((src) => {
-        const el = document.createElement('script');
-        el.setAttribute('src', src);
-        el.setAttribute('data-test-react130-bundle', '1');
-        document.head.appendChild(el);
-      });
-    };
-
-    const cleanupBundleScripts = () => {
-      document
-        .querySelectorAll('script[data-test-react130-bundle="1"]')
-        .forEach((el) => el.parentNode?.removeChild(el));
-    };
-
-    beforeEach(() => {
-      origPlatformOS = Platform.OS;
-      origFetch = (global as any).fetch;
-      Platform.OS = 'web';
-      delete (global as any).window.__metravelModuleReloadTriggered;
-      sessionStorage.clear();
-      cleanupBundleScripts();
-      // Provide minimal stubs for caches + navigator.serviceWorker used by cleanup()
-      (global as any).caches = { keys: jest.fn().mockResolvedValue([]), delete: jest.fn() };
-      (global as any).navigator = {
-        ...(global as any).navigator,
-        serviceWorker: { getRegistrations: jest.fn().mockResolvedValue([]) },
-      };
-    });
-
-    afterEach(() => {
-      Platform.OS = origPlatformOS;
-      (global as any).fetch = origFetch;
-      delete (global as any).window.__metravelModuleReloadTriggered;
-      cleanupBundleScripts();
-      mockReplace.mockReset();
-    });
-
-    const staleChunkMessages = [
-      'Loading module https://metravel.by/_expo/static/js/web/Home-68ad15.js failed.',
-      'Failed to fetch dynamically imported module: /chunk.js',
-      'ChunkLoadError: Loading chunk 42 failed.',
-      'Cannot find module "./SomeComponent"',
-      '(0 , r(...).getFiltersPanelStyles) is not a function',
-      '(0 , r(...).useBreadcrumbModel) is not a function',
-      "Class constructors cannot be invoked without 'new'",
-    ];
-
-    it.each(staleChunkMessages)(
-      'should detect stale chunk error and show recovery UI: %s',
-      (message) => {
-        const consoleError = console.error;
-        console.error = jest.fn();
-
-        const ThrowChunkError = () => {
-          throw new Error(message);
-        };
-
-        const { toJSON } = render(
-          <ErrorBoundary>
-            <ThrowChunkError />
-          </ErrorBoundary>
-        );
-
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Обновление приложения');
-        expect(treeStr).toContain('Перезагрузить и очистить кеш');
-
-        console.error = consoleError;
-      },
-    );
-
-    it('should detect AsyncRequireError by error.name and show recovery UI', () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      const ThrowAsyncRequireError = () => {
-        const err = new Error('some module load failure');
-        err.name = 'AsyncRequireError';
-        throw err;
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowAsyncRequireError />
-        </ErrorBoundary>
-      );
-
-      const treeStr = JSON.stringify(toJSON());
-      expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Перезагрузить и очистить кеш');
-
-      console.error = consoleError;
-    });
-
-    it('should show recovery UI for React #130 args[]=undefined even when no SW controller is present (strong stale-cache signal)', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      (global as any).navigator = {
-        ...(global as any).navigator,
-        serviceWorker: {
-          ...(global as any).navigator?.serviceWorker,
-          controller: undefined,
-        },
-      };
-
-      (global as any).fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        text: async () =>
-          '<html><head><script src="/_expo/static/js/web/__common-same.js"></script><script src="/_expo/static/js/web/entry-same.js"></script></head></html>',
-      });
-      addBundleScripts([
-        '/_expo/static/js/web/__common-same.js',
-        '/_expo/static/js/web/entry-same.js',
-      ]);
-
-      const ThrowReact130UndefinedArgs = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowReact130UndefinedArgs />
-        </ErrorBoundary>
-      );
-
-      await waitFor(() => {
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Обновление приложения');
-        expect(treeStr).toContain('Перезагрузить и очистить кеш');
-      });
-
-      console.error = consoleError;
-    });
-
-    it('should show recovery UI for React #130 args[]=undefined when a SW controller is present (stale runtime signal)', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      try {
-        Object.defineProperty((global as any).window.navigator, 'serviceWorker', {
-          value: {
-            getRegistrations: jest.fn().mockResolvedValue([]),
-            controller: {},
-          },
-          configurable: true,
-        });
-      } catch {
-        // noop
-      }
-
-      (global as any).navigator = {
-        ...(global as any).navigator,
-        serviceWorker: {
-          ...(global as any).navigator?.serviceWorker,
-          controller: {},
-        },
-      };
-
-      (global as any).fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        text: async () =>
-          '<html><head><script src="/_expo/static/js/web/__common-same.js"></script><script src="/_expo/static/js/web/entry-same.js"></script></head></html>',
-      });
-      addBundleScripts([
-        '/_expo/static/js/web/__common-same.js',
-        '/_expo/static/js/web/entry-same.js',
-      ]);
-
-      const ThrowReact130UndefinedArgs = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowReact130UndefinedArgs />
-        </ErrorBoundary>
-      );
-
-      await waitFor(() => {
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Обновление приложения');
-        expect(treeStr).toContain('Перезагрузить и очистить кеш');
-      });
-
-      console.error = consoleError;
-    });
-
-    it('should show cache clear instructions when stale retry budget is exhausted', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      const now = Date.now();
-      sessionStorage.setItem('metravel:eb:reload_count', '5');
-      sessionStorage.setItem('metravel:eb:reload_ts', String(now));
-      // Set exhausted flag (as inline script would do)
-      sessionStorage.setItem('__metravel_recovery_exhausted', '1');
-
-      const ThrowChunkError = () => {
-        throw new Error('ChunkLoadError: Loading chunk 42 failed.');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowChunkError />
-        </ErrorBoundary>
-      );
-
-      // Should show stale chunk recovery UI
-      const treeStr = JSON.stringify(toJSON());
-      expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Перезагрузить и очистить кеш');
-
-      console.error = consoleError;
-    });
-
-    it('should show cache clear instructions for React #130 undefined args when exhausted', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      // Set exhausted flag
-      sessionStorage.setItem('__metravel_recovery_exhausted', '1');
-
-      const ThrowReact130UndefinedArgs = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowReact130UndefinedArgs />
-        </ErrorBoundary>
-      );
-
-      // Should show stale chunk recovery UI for React #130 with undefined args when exhausted
-      const treeStr = JSON.stringify(toJSON());
-      expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Перезагрузить и очистить кеш');
-
-      console.error = consoleError;
-    });
-
-    it('should NOT auto-recover for React #130 errors without args[]=undefined', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      const cacheDelete = jest.fn().mockResolvedValue(true);
-      (global as any).caches = {
-        keys: jest.fn().mockResolvedValue(['third-party-cache']),
-        delete: cacheDelete,
-      };
-
-      const ThrowReact130 = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]=SomeComponent for the full message');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowReact130 />
-        </ErrorBoundary>
-      );
-
-      await waitFor(() => {
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Что-то пошло не так');
-      });
-
-      expect((global as any).window.__metravelModuleReloadTriggered).toBeUndefined();
-      expect(cacheDelete).not.toHaveBeenCalled();
-      expect(sessionStorage.getItem('__metravel_emergency_recovery_ts')).toBeNull();
-      expect(mockReplace).not.toHaveBeenCalled();
-
-      console.error = consoleError;
-    });
-
-    it('should auto-recover for React #130 when fresh HTML has mismatched bundle scripts (non-undefined args)', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      addBundleScripts([
-        '/_expo/static/js/web/__common-old.js',
-        '/_expo/static/js/web/entry-old.js',
-      ]);
-
-      (global as any).fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        text: async () =>
-          '<html><head><script src="/_expo/static/js/web/__common-new.js"></script><script src="/_expo/static/js/web/entry-new.js"></script></head></html>',
-      });
-
-      const ThrowReact130 = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]= for the full message');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowReact130 />
-        </ErrorBoundary>
-      );
-
-      await waitFor(() => {
-        expect((global as any).fetch).toHaveBeenCalled();
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Обновление приложения');
-        expect(treeStr).toContain('Перезагрузить и очистить кеш');
-      });
-
-      console.error = consoleError;
-    });
-
-    it('should NOT show recovery UI for React #130 when fresh HTML bundle scripts match (non-undefined args)', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      addBundleScripts([
-        '/_expo/static/js/web/__common-same.js',
-        '/_expo/static/js/web/entry-same.js',
-      ]);
-
-      (global as any).fetch = jest.fn().mockResolvedValue({
-        ok: true,
-        text: async () =>
-          '<html><head><script src="/_expo/static/js/web/__common-same.js"></script><script src="/_expo/static/js/web/entry-same.js"></script></head></html>',
-      });
-
-      const ThrowReact130 = () => {
-        throw new Error('Minified React error #130; visit https://react.dev/errors/130?args[]=object&args[]= for the full message');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowReact130 />
-        </ErrorBoundary>
-      );
-
-      await waitFor(() => {
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Что-то пошло не так');
-      });
-
-      expect((global as any).fetch).toHaveBeenCalled();
-
-      console.error = consoleError;
-    });
-
-    it('should show cache clear instructions when _cb param AND exhausted flag are set', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      // Simulate being in recovery loop (URL has _cb param) AND exhausted flag set
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://metravel.by/map?_cb=123456',
-          hostname: 'metravel.by',
-          pathname: '/map',
-          search: '?_cb=123456',
-          replace: mockReplace,
-          reload: jest.fn(),
-        },
-        writable: true,
-      });
-      // Set exhausted flag - this is what actually triggers the instructions
-      sessionStorage.setItem('__metravel_recovery_exhausted', '1');
-
-      const ThrowChunkError = () => {
-        throw new Error('ChunkLoadError: Loading chunk 99 failed.');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowChunkError />
-        </ErrorBoundary>
-      );
-
-      const treeStr = JSON.stringify(toJSON());
-      // Should show stale chunk recovery UI when exhausted flag is set
-      expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Перезагрузить и очистить кеш');
-
-      // Reset location
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://metravel.by/',
-          hostname: 'metravel.by',
-          pathname: '/',
-          search: '',
-          replace: mockReplace,
-          reload: jest.fn(),
-        },
-        writable: true,
-      });
-
-      console.error = consoleError;
-    });
-
-    it('should NOT show cache clear instructions when _cb param is set but exhausted flag is NOT set (user cleared cache)', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      // Simulate _cb in URL but NO exhausted flag (user cleared cache including sessionStorage)
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://metravel.by/map?_cb=123456',
-          hostname: 'metravel.by',
-          pathname: '/map',
-          search: '?_cb=123456',
-          replace: mockReplace,
-          reload: jest.fn(),
-        },
-        writable: true,
-      });
-      // Ensure exhausted flag is NOT set (simulates user cleared sessionStorage)
-      sessionStorage.removeItem('__metravel_recovery_exhausted');
-
-      const ThrowChunkError = () => {
-        throw new Error('ChunkLoadError: Loading chunk 99 failed.');
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowChunkError />
-        </ErrorBoundary>
-      );
-
-      const treeStr = JSON.stringify(toJSON());
-      // Should show stale chunk recovery UI (even if _cb is in URL - user might have cleared cache)
-      expect(treeStr).toContain('Обновление приложения');
-      expect(treeStr).toContain('Перезагрузить и очистить кеш');
-
-      // Reset location
-      Object.defineProperty(window, 'location', {
-        value: {
-          href: 'https://metravel.by/',
-          hostname: 'metravel.by',
-          pathname: '/',
-          search: '',
-          replace: mockReplace,
-          reload: jest.fn(),
-        },
-        writable: true,
-      });
-
-      console.error = consoleError;
-    });
-
-    it.each([
-      'Test error',
-      'Element type is invalid: expected a string (for built-in components) or a class/function but got: undefined',
-    ])('should NOT trigger reload for non-stale errors: %s', (message) => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      const ThrowNonStaleError = () => {
-        throw new Error(message);
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowNonStaleError />
-        </ErrorBoundary>
-      );
-
-      const treeStr = JSON.stringify(toJSON());
-      // Should show generic error UI, not recovery UI
-      expect(treeStr).toContain('Что-то пошло не так');
-      expect(treeStr).not.toContain('Обновление приложения');
-
-      console.error = consoleError;
-    });
-
-    it('should detect AsyncRequireError as stale chunk error and show recovery UI', async () => {
-      const consoleError = console.error;
-      console.error = jest.fn();
-
-      // Clear any previous state
-      sessionStorage.clear();
-
-      const ThrowAsyncRequireError = () => {
-        const error = new Error(
-          'AsyncRequireError: Loading module https://metravel.by/_expo/static/js/web/CustomHeader-35c08b6fda505a901ff6d2adcd502571.js failed.'
-        );
-        error.name = 'AsyncRequireError';
-        throw error;
-      };
-
-      const { toJSON } = render(
-        <ErrorBoundary>
-          <ThrowAsyncRequireError />
-        </ErrorBoundary>
-      );
-
-      await waitFor(() => {
-        const treeStr = JSON.stringify(toJSON());
-        expect(treeStr).toContain('Обновление приложения');
-        expect(treeStr).toContain('Перезагрузить и очистить кеш');
-      });
-
-      console.error = consoleError;
-    });
   });
 });
-

@@ -94,31 +94,6 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    if (!lcpLoaded) return
-    if (typeof window === 'undefined') return
-    const nav: any = typeof navigator !== 'undefined' ? (navigator as any) : (window as any).navigator
-    if (!nav || !nav.serviceWorker || !nav.serviceWorker.ready) return
-
-    // Prefetch travel-critical JS via Service Worker after LCP to reduce INP/TTI on subsequent navigations.
-    // Guarded to run at most once per session.
-    if ((window as any).__metravelPrefetchTravelDone) return
-    ;(window as any).__metravelPrefetchTravelDone = true
-
-    rIC(async () => {
-      try {
-        const reg = await nav.serviceWorker.ready
-        const active = reg && reg.active
-        if (active && typeof active.postMessage === 'function') {
-          active.postMessage({ type: 'PREFETCH_TRAVEL_RESOURCES', url: window.location.href })
-        }
-      } catch {
-        // noop
-      }
-    }, 3200)
-  }, [lcpLoaded])
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
     if (!travel) return
     const connection = (window as any)?.navigator?.connection
     const effectiveType = String(connection?.effectiveType || '')

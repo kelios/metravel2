@@ -190,8 +190,8 @@ if (process.env.EXPO_PLATFORM === 'web') {
     ...config.web,
     // Enable PWA features
     pwa: true,
-    // Enable service worker
-    serviceWorker: true,
+    // Disable service worker to avoid stale-cache/runtime mismatch issues on web
+    serviceWorker: false,
     // Enable web manifest
     manifest: {
       name: 'Metravel - Travel Details',

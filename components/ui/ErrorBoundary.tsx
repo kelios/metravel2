@@ -1,17 +1,8 @@
-// Error Boundary для обработки ошибок React
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
-import {
-  clearRecoverySessionState,
-  RECOVERY_SESSION_KEYS,
-} from '@/utils/recovery/sessionRecovery';
-import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS } from '@/utils/recovery/recoveryConfig';
-import { STALE_ERROR_REGEX } from '@/utils/recovery/staleErrorPattern';
-import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
-import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
 
 interface Props {
   children: ReactNode;
@@ -22,71 +13,6 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
-  isStaleChunk?: boolean;
-  recoveryExhausted?: boolean;
-}
-
-function isReact130LikeError(msg: string): boolean {
-  return /Minified React error #130/i.test(msg) || /Element type is invalid/i.test(msg);
-}
-
-function isReact130UndefinedArgsError(msg: string): boolean {
-  return /args\[\]=undefined/i.test(msg);
-}
-
-function clearRecoverySessionKeys(
-  clearEmergencyKey = false,
-  clearExhaustedAutoRetryKeys = false,
-): void {
-  clearRecoverySessionState({
-    clearEmergencyKey,
-    clearExhaustedAutoRetryKeys,
-    clearReact130RecoveryKeys: clearExhaustedAutoRetryKeys,
-  });
-}
-
-/** Shared detection for stale-chunk / module-mismatch errors after deploy.
- *  Includes both chunk-loading errors and runtime symptoms of module version
- *  mismatch (e.g. spread on undefined when an export signature changed). */
-function isStaleModuleError(msg: string, name?: string): boolean {
-  return (
-    STALE_ERROR_REGEX.test(msg) ||
-    name === 'AsyncRequireError'
-  );
-}
-
-/** Unregister SW, purge caches, then hard-navigate with cache-busting. */
-function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = { purgeAllCaches: true }): void {
-  runStaleChunkRecovery({ purgeAllCaches: options.purgeAllCaches });
-}
-
-function shouldAutoRecoverStaleChunk(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    const now = Date.now();
-    const prevTsRaw = sessionStorage.getItem(RECOVERY_SESSION_KEYS.chunkReloadTs);
-    const prevCountRaw = sessionStorage.getItem(RECOVERY_SESSION_KEYS.chunkReloadCount);
-    const exhausted = sessionStorage.getItem(RECOVERY_SESSION_KEYS.recoveryExhausted) === '1';
-    if (exhausted) return false;
-
-    const prevTs = prevTsRaw ? Number(prevTsRaw) : 0;
-    const prevCount = prevCountRaw ? Number(prevCountRaw) : 0;
-    const withinCooldown =
-      Number.isFinite(prevTs) && prevTs > 0 && now - prevTs < RECOVERY_COOLDOWNS.staleMs;
-
-    const nextCount = withinCooldown ? prevCount + 1 : 1;
-    sessionStorage.setItem(RECOVERY_SESSION_KEYS.chunkReloadTs, String(now));
-    sessionStorage.setItem(RECOVERY_SESSION_KEYS.chunkReloadCount, String(nextCount));
-
-    if (nextCount > RECOVERY_RETRY_LIMITS.stale) {
-      sessionStorage.setItem(RECOVERY_SESSION_KEYS.recoveryExhausted, '1');
-      return false;
-    }
-    return true;
-  } catch {
-    // If sessionStorage is blocked, allow one recovery attempt.
-    return true;
-  }
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -96,24 +22,17 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, isStaleChunk: false, recoveryExhausted: false };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    const msg = String(error?.message ?? '');
-    // Check for stale module errors OR React #130 with undefined args (stale chunk symptom)
-    const isStale = isStaleModuleError(msg, error?.name) ||
-      (isReact130LikeError(msg) && isReact130UndefinedArgsError(msg));
     return {
       hasError: true,
       error,
-      isStaleChunk: isStale,
-      recoveryExhausted: false,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // ✅ УЛУЧШЕНИЕ: Используем новый logger с поддержкой мониторинга
     const { logError } = require('@/utils/logger');
     logError(error, {
       componentStack: errorInfo.componentStack,
@@ -122,53 +41,6 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
 
     const msg = String(error?.message ?? '');
-    // Auto-recover from stale-bundle module mismatch errors.
-    // When the SW serves cached JS chunks from a previous build, module IDs can
-    // shift and named exports resolve to undefined (e.g. "useFilters is not a function").
-    // Unregister the SW, purge JS caches, and hard-navigate with cache-busting.
-    if (
-      Platform.OS === 'web' &&
-      typeof window !== 'undefined'
-    ) {
-      if (isStaleModuleError(msg, error?.name)) {
-        if (shouldAutoRecoverStaleChunk()) {
-          doStaleChunkRecovery({ purgeAllCaches: true });
-          return;
-        }
-        // Fallback: show stable UI and allow explicit manual recovery.
-        this.setState({ isStaleChunk: true, recoveryExhausted: true });
-        return;
-      }
-
-      // Safe one-shot auto-recovery for React #130 only when we can confirm
-      // a stale HTML ↔ bundle script mismatch in the freshly fetched document.
-      if (isReact130LikeError(msg)) {
-        const isUndefinedArgs130 = isReact130UndefinedArgsError(msg);
-
-        const hasSwController =
-          !!(
-            (typeof window !== 'undefined' && (window as any)?.navigator?.serviceWorker?.controller) ||
-            (typeof globalThis !== 'undefined' && (globalThis as any)?.navigator?.serviceWorker?.controller)
-          );
-
-        void hasFreshHtmlBundleMismatch()
-          .then((hasMismatch) => {
-            if (!hasMismatch && !(isUndefinedArgs130 && hasSwController)) return;
-            this.setState({ isStaleChunk: true, recoveryExhausted: true });
-          })
-          .catch(() => {
-            if (!isUndefinedArgs130 || !hasSwController) return;
-            this.setState({ isStaleChunk: true, recoveryExhausted: true });
-          });
-      }
-
-      // Intentionally avoid auto-recovery for generic React #130 errors.
-      // #130 can represent real runtime regressions (invalid/undefined element type),
-      // and treating it as stale-chunk caused false-positive recovery loops.
-    }
-
-    // Auto-recover from Leaflet "Map container is being reused by another instance"
-    // by cleaning all map containers and resetting (max 2 retries to avoid loops).
     if (
       msg.includes('reused by another instance') &&
       this._leafletAutoRetryCount < 2 &&
@@ -191,44 +63,19 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  private renderStaleChunkRecoveryUI(styles: ReturnType<typeof getStyles>) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Обновление приложения…</Text>
-          <Text style={styles.message}>
-            Обновляем приложение автоматически. Пожалуйста, подождите.
-          </Text>
-          <Text style={styles.instructions}>
-            Если экран не исчезает, нажмите{' '}
-            <Text style={styles.instructionsBold}>«Перезагрузить и очистить кеш»</Text>.
-          </Text>
-          <Button
-            label="Перезагрузить и очистить кеш"
-            onPress={() => {
-              clearRecoverySessionKeys(true, true);
-              doStaleChunkRecovery({ purgeAllCaches: true });
-            }}
-            style={[styles.button, styles.primaryButton]}
-            accessibilityLabel="Перезагрузить и очистить кеш"
-          />
-        </View>
-      </View>
-    );
-  }
+  private reloadPage = () => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    try {
+      window.location.reload();
+    } catch {
+      // noop
+    }
+  };
 
   render() {
     if (this.state.hasError) {
       const colors = getThemedColors(this.context?.isDark ?? false);
       const styles = getStyles(colors);
-
-      // Show a friendly updating UI for stale chunk errors while auto-recovery runs.
-      // This MUST be checked BEFORE props.fallback so that pages with custom fallback
-      // (e.g. Home, Search) still show the stale recovery UI instead of a generic
-      // "Не удалось загрузить..." message that doesn't trigger cache recovery.
-      if (this.state.isStaleChunk && Platform.OS === 'web') {
-        return this.renderStaleChunkRecoveryUI(styles);
-      }
 
       if (this.props.fallback) {
         return this.props.fallback;
@@ -243,29 +90,14 @@ export default class ErrorBoundary extends Component<Props, State> {
             </Text>
             <Button
               label="Попробовать снова"
-              onPress={() => {
-                if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                  const errMsg = String(this.state.error?.message ?? '');
-                  if (isStaleModuleError(errMsg, this.state.error?.name)) {
-                    // Reset retry counters so the manual retry always works
-                    clearRecoverySessionKeys(true, true);
-                    doStaleChunkRecovery({ purgeAllCaches: true });
-                    return;
-                  }
-                }
-                this.handleReset();
-              }}
+              onPress={this.handleReset}
               style={[styles.button, styles.primaryButton]}
               accessibilityLabel="Попробовать снова"
             />
             {Platform.OS === 'web' && (
               <Button
                 label="Перезагрузить страницу"
-                onPress={() => {
-                  // Reset ALL retry counters and do full cleanup + cache-busting reload
-                  clearRecoverySessionKeys(true, true);
-                  doStaleChunkRecovery({ purgeAllCaches: true });
-                }}
+                onPress={this.reloadPage}
                 variant="ghost"
                 style={[styles.button, styles.secondaryButton]}
                 accessibilityLabel="Перезагрузить страницу"
@@ -307,21 +139,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  instructions: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginBottom: 24,
-    textAlign: 'left',
-    lineHeight: 22,
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    width: '100%',
-  },
-  instructionsBold: {
-    fontWeight: '600',
-    color: colors.text,
-  },
   button: {
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -353,7 +170,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   secondaryButton: {
     backgroundColor: 'transparent',
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только цвет текста
     ...Platform.select({
       web: {
         cursor: 'pointer',
