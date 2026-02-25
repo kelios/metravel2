@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform } from 'react-native';
+import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -57,6 +57,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
 
     const { isPhone, isLargePhone } = useResponsive();
     const isMobile = isPhone || isLargePhone;
+    const { width: viewportWidth } = useWindowDimensions();
+    const isCompactFullscreenHeader = viewportWidth < 390;
 
     useEffect(() => {
         const result = validateTravelForm({
@@ -422,9 +424,18 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                 <TouchableOpacity
                                                     onPress={() => setIsDescriptionFullscreen(false)}
                                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                                    style={styles.modalActionButton}
+                                                    style={[
+                                                        styles.modalActionButton,
+                                                        isCompactFullscreenHeader && styles.modalActionButtonCompact,
+                                                    ]}
+                                                    accessibilityLabel="Закрыть полноэкранный редактор"
                                                 >
-                                                    <Text style={styles.modalHeaderAction}>Закрыть</Text>
+                                                    <View style={styles.modalActionContent}>
+                                                        <Feather name="x" size={14} color={colors.primaryText} />
+                                                        {!isCompactFullscreenHeader && (
+                                                            <Text style={styles.modalHeaderAction}>Закрыть</Text>
+                                                        )}
+                                                    </View>
                                                 </TouchableOpacity>
                                             </View>
                                             <View style={styles.modalHeaderCenter}>
@@ -435,9 +446,19 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                 <TouchableOpacity
                                                     onPress={() => setIsDescriptionFullscreen(false)}
                                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                                    style={[styles.modalActionButton, styles.modalActionButtonPrimary]}
+                                                    style={[
+                                                        styles.modalActionButton,
+                                                        styles.modalActionButtonPrimary,
+                                                        isCompactFullscreenHeader && styles.modalActionButtonCompact,
+                                                    ]}
+                                                    accessibilityLabel="Сохранить и закрыть полноэкранный редактор"
                                                 >
-                                                    <Text style={[styles.modalHeaderAction, styles.modalHeaderActionPrimary]}>Готово</Text>
+                                                    <View style={styles.modalActionContent}>
+                                                        <Feather name="check" size={14} color={colors.textOnPrimary} />
+                                                        {!isCompactFullscreenHeader && (
+                                                            <Text style={[styles.modalHeaderAction, styles.modalHeaderActionPrimary]}>Готово</Text>
+                                                        )}
+                                                    </View>
                                                 </TouchableOpacity>
                                             </View>
                                         </View>
@@ -495,6 +516,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         },
         [
             autosaveStatus,
+            colors.primaryText,
             colors.text,
             colors.textOnPrimary,
             descriptionPlainLength,
@@ -509,6 +531,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             isImportingDescriptionText,
             isMobile,
             isPastingDescriptionText,
+            isCompactFullscreenHeader,
             pasteDescriptionText,
             styles,
         ]
@@ -735,6 +758,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+    modalActionButtonCompact: {
+        minWidth: 36,
+        width: 36,
+        paddingHorizontal: 0,
+    },
+    modalActionContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
     },
     modalActionButtonPrimary: {
         backgroundColor: colors.primary,
