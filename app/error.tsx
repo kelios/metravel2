@@ -1,5 +1,5 @@
 import { Stack, router } from 'expo-router'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Platform, Pressable, StyleSheet } from 'react-native'
 
 import { Text, View } from '@/components/ui/Themed'
@@ -11,13 +11,46 @@ type ErrorScreenProps = {
   retry: () => void
 }
 
+const MODULE_ERROR_RETRY_KEY = 'metravel:module-error-retry-ts'
+const MODULE_ERROR_RETRY_WINDOW_MS = 30_000
+
+const isModuleLoadError = (message: string): boolean =>
+  /loading module.*failed|chunkloaderror|cannot find module|requiring unknown module|failed to fetch dynamically imported module/i.test(
+    message,
+  )
+
+const hardReloadWithCacheBust = () => {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  url.searchParams.set('__r', Date.now().toString())
+  window.location.replace(url.toString())
+}
+
 export default function ErrorScreen({ error, retry }: ErrorScreenProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const errorMessage = String(error?.message || '')
+  const hasModuleLoadError = useMemo(() => isModuleLoadError(errorMessage), [errorMessage])
   const message = useMemo(() => {
     if (__DEV__) return error?.message || 'Неизвестная ошибка'
     return 'Произошла непредвиденная ошибка'
   }, [error])
+
+  useEffect(() => {
+    if (!hasModuleLoadError || Platform.OS !== 'web' || typeof window === 'undefined') return
+
+    try {
+      const now = Date.now()
+      const lastTsRaw = window.sessionStorage.getItem(MODULE_ERROR_RETRY_KEY)
+      const lastTs = Number(lastTsRaw || 0)
+      if (Number.isFinite(lastTs) && now - lastTs < MODULE_ERROR_RETRY_WINDOW_MS) return
+      window.sessionStorage.setItem(MODULE_ERROR_RETRY_KEY, String(now))
+      hardReloadWithCacheBust()
+    } catch {
+      // If sessionStorage is not available, do a best-effort reload once.
+      hardReloadWithCacheBust()
+    }
+  }, [hasModuleLoadError])
 
   return (
     <>
@@ -44,8 +77,7 @@ export default function ErrorScreen({ error, retry }: ErrorScreenProps) {
             style={styles.tertiaryButton}
             accessibilityRole="button"
             onPress={() => {
-              if (typeof window === 'undefined') return
-              window.location.reload()
+              hardReloadWithCacheBust()
             }}
           >
             <Text style={styles.tertiaryButtonText}>Перезагрузить страницу</Text>
