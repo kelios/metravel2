@@ -78,7 +78,7 @@ function BelkrajWidget({
         const { lat, lng } = firstCoord;
 
         const script = document.createElement('script');
-        script.async = true;
+        script.async = false;
         script.src =
             `https://belkraj.by/sites/all/modules/_custom/modules/affiliate/js/widget.js` +
             `?country=${encodeURIComponent(ctry)}` +

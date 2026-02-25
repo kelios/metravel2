@@ -49,7 +49,7 @@
     "format": "npx prettier --write .",
     "build": "npm run build:web",
     "build:web": "node ./node_modules/expo/bin/cli export -p web",
-    "build:web:prod": "cp .env.prod .env && NODE_ENV=production EXPO_ENV=prod EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false node ./node_modules/expo/bin/cli export --output-dir dist/prod -p web -c && node scripts/generate-seo-pages.js --dist dist/prod && node scripts/stamp-sw-version.js dist/prod",
+    "build:web:prod": "cp .env.prod .env && NODE_ENV=production EXPO_ENV=prod EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false node ./node_modules/expo/bin/cli export --output-dir dist/prod -p web -c && node scripts/generate-seo-pages.js --dist dist/prod && node scripts/copy-public-files.js dist/prod && node scripts/stamp-sw-version.js dist/prod && node scripts/add-cache-bust-meta.js dist/prod",
     "seo:generate-pages": "node scripts/generate-seo-pages.js --dist dist/prod",
     "fetch:lasy-data": "node scripts/fetch-lasy-wfs-data.js",
     "analyze:bundle": "node scripts/analyze-bundle.js",
@@ -68,7 +68,7 @@
     "clean": "npx expo start --clear",
     "reset": "EXPO_RESET_CACHE=true npx expo start --clear",
     "prod:web": "NODE_ENV=production node ./node_modules/expo/bin/cli export -p web",
-    "postinstall": "node scripts/fix-lightningcss.js && (node ./node_modules/patch-package/dist/index.js || true)",
+    "postinstall": "node scripts/fix-lightningcss.js && node scripts/fix-expo-metro-terminal-reporter.js && (node ./node_modules/patch-package/dist/index.js || true)",
     "ios:prebuild": "./scripts/ios-prebuild.sh",
     "ios:build": "./scripts/ios-build.sh",
     "ios:submit": "./scripts/ios-submit.sh",
@@ -107,7 +107,6 @@
     "validator:contracts:check": "jest --passWithNoTests --runInBand __tests__/scripts/validator-error-codes-centralization.test.ts __tests__/scripts/validator-error-codes-prefix-policy.test.ts __tests__/scripts/validator-error-codes-uniqueness.test.ts __tests__/scripts/validate-validator-error-codes-doc-table.test.ts __tests__/scripts/validate-validator-error-codes-policy.test.ts __tests__/scripts/validate-validator-contracts-summary.test.ts __tests__/scripts/summarize-validator-contracts-summary-validation.test.ts",
     "validator:contracts:summary": "node scripts/summarize-validator-contracts.js --json-output test-results/validator-contracts-summary.json",
     "validator:contracts:summary:validate": "node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json"
-    ,"postinstall": "node scripts/fix-expo-metro-terminal-reporter.js"
   },
   "dependencies": {
     "@babel/runtime": "7.25.0",

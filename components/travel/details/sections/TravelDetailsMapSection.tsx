@@ -15,7 +15,7 @@ import { withLazy } from '../TravelDetailsLazy'
 import { isWebAutomation } from '@/utils/isWebAutomation'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
-const EXCURSION_CONTAINER_STYLE = { marginTop: 12, minHeight: 600 } as const
+const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
 const WEATHER_PLACEHOLDER_STYLE = { minHeight: 120 } as const
 
 const PointList = withLazy(() => import('@/components/travel/PointList'))
@@ -178,11 +178,11 @@ export const TravelDetailsMapSection: React.FC<{
               <Text style={styles.sectionHeaderText}>Экскурсии</Text>
               <Text style={styles.sectionSubtitle}>Покажем экскурсии рядом с точками маршрута</Text>
 
-              <View style={EXCURSION_CONTAINER_STYLE}>
+              <View style={[EXCURSION_CONTAINER_STYLE, styles.excursionsWidgetCard]}>
                 <BelkrajWidgetComponent
                   countryCode={travel.countryCode}
                   points={travel.travelAddress as any}
-                  collapsedHeight={600}
+                  collapsedHeight={460}
                 />
               </View>
             </View>

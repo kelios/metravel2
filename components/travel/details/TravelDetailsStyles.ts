@@ -442,6 +442,16 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     marginTop: DESIGN_TOKENS.spacing.xs,
     lineHeight: Platform.select({ default: 20, web: 22 }),
   },
+  excursionsWidgetCard: {
+    borderRadius: DESIGN_TOKENS.radii.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: colors.boxShadows.light,
+    } : colors.shadows.light),
+  },
   sliderContainer: {
     width: "100%",
     borderRadius: DESIGN_TOKENS.radii.xl,

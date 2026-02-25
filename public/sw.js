@@ -5,6 +5,36 @@ const RUNTIME_CACHE = `metravel-runtime-${CACHE_VERSION}`;
 const STATIC_ASSETS = ['/manifest.json', '/favicon.ico'];
 
 const MAX_RUNTIME_ENTRIES = 150;
+const STALE_SCRIPT_STATUSES = new Set([404, 410, 500, 502, 503, 504]);
+
+function buildStaleChunkRecoveryScript() {
+  return `;(() => {
+  try {
+    if (typeof window === 'undefined' || !window.location) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('_cb', String(Date.now()));
+    window.location.replace(url.toString());
+  } catch (_err) {
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.reload();
+      }
+    } catch (_ignored) {}
+  }
+})();`;
+}
+
+function staleChunkScriptResponse() {
+  return new Response(buildStaleChunkRecoveryScript(), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+    },
+  });
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -28,6 +58,13 @@ self.addEventListener('activate', (event) => {
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  const type = event?.data?.type;
+  if (type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 function buildOfflineHTML() {
@@ -158,7 +195,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (request.destination === 'script') {
-    event.respondWith(fetch(request));
+    event.respondWith(fetchScriptWithRecovery(event));
     return;
   }
 
@@ -169,6 +206,52 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(staleWhileRevalidateRuntime(request));
 });
+
+async function notifyStaleChunk(event, reason) {
+  const payload = {
+    type: 'SW_STALE_CHUNK',
+    reason,
+    url: event?.request?.url || '',
+    ts: Date.now(),
+  };
+
+  try {
+    const targetClientId = event?.clientId || event?.resultingClientId;
+    if (targetClientId) {
+      const client = await self.clients.get(targetClientId);
+      if (client) {
+        client.postMessage(payload);
+        return;
+      }
+    }
+  } catch {
+    void 0;
+  }
+
+  try {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clients.forEach((client) => {
+      client.postMessage(payload);
+    });
+  } catch {
+    void 0;
+  }
+}
+
+async function fetchScriptWithRecovery(event) {
+  const { request } = event;
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response && STALE_SCRIPT_STATUSES.has(response.status)) {
+      await notifyStaleChunk(event, `script-http-${response.status}`);
+      return staleChunkScriptResponse();
+    }
+    return response;
+  } catch {
+    await notifyStaleChunk(event, 'script-network-error');
+    return staleChunkScriptResponse();
+  }
+}
 
 async function cacheFirstRuntime(request) {
   try {

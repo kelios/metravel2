@@ -1,6 +1,6 @@
 // __tests__/services/pdf-export/generators/pages/GalleryPageGenerator.test.ts
 
-import { GalleryPageGenerator } from '@/services/pdf-export/generators/pages';
+import { GalleryPageGenerator } from '@/services/pdf-export/generators/pages/GalleryPageGenerator';
 import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig';
 
 describe('GalleryPageGenerator', () => {

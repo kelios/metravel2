@@ -36,6 +36,8 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
+import { clearRecoverySessionState, RECOVERY_SESSION_KEYS } from "@/utils/recovery/sessionRecovery";
+import { runStaleChunkRecovery } from "@/utils/recovery/runtimeRecovery";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
 if (__DEV__) {
@@ -336,13 +338,71 @@ export default function RootLayout() {
       const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
       if (!isProd) return;
 
-      // --- Service Worker registration (minimal; no custom recovery wiring) ---
+      let updateInterval: ReturnType<typeof setInterval> | null = null;
+      let removeMessageListener: (() => void) | null = null;
+      let removeControllerChangeListener: (() => void) | null = null;
+
+      const RELOAD_COOLDOWN_MS = 20000;
+      const now = () => Date.now();
+      const canReloadOncePerCooldown = (key: string): boolean => {
+        try {
+          const raw = sessionStorage.getItem(key);
+          const prev = raw ? Number(raw) : 0;
+          const current = now();
+          if (prev && Number.isFinite(prev) && current - prev < RELOAD_COOLDOWN_MS) {
+            return false;
+          }
+          sessionStorage.setItem(key, String(current));
+          return true;
+        } catch {
+          return true;
+        }
+      };
+
+      const onSWMessage = (event: MessageEvent) => {
+        const data = (event as any)?.data;
+        if (!data || typeof data !== 'object') return;
+
+        if (data.type === 'SW_STALE_CHUNK') {
+          if (!canReloadOncePerCooldown(RECOVERY_SESSION_KEYS.swStaleReloadTs)) return;
+          runStaleChunkRecovery({ purgeAllCaches: true });
+        }
+      };
+
+      const onControllerChange = () => {
+        if (!canReloadOncePerCooldown(RECOVERY_SESSION_KEYS.controllerChangeReloadTs)) return;
+        runStaleChunkRecovery({ purgeAllCaches: false });
+      };
+
       if ('serviceWorker' in navigator) {
         const registerSW = () => {
           navigator.serviceWorker
             .register('/sw.js', { updateViaCache: 'none' as any })
             .then((registration) => {
+              navigator.serviceWorker.addEventListener('message', onSWMessage);
+              removeMessageListener = () => navigator.serviceWorker.removeEventListener('message', onSWMessage);
+
+              navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+              removeControllerChangeListener = () => navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+
+              if (registration.waiting) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+
+              registration.addEventListener('updatefound', () => {
+                const installing = registration.installing;
+                if (!installing) return;
+                installing.addEventListener('statechange', () => {
+                  if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                    installing.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
+
               registration.update().catch(() => {});
+              updateInterval = setInterval(() => {
+                registration.update().catch(() => {});
+              }, 5 * 60 * 1000);
             })
             .catch(() => {});
         };
@@ -360,7 +420,18 @@ export default function RootLayout() {
           window.addEventListener('load', onLoad, { once: true });
         }
       }
-      return undefined;
+
+      return () => {
+        if (updateInterval) {
+          clearInterval(updateInterval);
+        }
+        if (removeMessageListener) {
+          removeMessageListener();
+        }
+        if (removeControllerChangeListener) {
+          removeControllerChangeListener();
+        }
+      };
     }, []);
 
     if (!fontsLoaded && !isWeb) {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider } from '@/hooks/useTheme';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';

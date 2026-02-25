@@ -7,7 +7,7 @@ import { QueryClient, DefaultOptions } from '@tanstack/react-query';
 /**
  * Оптимизированные настройки по умолчанию для React Query
  */
-export const defaultQueryOptions: DefaultOptions = {
+const defaultQueryOptions: DefaultOptions = {
   queries: {
     // Время, в течение которого данные считаются свежими
     staleTime: 5 * 60 * 1000, // 5 минут

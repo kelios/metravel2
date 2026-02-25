@@ -65,7 +65,6 @@ const WebVideo = memo(function WebVideo({ src, poster, onError }: { src?: string
         controls: true,
         playsInline: true,
         preload: 'metadata',
-        crossOrigin: 'anonymous',
         // @ts-ignore
         style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' },
         onError: (e: any) => {
@@ -768,22 +767,24 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                             </View>
                         )}
 
-                        {(!showFinaleOnly) && currentStep && city && (
+                        {(!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
                             <View style={styles.excursionsSection}>
                                 <View style={styles.excursionsDivider} />
-                                <View style={styles.excursionsHeader}>
-                                    <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-                                    <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                                <View style={styles.excursionsCard}>
+                                    <View style={styles.excursionsHeader}>
+                                        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
+                                        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                                    </View>
+                                    <Suspense fallback={null}>
+                                        <BelkrajWidgetLazy
+                                            points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
+                                            countryCode={city.countryCode}
+                                            collapsedHeight={compactNav ? 320 : 460}
+                                            expandedHeight={compactNav ? 600 : 900}
+                                            className="belkraj-slot"
+                                        />
+                                    </Suspense>
                                 </View>
-                                <Suspense fallback={null}>
-                                    <BelkrajWidgetLazy
-                                        points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                        countryCode={city.countryCode}
-                                        collapsedHeight={compactNav ? 320 : 520}
-                                        expandedHeight={compactNav ? 600 : 1200}
-                                        className="belkraj-slot"
-                                    />
-                                </Suspense>
                             </View>
                         )}
 
@@ -1117,6 +1118,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     excursionsHeader: {
         marginBottom: SPACING.md,
+    },
+    excursionsCard: {
+        backgroundColor: colors.surface,
+        borderRadius: 12,
+        padding: SPACING.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        ...Platform.select({
+            web: {
+                boxShadow: colors.boxShadows.light,
+            } as any,
+            default: colors.shadows.light,
+        }),
     },
     excursionsTitle: {
         fontSize: 18,

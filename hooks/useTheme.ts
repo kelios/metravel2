@@ -169,7 +169,7 @@ export type ThemedColors = ReturnType<typeof useThemedColors>;
 /**
  * Хук для проверки предпочтений пользователя (reducedMotion)
  */
-export function useAccessibilityPreferences() {
+function useAccessibilityPreferences() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [prefersHighContrast, setPrefersHighContrast] = useState(false);
 
@@ -215,7 +215,7 @@ export function useAccessibilityPreferences() {
 /**
  * Хук для анимационного timing в зависимости от предпочтений
  */
-export function useAnimationTiming() {
+function useAnimationTiming() {
   const { prefersReducedMotion } = useAccessibilityPreferences();
 
   return useMemo(() => ({

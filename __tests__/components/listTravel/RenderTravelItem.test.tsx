@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider } from '@/hooks/useTheme';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 

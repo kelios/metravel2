@@ -194,6 +194,50 @@ async function fetchTravelDetail(id) {
   }
 }
 
+function extractCollectionItems(result) {
+  if (Array.isArray(result)) return result;
+  if (result && typeof result === 'object') {
+    return result.data || result.results || result.items || [];
+  }
+  return [];
+}
+
+function normalizeApiEndpoint(endpoint) {
+  const raw = String(endpoint || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw.replace(/\/+$/, '');
+  }
+  if (!raw.startsWith('/')) return '';
+  return `${API_BASE}${raw}`.replace(/\/+$/, '');
+}
+
+async function resolveArticleEndpointCandidates() {
+  const fromApiIndex = [];
+  try {
+    const indexPayload = await fetchJson(`${API_BASE}/api/`);
+    if (indexPayload && typeof indexPayload === 'object') {
+      for (const [key, value] of Object.entries(indexPayload)) {
+        if (!/articles?/i.test(String(key))) continue;
+        const normalized = normalizeApiEndpoint(value);
+        if (normalized) fromApiIndex.push(normalized);
+      }
+    }
+  } catch {
+    // ignore API index probe errors and use hardcoded fallback paths
+  }
+
+  return Array.from(
+    new Set([
+      ...fromApiIndex,
+      `${API_BASE}/api/articles`,
+      `${API_BASE}/api/articles/`,
+      `${API_BASE}/api/article`,
+      `${API_BASE}/api/article/`,
+    ].map((value) => value.replace(/\/+$/, '')))
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Meta-tag injection
 // ---------------------------------------------------------------------------
@@ -605,13 +649,6 @@ async function main() {
       writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), htmlWithBreadcrumb);
       writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), htmlWithBreadcrumb);
 
-      // Also write to /travels/{id} when slug exists (id-based URLs still used by app)
-      if (slug && id) {
-        const idStr = String(id);
-        writeFileSafe(path.join(DIST_DIR, 'travels', `${idStr}.html`), htmlWithBreadcrumb);
-        writeFileSafe(path.join(DIST_DIR, 'travels', idStr, 'index.html'), htmlWithBreadcrumb);
-      }
-
       generated++;
     }
 
@@ -622,23 +659,33 @@ async function main() {
   // --- 3. Article pages ---
   console.log('\n📰 Fetching articles from API...');
   let articles = [];
-  try {
-    const params = new URLSearchParams({
-      page: '1',
-      perPage: '500',
-      where: JSON.stringify({ publish: 1, moderation: 1 }),
-    });
-    const url = `${API_BASE}/api/articles?${params}`;
-    const result = await fetchJson(url);
+  const articleErrors = [];
+  const articleParams = new URLSearchParams({
+    page: '1',
+    perPage: '500',
+    where: JSON.stringify({ publish: 1, moderation: 1 }),
+  });
+  const articleCandidates = await resolveArticleEndpointCandidates();
 
-    if (Array.isArray(result)) {
-      articles = result;
-    } else if (result && typeof result === 'object') {
-      articles = result.data || result.results || result.items || [];
+  for (const endpoint of articleCandidates) {
+    const url = `${endpoint}/?${articleParams}`;
+    try {
+      const result = await fetchJson(url);
+      const items = extractCollectionItems(result);
+      if (items.length > 0) {
+        articles = items;
+        console.log(`  📦 Got ${articles.length} articles from ${endpoint}`);
+        break;
+      }
+      articleErrors.push(`${endpoint} returned empty result`);
+    } catch (err) {
+      articleErrors.push(err.message);
     }
-    console.log(`  📦 Got ${articles.length} articles`);
-  } catch (err) {
-    console.log('⚠️  Articles API not available (skipping):', err.message);
+  }
+
+  if (articles.length === 0) {
+    const diagnostics = articleErrors.length > 0 ? articleErrors[0] : 'no article endpoint candidates';
+    console.log(`⚠️  Articles API not available (skipping): ${diagnostics}`);
   }
 
   if (articles.length > 0) {

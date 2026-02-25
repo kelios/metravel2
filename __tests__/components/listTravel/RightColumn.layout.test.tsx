@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider } from '@/hooks/useTheme';
 import RightColumn from '@/components/listTravel/RightColumn';
 
 jest.mock('expo-router', () => ({
