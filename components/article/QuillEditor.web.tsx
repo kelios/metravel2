@@ -99,16 +99,6 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
     let cancelled = false
     const containerEl = containerRef.current
     const parent = containerEl.parentElement
-    if (parent) {
-      const toolbars = Array.from(parent.querySelectorAll(':scope > .ql-toolbar'))
-      toolbars.forEach((node) => {
-        try {
-          parent.removeChild(node)
-        } catch (e) {
-          void e
-        }
-      })
-    }
 
     try {
       containerEl.innerHTML = ''
@@ -121,6 +111,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
     setLoadError(null)
 
     let quillInstance: any | null = null
+    let toolbarEl: HTMLElement | null = null
     let onTextChange: ((delta: unknown, _oldDelta: unknown, source: unknown) => void) | null = null
 
     loadQuill()
@@ -136,6 +127,13 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
 
         quillInstance = quill
         quillRef.current = quill
+        try {
+          const toolbarModule = quill.getModule?.('toolbar')
+          const candidate = toolbarModule?.container
+          toolbarEl = candidate instanceof HTMLElement ? candidate : null
+        } catch (e) {
+          void e
+        }
 
         const initial = initialValueRef.current
         lastHtmlRef.current = initial
@@ -176,15 +174,12 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
       }
       quillRef.current = null
 
-      if (parent) {
-        const toolbars = Array.from(parent.querySelectorAll(':scope > .ql-toolbar'))
-        toolbars.forEach((node) => {
-          try {
-            parent.removeChild(node)
-          } catch (err) {
-            void err
-          }
-        })
+      if (toolbarEl && parent && toolbarEl.parentElement === parent) {
+        try {
+          parent.removeChild(toolbarEl)
+        } catch (err) {
+          void err
+        }
       }
 
       try {

@@ -8,12 +8,14 @@ SERVER="${SERVER:-sx3@178.172.137.129}"
 REMOTE_DIR="${REMOTE_DIR:-/home/sx3/metravel}"
 SITE_URL="${SITE_URL:-https://metravel.by}"
 ENV="${ENV:-prod}"
+FORCE_REBUILD="${FORCE_REBUILD:-1}"
 
 echo "FIX-PROD: safe web redeploy"
 echo "server=$SERVER"
 echo "remote_dir=$REMOTE_DIR"
 echo "site_url=$SITE_URL"
 echo "env=$ENV"
+echo "force_rebuild=$FORCE_REBUILD"
 echo
 
 if [ "$ENV" != "prod" ] && [ "$ENV" != "preprod" ] && [ "$ENV" != "dev" ]; then
@@ -21,8 +23,13 @@ if [ "$ENV" != "prod" ] && [ "$ENV" != "preprod" ] && [ "$ENV" != "dev" ]; then
   exit 1
 fi
 
+if [ "$FORCE_REBUILD" = "1" ]; then
+  echo "Force rebuild enabled: removing dist/$ENV"
+  rm -rf "dist/$ENV"
+fi
+
 if [ ! -d "dist/$ENV/_expo/static/js/web" ]; then
-  echo "Local build not found, running npm run build:web:prod ..."
+  echo "Building fresh web bundle..."
   npm run build:web:prod
 fi
 
@@ -83,4 +90,35 @@ if [ "$entry_status" != "200" ]; then
 fi
 
 echo "OK: entry chunk available: $entry_chunk"
+
+echo "Validating runtime chunk linkage..."
+tmp_html="$(mktemp)"
+tmp_index="$(mktemp)"
+tmp_header="$(mktemp)"
+curl -sS "$SITE_URL/" > "$tmp_html"
+served_index_chunk="$(grep -oE '_expo/static/js/web/index-[a-f0-9]+\\.js' "$tmp_html" | head -1)"
+if [ -z "$served_index_chunk" ]; then
+  echo "ERROR: cannot detect served index chunk from $SITE_URL/"
+  rm -f "$tmp_html" "$tmp_index" "$tmp_header"
+  exit 1
+fi
+
+curl -sS "$SITE_URL/$served_index_chunk" > "$tmp_index"
+served_custom_header_chunk="$(grep -oE '_expo/static/js/web/CustomHeader-[a-f0-9]+\\.js' "$tmp_index" | head -1)"
+if [ -z "$served_custom_header_chunk" ]; then
+  echo "ERROR: cannot detect served CustomHeader chunk from $served_index_chunk"
+  rm -f "$tmp_html" "$tmp_index" "$tmp_header"
+  exit 1
+fi
+
+curl -sS "$SITE_URL/$served_custom_header_chunk" > "$tmp_header"
+if grep -qE "\\.useFilters\\)\\(\\)" "$tmp_header"; then
+  echo "ERROR: served CustomHeader chunk still contains direct .useFilters() call:"
+  echo "  $served_custom_header_chunk"
+  rm -f "$tmp_html" "$tmp_index" "$tmp_header"
+  exit 1
+fi
+
+rm -f "$tmp_html" "$tmp_index" "$tmp_header"
+echo "OK: served CustomHeader chunk is safe: $served_custom_header_chunk"
 echo "Done: production web assets replaced without old-chunk carryover."

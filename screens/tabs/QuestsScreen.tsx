@@ -199,12 +199,27 @@ export default function QuestsScreen() {
         (async () => {
             try {
                 const saved = await AsyncStorage.getItem(STORAGE_SELECTED_CITY);
-                setSelectedCityId(saved || 'krakow');
+                setSelectedCityId(saved || null);
             } catch {
-                setSelectedCityId('krakow');
+                setSelectedCityId(null);
             }
         })();
     }, []);
+
+    useEffect(() => {
+        if (!dataLoaded) return;
+        if (!CITIES.length) return;
+
+        const validCityIds = new Set(CITIES.map((city) => city.id));
+        const isSelectedValid =
+            selectedCityId === NEARBY_ID || (selectedCityId ? validCityIds.has(selectedCityId) : false);
+
+        if (isSelectedValid) return;
+
+        const fallbackCityId = CITIES[0]?.id ?? null;
+        if (!fallbackCityId) return;
+        void handleSelectCity(fallbackCityId);
+    }, [CITIES, dataLoaded, handleSelectCity, selectedCityId]);
 
     // радиус «Рядом»
     useEffect(() => {
