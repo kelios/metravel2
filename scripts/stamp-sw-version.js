@@ -35,8 +35,8 @@ let content = fs.readFileSync(swPath, 'utf8');
 
 const versionRe = /const CACHE_VERSION\s*=\s*['"][^'"]*['"]/;
 if (!versionRe.test(content)) {
-  console.error('❌ Could not find CACHE_VERSION in sw.js');
-  process.exit(1);
+  console.log('ℹ️  CACHE_VERSION marker not found in sw.js, skipping stamp.');
+  process.exit(0);
 }
 
 content = content.replace(versionRe, `const CACHE_VERSION = '${version}'`);

@@ -6,7 +6,9 @@ import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useThe
 import Button from '@/components/ui/Button';
 import {
   clearRecoverySessionState,
+  RECOVERY_SESSION_KEYS,
 } from '@/utils/recovery/sessionRecovery';
+import { RECOVERY_COOLDOWNS, RECOVERY_RETRY_LIMITS } from '@/utils/recovery/recoveryConfig';
 import { STALE_ERROR_REGEX } from '@/utils/recovery/staleErrorPattern';
 import { runStaleChunkRecovery } from '@/utils/recovery/runtimeRecovery';
 import { hasFreshHtmlBundleMismatch } from '@/utils/recovery/bundleScriptMismatch';
@@ -58,6 +60,35 @@ function doStaleChunkRecovery(options: { purgeAllCaches?: boolean } = { purgeAll
   runStaleChunkRecovery({ purgeAllCaches: options.purgeAllCaches });
 }
 
+function shouldAutoRecoverStaleChunk(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const now = Date.now();
+    const prevTsRaw = sessionStorage.getItem(RECOVERY_SESSION_KEYS.chunkReloadTs);
+    const prevCountRaw = sessionStorage.getItem(RECOVERY_SESSION_KEYS.chunkReloadCount);
+    const exhausted = sessionStorage.getItem(RECOVERY_SESSION_KEYS.recoveryExhausted) === '1';
+    if (exhausted) return false;
+
+    const prevTs = prevTsRaw ? Number(prevTsRaw) : 0;
+    const prevCount = prevCountRaw ? Number(prevCountRaw) : 0;
+    const withinCooldown =
+      Number.isFinite(prevTs) && prevTs > 0 && now - prevTs < RECOVERY_COOLDOWNS.staleMs;
+
+    const nextCount = withinCooldown ? prevCount + 1 : 1;
+    sessionStorage.setItem(RECOVERY_SESSION_KEYS.chunkReloadTs, String(now));
+    sessionStorage.setItem(RECOVERY_SESSION_KEYS.chunkReloadCount, String(nextCount));
+
+    if (nextCount > RECOVERY_RETRY_LIMITS.stale) {
+      sessionStorage.setItem(RECOVERY_SESSION_KEYS.recoveryExhausted, '1');
+      return false;
+    }
+    return true;
+  } catch {
+    // If sessionStorage is blocked, allow one recovery attempt.
+    return true;
+  }
+}
+
 export default class ErrorBoundary extends Component<Props, State> {
   static contextType = ThemeContext;
   override context: React.ContextType<typeof ThemeContext> | null = null;
@@ -100,7 +131,11 @@ export default class ErrorBoundary extends Component<Props, State> {
       typeof window !== 'undefined'
     ) {
       if (isStaleModuleError(msg, error?.name)) {
-        // Simplified behavior: show stable UI; user can trigger a single hard reload.
+        if (shouldAutoRecoverStaleChunk()) {
+          doStaleChunkRecovery({ purgeAllCaches: true });
+          return;
+        }
+        // Fallback: show stable UI and allow explicit manual recovery.
         this.setState({ isStaleChunk: true, recoveryExhausted: true });
         return;
       }
@@ -171,17 +206,8 @@ export default class ErrorBoundary extends Component<Props, State> {
             <View style={styles.content}>
               <Text style={styles.title}>Обновление приложения…</Text>
               <Text style={styles.message}>
-                Требуется перезагрузка, чтобы применить новую версию.
+                Обновляем приложение автоматически. Пожалуйста, подождите.
               </Text>
-              <Button
-                label="Перезагрузить и очистить кеш"
-                onPress={() => {
-                  clearRecoverySessionKeys(true, true);
-                  doStaleChunkRecovery({ purgeAllCaches: true });
-                }}
-                style={[styles.button, styles.primaryButton]}
-                accessibilityLabel="Перезагрузить страницу"
-              />
             </View>
           </View>
         );

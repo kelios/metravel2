@@ -32,6 +32,12 @@ npm run build:web
 
 (Expo export for web)
 
+## Web cache policy (do not revert)
+
+- Service Worker caching for web is disabled by policy.
+- Never require users to manually clear browser cache after deploy.
+- Any change that re-enables SW runtime/static cache or adds "clear cache" UX is prohibited.
+
 ## Mobile builds (EAS)
 
 See scripts in `package.json`:

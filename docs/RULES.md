@@ -29,6 +29,10 @@ npm run lighthouse:travel:desktop
 ```
 
 - After deploying to production, validate performance against the real production URL (PageSpeed Insights or Lighthouse).
+- Web caching policy (mandatory):
+  - Do not re-introduce Service Worker runtime/static caching for web pages/assets.
+  - Do not add user-facing flows that ask to "clear cache" after deploy.
+  - Update rollout must be automatic (server headers + fresh build artifacts only).
 
 ### Performance testing with metravel.by
 

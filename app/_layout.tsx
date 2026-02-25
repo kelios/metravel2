@@ -36,8 +36,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
-import { clearRecoverySessionState, RECOVERY_SESSION_KEYS } from "@/utils/recovery/sessionRecovery";
-import { runStaleChunkRecovery } from "@/utils/recovery/runtimeRecovery";
+import { clearRecoverySessionState } from "@/utils/recovery/sessionRecovery";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
 if (__DEV__) {
@@ -334,104 +333,32 @@ export default function RootLayout() {
     useEffect(() => {
       if (!isWeb) return;
       if (typeof window === 'undefined') return;
-      
+
       const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
       if (!isProd) return;
 
-      let updateInterval: ReturnType<typeof setInterval> | null = null;
-      let removeMessageListener: (() => void) | null = null;
-      let removeControllerChangeListener: (() => void) | null = null;
-
-      const RELOAD_COOLDOWN_MS = 20000;
-      const now = () => Date.now();
-      const canReloadOncePerCooldown = (key: string): boolean => {
+      const disableServiceWorkerCaching = async () => {
         try {
-          const raw = sessionStorage.getItem(key);
-          const prev = raw ? Number(raw) : 0;
-          const current = now();
-          if (prev && Number.isFinite(prev) && current - prev < RELOAD_COOLDOWN_MS) {
-            return false;
-          }
-          sessionStorage.setItem(key, String(current));
-          return true;
+          if (!('serviceWorker' in navigator)) return;
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
         } catch {
-          return true;
+          // noop
+        }
+
+        try {
+          if (typeof caches === 'undefined') return;
+          const keys = await caches.keys();
+          const targets = keys.filter((key) => key.startsWith('metravel-'));
+          await Promise.all(targets.map((key) => caches.delete(key)));
+        } catch {
+          // noop
         }
       };
 
-      const onSWMessage = (event: MessageEvent) => {
-        const data = (event as any)?.data;
-        if (!data || typeof data !== 'object') return;
+      void disableServiceWorkerCaching();
 
-        if (data.type === 'SW_STALE_CHUNK') {
-          if (!canReloadOncePerCooldown(RECOVERY_SESSION_KEYS.swStaleReloadTs)) return;
-          runStaleChunkRecovery({ purgeAllCaches: true });
-        }
-      };
-
-      const onControllerChange = () => {
-        if (!canReloadOncePerCooldown(RECOVERY_SESSION_KEYS.controllerChangeReloadTs)) return;
-        runStaleChunkRecovery({ purgeAllCaches: false });
-      };
-
-      if ('serviceWorker' in navigator) {
-        const registerSW = () => {
-          navigator.serviceWorker
-            .register('/sw.js', { updateViaCache: 'none' as any })
-            .then((registration) => {
-              navigator.serviceWorker.addEventListener('message', onSWMessage);
-              removeMessageListener = () => navigator.serviceWorker.removeEventListener('message', onSWMessage);
-
-              navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
-              removeControllerChangeListener = () => navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
-
-              if (registration.waiting) {
-                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-              }
-
-              registration.addEventListener('updatefound', () => {
-                const installing = registration.installing;
-                if (!installing) return;
-                installing.addEventListener('statechange', () => {
-                  if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-                    installing.postMessage({ type: 'SKIP_WAITING' });
-                  }
-                });
-              });
-
-              registration.update().catch(() => {});
-              updateInterval = setInterval(() => {
-                registration.update().catch(() => {});
-              }, 5 * 60 * 1000);
-            })
-            .catch(() => {});
-        };
-        // Defer SW registration to avoid competing with critical resources.
-        const onLoad = () => {
-          if ((window as any).requestIdleCallback) {
-            (window as any).requestIdleCallback(registerSW, { timeout: 5000 });
-          } else {
-            setTimeout(registerSW, 4000);
-          }
-        };
-        if (document.readyState === 'complete') {
-          onLoad();
-        } else {
-          window.addEventListener('load', onLoad, { once: true });
-        }
-      }
-
-      return () => {
-        if (updateInterval) {
-          clearInterval(updateInterval);
-        }
-        if (removeMessageListener) {
-          removeMessageListener();
-        }
-        if (removeControllerChangeListener) {
-          removeControllerChangeListener();
-        }
-      };
+      return () => {};
     }, []);
 
     if (!fontsLoaded && !isWeb) {
