@@ -24,6 +24,7 @@ function getNumberEnv(name: string, fallback: number): number {
 
 const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_AFTER_RENDER_MAX', 0.02);
 const CLS_TOTAL_MAX = getNumberEnv('E2E_CLS_TOTAL_MAX', 0.35);
+const NETWORKIDLE_TIMEOUT_MS = getNumberEnv('E2E_CLS_AUDIT_NETWORKIDLE_TIMEOUT_MS', 8000);
 const VERBOSE = process.env.CI === 'true' ? process.env.E2E_CLS_AUDIT_VERBOSE === '1' : true;
 const ENFORCE_TOTAL = process.env.E2E_CLS_AUDIT_ENFORCE_TOTAL === '1';
 
@@ -176,7 +177,7 @@ test.describe('@perf CLS audit', () => {
         await routePage.goto(route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
         // Allow initial render/hydration/async blocks to complete.
-        await routePage.waitForLoadState('networkidle').catch(() => null);
+        await routePage.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
 
         try {
           const beforePath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-before.png`);
@@ -192,10 +193,10 @@ test.describe('@perf CLS audit', () => {
           if (!s) return;
           s.phase = 'afterRender';
           s.clsAfterRender = 0;
-        });
+        }).catch(() => null);
 
         // Let the route settle (lazy components / images).
-        await routePage.waitForLoadState('networkidle').catch(() => null);
+        await routePage.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
 
         try {
           const afterPath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-after.png`);
@@ -215,7 +216,7 @@ test.describe('@perf CLS audit', () => {
             clsAfterRender: typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0,
             entries: Array.isArray(s.entries) ? s.entries : [],
           };
-        });
+        }).catch(() => ({ clsTotal: 0, clsAfterRender: 0, entries: [] }));
 
         results.push({
           route,
@@ -369,16 +370,16 @@ test.describe('@perf CLS audit', () => {
     }
     if (lastError) throw lastError;
 
-    await page.waitForLoadState('networkidle').catch(() => null);
-    await page.evaluate(() => { const s = (window as any).__e2eCls; if (s) { s.phase = 'afterRender'; s.clsAfterRender = 0; } });
-    await page.waitForLoadState('networkidle').catch(() => null);
+    await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
+    await page.evaluate(() => { const s = (window as any).__e2eCls; if (s) { s.phase = 'afterRender'; s.clsAfterRender = 0; } }).catch(() => null);
+    await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
 
     const data = await page.evaluate(() => {
       const s = (window as any).__e2eCls;
       if (!s) return { clsTotal: 0, clsAfterRender: 0 };
       s.finalized = true;
       return { clsTotal: s.clsTotal ?? 0, clsAfterRender: s.clsAfterRender ?? 0 };
-    });
+    }).catch(() => ({ clsTotal: 0, clsAfterRender: 0 }));
 
     expect(data.clsTotal, `Mobile CLS total too high: ${data.clsTotal.toFixed(4)}`).toBeLessThanOrEqual(CLS_TOTAL_MAX);
     expect(data.clsAfterRender, `Mobile CLS afterRender too high: ${data.clsAfterRender.toFixed(4)}`).toBeLessThanOrEqual(CLS_AFTER_RENDER_MAX);

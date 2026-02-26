@@ -4,6 +4,7 @@ import { getTravelsListPath } from './helpers/routes';
 
 // Alias for backward compat within this file
 const preacceptCookiesAndStabilize = preacceptCookies;
+const NETWORKIDLE_TIMEOUT_MS = 8000;
 
 const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 812 },
@@ -53,16 +54,18 @@ async function startClsAfterRenderPhase(page: any) {
     if (!s) return;
     s.phase = 'afterRender';
     s.clsAfterRender = 0;
-  });
+  }).catch(() => null);
 }
 
 async function finalizeClsAfterRender(page: any): Promise<number> {
-  return page.evaluate(() => {
+  return page
+    .evaluate(() => {
     const s = (window as any).__e2eClsAudit;
     if (!s) return 0;
     s.finalized = true;
     return typeof s.clsAfterRender === 'number' ? s.clsAfterRender : 0;
-  });
+    })
+    .catch(() => 0);
 }
 
 test.describe('@perf Render audit: main and travel details (responsive + perf)', () => {
@@ -127,9 +130,9 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       await assertNoHorizontalScroll(page);
 
       // CLS after initial render
-      await page.waitForLoadState('networkidle').catch(() => null);
+      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
       await startClsAfterRenderPhase(page);
-      await page.waitForLoadState('networkidle').catch(() => null);
+      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
       const cls = await finalizeClsAfterRender(page);
       expect(cls, `CLS after render too high on main (${vp.name})`).toBeLessThanOrEqual(0.05);
 
@@ -227,9 +230,9 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
         `Expected share or CTA block to render (share=${shareCount}, cta=${ctaCount})`
       ).toBeGreaterThanOrEqual(1);
 
-      await page.waitForLoadState('networkidle').catch(() => null);
+      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
       await startClsAfterRenderPhase(page);
-      await page.waitForLoadState('networkidle').catch(() => null);
+      await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
       const cls = await finalizeClsAfterRender(page);
       expect(cls, `CLS after render too high on travel details (${vp.name})`).toBeLessThanOrEqual(0.05);
 

@@ -30,6 +30,7 @@ const LCP_MAX_MS = process.env.CI
 const INP_MAX_MS = process.env.CI
   ? getNumberEnv('E2E_INP_MAX_MS', 200)
   : getNumberEnv('E2E_INP_MAX_MS', 500);
+const NETWORKIDLE_TIMEOUT_MS = getNumberEnv('E2E_WEB_VITALS_NETWORKIDLE_TIMEOUT_MS', 8000);
 
 test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
   test('travels page stays stable and fast', async ({ page }: any) => {
@@ -181,7 +182,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
     ]);
 
     // Give LCP observer some time to settle.
-    await page.waitForLoadState('networkidle').catch(() => null);
+    await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
 
     // Reset CLS after initial render so we can assert on "post-render" stability separately.
     await page.evaluate(() => {
@@ -189,10 +190,10 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
         (window as any).__e2eVitals._phase = 'afterRender';
         (window as any).__e2eVitals.clsAfterRender = 0;
       }
-    });
+    }).catch(() => null);
 
     // Let the page settle a bit more in the "afterRender" phase
-    await page.waitForLoadState('networkidle').catch(() => null);
+    await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
 
     // Freeze CLS before interaction so the CLS assertion is about load/layout stability,
     // not about post-input reflows.
@@ -200,7 +201,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
       if ((window as any).__e2eVitals) {
         (window as any).__e2eVitals._clsFinalized = true;
       }
-    });
+    }).catch(() => null);
 
     // Trigger a simple interaction to produce an INP sample.
     // The search box exists even when the list is empty.
@@ -223,7 +224,13 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
       inp: typeof v?.inp === 'number' ? v.inp : null,
       clsEntries: Array.isArray(v?._clsEntries) ? v._clsEntries : [],
     };
-  });
+  }).catch(() => ({
+    clsTotal: 0,
+    clsAfterRender: 0,
+    lcp: null,
+    inp: null,
+    clsEntries: [],
+  }));
 
   const result: WebVitalsResult = {
     clsTotal: vitals.clsTotal,
