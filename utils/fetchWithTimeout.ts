@@ -39,6 +39,22 @@ export async function fetchWithTimeout(
         });
         return response;
     } catch (error: any) {
+        const isPrematureCloseError =
+            error?.code === 'ERR_STREAM_PREMATURE_CLOSE' ||
+            error?.message === 'Premature close';
+
+        // In Node (SSR/tests/scripts), abrupt socket closure can bubble up as
+        // ERR_STREAM_PREMATURE_CLOSE. Treat it as a transient network failure
+        // unless it was caused by our timeout abort.
+        if (isPrematureCloseError) {
+            if (didTimeout) {
+                throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
+            }
+            throw new Error(
+                `Сетевое соединение было прервано при запросе ${url}. Попробуйте позже.`
+            );
+        }
+
         // Browsers often throw `TypeError: Failed to fetch` for DNS/connection/CORS issues.
         // Provide a more actionable message while preserving the original error as a cause.
         const message = String(error?.message ?? '');
@@ -49,9 +65,6 @@ export async function fetchWithTimeout(
             );
             (err as any).cause = error;
             throw err;
-        }
-        if ((error?.code === 'ERR_STREAM_PREMATURE_CLOSE' || error?.message === 'Premature close') && didTimeout) {
-            throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
         }
         if (error.name === 'AbortError') {
             // Если отмена произошла из-за внешнего signal, пробрасываем оригинальную ошибку

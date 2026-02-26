@@ -90,6 +90,18 @@ describe('fetchWithTimeout', () => {
 
     await expect(promise).rejects.toMatchObject({ name: 'AbortError', reason: 'external' })
   })
+
+  it('maps ERR_STREAM_PREMATURE_CLOSE to user-friendly network error', async () => {
+    const fetchMock = jest.fn().mockRejectedValue({
+      code: 'ERR_STREAM_PREMATURE_CLOSE',
+      message: 'Premature close',
+    })
+    global.fetch = fetchMock as any
+
+    await expect(fetchWithTimeout('https://example.com/interrupted', {}, 1000)).rejects.toThrow(
+      /Сетевое соединение было прервано/
+    )
+  })
 })
 
 describe('safeJsonParse', () => {
