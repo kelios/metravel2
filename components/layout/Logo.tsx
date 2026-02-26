@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -9,6 +9,15 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
     const isMobile = isPhone || isLargePhone;
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
+    const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+    const primarySource =
+        Platform.OS === 'web'
+            ? ({ uri: '/assets/icons/logo_yellow_60x60.png' } as const)
+            : require('../../assets/icons/logo_yellow_60x60.png');
+    const fallbackSource =
+        Platform.OS === 'web'
+            ? ({ uri: '/assets/icons/logo_yellow.png' } as const)
+            : require('../../assets/icons/logo_yellow_60x60.png');
 
     return (
         <TouchableOpacity
@@ -18,9 +27,10 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
             accessibilityHint="Перейти на главную страницу"
         >
             <Image
-                source={require('../../assets/icons/logo_yellow_60x60.png')}
+                source={logoLoadFailed ? fallbackSource : primarySource}
                 style={[styles.logo, isMobile && styles.logoMobile]}
                 resizeMode="contain"
+                onError={() => setLogoLoadFailed(true)}
                 accessibilityLabel="MeTravel логотип"
                 alt="MeTravel логотип"
             />

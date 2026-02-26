@@ -4,7 +4,7 @@ import { preacceptCookies } from './helpers/navigation';
 
 type ApiMatch = string | RegExp;
 
-const ensureApiProxy = async (page: any, label: string) => {
+const ensureApiProxy = async (page: any, _label: string) => {
   // Retry until proxy is reachable.
   // Some backends legitimately return 4xx/5xx for /api/travels/ while
   // still serving all required page endpoints used in this suite.
@@ -143,7 +143,7 @@ test.describe('@smoke Integration: core data flows (web)', () => {
     );
   });
 
-  test('map list shows travel cards after API load', async ({ page }, testInfo) => {
+  test('map list shows travel cards after API load', async ({ page }) => {
     const proxyReady = await ensureApiProxy(page, 'map');
     if (!proxyReady) {
       test.skip(true, 'map: /api/travels/ proxy is unavailable in current environment');
