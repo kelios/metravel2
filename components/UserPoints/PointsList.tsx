@@ -11,8 +11,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { userPointsApi } from '@/api/userPoints';
 import { fetchFilters } from '@/api/misc';
 import { normalizeCategoryDictionary, createCategoryNameToIdsMap, resolveCategoryIdsByNames as mapNamesToIds } from '@/utils/userPointsCategories';
@@ -38,6 +36,8 @@ import { usePointsBulkActions } from './usePointsBulkActions';
 import { usePointsManualForm } from './usePointsManualForm';
 import { usePointsDeletePoint } from './usePointsDeletePoint';
 import { usePointsDriveInfo } from './usePointsDriveInfo';
+import { usePointsExportKml } from './usePointsExportKml';
+import { usePointsActivePoint } from './usePointsActivePoint';
 
 import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
@@ -73,7 +73,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const viewMode: ViewMode = 'map'; // Fixed to map view only
   const [panelTab, setPanelTab] = useState<'filters' | 'list'>('list');
   const [showActions, setShowActions] = useState(false);
-  const [activePointId, setActivePointId] = useState<number | null>(null);
+  const { activePointId, setActivePointId, handleShowPointOnMap } = usePointsActivePoint();
   const {
     currentLocation,
     isLocating,
@@ -84,27 +84,16 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     handleOpenRecommendations: openRecommendations,
     handleCloseRecommendations: closeRecommendations,
   } = usePointsRecommendations({ setActivePointId });
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const { isExporting, exportError, handleExportKml } = usePointsExportKml();
 
   const { width: windowWidth } = useWindowDimensions();
   const isNarrow = windowWidth < 420;
   const isMobile = Platform.OS !== 'web';
   const isWideScreenWeb = Platform.OS === 'web' && windowWidth >= 1024;
 
-  const showPointTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
 
   const presetPrevCategoryIdsRef = useRef<string[] | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (showPointTimeoutRef.current) {
-        clearTimeout(showPointTimeoutRef.current);
-        showPointTimeoutRef.current = null;
-      }
-    };
-  }, []);
 
   const blurActiveElementForModal = useCallback(() => {
     if (Platform.OS !== 'web') return;
@@ -432,7 +421,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     presetPrevCategoryIdsRef.current = null;
     closeRecommendations();
     setActivePointId(null);
-  }, [closeRecommendations, filters.perPage]);
+  }, [closeRecommendations, filters.perPage, setActivePointId]);
 
   const handleRemoveFilterChip = useCallback((key: string) => {
     if (key === 'preset') {
@@ -466,70 +455,10 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     }
   }, [filters.categoryIds, filters.colors, filters.statuses, handlePresetChange]);
 
-  const handleExportKml = useCallback(async () => {
-    setExportError(null);
-    setIsExporting(true);
-    try {
-      const result = await userPointsApi.exportKml();
-
-      const fallbackName = `user-points-${new Date().toISOString().slice(0, 10)}.kml`;
-      const filename = String((result as any)?.filename || '').trim() || fallbackName;
-      const contentType = String((result as any)?.contentType || '').trim() || 'application/vnd.google-earth.kml+xml';
-
-      if (Platform.OS === 'web') {
-        const blob = (result as any)?.blob as Blob;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        return;
-      }
-
-      const blob = (result as any)?.blob as Blob;
-      const text = await blob.text();
-      const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
-      const uri = `${cacheDir}${filename}`;
-      await FileSystem.writeAsStringAsync(uri, text);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: contentType, dialogTitle: 'Экспорт точек' });
-      }
-    } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Ошибка экспорта');
-    } finally {
-      setIsExporting(false);
-    }
-  }, []);
-
   const handleOpenRecommendations = useCallback(
     async () => openRecommendations(filteredPoints),
     [filteredPoints, openRecommendations]
   );
-
-  const handleShowPointOnMap = useCallback((point: any) => {
-    const lat = Number((point as any)?.latitude);
-    const lng = Number((point as any)?.longitude);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-    // Important: do NOT clear activePointId with a timeout.
-    // Clearing it causes PointsMap to re-run its auto-centering (user location / fitBounds)
-    // which overrides the zoom-to-point behavior.
-    //
-    // Instead, force a re-trigger even when the user clicks the same card again.
-    const id = Number((point as any)?.id);
-    if (!Number.isFinite(id)) return;
-
-    setActivePointId(null);
-    if (showPointTimeoutRef.current) {
-      clearTimeout(showPointTimeoutRef.current);
-    }
-    showPointTimeoutRef.current = setTimeout(() => {
-      setActivePointId(id);
-    }, 0);
-  }, []);
 
   const handleLocateMe = locateMe;
 

@@ -162,6 +162,15 @@
   - moved manual form state (`showManualAdd`, fields, validation, save lifecycle)
   - moved manual workflows (`openManualAdd`, `closeManualAdd`, `openEditPoint`, `handleMapPress`, `handleSaveManual`)
   - preserved map reverse-geocoding flow while reducing `PointsList` responsibilities
+- [x] 2026-02-26: extracted single-point delete controller from `PointsList` into `components/UserPoints/usePointsDeletePoint.ts`:
+  - moved delete confirmation state (`pointToDelete`) and request/confirm handlers
+  - centralized cache update for removed point with typed query-cache filtering
+- [x] 2026-02-26: extracted active route ETA/distance controller from `PointsList` into `components/UserPoints/usePointsDriveInfo.ts`:
+  - moved OSRM request lifecycle and abort cleanup into dedicated hook
+  - reduced `PointsList` local effect complexity around active card drive info
+- [x] 2026-02-26: extracted KML export controller from `PointsList` into `components/UserPoints/usePointsExportKml.ts`:
+  - moved export state (`isExporting`, `exportError`) and platform-specific export flow
+  - removed `expo-file-system` / `expo-sharing` concerns from list UI component
 - [ ] map module unification (`components/map` + `components/MapPage`)
 - [ ] first god-component split (`PointsList` or `ArticleEditor.web`)
 - [ ] continue API boundary type-hardening slice (related parsers + DTO contracts)
