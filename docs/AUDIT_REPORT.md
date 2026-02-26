@@ -171,6 +171,36 @@
 - [x] 2026-02-26: extracted KML export controller from `PointsList` into `components/UserPoints/usePointsExportKml.ts`:
   - moved export state (`isExporting`, `exportError`) and platform-specific export flow
   - removed `expo-file-system` / `expo-sharing` concerns from list UI component
+- [x] 2026-02-26: extracted active-point focus controller from `PointsList` into `components/UserPoints/usePointsActivePoint.ts`:
+  - moved `activePointId` state and repeat-click re-focus behavior
+  - moved timeout lifecycle cleanup out of UI component
+- [x] 2026-02-26: extracted filters/search state controller from `PointsList` into `components/UserPoints/usePointsFiltersController.ts`:
+  - moved `filters` + `searchQuery` state and common handlers (`handleSearch`, `handleFilterChange`, `handleResetFilters`)
+  - reduced list component responsibilities while preserving preset/filter interactions
+- [x] 2026-02-26: extracted filter-chip actions and category auto-prune from `PointsList` into `components/UserPoints/usePointsFilterChipActions.ts`:
+  - moved `handleRemoveFilterChip` action routing (`preset/search/radius/status/category/color`)
+  - moved selected-category synchronization with available options
+- [x] 2026-02-26: extracted actions menu modal from `PointsList` into `components/UserPoints/PointsListActionsModal.tsx`:
+  - moved import/export/manual-add/selection/delete-all actions UI into dedicated presentational component
+  - reduced inline modal markup and callback noise inside core list container
+- [x] 2026-02-26: extracted bulk/delete confirmation modals from `PointsList` into `components/UserPoints/PointsListBulkModals.tsx`:
+  - moved single-point delete modal and bulk-edit/delete confirmation modal markup into dedicated presentational component
+  - simplified `PointsList` render tree and reduced inline modal state wiring noise
+- [x] 2026-02-26: extracted manual add/edit modal from `PointsList` into `components/UserPoints/PointsListManualModal.tsx`:
+  - moved manual form layout (name/coords/category/color/save) and validation rendering into dedicated presentational component
+  - kept form state and save workflow in `usePointsManualForm`, reducing `PointsList` to orchestration responsibilities
+- [x] 2026-02-26: extracted bulk selection top-bar from `PointsList` into `components/UserPoints/PointsListBulkMapBar.tsx`:
+  - moved bulk progress/selection actions UI (`Список`, `Снять`, `Изменить`, `Удалить`, `Готово`) to dedicated presentational component
+  - reduced inline branching and action button noise in `PointsList` render path
+- [x] 2026-02-26: extracted points/category data-model calculations from `PointsList` into `components/UserPoints/usePointsDataModel.ts`:
+  - moved category dictionary loading, points loading, and derived filtering/color/category option computation into dedicated hook
+  - reduced `PointsList` query/computation surface and kept container focused on orchestration + composition
+- [x] 2026-02-26: extracted view-model calculations from `PointsList` into `components/UserPoints/usePointsViewModel.ts`:
+  - moved visible-points resolution for recommendations/presets and filter-chip/active-filter metadata calculations
+  - moved recommendations-open callback orchestration dependent on current filtered list
+- [x] 2026-02-26: extracted header render wiring from `PointsList` into `components/UserPoints/usePointsHeaderRenderer.tsx`:
+  - moved `PointsListHeader` props composition and memoized render callback into dedicated hook
+  - reduced callback/dependency boilerplate in the main container component
 - [ ] map module unification (`components/map` + `components/MapPage`)
 - [ ] first god-component split (`PointsList` or `ArticleEditor.web`)
 - [ ] continue API boundary type-hardening slice (related parsers + DTO contracts)

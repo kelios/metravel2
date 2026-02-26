@@ -1,35 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  Modal,
   Platform,
   View,
   Text,
   StyleSheet,
-  TextInput,
-  ScrollView,
-  Pressable,
   useWindowDimensions,
 } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { userPointsApi } from '@/api/userPoints';
-import { fetchFilters } from '@/api/misc';
-import { normalizeCategoryDictionary, createCategoryNameToIdsMap, resolveCategoryIdsByNames as mapNamesToIds } from '@/utils/userPointsCategories';
+import { useQueryClient } from '@tanstack/react-query';
 import { getPointCategoryNames } from '@/utils/travelPointMeta';
-import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';
-import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect';
-import Button from '@/components/ui/Button';
-import ColorChip from '@/components/ui/ColorChip';
-import type { PointFilters as PointFiltersType } from '@/types/userPoints';
-import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
+import { STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import {
-  POINTS_PRESETS,
-  haversineKm,
-  normalizeCategoryIdsFromPoint,
-  sortPointsByPresetProximity,
-} from './pointsListLogic';
-import { buildActiveFilterChips, computeHasActiveFilters } from './pointsFiltersMeta';
+import { normalizeCategoryIdsFromPoint } from './pointsListLogic';
 import { usePointsPresets } from './usePointsPresets';
 import { usePointsRecommendations } from './usePointsRecommendations';
 import { usePointsBulkActions } from './usePointsBulkActions';
@@ -38,10 +20,18 @@ import { usePointsDeletePoint } from './usePointsDeletePoint';
 import { usePointsDriveInfo } from './usePointsDriveInfo';
 import { usePointsExportKml } from './usePointsExportKml';
 import { usePointsActivePoint } from './usePointsActivePoint';
+import { usePointsFiltersController } from './usePointsFiltersController';
+import { usePointsFilterChipActions } from './usePointsFilterChipActions';
+import { usePointsDataModel } from './usePointsDataModel';
+import { usePointsViewModel } from './usePointsViewModel';
+import { usePointsHeaderRenderer } from './usePointsHeaderRenderer';
 
-import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
 import { PointsListItem } from './PointsListItem'
+import { PointsListActionsModal } from './PointsListActionsModal'
+import { PointsListBulkModals } from './PointsListBulkModals'
+import { PointsListManualModal } from './PointsListManualModal'
+import { PointsListBulkMapBar } from './PointsListBulkMapBar'
 
 const DEFAULT_POINT_COLORS: string[] = [
   'red',
@@ -65,11 +55,9 @@ type PointsListProps = {
 
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const defaultPerPage = Platform.OS === 'web' ? 5000 : 200;
-  const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: defaultPerPage, radiusKm: 100 });
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showMapSettings, setShowMapSettings] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const viewMode: ViewMode = 'map'; // Fixed to map view only
   const [panelTab, setPanelTab] = useState<'filters' | 'list'>('list');
   const [showActions, setShowActions] = useState(false);
@@ -95,6 +83,22 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const presetPrevCategoryIdsRef = useRef<string[] | null>(null);
 
+  const {
+    filters,
+    setFilters,
+    searchQuery,
+    setSearchQuery,
+    handleSearch,
+    handleFilterChange,
+    handleResetFilters,
+  } = usePointsFiltersController({
+    defaultPerPage,
+    setActivePresetId,
+    presetPrevCategoryIdsRef,
+    closeRecommendations,
+    setActivePointId,
+  });
+
   const blurActiveElementForModal = useCallback(() => {
     if (Platform.OS !== 'web') return;
     try {
@@ -116,35 +120,24 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   );
   const gridColors = useMemo(() => ({ text: colors.text }), [colors.text]);
 
-  const siteCategoryOptionsQuery = useQuery({
-    queryKey: ['userPointsCategoryDictionary'],
-    queryFn: async () => {
-      const data = await fetchFilters();
-      const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
-      return normalizeCategoryDictionary(raw);
-    },
-    staleTime: 24 * 60 * 60 * 1000,
+  const {
+    points,
+    isLoading,
+    refetch,
+    categoryIdToName,
+    categoryData,
+    resolveCategoryIdsByNames,
+    availableCategoryOptions,
+    availableColors,
+    manualColorOptions,
+    filteredPoints,
+  } = usePointsDataModel({
+    defaultPerPage,
+    filters,
+    searchQuery,
+    currentLocation,
+    defaultPointColors: DEFAULT_POINT_COLORS,
   });
-
-  const categoryData = useMemo(() => siteCategoryOptionsQuery.data ?? [], [siteCategoryOptionsQuery.data]);
-
-  const categoryIdToName = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const c of categoryData) {
-      const id = String((c as any)?.id ?? '').trim();
-      const name = String((c as any)?.name ?? id).trim();
-      if (!id) continue;
-      map.set(id, name || id);
-    }
-    return map;
-  }, [categoryData]);
-
-  const categoryNameToIds = useMemo(() => createCategoryNameToIdsMap(categoryData), [categoryData]);
-
-  const resolveCategoryIdsByNames = useCallback(
-    (names: string[]) => mapNamesToIds(names, categoryNameToIds),
-    [categoryNameToIds]
-  );
 
   const { activePreset, handlePresetChange } = usePointsPresets({
     activePresetId,
@@ -167,139 +160,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     },
     [categoryIdToName, resolveCategoryIdsByNames]
   );
-
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['userPointsAll'],
-    queryFn: () => userPointsApi.getPoints({ page: 1, perPage: defaultPerPage }),
-    staleTime: 10 * 60 * 1000,
-  });
-
-  // If backend errors (or not ready) — treat as empty list.
-  const points = useMemo(() => {
-    if (error) return [];
-    return Array.isArray(data) ? data : [];
-  }, [data, error]);
-
-  const pointsWithDerivedCategories = useMemo(() => {
-    return (points as any[]).map((p) => {
-      const categoryIds = normalizeCategoryIdsFromPoint(p);
-      const categoryNames = categoryIds
-        .map((id) => categoryIdToName.get(id) ?? id)
-        .map((v) => String(v).trim())
-        .filter(Boolean);
-      return { ...p, categoryIds, categoryNames };
-    });
-  }, [categoryIdToName, points]);
-
-  const baseFilteredPoints = useMemo(() => {
-    const q = String(searchQuery || '').trim().toLowerCase();
-    const selectedColors = filters.colors ?? [];
-    const selectedStatuses = filters.statuses ?? [];
-    const radiusKm = filters.radiusKm;
-
-    const radiusFilterEnabled = radiusKm !== null && radiusKm !== undefined && currentLocation;
-    const userLat = Number(currentLocation?.lat);
-    const userLng = Number(currentLocation?.lng);
-    const radius = Number(radiusKm);
-    const canDoRadius =
-      Boolean(radiusFilterEnabled) &&
-      Number.isFinite(userLat) &&
-      Number.isFinite(userLng) &&
-      Number.isFinite(radius) &&
-      radius > 0;
-
-    const latDelta = canDoRadius ? radius / 111 : 0;
-    const lngDelta = canDoRadius ? radius / (111 * Math.max(0.2, Math.cos((userLat * Math.PI) / 180))) : 0;
-    const minLat = canDoRadius ? userLat - latDelta : 0;
-    const maxLat = canDoRadius ? userLat + latDelta : 0;
-    const minLng = canDoRadius ? userLng - lngDelta : 0;
-    const maxLng = canDoRadius ? userLng + lngDelta : 0;
-
-    return pointsWithDerivedCategories.filter((p: any) => {
-      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
-
-      if (canDoRadius) {
-        const pointLat = Number(p.latitude);
-        const pointLng = Number(p.longitude);
-        if (Number.isFinite(pointLat) && Number.isFinite(pointLng)) {
-          if (pointLat < minLat || pointLat > maxLat || pointLng < minLng || pointLng > maxLng) return false;
-          const distance = haversineKm(userLat, userLng, pointLat, pointLng);
-          if (distance > radius) return false;
-        }
-      }
-
-      if (!q) return true;
-      const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [currentLocation, filters.colors, filters.radiusKm, filters.statuses, pointsWithDerivedCategories, searchQuery]);
-
-  const availableCategoryOptions = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of baseFilteredPoints as any[]) {
-      const ids = Array.isArray(p?.categoryIds) ? p.categoryIds : [];
-      for (const id of ids) {
-        const norm = String(id).trim();
-        if (!norm) continue;
-        counts.set(norm, (counts.get(norm) || 0) + 1);
-      }
-    }
-
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([id]) => ({ id, name: categoryIdToName.get(id) ?? id }));
-  }, [baseFilteredPoints, categoryIdToName]);
-
-  const availableColors = useMemo(() => {
-    const colorMap = new Map<string, number>();
-    for (const p of points as any[]) {
-      const c = String(p?.color ?? '').trim();
-      if (c) {
-        colorMap.set(c, (colorMap.get(c) || 0) + 1);
-      }
-    }
-
-    const observed = Array.from(colorMap.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([color]) => color);
-
-    const seen = new Set<string>();
-    const merged: string[] = [];
-    for (const c of observed) {
-      if (!c || seen.has(c)) continue;
-      seen.add(c);
-      merged.push(c);
-    }
-    for (const c of DEFAULT_POINT_COLORS) {
-      if (!c || seen.has(c)) continue;
-      seen.add(c);
-      merged.push(c);
-    }
-
-    return merged;
-  }, [points]);
-
-  const manualColorOptions = useMemo(() => {
-    const base = [...DEFAULT_POINT_COLORS, ...(availableColors ?? [])];
-    const unique = Array.from(new Set(base.map((c) => String(c).trim()).filter(Boolean)));
-    return unique.length ? unique : DEFAULT_POINT_COLORS.slice();
-  }, [availableColors]);
-
-  const filteredPoints = useMemo(() => {
-    const selectedCategoryIds = filters.categoryIds ?? [];
-    if (!selectedCategoryIds.length) return baseFilteredPoints;
-
-    return baseFilteredPoints.filter((p: any) => {
-      if (selectedCategoryIds.length > 0) {
-        const ids = Array.isArray(p?.categoryIds) ? p.categoryIds : [];
-        const hasAny = selectedCategoryIds.some((id) => ids.includes(id));
-        if (!hasAny) return false;
-      }
-
-      return true;
-    });
-  }, [baseFilteredPoints, filters.categoryIds]);
 
   const {
     selectionMode,
@@ -360,15 +220,24 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setIsBulkWorking,
   });
 
-  const visibleFilteredPoints = useMemo(() => {
-    // Show only recommended points when in recommendations mode
-    if (showingRecommendations && recommendedPointIds.length > 0) {
-      const recommended = new Set(recommendedPointIds);
-      return filteredPoints.filter((p: any) => recommended.has(Number(p.id)));
-    }
-
-    return sortPointsByPresetProximity(filteredPoints, activePreset, resolveCategoryIdsByNames);
-  }, [activePreset, filteredPoints, recommendedPointIds, resolveCategoryIdsByNames, showingRecommendations]);
+  const {
+    visibleFilteredPoints,
+    hasActiveFilters,
+    activeFilterChips,
+    handleOpenRecommendations,
+  } = usePointsViewModel({
+    filteredPoints: filteredPoints as Record<string, unknown>[],
+    showingRecommendations,
+    recommendedPointIds,
+    activePreset,
+    resolveCategoryIdsByNames,
+    activePresetId,
+    filters,
+    searchQuery,
+    categoryIdToName,
+    statusLabels: STATUS_LABELS as Record<string, string>,
+    openRecommendations: openRecommendations as (points: Record<string, unknown>[]) => Promise<void>,
+  });
 
   const activeDriveInfo = usePointsDriveInfo({
     activePointId,
@@ -376,152 +245,46 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     visibleFilteredPoints: visibleFilteredPoints as Record<string, unknown>[],
   });
 
-  useEffect(() => {
-    const selected = filters.categoryIds ?? [];
-    if (!selected.length) return;
-    const available = new Set(availableCategoryOptions.map((c) => c.id));
-    const next = selected.filter((c) => available.has(c));
-    if (next.length === selected.length) return;
-    setFilters((prev) => ({ ...prev, categoryIds: next, page: 1 }));
-  }, [availableCategoryOptions, filters.categoryIds]);
-
-  const handleSearch = useCallback((text: string) => {
-    setSearchQuery(text);
-    setFilters((prev) => ({ ...prev, search: text, page: 1 }));
-  }, []);
-
-  const handleFilterChange = useCallback(
-    (newFilters: PointFiltersType) => {
-      setFilters({ ...newFilters, page: 1, perPage: filters.perPage ?? defaultPerPage });
-    },
-    [defaultPerPage, filters.perPage]
-  );
-
-  const hasActiveFilters = useMemo(
-    () => computeHasActiveFilters({ activePresetId, filters, searchQuery }),
-    [activePresetId, filters, searchQuery]
-  );
-
-  const activeFilterChips = useMemo(
-    () =>
-      buildActiveFilterChips({
-        activePreset,
-        categoryIdToName,
-        filters,
-        searchQuery,
-        statusLabels: STATUS_LABELS as Record<string, string>,
-      }),
-    [activePreset, categoryIdToName, filters, searchQuery]
-  );
-
-  const handleResetFilters = useCallback(() => {
-    setSearchQuery('');
-    setFilters({ page: 1, perPage: filters.perPage ?? 50, radiusKm: 100 });
-    setActivePresetId(null);
-    presetPrevCategoryIdsRef.current = null;
-    closeRecommendations();
-    setActivePointId(null);
-  }, [closeRecommendations, filters.perPage, setActivePointId]);
-
-  const handleRemoveFilterChip = useCallback((key: string) => {
-    if (key === 'preset') {
-      handlePresetChange(null);
-      return;
-    }
-
-    if (key === 'search') {
-      setSearchQuery('');
-      setFilters((prev) => ({ ...prev, search: '', page: 1 }));
-      return;
-    }
-
-    if (key === 'radius') {
-      setFilters((prev) => ({ ...prev, radiusKm: 100, page: 1 }));
-      return;
-    }
-
-    if (key.startsWith('status-')) {
-      const status = key.replace('status-', '') as PointStatus;
-      const next = (filters.statuses ?? []).filter((s) => s !== status);
-      setFilters((prev) => ({ ...prev, statuses: next, page: 1 }));
-    } else if (key.startsWith('category-')) {
-      const category = key.replace('category-', '');
-      const next = (filters.categoryIds ?? []).filter((c) => c !== category);
-      setFilters((prev) => ({ ...prev, categoryIds: next, page: 1 }));
-    } else if (key.startsWith('color-')) {
-      const color = key.replace('color-', '');
-      const next = (filters.colors ?? []).filter((c) => c !== color);
-      setFilters((prev) => ({ ...prev, colors: next, page: 1 }));
-    }
-  }, [filters.categoryIds, filters.colors, filters.statuses, handlePresetChange]);
-
-  const handleOpenRecommendations = useCallback(
-    async () => openRecommendations(filteredPoints),
-    [filteredPoints, openRecommendations]
-  );
+  const { handleRemoveFilterChip } = usePointsFilterChipActions({
+    availableCategoryOptions,
+    filters,
+    setFilters,
+    setSearchQuery,
+    handlePresetChange,
+  });
 
   const handleLocateMe = locateMe;
 
-  const renderHeader = useCallback(() => {
-    return (
-      <PointsListHeader
-        styles={styles}
-        colors={headerColors}
-        isNarrow={isNarrow}
-        isMobile={isMobile}
-        total={points.length}
-        found={visibleFilteredPoints.length}
-        hasActiveFilters={hasActiveFilters}
-        onResetFilters={handleResetFilters}
-        activeFilterChips={activeFilterChips}
-        onRemoveFilterChip={handleRemoveFilterChip}
-        viewMode={viewMode}
-        onViewModeChange={() => {}}
-        showFilters={showFilters}
-        onToggleFilters={() => setShowFilters((prev) => !prev)}
-        showMapSettings={showMapSettings}
-        onToggleMapSettings={() => setShowMapSettings((v) => !v)}
-        onOpenActions={() => {
-          blurActiveElementForModal();
-          setShowActions(true);
-        }}
-        onOpenRecommendations={handleOpenRecommendations}
-        searchQuery={searchQuery}
-        onSearch={handleSearch}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        presets={POINTS_PRESETS.map((p) => ({ id: p.id, label: p.label }))}
-        activePresetId={activePresetId}
-        onPresetChange={handlePresetChange}
-        siteCategoryOptions={availableCategoryOptions}
-        availableColors={availableColors}
-      />
-    );
-  }, [
-    activeFilterChips,
-    activePresetId,
-    availableColors,
-    availableCategoryOptions,
-    blurActiveElementForModal,
-    headerColors,
-    filters,
-    handleOpenRecommendations,
-    handleFilterChange,
-    handlePresetChange,
-    handleRemoveFilterChip,
-    handleResetFilters,
-    handleSearch,
-    hasActiveFilters,
-    isMobile,
-    isNarrow,
-    points.length,
-    visibleFilteredPoints.length,
-    searchQuery,
-    showFilters,
-    showMapSettings,
+  const renderHeader = usePointsHeaderRenderer({
     styles,
+    colors: headerColors,
+    isNarrow,
+    isMobile,
+    total: points.length,
+    found: visibleFilteredPoints.length,
+    hasActiveFilters,
+    onResetFilters: handleResetFilters,
+    activeFilterChips,
+    onRemoveFilterChip: handleRemoveFilterChip,
     viewMode,
-  ]);
+    showFilters,
+    onToggleFilters: () => setShowFilters((prev) => !prev),
+    showMapSettings,
+    onToggleMapSettings: () => setShowMapSettings((v) => !v),
+    onOpenActions: () => {
+      blurActiveElementForModal();
+      setShowActions(true);
+    },
+    onOpenRecommendations: handleOpenRecommendations,
+    searchQuery,
+    onSearch: handleSearch,
+    filters,
+    onFilterChange: handleFilterChange,
+    activePresetId,
+    onPresetChange: handlePresetChange,
+    siteCategoryOptions: availableCategoryOptions,
+    availableColors,
+  });
 
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
@@ -567,75 +330,24 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	  return (
 	    <View style={styles.container}>
 	      {selectionMode ? (
-	        <View
-	          style={[
-	            styles.bulkMapBar,
-	            isWideScreenWeb ? { right: 420 + DESIGN_TOKENS.spacing.lg } : null,
-	          ]}
-	        >
-	          <View style={styles.bulkMapBarRow}>
-	            <Text style={styles.bulkMapBarText}>
-	              {bulkProgress
-	                ? `Удаляем: ${bulkProgress.current}/${bulkProgress.total}`
-                : selectedIds.length > 0
-                  ? `Выбрано: ${selectedIds.length}`
-                  : 'Выберите точки в списке'}
-            </Text>
-	            <View style={styles.bulkMapBarActions}>
-	              <Button
-	                label="Список"
-	                onPress={() => setPanelTab('list')}
-	                disabled={isBulkWorking}
-	                size="sm"
-	                variant="secondary"
-	                accessibilityLabel="Назад к списку"
-	              />
-
-              {selectedIds.length > 0 ? (
-                <>
-                  <Button
-                    label="Снять"
-                    onPress={clearSelection}
-                    disabled={isBulkWorking}
-                    size="sm"
-                    variant="secondary"
-                    accessibilityLabel="Снять"
-                  />
-                  <Button
-                    label="Изменить"
-                    onPress={() => {
-                      blurActiveElementForModal();
-                      setShowBulkEdit(true);
-                    }}
-                    disabled={isBulkWorking}
-                    size="sm"
-                    accessibilityLabel="Изменить"
-                  />
-                  <Button
-                    label="Удалить"
-                    onPress={() => {
-                      blurActiveElementForModal();
-                      setShowConfirmDeleteSelected(true);
-                    }}
-                    disabled={isBulkWorking}
-                    size="sm"
-                    variant="danger"
-                    accessibilityLabel="Удалить выбранные"
-                  />
-                </>
-              ) : null}
-
-              <Button
-                label="Готово"
-                onPress={exitSelectionMode}
-                disabled={isBulkWorking}
-                size="sm"
-                variant="secondary"
-                accessibilityLabel="Готово"
-              />
-            </View>
-          </View>
-        </View>
+	        <PointsListBulkMapBar
+            styles={styles}
+            isWideScreenWeb={isWideScreenWeb}
+            bulkProgress={bulkProgress}
+            selectedCount={selectedIds.length}
+            isBulkWorking={isBulkWorking}
+            onBackToList={() => setPanelTab('list')}
+            onClearSelection={clearSelection}
+            onOpenBulkEdit={() => {
+              blurActiveElementForModal();
+              setShowBulkEdit(true);
+            }}
+            onOpenDeleteSelected={() => {
+              blurActiveElementForModal();
+              setShowConfirmDeleteSelected(true);
+            }}
+            onDone={exitSelectionMode}
+          />
       ) : null}
 
 	      <PointsListGrid
@@ -676,383 +388,81 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         showMapSettings={showMapSettings}
       />
 
-      <Modal
+      <PointsListActionsModal
+        styles={styles}
         visible={showActions}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowActions(false)}
-      >
-        <View style={styles.actionsOverlay}>
-          <Pressable
-            style={styles.actionsBackdrop}
-            onPress={() => setShowActions(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть меню"
-          />
+        exportError={exportError}
+        isExporting={isExporting}
+        onClose={() => setShowActions(false)}
+        onImport={() => {
+          setShowActions(false);
+          onImportPress?.();
+        }}
+        onExport={handleExportKml}
+        onOpenManualAdd={openManualAdd}
+        onStartSelection={() => {
+          setShowActions(false);
+          startSelectionMode();
+          setPanelTab('list');
+        }}
+        onDeleteAll={() => {
+          setShowActions(false);
+          blurActiveElementForModal();
+          setShowConfirmDeleteAll(true);
+        }}
+      />
 
-          <View style={styles.actionsModal}>
-            <Text style={styles.actionsTitle}>Действия</Text>
+      <PointsListBulkModals
+        styles={styles}
+        pointToDelete={pointToDelete}
+        onClosePointDelete={() => setPointToDelete(null)}
+        onConfirmPointDelete={confirmDeletePoint}
+        showBulkEdit={showBulkEdit}
+        onCloseBulkEdit={() => setShowBulkEdit(false)}
+        bulkStatus={bulkStatus}
+        onBulkStatusChange={setBulkStatus}
+        onApplyBulkEdit={applyBulkEdit}
+        showConfirmDeleteSelected={showConfirmDeleteSelected}
+        onCloseConfirmDeleteSelected={() => setShowConfirmDeleteSelected(false)}
+        selectedCount={selectedIds.length}
+        onDeleteSelected={deleteSelected}
+        showConfirmDeleteAll={showConfirmDeleteAll}
+        onCloseConfirmDeleteAll={() => setShowConfirmDeleteAll(false)}
+        onDeleteAll={deleteAll}
+        isBulkWorking={isBulkWorking}
+      />
 
-            {exportError ? <Text style={styles.manualErrorText}>{exportError}</Text> : null}
-
-            <Button
-              label="Импорт"
-              onPress={() => {
-                setShowActions(false);
-                onImportPress?.();
-              }}
-              accessibilityLabel="Импорт"
-              fullWidth
-              style={styles.actionsButton}
-            />
-
-            <Button
-              label={isExporting ? 'Экспорт…' : 'Экспорт'}
-              onPress={handleExportKml}
-              accessibilityLabel="Экспорт"
-              fullWidth
-              loading={isExporting}
-              style={styles.actionsButton}
-            />
-
-            <Button
-              label="Добавить вручную"
-              onPress={openManualAdd}
-              accessibilityLabel="Добавить вручную"
-              fullWidth
-              style={styles.actionsButton}
-            />
-
-	            <Button
-	              label="Выбрать точки"
-	              onPress={() => {
-	                setShowActions(false);
-	                startSelectionMode();
-	                setPanelTab('list');
-	              }}
-	              accessibilityLabel="Выбрать точки"
-	              fullWidth
-	              style={styles.actionsButton}
-	            />
-
-            <Button
-              label="Удалить все точки"
-              onPress={() => {
-                setShowActions(false);
-                blurActiveElementForModal();
-                setShowConfirmDeleteAll(true);
-              }}
-              accessibilityLabel="Удалить все точки"
-              fullWidth
-              variant="danger"
-              style={styles.actionsButton}
-            />
-
-            <Button
-              label="Отмена"
-              onPress={() => setShowActions(false)}
-              accessibilityLabel="Отмена"
-              fullWidth
-              variant="ghost"
-            />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={Boolean(pointToDelete)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPointToDelete(null)}
-      >
-        <View style={styles.actionsOverlay}>
-          <Pressable
-            style={styles.actionsBackdrop}
-            onPress={() => setPointToDelete(null)}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть"
-          />
-
-          <View style={styles.actionsModal}>
-            <Text style={styles.actionsTitle}>Удалить точку?</Text>
-            <Text style={styles.emptySubtext}>{String(pointToDelete?.name ?? '')}</Text>
-
-            <Button
-              label="Удалить"
-              onPress={confirmDeletePoint}
-              disabled={isBulkWorking}
-              loading={isBulkWorking}
-              accessibilityLabel="Удалить"
-              fullWidth
-              variant="danger"
-            />
-
-            <Button
-              label="Отмена"
-              onPress={() => setPointToDelete(null)}
-              accessibilityLabel="Отмена"
-              fullWidth
-              variant="ghost"
-              style={styles.modalSpacing}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={showBulkEdit}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowBulkEdit(false)}
-      >
-        <View style={styles.actionsOverlay}>
-          <Pressable
-            style={styles.actionsBackdrop}
-            onPress={() => setShowBulkEdit(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть"
-          />
-
-          <View style={styles.actionsModal}>
-            <Text style={styles.actionsTitle}>Изменить выбранные</Text>
-
-            <FormFieldWithValidation label="Статус">
-              <SimpleMultiSelect
-                data={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-                value={bulkStatus ? [bulkStatus] : []}
-                onChange={(vals) => {
-                  const v = (vals[vals.length - 1] as PointStatus | undefined) ?? undefined;
-                  setBulkStatus(v ?? null);
-                }}
-                labelField="label"
-                valueField="value"
-                search={false}
-              />
-            </FormFieldWithValidation>
-
-            <Button
-              label="Применить"
-              onPress={applyBulkEdit}
-              disabled={isBulkWorking || selectedIds.length === 0}
-              loading={isBulkWorking}
-              accessibilityLabel="Применить"
-              fullWidth
-            />
-
-            <Button
-              label="Отмена"
-              onPress={() => setShowBulkEdit(false)}
-              accessibilityLabel="Отмена"
-              fullWidth
-              variant="ghost"
-              style={styles.modalSpacing}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={showConfirmDeleteSelected}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfirmDeleteSelected(false)}
-      >
-        <View style={styles.actionsOverlay}>
-          <Pressable
-            style={styles.actionsBackdrop}
-            onPress={() => setShowConfirmDeleteSelected(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть"
-          />
-          <View style={styles.actionsModal}>
-            <Text style={styles.actionsTitle}>Удалить выбранные?</Text>
-            <Text style={styles.emptySubtext}>Будут удалены: {selectedIds.length}</Text>
-
-            <Button
-              label="Удалить"
-              onPress={deleteSelected}
-              disabled={isBulkWorking}
-              loading={isBulkWorking}
-              accessibilityLabel="Удалить"
-              fullWidth
-              variant="danger"
-            />
-
-            <Button
-              label="Отмена"
-              onPress={() => setShowConfirmDeleteSelected(false)}
-              accessibilityLabel="Отмена"
-              fullWidth
-              variant="ghost"
-              style={styles.modalSpacing}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
-        visible={showConfirmDeleteAll}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowConfirmDeleteAll(false)}
-      >
-        <View style={styles.actionsOverlay}>
-          <Pressable
-            style={styles.actionsBackdrop}
-            onPress={() => setShowConfirmDeleteAll(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть"
-          />
-          <View style={styles.actionsModal}>
-            <Text style={styles.actionsTitle}>Удалить все точки?</Text>
-            <Text style={styles.emptySubtext}>Это действие нельзя отменить</Text>
-
-            <Button
-              label="Удалить все"
-              onPress={deleteAll}
-              disabled={isBulkWorking}
-              loading={isBulkWorking}
-              accessibilityLabel="Удалить все"
-              fullWidth
-              variant="danger"
-            />
-
-            <Button
-              label="Отмена"
-              onPress={() => setShowConfirmDeleteAll(false)}
-              accessibilityLabel="Отмена"
-              fullWidth
-              variant="ghost"
-              style={styles.modalSpacing}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
+      <PointsListManualModal
+        styles={styles}
         visible={showManualAdd}
-        transparent
-        animationType="fade"
-        onRequestClose={closeManualAdd}
-      >
-        <View style={styles.manualOverlay}>
-          <Pressable
-            style={styles.manualBackdrop}
-            onPress={closeManualAdd}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть форму"
-          />
-          <View style={styles.manualModal}>
-            <View style={styles.manualHeader}>
-              <Text style={styles.manualTitle}>{editingPointId ? 'Редактировать точку' : 'Добавить точку вручную'}</Text>
-              <Button
-                label="Закрыть"
-                onPress={closeManualAdd}
-                accessibilityLabel="Закрыть"
-                size="sm"
-                variant="secondary"
-              />
-            </View>
-
-            <ScrollView style={styles.manualScroll} contentContainerStyle={styles.manualScrollContent}>
-              <FormFieldWithValidation label="Название" required error={manualError && !manualName.trim() ? manualError : null}>
-                <TextInput
-                  style={styles.manualInput}
-                  value={manualName}
-                  onChangeText={(v) => {
-                    setManualNameTouched(true);
-                    setManualName(v);
-                  }}
-                  placeholder="Например: Любимое кафе"
-                  placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
-                />
-              </FormFieldWithValidation>
-
-              <View style={styles.coordsRow}>
-                <View style={styles.coordsCol}>
-                  <FormFieldWithValidation label="Lat" required error={manualError && !manualCoords ? manualError : null}>
-                    <TextInput
-                      style={styles.manualInput}
-                      value={manualLat}
-                      onChangeText={(v) => {
-                        setManualLat(v);
-                        syncCoordsFromInputs(v, manualLng);
-                      }}
-                      placeholder="55.755800"
-                      placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
-                      keyboardType={Platform.OS === 'ios' || Platform.OS === 'android' ? 'numeric' : (undefined as any)}
-                    />
-                  </FormFieldWithValidation>
-                </View>
-                <View style={styles.coordsCol}>
-                  <FormFieldWithValidation label="Lng" required error={manualError && !manualCoords ? manualError : null}>
-                    <TextInput
-                      style={styles.manualInput}
-                      value={manualLng}
-                      onChangeText={(v) => {
-                        setManualLng(v);
-                        syncCoordsFromInputs(manualLat, v);
-                      }}
-                      placeholder="37.617300"
-                      placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
-                      keyboardType={Platform.OS === 'ios' || Platform.OS === 'android' ? 'numeric' : (undefined as any)}
-                    />
-                  </FormFieldWithValidation>
-                </View>
-              </View>
-
-              <FormFieldWithValidation label="Категория" required>
-                <SimpleMultiSelect
-                  data={(siteCategoryOptionsQuery.data ?? []).map((cat) => ({
-                    value: cat.id,
-                    label: cat.name,
-                  }))}
-                  value={manualCategoryIds}
-                  onChange={(vals) => setManualCategoryIds(vals.filter((v): v is string => typeof v === 'string'))}
-                  labelField="label"
-                  valueField="value"
-                  search={false}
-                />
-              </FormFieldWithValidation>
-
-              <FormFieldWithValidation label="Цвет">
-                <View style={styles.manualColorRow}>
-                  {manualColorOptions.map((color) => {
-                    const isSelected = manualColor === color;
-                    return (
-                      <ColorChip
-                        key={color}
-                        color={color}
-                        selected={isSelected}
-                        onPress={() => setManualColor(color)}
-                        accessibilityLabel={`Цвет ${color}`}
-                        chipSize={32}
-                        dotSize={20}
-                        dotBorderWidth={1}
-                      />
-                    );
-                  })}
-                </View>
-              </FormFieldWithValidation>
-
-              {manualError && manualName.trim() && manualCoords ? (
-                <Text style={styles.manualErrorText}>{manualError}</Text>
-              ) : null}
-            </ScrollView>
-
-            <View style={styles.manualFooter}>
-              <Button
-                label={isSavingManual ? 'Сохранение…' : 'Сохранить'}
-                onPress={handleSaveManual}
-                disabled={isSavingManual}
-                loading={isSavingManual}
-                accessibilityLabel="Сохранить точку"
-                fullWidth
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+        editingPointId={editingPointId}
+        onClose={closeManualAdd}
+        manualName={manualName}
+        onChangeName={(v) => {
+          setManualNameTouched(true);
+          setManualName(v);
+        }}
+        manualError={manualError}
+        manualCoords={manualCoords}
+        manualLat={manualLat}
+        onChangeLat={(v) => {
+          setManualLat(v);
+          syncCoordsFromInputs(v, manualLng);
+        }}
+        manualLng={manualLng}
+        onChangeLng={(v) => {
+          setManualLng(v);
+          syncCoordsFromInputs(manualLat, v);
+        }}
+        categoryOptions={categoryData}
+        manualCategoryIds={manualCategoryIds}
+        onChangeCategoryIds={setManualCategoryIds}
+        manualColorOptions={manualColorOptions}
+        manualColor={manualColor}
+        onChangeColor={setManualColor}
+        isSavingManual={isSavingManual}
+        onSave={handleSaveManual}
+      />
     </View>
   );
 };
