@@ -36,6 +36,8 @@ import { usePointsPresets } from './usePointsPresets';
 import { usePointsRecommendations } from './usePointsRecommendations';
 import { usePointsBulkActions } from './usePointsBulkActions';
 import { usePointsManualForm } from './usePointsManualForm';
+import { usePointsDeletePoint } from './usePointsDeletePoint';
+import { usePointsDriveInfo } from './usePointsDriveInfo';
 
 import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
@@ -82,13 +84,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     handleOpenRecommendations: openRecommendations,
     handleCloseRecommendations: closeRecommendations,
   } = usePointsRecommendations({ setActivePointId });
-  const [activeDriveInfo, setActiveDriveInfo] = useState<
-    | null
-    | { status: 'loading' }
-    | { status: 'ok'; distanceKm: number; durationMin: number }
-    | { status: 'error' }
-  >(null);
-  const [pointToDelete, setPointToDelete] = useState<any | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -98,7 +93,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const isWideScreenWeb = Platform.OS === 'web' && windowWidth >= 1024;
 
   const showPointTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activeDriveAbortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
 
   const presetPrevCategoryIdsRef = useRef<string[] | null>(null);
@@ -109,9 +103,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         clearTimeout(showPointTimeoutRef.current);
         showPointTimeoutRef.current = null;
       }
-
-      activeDriveAbortRef.current?.abort();
-      activeDriveAbortRef.current = null;
     };
   }, []);
 
@@ -375,6 +366,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     queryClient,
   });
 
+  const { pointToDelete, setPointToDelete, requestDeletePoint, confirmDeletePoint } = usePointsDeletePoint({
+    queryClient,
+    setIsBulkWorking,
+  });
+
   const visibleFilteredPoints = useMemo(() => {
     // Show only recommended points when in recommendations mode
     if (showingRecommendations && recommendedPointIds.length > 0) {
@@ -385,58 +381,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return sortPointsByPresetProximity(filteredPoints, activePreset, resolveCategoryIdsByNames);
   }, [activePreset, filteredPoints, recommendedPointIds, resolveCategoryIdsByNames, showingRecommendations]);
 
-  useEffect(() => {
-    const id = Number(activePointId);
-    const userLat = Number(currentLocation?.lat);
-    const userLng = Number(currentLocation?.lng);
-    if (!Number.isFinite(id)) {
-      setActiveDriveInfo(null);
-      return;
-    }
-    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) {
-      setActiveDriveInfo(null);
-      return;
-    }
-
-    const target = (visibleFilteredPoints as any[]).find((p: any) => Number(p?.id) === id);
-    const toLat = Number((target as any)?.latitude);
-    const toLng = Number((target as any)?.longitude);
-    if (!Number.isFinite(toLat) || !Number.isFinite(toLng)) {
-      setActiveDriveInfo(null);
-      return;
-    }
-
-    activeDriveAbortRef.current?.abort();
-    const controller = new AbortController();
-    activeDriveAbortRef.current = controller;
-    setActiveDriveInfo({ status: 'loading' });
-
-    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${toLng},${toLat}?overview=false`;
-
-    fetch(url, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((data) => {
-        if (controller.signal.aborted) return;
-        const route = Array.isArray(data?.routes) ? data.routes[0] : null;
-        const distanceM = Number(route?.distance);
-        const durationS = Number(route?.duration);
-        if (!Number.isFinite(distanceM) || !Number.isFinite(durationS)) {
-          setActiveDriveInfo({ status: 'error' });
-          return;
-        }
-        const distanceKm = Math.round((distanceM / 1000) * 10) / 10;
-        const durationMin = Math.max(1, Math.round(durationS / 60));
-        setActiveDriveInfo({ status: 'ok', distanceKm, durationMin });
-      })
-      .catch(() => {
-        if (controller.signal.aborted) return;
-        setActiveDriveInfo({ status: 'error' });
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, [activePointId, currentLocation?.lat, currentLocation?.lng, visibleFilteredPoints]);
+  const activeDriveInfo = usePointsDriveInfo({
+    activePointId,
+    currentLocation,
+    visibleFilteredPoints: visibleFilteredPoints as Record<string, unknown>[],
+  });
 
   useEffect(() => {
     const selected = filters.categoryIds ?? [];
@@ -554,32 +503,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setIsExporting(false);
     }
   }, []);
-
-  const requestDeletePoint = useCallback((point: any) => {
-    setPointToDelete(point);
-  }, []);
-
-  const confirmDeletePoint = useCallback(async () => {
-    const id = Number(pointToDelete?.id);
-    if (!Number.isFinite(id)) {
-      setPointToDelete(null);
-      return;
-    }
-
-    setIsBulkWorking(true);
-    try {
-      await userPointsApi.deletePoint(id);
-      queryClient.setQueryData(['userPointsAll'], (prev: any) => {
-        const arr = Array.isArray(prev) ? prev : [];
-        return arr.filter((p: any) => Number(p?.id) !== id);
-      });
-    } catch {
-      // noop
-    } finally {
-      setIsBulkWorking(false);
-      setPointToDelete(null);
-    }
-  }, [pointToDelete, queryClient, setIsBulkWorking]);
 
   const handleOpenRecommendations = useCallback(
     async () => openRecommendations(filteredPoints),

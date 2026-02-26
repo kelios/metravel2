@@ -158,6 +158,10 @@
   - moved selection state and transitions (`selectionMode`, `selectedIds`, `selectedIdSet`, start/exit/clear/toggle)
   - moved bulk workflows (`applyBulkEdit`, `deleteSelected`, `deleteAll`) and progress/confirm modal state
   - integrated `PointsList` with hook handlers and removed duplicate local bulk handlers/effects
+- [x] 2026-02-26: extracted manual add/edit form controller from `PointsList` into `components/UserPoints/usePointsManualForm.ts`:
+  - moved manual form state (`showManualAdd`, fields, validation, save lifecycle)
+  - moved manual workflows (`openManualAdd`, `closeManualAdd`, `openEditPoint`, `handleMapPress`, `handleSaveManual`)
+  - preserved map reverse-geocoding flow while reducing `PointsList` responsibilities
 - [ ] map module unification (`components/map` + `components/MapPage`)
 - [ ] first god-component split (`PointsList` or `ArticleEditor.web`)
 - [ ] continue API boundary type-hardening slice (related parsers + DTO contracts)
