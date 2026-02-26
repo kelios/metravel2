@@ -144,6 +144,7 @@ config.resolver.resolveRequest = ((orig) => {
 	    }
 
 	    const publicRoot = path.resolve(__dirname, 'public')
+      const projectAssetsRoot = path.resolve(__dirname, 'assets')
 	    const mimeByExt = {
 	      '.ico': 'image/x-icon',
 	      '.png': 'image/png',
@@ -188,6 +189,14 @@ config.resolver.resolveRequest = ((orig) => {
           req.url = url
         }
 
+        // Backward compatibility for legacy static URLs used outside Metro:
+        // /icons/* should resolve to /assets/icons/* in local dev as well.
+        if (pathname.startsWith('/icons/')) {
+          pathname = `/assets${pathname}`
+          url = pathname + search
+          req.url = url
+        }
+
         // CORS proxy for API requests
         if (pathname.startsWith('/api/')) {
           const apiHost = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.36';
@@ -226,10 +235,12 @@ config.resolver.resolveRequest = ((orig) => {
 	                }
 	              });
 
-	              // If the client disconnects, stop proxying to avoid unhandled stream errors.
+	              // If the client disconnects before the response is fully written,
+                // stop upstream streams. Do not destroy completed responses.
 	              res.on('close', () => {
-	                proxyReq.destroy()
-	                proxyRes.destroy()
+                  if (res.writableEnded) return
+                  if (!proxyReq.destroyed) proxyReq.destroy()
+                  if (!proxyRes.destroyed) proxyRes.destroy()
 	              })
 
 	              proxyRes.on('aborted', () => {
@@ -285,11 +296,27 @@ config.resolver.resolveRequest = ((orig) => {
 	          const relative = pathname.replace(/^\/+/, '')
 	          const filePath = path.resolve(publicRoot, relative)
 	          const safeRoot = publicRoot.endsWith(path.sep) ? publicRoot : publicRoot + path.sep
+            const fallbackAssetRelative = relative.startsWith('assets/')
+              ? relative.slice('assets/'.length)
+              : relative
+            const fallbackAssetPath = path.resolve(projectAssetsRoot, fallbackAssetRelative)
+            const safeAssetsRoot = projectAssetsRoot.endsWith(path.sep)
+              ? projectAssetsRoot
+              : projectAssetsRoot + path.sep
 
-	          if (filePath.startsWith(safeRoot) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-	            const ext = path.extname(filePath).toLowerCase()
+            const chosenPath =
+              filePath.startsWith(safeRoot) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()
+                ? filePath
+                : fallbackAssetPath.startsWith(safeAssetsRoot) &&
+                    fs.existsSync(fallbackAssetPath) &&
+                    fs.statSync(fallbackAssetPath).isFile()
+                  ? fallbackAssetPath
+                  : null
+
+	          if (chosenPath) {
+	            const ext = path.extname(chosenPath).toLowerCase()
 	            res.setHeader('Content-Type', mimeByExt[ext] || 'application/octet-stream')
-	            const stream = fs.createReadStream(filePath)
+	            const stream = fs.createReadStream(chosenPath)
 	            res.on('close', () => stream.destroy())
 	            pipeline(stream, res, (err) => {
 	              if (err && !isPrematureCloseError(err)) {
