@@ -49,16 +49,28 @@ function HomeScreen() {
 
     const shouldRenderSeo = useMemo(() => {
         if (Platform.OS !== 'web') return false;
-        return isHomePath;
-    }, [isHomePath]);
+        if (isHomePath) return true;
+        // SSR/first render fallback for home route: keep meta tags available
+        // even before window.location-based URL verification is possible.
+        return !hydrated && (pathname === '/' || pathname === '/index' || pathname === '');
+    }, [hydrated, isHomePath, pathname]);
 
     const title = 'Идеи поездок на выходные и книга путешествий | Metravel';
     const description = 'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.';
 
-    // Before hydration or when URL is not home: render nothing.
-    // null avoids any visible DOM footprint from this tab.
+    // Before hydration or when URL is not home: avoid rendering home content.
+    // Keep SEO tags when shouldRenderSeo=true so crawlers still see meta tags.
     if (!isHomePath) {
-        return null;
+        return shouldRenderSeo ? (
+            <InstantSEO
+                headKey="home"
+                title={title}
+                description={description}
+                canonical={canonical}
+                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                ogType="website"
+            />
+        ) : null;
     }
 
     return (
