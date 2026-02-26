@@ -20,8 +20,12 @@ test.describe('Quest Video Loading', () => {
 
     test('should load quest page and check video in finale', async ({ page }) => {
         // Переходим на страницу квестов
-        await page.goto('/quests');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/quests', { waitUntil: 'domcontentloaded' });
+        await page.waitForLoadState('domcontentloaded');
+        await Promise.race([
+            page.locator('a[href*="/quests/"]').first().waitFor({ state: 'visible', timeout: 10000 }),
+            page.locator('text=/ошибка|Internal Server Error|Failed to load quests|не удалось загрузить/i').first().waitFor({ state: 'visible', timeout: 10000 }),
+        ]).catch(() => null);
 
         // Ищем первый доступный квест
         const questLink = page.locator('a[href*="/quests/"]').first();
@@ -34,8 +38,11 @@ test.describe('Quest Video Loading', () => {
         }
 
         // Переходим на страницу квеста
-        await questLink.click();
-        await page.waitForLoadState('networkidle');
+        await Promise.all([
+            page.waitForURL(/\/quests\//, { timeout: 10000 }),
+            questLink.click(),
+        ]);
+        await page.waitForLoadState('domcontentloaded');
 
         // Проверяем, что страница квеста загрузилась
         await expect(page.locator('text=/Квест|Quest/i').first()).toBeVisible({ timeout: 10000 });
@@ -124,7 +131,13 @@ test.describe('Quest Video Loading', () => {
 
     test('should check video URL from API', async ({ page: _page, request }) => {
         // Получаем список квестов через API
-        const questsResponse = await request.get('/api/quests/');
+        let questsResponse;
+        try {
+            questsResponse = await request.get('/api/quests/', { timeout: 10000 });
+        } catch (error: any) {
+            test.skip(true, `Quests API unavailable: ${error?.message ?? 'request failed'}`);
+            return;
+        }
         if (!questsResponse.ok()) {
             test.skip(true, `Quests API unavailable: ${questsResponse.status()}`);
             return;
@@ -145,7 +158,13 @@ test.describe('Quest Video Loading', () => {
         console.log(`Testing quest: ${questId}`);
 
         // Получаем полный бандл квеста
-        const bundleResponse = await request.get(`/api/quests/by-quest-id/${questId}/`);
+        let bundleResponse;
+        try {
+            bundleResponse = await request.get(`/api/quests/by-quest-id/${questId}/`, { timeout: 10000 });
+        } catch (error: any) {
+            test.skip(true, `Quest bundle API unavailable: ${error?.message ?? 'request failed'}`);
+            return;
+        }
         if (!bundleResponse.ok()) {
             test.skip(true, `Quest bundle API unavailable: ${bundleResponse.status()}`);
             return;
@@ -206,13 +225,20 @@ test.describe('Quest Video Loading', () => {
         });
 
         // Переходим на страницу квеста
-        await page.goto('/quests');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/quests', { waitUntil: 'domcontentloaded' });
+        await page.waitForLoadState('domcontentloaded');
+        await Promise.race([
+            page.locator('a[href*="/quests/"]').first().waitFor({ state: 'visible', timeout: 10000 }),
+            page.locator('text=/ошибка|Internal Server Error|Failed to load quests|не удалось загрузить/i').first().waitFor({ state: 'visible', timeout: 10000 }),
+        ]).catch(() => null);
 
         const questLink = page.locator('a[href*="/quests/"]').first();
         if (await questLink.count() > 0) {
-            await questLink.click();
-            await page.waitForLoadState('networkidle');
+            await Promise.all([
+                page.waitForURL(/\/quests\//, { timeout: 10000 }),
+                questLink.click(),
+            ]);
+            await page.waitForLoadState('domcontentloaded');
 
             // Пытаемся открыть финал
             const finaleButton = page.locator('text=/Финал/i');

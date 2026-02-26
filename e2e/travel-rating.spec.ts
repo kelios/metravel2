@@ -506,16 +506,11 @@ test.describe('Travel Rating - API Integration', () => {
    */
   test('TC-RATING-007: API /rating/users/ возвращает данные для авторизованного пользователя', async ({ page }) => {
     let ratingUsersApiCalled = false;
-    let ratingUsersResponse: any = null;
 
     // Перехватываем запрос к /rating/users/
     await page.route('**/api/travels/*/rating/users/**', async (route) => {
       ratingUsersApiCalled = true;
-      // Пропускаем запрос к реальному API и сохраняем ответ
-      const response = await route.fetch();
-      ratingUsersResponse = await response.json().catch(() => null);
-
-      // Мокируем ответ с оценкой пользователя
+      // Стабильный мок вместо route.fetch(), чтобы тест не зависел от нестабильного backend ответа.
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -530,15 +525,16 @@ test.describe('Travel Rating - API Integration', () => {
 
     await assertTravelDetailsOpened(page);
     await getVisibleRatingSection(page);
-    await page.waitForTimeout(500);
+    await expect
+      .poll(() => ratingUsersApiCalled, { timeout: 8_000 })
+      .toBe(true);
 
     test.info().annotations.push({
       type: 'note',
-      description: `API /rating/users/ called: ${ratingUsersApiCalled}, response: ${JSON.stringify(ratingUsersResponse)}`,
+      description: `API /rating/users/ called: ${ratingUsersApiCalled}`,
     });
 
-    // API должен быть вызван для авторизованного пользователя
-    // (может не вызваться если используется кэш или мок не применился)
+    expect(ratingUsersApiCalled).toBe(true);
   });
 
   /**

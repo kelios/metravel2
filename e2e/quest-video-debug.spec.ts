@@ -20,8 +20,12 @@ test.describe('Quest Video Debug', () => {
 
         // Переходим на страницу квестов
         console.log('\n=== Step 1: Navigate to /quests ===');
-        await page.goto('/quests');
-        await page.waitForLoadState('networkidle');
+        await page.goto('/quests', { waitUntil: 'domcontentloaded' });
+        await page.waitForLoadState('domcontentloaded');
+        await Promise.race([
+            page.locator('a[href*="/quests/"]').first().waitFor({ state: 'visible', timeout: 10000 }),
+            page.locator('text=/ошибка|Internal Server Error|Failed to load quests|не удалось загрузить/i').first().waitFor({ state: 'visible', timeout: 10000 }),
+        ]).catch(() => null);
 
         // Делаем скриншот
         await page.screenshot({ path: 'playwright-screenshots/quest-list.png', fullPage: true });
@@ -54,8 +58,11 @@ test.describe('Quest Video Debug', () => {
 
         // Переходим на страницу квеста
         console.log('\n=== Step 3: Open quest ===');
-        await krakowLink.click();
-        await page.waitForLoadState('networkidle');
+        await Promise.all([
+            page.waitForURL(/\/quests\//, { timeout: 10000 }),
+            krakowLink.click(),
+        ]);
+        await page.waitForLoadState('domcontentloaded');
         await expect(page).toHaveURL(/\/quests\//);
         await page.screenshot({ path: 'playwright-screenshots/quest-page.png', fullPage: true });
 
