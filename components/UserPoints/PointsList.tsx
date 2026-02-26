@@ -11,10 +11,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-let Location: typeof import('expo-location') | undefined;
-if (Platform.OS !== 'web') {
-  Location = require('expo-location');
-}
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { userPointsApi } from '@/api/userPoints';
@@ -25,11 +21,21 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect';
 import Button from '@/components/ui/Button';
 import ColorChip from '@/components/ui/ColorChip';
-import { buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import {
+  POINTS_PRESETS,
+  haversineKm,
+  normalizeCategoryIdsFromPoint,
+  sortPointsByPresetProximity,
+} from './pointsListLogic';
+import { buildActiveFilterChips, computeHasActiveFilters } from './pointsFiltersMeta';
+import { usePointsPresets } from './usePointsPresets';
+import { usePointsRecommendations } from './usePointsRecommendations';
+import { usePointsBulkActions } from './usePointsBulkActions';
+import { usePointsManualForm } from './usePointsManualForm';
 
 import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
@@ -49,157 +55,7 @@ const DEFAULT_POINT_COLORS: string[] = [
 ];
 
 
-const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-const pickRandomDistinct = <T,>(items: T[], count: number): T[] => {
-  const n = items.length;
-  if (count <= 0 || n === 0) return [];
-  if (count >= n) return items.slice();
-
-  const result: T[] = [];
-  const picked = new Set<number>();
-  while (result.length < count) {
-    const idx = Math.floor(Math.random() * n);
-    if (picked.has(idx)) continue;
-    picked.add(idx);
-    result.push(items[idx]);
-  }
-  return result;
-};
-
 type ViewMode = 'list' | 'map';
-
-type PointsPreset = {
-  id: string;
-  label: string;
-  baseCategoryNames: string[];
-  nearbyCategoryNames: string[];
-  proximityKm: number;
-};
-
-const POINTS_PRESETS: PointsPreset[] = [
-  {
-    id: 'hike_mountains',
-    label: 'Поход в горы',
-    baseCategoryNames: ['Гора', 'Горный хребет', 'Перевал', 'Треккинговый маршрут'],
-    nearbyCategoryNames: [
-      'Приют',
-      'Заповедник',
-      'Национальный парк',
-      'Озеро',
-      'Родник',
-      'Река',
-      'Ручей',
-      'Водопад',
-      'Скала',
-      'Утес',
-      'Ущелье',
-      'Долина',
-      'Каньон',
-      'Пещера',
-      'Ледник',
-      'Экологическая тропа',
-      'Обзорная точка',
-      'Кемпинг',
-      'Парковка',
-      'Горячий источник',
-    ],
-    proximityKm: 10,
-  },
-  {
-    id: 'history_ruins',
-    label: 'Руины',
-    baseCategoryNames: [
-      'Руины',
-      'Руины замка',
-      'Руины усадьбы',
-      'Руины мельницы',
-      'Руины дворца',
-      'Руины моста',
-      'Руины церкви',
-      'Замок',
-      'Крепость',
-      'Форт',
-      'Усадьба',
-      'Древний город',
-      'Археологическая достопримечательность',
-      'Акведук',
-      'Амфитеатр',
-      'Арка',
-      'Башня',
-      'Бункер',
-      'Дот',
-    ],
-    nearbyCategoryNames: [
-      'Музей',
-      'Музей под открытым небом',
-      'Памятник',
-      'Религиозная достопримечательность',
-      'Церковь',
-      'Собор',
-      'Часовня',
-      'Монастырь',
-      'Дворец',
-      'Обзорная точка',
-      'Парк',
-      'Рынок',
-      'Кафе',
-      'Ресторан',
-      'Парковка',
-    ],
-    proximityKm: 8,
-  },
-  {
-    id: 'lakes',
-    label: 'Озёра',
-    baseCategoryNames: ['Озеро'],
-    nearbyCategoryNames: ['Родник', 'Водопад', 'Парк', 'Лес', 'Место отдыха', 'Пляж', 'Скала'],
-    proximityKm: 6,
-  },
-  {
-    id: 'with_kids',
-    label: 'С детьми',
-    baseCategoryNames: ['Парк развлечений', 'Парк', 'Место отдыха'],
-    nearbyCategoryNames: ['Кафе', 'Ресторан', 'Туалет', 'Остановка', 'Музей', 'Пляж', 'Озеро'],
-    proximityKm: 4,
-  },
-  {
-    id: 'nature',
-    label: 'Природа',
-    baseCategoryNames: ['Заповедник', 'Лес', 'Парк', 'Водопад', 'Озеро'],
-    nearbyCategoryNames: ['Родник', 'Скала', 'Пещера', 'Гора', 'Место отдыха'],
-    proximityKm: 10,
-  },
-];
-
-const normalizeCategoryIdsFromPoint = (p: any): string[] => {
-  const multiAlt = (p as any)?.categories ?? (p as any)?.categories_ids;
-  if (Array.isArray(multiAlt)) {
-    return multiAlt.map((v: any) => String(v)).map((v) => v.trim()).filter(Boolean);
-  }
-
-  const direct = (p as any)?.categoryIds ?? (p as any)?.category_ids;
-  if (Array.isArray(direct)) {
-    return direct.map((v: any) => String(v)).map((v) => v.trim()).filter(Boolean);
-  }
-
-  const single = (p as any)?.categoryId ?? (p as any)?.category_id;
-  if (single != null && String(single).trim()) return [String(single).trim()];
-
-  const legacy = (p as any)?.category;
-  if (legacy != null && String(legacy).trim()) return [String(legacy).trim()];
-
-  return [];
-};
 
 type PointsListProps = {
   onImportPress?: () => void;
@@ -215,44 +71,24 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const viewMode: ViewMode = 'map'; // Fixed to map view only
   const [panelTab, setPanelTab] = useState<'filters' | 'list'>('list');
   const [showActions, setShowActions] = useState(false);
-  const [recommendedPointIds, setRecommendedPointIds] = useState<number[]>([]);
-  const [showingRecommendations, setShowingRecommendations] = useState(false);
-  const [recommendedRoutes, setRecommendedRoutes] = useState<
-    Record<number, { distance: number; duration: number; line?: Array<[number, number]> }>
-  >({});
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [activePointId, setActivePointId] = useState<number | null>(null);
+  const {
+    currentLocation,
+    isLocating,
+    recommendedPointIds,
+    showingRecommendations,
+    recommendedRoutes,
+    handleLocateMe: locateMe,
+    handleOpenRecommendations: openRecommendations,
+    handleCloseRecommendations: closeRecommendations,
+  } = usePointsRecommendations({ setActivePointId });
   const [activeDriveInfo, setActiveDriveInfo] = useState<
     | null
     | { status: 'loading' }
     | { status: 'ok'; distanceKm: number; durationMin: number }
     | { status: 'error' }
   >(null);
-  const [showBulkEdit, setShowBulkEdit] = useState(false);
-  const [bulkColor, setBulkColor] = useState<string | null>(null);
-  const [bulkStatus, setBulkStatus] = useState<PointStatus | null>(null);
-  const [isBulkWorking, setIsBulkWorking] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
-  const [showConfirmDeleteSelected, setShowConfirmDeleteSelected] = useState(false);
-  const [showConfirmDeleteAll, setShowConfirmDeleteAll] = useState(false);
-  const [editingPointId, setEditingPointId] = useState<number | null>(null);
   const [pointToDelete, setPointToDelete] = useState<any | null>(null);
-  const [showManualAdd, setShowManualAdd] = useState(false);
-  const [manualName, setManualName] = useState('');
-  const [manualNameTouched, setManualNameTouched] = useState(false);
-  const [manualAutoName, setManualAutoName] = useState('');
-  const [manualAddress, setManualAddress] = useState('');
-  const [manualCoords, setManualCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [manualLat, setManualLat] = useState('');
-  const [manualLng, setManualLng] = useState('');
-  const [manualColor, setManualColor] = useState<string>(DESIGN_COLORS.userPointDefault);
-  const [manualStatus, setManualStatus] = useState<PointStatus>(PointStatus.PLANNING);
-  const [manualCategoryIds, setManualCategoryIds] = useState<string[]>([]);
-  const [isSavingManual, setIsSavingManual] = useState(false);
-  const [manualError, setManualError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -263,7 +99,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const showPointTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeDriveAbortRef = useRef<AbortController | null>(null);
-  const recommendationsAbortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
 
   const presetPrevCategoryIdsRef = useRef<string[] | null>(null);
@@ -277,9 +112,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
       activeDriveAbortRef.current?.abort();
       activeDriveAbortRef.current = null;
-
-      recommendationsAbortRef.current?.abort();
-      recommendationsAbortRef.current = null;
     };
   }, []);
 
@@ -291,50 +123,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     } catch {
       // noop
     }
-  }, []);
-
-  // Auto-request geolocation on mount for default 100km radius filter
-  useEffect(() => {
-    const requestLocation = async () => {
-      try {
-        if (Platform.OS === 'web') {
-          if (typeof navigator === 'undefined' || !navigator.geolocation) {
-            return;
-          }
-
-          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0,
-            });
-          });
-
-          setCurrentLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        } else {
-          if (!Location) {
-            return;
-          }
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== 'granted') {
-            return;
-          }
-
-          const pos = await Location.getCurrentPositionAsync({});
-          setCurrentLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        }
-      } catch {
-        // If location fails, user can still see all points or manually enable location
-      }
-    };
-
-    requestLocation();
   }, []);
 
   const listColumns = 1;
@@ -373,15 +161,19 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const categoryNameToIds = useMemo(() => createCategoryNameToIdsMap(categoryData), [categoryData]);
 
-  const activePreset = useMemo(() => {
-    if (!activePresetId) return null;
-    return POINTS_PRESETS.find((p) => p.id === activePresetId) ?? null;
-  }, [activePresetId]);
-
   const resolveCategoryIdsByNames = useCallback(
     (names: string[]) => mapNamesToIds(names, categoryNameToIds),
     [categoryNameToIds]
   );
+
+  const { activePreset, handlePresetChange } = usePointsPresets({
+    activePresetId,
+    setActivePresetId,
+    filtersCategoryIds: filters.categoryIds,
+    setFilters,
+    presetPrevCategoryIdsRef,
+    resolveCategoryIdsByNames,
+  });
 
   const resolveCategoryIdsForEdit = useCallback(
     (point: any): string[] => {
@@ -394,29 +186,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       return resolved;
     },
     [categoryIdToName, resolveCategoryIdsByNames]
-  );
-
-  const handlePresetChange = useCallback(
-    (nextPresetId: string | null) => {
-      setActivePresetId(nextPresetId);
-
-      if (!nextPresetId) {
-        const prev = presetPrevCategoryIdsRef.current;
-        presetPrevCategoryIdsRef.current = null;
-        if (prev) {
-          setFilters((f) => ({ ...f, categoryIds: prev, page: 1 }));
-        }
-        return;
-      }
-
-      const preset = POINTS_PRESETS.find((p) => p.id === nextPresetId);
-      if (!preset) return;
-
-      presetPrevCategoryIdsRef.current = (filters.categoryIds ?? []).slice();
-      const baseIds = resolveCategoryIdsByNames(preset.baseCategoryNames);
-      setFilters((f) => ({ ...f, categoryIds: baseIds, page: 1 }));
-    },
-    [filters.categoryIds, resolveCategoryIdsByNames]
   );
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -552,94 +321,69 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     });
   }, [baseFilteredPoints, filters.categoryIds]);
 
+  const {
+    selectionMode,
+    selectedIds,
+    selectedIdSet,
+    showBulkEdit,
+    setShowBulkEdit,
+    bulkStatus,
+    setBulkStatus,
+    isBulkWorking,
+    setIsBulkWorking,
+    bulkProgress,
+    showConfirmDeleteSelected,
+    setShowConfirmDeleteSelected,
+    showConfirmDeleteAll,
+    setShowConfirmDeleteAll,
+    startSelectionMode,
+    toggleSelect,
+    clearSelection,
+    exitSelectionMode,
+    applyBulkEdit,
+    deleteSelected,
+    deleteAll,
+  } = usePointsBulkActions({ filteredPoints, queryClient });
+
+  const {
+    editingPointId,
+    showManualAdd,
+    manualName,
+    setManualName,
+    setManualNameTouched,
+    manualCoords,
+    manualLat,
+    setManualLat,
+    manualLng,
+    setManualLng,
+    manualColor,
+    setManualColor,
+    manualCategoryIds,
+    setManualCategoryIds,
+    isSavingManual,
+    manualError,
+    openManualAdd,
+    closeManualAdd,
+    openEditPoint,
+    handleMapPress,
+    syncCoordsFromInputs,
+    handleSaveManual,
+  } = usePointsManualForm({
+    blurActiveElementForModal,
+    setShowActions,
+    resolveCategoryIdsForEdit,
+    queryClient,
+  });
+
   const visibleFilteredPoints = useMemo(() => {
-    const applyPresetSorting = (list: any[]) => {
-      if (!activePreset) return list;
-
-      const proximityKm = Number(activePreset.proximityKm);
-      if (!Number.isFinite(proximityKm) || proximityKm <= 0) return list;
-
-      const wantedIds = resolveCategoryIdsByNames(activePreset.nearbyCategoryNames);
-      if (wantedIds.length === 0) return list;
-
-      const cellSizeKm = proximityKm;
-      const cellSizeDeg = cellSizeKm / 111;
-
-      const toCell = (lat: number, lng: number) => {
-        const cx = Math.floor(lng / cellSizeDeg);
-        const cy = Math.floor(lat / cellSizeDeg);
-        return `${cx}:${cy}`;
-      };
-
-      const grid = new Map<string, any[]>();
-      for (const p of list) {
-        const lat = Number(p?.latitude);
-        const lng = Number(p?.longitude);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        const key = toCell(lat, lng);
-        const bucket = grid.get(key);
-        if (bucket) bucket.push(p);
-        else grid.set(key, [p]);
-      }
-
-      const wantedSet = new Set(wantedIds);
-
-      const scorePoint = (p: any) => {
-        const lat = Number(p?.latitude);
-        const lng = Number(p?.longitude);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { score: 0 };
-
-        const cx = Math.floor(lng / cellSizeDeg);
-        const cy = Math.floor(lat / cellSizeDeg);
-        const found = new Set<string>();
-
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            const key = `${cx + dx}:${cy + dy}`;
-            const bucket = grid.get(key);
-            if (!bucket) continue;
-            for (const q of bucket) {
-              if (q === p) continue;
-              const qLat = Number(q?.latitude);
-              const qLng = Number(q?.longitude);
-              if (!Number.isFinite(qLat) || !Number.isFinite(qLng)) continue;
-              if (haversineKm(lat, lng, qLat, qLng) > proximityKm) continue;
-              const ids = Array.isArray(q?.categoryIds) ? q.categoryIds : [];
-              for (const id of ids) {
-                if (wantedSet.has(id)) found.add(id);
-              }
-            }
-          }
-        }
-
-        return { score: found.size };
-      };
-
-      return list
-        .map((p) => {
-          const s = scorePoint(p);
-          return { ...p, __presetScore: s.score };
-        })
-        .sort((a: any, b: any) => {
-          const sa = Number(a.__presetScore) || 0;
-          const sb = Number(b.__presetScore) || 0;
-          if (sb !== sa) return sb - sa;
-          return String(a?.name ?? '').localeCompare(String(b?.name ?? ''));
-        });
-    };
-
     // Show only recommended points when in recommendations mode
     if (showingRecommendations && recommendedPointIds.length > 0) {
       const recommended = new Set(recommendedPointIds);
       return filteredPoints.filter((p: any) => recommended.has(Number(p.id)));
     }
 
-    return applyPresetSorting(filteredPoints);
+    return sortPointsByPresetProximity(filteredPoints, activePreset, resolveCategoryIdsByNames);
   }, [activePreset, filteredPoints, recommendedPointIds, resolveCategoryIdsByNames, showingRecommendations]);
-
-  const selectedIdSet = useMemo(() => {
-    return new Set(selectedIds);
-  }, [selectedIds]);
 
   useEffect(() => {
     const id = Number(activePointId);
@@ -715,68 +459,31 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     [defaultPerPage, filters.perPage]
   );
 
-  const hasActiveFilters = useMemo(() => {
-    const hasSearch = String(searchQuery || '').trim().length > 0;
-    const radiusKm = filters.radiusKm;
-    const hasRadius = radiusKm != null && Number.isFinite(Number(radiusKm)) && Number(radiusKm) !== 100;
-    return (
-      (filters.statuses?.length ?? 0) > 0 ||
-      (filters.categoryIds?.length ?? 0) > 0 ||
-      (filters.colors?.length ?? 0) > 0 ||
-      hasSearch ||
-      hasRadius ||
-      Boolean(activePresetId)
-    );
-  }, [activePresetId, filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
+  const hasActiveFilters = useMemo(
+    () => computeHasActiveFilters({ activePresetId, filters, searchQuery }),
+    [activePresetId, filters, searchQuery]
+  );
 
-  const activeFilterChips = useMemo(() => {
-    const chips: Array<{ key: string; label: string }> = [];
-
-    if (activePreset) {
-      chips.push({ key: 'preset', label: `Подборка: ${activePreset.label}` });
-    }
-
-    const q = String(searchQuery || '').trim();
-    if (q) {
-      chips.push({ key: 'search', label: `Поиск: ${q}` });
-    }
-
-    const radiusKm = filters.radiusKm;
-    if (radiusKm != null && Number.isFinite(Number(radiusKm)) && Number(radiusKm) !== 100) {
-      chips.push({ key: 'radius', label: `Радиус: ${Number(radiusKm)} км` });
-    }
-    
-    (filters.statuses ?? []).forEach((status) => {
-      const label = (STATUS_LABELS as Record<string, string>)[status as unknown as string] || String(status);
-      chips.push({ key: `status-${status}`, label: `Статус: ${label}` });
-    });
-    
-    (filters.categoryIds ?? []).forEach((catId) => {
-      const label = categoryIdToName.get(catId) ?? catId;
-      chips.push({ key: `category-${catId}`, label: `Категория: ${label}` });
-    });
-    
-    (filters.colors ?? []).forEach((color) => {
-      chips.push({ key: `color-${color}`, label: `Цвет: ${color}` });
-    });
-    
-    return chips;
-  }, [activePreset, categoryIdToName, filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
-
-  const handleCloseRecommendations = useCallback(() => {
-    setShowingRecommendations(false);
-    setRecommendedPointIds([]);
-    setRecommendedRoutes({});
-  }, []);
+  const activeFilterChips = useMemo(
+    () =>
+      buildActiveFilterChips({
+        activePreset,
+        categoryIdToName,
+        filters,
+        searchQuery,
+        statusLabels: STATUS_LABELS as Record<string, string>,
+      }),
+    [activePreset, categoryIdToName, filters, searchQuery]
+  );
 
   const handleResetFilters = useCallback(() => {
     setSearchQuery('');
     setFilters({ page: 1, perPage: filters.perPage ?? 50, radiusKm: 100 });
     setActivePresetId(null);
     presetPrevCategoryIdsRef.current = null;
-    handleCloseRecommendations();
+    closeRecommendations();
     setActivePointId(null);
-  }, [filters.perPage, handleCloseRecommendations]);
+  }, [closeRecommendations, filters.perPage]);
 
   const handleRemoveFilterChip = useCallback((key: string) => {
     if (key === 'preset') {
@@ -809,73 +516,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setFilters((prev) => ({ ...prev, colors: next, page: 1 }));
     }
   }, [filters.categoryIds, filters.colors, filters.statuses, handlePresetChange]);
-
-  useEffect(() => {
-    if (!selectionMode) return;
-    const visible = new Set(filteredPoints.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id)));
-    setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
-  }, [filteredPoints, selectionMode]);
-
-  const resetManualForm = useCallback(() => {
-    setManualName('');
-    setManualNameTouched(false);
-    setManualAutoName('');
-    setManualAddress('');
-    setManualCoords(null);
-    setManualLat('');
-    setManualLng('');
-    setManualColor(DESIGN_COLORS.userPointDefault);
-    setManualStatus(PointStatus.PLANNING);
-    setManualCategoryIds([]);
-    setManualError(null);
-    setEditingPointId(null);
-  }, []);
-
-  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
-    try {
-      const primary = await fetch(
-        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
-      );
-      if (primary.ok) {
-        return await primary.json();
-      }
-    } catch {
-      // ignore and fall back
-    }
-
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1&zoom=18`
-      );
-      if (!response.ok) return null;
-      return await response.json();
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const getPrimaryPlaceName = useCallback((geocodeData: any, lat: number, lng: number): string => {
-    const poi =
-      geocodeData?.name ||
-      geocodeData?.address?.name ||
-      geocodeData?.address?.tourism ||
-      geocodeData?.address?.amenity ||
-      geocodeData?.address?.historic ||
-      geocodeData?.address?.leisure ||
-      geocodeData?.address?.place_of_worship ||
-      geocodeData?.address?.building;
-
-    if (poi && String(poi).trim()) return String(poi).trim();
-
-    const address = buildAddressFromGeocode(geocodeData, { lat, lng });
-    const firstPart = String(address || '').split('·')[0]?.trim();
-    return firstPart || String(address || '').trim() || 'Новая точка';
-  }, []);
-
-  const closeManualAdd = useCallback(() => {
-    setShowManualAdd(false);
-    resetManualForm();
-  }, [resetManualForm]);
 
   const handleExportKml = useCallback(async () => {
     setExportError(null);
@@ -915,242 +555,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     }
   }, []);
 
-  const openManualAdd = useCallback(() => {
-    blurActiveElementForModal();
-    setShowActions(false);
-    resetManualForm();
-    setShowManualAdd(true);
-  }, [blurActiveElementForModal, resetManualForm]);
-
-  const parseCoordinate = useCallback((value: string): number | null => {
-    const trimmed = value.trim().replace(',', '.');
-    if (!trimmed) return null;
-    const num = Number(trimmed);
-    if (!Number.isFinite(num)) return null;
-    return num;
-  }, []);
-
-  const syncCoordsFromInputs = useCallback(
-    (nextLatStr: string, nextLngStr: string) => {
-      const lat = parseCoordinate(nextLatStr);
-      const lng = parseCoordinate(nextLngStr);
-      if (lat == null || lng == null) {
-        setManualCoords(null);
-        return;
-      }
-      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        setManualCoords(null);
-        return;
-      }
-      setManualCoords({ lat, lng });
-    },
-    [parseCoordinate]
-  );
-
-  const openEditPoint = useCallback(
-    (point: any) => {
-      if (!point) return;
-      blurActiveElementForModal();
-      setShowActions(false);
-      resetManualForm();
-
-      setEditingPointId(Number(point.id));
-      setManualName(String(point?.name ?? ''));
-      setManualNameTouched(true);
-      setManualAutoName('');
-      setManualAddress(String(point?.address ?? ''));
-      const lat = Number(point?.latitude);
-      const lng = Number(point?.longitude);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        setManualCoords({ lat, lng });
-        setManualLat(String(lat));
-        setManualLng(String(lng));
-      } else {
-        setManualCoords(null);
-        setManualLat('');
-        setManualLng('');
-      }
-      setManualColor(String(point?.color ?? DESIGN_COLORS.userPointDefault));
-      const nextStatus = ((point?.status as any) ?? PointStatus.PLANNING) as PointStatus;
-      setManualStatus(nextStatus);
-      setManualCategoryIds(resolveCategoryIdsForEdit(point));
-      setManualError(null);
-      setShowManualAdd(true);
-    },
-    [blurActiveElementForModal, resetManualForm, resolveCategoryIdsForEdit]
-  );
-
   const requestDeletePoint = useCallback((point: any) => {
     setPointToDelete(point);
   }, []);
-
-const toggleSelect = useCallback((point: any) => {
-  const id = Number(point?.id);
-  if (!Number.isFinite(id)) return;
-  setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-}, []);
-
-const clearSelection = useCallback(() => {
-  setSelectedIds([]);
-}, []);
-
-const exitSelectionMode = useCallback(() => {
-  setSelectionMode(false);
-  setSelectedIds([]);
-  setShowBulkEdit(false);
-  setBulkColor(null);
-  setBulkStatus(null);
-}, []);
-
-const applyBulkEdit = useCallback(async () => {
-  if (!selectedIds.length) return;
-  const updates: any = {};
-  if (bulkColor) updates.color = bulkColor;
-  if (bulkStatus) updates.status = bulkStatus;
-  if (!Object.keys(updates).length) return;
-
-  setIsBulkWorking(true);
-  try {
-    await userPointsApi.bulkUpdatePoints(selectedIds, updates);
-    const selectedSet = new Set(selectedIds);
-    queryClient.setQueryData(['userPointsAll'], (prev: any) => {
-      const arr = Array.isArray(prev) ? prev : [];
-      return arr.map((p: any) => (selectedSet.has(Number(p?.id)) ? { ...p, ...updates } : p));
-    });
-    setShowBulkEdit(false);
-    setBulkColor(null);
-    setBulkStatus(null);
-    setSelectedIds([]);
-    setSelectionMode(false);
-  } catch {
-    // noop
-  } finally {
-    setIsBulkWorking(false);
-  }
-}, [bulkColor, bulkStatus, queryClient, selectedIds]);
-
-const deleteSelected = useCallback(async () => {
-  if (!selectedIds.length) return;
-  setIsBulkWorking(true);
-  setBulkProgress({ current: 0, total: selectedIds.length });
-  try {
-    const batchSize = 5;
-    let done = 0;
-    for (let i = 0; i < selectedIds.length; i += batchSize) {
-      const chunk = selectedIds.slice(i, i + batchSize);
-      await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
-      done += chunk.length;
-      setBulkProgress({ current: done, total: selectedIds.length });
-    }
-    const selectedSet = new Set(selectedIds);
-    queryClient.setQueryData(['userPointsAll'], (prev: any) => {
-      const arr = Array.isArray(prev) ? prev : [];
-      return arr.filter((p: any) => !selectedSet.has(Number(p?.id)));
-    });
-    setSelectedIds([]);
-    setSelectionMode(false);
-  } catch {
-    // noop
-  } finally {
-    setIsBulkWorking(false);
-    setBulkProgress(null);
-    setShowConfirmDeleteSelected(false);
-  }
-}, [queryClient, selectedIds]);
-
-const deleteAll = useCallback(async () => {
-  setIsBulkWorking(true);
-  try {
-    await userPointsApi.purgePoints();
-    queryClient.setQueryData(['userPointsAll'], []);
-    exitSelectionMode();
-  } catch {
-    // noop
-  } finally {
-    setIsBulkWorking(false);
-    setBulkProgress(null);
-    setShowConfirmDeleteAll(false);
-  }
-}, [exitSelectionMode, queryClient]);
-
-  const handleMapPress = useCallback(
-    (coords: { lat: number; lng: number }) => {
-      blurActiveElementForModal();
-      setShowActions(false);
-      resetManualForm();
-      setManualCoords(coords);
-      setManualLat(coords.lat.toFixed(6));
-      setManualLng(coords.lng.toFixed(6));
-      setManualName('Новая точка');
-      setShowManualAdd(true);
-
-    void (async () => {
-      const geocodeData = await reverseGeocode(coords.lat, coords.lng);
-      if (!geocodeData) return;
-
-      const addr = buildAddressFromGeocode(geocodeData, { lat: coords.lat, lng: coords.lng });
-      setManualAddress(String(addr || '').trim());
-
-      const primaryName = getPrimaryPlaceName(geocodeData, coords.lat, coords.lng);
-      setManualAutoName(primaryName);
-
-      if (!manualNameTouched) {
-        setManualName(primaryName);
-      }
-    })();
-  },
-  [blurActiveElementForModal, getPrimaryPlaceName, manualNameTouched, resetManualForm, reverseGeocode]
-);
-
-  const handleSaveManual = useCallback(async () => {
-    setManualError(null);
-    const name = manualName.trim();
-    if (!name) {
-      setManualError('Введите название точки');
-      return;
-    }
-    if (!manualCoords) {
-      setManualError('Укажите координаты');
-      return;
-    }
-    if ((manualCategoryIds || []).length === 0) {
-      setManualError('Выберите категорию');
-      return;
-    }
-
-    setIsSavingManual(true);
-    try {
-      const payload: any = {
-        name,
-        address: manualAddress || undefined,
-        latitude: manualCoords.lat,
-        longitude: manualCoords.lng,
-        color: manualColor,
-        categoryIds: manualCategoryIds,
-        status: manualStatus,
-      };
-
-      if (editingPointId) {
-        const updated = await userPointsApi.updatePoint(editingPointId, payload);
-        queryClient.setQueryData(['userPointsAll'], (prev: any) => {
-          const arr = Array.isArray(prev) ? prev : [];
-          return arr.map((p: any) => (Number(p?.id) === Number(editingPointId) ? updated : p));
-        });
-      } else {
-        const created = await userPointsApi.createPoint(payload);
-        queryClient.setQueryData(['userPointsAll'], (prev: any) => {
-          const arr = Array.isArray(prev) ? prev : [];
-          return [created, ...arr];
-        });
-      }
-
-      closeManualAdd();
-    } catch (e) {
-      setManualError(e instanceof Error ? e.message : 'Не удалось сохранить точку');
-    } finally {
-      setIsSavingManual(false);
-    }
-  }, [closeManualAdd, editingPointId, manualAddress, manualCategoryIds, manualColor, manualCoords, manualName, manualStatus, queryClient]);
 
   const confirmDeletePoint = useCallback(async () => {
     const id = Number(pointToDelete?.id);
@@ -1172,91 +579,12 @@ const deleteAll = useCallback(async () => {
       setIsBulkWorking(false);
       setPointToDelete(null);
     }
-  }, [pointToDelete, queryClient]);
+  }, [pointToDelete, queryClient, setIsBulkWorking]);
 
-  const handleOpenRecommendations = useCallback(async () => {
-    recommendationsAbortRef.current?.abort();
-    const controller = new AbortController();
-    recommendationsAbortRef.current = controller;
-
-    // Get 3 random points from filtered points (respects all active filters)
-    const recommended = pickRandomDistinct(filteredPoints as any[], 3);
-    const recommendedIds = recommended.map((p: any) => Number(p.id));
-    
-    setRecommendedPointIds(recommendedIds);
-    setShowingRecommendations(true);
-    
-    let loc = currentLocation;
-    if (!loc) {
-      try {
-        if (Platform.OS === 'web') {
-          if (typeof navigator !== 'undefined' && navigator.geolocation) {
-            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 5000,
-              });
-            });
-            loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            setCurrentLocation(loc);
-          }
-        }
-      } catch {
-        // noop
-      }
-    }
-
-    // Calculate routes if we have current location
-    if (controller.signal.aborted) return;
-
-    if (loc && recommended.length > 0) {
-      const routes: Record<number, { distance: number; duration: number; line?: Array<[number, number]> }> = {};
-      
-      // Calculate route to each recommended point
-      for (const point of recommended) {
-        try {
-          // Use OSRM public API for car routing
-          const toLng = Number((point as any)?.longitude);
-          const toLat = Number((point as any)?.latitude);
-          if (!Number.isFinite(toLng) || !Number.isFinite(toLat)) continue;
-
-          const url = `https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${toLng},${toLat}?overview=full&geometries=geojson`;
-          const response = await fetch(url, { signal: controller.signal });
-          const data = await response.json();
-          
-          if (data.code === 'Ok' && data.routes && data.routes[0]) {
-            const route = data.routes[0];
-            const coords = route?.geometry?.coordinates;
-            const line = Array.isArray(coords)
-              ? (coords
-                  .map((c: any) => {
-                    const lng = Number(c?.[0]);
-                    const lat = Number(c?.[1]);
-                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-                    return [lat, lng] as [number, number];
-                  })
-                  .filter((v: any): v is [number, number] => v != null))
-              : undefined;
-
-            routes[Number(point.id)] = {
-              distance: Math.round(route.distance / 1000), // Convert meters to km
-              duration: Math.round(route.duration / 60), // Convert seconds to minutes
-              line,
-            };
-          }
-        } catch (error) {
-          if (controller.signal.aborted) return;
-          // If route calculation fails, skip this point
-          console.warn('Failed to calculate route for point', point.id, error);
-        }
-      }
-      
-      if (controller.signal.aborted) return;
-      setRecommendedRoutes(routes);
-      setActivePointId(null); // Clear any active point to trigger auto-fit
-    }
-  }, [filteredPoints, currentLocation]);
+  const handleOpenRecommendations = useCallback(
+    async () => openRecommendations(filteredPoints),
+    [filteredPoints, openRecommendations]
+  );
 
   const handleShowPointOnMap = useCallback((point: any) => {
     const lat = Number((point as any)?.latitude);
@@ -1280,47 +608,7 @@ const deleteAll = useCallback(async () => {
     }, 0);
   }, []);
 
-  const handleLocateMe = useCallback(async () => {
-    setIsLocating(true);
-
-    try {
-      if (Platform.OS === 'web') {
-        if (typeof navigator === 'undefined' || !navigator.geolocation) {
-          return;
-        }
-
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 5000,
-          });
-        });
-
-        setCurrentLocation({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
-        return;
-      }
-
-      const Location = await import('expo-location');
-      const perm = await Location.requestForegroundPermissionsAsync();
-      if (!perm?.granted) {
-        return;
-      }
-
-      const pos = await Location.getCurrentPositionAsync({});
-      setCurrentLocation({
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-      });
-    } catch {
-      // noop
-    } finally {
-      setIsLocating(false);
-    }
-  }, []);
+  const handleLocateMe = locateMe;
 
   const renderHeader = useCallback(() => {
     return (
@@ -1382,18 +670,6 @@ const deleteAll = useCallback(async () => {
     styles,
     viewMode,
   ]);
-
-const suggestManualName = useCallback((): string => {
-  if (manualAutoName) return manualAutoName;
-  return 'Новая точка';
-}, [manualAutoName]);
-
-useEffect(() => {
-  if (!showManualAdd) return;
-  if (manualNameTouched) return;
-  setManualName(suggestManualName());
-}, [manualNameTouched, showManualAdd, suggestManualName]);
-
 
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
@@ -1538,7 +814,7 @@ useEffect(() => {
         onLocateMe={handleLocateMe}
         showingRecommendations={showingRecommendations}
         onRefreshRecommendations={handleOpenRecommendations}
-        onCloseRecommendations={handleCloseRecommendations}
+        onCloseRecommendations={closeRecommendations}
         activePointId={activePointId}
         recommendedRoutes={recommendedRoutes}
         searchQuery={searchQuery}
@@ -1599,8 +875,7 @@ useEffect(() => {
 	              label="Выбрать точки"
 	              onPress={() => {
 	                setShowActions(false);
-	                setSelectionMode(true);
-	                setSelectedIds([]);
+	                startSelectionMode();
 	                setPanelTab('list');
 	              }}
 	              accessibilityLabel="Выбрать точки"

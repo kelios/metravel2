@@ -62,6 +62,12 @@ const EMPTY_FILTERS: Filters = {
   year: '',
 };
 
+const isAbortError = (error: unknown): boolean => error instanceof Error && error.name === 'AbortError';
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && typeof error.message === 'string' && error.message.trim().length > 0
+    ? error.message
+    : fallback;
+
 const slugifySafe = (value?: string): string => {
   if (!value) return '';
   const out = value
@@ -105,7 +111,7 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
     const arrayFields = ['countries', 'categories', 'transports', 'companions',
                          'complexity', 'month', 'over_nights_stay'];
     arrayFields.forEach(field => {
-      const value = (data as any)[field];
+      const value = (data as Record<string, unknown>)[field];
       if (value && !Array.isArray(value)) {
         throw new Error(`Поле ${field} должно быть массивом`);
       }
@@ -121,7 +127,7 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
     const sanitizedData = {
       ...data,
       name: sanitizeStringField(data.name, 200),
-      description: typeof data.description === 'string' ? (sanitizeInput(data.description) as any) : data.description,
+      description: typeof data.description === 'string' ? sanitizeInput(data.description) : data.description,
       minus: sanitizeStringField(data.minus, 5000),
       plus: sanitizeStringField(data.plus, 5000),
       recommendation: sanitizeStringField(data.recommendation, 5000),
@@ -155,54 +161,49 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
  * Удаляет из объекта несериализуемые сущности (DOM-узлы, функции, React элементы)
  * и разрывает возможные циклические ссылки перед JSON.stringify.
  */
-function sanitizeForJson<T>(value: T, seen = new WeakSet()): T {
+function sanitizeForJson(value: unknown, seen = new WeakSet<object>()): unknown {
   if (value === null || typeof value !== 'object') {
     return value;
   }
 
   // Пропускаем повторно встреченные объекты, чтобы разорвать циклы
-  if (seen.has(value as any)) {
-    return undefined as any;
+  if (seen.has(value)) {
+    return undefined;
   }
-  seen.add(value as any);
+  seen.add(value);
 
   // Фильтруем DOM-узлы и React-элементы
   if (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) {
-    return undefined as any;
+    return undefined;
   }
   if (typeof Node !== 'undefined' && value instanceof Node) {
-    return undefined as any;
+    return undefined;
   }
 
   // Фильтруем события/функции/символы/бигинты
-  if (
-    typeof value === 'function' ||
-    value instanceof Event ||
-    typeof (value as any) === 'symbol' ||
-    typeof (value as any) === 'bigint'
-  ) {
-    return undefined as any;
+  if (typeof value === 'function' || value instanceof Event) {
+    return undefined;
   }
 
   // Даты сериализуем в строку
   if (value instanceof Date) {
-    return value.toISOString() as any;
+    return value.toISOString();
   }
 
   if (Array.isArray(value)) {
     return value
       .map(item => sanitizeForJson(item, seen))
-      .filter(item => item !== undefined) as any;
+      .filter(item => item !== undefined);
   }
 
-  const result: Record<string, any> = {};
-  Object.entries(value as Record<string, any>).forEach(([key, val]) => {
+  const result: Record<string, unknown> = {};
+  Object.entries(value as Record<string, unknown>).forEach(([key, val]) => {
     const sanitized = sanitizeForJson(val, seen);
     if (sanitized !== undefined) {
       result[key] = sanitized;
     }
   });
-  return result as any;
+  return result;
 }
 
 export const deleteTravelMainImage = async (travelId: string | number) => {
@@ -225,7 +226,7 @@ export const deleteTravelMainImage = async (travelId: string | number) => {
   );
 };
 
-export const uploadImage = async (data: FormData): Promise<any> => {
+export const uploadImage = async (data: FormData): Promise<Record<string, unknown>> => {
   const token = await getSecureItem('userToken');
   if (!token) {
     throw new Error('Пользователь не авторизован');
@@ -243,18 +244,22 @@ export const uploadImage = async (data: FormData): Promise<any> => {
 
   // Use apiClient upload helper so 401 triggers refresh+retry.
   // Response may be JSON or plain string. apiClient.parseSuccessResponse handles both.
-  const result = await apiClient.uploadFormData<any>('/upload', data, 'POST', LONG_TIMEOUT);
+  const result = await apiClient.uploadFormData<unknown>('/upload', data, 'POST', LONG_TIMEOUT);
   if (typeof result === 'string') {
     const rawText = result.trim();
     if (!rawText) return { ok: true };
     try {
-      const parsed = JSON.parse(rawText);
-      return parsed && typeof parsed === 'object' ? { ok: true, ...parsed } : { ok: true };
+      const parsed = JSON.parse(rawText) as unknown;
+      return parsed && typeof parsed === 'object'
+        ? { ok: true, ...(parsed as Record<string, unknown>) }
+        : { ok: true };
     } catch {
       return { ok: true, url: rawText };
     }
   }
-  return result && typeof result === 'object' ? { ok: true, ...result } : { ok: true };
+  return result && typeof result === 'object'
+    ? { ok: true, ...(result as Record<string, unknown>) }
+    : { ok: true };
 };
 
 export const deleteImage = async (imageId: string) => {
@@ -264,7 +269,7 @@ export const deleteImage = async (imageId: string) => {
   }
 
   try {
-    return await apiClient.delete<any>(`/gallery/${imageId}/`, DEFAULT_TIMEOUT);
+    return await apiClient.delete<unknown>(`/gallery/${imageId}/`, DEFAULT_TIMEOUT);
   } catch (error) {
     // Preserve previous behavior: non-204 is treated as "Ошибка удаления изображения"
     if (typeof ApiError === 'function' && error instanceof ApiError) {
@@ -279,9 +284,9 @@ export const fetchFilters = async (options?: { signal?: AbortSignal; throwOnErro
     const res = await fetchWithTimeout(GET_FILTERS, { signal: options?.signal }, DEFAULT_TIMEOUT);
     const parsed = await safeJsonParse<Filters>(res, EMPTY_FILTERS);
     return parsed;
-  } catch (e: any) {
+  } catch (e: unknown) {
     devError('Error fetching filters:', e);
-    if (e?.name === 'AbortError') {
+    if (isAbortError(e)) {
       throw e;
     }
     if (options?.throwOnError) throw e;
@@ -289,13 +294,15 @@ export const fetchFilters = async (options?: { signal?: AbortSignal; throwOnErro
   }
 };
 
-export const fetchFiltersCountry = async (options?: { signal?: AbortSignal; throwOnError?: boolean }) => {
+export const fetchFiltersCountry = async (
+  options?: { signal?: AbortSignal; throwOnError?: boolean }
+): Promise<unknown[]> => {
   try {
     const res = await fetchWithTimeout(GET_FILTERS_COUNTRY, { signal: options?.signal }, DEFAULT_TIMEOUT);
-    return await safeJsonParse<any[]>(res, []);
-  } catch (e: any) {
+    return await safeJsonParse<unknown[]>(res, []);
+  } catch (e: unknown) {
     devError('Error fetching filters country:', e);
-    if (e?.name === 'AbortError') {
+    if (isAbortError(e)) {
       throw e;
     }
     if (options?.throwOnError) throw e;
@@ -303,14 +310,16 @@ export const fetchFiltersCountry = async (options?: { signal?: AbortSignal; thro
   }
 };
 
-export const fetchAllCountries = async (options?: { signal?: AbortSignal; throwOnError?: boolean }) => {
+export const fetchAllCountries = async (
+  options?: { signal?: AbortSignal; throwOnError?: boolean }
+): Promise<unknown[]> => {
   try {
     const res = await fetchWithTimeout(GET_ALL_COUNTRY, { signal: options?.signal }, DEFAULT_TIMEOUT);
-    const parsed = await safeJsonParse<any[]>(res, []);
+    const parsed = await safeJsonParse<unknown[]>(res, []);
     return parsed;
-  } catch (e: any) {
+  } catch (e: unknown) {
     devError('Error fetching all countries:', e);
-    if (e?.name === 'AbortError') {
+    if (isAbortError(e)) {
       throw e;
     }
     if (options?.throwOnError) throw e;
@@ -363,11 +372,11 @@ export const sendFeedback = async (
     return typeof json === 'string'
       ? json
       : (typeof json?.message === 'string' ? json.message : 'Сообщение успешно отправлено');
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (__DEV__) {
       console.error('Ошибка при отправке обратной связи:', e);
     }
-    throw new Error(e?.message || 'Не удалось отправить сообщение');
+    throw new Error(getErrorMessage(e, 'Не удалось отправить сообщение'));
   }
 };
 
@@ -388,7 +397,7 @@ export const sendAIMessage = async (inputText: string) => {
       throw new Error(`AI request failed: ${response.statusText}`);
     }
     
-    const responseData = await safeJsonParse<any>(response);
+    const responseData = await safeJsonParse<unknown>(response);
     return responseData;
   } catch (error) {
     if (__DEV__) {

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -8,7 +8,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
@@ -19,6 +18,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
+import ProfileCollectionHeader from '@/components/profile/ProfileCollectionHeader';
 
 export default function FavoritesScreen() {
     const router = useRouter();
@@ -37,65 +38,6 @@ export default function FavoritesScreen() {
         container: {
             flex: 1,
             backgroundColor: colors.background,
-        },
-        header: {
-            paddingHorizontal: 16,
-            paddingTop: 12,
-            paddingBottom: 8,
-        },
-        headerRow: {
-            flexDirection: 'row',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
-            gap: 12,
-        },
-        headerTitleBlock: {
-            flex: 1,
-        },
-        title: {
-            fontSize: 20,
-            fontWeight: '700',
-            color: colors.text,
-        },
-        subtitle: {
-            marginTop: 4,
-            fontSize: 13,
-            color: colors.textMuted,
-        },
-        clearButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            borderRadius: DESIGN_TOKENS.radii.md,
-            borderWidth: 1,
-            borderColor: colors.danger,
-            backgroundColor: colors.surface,
-            minHeight: 40,
-        },
-        clearButtonText: {
-            fontSize: 14,
-            fontWeight: '600',
-            color: colors.danger,
-        },
-        backToProfileButton: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            borderRadius: DESIGN_TOKENS.radii.md,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
-            backgroundColor: colors.surface,
-            minHeight: 40,
-        },
-        backToProfileButtonText: {
-            fontSize: 14,
-            fontWeight: '600',
-            color: colors.primary,
         },
         listContent: {
             paddingHorizontal: 16,
@@ -164,29 +106,6 @@ export default function FavoritesScreen() {
         [router]
     );
 
-    // Функция для очистки заголовка от информации о стране
-    const cleanTitle = useCallback((title: string, country: string | null) => {
-        if (!country || !title) return title;
-        
-        // Удаляем страну из заголовка
-        const countryPatterns = [
-            `в ${country}`,
-            `в ${country.toLowerCase()}`,
-            `${country}`,
-            `${country.toLowerCase()}`,
-        ];
-        
-        let cleanedTitle = title;
-        countryPatterns.forEach(pattern => {
-            cleanedTitle = cleanedTitle.replace(pattern, '').trim();
-        });
-        
-        // Удаляем лишние пробелы и знаки препинания в конце
-        cleanedTitle = cleanedTitle.replace(/\s*[,.\-:]\s*$/, '').trim();
-        
-        return cleanedTitle || title; // Возвращаем оригинал если что-то пошло не так
-    }, []);
-
     const { isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
     const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
     const isCardsSingleColumn = (width || 0) < BREAKPOINTS.MOBILE;
@@ -254,24 +173,7 @@ export default function FavoritesScreen() {
         return (
             <SafeAreaView style={styles.container}>
                 {seoBlock}
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <View style={styles.headerTitleBlock}>
-                            <Text style={styles.title}>Избранное</Text>
-                            <Text style={styles.subtitle}>Профиль</Text>
-                        </View>
-                        <Pressable
-                            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-                            onPress={handleBackToProfile}
-                            accessibilityRole="button"
-                            accessibilityLabel="Перейти в профиль"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
-                        >
-                            <Feather name="user" size={16} color={colors.primary} />
-                            <Text style={styles.backToProfileButtonText}>В профиль</Text>
-                        </Pressable>
-                    </View>
-                </View>
+                <ProfileCollectionHeader title="Избранное" onBackPress={handleBackToProfile} />
                 <View style={styles.listContent}>
                     {Array.from({ length: 3 }).map((_, index) => (
                         <View key={index} style={styles.cardWrap}>
@@ -308,38 +210,13 @@ export default function FavoritesScreen() {
     return (
         <SafeAreaView style={styles.container}>
             {seoBlock}
-            <View style={styles.header}>
-                <View style={styles.headerRow}>
-                    <View style={styles.headerTitleBlock}>
-                        <Text style={styles.title}>Избранное</Text>
-                        <Text style={styles.subtitle}>Профиль</Text>
-                    </View>
-
-                    <Pressable
-                        style={[styles.backToProfileButton, globalFocusStyles.focusable]}
-                        onPress={handleBackToProfile}
-                        accessibilityRole="button"
-                        accessibilityLabel="Перейти в профиль"
-                        {...Platform.select({ web: { cursor: 'pointer' } })}
-                    >
-                        <Feather name="user" size={16} color={colors.primary} />
-                        <Text style={styles.backToProfileButtonText}>В профиль</Text>
-                    </Pressable>
-
-                    {typeof clearFavorites === 'function' && data.length > 0 && (
-                        <Pressable
-                            style={[styles.clearButton, globalFocusStyles.focusable]}
-                            onPress={handleClearAll}
-                            accessibilityRole="button"
-                            accessibilityLabel="Очистить избранное"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
-                        >
-                            <Feather name="trash-2" size={16} color={colors.danger} />
-                            <Text style={styles.clearButtonText}>Очистить</Text>
-                        </Pressable>
-                    )}
-                </View>
-            </View>
+            <ProfileCollectionHeader
+                title="Избранное"
+                onBackPress={handleBackToProfile}
+                showClearButton={typeof clearFavorites === 'function' && data.length > 0}
+                onClearPress={handleClearAll}
+                clearAccessibilityLabel="Очистить избранное"
+            />
 
             {Platform.OS === 'web' ? (
                 <ScrollView
@@ -365,7 +242,7 @@ export default function FavoritesScreen() {
                                 <TabTravelCard
                                     item={{
                                         id: item.id,
-                                        title: cleanTitle(item.title, item.country ?? item.countryName),
+                                        title: cleanTravelTitle(item.title, item.country ?? item.countryName),
                                         imageUrl: item.imageUrl,
                                         city: item.city ?? null,
                                         country: item.country ?? item.countryName ?? null,
@@ -414,7 +291,7 @@ export default function FavoritesScreen() {
                             <TabTravelCard
                                 item={{
                                     id: item.id,
-                                    title: cleanTitle(item.title, item.country ?? item.countryName),
+                                    title: cleanTravelTitle(item.title, item.country ?? item.countryName),
                                     imageUrl: item.imageUrl,
                                     city: item.city ?? null,
                                     country: item.country ?? item.countryName ?? null,

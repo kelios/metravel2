@@ -1,5 +1,169 @@
 # Production Audit Report — metravel.by
 
+## v27 — Codebase Architecture Audit & Refactoring Plan (2026-02-26)
+
+**Auditor:** Codex (architectural review)  
+**Scope:** frontend/app architecture (`app/`, `components/`, `hooks/`, `api/`, `stores/`, `utils/`)  
+**Method:** static review of module boundaries, file complexity, typing quality, duplication patterns, and test coverage shape.
+
+### Snapshot (what we measured)
+
+- TS/TSX files analyzed: **657**
+- Total TS/TSX LOC: **160,388**
+- `any` usages: **3,103**
+- `@ts-ignore` usages: **87**
+- `eslint-disable` usages: **11**
+- Largest files:
+  - `components/UserPoints/PointsList.tsx` — 2,322 LOC
+  - `services/pdf-export/generators/EnhancedPdfGenerator.ts` — 2,235 LOC
+  - `components/UserPoints/UserPointsMap.tsx` — 1,761 LOC
+  - `components/article/ArticleEditor.web.tsx` — 1,642 LOC
+  - `components/travel/PointList.tsx` — 1,370 LOC
+  - `components/MapPage/Map.web.tsx` — 1,301 LOC
+  - `api/travelsApi.ts` — 1,027 LOC
+
+### Key findings (architect level)
+
+| Area | Risk | Evidence | Impact |
+|------|------|----------|--------|
+| Overgrown UI modules (god-components) | High | 1k-2.3k LOC files in `components/*` and route screens | Hard onboarding, slow changes, high regression probability |
+| Duplicate map stack (`components/map` + `components/MapPage`) | High | parallel map implementations and shared concerns duplicated | Bugs diverge between flows, slower performance tuning |
+| Weak typing boundary | High | 3,103 `any` + 87 `@ts-ignore` | Runtime bugs masked, weak IDE/static guarantees |
+| API layer mixed with validation/sanitization/business logic | Medium/High | `api/misc.ts` and `api/client.ts` handle many concerns | Difficult testability and inconsistent error behavior |
+| Context + stores overlap | Medium | `FavoritesContext` wraps multiple Zustand stores with duplicated orchestration | Hidden data flow and stale state edge cases |
+| Route-level UI duplication | Medium | `app/(tabs)/favorites.tsx` and `history.tsx` share large repeated UI blocks | Copy-paste drift and slower feature delivery |
+| Large script surface in `/scripts` | Medium | several 300-800 LOC scripts with mixed responsibilities | CI/tooling changes are fragile |
+
+### What to refactor first (prioritized backlog)
+
+1. **P0: Stabilize map architecture into one platform module**
+   - Unify `components/map/Map.web.tsx` and `components/MapPage/Map.web.tsx` into a single bounded map core.
+   - Keep one shared contract (`types`, events, marker model, route model) and move feature variations to adapters.
+   - Target: remove duplicate marker/popup/routing orchestration.
+
+2. **P0: Split god-components into container/presenter + hooks**
+   - Start with:
+     - `components/UserPoints/PointsList.tsx`
+     - `components/article/ArticleEditor.web.tsx`
+     - `components/UserPoints/UserPointsMap.tsx`
+     - `app/(tabs)/settings.tsx`, `app/(tabs)/subscriptions.tsx`
+   - Extract:
+     - data hooks (`use*Data`)
+     - pure UI sections (`*Section`, `*Panel`)
+     - command handlers (`use*Actions`)
+
+3. **P1: Type hardening campaign**
+   - Replace `any` in API DTO boundaries first (`api/client.ts`, `api/misc.ts`, `api/travelsApi.ts`, `hooks/useTravelFilters.ts`).
+   - Replace broad `@ts-ignore` with typed web/native wrappers (`WebStyleProps`, platform-specific component facades).
+   - Gate: no new `any`/`@ts-ignore` in changed files.
+
+4. **P1: Normalize state management boundaries**
+   - Define clear ownership:
+     - auth/profile: auth store
+     - favorites/history/recommendations: dedicated stores only
+     - context as DI/composition, not business layer
+   - Simplify `FavoritesContext` to thin selectors/actions over stores.
+
+5. **P2: Remove duplicated tab-page layout patterns**
+   - Extract reusable profile-list page shell (header, SEO, loading/empty/login states, grid/list wrappers).
+   - First migration targets: `favorites.tsx` + `history.tsx`.
+
+6. **P2: Modularize tooling scripts**
+   - Extract shared CLI utilities for report parsing, validation formatting, and file IO.
+   - Keep each script focused on one command use-case.
+
+### What should be added (дописать)
+
+1. **Architectural Decision Records (ADR)**
+   - Add short ADRs in `docs/`:
+     - state-management boundaries
+     - map module ownership
+     - API error/validation contract
+
+2. **Typed API contracts**
+   - Add explicit DTO schemas/interfaces for top endpoints (`travels`, `messages`, `user profile`, `filters`).
+   - Introduce parser layer (`api/parsers/*`) as required step between network and UI.
+
+3. **Complexity and typing guardrails in CI**
+   - Add checks:
+     - changed-file max LOC threshold warning
+     - deny new `@ts-ignore` without justification
+     - deny new raw `any` in `api/`, `hooks/`, `stores/` (allowlist if needed)
+
+4. **Targeted regression tests around high-risk modules**
+   - Add/expand tests for:
+     - map orchestration (route build, marker sync, popup open/close)
+     - favorites/history shared UI shell behavior
+     - API error normalization and token refresh edge cases
+     - ArticleEditor web sync/autosave behavior
+
+5. **Module ownership map**
+   - Add a small ownership matrix in docs (module → owner/reviewer) for map, auth, messaging, export/PDF.
+
+### Suggested execution order (6-week pragmatic plan)
+
+1. Week 1-2: map unification RFC + first extraction slice.
+2. Week 2-3: type hardening on API boundary and ban new weak typing.
+3. Week 3-4: split top-2 god components and route shells.
+4. Week 4-5: state boundary cleanup (context/store simplification).
+5. Week 5-6: CI guardrails + regression tests + ADR finalization.
+
+### Success criteria
+
+- `any` reduced by at least **30%** in `api/`, `hooks/`, `stores/`.
+- `@ts-ignore` reduced by at least **50%** in touched feature areas.
+- No files above **1,200 LOC** in active feature modules.
+- Single map core module used by all web map surfaces.
+- Stable test coverage for extracted critical paths (map, auth refresh, messaging, favorites/history flows).
+
+### Implementation status
+
+- [x] 2026-02-26: eliminated duplicate `cleanTitle` logic in favorites/history by extracting `utils/cleanTravelTitle.ts`; connected in:
+  - `app/(tabs)/favorites.tsx`
+  - `app/(tabs)/history.tsx`
+  - test added: `__tests__/utils/cleanTravelTitle.test.ts`
+- [x] 2026-02-26: extracted shared profile collection header UI into `components/profile/ProfileCollectionHeader.tsx` and reused in:
+  - `app/(tabs)/favorites.tsx`
+  - `app/(tabs)/history.tsx`
+  - test added: `__tests__/components/profile/ProfileCollectionHeader.test.tsx`
+- [x] 2026-02-26: started API type-hardening slice in `api/client.ts`:
+  - `ApiError.data` migrated `any -> unknown`
+  - `post/put/patch` payloads migrated `any -> unknown`
+  - safe error field extractor added for typed `message/detail` reads
+- [x] 2026-02-26: continued API type-hardening in `api/misc.ts`:
+  - removed remaining `any` usages in the module
+  - `catch` handlers migrated to `unknown` + shared error helpers
+  - upload/filter API responses narrowed to `unknown`/typed records at boundary
+- [x] 2026-02-26: started `PointsList` decomposition by extracting pure domain logic into `components/UserPoints/pointsListLogic.ts`:
+  - `POINTS_PRESETS`
+  - `haversineKm`
+  - `pickRandomDistinct`
+  - `normalizeCategoryIdsFromPoint`
+  - test added: `__tests__/components/UserPoints/pointsListLogic.test.ts`
+- [x] 2026-02-26: extracted filter meta computation from `PointsList` into `components/UserPoints/pointsFiltersMeta.ts`:
+  - `computeHasActiveFilters`
+  - `buildActiveFilterChips`
+  - test added: `__tests__/components/UserPoints/pointsFiltersMeta.test.ts`
+- [x] 2026-02-26: extracted preset state/controller from `PointsList` into `components/UserPoints/usePointsPresets.ts`:
+  - moved `activePreset` derivation
+  - moved `handlePresetChange` business logic
+- [x] 2026-02-26: extracted preset proximity sorting algorithm from `PointsList` into `components/UserPoints/pointsListLogic.ts`:
+  - `sortPointsByPresetProximity`
+  - test coverage extended in `__tests__/components/UserPoints/pointsListLogic.test.ts`
+- [x] 2026-02-26: extracted geolocation + recommendations controller from `PointsList` into `components/UserPoints/usePointsRecommendations.ts`:
+  - moved location bootstrap and `handleLocateMe`
+  - moved recommendations state (`recommendedPointIds`, `recommendedRoutes`, `showingRecommendations`)
+  - moved `handleOpenRecommendations` / `handleCloseRecommendations`
+- [x] 2026-02-26: extracted bulk selection/actions controller from `PointsList` into `components/UserPoints/usePointsBulkActions.ts`:
+  - moved selection state and transitions (`selectionMode`, `selectedIds`, `selectedIdSet`, start/exit/clear/toggle)
+  - moved bulk workflows (`applyBulkEdit`, `deleteSelected`, `deleteAll`) and progress/confirm modal state
+  - integrated `PointsList` with hook handlers and removed duplicate local bulk handlers/effects
+- [ ] map module unification (`components/map` + `components/MapPage`)
+- [ ] first god-component split (`PointsList` or `ArticleEditor.web`)
+- [ ] continue API boundary type-hardening slice (related parsers + DTO contracts)
+
+---
+
 ---
 
 ## v26 — Full Post-Deploy Audit (2026-02-24 23:05 UTC+1)

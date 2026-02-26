@@ -29,7 +29,7 @@ export class ApiError extends Error {
     constructor(
         public status: number,
         public message: string,
-        public data?: any
+        public data?: unknown
     ) {
         super(message);
         this.name = 'ApiError';
@@ -40,6 +40,12 @@ type DownloadResponse = {
     blob: Blob;
     filename?: string;
     contentType?: string;
+};
+
+const getErrorTextField = (data: unknown, field: 'message' | 'detail'): string | undefined => {
+    if (!data || typeof data !== 'object') return undefined;
+    const value = (data as Record<string, unknown>)[field];
+    return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 };
 
 /**
@@ -212,7 +218,7 @@ class ApiClient {
             return null as T;
         }
 
-        const maybeTextFn = (response as any)?.text;
+        const maybeTextFn = (response as Partial<Response>)?.text;
         if (typeof maybeTextFn === 'function') {
             const text = await response.text().catch(() => '');
             if (!text) {
@@ -229,7 +235,7 @@ class ApiClient {
             }
         }
 
-        const maybeJsonFn = (response as any)?.json;
+        const maybeJsonFn = (response as Partial<Response>)?.json;
         if (typeof maybeJsonFn === 'function') {
             return (await response.json()) as T;
         }
@@ -471,7 +477,7 @@ class ApiClient {
         const handle = async (resp: Response): Promise<DownloadResponse> => {
             if (!resp.ok) {
                 const errorText = await resp.text().catch(() => 'Unknown error');
-                let errorData: any = errorText;
+                let errorData: unknown = errorText;
                 try {
                     errorData = JSON.parse(errorText);
                 } catch {
@@ -479,7 +485,9 @@ class ApiClient {
                 }
                 throw new ApiError(
                     resp.status,
-                    errorData?.message || errorData?.detail || `Ошибка запроса: ${resp.statusText}`,
+                    getErrorTextField(errorData, 'message') ||
+                        getErrorTextField(errorData, 'detail') ||
+                        `Ошибка запроса: ${resp.statusText}`,
                     errorData
                 );
             }
@@ -568,7 +576,7 @@ class ApiClient {
     /**
      * POST запрос
      */
-    async post<T>(endpoint: string, data?: any, timeout?: number): Promise<T> {
+    async post<T>(endpoint: string, data?: unknown, timeout?: number): Promise<T> {
         return this.request<T>(
             endpoint,
             {
@@ -582,7 +590,7 @@ class ApiClient {
     /**
      * PUT запрос
      */
-    async put<T>(endpoint: string, data?: any, timeout?: number): Promise<T> {
+    async put<T>(endpoint: string, data?: unknown, timeout?: number): Promise<T> {
         return this.request<T>(
             endpoint,
             {
@@ -596,7 +604,7 @@ class ApiClient {
     /**
      * PATCH запрос
      */
-    async patch<T>(endpoint: string, data?: any, timeout?: number): Promise<T> {
+    async patch<T>(endpoint: string, data?: unknown, timeout?: number): Promise<T> {
         return this.request<T>(
             endpoint,
             {
