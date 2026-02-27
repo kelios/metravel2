@@ -33,6 +33,11 @@ npm run lighthouse:travel:desktop
   - Do not re-introduce Service Worker runtime/static caching for web pages/assets.
   - Do not add user-facing flows that ask to "clear cache" after deploy.
   - Update rollout must be automatic (server headers + fresh build artifacts only).
+  - Do not use client-side cache-bust/reload workarounds in runtime:
+    - no forced `window.location.reload(...)` to recover from deploy mismatch,
+    - no query-param cache busting like `?__r=` / `?__cb=` appended to JS/CSS URLs at runtime.
+  - Do not add pre-hydration "self-heal" scripts that reload the page on version mismatch/chunk error.
+  - Keep release consistency at the HTTP layer (Nginx/CDN headers + atomic static deploy), not via browser-side reload hacks.
   - Do not set `Cache-Control: immutable` for `/_expo/static/*.js` by default.
   - For Expo JS bundles/chunks, keep revalidation (`max-age=0, must-revalidate`) unless content-addressed hash stability is explicitly verified across releases.
 
