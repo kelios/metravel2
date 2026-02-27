@@ -30,7 +30,8 @@ export const sendAnalyticsEvent = async (
             return;
         }
 
-        if (!hasWarnedMissingConfig) {
+        // GA bootstraps lazily after consent/idle; missing gtag early is expected in production.
+        if (__DEV__ && !hasWarnedMissingConfig) {
             console.warn('GA4: gtag is not available – analytics event skipped.');
             hasWarnedMissingConfig = true;
         }

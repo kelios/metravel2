@@ -85,6 +85,11 @@ function HomeScreen() {
                     ogType="website"
                 />
             )}
+            {Platform.OS === 'web' && (
+                <h1 style={styles.visuallyHiddenHeading}>
+                    Идеи поездок на выходные и книга путешествий
+                </h1>
+            )}
             <View style={styles.container}>
                 <ErrorBoundary
                     fallback={
@@ -125,6 +130,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         padding: 20,
     },
+    visuallyHiddenHeading: {
+        position: 'absolute',
+        width: 1,
+        height: 1,
+        padding: 0,
+        margin: -1,
+        overflow: 'hidden',
+        clip: 'rect(0, 0, 0, 0)',
+        whiteSpace: 'nowrap' as any,
+        borderWidth: 0,
+    } as any,
 });
 
 export default React.memo(HomeScreen);
