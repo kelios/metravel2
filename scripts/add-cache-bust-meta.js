@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Adds cache-busting meta tags to all HTML files in the build directory.
+ * Adds anti-cache meta tags to all HTML files in the build directory.
  * This forces browsers to reload HTML even if they have it cached.
  * 
  * The script adds:
@@ -32,17 +32,18 @@ const BUILD_VERSION = `v${Date.now()}`;
 async function processHtmlFile(filePath) {
   try {
     let content = await readFile(filePath, 'utf8');
-    
-    if (content.includes('name="build-version"')) {
-      return false;
-    }
-    
+
     const cacheMetaTags = `
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta name="build-version" content="${BUILD_VERSION}">`;
-    
+
+    if (content.includes('name="build-version"')) {
+      await writeFile(filePath, content, 'utf8');
+      return true;
+    }
+
     if (content.includes('</head>')) {
       content = content.replace('</head>', `${cacheMetaTags}\n</head>`);
       await writeFile(filePath, content, 'utf8');
