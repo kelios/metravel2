@@ -115,6 +115,9 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 // ❌ CSS — игнорируем (Leaflet CSS подключаем вручную)
 config.resolver.resolveRequest = ((orig) => {
   return (context, moduleName, platform) => {
+    if (platform === 'web' && moduleName === 'quill/dist/quill.snow.css') {
+      return orig(context, moduleName, platform)
+    }
     if (platform === 'web' && moduleName.endsWith('.css')) {
       return {
         filePath: path.resolve(__dirname, 'metro-stubs/empty.js'),

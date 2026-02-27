@@ -347,6 +347,9 @@ const PointMarkerWeb = React.memo(
     isActive,
     colors,
     mapInstance,
+    isCompactPopup,
+    isNarrowPopup,
+    isTinyPopup,
     centerOverride,
     driveInfo,
     getMarkerIconCached,
@@ -361,6 +364,9 @@ const PointMarkerWeb = React.memo(
     isActive: boolean;
     colors: ReturnType<typeof useThemedColors>;
     mapInstance: any;
+    isCompactPopup: boolean;
+    isNarrowPopup: boolean;
+    isTinyPopup: boolean;
     centerOverride?: { lat: number; lng: number };
     driveInfo?:
       | { status: 'loading' }
@@ -444,6 +450,7 @@ const PointMarkerWeb = React.memo(
         const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
         const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
         void openExternalUrlInNewTab(tg);
+        void showToast({ type: 'success', text1: 'Открываю Telegram', position: 'bottom' });
       } catch {
         // noop
       }
@@ -451,6 +458,7 @@ const PointMarkerWeb = React.memo(
 
     const openExternalMap = React.useCallback((url: string) => {
       void openExternalUrlInNewTab(url);
+      void showToast({ type: 'success', text1: 'Открываю карту', position: 'bottom' });
     }, []);
 
     const colorLabel = React.useMemo(() => String((point as any)?.color ?? '').trim(), [point]);
@@ -557,6 +565,29 @@ const PointMarkerWeb = React.memo(
       [onMarkerReady, pointId]
     );
 
+    const handleClosePopup = React.useCallback(() => {
+      try {
+        markerInstanceRef.current?.closePopup?.();
+      } catch {
+        // noop
+      }
+      try {
+        mapInstance?.closePopup?.();
+      } catch {
+        // noop
+      }
+    }, [mapInstance]);
+
+    const handleEditPoint = React.useCallback(() => {
+      handleClosePopup();
+      onEditPoint?.(point);
+    }, [handleClosePopup, onEditPoint, point]);
+
+    const handleDeletePoint = React.useCallback(() => {
+      handleClosePopup();
+      onDeletePoint?.(point);
+    }, [handleClosePopup, onDeletePoint, point]);
+
     return (
       <mods.Marker
         ref={markerRefCb as any}
@@ -564,29 +595,41 @@ const PointMarkerWeb = React.memo(
         icon={markerIcon}
         eventHandlers={markerEventHandlers}
       >
-        <mods.Popup>
+        <mods.Popup
+          className="metravel-user-point-popup"
+          closeButton={false}
+          autoPan
+          autoPanPadding={isCompactPopup ? ([16, 92] as any) : ([28, 120] as any)}
+        >
           <div
             style={{
-              width: 300,
-              maxWidth: '74vw',
-              maxHeight: '44vh',
+              width: isTinyPopup ? 276 : isNarrowPopup ? 292 : isCompactPopup ? 300 : 340,
+              maxWidth: isCompactPopup ? '88vw' : '74vw',
+              maxHeight: isCompactPopup ? '58vh' : '52vh',
               overflowY: 'auto',
               overflowX: 'hidden',
-              paddingRight: 6,
-              paddingLeft: 10,
+              padding: isTinyPopup ? '10px 10px 8px' : isNarrowPopup ? '11px 11px 9px' : '12px 12px 10px',
               boxSizing: 'border-box',
-              borderLeft: `4px solid ${markerAccentColor}`,
-              borderTopLeftRadius: 10,
-              borderBottomLeftRadius: 10,
+              borderLeft: `5px solid ${markerAccentColor}`,
+              borderTopLeftRadius: 12,
+              borderBottomLeftRadius: 12,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: isCompactPopup ? 'column' : 'row',
+                alignItems: isCompactPopup ? 'stretch' : 'flex-start',
+                justifyContent: 'space-between',
+                gap: isCompactPopup ? 8 : 10,
+              }}
+            >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
-                    fontSize: 16,
+                    fontSize: isCompactPopup ? 16 : 18,
                     fontWeight: 700,
-                    lineHeight: '20px',
+                    lineHeight: isTinyPopup ? '20px' : isCompactPopup ? '22px' : '24px',
                     color: colors.text,
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
@@ -599,17 +642,17 @@ const PointMarkerWeb = React.memo(
                   {(point as any)?.name}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: isTinyPopup ? 6 : 8, marginTop: isTinyPopup ? 8 : 10 }}>
                   {badgeLabel ? (
                     <div
                       style={{
-                        background: colors.backgroundTertiary,
+                        background: colors.backgroundSecondary,
                         border: `1px solid ${colors.border}`,
                         borderRadius: 999,
-                        padding: '6px 10px',
-                        fontSize: 12,
-                        lineHeight: '14px',
-                        color: colors.textMuted,
+                        padding: isTinyPopup ? '5px 8px' : isCompactPopup ? '6px 10px' : '8px 12px',
+                        fontSize: isTinyPopup ? 12 : isCompactPopup ? 13 : 14,
+                        lineHeight: isTinyPopup ? '13px' : isCompactPopup ? '14px' : '16px',
+                        color: colors.textSecondary,
                         fontWeight: 600,
                       }}
                     >
@@ -619,13 +662,13 @@ const PointMarkerWeb = React.memo(
                   {!isSitePoint && countryLabel ? (
                     <div
                       style={{
-                        background: colors.backgroundTertiary,
+                        background: colors.backgroundSecondary,
                         border: `1px solid ${colors.border}`,
                         borderRadius: 999,
-                        padding: '6px 10px',
-                        fontSize: 12,
-                        lineHeight: '14px',
-                        color: colors.textMuted,
+                        padding: isTinyPopup ? '5px 8px' : isCompactPopup ? '6px 10px' : '8px 12px',
+                        fontSize: isTinyPopup ? 12 : isCompactPopup ? 13 : 14,
+                        lineHeight: isTinyPopup ? '13px' : isCompactPopup ? '14px' : '16px',
+                        color: colors.textSecondary,
                         fontWeight: 600,
                       }}
                     >
@@ -635,27 +678,37 @@ const PointMarkerWeb = React.memo(
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: isTinyPopup ? 6 : 8,
+                  flexShrink: 0,
+                  minWidth: 0,
+                  flexWrap: 'wrap',
+                  justifyContent: isCompactPopup ? 'flex-start' : 'flex-end',
+                }}
+              >
                 {typeof onEditPoint === 'function' ? (
                   <CardActionPressable
                     accessibilityLabel="Редактировать"
                     title="Редактировать"
-                    onPress={() => onEditPoint(point)}
+                    onPress={handleEditPoint}
                     style={{
                       borderWidth: 1,
                       borderColor: colors.border,
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.backgroundSecondary,
                       color: colors.text,
-                      borderRadius: 12,
-                      width: 34,
-                      height: 34,
+                      borderRadius: 14,
+                      width: isTinyPopup ? 38 : 40,
+                      height: isTinyPopup ? 38 : 40,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
                     }}
                   >
-                    <Feather name="edit-2" size={16} color={colors.text} />
+                    <Feather name="edit-2" size={isTinyPopup ? 16 : 17} color={colors.text} />
                   </CardActionPressable>
                 ) : null}
 
@@ -663,24 +716,45 @@ const PointMarkerWeb = React.memo(
                   <CardActionPressable
                     accessibilityLabel="Удалить"
                     title="Удалить"
-                    onPress={() => onDeletePoint(point)}
+                    onPress={handleDeletePoint}
                     style={{
                       borderWidth: 1,
                       borderColor: colors.border,
-                      backgroundColor: colors.surface,
+                      backgroundColor: colors.backgroundSecondary,
                       color: colors.text,
-                      borderRadius: 12,
-                      width: 34,
-                      height: 34,
+                      borderRadius: 14,
+                      width: isTinyPopup ? 38 : 40,
+                      height: isTinyPopup ? 38 : 40,
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
                     }}
                   >
-                    <Feather name="trash-2" size={16} color={colors.text} />
+                    <Feather name="trash-2" size={isTinyPopup ? 16 : 17} color={colors.text} />
                   </CardActionPressable>
                 ) : null}
+
+                <CardActionPressable
+                  accessibilityLabel="Закрыть попап"
+                  title="Закрыть"
+                  onPress={handleClosePopup}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    backgroundColor: colors.backgroundSecondary,
+                    color: colors.text,
+                    borderRadius: 14,
+                    width: isTinyPopup ? 38 : 40,
+                    height: isTinyPopup ? 38 : 40,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+                  }}
+                >
+                  <Feather name="x" size={isTinyPopup ? 16 : 17} color={colors.text} />
+                </CardActionPressable>
               </div>
             </div>
 
@@ -697,7 +771,7 @@ const PointMarkerWeb = React.memo(
                 <ImageCardMedia
                   src={photoUrl}
                   alt="Фото точки"
-                  height={140}
+                  height={isTinyPopup ? 108 : isNarrowPopup ? 120 : 140}
                   width="100%"
                   borderRadius={12}
                   fit="contain"
@@ -708,14 +782,23 @@ const PointMarkerWeb = React.memo(
             ) : null}
 
             {(point as any)?.description ? (
-              <div style={{ marginTop: 10, color: colors.text, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              <div
+                style={{
+                  marginTop: 10,
+                  color: colors.text,
+                  whiteSpace: 'pre-wrap',
+                  overflowWrap: 'anywhere',
+                  fontSize: isTinyPopup ? 13 : 14,
+                  lineHeight: isTinyPopup ? '18px' : '20px',
+                }}
+              >
                 {(point as any)?.description}
               </div>
             ) : null}
 
             {(point as any)?.address ? (
               <div style={{ marginTop: 10, color: colors.textMuted, overflowWrap: 'anywhere' }}>
-                <span style={{ fontSize: 12, lineHeight: '16px' }}>{(point as any)?.address}</span>
+                <span style={{ fontSize: isTinyPopup ? 11 : 12, lineHeight: isTinyPopup ? '15px' : '16px' }}>{(point as any)?.address}</span>
               </div>
             ) : null}
 
@@ -733,32 +816,50 @@ const PointMarkerWeb = React.memo(
 
             {coordsText ? (
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: isCompactPopup ? 'column' : 'row',
+                    alignItems: isCompactPopup ? 'stretch' : 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                  }}
+                >
                   <div
                     style={{
                       border: `1px solid ${colors.border}`,
-                      background: colors.surface,
+                      background: colors.backgroundSecondary,
                       borderRadius: 12,
-                      padding: '10px 12px',
+                      padding: isTinyPopup ? '9px 10px' : isCompactPopup ? '10px 12px' : '12px 14px',
                       flex: 1,
                       minWidth: 0,
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 12,
-                        color: colors.textMuted,
+                        fontSize: isTinyPopup ? 12 : isCompactPopup ? 13 : 15,
+                        color: colors.textSecondary,
                         lineHeight: 1.2,
                         overflowWrap: 'anywhere',
                         wordBreak: 'break-word',
                         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                        fontWeight: 600,
                       }}
                     >
                       {coordsText}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: isTinyPopup ? 5 : 6,
+                      flexShrink: 0,
+                      flexWrap: 'wrap',
+                      justifyContent: isCompactPopup ? 'flex-end' : 'flex-start',
+                    }}
+                  >
                     <CardActionPressable
                       accessibilityLabel="Копировать координаты"
                       title="Копировать координаты"
@@ -766,18 +867,18 @@ const PointMarkerWeb = React.memo(
                       style={{
                         borderWidth: 1,
                         borderColor: colors.border,
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.backgroundSecondary,
                         color: colors.text,
-                        borderRadius: 12,
-                        width: 34,
-                        height: 34,
+                        borderRadius: 14,
+                        width: isTinyPopup ? 38 : 40,
+                        height: isTinyPopup ? 38 : 40,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
                       }}
                     >
-                      <Feather name="copy" size={16} color={colors.text} />
+                      <Feather name="copy" size={isTinyPopup ? 16 : 17} color={colors.text} />
                     </CardActionPressable>
 
                     <CardActionPressable
@@ -787,24 +888,24 @@ const PointMarkerWeb = React.memo(
                       style={{
                         borderWidth: 1,
                         borderColor: colors.border,
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.backgroundSecondary,
                         color: colors.text,
-                        borderRadius: 12,
-                        width: 34,
-                        height: 34,
+                        borderRadius: 14,
+                        width: isTinyPopup ? 38 : 40,
+                        height: isTinyPopup ? 38 : 40,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
                       }}
                     >
-                      <Feather name="send" size={16} color={colors.text} />
+                      <Feather name="send" size={isTinyPopup ? 16 : 17} color={colors.text} />
                     </CardActionPressable>
                   </div>
                 </div>
 
                 <div style={{ marginTop: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: isTinyPopup ? 5 : 6, flexWrap: 'wrap', justifyContent: 'flex-start', width: '100%' }}>
                     {mapLinks.map((p) => (
                       <CardActionPressable
                         key={p.key}
@@ -814,21 +915,21 @@ const PointMarkerWeb = React.memo(
                         style={{
                           borderWidth: 1,
                           borderColor: colors.border,
-                          backgroundColor: colors.surface,
+                          backgroundColor: colors.backgroundSecondary,
                           color: colors.text,
                           borderRadius: 999,
-                          paddingVertical: 4,
-                          paddingHorizontal: 8,
+                          paddingVertical: isTinyPopup ? 4 : isCompactPopup ? 5 : 6,
+                          paddingHorizontal: isTinyPopup ? 7 : isCompactPopup ? 9 : 10,
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-                          fontSize: 11,
-                          lineHeight: '13px',
-                          flexShrink: 0,
+                          minWidth: isTinyPopup ? 46 : isCompactPopup ? 50 : 52,
                         }}
                       >
-                        {p.key}
+                        <span style={{ fontSize: isTinyPopup ? 10 : isCompactPopup ? 11 : 12, lineHeight: isTinyPopup ? '12px' : isCompactPopup ? '13px' : '14px', color: colors.textSecondary, fontWeight: 600 }}>
+                          {p.key}
+                        </span>
                       </CardActionPressable>
                     ))}
                   </div>
@@ -891,6 +992,10 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   const loadingStyles = React.useMemo(() => createLoadingStyles(colors), [colors]);
 
   const [mapInstance, setMapInstance] = React.useState<any>(null);
+  const [viewportWidth, setViewportWidth] = React.useState<number>(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') return window.innerWidth;
+    return 1280;
+  });
   const mapRef = React.useRef<any>(null);
   const baseLayerFallbackIndexRef = React.useRef(0);
   const baseLayerFallbackSwitchingRef = React.useRef(false);
@@ -958,6 +1063,18 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
       cancelled = true;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const onResize = () => setViewportWidth(window.innerWidth);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const isCompactPopup = viewportWidth <= 900;
+  const isNarrowPopup = viewportWidth <= 390;
+  const isTinyPopup = viewportWidth <= 360;
 
   const getMarkerIcon = React.useCallback(
     (color: PointColor | string | undefined, opts?: { active?: boolean; emphasize?: boolean }) => {
@@ -1300,22 +1417,23 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     }
   }, [activePointId, mapInstance, safePoints]);
 
-  React.useEffect(() => {
-    const id = Number(activePointId);
-    if (!Number.isFinite(id)) return;
-    const marker = markerByIdRef.current.get(id);
-    if (!marker || typeof marker.openPopup !== 'function') return;
-
-    const t = setTimeout(() => {
-      try {
-        marker.openPopup();
-      } catch {
-        // noop
-      }
-    }, 0);
-
-    return () => clearTimeout(t);
-  }, [activePointId]);
+  // Popup disabled: info shown in right panel instead
+  // React.useEffect(() => {
+  //   const id = Number(activePointId);
+  //   if (!Number.isFinite(id)) return;
+  //   const marker = markerByIdRef.current.get(id);
+  //   if (!marker || typeof marker.openPopup !== 'function') return;
+  //
+  //   const t = setTimeout(() => {
+  //     try {
+  //       marker.openPopup();
+  //     } catch {
+  //       // noop
+  //     }
+  //   }, 0);
+  //
+  //   return () => clearTimeout(t);
+  // }, [activePointId]);
 
   React.useEffect(() => {
     if (!mapInstance) return;
@@ -1480,6 +1598,25 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
               top: 0;
               left: 0;
             }
+
+            .metravel-user-point-popup .leaflet-popup-content-wrapper {
+              background: ${colors.surface};
+              box-shadow: 0 10px 30px rgba(12, 18, 28, 0.28);
+              border-radius: 16px;
+              overflow: hidden;
+              max-width: min(88vw, 360px);
+            }
+
+            .metravel-user-point-popup .leaflet-popup-content {
+              margin: 0 !important;
+              width: auto !important;
+              min-width: 0 !important;
+              max-width: min(88vw, 360px);
+            }
+
+            .metravel-user-point-popup .leaflet-popup-tip {
+              background: ${colors.surface};
+            }
           `}
         </style>
       ) : null}
@@ -1560,6 +1697,9 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
               isActive={Number(activePointId) === Number((point as any)?.id)}
               colors={colors}
               mapInstance={mapInstance}
+              isCompactPopup={isCompactPopup}
+              isNarrowPopup={isNarrowPopup}
+              isTinyPopup={isTinyPopup}
               centerOverride={centerOverride}
               driveInfo={driveInfo}
               getMarkerIconCached={getMarkerIconCached}

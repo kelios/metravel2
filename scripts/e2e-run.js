@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { spawn } = require('node:child_process');
+const net = require('node:net');
 const path = require('node:path');
 
 const rootDir = path.join(__dirname, '..');
@@ -53,6 +54,26 @@ function runPlaywright(args) {
   });
 }
 
+function checkPortFree(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', () => resolve(false));
+    server.listen(port, '127.0.0.1', () => {
+      server.close(() => resolve(true));
+    });
+  });
+}
+
+async function findAvailablePort(startPort, maxAttempts = 50) {
+  for (let offset = 0; offset < maxAttempts; offset += 1) {
+    const candidate = startPort + offset;
+    const free = await checkPortFree(candidate);
+    if (free) return candidate;
+  }
+  return startPort;
+}
+
 async function main() {
   const forwarded = process.argv.slice(2);
 
@@ -66,6 +87,19 @@ async function main() {
   // Keep CI worker count conservative to avoid web export server OOM/connection-refused flakes
   // in long parallel runs. Local runs can still override with E2E_WORKERS.
   const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 4);
+  const requestedPort = getNumberEnv('E2E_WEB_PORT', 8085);
+  const autoSelectPort = String(process.env.E2E_AUTO_SELECT_PORT || '1') !== '0';
+  const selectedPort = autoSelectPort
+    ? await findAvailablePort(requestedPort)
+    : requestedPort;
+
+  if (selectedPort !== requestedPort) {
+    console.log(
+      `[e2e-run] Port ${requestedPort} is busy, using ${selectedPort} for this run.`
+    );
+  }
+  process.env.E2E_WEB_PORT = String(selectedPort);
+
   const outputRootArgIndex = forwarded.findIndex((a) => a === '--output');
   const outputRoot =
     outputRootArgIndex !== -1 && typeof forwarded[outputRootArgIndex + 1] === 'string'

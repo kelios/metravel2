@@ -197,7 +197,6 @@ function ImageCardMedia({
         quality,
         fit: contentFit === 'contain' ? 'contain' : 'cover',
         format: 'auto',
-        dpr: 1,
       }) ?? uri
     );
   }, [resolvedSource, width, height, contentFit, quality]);
@@ -221,8 +220,21 @@ function ImageCardMedia({
     if (typeof resolvedSource === 'string') return undefined;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
-    return generateSrcSet(uri, [160, 320, 480, 640], { quality, fit: contentFit === 'contain' ? 'contain' : 'cover', dpr: 1 }) || undefined;
-  }, [resolvedSource, contentFit, quality]);
+    const baseWidth = typeof width === 'number' ? width : 320;
+    const srcSetWidths = [
+      Math.max(160, Math.round(baseWidth * 0.5)),
+      Math.max(320, Math.round(baseWidth)),
+      Math.max(480, Math.round(baseWidth * 1.5)),
+      Math.max(640, Math.round(baseWidth * 2)),
+    ];
+    const uniqueSortedWidths = Array.from(new Set(srcSetWidths)).sort((a, b) => a - b);
+    return (
+      generateSrcSet(uri, uniqueSortedWidths, {
+        quality,
+        fit: contentFit === 'contain' ? 'contain' : 'cover',
+      }) || undefined
+    );
+  }, [resolvedSource, contentFit, quality, width]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;

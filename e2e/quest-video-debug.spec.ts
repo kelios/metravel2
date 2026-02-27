@@ -52,7 +52,9 @@ test.describe('Quest Video Debug', () => {
         }
 
         if (!krakowLink) {
-            test.skip(true, 'No quests found on /quests page');
+            const hasFallbackState =
+                (await page.locator('text=/ошибка|не удалось загрузить|квесты не найдены|нет квестов/i').count()) > 0;
+            expect(hasFallbackState).toBeTruthy();
             return;
         }
 

@@ -49,8 +49,11 @@ const QuillEditor =
 
 const quillModulesDefault = {
     toolbar: [
+        [{ font: [] }, { size: ['small', false, 'large', 'huge'] }],
         ['bold', 'italic', 'underline', 'strike'],
         [{ header: [1, 2, 3, false] }],
+        [{ color: [] }, { background: [] }],
+        [{ align: [] }],
         [{ list: 'ordered' }, { list: 'bullet' }],
         ['link', 'image'],
         ['clean'],
@@ -301,7 +304,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             ...(isWeb
                 ? ({
                     maxHeight: fullscreen ? undefined : 560,
-                    overflow: 'auto',
+                    // Keep the Quill toolbar visible; only editor content should scroll.
+                    overflow: 'hidden',
                 } as any)
                 : null),
         },

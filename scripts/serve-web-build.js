@@ -40,6 +40,43 @@ const contentTypes = {
 
 const compressibleExts = new Set(['.html', '.js', '.css', '.json', '.svg', '.map'])
 
+function getDynamicRouteFallbackCandidates(pathname, resolvedPath) {
+  const ext = path.extname(pathname)
+  if (ext) return []
+
+  const segments = pathname.split('/').filter(Boolean)
+  if (segments.length === 0) return []
+
+  const candidates = []
+  const dynamicNames = ['[param]', '[id]']
+
+  for (let i = segments.length - 1; i >= 0; i -= 1) {
+    for (const dynamicName of dynamicNames) {
+      const nextSegments = segments.slice()
+      nextSegments[i] = dynamicName
+      const candidatePath = path.join(buildDir, ...nextSegments) + '.html'
+      if (candidatePath === `${resolvedPath}.html`) continue
+      candidates.push({
+        filePath: candidatePath,
+        replacements: {
+          [dynamicName]: segments[i],
+        },
+      })
+    }
+  }
+
+  return candidates
+}
+
+function applyDynamicReplacements(html, replacements) {
+  let next = html
+  for (const [token, value] of Object.entries(replacements || {})) {
+    if (!token) continue
+    next = next.split(token).join(value)
+  }
+  return next
+}
+
 function sendCompressed(req, res, contentType, data, fileExt) {
   res.setHeader('Content-Type', contentType)
   const ext = fileExt || ''
@@ -310,6 +347,40 @@ const server = http.createServer((req, res) => {
       if (err) {
         const hasExtension = path.extname(pathname) !== ''
         const htmlCandidate = hasExtension ? null : `${resolvedPath}.html`
+        const dynamicCandidates = hasExtension ? [] : getDynamicRouteFallbackCandidates(pathname, resolvedPath)
+
+        const sendIndexFallback = () => {
+          const indexPath = path.join(buildDir, 'index.html')
+          fs.readFile(indexPath, (fallbackErr, fallbackData) => {
+            if (fallbackErr) {
+              res.statusCode = 404
+              res.end('Not found')
+              return
+            }
+            sendCompressed(req, res, 'text/html; charset=utf-8', fallbackData, '.html')
+          })
+        }
+
+        const tryDynamicFallback = (candidates, idx = 0) => {
+          if (idx >= candidates.length) {
+            sendIndexFallback()
+            return
+          }
+          const candidate = candidates[idx]
+          if (!candidate || !candidate.filePath || !candidate.filePath.startsWith(buildDir)) {
+            tryDynamicFallback(candidates, idx + 1)
+            return
+          }
+          fs.readFile(candidate.filePath, (candidateErr, candidateData) => {
+            if (candidateErr) {
+              tryDynamicFallback(candidates, idx + 1)
+              return
+            }
+            const rawHtml = candidateData.toString('utf8')
+            const html = applyDynamicReplacements(rawHtml, candidate.replacements)
+            sendCompressed(req, res, 'text/html; charset=utf-8', Buffer.from(html, 'utf8'), '.html')
+          })
+        }
 
         if (htmlCandidate) {
           fs.readFile(htmlCandidate, (htmlErr, htmlData) => {
@@ -317,29 +388,12 @@ const server = http.createServer((req, res) => {
               sendCompressed(req, res, 'text/html; charset=utf-8', htmlData, '.html')
               return
             }
-
-            const indexPath = path.join(buildDir, 'index.html')
-            fs.readFile(indexPath, (fallbackErr, fallbackData) => {
-              if (fallbackErr) {
-                res.statusCode = 404
-                res.end('Not found')
-                return
-              }
-              sendCompressed(req, res, 'text/html; charset=utf-8', fallbackData, '.html')
-            })
+            tryDynamicFallback(dynamicCandidates)
           })
           return
         }
 
-        const indexPath = path.join(buildDir, 'index.html')
-        fs.readFile(indexPath, (fallbackErr, fallbackData) => {
-          if (fallbackErr) {
-            res.statusCode = 404
-            res.end('Not found')
-            return
-          }
-          sendCompressed(req, res, 'text/html; charset=utf-8', fallbackData, '.html')
-        })
+        tryDynamicFallback(dynamicCandidates)
         return
       }
 

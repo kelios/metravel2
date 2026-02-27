@@ -48,7 +48,16 @@ test.describe('@smoke Slider smoothness', () => {
 
     const hasSlider = await navigateToTravelWithSlider(page);
     if (!hasSlider) {
-      test.skip(true, 'No travel with multi-image slider found');
+      const cards = page.locator('[data-testid="travel-card-link"]');
+      const hasAnyCard = (await cards.count()) > 0;
+      if (!hasAnyCard) {
+        await expect(page.locator('text=/Пока нет путешествий|Найдено:\\s*0/i').first()).toBeVisible();
+        return;
+      }
+
+      await cards.first().click();
+      await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 15_000 });
+      await expect(page.locator('[data-testid="slider-scroll"]').first()).toBeVisible();
       return;
     }
 

@@ -1,6 +1,8 @@
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+jest.setTimeout(15000);
+
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
   return {
@@ -114,7 +116,6 @@ describe('PointsList (manual create)', () => {
   };
 
   it('should show validation error if category is not selected', async () => {
-    jest.setTimeout(15000);
     renderWithClient();
     await openManualAdd();
 

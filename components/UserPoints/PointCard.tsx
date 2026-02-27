@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Share, Alert, ActionSheetIOS } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Share, Alert, ActionSheetIOS, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -43,6 +43,8 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   onToggleSelect,
 }) => {
   const colors = useThemedColors();
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowLayout = viewportWidth <= 430;
   const isSitePoint = React.useMemo(() => {
     const tags = (point as any)?.tags;
     return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
@@ -305,15 +307,15 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
           </View>
         ) : null}
 
-        <View style={styles.headerRow}>
-          <View style={styles.headerMain}>
+        <View style={[styles.headerRow, isNarrowLayout ? styles.headerRowNarrow : null]}>
+          <View style={[styles.headerMain, isNarrowLayout ? styles.headerMainNarrow : null]}>
             <Text style={styles.name} numberOfLines={2}>
               {point.name}
             </Text>
           </View>
 
           {showActions ? (
-            <View style={styles.headerActions}>
+            <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null]}>
               {typeof onEdit === 'function' ? (
                 Platform.OS === 'web' ? (
                   <ActionButton label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
@@ -371,23 +373,23 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         {hasCoords ? (
           Platform.OS === 'web' ? (
             <View style={styles.coordsBlock}>
-              <Text style={styles.coordsText} numberOfLines={1}>
+              <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
                 {coordsText}
               </Text>
-              <View style={styles.coordsActionsRow as any}>
+              <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
                 <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
                 <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
                 {mapUrls ? (
-                  <ActionButton label="Открыть в картах" icon="navigation" onActivate={() => void openExternalLink(mapUrls.google)} />
+                  <ActionButton label="Открыть в картах" icon="map-pin" onActivate={() => void openExternalLink(mapUrls.google)} />
                 ) : null}
               </View>
             </View>
           ) : (
             <View style={styles.coordsRow}>
-              <Text style={styles.coordsText} numberOfLines={1}>
+              <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
                 {coordsText}
               </Text>
-              <View style={styles.coordsActionsRow as any}>
+              <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
                 <IconButton
                   icon={<Feather name="copy" size={14} color={colors.textMuted} />}
                   label="Копировать координаты"
@@ -402,7 +404,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
                 />
                 {mapUrls ? (
                   <IconButton
-                    icon={<Feather name="navigation" size={14} color={colors.textMuted} />}
+                    icon={<Feather name="map-pin" size={14} color={colors.textMuted} />}
                     label="Открыть в картах"
                     onPress={() => void openInMaps()}
                     size="sm"
@@ -441,7 +443,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md,
     marginHorizontal: DESIGN_TOKENS.spacing.lg,
-    marginBottom: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
@@ -453,6 +455,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   containerActive: {
     borderColor: colors.primary,
     borderWidth: 2,
+    backgroundColor: `${colors.primary}08`,
+    ...(Platform.OS === 'web' ? ({ boxShadow: `0 0 0 4px ${colors.primary}15, ${DESIGN_TOKENS.shadows.card}` } as any) : null),
   },
   containerGrid: {
     marginHorizontal: 0,
@@ -485,15 +489,27 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 10,
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
+  headerRowNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 6,
+  },
   headerMain: {
     flex: 1,
     minWidth: 0,
+  },
+  headerMainNarrow: {
+    width: '100%',
   },
   headerActions: {
     flexDirection: 'row',
     gap: 6,
     marginTop: 2,
     flexShrink: 0,
+  },
+  headerActionsNarrow: {
+    width: '100%',
+    justifyContent: 'flex-end',
   },
   webActionButton: {
     width: 28,
@@ -573,8 +589,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   coordsActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 4,
     flexShrink: 0,
+  },
+  coordsActionsRowNarrow: {
+    width: '100%',
+    justifyContent: 'flex-end',
   },
   coordsText: {
     fontSize: DESIGN_TOKENS.typography.sizes.xs,

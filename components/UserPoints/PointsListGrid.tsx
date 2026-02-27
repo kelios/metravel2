@@ -112,6 +112,7 @@ export const PointsListGrid: React.FC<{
   const { width: windowWidth } = useWindowDimensions()
   const isWeb = Platform.OS === 'web'
   const isWideScreen = isWeb && windowWidth >= 1024
+  const compactControls = isWeb && windowWidth < 1200
   const themedColors = useThemedColors()
   const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
   const mapSettingsStyles = useMemo(
@@ -252,24 +253,26 @@ export const PointsListGrid: React.FC<{
             testID="userpoints-list-search"
           />
 
-          <IconButton
-            icon={<Feather name="sliders" size={16} color={themedColors.text} />}
-            label="Фильтры"
-            onPress={() => setPanelTab('filters')}
-            size="sm"
-            testID="userpoints-list-open-filters"
-            showLabel
-          />
+          <View style={localStyles.listControlsActions}>
+            <IconButton
+              icon={<Feather name="sliders" size={16} color={themedColors.text} />}
+              label="Фильтры"
+              onPress={() => setPanelTab('filters')}
+              size="sm"
+              testID="userpoints-list-open-filters"
+              showLabel={!compactControls}
+            />
 
-          <IconButton
-            icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-            label="Сбросить фильтры"
-            onPress={onResetFilters}
-            disabled={!hasFilters}
-            size="sm"
-            testID="userpoints-list-reset-filters"
-            showLabel
-          />
+            <IconButton
+              icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
+              label="Сбросить фильтры"
+              onPress={onResetFilters}
+              disabled={!hasFilters}
+              size="sm"
+              testID="userpoints-list-reset-filters"
+              showLabel={!compactControls}
+            />
+          </View>
         </View>
 
         {showingRecommendations ? (
@@ -299,10 +302,12 @@ export const PointsListGrid: React.FC<{
     [
       hasFilters,
       localStyles.listControlsRow,
+      localStyles.listControlsActions,
       localStyles.listSearchInput,
       localStyles.recommendationsActions,
       localStyles.recommendationsHeader,
       localStyles.recommendationsTitle,
+      compactControls,
       onCloseRecommendations,
       onRefreshRecommendations,
       onResetFilters,
@@ -681,11 +686,23 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
   listControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 12,
   },
+  listControlsActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    flexShrink: 1,
+    maxWidth: '100%',
+  },
   listSearchInput: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 200,
+    minWidth: 170,
     height: 40,
     borderWidth: 1,
     borderColor: colors.border,
@@ -695,7 +712,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     color: colors.text,
   },
   pointsListItem: {
-    marginBottom: 0,
+    marginBottom: 16,
   },
   recommendationsHeader: {
     flexDirection: 'row',

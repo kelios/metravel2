@@ -117,8 +117,10 @@ test.describe('@smoke Integration: core data flows (web)', () => {
   test('travels list renders cards after API load', async ({ page }, testInfo) => {
     const proxyReady = await ensureApiProxy(page, 'travelsby');
     if (!proxyReady) {
-      test.skip(true, 'travelsby: /api/travels/ proxy is unavailable in current environment');
-      return;
+      testInfo.annotations.push({
+        type: 'note',
+        description: 'travelsby: /api/travels/ proxy is unavailable; running UI-only fallback check.',
+      });
     }
     const responsePromise = waitForApiResponse(
       page,
@@ -146,8 +148,7 @@ test.describe('@smoke Integration: core data flows (web)', () => {
   test('map list shows travel cards after API load', async ({ page }) => {
     const proxyReady = await ensureApiProxy(page, 'map');
     if (!proxyReady) {
-      test.skip(true, 'map: /api/travels/ proxy is unavailable in current environment');
-      return;
+      // continue with UI-only checks
     }
     const responsePromise = waitForApiResponse(
       page,
@@ -184,8 +185,10 @@ test.describe('@smoke Integration: core data flows (web)', () => {
   test('roulette returns cards after spin', async ({ page }, testInfo) => {
     const proxyReady = await ensureApiProxy(page, 'roulette');
     if (!proxyReady) {
-      test.skip(true, 'roulette: /api/travels/ proxy is unavailable in current environment');
-      return;
+      testInfo.annotations.push({
+        type: 'note',
+        description: 'roulette: /api/travels/ proxy is unavailable; running UI-only fallback check.',
+      });
     }
     const filtersPromise = waitForApiResponse(
       page,
