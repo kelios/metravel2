@@ -2,6 +2,8 @@ import { expect, type Page } from '@playwright/test';
 import { seedNecessaryConsent, hideRecommendationsBanner } from './storage';
 import { getTravelsListPath } from './routes';
 
+const TRAVEL_DETAILS_LOAD_ERROR_PATTERN = /не удалось загрузить путешествие|требуется авторизация/i;
+
 /**
  * Pre-accept cookies and hide non-essential banners to stabilize tests.
  */
@@ -247,4 +249,13 @@ export async function waitForMainListRender(page: Page) {
  */
 export function tid(id: string): string {
   return `[data-testid="${id}"], [testID="${id}"]`;
+}
+
+/**
+ * Detect known travel details load errors rendered in app UI.
+ */
+export async function hasTravelDetailsLoadError(page: Page, timeout = 3000): Promise<boolean> {
+  const loadError = page.getByText(TRAVEL_DETAILS_LOAD_ERROR_PATTERN).first();
+  await loadError.waitFor({ state: 'visible', timeout }).catch(() => null);
+  return loadError.isVisible().catch(() => false);
 }
