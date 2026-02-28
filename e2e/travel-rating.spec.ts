@@ -18,8 +18,8 @@ import { test, expect } from './fixtures';
 import { preacceptCookies, navigateToFirstTravel, gotoWithRetry } from './helpers/navigation';
 import { isAuthenticated, ensureAuthedStorageFallback, mockFakeAuthApis, waitForAuth } from './helpers/auth';
 
-const RATING_SECTION_SELECTOR = '[data-testid="travel-rating-section"]';
-const STAR_SELECTOR = '[data-testid^="star-rating-star-"]';
+const RATING_SECTION_SELECTOR = '[data-testid="travel-rating-section"], [testID="travel-rating-section"]';
+const STAR_SELECTOR = '[data-testid^="star-rating-star-"], [testID^="star-rating-star-"]';
 const LOGIN_HINT_PATTERN = /войд/i;
 const YOUR_RATING_PATTERN = /ваша оценка/i;
 type E2EPage = import('@playwright/test').Page;
@@ -70,10 +70,21 @@ async function mockFallbackTravelDetails(page: E2EPage): Promise<void> {
   await page.route(`**/api/travels/${FALLBACK_TRAVEL_ID}/`, routeHandler);
 }
 
+async function hasTravelLoadError(page: E2EPage, timeout = 3000): Promise<boolean> {
+  const loadError = page.getByText(/не удалось загрузить путешествие|требуется авторизация/i).first();
+  await loadError.waitFor({ state: 'visible', timeout }).catch(() => null);
+  return loadError.isVisible().catch(() => false);
+}
+
 async function goToTravelDetails(page: E2EPage): Promise<boolean> {
   await preacceptCookies(page);
   const openedFromList = await navigateToFirstTravel(page).catch(() => false);
-  if (openedFromList) return true;
+  if (openedFromList) {
+    // Иногда первый маршрут из списка может требовать авторизацию/быть недоступным.
+    // В таком случае переключаемся на детерминированный fallback-маршрут с моками.
+    const hasError = await hasTravelLoadError(page, 4000);
+    if (!hasError) return true;
+  }
 
   await mockFallbackTravelDetails(page);
   await gotoWithRetry(page, `/travels/${FALLBACK_TRAVEL_SLUG}`);
@@ -83,7 +94,8 @@ async function goToTravelDetails(page: E2EPage): Promise<boolean> {
     .waitFor({ state: 'visible', timeout: 30_000 })
     .then(() => true)
     .catch(() => false);
-  return detailsVisible;
+  if (!detailsVisible) return false;
+  return !(await hasTravelLoadError(page, 5000));
 }
 
 /**

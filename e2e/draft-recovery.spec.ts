@@ -266,7 +266,7 @@ test.describe('Draft recovery popup', () => {
       await expect(page.getByText('Найден черновик', { exact: true })).toHaveCount(0);
 
       // Manual save should clear the local draft. Click the save action in the header.
-      await page.getByRole('button', { name: 'Сохранить' }).click({ timeout: 20_000 });
+      await page.getByRole('button', { name: /^Сохранить$/, exact: true }).click({ timeout: 20_000 });
 
       // Ensure no beforeunload warning blocks reload after save.
       const dialogs: string[] = [];
