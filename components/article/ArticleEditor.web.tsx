@@ -572,7 +572,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-editor{background:var(--bg);color:var(--fg);padding:16px 20px;line-height:1.65}
       .ql-toolbar{background:var(--bar);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;max-width:100%;display:flex}
       .quill > .ql-toolbar{display:flex !important;visibility:visible !important;opacity:1 !important}
-      .ql-toolbar.ql-snow{display:flex !important;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+      .ql-toolbar.ql-snow{display:flex !important;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;overflow-x:auto;overflow-y:visible;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+      .ql-toolbar.ql-snow .ql-picker{position:relative}
+      .ql-toolbar.ql-snow .ql-picker-options{z-index:30}
       .ql-toolbar.ql-snow .ql-formats{display:flex;flex-wrap:wrap;gap:4px;margin-right:6px}
       .ql-toolbar.ql-snow .ql-picker{max-width:100%}
       .ql-toolbar.ql-snow button{flex:0 0 auto}

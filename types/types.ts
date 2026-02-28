@@ -153,6 +153,12 @@ export type Filters = {
     complexity: string[]
     month: string[]
     over_nights_stay: string[]
+    sortings?: Array<{
+        id: string
+        name: string
+        sortBy?: string
+        sortOrder?: 'asc' | 'desc'
+    }>
     transports: string[]
     year: string
     user_id?: number

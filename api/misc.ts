@@ -58,6 +58,7 @@ const EMPTY_FILTERS: Filters = {
   complexity: [],
   month: [],
   over_nights_stay: [],
+  sortings: [],
   transports: [],
   year: '',
 };

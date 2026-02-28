@@ -13,6 +13,9 @@ import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
 import { isWebAutomation } from '@/utils/isWebAutomation'
+import TravelRouteFilesPanel from '@/components/travel/TravelRouteFilesPanel'
+import type { ParsedRoutePreview } from '@/types/travelRoutes'
+import RouteElevationProfile from '@/components/travel/details/sections/RouteElevationProfile'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
@@ -135,7 +138,8 @@ export const TravelDetailsMapSection: React.FC<{
 }> = ({ travel, anchors, canRenderHeavy, scrollToMapSection }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
-  const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0
+  const [routePreview, setRoutePreview] = useState<ParsedRoutePreview | null>(null)
+  const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0 || ((routePreview?.linePoints.length ?? 0) > 0)
 
   // Simplified lazy loading (replaces 30+ lines with 5 lines!)
   const { shouldRender, elementRef, isLoading } = useMapLazyLoad({
@@ -238,6 +242,11 @@ export const TravelDetailsMapSection: React.FC<{
                     resizeTrigger={mapResizeTrigger}
                     compact
                     height={isMobileWeb ? 400 : 500}
+                    showRouteLine={(routePreview?.linePoints.length ?? 0) >= 2}
+                    routeLineCoords={(routePreview?.linePoints ?? []).map((p) => {
+                      const [latStr, lngStr] = String(p.coord ?? '').split(',')
+                      return [Number(latStr), Number(lngStr)] as [number, number]
+                    })}
                   />
                 </Suspense>
               ) : (
@@ -250,6 +259,17 @@ export const TravelDetailsMapSection: React.FC<{
             </View>
           )}
         </View>
+
+        <TravelRouteFilesPanel
+          travelId={travel.id}
+          allowUpload={false}
+          title="Треки маршрута (GPX, KML)"
+          onPreviewDataChange={setRoutePreview}
+        />
+
+        {routePreview && routePreview.linePoints.length >= 2 ? (
+          <RouteElevationProfile preview={routePreview} />
+        ) : null}
       </View>
 
       {/* 4.3: WeatherWidget — unified across all devices, lazy via button */}

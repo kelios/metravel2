@@ -1,5 +1,6 @@
 // components/belkraj/BelkrajWidget.tsx
 import React, { useMemo } from 'react';
+import { getCountryCodeByCoords } from '@/utils/geoCountry';
 
 interface TravelAddress {
     id: number;
@@ -19,7 +20,7 @@ type Props = {
 
 function BelkrajWidget({
                                           points,
-                                          countryCode = 'BY',
+                                          countryCode,
                                           collapsedHeight = 520,
                                           expandedHeight = 1200,
                                           className,
@@ -46,17 +47,29 @@ function BelkrajWidget({
         process.env &&
         process.env.NODE_ENV === 'production';
 
+    const resolvedCountryCode = useMemo(() => {
+        const normalized = String(countryCode || '').trim().toUpperCase();
+        if (/^[A-Z]{2}$/.test(normalized)) return normalized;
+        if (!firstCoord) return undefined;
+        return getCountryCodeByCoords(firstCoord.lat, firstCoord.lng);
+    }, [countryCode, firstCoord]);
+
     const iframeSrc = useMemo(() => {
         if (!firstCoord) return null;
-        const ctry = (countryCode || 'BY').toUpperCase();
         const { lat, lng } = firstCoord;
-        return (
-            `https://belkraj.by/partner/widget` +
-            `?country=${encodeURIComponent(ctry)}` +
-            `&lat=${lat}&lng=${lng}` +
-            `&term=place&theme=cards&partner=u180793&size=6`
-        );
-    }, [countryCode, firstCoord]);
+        const params = new URLSearchParams({
+            lat: String(lat),
+            lng: String(lng),
+            term: 'place',
+            theme: 'cards',
+            partner: 'u180793',
+            size: '6',
+        });
+        if (resolvedCountryCode) {
+            params.set('country', resolvedCountryCode);
+        }
+        return `https://belkraj.by/partner/widget?${params.toString()}`;
+    }, [firstCoord, resolvedCountryCode]);
 
     // Не рендерим ничего, если нет координат
     if (!firstCoord || !isProd || !iframeSrc) return null;

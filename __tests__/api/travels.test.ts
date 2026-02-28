@@ -811,6 +811,7 @@ describe('src/api/travelsApi.ts', () => {
         complexity: [],
         month: [],
         over_nights_stay: [],
+        sortings: [],
         transports: [],
         year: '',
       } as any);

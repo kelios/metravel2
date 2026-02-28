@@ -8,6 +8,7 @@ import type { Travel } from "@/types/types";
 // ✅ АРХИТЕКТУРА: Состояние фильтров
 export interface FilterState {
   year?: string;
+  sort?: string;
   moderation?: number; // 0 - на модерации, 1 - прошедшие модерацию, undefined - по умолчанию (1)
   countries?: number[];
   categories?: Array<string | number>;
@@ -29,6 +30,12 @@ export interface FilterOptions {
   complexity?: Array<{ id: string; name: string }>;
   month?: Array<{ id: string; name: string }>;
   over_nights_stay?: Array<{ id: string; name: string }>;
+  sortings?: Array<{
+    id: string;
+    name: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }>;
 }
 
 // ✅ АРХИТЕКТУРА: Категория с количеством

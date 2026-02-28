@@ -18,6 +18,7 @@ import type { TravelFilters } from '@/hooks/useTravelFilters';
 import { showToast } from '@/utils/toast';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
+import TravelRouteFilesPanel from '@/components/travel/TravelRouteFilesPanel';
 
 async function showToastMessage(payload: any) {
     await showToast(payload);
@@ -589,6 +590,11 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                     </Button>
                                 </View>
                             )}
+
+                            <TravelRouteFilesPanel
+                                travelId={_travelId}
+                                allowUpload={true}
+                            />
 
                             {/* ✅ ФАЗА 2: Поиск мест на карте */}
                             <LocationSearchInput

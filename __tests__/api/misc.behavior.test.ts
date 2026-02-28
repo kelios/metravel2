@@ -172,6 +172,7 @@ describe('api/misc', () => {
       complexity: [],
       month: [],
       over_nights_stay: [],
+      sortings: [],
       transports: [],
       year: '',
     })

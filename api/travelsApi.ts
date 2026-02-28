@@ -319,11 +319,37 @@ const normalizeNumericFilterArray = (value: unknown): number[] => {
         .filter((val): val is number => val !== null);
 };
 
+type TravelSortQueryParams = {
+    ordering?: string;
+    sort?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+};
+
+const normalizeStringParam = (value: unknown): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : undefined;
+};
+
+const extractSortQueryParams = (source: Record<string, unknown>): TravelSortQueryParams => {
+    const sortOrderRaw = normalizeStringParam(source.sortOrder);
+    const sortOrder = sortOrderRaw === 'asc' || sortOrderRaw === 'desc' ? sortOrderRaw : undefined;
+
+    return {
+        ordering: normalizeStringParam(source.ordering),
+        sort: normalizeStringParam(source.sort),
+        sortBy: normalizeStringParam(source.sortBy),
+        sortOrder,
+    };
+};
+
 const buildWhereQueryParams = (params: {
     page?: number;
     perPage?: number;
     query?: string;
     where: Record<string, unknown>;
+    sortQuery?: TravelSortQueryParams;
 }): string => {
     const searchParams: Record<string, string> = {
         where: JSON.stringify(params.where),
@@ -337,6 +363,18 @@ const buildWhereQueryParams = (params: {
     }
     if (params.query !== undefined) {
         searchParams.query = params.query || '';
+    }
+    if (params.sortQuery?.ordering) {
+        searchParams.ordering = params.sortQuery.ordering;
+    }
+    if (params.sortQuery?.sort) {
+        searchParams.sort = params.sortQuery.sort;
+    }
+    if (params.sortQuery?.sortBy) {
+        searchParams.sortBy = params.sortQuery.sortBy;
+    }
+    if (params.sortQuery?.sortOrder) {
+        searchParams.sortOrder = params.sortQuery.sortOrder;
     }
 
     return new URLSearchParams(searchParams).toString();
@@ -460,6 +498,7 @@ export const fetchTravels = async (
 ) => {
     try {
         const whereObject: Record<string, unknown> = {};
+        const sortQuery = extractSortQueryParams(urlParams || {});
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
         // When user_id is provided without explicit publish/moderation filters, we assume
@@ -507,7 +546,16 @@ export const fetchTravels = async (
             }
         }
 
-        const handledKeys = new Set<string>([...arrayFields, 'year', 'moderation', 'publish']);
+        const handledKeys = new Set<string>([
+            ...arrayFields,
+            'year',
+            'moderation',
+            'publish',
+            'sort',
+            'sortBy',
+            'sortOrder',
+            'ordering',
+        ]);
         Object.entries(urlParams || {}).forEach(([key, value]) => {
             if (handledKeys.has(key)) {
                 return;
@@ -526,6 +574,7 @@ export const fetchTravels = async (
             perPage: itemsPerPage,
             query: search,
             where: whereObject,
+            sortQuery,
         });
 
 
@@ -606,6 +655,7 @@ export const fetchRandomTravels = async (
 ) => {
     try {
         const whereObject: Record<string, unknown> = {};
+        const sortQuery = extractSortQueryParams(urlParams || {});
 
         applyPublishModeration(whereObject, urlParams, { publish: 1, moderation: 1 });
 
@@ -634,6 +684,7 @@ export const fetchRandomTravels = async (
             perPage: itemsPerPage,
             where: whereObject,
             query: search,
+            sortQuery,
         });
 
         // DRF endpoints expect the trailing slash; keep it to avoid 301 redirects

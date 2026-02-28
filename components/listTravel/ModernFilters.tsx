@@ -313,7 +313,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         {filterGroups.map((group, index) => {
           const isExpanded = expandedGroups.has(group.key);
           const rawSelected = selectedFilters[group.key];
-          const selectedArray = Array.isArray(rawSelected) ? rawSelected : [];
+          const isMultiSelect = group.multiSelect !== false;
+          const selectedArray = isMultiSelect
+            ? (Array.isArray(rawSelected) ? rawSelected : [])
+            : (rawSelected !== undefined && rawSelected !== null && rawSelected !== ''
+              ? [rawSelected]
+              : []);
           const selectedSet = new Set(selectedArray.map(String));
           const selectedCount = selectedArray.length;
           const selectedNames = group.options
@@ -397,7 +402,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                           styles.filterOption,
                           isSelected && styles.filterOptionSelected
                         ]}
-                        accessibilityRole={group.multiSelect !== false ? 'checkbox' : 'radio'}
+                        accessibilityRole={isMultiSelect ? 'checkbox' : 'radio'}
                         accessibilityLabel={option.name}
                         accessibilityState={{ checked: isSelected }}
                         {...(Platform.OS === 'web'
@@ -408,7 +413,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                             } as any)
                           : null)}
                       >
-                        {group.multiSelect !== false ? (
+                        {isMultiSelect ? (
                           <FilterCheckbox checked={isSelected} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
                         ) : (
                           <FilterRadio checked={isSelected} radioStyle={styles.radio} radioCheckedStyle={styles.radioChecked} radioDotStyle={styles.radioDot} />

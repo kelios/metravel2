@@ -24,6 +24,8 @@ import Button from '@/components/ui/Button';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { buildTravelRouteDownloadPath, listTravelRouteFiles } from '@/api/travelRoutes';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)
 if (Platform.OS === 'web') {
@@ -96,6 +98,7 @@ function CompactSideBarTravel({
     null;
   const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
+  const [isRouteDownloading, setIsRouteDownloading] = useState(false);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
@@ -227,6 +230,43 @@ function CompactSideBarTravel({
     }
   };
   const handleEdit = () => canEdit && navigateInternalUrl(`/travel/${travel.id}/`);
+
+  const handleDownloadRoute = useCallback(async () => {
+    const travelId = (travel as any)?.id;
+    if (!travelId || isRouteDownloading) return;
+
+    setIsRouteDownloading(true);
+    try {
+      const files = await listTravelRouteFiles(travelId);
+      const supported = files.find((file) => {
+        const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
+          .toLowerCase()
+          .replace(/^\./, '');
+        return ext === 'gpx' || ext === 'kml';
+      });
+
+      if (!supported) {
+        notifyUnavailable('Скачать маршрут');
+        return;
+      }
+
+      const rawUrl =
+        String(supported.download_url ?? '').trim() ||
+        buildTravelRouteDownloadPath(travelId, supported.id);
+
+      await openExternalUrlInNewTab(rawUrl, {
+        allowRelative: true,
+        baseUrl:
+          Platform.OS === 'web' && typeof window !== 'undefined'
+            ? window.location.origin
+            : (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
+      });
+    } catch {
+      notifyUnavailable('Скачать маршрут');
+    } finally {
+      setIsRouteDownloading(false);
+    }
+  }, [isRouteDownloading, notifyUnavailable, travel]);
 
   const setWebTitle = useCallback(
     (title: string) => (el: any) => {
@@ -511,6 +551,47 @@ function CompactSideBarTravel({
         </React.Fragment>
       );
     }),
+
+    <Pressable
+      key="download-route"
+      style={({ pressed }) => [
+        styles.link,
+        pressed && styles.linkPressed,
+      ]}
+      onPress={handleDownloadRoute}
+      accessibilityRole="button"
+      accessibilityLabel="Скачать маршрут"
+      {...(Platform.OS === 'web'
+        ? {
+            'data-sidebar-link': true,
+            role: 'button',
+            'aria-label': 'Скачать маршрут',
+          }
+        : {})}
+    >
+      <View style={styles.activeIndicator} />
+      <View style={styles.linkLeft}>
+        <Feather
+          name="download"
+          size={Platform.select({
+            default: 18,
+            web: isTablet ? 20 : 18,
+          })}
+          color={mutedText}
+          {...(Platform.OS === 'web' ? { 'data-icon': true } : {})}
+        />
+        <Text
+          style={[
+            styles.linkTxt,
+            isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
+            { color: mutedText },
+          ]}
+          {...(Platform.OS === 'web' ? { 'data-link-text': true } : {})}
+        >
+          {isRouteDownloading ? 'Скачивание...' : 'Скачать маршрут'}
+        </Text>
+      </View>
+    </Pressable>,
 
     <Suspense key="weather" fallback={<Fallback />}>
       <WeatherWidget points={travel.travelAddress as any} />

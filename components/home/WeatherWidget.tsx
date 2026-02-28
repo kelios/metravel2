@@ -4,6 +4,7 @@
  */
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
@@ -22,7 +23,7 @@ type DailyForecast = {
     temperatureMin: number;
     temperatureMax: number;
     condition: string;
-    icon: string;
+    icon: React.ComponentProps<typeof Feather>['name'];
 };
 
 function WeatherWidget({ points, countryName }: Props) {
@@ -112,9 +113,9 @@ function WeatherWidget({ points, countryName }: Props) {
                 ]}>
                     <View style={styles.dateIconContainer}>
                         <Text style={[styles.date, { color: colors.textMuted }]}>{formatDateShort(day.date)}</Text>
-                        <Text style={styles.iconEmoji} accessibilityRole="image" aria-label={day.condition}>
-                          {day.icon}
-                        </Text>
+                        <View style={styles.iconContainer} accessibilityRole="image" aria-label={day.condition}>
+                          <Feather name={day.icon} size={20} color={colors.textMuted} />
+                        </View>
                     </View>
                     <View style={styles.tempContainer}>
                         <Text style={[styles.tempMax, { color: colors.text }]}>{Math.round(day.temperatureMax)}°</Text>
@@ -196,16 +197,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: 3, // было 4px (-25%)
         textAlign: 'center',
     },
-    icon: {
-        width: 28, // было 32px (-12.5%)
-        height: 28, // было 32px (-12.5%)
-    },
-    iconEmoji: {
+    iconContainer: {
         width: 28,
         height: 28,
-        textAlign: 'center',
-        fontSize: 20,
-        lineHeight: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     tempContainer: {
         flexDirection: 'row',
@@ -263,14 +259,16 @@ const weatherDescriptions: Record<number, string> = {
     99: 'Сильная гроза',
 };
 
-function iconFromCode(code: number): string {
-    if (code === 0) return '☀️';
-    if (code <= 2) return '🌤️';
-    if (code <= 3) return '☁️';
-    if (code >= 45 && code < 60) return '🌫️';
-    if (code >= 60 && code < 70) return '🌧️';
-    if (code >= 80) return '⛈️';
-    return '🌦️';
+function iconFromCode(code: number): React.ComponentProps<typeof Feather>['name'] {
+    if (code === 0) return 'sun';
+    if (code <= 2) return 'cloud';
+    if (code <= 3) return 'cloud';
+    if (code >= 45 && code < 60) return 'wind';
+    if (code >= 60 && code < 70) return 'cloud-rain';
+    if (code >= 70 && code < 80) return 'cloud-snow';
+    if (code >= 80 && code < 90) return 'cloud-rain';
+    if (code >= 95) return 'cloud-lightning';
+    return 'cloud-drizzle';
 }
 
 export default memo(WeatherWidget);

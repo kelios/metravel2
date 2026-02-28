@@ -30,6 +30,7 @@ import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { calculateColumns } from './utils/listTravelHelpers'
+import { buildSortingOptions } from './utils/sortings'
 import { deleteTravel } from '@/api/travelsApi'
 
 // ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
@@ -570,6 +571,7 @@ function ListTravelBase({
             complexity: rawOptions.complexity || [],
             month: rawOptions.month || [],
             over_nights_stay: rawOptions.over_nights_stay || [],
+            sortings: rawOptions.sortings || [],
         };
     }, [rawOptions]); // ✅ ОПТИМИЗАЦИЯ: Только rawOptions в зависимостях
 
@@ -830,6 +832,7 @@ function ListTravelBase({
 
       // ✅ ОПТИМИЗАЦИЯ: Проверяем остальные поля отдельно
       if (filter.year) count += 1;
+      if (filter.sort) count += 1;
       if (filter.moderation !== undefined) count += 1;
       if (debSearch && debSearch.trim().length > 0) count += 1;
 
@@ -883,6 +886,7 @@ function ListTravelBase({
       if (Array.isArray(filter.month) && filter.month.length > 0) activeFilters.push('месяц');
       if (Array.isArray(filter.over_nights_stay) && filter.over_nights_stay.length > 0) activeFilters.push('ночлег');
       if (filter.year) activeFilters.push(`год ${filter.year}`);
+      if (filter.sort) activeFilters.push('сортировка');
       if (debSearch) activeFilters.push(`поиск "${debSearch}"`);
 
       // Формируем сообщение
@@ -938,6 +942,13 @@ function ListTravelBase({
           icon: 'globe',
         },
       ] : []),
+      {
+        key: 'sort',
+        title: 'Сортировка',
+        options: buildSortingOptions(options?.sortings || []),
+        multiSelect: false,
+        icon: 'sliders',
+      },
       {
         key: 'categories',
         title: 'Категории',
@@ -1014,6 +1025,7 @@ function ListTravelBase({
         isTravelBy,
         options?.countries,
         options?.categories,
+        options?.sortings,
         options?.transports,
         options?.categoryTravelAddress,
         options?.companions,

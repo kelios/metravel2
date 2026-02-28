@@ -33,13 +33,25 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
     containerStyle,
   }) => {
     const handleFilterChange = useCallback((groupKey: string, optionId: string) => {
+      const group = filterGroups.find((item: any) => item?.key === groupKey);
+      const isMultiSelect = group?.multiSelect !== false;
+      if (!isMultiSelect) {
+        const currentValue = (filter as any)[groupKey];
+        const normalizedId = String(optionId);
+        const nextValue = currentValue !== undefined && String(currentValue) === normalizedId
+          ? undefined
+          : normalizedId;
+        onSelect(groupKey, nextValue);
+        return;
+      }
+
       const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v))
       const normalizedId = String(optionId)
       const newValues = currentValues.includes(normalizedId)
         ? currentValues.filter((id) => id !== normalizedId)
         : [...currentValues, normalizedId]
       onSelect(groupKey, newValues)
-    }, [filter, onSelect])
+    }, [filterGroups, filter, onSelect])
 
     const handleClearAll = useCallback(() => {
       setSearch('')
