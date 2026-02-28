@@ -189,11 +189,24 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
         ? L.svg(hasRoutePane ? { pane: paneName } : undefined)
         : undefined;
 
-      // Create polyline with proper styling
+      // Draw route in two passes: contrast halo + main line.
+      // This keeps track visible on any OSM background.
+      const halo = L.polyline(latlngs, {
+        color: colors.surface || DESIGN_TOKENS.colors.surface,
+        weight: 8,
+        opacity: 0.95,
+        lineJoin: 'round',
+        lineCap: 'round',
+        interactive: false,
+        renderer,
+        pane: hasRoutePane ? paneName : 'overlayPane',
+        className: 'metravel-route-line-halo',
+      });
+
       const line = L.polyline(latlngs, {
-        color: colors.primary || DESIGN_TOKENS.colors.primary,
-        weight: 4,
-        opacity: 0.85,
+        color: colors.info || colors.primary || DESIGN_TOKENS.colors.primary,
+        weight: 5,
+        opacity: 1,
         lineJoin: 'round',
         lineCap: 'round',
         interactive: false,
@@ -203,14 +216,15 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
       });
 
       try {
-        line.addTo(map);
+        const routeLayer = L.layerGroup([halo, line]);
+        routeLayer.addTo(map);
         
         // Force polyline to front
         if (typeof line.bringToFront === 'function') {
           line.bringToFront();
         }
         
-        polylineRef.current = line;
+        polylineRef.current = routeLayer;
 
         if (__DEV__) console.info('[TravelMap] RouteLineLayer: polyline added, coords:', latlngs.length);
       } catch (error) {
@@ -237,7 +251,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
         polylineRef.current = null;
       }
     };
-  }, [map, L, routeLineCoords, colors.primary]);
+  }, [map, L, routeLineCoords, colors.info, colors.primary, colors.surface]);
 
   return null;
 };
@@ -746,6 +760,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           />
         )}
       </MapContainer>
+
     </View>
   );
 };

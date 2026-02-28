@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { Button } from '@/ui/paper';
@@ -23,6 +22,7 @@ type Props = {
   title?: string;
   onPreviewPointsChange?: (points: ParsedRoutePoint[]) => void;
   onPreviewDataChange?: (data: ParsedRoutePreview) => void;
+  onRoutesChange?: (files: TravelRouteFile[]) => void;
 };
 
 const SUPPORTED_EXTENSIONS = new Set(['gpx', 'kml']);
@@ -50,6 +50,7 @@ export default function TravelRouteFilesPanel({
   title = 'Файлы маршрута (GPX, KML)',
   onPreviewPointsChange,
   onPreviewDataChange,
+  onRoutesChange,
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -67,6 +68,7 @@ export default function TravelRouteFilesPanel({
   const loadRoutes = useCallback(async () => {
     if (!travelId) {
       setRoutes([]);
+      onRoutesChange?.([]);
       onPreviewPointsChange?.([]);
       onPreviewDataChange?.({ linePoints: [], elevationProfile: [] });
       return;
@@ -78,13 +80,15 @@ export default function TravelRouteFilesPanel({
     try {
       const loaded = await listTravelRouteFiles(travelId);
       setRoutes(loaded);
+      onRoutesChange?.(loaded);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Не удалось загрузить файлы маршрута';
       setError(message);
+      onRoutesChange?.([]);
     } finally {
       setIsLoading(false);
     }
-  }, [travelId, onPreviewPointsChange, onPreviewDataChange]);
+  }, [travelId, onPreviewPointsChange, onPreviewDataChange, onRoutesChange]);
 
   useEffect(() => {
     void loadRoutes();
@@ -275,29 +279,23 @@ export default function TravelRouteFilesPanel({
         return (
           <View key={file.id} style={styles.item}>
             <View style={styles.itemInfo}>
-              <View style={styles.itemTitleRow}>
-                <Feather name="map" size={14} color={colors.textMuted} />
-                <Text numberOfLines={1} style={styles.itemTitle}>{file.original_name || `route-${file.id}.${ext.toLowerCase()}`}</Text>
-              </View>
+              <Text numberOfLines={1} style={styles.itemTitle}>{file.original_name || `route-${file.id}.${ext.toLowerCase()}`}</Text>
               <Text style={styles.itemMeta}>{ext || 'FILE'} • {formatSize(file.size)}</Text>
             </View>
 
             <View style={styles.actionsRow}>
               <Pressable onPress={() => handleDownload(file)} style={styles.actionButton}>
-                <Feather name="download" size={14} color={colors.primary} />
                 <Text style={styles.actionText}>Скачать</Text>
               </Pressable>
 
               {canPreview ? (
                 <Pressable onPress={() => void loadPreviewPoints(file)} style={styles.actionButton}>
-                  <Feather name="navigation" size={14} color={colors.primary} />
                   <Text style={styles.actionText}>На карте</Text>
                 </Pressable>
               ) : null}
 
               {canManage ? (
                 <Pressable onPress={() => void handleDelete(file)} style={styles.actionButton}>
-                  <Feather name="trash-2" size={14} color={colors.danger} />
                   <Text style={[styles.actionText, { color: colors.danger }]}>Удалить</Text>
                 </Pressable>
               ) : null}
@@ -351,11 +349,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     itemInfo: {
       gap: 2,
-    },
-    itemTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
     },
     itemTitle: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
