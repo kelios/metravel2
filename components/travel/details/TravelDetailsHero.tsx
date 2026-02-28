@@ -106,6 +106,7 @@ const OptimizedLCPHeroInner: React.FC<{
 }> = ({ img, alt, onLoad, height, isMobile }) => {
   const [loadError, setLoadError] = useState(false)
   const [mainLoaded, setMainLoaded] = useState(false)
+  const [mainLoadedSrc, setMainLoadedSrc] = useState<string | null>(null)
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null)
   const [didTryApiPrefix, setDidTryApiPrefix] = useState(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
@@ -150,6 +151,11 @@ const OptimizedLCPHeroInner: React.FC<{
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
+
+  useEffect(() => {
+    setMainLoaded(false)
+    setMainLoadedSrc(null)
+  }, [srcWithRetry])
 
   if (!srcWithRetry) {
     return <NeutralHeroPlaceholder height={height} />
@@ -230,7 +236,7 @@ const OptimizedLCPHeroInner: React.FC<{
               inset: '-5%',
               width: '110%',
               height: '110%',
-              backgroundImage: mainLoaded ? `url("${srcWithRetry}")` : 'none',
+              backgroundImage: mainLoaded && mainLoadedSrc ? `url("${mainLoadedSrc}")` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               filter: 'blur(20px)',
@@ -262,7 +268,10 @@ const OptimizedLCPHeroInner: React.FC<{
             ref={imgRef as any}
             referrerPolicy="no-referrer-when-downgrade"
             data-lcp
-            onLoad={() => {
+            onLoad={(event) => {
+              const resolvedSrc =
+                ((event.currentTarget as HTMLImageElement | null)?.currentSrc || srcWithRetry)
+              setMainLoadedSrc(resolvedSrc)
               setMainLoaded(true)
               onLoad?.()
             }}

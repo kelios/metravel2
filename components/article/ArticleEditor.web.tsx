@@ -18,6 +18,7 @@ import {
     Modal,
     SafeAreaView,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { uploadImage } from '@/api/misc';
@@ -79,6 +80,7 @@ export interface ArticleEditorProps {
     content: string;
     onChange: (html: string) => void;
     onAutosave?: (html: string) => Promise<void>;
+    onManualSave?: () => Promise<unknown> | void;
     autosaveDelay?: number;
     idTravel?: string;
     editorRef?: Ref<any>;
@@ -91,6 +93,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     content,
     onChange,
     onAutosave,
+    onManualSave,
     autosaveDelay = 5000,
     idTravel,
     editorRef,
@@ -111,6 +114,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const [anchorValue, setAnchorValue] = useState('');
     const [linkModalVisible, setLinkModalVisible] = useState(false);
     const [linkValue, setLinkValue] = useState('');
+    const [isManualSaving, setIsManualSaving] = useState(false);
     const htmlSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
     const [htmlForcedSelection, setHtmlForcedSelection] = useState<{ start: number; end: number } | null>(null);
 
@@ -882,6 +886,16 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         );
     };
 
+    const handleManualSave = useCallback(async () => {
+        if (!onManualSave || isManualSaving) return;
+        setIsManualSaving(true);
+        try {
+            await Promise.resolve(onManualSave());
+        } finally {
+            setIsManualSaving(false);
+        }
+    }, [isManualSaving, onManualSave]);
+
     const insertAnchor = useCallback((idRaw: string) => {
         if (!quillRef.current) return;
         const editor = quillRef.current.getEditor();
@@ -995,6 +1009,19 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     onPress={() => quillRef.current?.getEditor().history.redo()}
                     label="Повторить действие"
                 />
+                {onManualSave && (
+                    <UiIconButton
+                        icon={isManualSaving
+                            ? <ActivityIndicator size="small" color={colors.textSecondary} />
+                            : <Feather name="save" size={20} color={colors.textSecondary} />}
+                        onPress={() => {
+                            void handleManualSave();
+                        }}
+                        label={isManualSaving ? 'Сохранение…' : 'Сохранить путешествие'}
+                        style={dynamicStyles.btn}
+                        disabled={isManualSaving}
+                    />
+                )}
                 <IconButton
                     name="code"
                     onPress={() => {

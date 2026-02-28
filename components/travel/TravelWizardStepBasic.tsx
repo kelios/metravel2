@@ -225,6 +225,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                             <ContentUpsertSection
                                 formData={formData}
                                 setFormData={setFormData}
+                                onManualSave={onManualSave}
                                 firstErrorField={firstErrorField}
                                 autosaveStatus={autosaveStatus}
                                 focusAnchorId={focusAnchorId}

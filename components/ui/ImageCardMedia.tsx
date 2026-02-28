@@ -23,7 +23,7 @@ type WebMainImageProps = {
   loaded: boolean;
   srcSet?: string;
   sizes?: string;
-  onLoad?: () => void;
+  onLoad?: (resolvedSrc: string) => void;
   onError?: () => void;
   showImmediately?: boolean;
 };
@@ -47,8 +47,9 @@ const WebMainImage = memo(function WebMainImage({
 }: WebMainImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const handleLoad = useCallback(() => {
-    onLoad?.();
-  }, [onLoad]);
+    const resolvedSrc = imgRef.current?.currentSrc || src;
+    onLoad?.(resolvedSrc);
+  }, [onLoad, src]);
 
   // Handle race condition: image may already be cached/complete before
   // React attaches the onLoad handler, so onLoad never fires.
@@ -159,6 +160,7 @@ function ImageCardMedia({
   const styles = useMemo(() => getStyles(colors), [colors]);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
   const [webLoaded, setWebLoaded] = useState(false);
+  const [webLoadedSrc, setWebLoadedSrc] = useState<string | null>(null);
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -242,13 +244,6 @@ function ImageCardMedia({
     return `(min-width: 1024px) ${numW}px, (min-width: 768px) 33vw, 50vw`;
   }, [width]);
 
-  // Reuse the same image source for both foreground and blur background on web.
-  // This avoids requesting a separate "blur" asset URL.
-  const webBlurSrc = useMemo(() => {
-    if (Platform.OS !== 'web' || !blurBackground) return null;
-    return webMainSrc;
-  }, [blurBackground, webMainSrc]);
-
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     return {};
@@ -257,10 +252,12 @@ function ImageCardMedia({
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     setWebLoaded(false);
+    setWebLoadedSrc(null);
   }, [webMainSrc]);
 
-  const handleWebLoad = useCallback(() => {
+  const handleWebLoad = useCallback((resolvedSrc: string) => {
     setWebLoaded(true);
+    setWebLoadedSrc(resolvedSrc);
     onLoad?.();
   }, [onLoad]);
 
@@ -332,8 +329,8 @@ function ImageCardMedia({
                   width: '110%',
                   height: '110%',
                   backgroundImage:
-                    webLoaded && (webBlurSrc || webMainSrc)
-                      ? `url("${webBlurSrc || webMainSrc}")`
+                    webLoaded && webLoadedSrc
+                      ? `url("${webLoadedSrc}")`
                       : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',

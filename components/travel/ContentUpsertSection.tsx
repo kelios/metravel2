@@ -20,6 +20,7 @@ const ArticleEditor = lazy(() => import('@/components/article/ArticleEditor'));
 interface ContentUpsertSectionProps {
     formData: TravelFormData;
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
+    onManualSave?: () => Promise<unknown> | void;
     firstErrorField?: string | null;
     autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
     focusAnchorId?: string | null;
@@ -31,6 +32,7 @@ interface ContentUpsertSectionProps {
 const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                                        formData,
                                                                        setFormData,
+                                                                       onManualSave,
                                                                        firstErrorField,
                                                                        autosaveStatus,
                                                                        focusAnchorId,
@@ -470,6 +472,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                         label={title}
                                                         content={content ?? ''}
                                                         onChange={onChange}
+                                                        onManualSave={isDescription ? onManualSave : undefined}
                                                         placeholder={hint}
                                                         idTravel={idTravelStr}
                                                         variant="default"
@@ -487,6 +490,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                             label={title}
                             content={content ?? ''}
                             onChange={onChange}
+                            onManualSave={isDescription ? onManualSave : undefined}
                             idTravel={idTravelStr}
                             variant={isDescription ? 'default' : 'compact'}
                         />
@@ -533,6 +537,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             isPastingDescriptionText,
             isCompactFullscreenHeader,
             pasteDescriptionText,
+            onManualSave,
             styles,
         ]
     );
