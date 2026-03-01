@@ -50,6 +50,7 @@ const RESETPASSWORDLINK = `${URLAPI}/user/reset-password-link/`;
 const CONFIRM_REGISTER = `${URLAPI}/user/confirm-registration/`;
 const SETNEWPASSWORD = `${URLAPI}/user/set-password-after-reset/`;
 const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
+const GOOGLE_LOGIN = `${URLAPI}/user/google-login/`;
 
 export const loginApi = async (email: string, password: string): Promise<{
     token: string;
@@ -300,5 +301,54 @@ export const confirmAccount = async (hash: string) => {
         return jsonResponse;
     } catch (error: any) {
         throw new Error(error.message || 'Произошла ошибка при подтверждении учетной записи.');
+    }
+};
+
+export const googleAuthApi = async (idToken: string): Promise<{
+    token: string;
+    refresh?: string;
+    name: string;
+    email: string;
+    id: string | number;
+    is_superuser: boolean;
+} | null> => {
+    try {
+        const response = await retry(
+            async () => {
+                return await fetchWithTimeout(GOOGLE_LOGIN, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_token: idToken }),
+                }, DEFAULT_TIMEOUT);
+            },
+            {
+                maxAttempts: 2,
+                delay: 500,
+                shouldRetry: (error) => {
+                    return isRetryableError(error) && !error.message.includes('401') && !error.message.includes('403');
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('Ошибка авторизации через Google');
+        }
+
+        const json = await safeJsonParse<{
+            token?: string;
+            refresh?: string;
+            name?: string;
+            email?: string;
+            id?: string | number;
+            is_superuser?: boolean;
+        }>(response, {});
+
+        if (json.token) return json as any;
+        return null;
+    } catch (error: any) {
+        devError('Google auth error:', error);
+        const message = getUserFriendlyError(error);
+        Alert.alert('Ошибка входа через Google', message);
+        return null;
     }
 };

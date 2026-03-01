@@ -40,6 +40,7 @@ interface AuthActions {
     invalidateAuthState: () => void;
     checkAuthentication: () => Promise<void>;
     login: (email: string, password: string) => Promise<boolean>;
+    loginWithGoogle: (credential: string) => Promise<boolean>;
     logout: () => Promise<void>;
     sendPassword: (email: string) => Promise<string>;
     setNewPassword: (token: string, newPassword: string) => Promise<boolean>;
@@ -214,6 +215,71 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка входа:', error);
+            }
+            return false;
+        }
+    },
+
+    // --- login with Google ---
+    loginWithGoogle: async (credential) => {
+        const epochAtStart = authEpoch;
+        try {
+            const { googleAuthApi } = await getAuthApi();
+            const userData = await googleAuthApi(credential);
+            if (!userData) return false;
+            if (epochAtStart !== authEpoch) return false;
+
+            await setSecureItem('userToken', userData.token);
+            if (userData.refresh) {
+                await setSecureItem('refreshToken', userData.refresh);
+            }
+
+            let profile: any = null;
+            try {
+                const { fetchUserProfile } = await getUserApi();
+                profile = await fetchUserProfile(String(userData.id));
+            } catch (e) {
+                if (__DEV__) {
+                    console.warn('Не удалось загрузить профиль пользователя:', e);
+                }
+            }
+
+            if (epochAtStart !== authEpoch) return false;
+
+            const normalizedFirstName = String(profile?.first_name ?? '').trim();
+            const displayName = normalizedFirstName || userData.name?.trim() || userData.email;
+            const avatar = normalizeAvatar(profile?.avatar);
+
+            const items: Array<[string, string]> = [
+                ['userId', String(userData.id)],
+                ['userName', displayName],
+                ['isSuperuser', userData.is_superuser ? 'true' : 'false'],
+            ];
+            if (avatar) {
+                items.push(['userAvatar', avatar]);
+            }
+
+            await setStorageBatch(items);
+            if (!avatar) {
+                await removeStorageBatch(['userAvatar']);
+            }
+
+            if (epochAtStart !== authEpoch) return false;
+
+            set((s) => ({
+                isAuthenticated: true,
+                userId: String(userData.id),
+                username: displayName,
+                isSuperuser: userData.is_superuser,
+                userAvatar: avatar,
+                authReady: true,
+                profileRefreshToken: s.profileRefreshToken + 1,
+            }));
+
+            return true;
+        } catch (error) {
+            if (__DEV__) {
+                console.error('Ошибка входа через Google:', error);
             }
             return false;
         }

@@ -25,11 +25,19 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 interface LoginFormValues {
     email: string;
     password: string;
 }
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && typeof error.message === 'string' && error.message.trim()) {
+        return error.message;
+    }
+    return fallback;
+};
 
 export default function Login() {
     /* ---------- state ---------- */
@@ -39,7 +47,7 @@ export default function Login() {
 
     /* ---------- helpers ---------- */
     const router = useRouter();
-    const { login, sendPassword } = useAuth();
+    const { login, loginWithGoogle, sendPassword } = useAuth();
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
 
     const isFocused = useIsFocused();
@@ -50,6 +58,15 @@ export default function Login() {
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const showMsg = (text: string, error = false) => setMsg({ text, error });
+
+    const resolvePostAuthPath = (): string => {
+        if (intent === 'create-book') return '/travel/new';
+        if (intent === 'build-pdf') return '/export';
+        if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+            return redirect;
+        }
+        return '/';
+    };
 
     React.useEffect(() => {
         if (!isFocused) return;
@@ -77,8 +94,8 @@ export default function Login() {
         try {
             const res = await sendPassword(trimmedEmail);
             showMsg(res, /ошиб|не удалось/i.test(res));
-        } catch (e: any) {
-            showMsg(e?.message || 'Ошибка при сбросе пароля.', true);
+        } catch (error) {
+            showMsg(getErrorMessage(error, 'Ошибка при сбросе пароля.'), true);
         }
     };
 
@@ -93,28 +110,36 @@ export default function Login() {
                 if (intent) {
                     sendAnalyticsEvent('AuthSuccess', { source: String(intent || 'unknown'), intent });
                 }
-                // ✅ Intent-редирект: обработка разных сценариев
-                let targetPath = '/';
-                if (intent === 'create-book') {
-                    targetPath = '/travel/new';
-                } else if (intent === 'build-pdf') {
-                    targetPath = '/export';
-                } else if (intent === 'comment') {
-                    if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
-                        targetPath = redirect;
-                    }
-                } else if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
-                    targetPath = redirect;
-                }
-                router.replace(targetPath as any);
+                router.replace(resolvePostAuthPath() as any);
             } else {
                 showMsg('Неверный email или пароль.', true);
             }
-        } catch (e: any) {
-            showMsg(e?.message || 'Ошибка при входе.', true);
+        } catch (error) {
+            showMsg(getErrorMessage(error, 'Ошибка при входе.'), true);
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handleGoogleSignIn = async (credential: string) => {
+        try {
+            showMsg('');
+            const ok = await loginWithGoogle(credential);
+            if (ok) {
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
+                }
+                router.replace(resolvePostAuthPath() as any);
+            } else {
+                showMsg('Не удалось войти через Google.', true);
+            }
+        } catch (error) {
+            showMsg(getErrorMessage(error, 'Ошибка при входе через Google.'), true);
+        }
+    };
+
+    const handleGoogleError = (error: string) => {
+        showMsg(error, true);
     };
 
     const {
@@ -264,6 +289,19 @@ export default function Login() {
                                                 >
                                                     <Text style={styles.forgot}>Забыли пароль?</Text>
                                                 </Pressable>
+
+                                                <View style={styles.dividerContainer}>
+                                                    <View style={styles.dividerLine} />
+                                                    <Text style={styles.dividerText}>или</Text>
+                                                    <View style={styles.dividerLine} />
+                                                </View>
+
+                                                <GoogleSignInButton
+                                                    onSuccess={handleGoogleSignIn}
+                                                    onError={handleGoogleError}
+                                                    disabled={isSubmitting}
+                                                />
+
                                             <View style={styles.registerContainer}>
                                                 <Text style={styles.registerText}>Нет аккаунта? </Text>
                                                 <Link
@@ -450,5 +488,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginTop: -10,
         marginBottom: 10,
         marginLeft: 4,
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
+    },
+    dividerText: {
+        marginHorizontal: 16,
+        fontSize: 14,
+        color: colors.textMuted,
+        fontWeight: '500',
     },
 });

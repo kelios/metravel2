@@ -17,28 +17,6 @@ import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
-const FilterCheckbox = memo(({ checked, checkboxStyle, checkboxCheckedStyle, checkColor }: {
-  checked: boolean;
-  checkboxStyle: any;
-  checkboxCheckedStyle: any;
-  checkColor: string;
-}) => (
-  <View style={[checkboxStyle, checked && checkboxCheckedStyle]}>
-    {checked && <Feather name="check" size={12} color={checkColor} />}
-  </View>
-));
-
-const FilterRadio = memo(({ checked, radioStyle, radioCheckedStyle, radioDotStyle }: {
-  checked: boolean;
-  radioStyle: any;
-  radioCheckedStyle: any;
-  radioDotStyle: any;
-}) => (
-  <View style={[radioStyle, checked && radioCheckedStyle]}>
-    {checked && <View style={radioDotStyle} />}
-  </View>
-));
-
 export interface FilterOption {
   id: string;
   name: string;
@@ -54,6 +32,304 @@ export interface FilterGroup {
 }
 
 export type FilterState = Record<string, string[]> & { year?: string | number; moderation?: number };
+
+const FilterCheckbox = memo(({ checked, checkboxStyle, checkboxCheckedStyle, checkColor }: {
+  checked: boolean;
+  checkboxStyle: any;
+  checkboxCheckedStyle: any;
+  checkColor: string;
+}) => (
+  <View style={[checkboxStyle, checked && checkboxCheckedStyle]}>
+    {checked && <Feather name="check" size={14} color={checkColor} />}
+  </View>
+));
+
+const FilterRadio = memo(({ checked, radioStyle, radioCheckedStyle, radioDotStyle }: {
+  checked: boolean;
+  radioStyle: any;
+  radioCheckedStyle: any;
+  radioDotStyle: any;
+}) => (
+  <View style={[radioStyle, checked && radioCheckedStyle]}>
+    {checked && <View style={radioDotStyle} />}
+  </View>
+));
+
+const GroupClearButton = memo(({ onPress, count, colors }: {
+  onPress: () => void;
+  count: number;
+  colors: ReturnType<typeof useThemedColors>;
+}) => (
+  <Pressable
+    onPress={onPress}
+    style={{
+      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: 2,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.dangerSoft,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+    }}
+    accessibilityRole="button"
+    accessibilityLabel={`Очистить ${count} выбранных`}
+    hitSlop={8}
+  >
+    <Feather name="x" size={12} color={colors.danger} />
+    <Text style={{
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.danger,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    }}>
+      Очистить
+    </Text>
+  </Pressable>
+));
+
+const SortDropdown = memo(({ 
+  sortGroup, 
+  selectedFilters, 
+  onFilterChange, 
+  styles, 
+  colors 
+}: {
+  sortGroup: FilterGroup;
+  selectedFilters: FilterState;
+  onFilterChange: (groupKey: string, optionId: string) => void;
+  styles: any;
+  colors: ReturnType<typeof useThemedColors>;
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const selectedOption = useMemo(() => {
+    const selectedId = String(selectedFilters.sort ?? '');
+    return sortGroup.options.find(opt => String(opt.id) === selectedId) || sortGroup.options[0];
+  }, [sortGroup.options, selectedFilters.sort]);
+
+  const handleSelect = useCallback((optionId: string) => {
+    onFilterChange(sortGroup.key, optionId);
+    setIsExpanded(false);
+  }, [onFilterChange, sortGroup.key]);
+
+  return (
+    <View style={styles.sortSection}>
+      {/* Dropdown trigger */}
+      <Pressable
+        onPress={() => setIsExpanded(!isExpanded)}
+        style={[
+          styles.sortDropdownTrigger,
+          isExpanded && styles.sortDropdownTriggerActive,
+          Platform.OS === 'web' && isHovered && !isExpanded && styles.sortDropdownTriggerHover,
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={`Сортировка: ${selectedOption?.name || 'Новые'}`}
+        accessibilityState={{ expanded: isExpanded }}
+        {...(Platform.OS === 'web'
+          ? {
+              onMouseEnter: () => setIsHovered(true),
+              onMouseLeave: () => setIsHovered(false),
+            } as any
+          : {})}
+      >
+        <View style={styles.sortDropdownTriggerLeft}>
+          <View style={styles.sortDropdownIcon}>
+            <Feather name="sliders" size={16} color={colors.primary} />
+          </View>
+          <View style={styles.sortDropdownTextContainer}>
+            <Text style={styles.sortDropdownLabel}>Сортировка</Text>
+            <Text style={styles.sortDropdownValue} numberOfLines={1}>
+              {selectedOption?.name || 'Новые'}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.sortDropdownChevron}>
+          <Feather 
+            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+            size={18} 
+            color={colors.textSecondary} 
+          />
+        </View>
+      </Pressable>
+
+      {/* Dropdown content */}
+      {isExpanded && (
+        <View style={styles.sortDropdownContent}>
+          {sortGroup.options.map((option) => {
+            const optionId = String(option.id);
+            const isSelected = String(selectedFilters.sort ?? '') === optionId;
+
+            return (
+              <SortOptionItem
+                key={option.id}
+                option={option}
+                isSelected={isSelected}
+                onPress={() => handleSelect(option.id)}
+                styles={styles}
+                colors={colors}
+                isCompact
+              />
+            );
+          })}
+        </View>
+      )}
+    </View>
+  );
+});
+
+const SORT_ICONS: Record<string, string> = {
+  'new': 'clock',
+  'old': 'archive',
+  'popular_desc': 'trending-up',
+  'popular_asc': 'trending-down',
+  'rating_desc': 'star',
+  'added_desc': 'plus-circle',
+  'added_asc': 'minus-circle',
+  'name_asc': 'type',
+  'name_desc': 'type',
+  'year_desc': 'calendar',
+  'year_asc': 'calendar',
+};
+
+const getSortIcon = (optionId: string): string => {
+  return SORT_ICONS[optionId] || 'list';
+};
+
+const SortOptionItem = memo(({ 
+  option, 
+  isSelected, 
+  onPress, 
+  styles, 
+  colors,
+  isCompact = false,
+}: {
+  option: FilterOption;
+  isSelected: boolean;
+  onPress: () => void;
+  styles: any;
+  colors: ReturnType<typeof useThemedColors>;
+  isCompact?: boolean;
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const iconName = getSortIcon(option.id);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.filterOption,
+        styles.sortOption,
+        isCompact && styles.sortOptionCompact,
+        isSelected && styles.sortOptionSelected,
+        Platform.OS === 'web' && isHovered && !isSelected && styles.sortOptionHover,
+      ]}
+      accessibilityRole="radio"
+      accessibilityLabel={option.name}
+      accessibilityState={{ checked: isSelected }}
+      {...(Platform.OS === 'web'
+        ? {
+            onMouseEnter: () => setIsHovered(true),
+            onMouseLeave: () => setIsHovered(false),
+          } as any
+        : {})}
+    >
+      <View style={[
+        styles.sortIconContainer,
+        isSelected && styles.sortIconContainerSelected,
+      ]}>
+        <Feather 
+          name={iconName as any} 
+          size={14} 
+          color={isSelected ? colors.primary : colors.textMuted} 
+        />
+      </View>
+      <Text
+        style={[
+          styles.sortOptionText,
+          isSelected && styles.sortOptionTextSelected,
+        ]}
+        numberOfLines={1}
+      >
+        {option.name}
+      </Text>
+      {isSelected && (
+        <View style={styles.sortCheckIcon}>
+          <Feather name="check" size={16} color={colors.primary} />
+        </View>
+      )}
+    </Pressable>
+  );
+});
+
+const FilterOptionItem = memo(({ 
+  option, 
+  isSelected, 
+  isMultiSelect,
+  onPress, 
+  styles, 
+  colors 
+}: {
+  option: FilterOption;
+  isSelected: boolean;
+  isMultiSelect: boolean;
+  onPress: () => void;
+  styles: any;
+  colors: ReturnType<typeof useThemedColors>;
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.filterOption,
+        isSelected && styles.filterOptionSelected,
+        Platform.OS === 'web' && isHovered && !isSelected && styles.filterOptionHover,
+      ]}
+      accessibilityRole={isMultiSelect ? 'checkbox' : 'radio'}
+      accessibilityLabel={option.name}
+      accessibilityState={{ checked: isSelected }}
+      {...(Platform.OS === 'web'
+        ? ({
+            'aria-checked': isSelected,
+            onMouseEnter: () => setIsHovered(true),
+            onMouseLeave: () => setIsHovered(false),
+          } as any)
+        : null)}
+    >
+      {isMultiSelect ? (
+        <FilterCheckbox 
+          checked={isSelected} 
+          checkboxStyle={styles.checkbox} 
+          checkboxCheckedStyle={styles.checkboxChecked} 
+          checkColor={colors.textOnPrimary} 
+        />
+      ) : (
+        <FilterRadio 
+          checked={isSelected} 
+          radioStyle={styles.radio} 
+          radioCheckedStyle={styles.radioChecked} 
+          radioDotStyle={styles.radioDot} 
+        />
+      )}
+      <Text 
+        style={[
+          styles.filterOptionText,
+          isSelected && styles.filterOptionTextSelected
+        ]}
+        numberOfLines={1}
+      >
+        {option.name}
+      </Text>
+      {typeof option.count === 'number' && option.count > 0 && (
+        <Text style={styles.filterOptionCount}>
+          {option.count}
+        </Text>
+      )}
+    </Pressable>
+  );
+});
 
 interface ModernFiltersProps {
   filterGroups: FilterGroup[];
@@ -151,7 +427,17 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     }, 0);
   }, [selectedFilters]);
 
-  const allGroupKeys = useMemo(() => filterGroups.map((g) => g.key), [filterGroups]);
+  const sortGroup = useMemo(
+    () => filterGroups.find((group) => group.key === 'sort'),
+    [filterGroups],
+  );
+
+  const groupsWithoutSort = useMemo(
+    () => filterGroups.filter((group) => group.key !== 'sort'),
+    [filterGroups],
+  );
+
+  const allGroupKeys = useMemo(() => groupsWithoutSort.map((g) => g.key), [groupsWithoutSort]);
 
   const areAllGroupsExpanded = useMemo(
     () => allGroupKeys.length > 0 && allGroupKeys.every((key) => expandedGroups.has(key)),
@@ -220,7 +506,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       <Pressable
         testID="toggle-all-groups"
         onPress={() => {
-          const allKeys = filterGroups.map((g) => g.key);
+          const allKeys = groupsWithoutSort.map((g) => g.key);
           const allExpanded = allKeys.every((key) => expandedGroups.has(key));
           const next = new Set<string>();
 
@@ -304,13 +590,24 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         </View>
       )}
 
+      {/* Sort (collapsible dropdown) */}
+      {sortGroup && (
+        <SortDropdown
+          sortGroup={sortGroup}
+          selectedFilters={selectedFilters}
+          onFilterChange={onFilterChange}
+          styles={styles}
+          colors={colors}
+        />
+      )}
+
       {/* Filter Groups */}
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={true}
         contentContainerStyle={styles.scrollContent}
       >
-        {filterGroups.map((group, index) => {
+        {groupsWithoutSort.map((group, index) => {
           const isExpanded = expandedGroups.has(group.key);
           const rawSelected = selectedFilters[group.key];
           const isMultiSelect = group.multiSelect !== false;
@@ -338,13 +635,16 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               key={group.key} 
               style={[
                 styles.filterGroup,
-                index === filterGroups.length - 1 && styles.filterGroupLast
+                index === groupsWithoutSort.length - 1 && styles.filterGroupLast
               ]}
             >
               {/* Group Header */}
               <Pressable
                 onPress={() => toggleGroup(group.key)}
                 style={styles.groupHeader}
+                accessibilityRole="button"
+                accessibilityLabel={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${group.title}`}
+                accessibilityState={{ expanded: isExpanded }}
               >
                 <View style={styles.groupHeaderLeft}>
                   {group.icon && (
@@ -363,12 +663,26 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                     </View>
                   )}
                 </View>
-                <View style={styles.iconSlot18}>
-                  <Feather
-                    name={isExpanded ? "chevron-up" : "chevron-down"}
-                    size={18}
-                    color={colors.textMuted}
-                  />
+                <View style={styles.groupHeaderRight}>
+                  {selectedCount > 0 && (
+                    <GroupClearButton
+                      onPress={(e) => {
+                        if (Platform.OS === 'web') {
+                          (e as any).stopPropagation();
+                        }
+                        selectedArray.forEach(id => onFilterChange(group.key, id));
+                      }}
+                      count={selectedCount}
+                      colors={colors}
+                    />
+                  )}
+                  <View style={styles.iconSlot18}>
+                    <Feather
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={colors.textMuted}
+                    />
+                  </View>
                 </View>
               </Pressable>
 
@@ -393,46 +707,17 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   {orderedOptions.map(option => {
                     const optionId = String(option.id);
                     const isSelected = selectedSet.has(optionId);
-                    
+
                     return (
-                      <Pressable
+                      <FilterOptionItem
                         key={option.id}
+                        option={option}
+                        isSelected={isSelected}
+                        isMultiSelect={isMultiSelect}
                         onPress={() => onFilterChange(group.key, option.id)}
-                        style={[
-                          styles.filterOption,
-                          isSelected && styles.filterOptionSelected
-                        ]}
-                        accessibilityRole={isMultiSelect ? 'checkbox' : 'radio'}
-                        accessibilityLabel={option.name}
-                        accessibilityState={{ checked: isSelected }}
-                        {...(Platform.OS === 'web'
-                          ? ({
-                              // React Native Web sometimes fails to reflect accessibilityState into aria-checked
-                              // for custom pressables; set it explicitly so assistive tech + Playwright can rely on it.
-                              'aria-checked': isSelected,
-                            } as any)
-                          : null)}
-                      >
-                        {isMultiSelect ? (
-                          <FilterCheckbox checked={isSelected} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
-                        ) : (
-                          <FilterRadio checked={isSelected} radioStyle={styles.radio} radioCheckedStyle={styles.radioChecked} radioDotStyle={styles.radioDot} />
-                        )}
-                        <Text 
-                          style={[
-                            styles.filterOptionText,
-                            isSelected && styles.filterOptionTextSelected
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {option.name}
-                        </Text>
-                        {typeof option.count === 'number' && option.count > 0 && (
-                          <Text style={styles.filterOptionCount}>
-                            {option.count}
-                          </Text>
-                        )}
-                      </Pressable>
+                        styles={styles}
+                        colors={colors}
+                      />
                     );
                   })}
                 </Animated.View>
@@ -653,6 +938,134 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       fontWeight: typography.weights.medium as any,
       color: colors.textSecondary,
     },
+    sortSection: {
+      marginBottom: spacing.md,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          boxShadow: colors.boxShadows.light,
+        },
+      }),
+    },
+    sortDropdownTrigger: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.surface,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.default}`,
+        },
+      }),
+    },
+    sortDropdownTriggerHover: Platform.select({
+      web: {
+        backgroundColor: colors.surfaceMuted,
+      } as any,
+    }),
+    sortDropdownTriggerActive: {
+      backgroundColor: colors.primarySoft,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sortDropdownTriggerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flex: 1,
+    },
+    sortDropdownIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: radii.md,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sortDropdownTextContainer: {
+      flex: 1,
+    },
+    sortDropdownLabel: {
+      fontSize: typography.sizes.xs,
+      color: colors.textMuted,
+      fontWeight: typography.weights.medium as any,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    sortDropdownValue: {
+      fontSize: typography.sizes.sm,
+      color: colors.text,
+      fontWeight: typography.weights.semibold as any,
+      marginTop: 2,
+    },
+    sortDropdownChevron: {
+      width: 24,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sortDropdownContent: {
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xs,
+      backgroundColor: colors.surface,
+      gap: 2,
+    },
+    sortOption: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: 'transparent',
+      marginBottom: 0,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.md,
+      ...Platform.select({
+        web: {
+          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.default}`,
+        },
+      }),
+    },
+    sortOptionCompact: {
+      paddingVertical: 8,
+      paddingHorizontal: spacing.sm,
+      minHeight: 40,
+    },
+    sortOptionSelected: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primaryAlpha30,
+    },
+    sortOptionHover: Platform.select({
+      web: {
+        backgroundColor: colors.surfaceMuted,
+      } as any,
+    }),
+    sortIconContainer: {
+      width: 24,
+      height: 24,
+      borderRadius: radii.sm,
+      backgroundColor: colors.surfaceMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sortIconContainerSelected: {
+      backgroundColor: colors.primaryAlpha30,
+    },
+    sortCheckIcon: {
+      width: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sortOptionTextSelected: {
+      color: colors.primaryDark,
+      fontWeight: typography.weights.semibold as any,
+    },
     extraFilters: {
       marginBottom: spacing.xs,
       gap: spacing.xs,
@@ -777,6 +1190,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       gap: spacing.xs,
       flex: 1,
     },
+    groupHeaderRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
     groupTitle: {
       fontSize: typography.sizes.sm,
       fontWeight: typography.weights.semibold as any,
@@ -825,10 +1243,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
     filterOption: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: spacing.xs,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
       borderRadius: radii.md,
       marginBottom: spacing.xxs,
+      minHeight: 44,
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -836,14 +1255,30 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
         },
       }),
     },
+    filterOptionHover: Platform.select({
+      web: {
+        backgroundColor: colors.surfaceMuted,
+        transform: 'translateX(2px)',
+      } as any,
+    }),
     filterOptionSelected: {
       backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
     },
     filterOptionText: {
       flex: 1,
       fontSize: typography.sizes.sm,
-      color: colors.textSecondary,
+      color: colors.text,
       marginLeft: spacing.sm,
+      fontWeight: typography.weights.regular as any,
+    },
+    sortOptionText: {
+      flex: 1,
+      fontSize: typography.sizes.md,
+      color: colors.text,
+      marginLeft: spacing.sm,
+      fontWeight: typography.weights.medium as any,
     },
     filterOptionTextSelected: {
       color: colors.primaryDark,
@@ -858,11 +1293,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       borderRadius: radii.pill,
     },
     checkbox: {
-      width: 18,
-      height: 18,
+      width: 20,
+      height: 20,
       borderRadius: radii.sm,
       borderWidth: 2,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
@@ -872,22 +1307,39 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       borderColor: colors.primary,
     },
     radio: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
       borderWidth: 2,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+    },
+    radioLarge: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.border,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
     },
     radioChecked: {
       borderColor: colors.primary,
+      borderWidth: 2,
     },
     radioDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.primary,
+    },
+    radioDotLarge: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
       backgroundColor: colors.primary,
     },
     applyButtonContainer: {
