@@ -67,7 +67,7 @@ describe('HomeHero Component', () => {
 
     it('should render badge correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Бесплатно и без регистрации/)).toBeTruthy();
+      expect(getByText(/Бесплатно\s*•\s*Без регистрации/)).toBeTruthy();
     });
   });
 

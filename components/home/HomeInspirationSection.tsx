@@ -509,7 +509,7 @@ function HomeInspirationSection({
           <View style={styles.titleContainer}>
             <View style={[
               styles.sectionBadge,
-              sectionBadge.color === 'warning' && { backgroundColor: colors.warningSoft ?? colors.primarySoft, borderColor: colors.warningAlpha30 ?? colors.primaryAlpha30 },
+              sectionBadge.color === 'warning' && { backgroundColor: colors.warningSoft ?? colors.primarySoft, borderColor: colors.warningAlpha40 ?? colors.primaryAlpha30 },
               sectionBadge.color === 'success' && { backgroundColor: colors.successSoft, borderColor: colors.primaryAlpha30 },
             ]}>
               <Feather name={sectionBadge.icon as any} size={12} color={colors.primary} />
