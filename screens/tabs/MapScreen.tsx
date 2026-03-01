@@ -229,6 +229,22 @@ export default function MapScreen() {
                 ) : (
                     mapPanelPlaceholder
                 )}
+                {showGeoBanner && (
+                    <View style={styles.geoBanner} testID="map-geo-banner">
+                        <Feather name="map-pin" size={13} color={themedColors.warning} />
+                        <Text style={styles.geoBannerText}>
+                            Геолокация недоступна
+                        </Text>
+                        <Pressable
+                            onPress={dismissGeoBanner}
+                            accessibilityRole="button"
+                            accessibilityLabel="Закрыть уведомление"
+                            style={({ pressed }) => [styles.geoBannerClose, pressed && { opacity: 0.6 }]}
+                        >
+                            <Feather name="x" size={12} color={themedColors.textMuted} />
+                        </Pressable>
+                    </View>
+                )}
             </View>
         ),
         [
@@ -244,6 +260,13 @@ export default function MapScreen() {
             selectTravelsTab,
             travelsData.length,
             styles.mapArea,
+            showGeoBanner,
+            dismissGeoBanner,
+            themedColors.warning,
+            themedColors.textMuted,
+            styles.geoBanner,
+            styles.geoBannerText,
+            styles.geoBannerClose,
         ]
     );
 
@@ -313,9 +336,9 @@ export default function MapScreen() {
                     accessibilityLabel="Фильтры"
                 >
                     <Feather
-                        name="filter"
-                        size={isMobile ? 22 : 18}
-                        color={rightPanelTab === 'filters' ? themedColors.textInverse : themedColors.text}
+                        name="sliders"
+                        size={15}
+                        color={rightPanelTab === 'filters' ? themedColors.textInverse : themedColors.textMuted}
                     />
                     {!isMobile && (
                         <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
@@ -340,8 +363,8 @@ export default function MapScreen() {
                 >
                     <Feather
                         name="list"
-                        size={isMobile ? 22 : 18}
-                        color={rightPanelTab === 'travels' ? themedColors.textInverse : themedColors.text}
+                        size={15}
+                        color={rightPanelTab === 'travels' ? themedColors.textInverse : themedColors.textMuted}
                     />
                     {!isMobile && (
                         <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
@@ -377,7 +400,7 @@ export default function MapScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Сбросить фильтры"
                 >
-                    <Feather name="refresh-cw" size={14} color={themedColors.textMuted} />
+                    <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
                 </Pressable>
             ) : (
                 <Pressable
@@ -388,7 +411,7 @@ export default function MapScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Закрыть панель"
                 >
-                    <Feather name="x" size={22} color={themedColors.textMuted} />
+                    <Feather name="x" size={16} color={themedColors.textMuted} />
                 </Pressable>
             )}
         </View>
@@ -423,30 +446,14 @@ export default function MapScreen() {
     return (
         <View style={styles.container}>
             {isFocused && Platform.OS === 'web' && (
-                <InstantSEO
-                    headKey="map"
-                    title={MAP_SEO_TITLE}
-                    description={MAP_SEO_DESCRIPTION}
-                    canonical={canonical}
-                />
-            )}
+                    <InstantSEO
+                        headKey="map"
+                        title={MAP_SEO_TITLE}
+                        description={MAP_SEO_DESCRIPTION}
+                        canonical={canonical}
+                    />
+                )}
 
-            {showGeoBanner && (
-                <View style={styles.geoBanner} testID="map-geo-banner">
-                    <Feather name="map-pin" size={14} color={themedColors.warning} />
-                    <Text style={styles.geoBannerText}>
-                        Геолокация недоступна — показываем карту по умолчанию
-                    </Text>
-                    <Pressable
-                        onPress={dismissGeoBanner}
-                        accessibilityRole="button"
-                        accessibilityLabel="Закрыть уведомление"
-                        style={({ pressed }) => [styles.geoBannerClose, pressed && { opacity: 0.6 }]}
-                    >
-                        <Feather name="x" size={14} color={themedColors.textMuted} />
-                    </Pressable>
-                </View>
-            )}
 
             <View style={styles.mapContainer}>
                 {/* Desktop collapsed strip */}

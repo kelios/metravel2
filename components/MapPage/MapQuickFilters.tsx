@@ -96,17 +96,17 @@ const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
       position: 'absolute',
-      top: 12,
-      left: 12,
-      right: 12,
+      top: 10,
+      left: 10,
+      right: 10,
       zIndex: 5,
     },
     scroll: {
       flexGrow: 0,
     },
     scrollContent: {
-      gap: 8,
-      paddingRight: 8,
+      gap: 6,
+      paddingRight: 6,
       ...(Platform.OS === 'web'
         ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' } as any)
         : null),
@@ -114,16 +114,18 @@ const getStyles = (colors: ThemedColors) =>
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
       borderRadius: 20,
       backgroundColor: colors.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: colors.boxShadows.light,
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
             cursor: 'pointer',
           } as any)
         : colors.shadows.light),
@@ -133,10 +135,10 @@ const getStyles = (colors: ThemedColors) =>
       borderColor: colors.primary,
     },
     chipPressed: {
-      opacity: 0.85,
+      opacity: 0.82,
     },
     chipText: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
       color: colors.text,
     },

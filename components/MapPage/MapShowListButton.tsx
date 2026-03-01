@@ -36,7 +36,7 @@ export const MapShowListButton: React.FC<MapShowListButtonProps> = React.memo(({
       title={label}
       style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
     >
-      <Feather name="list" size={16} color={colors.textOnDark} />
+      <Feather name="list" size={14} color={colors.primary} />
       <Text style={styles.text}>{label}</Text>
     </CardActionPressable>
   );
@@ -46,30 +46,34 @@ const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     button: {
       position: 'absolute',
-      bottom: 48,
+      bottom: 52,
       alignSelf: 'center',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      borderRadius: 24,
-      backgroundColor: colors.text,
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
       zIndex: 6,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: colors.boxShadows.heavy,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
             cursor: 'pointer',
           } as any)
-        : colors.shadows.heavy),
+        : colors.shadows.medium),
     },
     buttonPressed: {
-      opacity: 0.9,
+      opacity: 0.88,
       transform: [{ scale: 0.97 }],
     },
     text: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
-      color: colors.textOnDark,
+      color: colors.text,
     },
   });

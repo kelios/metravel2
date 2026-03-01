@@ -65,15 +65,15 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      height: 36,
+      height: 34,
       justifyContent: 'center',
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
     scrollContent: {
-      paddingHorizontal: 12,
-      gap: 8,
+      paddingHorizontal: 10,
+      gap: 6,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? ({ touchAction: 'pan-x' } as any)
@@ -83,29 +83,31 @@ const getStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 14,
-      backgroundColor: colors.primaryLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
+      backgroundColor: colors.primarySoft ?? colors.primaryLight,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     chipPressed: {
       opacity: 0.7,
     },
     chipText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       color: colors.primaryText,
-      maxWidth: 120,
+      maxWidth: 110,
     },
     clearBtn: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 14,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     clearText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
       color: colors.textMuted,
     },

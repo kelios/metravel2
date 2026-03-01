@@ -36,18 +36,18 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     stickyTop: {
       gap: 8,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 16 : 0,
-      paddingTop: isMobile ? 12 : 0,
+      paddingHorizontal: isMobile ? 14 : 0,
+      paddingTop: isMobile ? 10 : 0,
       paddingBottom: isMobile ? 8 : 0,
-      borderBottomWidth: isMobile ? 1 : 0,
-      borderBottomColor: isMobile ? colors.borderLight : 'transparent',
+      borderBottomWidth: isMobile ? StyleSheet.hairlineWidth : 0,
+      borderBottomColor: isMobile ? colors.border : 'transparent',
       ...(Platform.OS === 'web'
         ? ({
             position: 'sticky',
             top: 0,
             zIndex: 5,
             backgroundColor: colors.surface,
-            paddingTop: isMobile ? 12 : 4,
+            paddingTop: isMobile ? 10 : 4,
           } as any)
         : null),
     },
@@ -55,9 +55,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderLight,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
     },
     compactTitleRow: {
       flexDirection: 'row',
@@ -128,9 +129,9 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexGrow: 1,
     },
     contentContainer: {
-      paddingBottom: 100 + bottomDockReserve,
-      paddingTop: isMobile ? 8 : 0,
-      paddingHorizontal: isMobile ? 16 : 0,
+      paddingBottom: 80 + bottomDockReserve,
+      paddingTop: isMobile ? 6 : 0,
+      paddingHorizontal: isMobile ? 14 : 0,
       flexGrow: 1,
     },
     section: {
@@ -733,7 +734,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 6,
       justifyContent: 'flex-end',
       alignItems: 'center',
-      paddingHorizontal: isMobile ? 16 : 0,
+      paddingHorizontal: isMobile ? 14 : 0,
       paddingBottom: isMobile ? 4 : 0,
     },
     ctaButton: {

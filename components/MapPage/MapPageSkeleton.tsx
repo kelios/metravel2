@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Text, type DimensionValue } from 'react-native';
+import { View, StyleSheet, Platform, type DimensionValue } from 'react-native';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const MARKER_POSITIONS: { top: DimensionValue; left: DimensionValue }[] = [
   { top: '25%', left: '30%' },
@@ -14,26 +15,28 @@ const MARKER_POSITIONS: { top: DimensionValue; left: DimensionValue }[] = [
 
 export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
   const colors = useThemedColors();
+  const { isMobile } = useResponsive();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
+      ...(Platform.OS === 'web' && !isMobile
+        ? ({ flexDirection: 'row-reverse' } as any)
+        : null),
     },
     mapArea: {
       flex: 1,
       backgroundColor: colors.surfaceLight,
       position: 'relative',
     },
-    headlineText: {
+    chipsRow: {
       position: 'absolute',
-      left: DESIGN_TOKENS.spacing.lg,
-      right: DESIGN_TOKENS.spacing.lg,
-      top: DESIGN_TOKENS.spacing.lg,
-      color: colors.text,
-      fontSize: 24,
-      fontWeight: '700',
-      lineHeight: 30,
+      top: 10,
+      left: 10,
+      right: 10,
+      flexDirection: 'row',
+      gap: 6,
     },
     mapControls: {
       position: 'absolute',
@@ -43,17 +46,44 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
       zIndex: 10,
     },
     controlButton: {
-      width: 44,
-      height: 44,
+      width: 36,
+      height: 36,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.surface,
       marginBottom: DESIGN_TOKENS.spacing.sm,
     },
     markerDot: {
       position: 'absolute',
       zIndex: 5,
     },
-  }), [colors]);
+    // Desktop side panel skeleton
+    sidePanel: {
+      width: 340,
+      flexShrink: 0,
+      backgroundColor: colors.surface,
+      borderLeftWidth: StyleSheet.hairlineWidth,
+      borderLeftColor: colors.border,
+      paddingTop: 0,
+    },
+    sidePanelHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    sidePanelContent: {
+      padding: 12,
+      gap: 10,
+    },
+    sidePanelItem: {
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+  }), [colors, isMobile]);
 
   if (inline) {
     return (
@@ -65,29 +95,54 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
 
   return (
     <View style={styles.container}>
+      {/* Map area */}
       <View style={styles.mapArea}>
         <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
-        <Text style={styles.headlineText}>Карта путешествий</Text>
 
-        {/* Pulsing marker placeholders */}
+        {/* Quick filter chips skeleton */}
+        <View style={styles.chipsRow} pointerEvents="none">
+          {[52, 68, 58].map((w, i) => (
+            <SkeletonLoader key={i} width={w} height={28} borderRadius={14} />
+          ))}
+        </View>
+
+        {/* Marker placeholders */}
         {MARKER_POSITIONS.map((pos, i) => (
           <View key={i} style={[styles.markerDot, { top: pos.top, left: pos.left }]}>
-            <SkeletonLoader width={20} height={20} borderRadius={10} />
+            <SkeletonLoader width={18} height={18} borderRadius={9} />
           </View>
         ))}
-        
+
+        {/* Map controls */}
         <View style={styles.mapControls}>
-          <View style={styles.controlButton}>
-            <SkeletonLoader width={44} height={44} borderRadius={DESIGN_TOKENS.radii.md} />
-          </View>
-          <View style={styles.controlButton}>
-            <SkeletonLoader width={44} height={44} borderRadius={DESIGN_TOKENS.radii.md} />
-          </View>
-          <View style={styles.controlButton}>
-            <SkeletonLoader width={44} height={44} borderRadius={DESIGN_TOKENS.radii.md} />
-          </View>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.controlButton}>
+              <SkeletonLoader width={36} height={36} borderRadius={DESIGN_TOKENS.radii.md} />
+            </View>
+          ))}
         </View>
       </View>
+
+      {/* Side panel skeleton (desktop only) */}
+      {Platform.OS === 'web' && !isMobile && (
+        <View style={styles.sidePanel}>
+          <View style={styles.sidePanelHeader}>
+            <SkeletonLoader width={120} height={26} borderRadius={8} />
+            <SkeletonLoader width={60} height={26} borderRadius={8} />
+          </View>
+          <View style={styles.sidePanelContent}>
+            {[0, 1, 2, 3, 4].map((i) => (
+              <View key={i} style={styles.sidePanelItem}>
+                <SkeletonLoader width={40} height={40} borderRadius={10} />
+                <View style={{ flex: 1, gap: 6 }}>
+                  <SkeletonLoader width="70%" height={13} borderRadius={4} />
+                  <SkeletonLoader width="45%" height={11} borderRadius={4} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
   );
 };

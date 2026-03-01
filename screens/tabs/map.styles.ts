@@ -17,7 +17,6 @@ export const getStyles = (
   _windowWidth: number = METRICS.breakpoints.tablet,
   themedColors: ThemedColors,
 ) => {
-  const shadowLight = themedColors.shadows.light;
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
 
@@ -134,10 +133,10 @@ export const getStyles = (
         ...(Platform.OS === 'web'
           ? ({
               boxShadow: isMobile ? themedColors.boxShadows.heavy : 'none',
-              borderTopLeftRadius: isMobile ? 20 : 16,
-              borderBottomLeftRadius: isMobile ? 0 : 16,
-              borderTopRightRadius: isMobile ? 20 : 0,
-              borderLeftWidth: isMobile ? 0 : 1,
+              borderTopLeftRadius: isMobile ? 24 : 0,
+              borderBottomLeftRadius: isMobile ? 0 : 0,
+              borderTopRightRadius: isMobile ? 24 : 0,
+              borderLeftWidth: isMobile ? 0 : StyleSheet.hairlineWidth,
               borderLeftColor: isMobile ? undefined : themedColors.border,
             } as any)
           : Platform.OS === 'ios'
@@ -146,7 +145,7 @@ export const getStyles = (
         zIndex: 1000,
         ...(Platform.OS === 'web' && !isMobile
           ? ({
-              width: `min(${PANEL_WIDTH_DESKTOP}px, 35vw)`,
+              width: `min(${PANEL_WIDTH_DESKTOP}px, 34vw)`,
               minWidth: PANEL_WIDTH_TABLET,
             } as any)
           : null),
@@ -211,50 +210,41 @@ export const getStyles = (
       tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: isMobile ? Math.max(16, insetTop + 6) : 8,
-        paddingBottom: isMobile ? 8 : 10,
-        paddingHorizontal: isMobile ? 16 : 8,
+        paddingTop: isMobile ? Math.max(14, insetTop + 4) : 10,
+        paddingBottom: isMobile ? 10 : 10,
+        paddingHorizontal: isMobile ? 14 : 10,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.border,
         columnGap: isMobile ? 6 : 8,
-        minHeight: isMobile ? 56 : undefined,
-        ...(Platform.OS === 'web'
-          ? ({
-              boxShadow: isMobile ? themedColors.boxShadows.light : themedColors.boxShadows.light,
-            } as any)
-          : Platform.OS === 'ios'
-          ? shadowLight
-          : { elevation: shadowLight.elevation }),
-        zIndex: 1001,
+        minHeight: isMobile ? 54 : undefined,
       },
       tabsSegment: {
         flexDirection: 'row',
         backgroundColor: themedColors.surfaceLight,
-        borderRadius: isMobile ? 12 : 16,
-        padding: 4,
-        columnGap: isMobile ? 4 : 6,
+        borderRadius: 12,
+        padding: 3,
+        columnGap: 2,
         alignSelf: isMobile ? 'flex-start' : 'stretch',
         flex: isMobile ? 0 : 1,
-        marginLeft: isMobile ? 0 : undefined,
       },
       tab: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: isMobile ? 10 : 10,
-        paddingHorizontal: isMobile ? 12 : 10,
-        borderRadius: 12,
-        gap: isMobile ? 0 : 10,
-        minWidth: isMobile ? 52 : undefined,
-        minHeight: isMobile ? 44 : undefined,
+        paddingVertical: isMobile ? 8 : 8,
+        paddingHorizontal: isMobile ? 14 : 10,
+        borderRadius: 10,
+        gap: isMobile ? 0 : 8,
+        minWidth: isMobile ? 48 : undefined,
+        minHeight: isMobile ? 40 : undefined,
       },
       tabActive: {
         backgroundColor: themedColors.primary,
       },
       tabPressed: {
-        opacity: 0.92,
+        opacity: 0.88,
       },
       tabIconBubble: {
         width: 32,
@@ -283,13 +273,13 @@ export const getStyles = (
         backgroundColor: themedColors.surface,
       },
       resetButton: {
-        flexDirection: 'row',
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         alignItems: 'center',
-        gap: 6,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 12,
+        justifyContent: 'center',
         backgroundColor: themedColors.surfaceLight,
+        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
       },
       resetButtonText: {
         fontSize: 12,
@@ -297,12 +287,13 @@ export const getStyles = (
         color: themedColors.textMuted,
       },
       closePanelButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         backgroundColor: themedColors.surfaceLight,
         alignItems: 'center',
         justifyContent: 'center',
+        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
       },
       travelsListContainer: {
         flex: 1,
@@ -413,24 +404,19 @@ export const getStyles = (
         color: themedColors.textInverse,
       },
       collapsedPanel: {
-        width: 48,
+        width: 44,
         flexShrink: 0,
         alignItems: 'center',
-        paddingTop: 8,
-        gap: 12,
+        paddingTop: 12,
+        gap: 10,
         backgroundColor: themedColors.surface,
-        borderLeftWidth: 1,
+        borderLeftWidth: StyleSheet.hairlineWidth,
         borderLeftColor: themedColors.border,
-        ...(Platform.OS === 'web'
-          ? ({
-              transition: 'width 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-            } as any)
-          : null),
       },
       collapseToggle: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 32,
+        height: 32,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.surfaceLight,
@@ -440,15 +426,15 @@ export const getStyles = (
       },
       collapseToggleInPanel: {
         position: 'absolute',
-        top: 8,
-        left: -16,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        top: 10,
+        left: -14,
+        width: 28,
+        height: 28,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.surface,
-        borderWidth: 1,
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.border,
         zIndex: 1002,
         ...(Platform.OS === 'web'
@@ -459,12 +445,11 @@ export const getStyles = (
           : null),
       },
       collapsedIconBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 12,
+        width: 32,
+        height: 32,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.surfaceLight,
         ...(Platform.OS === 'web'
           ? ({ cursor: 'pointer' } as any)
           : null),
@@ -498,14 +483,23 @@ export const getStyles = (
           : null),
       },
       geoBanner: {
+        position: 'absolute',
+        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT + 12 : 16,
+        left: 16,
+        right: 16,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: themedColors.warningSoft,
-        borderBottomWidth: 1,
-        borderBottomColor: themedColors.warningLight,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        backgroundColor: themedColors.surface,
+        borderRadius: 12,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.warningLight,
+        zIndex: 1010,
+        ...(Platform.OS === 'web'
+          ? ({ boxShadow: themedColors.boxShadows.medium } as any)
+          : themedColors.shadows.medium),
       },
       geoBannerText: {
         flex: 1,
@@ -513,11 +507,12 @@ export const getStyles = (
         color: themedColors.text,
       },
       geoBannerClose: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 22,
+        height: 22,
+        borderRadius: 11,
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: themedColors.surfaceLight,
         ...(Platform.OS === 'web'
           ? ({ cursor: 'pointer' } as any)
           : null),
