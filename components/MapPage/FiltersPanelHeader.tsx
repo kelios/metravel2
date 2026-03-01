@@ -69,7 +69,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
         accessibilityLabel="Выбор режима поиска"
       />
 
-      {isMobile && mode === 'route' && (!!routingLoading || !!routingError || (routeDistance != null && routeDistance > 0)) && (
+      {mode === 'route' && (!!routingLoading || !!routingError || (routeDistance != null && routeDistance > 0)) && (
         <View style={styles.statusCard} testID="routing-status">
           <RoutingStatus
             isLoading={!!routingLoading}
@@ -77,6 +77,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
             distance={routeDistance}
             duration={routeDuration ?? null}
             transportMode={transportMode}
+            compact={!isMobile}
           />
         </View>
       )}

@@ -65,15 +65,20 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      height: 34,
+      height: 40,
       justifyContent: 'center',
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          } as any)
+        : null),
     },
     scrollContent: {
       paddingHorizontal: 10,
-      gap: 6,
+      gap: 8,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? ({ touchAction: 'pan-x' } as any)
@@ -82,12 +87,15 @@ const getStyles = (colors: ThemedColors) =>
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 12,
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 14,
       backgroundColor: colors.primarySoft ?? colors.primaryLight,
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+      ...(Platform.OS === 'web' ? ({
+        cursor: 'pointer',
+        transition: 'transform 0.15s ease, opacity 0.15s ease',
+      } as any) : null),
     },
     chipPressed: {
       opacity: 0.7,

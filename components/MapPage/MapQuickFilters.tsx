@@ -127,15 +127,27 @@ const getStyles = (colors: ThemedColors) =>
             WebkitBackdropFilter: 'blur(8px)',
             boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
             cursor: 'pointer',
+            transition: 'transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
           } as any)
         : colors.shadows.light),
     },
     chipActive: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
+      ...(Platform.OS === 'web'
+        ? ({
+            transform: 'scale(1.05)',
+            boxShadow: `0 2px 8px ${colors.primary}44`,
+          } as any)
+        : null),
     },
     chipPressed: {
       opacity: 0.82,
+      ...(Platform.OS === 'web'
+        ? ({
+            transform: 'scale(0.95)',
+          } as any)
+        : null),
     },
     chipText: {
       fontSize: 12,

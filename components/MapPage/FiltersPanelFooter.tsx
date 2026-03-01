@@ -1,6 +1,8 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface FiltersPanelFooterProps {
   styles: any;
@@ -32,6 +34,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   totalPoints,
   onOpenList: _onOpenList,
 }) => {
+  const colors = useThemedColors();
   const showMobileApply = isMobile && mode === 'radius';
 
   if (showMobileApply) return null;
@@ -68,13 +71,14 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
           <Button
             label={ctaLabel}
             testID="filters-build-route-button"
+            icon={<Feather name="navigation" size={16} color={canBuildRoute && !routingLoading ? colors.textOnPrimary : colors.textMuted} />}
             onPress={() => {
               if (!canBuildRoute || routingLoading) return;
               onBuildRoute();
             }}
             disabled={!canBuildRoute || routingLoading}
             accessibilityLabel="Построить маршрут"
-            style={styles.ctaButton}
+            style={[styles.ctaButton, styles.ctaPrimary]}
           />
         )}
       </View>

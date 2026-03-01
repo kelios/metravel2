@@ -90,19 +90,23 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           </SafeView>
         </SafeView>
 
-        {/* Swap button */}
-        {onSwap && hasRoute && (
-          <SafeView style={styles.swapContainer}>
-            <IconButton
-              testID="route-swap"
-              icon={<MapIcon name="swap-vert" size={20} color={colors.primary} />}
-              label="Поменять старт и финиш местами"
-              size={compact ? 'sm' : 'md'}
-              onPress={onSwap}
-              style={styles.swapButton}
-            />
-          </SafeView>
-        )}
+        {/* Visual connector line between start and end */}
+        <SafeView style={styles.connectorContainer}>
+          <SafeView style={styles.connectorLine} />
+          {/* Swap button overlaid on connector */}
+          {onSwap && hasRoute && (
+            <SafeView style={styles.swapContainer}>
+              <IconButton
+                testID="route-swap"
+                icon={<MapIcon name="swap-vert" size={20} color={colors.primary} />}
+                label="Поменять старт и финиш местами"
+                size={compact ? 'sm' : 'md'}
+                onPress={onSwap}
+                style={styles.swapButton}
+              />
+            </SafeView>
+          )}
+        </SafeView>
 
         {/* End address */}
         <SafeView style={styles.addressRow}>
@@ -175,7 +179,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   addressContainer: {
-    gap: compact ? 8 : 12,
+    gap: 0,
   },
   addressRow: {
     flexDirection: 'row',
@@ -191,13 +195,32 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    zIndex: 2,
   },
   addressInputWrapper: {
     flex: 1,
   },
-  swapContainer: {
+  connectorContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: compact ? -6 : -8,
+    height: compact ? 20 : 24,
+    marginLeft: compact ? 13 : 15,
+    position: 'relative',
+  },
+  connectorLine: {
+    width: 2,
+    height: '100%',
+    backgroundColor: colors.border,
+    borderRadius: 1,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  swapContainer: {
+    position: 'absolute',
+    left: compact ? -10 : -12,
+    alignItems: 'center',
+    zIndex: 3,
   },
   swapButton: {
     width: compact ? 32 : 36,

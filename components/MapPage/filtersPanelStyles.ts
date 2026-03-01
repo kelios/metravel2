@@ -747,6 +747,26 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       justifyContent: 'center',
       flex: Platform.OS === 'web' ? undefined : 1,
     },
+    ctaPrimary: {
+      minHeight: isMobile ? 40 : 48,
+      paddingVertical: isMobile ? 10 : 14,
+      paddingHorizontal: isMobile ? 16 : 20,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      flex: 1,
+      gap: 8,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: `0 2px 8px ${colors.primary}33`,
+            transition: 'box-shadow 0.2s ease, transform 0.15s ease',
+          } as any)
+        : {
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            elevation: 4,
+          }),
+    },
     footerPreview: {
       fontSize: 13,
       fontWeight: '600',

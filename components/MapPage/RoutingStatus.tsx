@@ -12,6 +12,7 @@ interface RoutingStatusProps {
   isEstimated?: boolean;
   elevationGain?: number | null;
   elevationLoss?: number | null;
+  compact?: boolean;
 }
 
 const getModeLabel = (mode: 'car' | 'bike' | 'foot') => {
@@ -66,9 +67,10 @@ function RoutingStatus({
   isEstimated = false,
   elevationGain,
   elevationLoss,
+  compact = false,
 }: RoutingStatusProps) {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(colors, compact), [colors, compact]);
 
   // ✅ УЛУЧШЕНИЕ: Анимированный прогресс-бар для лучшего UX
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -152,31 +154,36 @@ function RoutingStatus({
     return (
       <View style={[styles.container, styles.successContainer]}>
         <View style={styles.successHeader}>
-          <Feather name={getModeIcon(transportMode)} size={16} color={colors.success} />
+          <Feather name={getModeIcon(transportMode)} size={compact ? 14 : 16} color={colors.success} />
           <Text style={styles.successTitle}>{isEstimated ? 'Оценка маршрута' : 'Маршрут построен'}</Text>
         </View>
-        <View style={styles.successStats}>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Расстояние:</Text>
-            <Text style={styles.statValue}>{formatDistance(distance)}</Text>
+        <View style={styles.miniCardGrid}>
+          <View style={styles.miniCard}>
+            <Feather name="map" size={compact ? 12 : 14} color={colors.primary} />
+            <Text style={styles.miniCardValue}>{formatDistance(distance)}</Text>
+            {!compact && <Text style={styles.miniCardLabel}>Расстояние</Text>}
           </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Время:</Text>
-            <Text style={styles.statValue}>{time}</Text>
+          <View style={styles.miniCard}>
+            <Feather name="clock" size={compact ? 12 : 14} color={colors.primary} />
+            <Text style={styles.miniCardValue}>{time}</Text>
+            {!compact && <Text style={styles.miniCardLabel}>Время</Text>}
           </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Способ:</Text>
-            <Text style={styles.statValue}>{getModeLabel(transportMode)}</Text>
+          <View style={styles.miniCard}>
+            <Feather name={getModeIcon(transportMode)} size={compact ? 12 : 14} color={colors.primary} />
+            <Text style={styles.miniCardValue}>{getModeLabel(transportMode)}</Text>
+            {!compact && <Text style={styles.miniCardLabel}>Способ</Text>}
           </View>
           {showElevation && (
             <>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Набор:</Text>
-                <Text style={styles.statValue}>{Math.round(Number(elevationGain))} м</Text>
+              <View style={styles.miniCard}>
+                <Feather name="trending-up" size={compact ? 12 : 14} color={colors.success} />
+                <Text style={styles.miniCardValue}>{Math.round(Number(elevationGain))} м</Text>
+                {!compact && <Text style={styles.miniCardLabel}>Набор</Text>}
               </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Спуск:</Text>
-                <Text style={styles.statValue}>{Math.round(Number(elevationLoss))} м</Text>
+              <View style={styles.miniCard}>
+                <Feather name="trending-down" size={compact ? 12 : 14} color={colors.danger} />
+                <Text style={styles.miniCardValue}>{Math.round(Number(elevationLoss))} м</Text>
+                {!compact && <Text style={styles.miniCardLabel}>Спуск</Text>}
               </View>
             </>
           )}
@@ -190,15 +197,14 @@ function RoutingStatus({
 
 export default React.memo(RoutingStatus);
 
-const getStyles = (colors: ThemedColors) => StyleSheet.create({
+const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: compact ? 10 : 12,
+    padding: compact ? 8 : 12,
+    marginBottom: compact ? 6 : 12,
     borderWidth: 1,
     borderColor: colors.border,
-    ...colors.shadows.light,
   },
   loadingContent: {
     flexDirection: 'row',
@@ -211,7 +217,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     fontWeight: '500',
     color: colors.info,
   },
-  // ✅ УЛУЧШЕНИЕ: Стили для прогресс-бара
   progressBarContainer: {
     height: 4,
     backgroundColor: colors.border,
@@ -273,16 +278,42 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   successHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-    paddingBottom: 10,
+    gap: compact ? 6 : 8,
+    marginBottom: compact ? 6 : 10,
+    paddingBottom: compact ? 6 : 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.successLight,
   },
   successTitle: {
-    fontSize: 13,
+    fontSize: compact ? 12 : 13,
     fontWeight: '600',
     color: colors.success,
+  },
+  miniCardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: compact ? 4 : 8,
+  },
+  miniCard: {
+    flex: 1,
+    minWidth: compact ? 60 : 80,
+    alignItems: 'center',
+    gap: compact ? 2 : 4,
+    padding: compact ? 6 : 10,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+  },
+  miniCardValue: {
+    fontSize: compact ? 11 : 13,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  miniCardLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: colors.textMuted,
+    textAlign: 'center',
   },
   successStats: {
     gap: 8,
