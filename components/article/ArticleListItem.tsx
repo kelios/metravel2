@@ -5,9 +5,10 @@ import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import RenderHTML from 'react-native-render-html';
-import { Link, type Href } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 type ArticleListItemProps = {
   article: Article;
@@ -36,31 +37,51 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
 
   return (
       <View style={styles.container}>
-        <Link href={articleRoute} asChild>
-          <Pressable>
-            <Card style={styles.card}>
-              <View style={styles.imageWrapper}>
-                <Card.Cover
-                    source={{ uri: article_image_thumb_url || DEFAULT_IMAGE }}
-                    style={styles.image}
-                />
-              </View>
-              <Card.Content>
-                <Title numberOfLines={2}>{name}</Title>
-                <RenderHTML
-                    source={{ html: description || '' }}
-                    contentWidth={width - wp(6)}
-                    baseStyle={styles.htmlText}
-                />
-                {article_type?.name && (
-                    <Paragraph>
-                      <Text style={styles.textOrange}>{article_type.name}</Text>
-                    </Paragraph>
-                )}
-              </Card.Content>
-            </Card>
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push(articleRoute)}
+          {...({
+            onClick: (e: any) => {
+              const hasModifier =
+                e?.metaKey ||
+                e?.ctrlKey ||
+                e?.shiftKey ||
+                e?.altKey ||
+                e?.button === 1;
+
+              if (!hasModifier) return;
+
+              e.preventDefault?.();
+              e.stopPropagation?.();
+
+              void openExternalUrlInNewTab(articleRoute, {
+                allowRelative: true,
+                baseUrl: typeof window !== 'undefined' ? window.location.origin : '',
+              });
+            },
+          } as any)}
+        >
+          <Card style={styles.card}>
+            <View style={styles.imageWrapper}>
+              <Card.Cover
+                  source={{ uri: article_image_thumb_url || DEFAULT_IMAGE }}
+                  style={styles.image}
+              />
+            </View>
+            <Card.Content>
+              <Title numberOfLines={2}>{name}</Title>
+              <RenderHTML
+                  source={{ html: description || '' }}
+                  contentWidth={width - wp(6)}
+                  baseStyle={styles.htmlText}
+              />
+              {article_type?.name && (
+                  <Paragraph>
+                    <Text style={styles.textOrange}>{article_type.name}</Text>
+                  </Paragraph>
+              )}
+            </Card.Content>
+          </Card>
+        </Pressable>
       </View>
   );
 };

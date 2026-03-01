@@ -11,6 +11,7 @@ import { queryKeys } from '@/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import CardActionPressable from "@/components/ui/CardActionPressable";
+import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
@@ -77,7 +78,6 @@ function TravelListItem({
                             hideAuthor = false,
                             visualVariant = 'default',
                         }: Props) {
-
     // ✅ ДИЗАЙН: Используем динамические цвета темы
     const colors = useThemedColors();
     const styles = useMemo(() => createTravelListItemStyles(colors), [colors]);
@@ -165,12 +165,21 @@ function TravelListItem({
         } as any);
     }, [id, slug, travel]);
 
+    const returnToPath = useMemo(() => {
+        if (_isMetravel) return '/metravel';
+        if (Platform.OS !== 'web' || typeof window === 'undefined') return '';
+
+        const normalizedPathname = window.location.pathname || '';
+        const navItem = HEADER_NAV_ITEMS.find((item) => !item.external && item.path === normalizedPathname);
+        return navItem?.path || '';
+    }, [_isMetravel]);
+
     const navigationUrl = useMemo(() => {
         if (!travelUrl) return '';
-        if (!_isMetravel) return travelUrl;
+        if (!returnToPath) return travelUrl;
         const separator = travelUrl.includes('?') ? '&' : '?';
-        return `${travelUrl}${separator}returnTo=${encodeURIComponent('/metravel')}`;
-    }, [_isMetravel, travelUrl]);
+        return `${travelUrl}${separator}returnTo=${encodeURIComponent(returnToPath)}`;
+    }, [returnToPath, travelUrl]);
 
     const cardTestId = useMemo(() => {
         const suffix = travelKey || 'unknown';

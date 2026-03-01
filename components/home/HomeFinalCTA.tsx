@@ -47,7 +47,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingVertical: isMobile ? 56 : 88,
+      paddingTop: isMobile ? 32 : 48,
+      paddingBottom: isMobile ? 64 : 80,
       backgroundColor: colors.background,
       alignItems: 'center',
       ...Platform.select({

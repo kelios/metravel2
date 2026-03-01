@@ -2,8 +2,6 @@
  * @jest-environment jsdom
  */
 
-import React from 'react';
-
 import { isValidLazyComponent } from '@/components/travel/details/TravelDetailsLazy';
 
 describe('isValidLazyComponent', () => {

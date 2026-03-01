@@ -53,7 +53,8 @@ function HomeFAQSection() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingVertical: isMobile ? 32 : 48,
+      paddingTop: isMobile ? 28 : 40,
+      paddingBottom: isMobile ? 20 : 24,
       backgroundColor: colors.backgroundSecondary,
       ...Platform.select({
         web: {

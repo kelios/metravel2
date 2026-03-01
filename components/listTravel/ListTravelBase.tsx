@@ -327,6 +327,7 @@ function ListTravelBase({
       companions?: string | string[];
       complexity?: string | string[];
       month?: string | string[];
+      sort?: string | string[];
       search?: string | string[];
     }>();
     const user_id = params.user_id;
@@ -342,6 +343,7 @@ function ListTravelBase({
       const companions = normalizeParam(params.companions);
       const complexity = normalizeParam(params.complexity);
       const month = normalizeParam(params.month);
+      const sort = normalizeParam(params.sort);
       const overNightsStay = normalizeParam(params.over_nights_stay ?? params.over__nights__stay);
       const categoryTravelAddress = normalizeParam(
         params.categoryTravelAddress
@@ -354,6 +356,9 @@ function ListTravelBase({
       if (categoryTravelAddress) {
         f.categoryTravelAddress = categoryTravelAddress.split(',').map(Number).filter(Boolean);
       }
+      if (sort) {
+        f.sort = sort;
+      }
       if (companions) f.companions = companions.split(',').map(Number).filter(Boolean);
       if (complexity) f.complexity = complexity.split(',').map(Number).filter(Boolean);
       if (month) f.month = month.split(',').map(Number).filter(Boolean);
@@ -363,6 +368,7 @@ function ListTravelBase({
       params.companions,
       params.complexity,
       params.month,
+      params.sort,
       params.over_nights_stay,
       params.over__nights__stay,
       params.categoryTravelAddress,
@@ -589,6 +595,26 @@ function ListTravelBase({
         user_id,
         initialFilter,
     });
+
+    useEffect(() => {
+      if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+      if (pathname !== '/search') return;
+
+      const url = new URL(window.location.href);
+      const sortValue = typeof filter.sort === 'string' ? filter.sort.trim() : '';
+      const currentSort = (url.searchParams.get('sort') || '').trim();
+
+      if (sortValue) {
+        if (currentSort === sortValue) return;
+        url.searchParams.set('sort', sortValue);
+      } else {
+        if (!currentSort) return;
+        url.searchParams.delete('sort');
+      }
+
+      const nextPath = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState(window.history.state, '', nextPath);
+    }, [filter.sort, pathname]);
 
     const {
       data: facetsData,

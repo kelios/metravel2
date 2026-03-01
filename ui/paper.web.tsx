@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import ReactDOM from 'react-dom'
 import {
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
   type StyleProp,
   type ViewStyle,
   type TextStyle,
+  type ImageStyle,
 } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
@@ -278,11 +280,16 @@ Menu.Item = MenuItem
 
 export const Card: React.FC<ChildrenProps & { style?: StyleProp<ViewStyle> }> & {
   Content: React.FC<ChildrenProps>
+  Cover: React.FC<{ source?: any; style?: StyleProp<ImageStyle>; resizeMode?: 'cover' | 'contain' | 'stretch' | 'center' | 'repeat' }>
 } = ({ children, style }) => {
   return <View style={[styles.card, style] as any}>{children}</View>
 }
 
 Card.Content = ({ children }: ChildrenProps) => <View style={styles.cardContent}>{children}</View>
+
+Card.Cover = ({ source, style, resizeMode = 'cover' }) => (
+  <Image source={source} style={style as any} resizeMode={resizeMode} />
+)
 
 export const Dialog: any = ({ children }: ChildrenProps) => <View>{children}</View>
 Dialog.Title = ({ children }: ChildrenProps) => <Title>{children}</Title>

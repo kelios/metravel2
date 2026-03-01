@@ -422,6 +422,15 @@ function HomeInspirationSection({
       width: '100%',
       minWidth: 150,
     },
+    cardWrapperPlaceholder: {
+      opacity: 0,
+      ...Platform.select({
+        web: {
+          visibility: 'hidden',
+          pointerEvents: 'none',
+        } as any,
+      }),
+    },
     emptyState: {
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
@@ -569,19 +578,34 @@ function HomeInspirationSection({
                     </React.Fragment>
                   );
                 })
-              : chunkArray(travelsList, numColumns).map((row: any[], rowIdx: number) => (
-                  <View
-                    key={`row-${rowIdx}`}
-                    style={[
-                      styles.row,
-                      isWebDesktop && centerRowsOnWebDesktop ? styles.rowWebCentered : null,
-                    ]}
-                  >
-                    {row.map((item: any, colIdx: number) => {
+              : chunkArray(travelsList, numColumns).map((row: any[], rowIdx: number) => {
+                  const paddedRow = row.concat(Array.from({ length: Math.max(0, numColumns - row.length) }, () => null));
+
+                  return (
+                    <View
+                      key={`row-${rowIdx}`}
+                      style={[
+                        styles.row,
+                        isWebDesktop && centerRowsOnWebDesktop ? styles.rowWebCentered : null,
+                      ]}
+                    >
+                      {paddedRow.map((item: any, colIdx: number) => {
                       const index = rowIdx * numColumns + colIdx;
                       const key = item?.id != null && String(item.id).length > 0
                         ? String(item.id)
                         : item?.url ? String(item.url) : `${queryKey}-${index}`;
+
+                      if (!item) {
+                        return (
+                          <View
+                            key={`placeholder-${rowIdx}-${colIdx}`}
+                            style={[styles.cardWrapper, styles.cardWrapperPlaceholder]}
+                            aria-hidden={Platform.OS === 'web' ? true : undefined}
+                            importantForAccessibility="no-hide-descendants"
+                          />
+                        );
+                      }
+
                       return (
                         <View
                           key={key}
@@ -600,9 +624,10 @@ function HomeInspirationSection({
                           />
                         </View>
                       );
-                    })}
-                  </View>
-                ))
+                      })}
+                    </View>
+                  );
+                })
             }
           </View>
         )}

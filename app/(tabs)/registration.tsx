@@ -25,6 +25,8 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 type PasswordStrength = 'weak' | 'medium' | 'strong';
 
@@ -52,12 +54,22 @@ export default function RegisterForm() {
     const [generalMsg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
     const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
     const router = useRouter();
+    const { loginWithGoogle } = useAuth();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const pathname = usePathname();
     const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
     const canonical = buildCanonicalUrl(pathname || '/registration');
+
+    const resolvePostAuthPath = (): string => {
+        if (intent === 'create-book') return '/travel/new';
+        if (intent === 'build-pdf') return '/export';
+        if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+            return redirect;
+        }
+        return '/';
+    };
 
     const onSubmit = async (
         values: FormValues,
@@ -79,23 +91,35 @@ export default function RegisterForm() {
             if (intent) {
                 sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
             }
-            // ✅ Intent-редирект: обработка разных сценариев
-            let targetPath = '/';
-            if (intent === 'create-book') {
-                targetPath = '/travel/new';
-            } else if (intent === 'build-pdf') {
-                targetPath = '/export';
-            } else if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
-                targetPath = redirect;
-            }
             setTimeout(() => {
-                router.replace(targetPath as any);
+                router.replace(resolvePostAuthPath() as any);
             }, 1000);
         } catch (e: any) {
             setMsg({ text: e?.message || 'Не удалось зарегистрироваться.', error: true });
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const handleGoogleSignIn = async (credential: string) => {
+        try {
+            setMsg({ text: '', error: false });
+            const ok = await loginWithGoogle(credential);
+            if (ok) {
+                if (intent) {
+                    sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
+                }
+                router.replace(resolvePostAuthPath() as any);
+            } else {
+                setMsg({ text: 'Не удалось войти через Google.', error: true });
+            }
+        } catch (e: any) {
+            setMsg({ text: e?.message || 'Ошибка при входе через Google.', error: true });
+        }
+    };
+
+    const handleGoogleError = (error: string) => {
+        setMsg({ text: error, error: true });
     };
 
     const {
@@ -349,6 +373,18 @@ export default function RegisterForm() {
                                                 accessibilityLabel="Зарегистрироваться"
                                             />
 
+                                            <View style={styles.dividerContainer}>
+                                                <View style={styles.dividerLine} />
+                                                <Text style={styles.dividerText}>или</Text>
+                                                <View style={styles.dividerLine} />
+                                            </View>
+
+                                            <GoogleSignInButton
+                                                onSuccess={handleGoogleSignIn}
+                                                onError={handleGoogleError}
+                                                disabled={isSubmitting}
+                                            />
+
                                             <View style={styles.loginContainer}>
                                                 <Text style={styles.loginText}>Уже есть аккаунт? </Text>
                                                 <Pressable
@@ -524,6 +560,22 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.primary,
         borderRadius: DESIGN_TOKENS.radii.lg,
         marginTop: 8,
+    },
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 20,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
+    },
+    dividerText: {
+        marginHorizontal: 16,
+        fontSize: 14,
+        color: colors.textMuted,
+        fontWeight: '500',
     },
     btnContent: { paddingVertical: 12 },
 });
