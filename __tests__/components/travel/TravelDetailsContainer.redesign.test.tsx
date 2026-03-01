@@ -42,21 +42,21 @@ jest.mock('@/context/AuthContext', () => ({
 describe('TravelDetailsContainer - Редизайн', () => {
   describe('Компактные метрики', () => {
     it('должен использовать уменьшенные spacing для hero секции', () => {
-      expect(COMPACT_SPACING.hero.mobile).toBe(20);
+      expect(COMPACT_SPACING.hero.mobile).toBe(14);
       expect(COMPACT_SPACING.hero.desktop).toBe(28);
       expect(COMPACT_SPACING.hero.mobile).toBeLessThan(24); // было 24
       expect(COMPACT_SPACING.hero.desktop).toBeLessThan(32); // было 32
     });
 
     it('должен использовать уменьшенные spacing для секций', () => {
-      expect(COMPACT_SPACING.section.mobile).toBe(18);
+      expect(COMPACT_SPACING.section.mobile).toBe(12);
       expect(COMPACT_SPACING.section.desktop).toBe(24);
       expect(COMPACT_SPACING.section.mobile).toBeLessThanOrEqual(20); // было 18-20
       expect(COMPACT_SPACING.section.desktop).toBeLessThanOrEqual(24); // было 24
     });
 
     it('должен использовать уменьшенные spacing для карточек', () => {
-      expect(COMPACT_SPACING.card.mobile).toBe(14);
+      expect(COMPACT_SPACING.card.mobile).toBe(10);
       expect(COMPACT_SPACING.card.desktop).toBe(16);
       expect(COMPACT_SPACING.card.mobile).toBeLessThanOrEqual(16); // было 16
     });

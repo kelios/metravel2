@@ -924,6 +924,65 @@ jest.mock('react-native', () => {
   }
 })
 
+jest.mock('react-native-worklets', () => {
+  const identity = <T>(value: T): T => value
+  const noop = () => undefined
+
+  return {
+    WorkletsModule: {},
+    RuntimeKind: { RN: 'rn', UI: 'ui' },
+    callMicrotasks: noop,
+    createSerializable: identity,
+    createSynchronizable: identity,
+    createWorkletRuntime: jest.fn(),
+    executeOnUIRuntimeSync: (fn: (() => unknown) | undefined) => fn?.(),
+    getDynamicFeatureFlag: () => false,
+    getRuntimeKind: () => 'rn',
+    getStaticFeatureFlag: () => false,
+    isSerializableRef: () => false,
+    isSynchronizable: () => false,
+    isWorkletFunction: () => false,
+    makeShareable: identity,
+    makeShareableCloneOnUIRecursive: identity,
+    makeShareableCloneRecursive: identity,
+    registerCustomSerializable: noop,
+    runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+    runOnRuntime: (_runtime: unknown, fn: (...args: unknown[]) => unknown) => fn,
+    runOnUI: (fn: (...args: unknown[]) => unknown) => fn,
+    runOnUIAsync: (fn: (...args: unknown[]) => unknown) => fn,
+    runOnUISync: (fn: (...args: unknown[]) => unknown) => fn,
+    scheduleOnRN: noop,
+    scheduleOnRuntime: noop,
+    scheduleOnUI: noop,
+    serializableMappingCache: new Map(),
+    setDynamicFeatureFlag: noop,
+    shareableMappingCache: new Map(),
+    unstable_eventLoopTask: noop,
+  }
+})
+
+jest.mock('react-native-maps', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+
+  const MockMapView = ({ children, ...props }: any) =>
+    React.createElement(View, { ...props, testID: props.testID ?? 'mock-map-view' }, children)
+
+  const MockMarker = ({ children, ...props }: any) =>
+    React.createElement(View, { ...props, testID: props.testID ?? 'mock-map-marker' }, children)
+
+  const MockCallout = ({ children, ...props }: any) =>
+    React.createElement(View, { ...props, testID: props.testID ?? 'mock-map-callout' }, children)
+
+  return {
+    __esModule: true,
+    default: MockMapView,
+    Marker: MockMarker,
+    Callout: MockCallout,
+    PROVIDER_GOOGLE: 'google',
+  }
+})
+
 jest.mock('react-native-reanimated', () => {
   const Reanimated = require('react-native-reanimated/mock');
   Reanimated.default.call = () => {};
