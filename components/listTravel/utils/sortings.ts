@@ -17,7 +17,17 @@ const SORTING_NAME_MAP: Record<string, string> = {
   rating_desc: 'Рейтинг ↓',
 };
 
-const HIDDEN_SORTINGS = new Set(['budget_desc', 'budget_asc', 'updated_asc', 'rating_asc']);
+const HIDDEN_SORTINGS = new Set([
+  'budget_desc',
+  'budget_asc',
+  'updated_asc',
+  'updated_desc',
+  'days_desc',
+  'days_asc',
+  'people_desc',
+  'people_asc',
+  'rating_asc',
+]);
 
 const SORTING_ORDER: string[] = [
   'newest',

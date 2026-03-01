@@ -9,6 +9,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { calculateRouteDistanceKm } from '@/utils/routeFileParser';
 
 type Props = {
+  title?: string;
+  lineColor?: string;
   preview: ParsedRoutePreview;
   onDownloadTrack?: () => void | Promise<void>;
   canDownloadTrack?: boolean;
@@ -29,6 +31,8 @@ const round = (value: number): number => Math.round(value * 10) / 10;
 const formatKm = (value: number): string => `${round(value)} км`;
 
 export default function RouteElevationProfile({
+  title = 'Профиль высот',
+  lineColor,
   preview,
   onDownloadTrack,
   canDownloadTrack = false,
@@ -39,6 +43,7 @@ export default function RouteElevationProfile({
 }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const chartLineColor = lineColor || colors.primary;
   const [width, setWidth] = useState(0);
 
   const metrics = useMemo(() => {
@@ -168,13 +173,14 @@ export default function RouteElevationProfile({
     const chartW = Math.max(1, width - CHART_PADDING * 2);
     const chartH = CHART_HEIGHT - CHART_PADDING * 2;
     const totalDistance = Math.max(0.001, metrics.totalDistanceKm);
+    const minElevation = metrics.minElevation ?? 0;
 
     return samples
       .map((sample) => {
         const x = CHART_PADDING + (sample.distanceKm / totalDistance) * chartW;
         const y =
           CHART_PADDING +
-          (1 - (sample.elevationM - metrics.minElevation) / metrics.elevationRange) * chartH;
+          (1 - (sample.elevationM - minElevation) / metrics.elevationRange) * chartH;
         return `${x},${y}`;
       })
       .join(' ');
@@ -187,13 +193,14 @@ export default function RouteElevationProfile({
     const chartW = Math.max(1, width - CHART_PADDING * 2);
     const chartH = CHART_HEIGHT - CHART_PADDING * 2;
     const totalDistance = Math.max(0.001, metrics.totalDistanceKm);
+    const minElevation = metrics.minElevation ?? 0;
 
     const toPoint = (sample: { distanceKm: number; elevationM: number } | null) => {
       if (!sample) return null;
       const x = CHART_PADDING + (sample.distanceKm / totalDistance) * chartW;
       const y =
         CHART_PADDING +
-        (1 - (sample.elevationM - metrics.minElevation) / metrics.elevationRange) * chartH;
+        (1 - (sample.elevationM - minElevation) / metrics.elevationRange) * chartH;
       return { x, y };
     };
 
@@ -257,7 +264,7 @@ export default function RouteElevationProfile({
   return (
     <View style={styles.container} onLayout={handleLayout}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Профиль высот</Text>
+        <Text style={styles.title}>{title}</Text>
         {canDownloadTrack && onDownloadTrack ? (
           <Pressable
             onPress={() => void onDownloadTrack()}
@@ -302,13 +309,13 @@ export default function RouteElevationProfile({
             <Polyline
               points={polylinePoints}
               fill="none"
-              stroke={colors.primary}
+              stroke={chartLineColor}
               strokeWidth={2.5}
               strokeLinejoin="round"
               strokeLinecap="round"
             />
             {keyPoints?.start ? (
-              <Circle cx={keyPoints.start.x} cy={keyPoints.start.y} r={3.5} fill={colors.primary} />
+              <Circle cx={keyPoints.start.x} cy={keyPoints.start.y} r={3.5} fill={chartLineColor} />
             ) : null}
             {keyPoints?.peak ? (
               <Circle cx={keyPoints.peak.x} cy={keyPoints.peak.y} r={4} fill={colors.info} />

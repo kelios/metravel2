@@ -1,4 +1,4 @@
-import { calculateRouteDistanceKm, parseRouteFilePreview } from '@/utils/routeFileParser';
+import { calculateRouteDistanceKm, parseRouteFilePreview, parseRouteFilePreviews } from '@/utils/routeFileParser';
 
 describe('routeFileParser', () => {
   it('keeps non-consecutive duplicate coordinates and preserves elevation values', () => {
@@ -43,5 +43,32 @@ describe('routeFileParser', () => {
     const distanceKm = calculateRouteDistanceKm(linePoints);
 
     expect(distanceKm).toBeGreaterThan(0);
+  });
+
+  it('splits GPX with multiple tracks into separate previews', () => {
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>Track 1</name>
+    <trkseg>
+      <trkpt lat="52.1000" lon="23.7000"><ele>100</ele></trkpt>
+      <trkpt lat="52.2000" lon="23.8000"><ele>120</ele></trkpt>
+    </trkseg>
+  </trk>
+  <trk>
+    <name>Track 2</name>
+    <trkseg>
+      <trkpt lat="53.1000" lon="24.7000"><ele>200</ele></trkpt>
+      <trkpt lat="53.2000" lon="24.8000"><ele>220</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+
+    const previews = parseRouteFilePreviews(gpx, 'gpx');
+    expect(previews).toHaveLength(2);
+    expect(previews[0].linePoints).toHaveLength(2);
+    expect(previews[1].linePoints).toHaveLength(2);
+    expect(previews[0].elevationProfile).toHaveLength(2);
+    expect(previews[1].elevationProfile).toHaveLength(2);
   });
 });

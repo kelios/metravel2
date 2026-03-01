@@ -31,9 +31,16 @@ const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<
 export const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default: T }>) =>
   lazy(async () => {
     try {
-      // In dev/HMR or under slow networks, dynamic imports can hang indefinitely (pending).
-      // Ensure we eventually resolve to a safe fallback instead of keeping Suspense forever.
-      return await withTimeout(retry(f, 2, 400), 12_000)
+      const lazyImport = retry(f, 2, 400)
+
+      // During local Metro bundling, initial async route chunks can take >12s.
+      // Hard timeout here causes permanent "Component failed to load" fallback for map widgets.
+      // Keep timeout protection in production only.
+      if (__DEV__) {
+        return await lazyImport
+      }
+
+      return await withTimeout(lazyImport, 12_000)
     } catch {
       return {
         default: (() => (

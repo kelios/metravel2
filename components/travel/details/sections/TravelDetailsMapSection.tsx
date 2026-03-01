@@ -21,12 +21,19 @@ import {
   listTravelRouteFiles,
 } from '@/api/travelRoutes'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
-import { parseRouteFilePreview } from '@/utils/routeFileParser'
+import { parseRouteFilePreviews } from '@/utils/routeFileParser'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
 const WEATHER_PLACEHOLDER_STYLE = { minHeight: 120 } as const
 const SUPPORTED_ROUTE_EXTENSIONS = new Set(['gpx', 'kml'])
+
+type RoutePreviewItem = {
+  file: TravelRouteFile
+  preview: ParsedRoutePreview
+  color: string
+  label: string
+}
 
 const PointList = withLazy(() => import('@/components/travel/PointList'))
 const ToggleableMap = withLazy(() => import('@/components/travel/ToggleableMapSection'))
@@ -145,8 +152,11 @@ export const TravelDetailsMapSection: React.FC<{
 }> = ({ travel, anchors, canRenderHeavy, scrollToMapSection }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
-  const [routePreview, setRoutePreview] = useState<ParsedRoutePreview | null>(null)
-  const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0 || ((routePreview?.linePoints.length ?? 0) > 0)
+  const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
+  const primaryRoutePreview = routePreviewItems[0]?.preview ?? null
+  const hasMapData =
+    (travel.coordsMeTravel?.length ?? 0) > 0 ||
+    routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
 
   // Simplified lazy loading (replaces 30+ lines with 5 lines!)
   const { shouldRender, elementRef, isLoading } = useMapLazyLoad({
@@ -158,12 +168,37 @@ export const TravelDetailsMapSection: React.FC<{
   })
 
   const colors = useThemedColors()
+  const routeColorPalette = useMemo(
+    () => [
+      colors.primary,
+      colors.info,
+      colors.success,
+      colors.warning,
+      colors.accent,
+      colors.primaryDark,
+      colors.infoDark,
+      colors.successDark,
+      colors.warningDark,
+      colors.accentDark,
+    ],
+    [
+      colors.accent,
+      colors.accentDark,
+      colors.info,
+      colors.infoDark,
+      colors.primary,
+      colors.primaryDark,
+      colors.success,
+      colors.successDark,
+      colors.warning,
+      colors.warningDark,
+    ],
+  )
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
   const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
   const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
   const [weatherVisible, setWeatherVisible] = useState(false)
-  const [routeFiles, setRouteFiles] = useState<TravelRouteFile[]>([])
-  const [isRouteDownloadPending, setIsRouteDownloadPending] = useState(false)
+  const [downloadingRouteId, setDownloadingRouteId] = useState<number | null>(null)
   const [keyPointLabels, setKeyPointLabels] = useState<{
     startName?: string | null
     peakName?: string | null
@@ -176,38 +211,58 @@ export const TravelDetailsMapSection: React.FC<{
     const loadRouteFiles = async () => {
       if (!travel?.id) {
         if (active) {
-          setRouteFiles([])
-          setRoutePreview(null)
+          setRoutePreviewItems([])
         }
         return
       }
       try {
         const files = await listTravelRouteFiles(travel.id)
         if (!active) return
-        setRouteFiles(files)
 
-        const firstSupported = files.find((file) => {
+        const supportedFiles = files.filter((file) => {
           const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
             .toLowerCase()
             .replace(/^\./, '')
           return SUPPORTED_ROUTE_EXTENSIONS.has(ext)
         })
 
-        if (!firstSupported) {
-          setRoutePreview(null)
+        if (supportedFiles.length === 0) {
+          setRoutePreviewItems([])
           return
         }
 
-        const ext = String(firstSupported.ext ?? firstSupported.original_name?.split('.').pop() ?? '')
-          .toLowerCase()
-          .replace(/^\./, '')
-        const downloaded = await downloadTravelRouteFileBlob(travel.id, firstSupported.id)
+        const parsedResults = await Promise.allSettled(
+          supportedFiles.map(async (file, index) => {
+            const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
+              .toLowerCase()
+              .replace(/^\./, '')
+            const downloaded = await downloadTravelRouteFileBlob(travel.id, file.id)
+            const previews = parseRouteFilePreviews(downloaded.text, ext)
+            const validPreviews = previews.filter((preview) => (preview?.linePoints?.length ?? 0) >= 2)
+            if (validPreviews.length === 0) return [] as RoutePreviewItem[]
+
+            return validPreviews.map((preview, previewIndex) => ({
+              file,
+              preview,
+              color: routeColorPalette[(index + previewIndex) % routeColorPalette.length],
+              label:
+                validPreviews.length > 1
+                  ? `${file.original_name || 'Маршрут'} • трек ${previewIndex + 1}`
+                  : file.original_name || 'Маршрут',
+            }))
+          }),
+        )
+
         if (!active) return
-        setRoutePreview(parseRouteFilePreview(downloaded.text, ext))
+
+        const readyItems = parsedResults
+          .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+          .filter((item): item is RoutePreviewItem => Boolean(item))
+
+        setRoutePreviewItems(readyItems)
       } catch {
         if (active) {
-          setRouteFiles([])
-          setRoutePreview(null)
+          setRoutePreviewItems([])
         }
       }
     }
@@ -216,18 +271,7 @@ export const TravelDetailsMapSection: React.FC<{
     return () => {
       active = false
     }
-  }, [travel?.id])
-
-  const downloadableRouteFile = useMemo(
-    () =>
-      routeFiles.find((file) => {
-        const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
-          .toLowerCase()
-          .replace(/^\./, '')
-        return SUPPORTED_ROUTE_EXTENSIONS.has(ext)
-      }) ?? null,
-    [routeFiles],
-  )
+  }, [routeColorPalette, travel?.id])
 
   const notifyDownloadUnavailable = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -241,17 +285,17 @@ export const TravelDetailsMapSection: React.FC<{
     Alert.alert?.('Недоступно', 'Файл маршрута недоступен для скачивания')
   }, [])
 
-  const handleDownloadRoute = useCallback(async () => {
-    if (isRouteDownloadPending) return
-    if (!travel?.id || !downloadableRouteFile) {
+  const handleDownloadRoute = useCallback(async (file: TravelRouteFile) => {
+    if (downloadingRouteId === file.id) return
+    if (!travel?.id) {
       notifyDownloadUnavailable()
       return
     }
-    setIsRouteDownloadPending(true)
+    setDownloadingRouteId(file.id)
     try {
       const rawUrl =
-        String(downloadableRouteFile.download_url ?? '').trim() ||
-        buildTravelRouteDownloadPath(travel.id, downloadableRouteFile.id)
+        String(file.download_url ?? '').trim() ||
+        buildTravelRouteDownloadPath(travel.id, file.id)
       await openExternalUrlInNewTab(rawUrl, {
         allowRelative: true,
         baseUrl:
@@ -262,9 +306,9 @@ export const TravelDetailsMapSection: React.FC<{
     } catch {
       notifyDownloadUnavailable()
     } finally {
-      setIsRouteDownloadPending(false)
+      setDownloadingRouteId(null)
     }
-  }, [downloadableRouteFile, isRouteDownloadPending, notifyDownloadUnavailable, travel?.id])
+  }, [downloadingRouteId, notifyDownloadUnavailable, travel?.id])
 
   const handlePointCardPress = useCallback((point: any) => {
     const coord = String(point?.coord ?? '').trim()
@@ -308,7 +352,7 @@ export const TravelDetailsMapSection: React.FC<{
 
   useEffect(() => {
     let active = true
-    const linePoints = Array.isArray(routePreview?.linePoints) ? routePreview?.linePoints : []
+    const linePoints = Array.isArray(primaryRoutePreview?.linePoints) ? primaryRoutePreview?.linePoints : []
     if (!linePoints || linePoints.length < 2) {
       setKeyPointLabels({})
       return () => {
@@ -425,7 +469,7 @@ export const TravelDetailsMapSection: React.FC<{
     return () => {
       active = false
     }
-  }, [routePreview])
+  }, [primaryRoutePreview])
 
   return (
     <>
@@ -503,28 +547,34 @@ export const TravelDetailsMapSection: React.FC<{
                       resizeTrigger={mapResizeTrigger}
                       compact
                       height={isMobileWeb ? 400 : 500}
-                      showRouteLine={(routePreview?.linePoints.length ?? 0) >= 2}
-                      routeLineCoords={(routePreview?.linePoints ?? []).map((p) => {
-                        const [latStr, lngStr] = String(p.coord ?? '').split(',')
-                        return [Number(latStr), Number(lngStr)] as [number, number]
-                      })}
+                      showRouteLine={routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) >= 2)}
+                      routeLines={routePreviewItems.map((item) => ({
+                        color: item.color,
+                        coords: (item.preview?.linePoints ?? []).map((p) => {
+                          const [latStr, lngStr] = String(p.coord ?? '').replace(/;/g, ',').split(',')
+                          return [Number(latStr), Number(lngStr)] as [number, number]
+                        }),
+                      }))}
                     />
                   </Suspense>
                 ) : (
                   <MapFallback />
                 )}
               </ToggleableMap>
-              {routePreview && routePreview.linePoints.length >= 2 ? (
+              {routePreviewItems.map((item, index) => (
                 <RouteElevationProfile
-                  preview={routePreview}
-                  canDownloadTrack={Boolean(downloadableRouteFile)}
-                  onDownloadTrack={handleDownloadRoute}
-                  isDownloadPending={isRouteDownloadPending}
+                  key={`route-profile-${item.file.id}`}
+                  title={`Профиль высот: ${item.label || `Трек ${index + 1}`}`}
+                  lineColor={item.color}
+                  preview={item.preview}
+                  canDownloadTrack
+                  onDownloadTrack={() => handleDownloadRoute(item.file)}
+                  isDownloadPending={downloadingRouteId === item.file.id}
                   placeHints={placeHints}
                   transportHints={transportHints}
-                  keyPointLabels={keyPointLabels}
+                  keyPointLabels={index === 0 ? keyPointLabels : undefined}
                 />
-              ) : null}
+              ))}
             </>
           ) : (
             <View style={styles.mapEmptyState}>

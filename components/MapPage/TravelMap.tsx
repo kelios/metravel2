@@ -68,6 +68,15 @@ interface TravelMapProps {
    * If provided, route line is rendered from this array instead of `travelData`.
    */
   routeLineCoords?: [number, number][];
+
+  /**
+   * Optional multiple route lines with per-track color.
+   * Used by travel details when a travel has multiple uploaded track files.
+   */
+  routeLines?: Array<{
+    coords: [number, number][];
+    color?: string;
+  }>;
 }
 
 /**
@@ -105,12 +114,13 @@ interface TravelMapProps {
  */
 interface RouteLineLayerProps {
   routeLineCoords: [number, number][];
+  routeColor?: string;
   colors: ThemedColors;
   useMap: () => any;
   L: any;
 }
 
-const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors, useMap, L }) => {
+const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, routeColor, colors, useMap, L }) => {
   const map = useMap();
   const polylineRef = useRef<any>(null);
   const mountedRef = useRef(true);
@@ -204,7 +214,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
       });
 
       const line = L.polyline(latlngs, {
-        color: colors.info || colors.primary || DESIGN_TOKENS.colors.primary,
+        color: routeColor || colors.info || colors.primary || DESIGN_TOKENS.colors.primary,
         weight: 5,
         opacity: 1,
         lineJoin: 'round',
@@ -251,7 +261,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
         polylineRef.current = null;
       }
     };
-  }, [map, L, routeLineCoords, colors.info, colors.primary, colors.surface]);
+  }, [map, L, routeLineCoords, routeColor, colors.info, colors.primary, colors.surface]);
 
   return null;
 };
@@ -266,6 +276,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   enableOverlays = false,
   showRouteLine = false,
   routeLineCoords: routeLineCoordsProp,
+  routeLines: routeLinesProp,
 }) => {
   const colors = useThemedColors();
   // `travelData` comes from API and can be null/invalid for some items.
@@ -302,6 +313,17 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Calculate center from travel data
   const center = useMemo(() => {
+    if (Array.isArray(routeLinesProp) && routeLinesProp.length > 0) {
+      const firstCoord = routeLinesProp[0]?.coords?.[0];
+      if (
+        Array.isArray(firstCoord) &&
+        Number.isFinite(firstCoord[0]) &&
+        Number.isFinite(firstCoord[1])
+      ) {
+        return [firstCoord[0], firstCoord[1]];
+      }
+    }
+
     if (Array.isArray(routeLineCoordsProp) && routeLineCoordsProp.length > 0) {
       const [lat, lng] = routeLineCoordsProp[0];
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
@@ -336,7 +358,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     }
 
     return [53.9006, 27.559];
-  }, [safeTravelData, routeLineCoordsProp]);
+  }, [safeTravelData, routeLineCoordsProp, routeLinesProp]);
 
   // Use optimized markers hook
   const {
@@ -405,6 +427,33 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
     return coords;
   }, [showRouteLine, routeLineCoordsProp, safeTravelData]);
+
+  const normalizedRouteLines = useMemo(() => {
+    if (!showRouteLine) return [] as Array<{ coords: [number, number][]; color?: string }>;
+
+    if (Array.isArray(routeLinesProp) && routeLinesProp.length > 0) {
+      return routeLinesProp
+        .map((line) => ({
+          color: line?.color,
+          coords: (Array.isArray(line?.coords) ? line.coords : []).filter(
+            ([lat, lng]) =>
+              Number.isFinite(lat) &&
+              Number.isFinite(lng) &&
+              lat >= -90 &&
+              lat <= 90 &&
+              lng >= -180 &&
+              lng <= 180
+          ),
+        }))
+        .filter((line) => line.coords.length >= 2);
+    }
+
+    if (routeLineCoords.length >= 2) {
+      return [{ coords: routeLineCoords }];
+    }
+
+    return [] as Array<{ coords: [number, number][]; color?: string }>;
+  }, [showRouteLine, routeLineCoords, routeLinesProp]);
 
   // Highlight point when requested
   useEffect(() => {
@@ -493,6 +542,23 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
     const points: [number, number][] = [];
 
+    if (Array.isArray(routeLinesProp) && routeLinesProp.length > 0) {
+      for (const routeLine of routeLinesProp) {
+        const coords = Array.isArray(routeLine?.coords) ? routeLine.coords : [];
+        points.push(
+          ...coords.filter(
+            ([lat, lng]) =>
+              Number.isFinite(lat) &&
+              Number.isFinite(lng) &&
+              lat >= -90 &&
+              lat <= 90 &&
+              lng >= -180 &&
+              lng <= 180
+          )
+        );
+      }
+    }
+
     if (Array.isArray(routeLineCoordsProp) && routeLineCoordsProp.length > 0) {
       points.push(
         ...routeLineCoordsProp.filter(
@@ -553,7 +619,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     return () => {
       clearTimeout(timer);
     };
-  }, [mapReady, L, safeTravelData, routeLineCoordsProp]);
+  }, [mapReady, L, safeTravelData, routeLineCoordsProp, routeLinesProp]);
 
   // Initialize overlay layers when map is ready and overlays are enabled
   useEffect(() => {
@@ -700,14 +766,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         />
 
         {/* Route line connecting travel points - using custom layer for proper z-index */}
-        {showRouteLine && rl.useMap && routeLineCoords.length >= 2 && (
+        {showRouteLine && rl.useMap && normalizedRouteLines.map((routeLine, index) => (
           <RouteLineLayer
-            routeLineCoords={routeLineCoords}
+            key={`route-line-${index}-${routeLine.coords.length}`}
+            routeLineCoords={routeLine.coords}
+            routeColor={routeLine.color}
             colors={colors}
             useMap={rl.useMap}
             L={L}
           />
-        )}
+        ))}
 
         {/* Travel markers (not clustered) */}
         {customIcons?.meTravel && markers.length > 0 && !shouldCluster && PopupComponent && (

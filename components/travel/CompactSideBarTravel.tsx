@@ -1,5 +1,5 @@
 // components/travel/CompactSideBarTravel.tsx
-import React, { memo, Suspense, useCallback, useMemo, useState, lazy } from "react";
+import React, { memo, Suspense, useCallback, useEffect, useMemo, useState, lazy } from "react";
 import {
   View,
   StyleSheet,
@@ -99,6 +99,38 @@ function CompactSideBarTravel({
   const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
   const [isRouteDownloading, setIsRouteDownloading] = useState(false);
+  const [hasDownloadableRoute, setHasDownloadableRoute] = useState(false);
+
+  useEffect(() => {
+    let activeRequest = true;
+
+    const loadRouteAvailability = async () => {
+      const travelId = (travel as any)?.id;
+      if (!travelId) {
+        if (activeRequest) setHasDownloadableRoute(false);
+        return;
+      }
+
+      try {
+        const files = await listTravelRouteFiles(travelId);
+        if (!activeRequest) return;
+        const hasSupported = files.some((file) => {
+          const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
+            .toLowerCase()
+            .replace(/^\./, '');
+          return ext === 'gpx' || ext === 'kml';
+        });
+        setHasDownloadableRoute(hasSupported);
+      } catch {
+        if (activeRequest) setHasDownloadableRoute(false);
+      }
+    };
+
+    void loadRouteAvailability();
+    return () => {
+      activeRequest = false;
+    };
+  }, [travel]);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
@@ -552,46 +584,48 @@ function CompactSideBarTravel({
       );
     }),
 
-    <Pressable
-      key="download-route"
-      style={({ pressed }) => [
-        styles.link,
-        pressed && styles.linkPressed,
-      ]}
-      onPress={handleDownloadRoute}
-      accessibilityRole="button"
-      accessibilityLabel="Скачать маршрут"
-      {...(Platform.OS === 'web'
-        ? {
-            'data-sidebar-link': true,
-            role: 'button',
-            'aria-label': 'Скачать маршрут',
-          }
-        : {})}
-    >
-      <View style={styles.activeIndicator} />
-      <View style={styles.linkLeft}>
-        <Feather
-          name="download"
-          size={Platform.select({
-            default: 18,
-            web: isTablet ? 20 : 18,
-          })}
-          color={mutedText}
-          {...(Platform.OS === 'web' ? { 'data-icon': true } : {})}
-        />
-        <Text
-          style={[
-            styles.linkTxt,
-            isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
-            { color: mutedText },
-          ]}
-          {...(Platform.OS === 'web' ? { 'data-link-text': true } : {})}
-        >
-          {isRouteDownloading ? 'Скачивание...' : 'Скачать маршрут'}
-        </Text>
-      </View>
-    </Pressable>,
+    hasDownloadableRoute ? (
+      <Pressable
+        key="download-route"
+        style={({ pressed }) => [
+          styles.link,
+          pressed && styles.linkPressed,
+        ]}
+        onPress={handleDownloadRoute}
+        accessibilityRole="button"
+        accessibilityLabel="Скачать маршрут"
+        {...(Platform.OS === 'web'
+          ? {
+              'data-sidebar-link': true,
+              role: 'button',
+              'aria-label': 'Скачать маршрут',
+            }
+          : {})}
+      >
+        <View style={styles.activeIndicator} />
+        <View style={styles.linkLeft}>
+          <Feather
+            name="download"
+            size={Platform.select({
+              default: 18,
+              web: isTablet ? 20 : 18,
+            })}
+            color={mutedText}
+            {...(Platform.OS === 'web' ? { 'data-icon': true } : {})}
+          />
+          <Text
+            style={[
+              styles.linkTxt,
+              isTablet && { fontSize: DESIGN_TOKENS.typography.sizes.sm },
+              { color: mutedText },
+            ]}
+            {...(Platform.OS === 'web' ? { 'data-link-text': true } : {})}
+          >
+            {isRouteDownloading ? 'Скачивание...' : 'Скачать маршрут'}
+          </Text>
+        </View>
+      </Pressable>
+    ) : null,
 
     <Suspense key="weather" fallback={<Fallback />}>
       <WeatherWidget points={travel.travelAddress as any} />
