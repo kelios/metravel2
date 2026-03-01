@@ -634,6 +634,9 @@ export const fetchTravelFacets = async (
 
         return { total, facets };
     } catch (e) {
+        if (isAbortError(e)) {
+            throw e;
+        }
         devError('Error fetching travel facets:', e);
         return { total: 0, facets: {} };
     }
@@ -791,6 +794,9 @@ export const fetchTravels = async (
             total: coerceTotal(total, 0),
         };
     } catch (e) {
+        if (isAbortError(e)) {
+            throw e;
+        }
         devError('Error fetching Travels:', e);
         return { data: [], total: 0 };
     }

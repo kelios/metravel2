@@ -1,5 +1,5 @@
 // ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
@@ -34,30 +34,35 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
 
   // ✅ МИГРАЦИЯ: Мемоизация стилей для производительности
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const webOpenHint = 'Открыть в новой вкладке: Ctrl/Cmd + клик';
+
+  const handleWebOpenInNewTab = useCallback((e: any) => {
+    const hasModifier =
+      e?.metaKey ||
+      e?.ctrlKey ||
+      e?.shiftKey ||
+      e?.altKey ||
+      e?.button === 1;
+
+    if (!hasModifier) return;
+
+    e.preventDefault?.();
+    e.stopPropagation?.();
+
+    void openExternalUrlInNewTab(articleRoute, {
+      allowRelative: true,
+      baseUrl: typeof window !== 'undefined' ? window.location.origin : '',
+    });
+  }, [articleRoute]);
 
   return (
       <View style={styles.container}>
         <Pressable
           onPress={() => router.push(articleRoute)}
           {...({
-            onClick: (e: any) => {
-              const hasModifier =
-                e?.metaKey ||
-                e?.ctrlKey ||
-                e?.shiftKey ||
-                e?.altKey ||
-                e?.button === 1;
-
-              if (!hasModifier) return;
-
-              e.preventDefault?.();
-              e.stopPropagation?.();
-
-              void openExternalUrlInNewTab(articleRoute, {
-                allowRelative: true,
-                baseUrl: typeof window !== 'undefined' ? window.location.origin : '',
-              });
-            },
+            onClick: handleWebOpenInNewTab,
+            onAuxClick: handleWebOpenInNewTab,
+            title: webOpenHint,
           } as any)}
         >
           <Card style={styles.card}>

@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
@@ -289,20 +289,22 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Права доступа', () => {
-    it('должен показывать кнопку редактирования для владельца', () => {
+    it('должен показывать кнопку редактирования для владельца', async () => {
       const propsWithEdit = { ...defaultProps, storedUserId: 'user-1' };
       render(<CompactSideBarTravel {...propsWithEdit} />);
 
-      const editButton = screen.getByLabelText('Редактировать путешествие');
-      expect(editButton).toBeTruthy();
+      await waitFor(() => {
+        expect(screen.getByLabelText('Редактировать путешествие')).toBeTruthy();
+      });
     });
 
-    it('должен показывать кнопку редактирования для суперпользователя', () => {
+    it('должен показывать кнопку редактирования для суперпользователя', async () => {
       const propsWithSuper = { ...defaultProps, isSuperuser: true };
       render(<CompactSideBarTravel {...propsWithSuper} />);
 
-      const editButton = screen.getByLabelText('Редактировать путешествие');
-      expect(editButton).toBeTruthy();
+      await waitFor(() => {
+        expect(screen.getByLabelText('Редактировать путешествие')).toBeTruthy();
+      });
     });
 
     it('не должен показывать кнопку редактирования для чужого пользователя', () => {
@@ -313,11 +315,12 @@ describe('CompactSideBarTravel - Web', () => {
       expect(editButton).not.toBeTruthy();
     });
 
-    it('должен показывать кнопку PDF только на веб', () => {
+    it('должен показывать кнопку PDF только на веб', async () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
-      const pdfButton = screen.getByLabelText('Экспорт в PDF');
-      expect(pdfButton).toBeTruthy();
+      await waitFor(() => {
+        expect(screen.getByLabelText('Экспорт в PDF')).toBeTruthy();
+      });
     });
   });
 

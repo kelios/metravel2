@@ -316,6 +316,16 @@ describe('src/api/travelsApi.ts', () => {
       expect(where.countries).toEqual([2, 3, 0]);
       expect(where.categories).toEqual([4]);
     });
+
+    it('пробрасывает AbortError без логирования', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      const abortError: any = new Error('aborted');
+      abortError.name = 'AbortError';
+      mockedFetchWithTimeout.mockRejectedValueOnce(abortError);
+
+      await expect(fetchTravels(0, 10, '', {}, {} as any)).rejects.toBe(abortError);
+      expect(devError).not.toHaveBeenCalledWith('Error fetching Travels:', abortError);
+    });
   });
 
   describe('fetchRandomTravels', () => {
@@ -437,6 +447,16 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(result).toEqual({ total: 0, facets: {} });
       expect(devError).toHaveBeenCalledWith('Error fetching travel facets: HTTP', 500, 'Server Error');
+    });
+
+    it('пробрасывает AbortError без логирования', async () => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      const abortError: any = new Error('aborted');
+      abortError.name = 'AbortError';
+      mockedFetchWithTimeout.mockRejectedValueOnce(abortError);
+
+      await expect(fetchTravelFacets('', {}, {} as any)).rejects.toBe(abortError);
+      expect(devError).not.toHaveBeenCalledWith('Error fetching travel facets:', abortError);
     });
   });
 

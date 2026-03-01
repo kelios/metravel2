@@ -563,7 +563,7 @@ export const TravelDetailsMapSection: React.FC<{
               </ToggleableMap>
               {routePreviewItems.map((item, index) => (
                 <RouteElevationProfile
-                  key={`route-profile-${item.file.id}`}
+                  key={`route-profile-${item.file.id}-${index}`}
                   title={`Профиль высот: ${item.label || `Трек ${index + 1}`}`}
                   lineColor={item.color}
                   preview={item.preview}

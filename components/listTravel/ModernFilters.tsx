@@ -16,6 +16,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 export interface FilterOption {
   id: string;
@@ -60,8 +61,9 @@ const GroupClearButton = memo(({ onPress, count, colors }: {
   count: number;
   colors: ReturnType<typeof useThemedColors>;
 }) => (
-  <Pressable
+  <CardActionPressable
     onPress={onPress}
+    title={`Очистить ${count} выбранных`}
     style={{
       paddingHorizontal: DESIGN_TOKENS.spacing.xs,
       paddingVertical: 2,
@@ -74,17 +76,16 @@ const GroupClearButton = memo(({ onPress, count, colors }: {
     }}
     accessibilityRole="button"
     accessibilityLabel={`Очистить ${count} выбранных`}
-    hitSlop={8}
   >
     <Feather name="x" size={12} color={colors.danger} />
     <Text style={{
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.danger,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-    }}>
+    }} numberOfLines={1}>
       Очистить
     </Text>
-  </Pressable>
+  </CardActionPressable>
 ));
 
 const SortDropdown = memo(({ 
@@ -666,10 +667,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 <View style={styles.groupHeaderRight}>
                   {selectedCount > 0 && (
                     <GroupClearButton
-                      onPress={(e) => {
-                        if (Platform.OS === 'web') {
-                          (e as any).stopPropagation();
-                        }
+                      onPress={() => {
                         selectedArray.forEach(id => onFilterChange(group.key, id));
                       }}
                       count={selectedCount}
@@ -1178,6 +1176,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingVertical: spacing.xs,
+      minHeight: 36,
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -1189,11 +1188,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       alignItems: 'center',
       gap: spacing.xs,
       flex: 1,
+      minWidth: 0,
     },
     groupHeaderRight: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: spacing.xs,
+      flexShrink: 0,
+      marginLeft: spacing.xs,
     },
     groupTitle: {
       fontSize: typography.sizes.sm,
@@ -1201,6 +1203,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       color: colors.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
+      flexShrink: 1,
     },
     selectedBadge: {
       backgroundColor: colors.primary,
@@ -1209,6 +1212,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       borderRadius: radii.pill,
       minWidth: 20,
       alignItems: 'center',
+      flexShrink: 0,
     },
     selectedBadgeText: {
       fontSize: typography.sizes.xs,
@@ -1217,7 +1221,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
     },
     selectedSummaryRow: {
       marginBottom: spacing.xs,
-      paddingVertical: spacing.xs,
+      paddingVertical: spacing.sm,
       paddingHorizontal: spacing.sm,
       borderRadius: radii.md,
       backgroundColor: colors.primarySoft,

@@ -281,7 +281,7 @@ function ImageCardMedia({
 
     const shouldPreload = loading === 'eager' && document.readyState !== 'complete';
     const rel = shouldPreload ? 'preload' : 'prefetch';
-    const id = `${rel}-img-${encodeURIComponent(prefetchHref)}`;
+    const id = `img-hint-${encodeURIComponent(prefetchHref)}`;
     if (document.getElementById(id)) return;
 
     const link = document.createElement('link');
@@ -295,12 +295,6 @@ function ImageCardMedia({
       link.setAttribute('fetchPriority', 'high');
     }
     document.head.appendChild(link);
-
-    return () => {
-      if (link.parentNode) {
-        link.parentNode.removeChild(link);
-      }
-    };
   }, [prefetch, priority, prefetchHref, loading, shouldDisableNetwork]);
 
   return (

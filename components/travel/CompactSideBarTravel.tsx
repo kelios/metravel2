@@ -85,7 +85,43 @@ function CompactSideBarTravel({
   const styles = useMemo(() => createStyles(themedColors), [themedColors]);
   const textColor = themedColors.text;
   const mutedText = isDark ? themedColors.textMuted : themedColors.textSecondary;
-  const travelOwnerId = (travel as any).userIds ?? (travel as any).userId ?? (travel as any).user?.id ?? null;
+  const travelOwnerId = useMemo(() => {
+    const rawUserIds = (travel as any).userIds;
+
+    if (Array.isArray(rawUserIds) && rawUserIds.length > 0) {
+      return rawUserIds[0] ?? null;
+    }
+
+    if (typeof rawUserIds === 'number' && Number.isFinite(rawUserIds) && rawUserIds > 0) {
+      return rawUserIds;
+    }
+
+    if (typeof rawUserIds === 'string') {
+      const first = rawUserIds
+        .split(',')
+        .map((value) => value.trim())
+        .find(Boolean);
+      if (!first) return null;
+
+      const maybeNumber = Number(first);
+      if (Number.isFinite(maybeNumber) && maybeNumber > 0) {
+        return maybeNumber;
+      }
+
+      return first;
+    }
+
+    const direct = (travel as any).userId ?? (travel as any).user?.id ?? null;
+    if (direct != null) {
+      if (typeof direct === 'string') {
+        const trimmedDirect = direct.trim();
+        return trimmedDirect || null;
+      }
+      return direct;
+    }
+
+    return null;
+  }, [travel]);
   const { profile: authorProfile } = useUserProfileCached(travelOwnerId, { enabled: !!travelOwnerId });
   const avatar =
     (authorProfile as any)?.avatar ??
@@ -256,9 +292,8 @@ function CompactSideBarTravel({
   }, [avatar, normalizeMediaUrl]);
 
   const handleUserTravels = () => {
-    const id = (travel as any).userIds ?? (travel as any).userId;
-    if (id) {
-      navigateInternalUrl(`/search?user_id=${encodeURIComponent(id)}`);
+    if (authorUserId) {
+      navigateInternalUrl(`/search?user_id=${encodeURIComponent(authorUserId)}`);
     }
   };
   const handleEdit = () => canEdit && navigateInternalUrl(`/travel/${travel.id}/`);

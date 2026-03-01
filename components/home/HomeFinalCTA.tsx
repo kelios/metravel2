@@ -59,6 +59,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     content: {
       width: '100%',
+      alignSelf: 'center',
       alignItems: 'center',
       gap: isMobile ? 18 : 24,
       maxWidth: 720,
