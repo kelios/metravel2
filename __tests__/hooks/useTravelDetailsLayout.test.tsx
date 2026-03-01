@@ -29,7 +29,7 @@ describe('useTravelDetailsLayout', () => {
     )
 
     expect(result.current.headerOffset).toBe(HEADER_OFFSET_MOBILE)
-    expect(result.current.contentHorizontalPadding).toBe(16)
+    expect(result.current.contentHorizontalPadding).toBe(10)
   })
 
   it('returns desktop layout values', () => {
