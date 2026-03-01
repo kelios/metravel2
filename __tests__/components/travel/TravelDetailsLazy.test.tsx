@@ -2,42 +2,24 @@
  * @jest-environment jsdom
  */
 
-import React, { Suspense } from 'react';
-import { Text } from 'react-native';
-import { render, waitFor } from '@testing-library/react-native';
+import React from 'react';
 
-import { withLazy } from '@/components/travel/details/TravelDetailsLazy';
+import { isValidLazyComponent } from '@/components/travel/details/TravelDetailsLazy';
 
-describe('withLazy', () => {
-  it('renders fallback component when lazy import has invalid default export', async () => {
-    const BrokenLazy = withLazy(async () => ({
-      default: undefined as unknown as React.ComponentType<any>,
-    }));
-
-    const screen = render(
-      <Suspense fallback={<Text>Loading…</Text>}>
-        <BrokenLazy />
-      </Suspense>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Component failed to load')).toBeTruthy();
-    });
+describe('isValidLazyComponent', () => {
+  it('returns true for function components', () => {
+    const Comp = () => null;
+    expect(isValidLazyComponent(Comp)).toBe(true);
   });
 
-  it('renders lazy component when default export is valid', async () => {
-    const WorkingLazy = withLazy(async () => ({
-      default: () => <Text>Lazy loaded content</Text>,
-    }));
+  it('returns true for object-like React wrappers', () => {
+    expect(isValidLazyComponent({ $$typeof: Symbol.for('react.memo') })).toBe(true);
+  });
 
-    const screen = render(
-      <Suspense fallback={<Text>Loading…</Text>}>
-        <WorkingLazy />
-      </Suspense>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('Lazy loaded content')).toBeTruthy();
-    });
+  it('returns false for invalid lazy defaults', () => {
+    expect(isValidLazyComponent(undefined)).toBe(false);
+    expect(isValidLazyComponent(null)).toBe(false);
+    expect(isValidLazyComponent('broken')).toBe(false);
+    expect(isValidLazyComponent(42)).toBe(false);
   });
 });

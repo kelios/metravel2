@@ -17,7 +17,7 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
   }
 }
 
-const isValidLazyComponent = (value: unknown): value is React.ComponentType<any> =>
+export const isValidLazyComponent = (value: unknown): value is React.ComponentType<any> =>
   typeof value === 'function' || (typeof value === 'object' && value !== null)
 
 const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<T> => {
