@@ -44,3 +44,5 @@ export function FiltersProvider({ children }: FiltersProviderProps) {
         </FiltersContext.Provider>
     );
 };
+
+export default useFilters;

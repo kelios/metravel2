@@ -64,9 +64,14 @@ deploy_prod() {
     rm -rf static/dist.new
     mv dist/$ENV static/dist.new
     mv static/dist static/dist.old || true
-    # CRITICAL: Do NOT copy old JS chunks to new build.
-    # Old chunks with different hashes MUST be removed to prevent version skew.
-    # Web stability policy: no SW cache recovery flows, only clean atomic deploy.
+    # Keep previous hashed Expo static assets for a short overlap window.
+    # This prevents "Requiring unknown module" crashes for active browser tabs
+    # that still execute older runtime chunks during a fresh deploy.
+    if [ -d static/dist.old/_expo/static ]; then
+      mkdir -p static/dist.new/_expo/static
+      rsync -a static/dist.old/_expo/static/ static/dist.new/_expo/static/
+    fi
+    # HTML shell still switches atomically to the new build below.
     mv static/dist.new static/dist
     rm -rf static/dist.old
     mkdir -p static/dist/assets/icons static/dist/assets/images

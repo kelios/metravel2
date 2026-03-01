@@ -9,6 +9,7 @@ import ThemeToggle from '@/components/layout/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import * as FiltersProviderModule from '@/context/FiltersProvider';
+import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { useUnreadCount } from '@/hooks/useMessages';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -18,7 +19,10 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
   try {
-    const filtersAccessor = (FiltersProviderModule as any)?.useFilters;
+    const filtersAccessor = resolveExportedFunction<() => { updateFilters: (next: any) => void }>(
+      FiltersProviderModule as unknown as Record<string, unknown>,
+      'useFilters'
+    );
     const ctx = typeof filtersAccessor === 'function' ? filtersAccessor() : null;
     if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
   } catch {

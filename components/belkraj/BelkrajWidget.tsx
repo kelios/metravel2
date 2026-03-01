@@ -90,7 +90,7 @@ function BelkrajWidget({
                 title="Belkraj partner offers"
                 width="100%"
                 height={targetHeight}
-                scrolling="yes"
+                scrolling="no"
                 frameBorder={0}
                 style={{
                     width: '100%',

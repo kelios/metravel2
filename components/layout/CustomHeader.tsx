@@ -7,6 +7,7 @@ import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites as _useFavorites } from '@/context/FavoritesContext';
 import * as FiltersProviderModule from '@/context/FiltersProvider';
+import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -24,7 +25,10 @@ const useFavoritesSafe = (): { favorites: { length: number } } => {
 
 const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
     try {
-        const filtersAccessor = (FiltersProviderModule as any)?.useFilters;
+        const filtersAccessor = resolveExportedFunction<() => { updateFilters: (next: any) => void }>(
+            FiltersProviderModule as unknown as Record<string, unknown>,
+            'useFilters'
+        );
         const ctx = typeof filtersAccessor === 'function' ? filtersAccessor() : null;
         if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
     } catch {

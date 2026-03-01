@@ -15,9 +15,10 @@ import { renderHook } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ── Real imports (no jest.mock for these) ──────────────────────────
-import {
-  FiltersProvider,
+import useFiltersDefault,
+{
   useFilters,
+  FiltersProvider,
 } from '@/context/FiltersProvider';
 
 // ── Mocks for transitive deps that need native/network ─────────────
@@ -79,6 +80,10 @@ describe('Context module exports (prod-build regression)', () => {
   describe('FiltersProvider exports', () => {
     it('exports useFilters as a function', () => {
       expect(typeof useFilters).toBe('function');
+    });
+
+    it('keeps default export alias for interop safety', () => {
+      expect(useFiltersDefault).toBe(useFilters);
     });
 
     it('exports FiltersProvider as a function', () => {

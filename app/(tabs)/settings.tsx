@@ -119,6 +119,35 @@ export default function SettingsScreen() {
         youtube,
     ]);
 
+    const saveEmailNotifications = useCallback(async (nextComments: boolean, nextMessages: boolean) => {
+        if (!userId) return;
+        setEmailNotifyComments(nextComments);
+        setEmailNotifyMessages(nextMessages);
+        setProfileSaving(true);
+        try {
+            const saved = await updateUserProfile(userId, {
+                email_notify_comments: nextComments,
+                email_notify_messages: nextMessages,
+            });
+            setProfile(saved);
+        } catch (error) {
+            setEmailNotifyComments(Boolean(profile?.email_notify_comments));
+            setEmailNotifyMessages(Boolean(profile?.email_notify_messages));
+            const message = error instanceof ApiError ? error.message : 'Не удалось обновить настройки уведомлений';
+            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+        } finally {
+            setProfileSaving(false);
+        }
+    }, [profile?.email_notify_comments, profile?.email_notify_messages, setProfile, userId]);
+
+    const handleEmailNotifyCommentsChange = useCallback((nextValue: boolean) => {
+        void saveEmailNotifications(nextValue, emailNotifyMessages);
+    }, [emailNotifyMessages, saveEmailNotifications]);
+
+    const handleEmailNotifyMessagesChange = useCallback((nextValue: boolean) => {
+        void saveEmailNotifications(emailNotifyComments, nextValue);
+    }, [emailNotifyComments, saveEmailNotifications]);
+
     // Sync form fields when profile loads
     React.useEffect(() => {
         if (!profile) return;
@@ -450,7 +479,7 @@ export default function SettingsScreen() {
                                 </View>
                                 <Toggle
                                     value={emailNotifyComments}
-                                    onValueChange={setEmailNotifyComments}
+                                    onValueChange={handleEmailNotifyCommentsChange}
                                     disabled={profileLoading || profileSaving}
                                 />
                             </View>
@@ -461,7 +490,7 @@ export default function SettingsScreen() {
                                 </View>
                                 <Toggle
                                     value={emailNotifyMessages}
-                                    onValueChange={setEmailNotifyMessages}
+                                    onValueChange={handleEmailNotifyMessagesChange}
                                     disabled={profileLoading || profileSaving}
                                 />
                             </View>
