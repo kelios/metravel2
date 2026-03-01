@@ -80,7 +80,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md,
-    padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
+    padding: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: DESIGN_TOKENS.spacing.lg }),
     borderWidth: 1,
     borderColor: colors.borderLight,
   },

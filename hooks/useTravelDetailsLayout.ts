@@ -32,7 +32,7 @@ export function useTravelDetailsLayout({
 
   const contentHorizontalPadding = useMemo(() => {
     // Mobile should use the full width with a compact, consistent gutter.
-    if (isMobile) return 16
+    if (isMobile) return screenWidth < 360 ? 6 : 10
     if (screenWidth >= 1600) return 80
     if (screenWidth >= 1440) return 64
     if (screenWidth >= 1024) return 48

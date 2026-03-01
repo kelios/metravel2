@@ -492,7 +492,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             backgroundColor: colors.border,
             marginVertical: 8,
         },
-    }), [colors]);
+    }), [colors, isMobile]);
 
     return (
       <View 

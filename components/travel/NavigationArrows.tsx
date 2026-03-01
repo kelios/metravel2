@@ -117,8 +117,8 @@ function NavigationArrows({
     },
     containerMobile: {
       flexDirection: 'column',
-      gap: DESIGN_TOKENS.spacing.md,
-      paddingHorizontal: 12,
+      gap: DESIGN_TOKENS.spacing.sm,
+      paddingHorizontal: 4,
     },
     navCard: {
       flex: 1,
