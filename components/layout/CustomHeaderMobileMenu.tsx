@@ -216,7 +216,7 @@ export default function CustomHeaderMobileMenu({
 
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>Навигация</Text>
-            {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
+            {(PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => {
               const isActive = !item.external && activePath === item.path
               return (
                 <Pressable
@@ -255,7 +255,7 @@ export default function CustomHeaderMobileMenu({
 
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>Документы</Text>
-            {DOCUMENT_NAV_ITEMS.map((item) => (
+            {(DOCUMENT_NAV_ITEMS ?? []).map((item) => (
               <Pressable
                 key={item.path}
                 onPress={() => onUserAction(item.path)}

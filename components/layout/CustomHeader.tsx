@@ -520,7 +520,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                           style={styles.navScroll}
                           alwaysBounceHorizontal={false}
                       >
-                          {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
+                          {(PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => {
                               const isActive = !item.external && activePath === item.path;
                               return (
                                   <Pressable

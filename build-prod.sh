@@ -69,7 +69,11 @@ deploy_prod() {
     # that still execute older runtime chunks during a fresh deploy.
     if [ -d static/dist.old/_expo/static ]; then
       mkdir -p static/dist.new/_expo/static
-      rsync -a static/dist.old/_expo/static/ static/dist.new/_expo/static/
+      # IMPORTANT: never overwrite new build artifacts with old ones.
+      # We only backfill files that are missing in the new build so existing
+      # tabs can finish loading legacy chunks while fresh navigations keep
+      # using the current release.
+      rsync -a --ignore-existing static/dist.old/_expo/static/ static/dist.new/_expo/static/
     fi
     # HTML shell still switches atomically to the new build below.
     mv static/dist.new static/dist

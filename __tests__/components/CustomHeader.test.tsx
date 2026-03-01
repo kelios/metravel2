@@ -178,6 +178,20 @@ describe('CustomHeader', () => {
             const utils = renderHeader();
             expect(utils.queryByTestId('mobile-menu-open')).toBeNull();
         });
+
+        it('does not crash when primary navigation config is unavailable', () => {
+            const headerNavigationModule = require('@/constants/headerNavigation');
+            const originalPrimary = headerNavigationModule.PRIMARY_HEADER_NAV_ITEMS;
+            headerNavigationModule.PRIMARY_HEADER_NAV_ITEMS = undefined;
+
+            try {
+                (usePathname as jest.Mock).mockReturnValue('/');
+                const utils = renderHeader();
+                expect(utils.queryByLabelText('Идеи поездок')).toBeNull();
+            } finally {
+                headerNavigationModule.PRIMARY_HEADER_NAV_ITEMS = originalPrimary;
+            }
+        });
     });
 
     describe('Mobile menu modal', () => {
@@ -239,6 +253,29 @@ describe('CustomHeader', () => {
 
             expect(utils.getByText('Политика конфиденциальности')).toBeTruthy();
             expect(utils.getByText('Настройки cookies')).toBeTruthy();
+        });
+
+        it('does not crash when mobile navigation and document configs are unavailable', () => {
+            const headerNavigationModule = require('@/constants/headerNavigation');
+            const originalPrimary = headerNavigationModule.PRIMARY_HEADER_NAV_ITEMS;
+            const originalDocuments = headerNavigationModule.DOCUMENT_NAV_ITEMS;
+            headerNavigationModule.PRIMARY_HEADER_NAV_ITEMS = undefined;
+            headerNavigationModule.DOCUMENT_NAV_ITEMS = undefined;
+
+            try {
+                (usePathname as jest.Mock).mockReturnValue('/');
+                const utils = renderHeader();
+
+                fireEvent.press(utils.getByTestId('mobile-menu-open'));
+
+                expect(utils.getByText('Навигация')).toBeTruthy();
+                expect(utils.getByText('Документы')).toBeTruthy();
+                expect(utils.queryByText('Политика конфиденциальности')).toBeNull();
+                expect(utils.queryByText('Настройки cookies')).toBeNull();
+            } finally {
+                headerNavigationModule.PRIMARY_HEADER_NAV_ITEMS = originalPrimary;
+                headerNavigationModule.DOCUMENT_NAV_ITEMS = originalDocuments;
+            }
         });
     });
 });

@@ -257,7 +257,7 @@ function AccountMenu() {
 
   const navLinks = useMemo(
     () => [
-      ...PRIMARY_HEADER_NAV_ITEMS.map((item) => ({
+      ...(PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => ({
         key: `nav-${item.path}`,
         title: item.label,
         path: item.path,
@@ -528,7 +528,7 @@ function AccountMenu() {
             />
           </Pressable>
 
-          {expandedSections.navigation && navLinks.map((item) => (
+          {expandedSections.navigation && (navLinks ?? []).map((item) => (
             <Menu.Item
               key={item.key}
               onPress={() => handleNavigate(item.path)}

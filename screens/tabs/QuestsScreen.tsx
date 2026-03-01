@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect, useCallback, Suspense } from 'react';
 import {
     View, Text, StyleSheet, Pressable, Platform,
-    Image, ScrollView,
+    Image, ScrollView, TextInput,
 } from 'react-native';
 import { Link } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,6 +13,7 @@ const Ion = React.lazy(() =>
 );
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
+import SelectComponent from '@/components/forms/SelectComponent';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
@@ -83,15 +84,37 @@ function getStyles(colors: ThemedColors, ui: UiTheme) {
         mapBtnMobile: { paddingHorizontal: 10, paddingVertical: 6 },
         mapBtnTxt: { color: colors.textOnPrimary, fontWeight: '800', fontSize: 14 },
 
-        citiesContainer: { gap: 8 },
-        citiesRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-start' },
-        cityCard: { flex: 1, minWidth: 100, maxWidth: '50%', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-        cityCardMobile: { minWidth: 80, padding: 10, borderRadius: 10 },
+        citiesContainer: { gap: 10 },
+        citiesHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+        citiesHeadTitle: { color: colors.text, fontSize: 14, fontWeight: '800' },
+        citiesHeadMeta: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+        citySearchInput: {
+            height: 40,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            color: colors.text,
+            fontSize: 14,
+        },
+        citySearchInputMobile: { height: 36, fontSize: 13, paddingHorizontal: 10 },
+        citiesScroll: { marginHorizontal: -2 },
+        citiesScrollContent: { gap: 8, paddingHorizontal: 2 },
+        cityCard: {
+            width: 176,
+            padding: 12,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+        },
+        cityCardMobile: { width: 150, padding: 10, borderRadius: 10 },
         cityCardActive: { borderColor: ui.primary, backgroundColor: ui.cardAlt },
         cityName: { color: colors.text, fontSize: 15, fontWeight: '800' },
         cityNameMobile: { fontSize: 13 },
-        cityCountry: { color: colors.textMuted, fontSize: 12, marginBottom: 8 },
-        cityCountryMobile: { fontSize: 11, marginBottom: 6 },
+        cityCountry: { color: colors.textMuted, fontSize: 12, marginBottom: 6 },
+        cityCountryMobile: { fontSize: 11, marginBottom: 4 },
         questsCount: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
         questsCountMobile: { fontSize: 11 },
 
@@ -152,11 +175,14 @@ function getStyles(colors: ThemedColors, ui: UiTheme) {
 }
 
 type QuestStyles = ReturnType<typeof getStyles>;
+type CityQuickFilter = 'all' | 'withQuests' | 'nearby';
 
 export default function QuestsScreen() {
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
+    const [citySearchQuery, setCitySearchQuery] = useState('');
+    const [cityQuickFilter, setCityQuickFilter] = useState<CityQuickFilter>('all');
     // Данные из API
     const { quests: ALL_QUESTS, cityQuestsIndex: CITY_QUESTS, loading: questsLoading } = useQuestsList();
     const { cities: apiCities, loading: citiesLoading } = useQuestCities();
@@ -191,7 +217,6 @@ export default function QuestsScreen() {
     const s = useMemo(() => getStyles(colors, ui), [colors, ui]);
 
     // колонки
-    const cityColumns = isMobile ? 2 : width >= 1200 ? 5 : width >= 900 ? 4 : 3;
     const questColumns = isMobile ? 1 : width >= 1100 ? 3 : 2;
 
     // выбранный город
@@ -279,6 +304,16 @@ export default function QuestsScreen() {
         [CITIES]
     );
 
+    const filteredCities = useMemo(() => {
+        const query = citySearchQuery.trim().toLowerCase();
+        if (!query) return citiesWithNearby;
+
+        return citiesWithNearby.filter((city) => {
+            const title = city.id === NEARBY_ID ? 'рядом' : city.name;
+            return title.toLowerCase().includes(query);
+        });
+    }, [citySearchQuery, citiesWithNearby]);
+
     const nearbyCount = useMemo(() => {
         if (!userLoc || !ALL_QUESTS.length) return 0;
         return ALL_QUESTS.reduce((acc, q) => {
@@ -286,6 +321,32 @@ export default function QuestsScreen() {
             return acc + (d <= nearbyRadiusKm ? 1 : 0);
         }, 0);
     }, [userLoc, nearbyRadiusKm, ALL_QUESTS]);
+
+    const cityQuestCountById = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const city of citiesWithNearby) {
+            counts[city.id] = city.id === NEARBY_ID ? nearbyCount : (CITY_QUESTS[city.id]?.length || 0);
+        }
+        return counts;
+    }, [citiesWithNearby, nearbyCount, CITY_QUESTS]);
+
+    const visibleCities = useMemo(() => {
+        if (cityQuickFilter === 'nearby') {
+            return filteredCities.filter((city) => city.id === NEARBY_ID);
+        }
+        if (cityQuickFilter === 'withQuests') {
+            return filteredCities.filter((city) => cityQuestCountById[city.id] > 0);
+        }
+        return filteredCities;
+    }, [cityQuickFilter, filteredCities, cityQuestCountById]);
+
+    const prioritizedCities = useMemo(() => {
+        if (!selectedCityId) return visibleCities;
+        const selectedIndex = visibleCities.findIndex((city) => city.id === selectedCityId);
+        if (selectedIndex <= 0) return visibleCities;
+        const selected = visibleCities[selectedIndex];
+        return [selected, ...visibleCities.slice(0, selectedIndex), ...visibleCities.slice(selectedIndex + 1)];
+    }, [visibleCities, selectedCityId]);
 
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!selectedCityId || !dataLoaded) return [];
@@ -306,7 +367,6 @@ export default function QuestsScreen() {
         return result;
     };
 
-    const chunkedCities = useMemo(() => chunkArray(citiesWithNearby, cityColumns), [citiesWithNearby, cityColumns]);
     const chunkedQuests = useMemo(() => chunkArray(questsAll, questColumns), [questsAll, questColumns]);
 
     // ---------- SEO ----------
@@ -372,14 +432,73 @@ export default function QuestsScreen() {
                         {!dataLoaded ? (
                             <Text style={{ color: colors.textMuted, padding: 8 }}>Загрузка городов…</Text>
                         ) : (
-                            chunkedCities.map((row, rowIndex) => (
-                                <View key={`row-${rowIndex}`} style={s.citiesRow}>
-                                    {row.map((item: any) => {
+                            <>
+                                <View style={s.citiesHead}>
+                                    <Text style={s.citiesHeadTitle}>Выберите локацию</Text>
+                                    <Text style={s.citiesHeadMeta}>{citiesWithNearby.length} локаций</Text>
+                                </View>
+
+                                <TextInput
+                                    value={citySearchQuery}
+                                    onChangeText={setCitySearchQuery}
+                                    placeholder="Поиск города"
+                                    placeholderTextColor={colors.textMuted}
+                                    style={sx(s.citySearchInput, isMobile && s.citySearchInputMobile)}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
+                                    clearButtonMode="while-editing"
+                                />
+
+                                <View style={sx(s.filtersRow, isMobile && s.filtersRowMobile)}>
+                                    <Text style={sx(s.filtersLabel, isMobile && s.filtersLabelMobile)}>Показывать:</Text>
+                                    {([
+                                        { id: 'all', label: 'Все' },
+                                        { id: 'withQuests', label: 'С квестами' },
+                                        { id: 'nearby', label: 'Только рядом' },
+                                    ] as Array<{ id: CityQuickFilter; label: string }>).map((filter) => (
+                                        <Pressable
+                                            key={filter.id}
+                                            onPress={() => setCityQuickFilter(filter.id)}
+                                            style={sx(s.chip, cityQuickFilter === filter.id && s.chipActive, isMobile && s.chipMobile)}
+                                        >
+                                            <Text
+                                                style={sx(
+                                                    s.chipText,
+                                                    cityQuickFilter === filter.id && s.chipTextActive,
+                                                    isMobile && s.chipTextMobile
+                                                )}
+                                            >
+                                                {filter.label}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+
+                                {Platform.OS === 'web' && !isMobile ? (
+                                    <SelectComponent
+                                        label="Быстрый выбор локации"
+                                        value={selectedCityId || ''}
+                                        onChange={(value) => {
+                                            if (!value) return;
+                                            void handleSelectCity(value);
+                                        }}
+                                        options={prioritizedCities.map((city) => ({
+                                            value: city.id,
+                                            label: `${city.id === NEARBY_ID ? 'Рядом' : city.name} (${cityQuestCountById[city.id] || 0})`,
+                                        }))}
+                                        placeholder="Выберите локацию"
+                                    />
+                                ) : null}
+
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={s.citiesScroll}
+                                    contentContainerStyle={s.citiesScrollContent}
+                                >
+                                    {prioritizedCities.map((item: any) => {
                                         const active = selectedCityId === item.id;
-                                        const questsCount =
-                                            item.id === NEARBY_ID
-                                                ? userLoc ? nearbyCount : 0
-                                                : (CITY_QUESTS[item.id]?.length || 0);
+                                        const questsCount = cityQuestCountById[item.id] || 0;
 
                                         return (
                                             <Pressable
@@ -387,13 +506,13 @@ export default function QuestsScreen() {
                                                 onPress={() => handleSelectCity(item.id)}
                                                 style={sx(s.cityCard, active && s.cityCardActive, isMobile && s.cityCardMobile)}
                                             >
-                                                <Text style={sx(s.cityName, isMobile && s.cityNameMobile)}>
+                                                <Text style={sx(s.cityName, isMobile && s.cityNameMobile)} numberOfLines={1}>
                                                     {item.id === NEARBY_ID ? 'Рядом' : item.name}
                                                 </Text>
-                                                <Text style={sx(s.cityCountry, isMobile && s.cityCountryMobile)}>
+                                                <Text style={sx(s.cityCountry, isMobile && s.cityCountryMobile)} numberOfLines={1}>
                                                     {item.id === NEARBY_ID
                                                         ? userLoc ? 'по геолокации' : 'гео отключена'
-                                                        : item.name}
+                                                        : 'город'}
                                                 </Text>
                                                 <Text style={sx(s.questsCount, isMobile && s.questsCountMobile)}>
                                                     {questsCount} кв.
@@ -401,8 +520,18 @@ export default function QuestsScreen() {
                                             </Pressable>
                                         );
                                     })}
-                                </View>
-                            ))
+                                </ScrollView>
+
+                                {prioritizedCities.length === 0 ? (
+                                    <View style={s.emptyState}>
+                                        <Suspense fallback={null}>
+                                            {/* @ts-ignore */}
+                                            <Ion name="search" size={16} color={colors.textMuted} />
+                                        </Suspense>
+                                        <Text style={s.emptyText}>По вашему запросу города не найдены.</Text>
+                                    </View>
+                                ) : null}
+                            </>
                         )}
                     </View>
 
