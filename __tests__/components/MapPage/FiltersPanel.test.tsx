@@ -250,7 +250,7 @@ describe('FiltersPanel', () => {
     }
     expect(carTabPressable?.props.accessibilityState?.disabled).toBe(true);
 
-    const { getByText: getByTextEnabled } = renderWithTheme(
+    const { getAllByText: getAllByTextEnabled } = renderWithTheme(
       <FiltersPanel />,
       {
         ...propsRouteMode,
@@ -260,7 +260,7 @@ describe('FiltersPanel', () => {
         ],
       }
     );
-    const carTabEnabled = getByTextEnabled('Авто');
+    const carTabEnabled = getAllByTextEnabled('Авто')[0];
     let carTabEnabledPressable: any = carTabEnabled as any;
     while (carTabEnabledPressable && carTabEnabledPressable.props?.accessibilityRole !== 'button') {
       carTabEnabledPressable = carTabEnabledPressable.parent;

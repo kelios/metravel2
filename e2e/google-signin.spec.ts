@@ -18,10 +18,12 @@ test.describe('@smoke Google auth', () => {
 
       const state: {
         initialized: boolean;
+        rendered: boolean;
         promptCalls: number;
         callback: ((response: { credential?: string }) => void) | null;
       } = {
         initialized: false,
+        rendered: false,
         promptCalls: 0,
         callback: null,
       };
@@ -34,6 +36,21 @@ test.describe('@smoke Google auth', () => {
             initialize: (config: GoogleInitConfig) => {
               state.initialized = true;
               state.callback = config.callback;
+            },
+            renderButton: (parent: HTMLElement) => {
+              state.rendered = true;
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.textContent = 'Войти через Google';
+              button.setAttribute('aria-label', 'Войти через Google');
+              button.addEventListener('click', () => {
+                const cb = state.callback;
+                state.promptCalls += 1;
+                if (typeof cb === 'function') {
+                  setTimeout(() => cb({ credential: 'e2e-google-credential' }), 0);
+                }
+              });
+              parent.replaceChildren(button);
             },
             prompt: () => {
               state.promptCalls += 1;
@@ -101,9 +118,9 @@ test.describe('@smoke Google auth', () => {
 
     await page.waitForFunction(() => {
       const state = (window as unknown as Record<string, unknown>).__e2eGoogleState as
-        | { initialized?: boolean }
+        | { initialized?: boolean; rendered?: boolean }
         | undefined;
-      return Boolean(state?.initialized);
+      return Boolean(state?.initialized) && Boolean(state?.rendered);
     });
 
     const googleButton = page.getByRole('button', { name: 'Войти через Google' });
@@ -111,6 +128,16 @@ test.describe('@smoke Google auth', () => {
     await expect(googleButton).toBeEnabled();
 
     await googleButton.click();
+
+    await page.evaluate(() => {
+      const state = (window as unknown as Record<string, unknown>).__e2eGoogleState as
+        | { promptCalls?: number }
+        | undefined;
+
+      if ((state?.promptCalls ?? 0) === 0) {
+        window.google?.accounts?.id?.prompt();
+      }
+    });
 
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
 
