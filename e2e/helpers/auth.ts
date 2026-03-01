@@ -107,7 +107,7 @@ export function simpleEncrypt(text: string, key: string): string {
   for (let i = 0; i < text.length; i++) {
     result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
   }
-  return Buffer.from(result, 'binary').toString('base64');
+  return `enc1:${Buffer.from(result, 'binary').toString('base64')}`;
 }
 
 /**
@@ -116,16 +116,30 @@ export function simpleEncrypt(text: string, key: string): string {
  */
 export async function ensureAuthedStorageFallback(page: Page): Promise<void> {
   const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
-  await page.addInitScript((payload: { encrypted: string }) => {
+  const encryptedRefresh = simpleEncrypt('e2e-fake-refresh-token', 'metravel_encryption_key_v1');
+  await page.addInitScript((payload: { encrypted: string; encryptedRefresh: string }) => {
     try {
+      const existingToken = window.localStorage.getItem('secure_userToken');
+      if (typeof existingToken === 'string' && existingToken.length > 0) {
+        return;
+      }
+
       window.localStorage.setItem('secure_userToken', payload.encrypted);
-      window.localStorage.setItem('userId', '1');
-      window.localStorage.setItem('userName', 'E2E User');
-      window.localStorage.setItem('isSuperuser', 'false');
+      window.localStorage.setItem('secure_refreshToken', payload.encryptedRefresh);
+
+      if (!window.localStorage.getItem('userId')) {
+        window.localStorage.setItem('userId', '1');
+      }
+      if (!window.localStorage.getItem('userName')) {
+        window.localStorage.setItem('userName', 'E2E User');
+      }
+      if (!window.localStorage.getItem('isSuperuser')) {
+        window.localStorage.setItem('isSuperuser', 'false');
+      }
     } catch {
       // ignore
     }
-  }, { encrypted });
+  }, { encrypted, encryptedRefresh });
 }
 
 /**

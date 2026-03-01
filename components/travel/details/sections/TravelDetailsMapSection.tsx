@@ -490,7 +490,7 @@ export const TravelDetailsMapSection: React.FC<{
                 <BelkrajWidgetComponent
                   countryCode={travel.countryCode}
                   points={travel.travelAddress as any}
-                  collapsedHeight={460}
+                  collapsedHeight={760}
                 />
               </View>
             </View>

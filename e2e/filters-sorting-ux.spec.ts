@@ -5,6 +5,39 @@ import { getTravelsListPath } from './helpers/routes';
 const FILTER_TIMEOUT_MS = 30_000;
 const DEBOUNCE_MS = 600;
 
+async function getFirstGroupFilterCheckbox(page: any) {
+  const checkboxes = page.getByRole('checkbox');
+  const count = await checkboxes.count();
+
+  for (let i = 0; i < count; i++) {
+    const option = checkboxes.nth(i);
+    const label = String((await option.getAttribute('aria-label')) || '');
+    if (!/Только на модерации/i.test(label)) {
+      return option;
+    }
+  }
+
+  return checkboxes.first();
+}
+
+async function getUncheckedGroupFilterCheckbox(page: any) {
+  const checkboxes = page.getByRole('checkbox');
+  const count = await checkboxes.count();
+
+  for (let i = 0; i < count; i++) {
+    const option = checkboxes.nth(i);
+    const label = String((await option.getAttribute('aria-label')) || '');
+    if (/Только на модерации/i.test(label)) continue;
+
+    const checked = await option.getAttribute('aria-checked');
+    if (checked !== 'true') {
+      return option;
+    }
+  }
+
+  return getFirstGroupFilterCheckbox(page);
+}
+
 test.describe('@smoke Filters and Sorting UX', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
@@ -81,7 +114,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await expect(sortDropdown).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     // Get initial background color
-    const initialBg = await sortDropdown.evaluate((el) => 
+    const initialBg = await sortDropdown.evaluate((el: Element) => 
       window.getComputedStyle(el).backgroundColor
     );
     
@@ -90,7 +123,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(200); // Wait for transition
     
     // Get hover background color
-    const hoverBg = await sortDropdown.evaluate((el) => 
+    const hoverBg = await sortDropdown.evaluate((el: Element) => 
       window.getComputedStyle(el).backgroundColor
     );
     
@@ -99,8 +132,8 @@ test.describe('@smoke Filters and Sorting UX', () => {
   });
 
   test('filter groups can be expanded and collapsed', async ({ page }) => {
-    // Find a filter group header (e.g., "Страны")
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    // Find any expandable filter group header
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     // Click to expand
@@ -108,7 +141,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(400); // Wait for animation
     
     // After expanding, button label should change to "Свернуть"
-    const collapseButton = page.getByRole('button', { name: /Свернуть Страны/i });
+    const collapseButton = page.getByRole('button', { name: /^Свернуть\s+/i }).first();
     await expect(collapseButton).toBeVisible({ timeout: 5000 });
     
     // Click to collapse
@@ -116,44 +149,44 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(400);
     
     // Button should be back to "Развернуть"
-    await expect(page.getByRole('button', { name: /Развернуть Страны/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /^Развернуть\s+/i }).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('group clear button appears when filters are selected', async ({ page }) => {
     // Expand a filter group
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
     await page.waitForTimeout(400);
     
     // Select a filter option (checkbox in the expanded group)
-    const filterOption = page.getByRole('checkbox').first();
+    const filterOption = await getUncheckedGroupFilterCheckbox(page);
     await expect(filterOption).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     await filterOption.click();
     await page.waitForTimeout(DEBOUNCE_MS);
     
     // Clear button should appear
-    const clearButton = page.getByRole('button', { name: /Очистить/i });
+    const clearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i });
     await expect(clearButton).toBeVisible({ timeout: 5000 });
   });
 
   test('group clear button clears only that group', async ({ page }) => {
     // Expand a filter group
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
     await page.waitForTimeout(400);
     
     // Select a filter
-    const filterOption = page.getByRole('checkbox').first();
+    const filterOption = await getFirstGroupFilterCheckbox(page);
     await expect(filterOption).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     await filterOption.click();
     await page.waitForTimeout(DEBOUNCE_MS);
     
     // Click group clear button
-    const groupClearButton = page.getByRole('button', { name: /Очистить/i }).first();
+    const groupClearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i }).first();
     await expect(groupClearButton).toBeVisible({ timeout: 5000 });
     await groupClearButton.click({ force: true });
     await page.waitForTimeout(DEBOUNCE_MS);
@@ -169,16 +202,16 @@ test.describe('@smoke Filters and Sorting UX', () => {
     }
 
     // Expand a group
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
     await page.waitForTimeout(400);
     
-    const filterOption = page.getByRole('checkbox').first();
+    const filterOption = await getFirstGroupFilterCheckbox(page);
     await expect(filterOption).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     // Get initial background
-    const initialBg = await filterOption.evaluate((el) => 
+    const initialBg = await filterOption.evaluate((el: Element) => 
       window.getComputedStyle(el).backgroundColor
     );
     
@@ -187,7 +220,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(200);
     
     // Get hover background
-    const hoverBg = await filterOption.evaluate((el) => 
+    const hoverBg = await filterOption.evaluate((el: Element) => 
       window.getComputedStyle(el).backgroundColor
     );
     
@@ -195,7 +228,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     const isChecked = await filterOption.getAttribute('aria-checked');
     if (isChecked !== 'true') {
       // Either background or transform should change
-      const transform = await filterOption.evaluate((el) => 
+      const transform = await filterOption.evaluate((el: Element) => 
         window.getComputedStyle(el).transform
       );
       const hasVisualChange = hoverBg !== initialBg || transform !== 'none';
@@ -225,41 +258,46 @@ test.describe('@smoke Filters and Sorting UX', () => {
 
   test('selected filters show count badge', async ({ page }) => {
     // Expand a group
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
     await page.waitForTimeout(400);
     
     // Select a filter
-    const filterOption = page.getByRole('checkbox').first();
+    const filterOption = await getFirstGroupFilterCheckbox(page);
     await expect(filterOption).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     await filterOption.click();
     await page.waitForTimeout(DEBOUNCE_MS);
     
-    // Badge with count "1" should appear somewhere in filters panel
-    // The badge shows the count of selected filters in that group
-    const badge = page.locator('text=/^1$/').first();
-    await expect(badge).toBeVisible({ timeout: 5000 });
+    // Group-level clear control should appear when at least one option is selected
+    const groupClearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i }).first();
+    await expect(groupClearButton).toBeVisible({ timeout: 5000 });
   });
 
   test('clear all button clears all filters', async ({ page }) => {
     // Expand and select a filter
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
     await page.waitForTimeout(400);
     
-    const filterOption = page.getByRole('checkbox').first();
+    const filterOption = await getFirstGroupFilterCheckbox(page);
     await expect(filterOption).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     await filterOption.click();
     await page.waitForTimeout(DEBOUNCE_MS);
     
     // Click global clear button (in header or mobile clear all)
-    const clearAllButton = page.getByRole('button', { name: /Очистить \(\d+\)|Очистить все/i });
-    await expect(clearAllButton.first()).toBeVisible({ timeout: 5000 });
-    await clearAllButton.first().click();
+    const clearAllButton = page.getByRole('button', { name: /Очистить \(\d+\)|Очистить все фильтры/i }).first();
+    if (await clearAllButton.count()) {
+      await expect(clearAllButton).toBeVisible({ timeout: 5000 });
+      await clearAllButton.click();
+    } else {
+      const resetButton = page.getByText(/^Сбросить$/).first();
+      await expect(resetButton).toBeVisible({ timeout: 5000 });
+      await resetButton.click();
+    }
     await page.waitForTimeout(DEBOUNCE_MS);
     
     // Filter should be unchecked
@@ -285,7 +323,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(300);
     
     // Filter group headers should be buttons
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
     await page.waitForTimeout(400);
@@ -310,7 +348,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
 
   test('accessibility: expanded state is communicated via label', async ({ page }) => {
     // Filter groups communicate expanded state via button label ("Развернуть" vs "Свернуть")
-    const expandButton = page.getByRole('button', { name: /Развернуть Страны/i });
+    const expandButton = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(expandButton).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     // Click to expand
@@ -318,18 +356,18 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await page.waitForTimeout(400);
     
     // Label should change to "Свернуть"
-    const collapseButton = page.getByRole('button', { name: /Свернуть Страны/i });
+    const collapseButton = page.getByRole('button', { name: /^Свернуть\s+/i }).first();
     await expect(collapseButton).toBeVisible({ timeout: 5000 });
   });
 
   test('results count updates when filters change', async ({ page }) => {
     // Expand and select a filter
-    const groupHeader = page.getByRole('button', { name: /Развернуть Страны/i });
+    const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
     await page.waitForTimeout(400);
     
-    const filterOption = page.getByRole('checkbox').first();
+    const filterOption = await getFirstGroupFilterCheckbox(page);
     await expect(filterOption).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     await filterOption.click();

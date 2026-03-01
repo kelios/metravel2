@@ -17,6 +17,9 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<
   }
 }
 
+const isValidLazyComponent = (value: unknown): value is React.ComponentType<any> =>
+  typeof value === 'function' || (typeof value === 'object' && value !== null)
+
 const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<T> => {
   try {
     return await fn()
@@ -32,15 +35,22 @@ export const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ 
   lazy(async () => {
     try {
       const lazyImport = retry(f, 2, 400)
+      let loadedModule: { default: T }
 
       // During local Metro bundling, initial async route chunks can take >12s.
       // Hard timeout here causes permanent "Component failed to load" fallback for map widgets.
       // Keep timeout protection in production only.
       if (__DEV__) {
-        return await lazyImport
+        loadedModule = await lazyImport
+      } else {
+        loadedModule = await withTimeout(lazyImport, 12_000)
       }
 
-      return await withTimeout(lazyImport, 12_000)
+      if (!isValidLazyComponent((loadedModule as { default?: unknown })?.default)) {
+        throw new Error('Lazy import returned invalid default export')
+      }
+
+      return loadedModule
     } catch {
       return {
         default: (() => (
