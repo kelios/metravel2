@@ -54,10 +54,10 @@ describe('map layout header offset', () => {
     expect(styles.rightPanel.top).toBe(0);
     expect(styles.overlay.top).toBe(0);
     // tabsContainer only has base padding without header offset
-    expect(styles.tabsContainer.paddingTop).toBe(8);
+    expect(styles.tabsContainer.paddingTop).toBe(10);
 
     // right panel uses tokenized widths (min string on web)
-    expect(styles.rightPanel.width).toBe(`min(${METRICS.baseUnit * 48}px, 35vw)`);
+    expect(styles.rightPanel.width).toBe(`min(${METRICS.baseUnit * 48}px, 34vw)`);
     expect(styles.rightPanel.maxWidth).toBe(METRICS.baseUnit * 48 + 40);
     // gap between map and panel on desktop
     expect(styles.content.columnGap).toBe(METRICS.spacing.m);
@@ -71,7 +71,8 @@ describe('map layout header offset', () => {
     const styles = getStyles(true, insetTop, headerOffset, 360, themedColors);
 
     // For mobile web: header offset handled by DOM, only inset applies
-    expect(styles.tabsContainer.paddingTop).toBe(insetTop + 6);
+    // Math.max(14, insetTop + 4) = Math.max(14, 16) = 16
+    expect(styles.tabsContainer.paddingTop).toBe(Math.max(14, insetTop + 4));
     expect(styles.container.paddingTop ?? 0).toBe(0);
 
     // Mobile overlay / panel transitions
