@@ -130,6 +130,7 @@ export default function SettingsScreen() {
                 email_notify_messages: nextMessages,
             });
             setProfile(saved);
+            showToast({ type: 'success', text1: 'Настройки уведомлений сохранены', visibilityTime: 2000 });
         } catch (error) {
             setEmailNotifyComments(Boolean(profile?.email_notify_comments));
             setEmailNotifyMessages(Boolean(profile?.email_notify_messages));
