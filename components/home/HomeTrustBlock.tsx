@@ -20,7 +20,7 @@ function HomeTrustBlock() {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingVertical: isMobile ? 28 : 44,
+      paddingVertical: isMobile ? 16 : 44,
       backgroundColor: colors.background,
     },
     content: {
@@ -28,20 +28,20 @@ function HomeTrustBlock() {
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      paddingVertical: isMobile ? 18 : 22,
-      paddingHorizontal: isMobile ? 16 : 20,
+      paddingVertical: isMobile ? 12 : 22,
+      paddingHorizontal: isMobile ? 10 : 20,
       flexDirection: isMobile ? 'column' : 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: isMobile ? 24 : 48,
+      gap: isMobile ? 16 : 48,
     },
     statItem: {
       alignItems: 'center',
-      gap: 6,
+      gap: isMobile ? 4 : 6,
     },
     statIconWrap: {
-      width: 48,
-      height: 48,
+      width: isMobile ? 40 : 48,
+      height: isMobile ? 40 : 48,
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.primarySoft,
       justifyContent: 'center',
@@ -49,13 +49,13 @@ function HomeTrustBlock() {
       marginBottom: 4,
     },
     statValue: {
-      fontSize: isMobile ? 30 : 40,
+      fontSize: isMobile ? 24 : 40,
       fontWeight: '900',
       color: colors.text,
       letterSpacing: -1.1,
     },
     statLabel: {
-      fontSize: 13,
+      fontSize: isMobile ? 12 : 13,
       fontWeight: '500',
       color: colors.textMuted,
       textTransform: 'uppercase',

@@ -57,33 +57,33 @@ function HomeHowItWorks() {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: isMobile ? 48 : 72,
+      paddingVertical: isMobile ? 28 : 72,
       backgroundColor: colors.backgroundSecondary,
     },
     header: {
       alignItems: 'center',
-      gap: 12,
-      marginBottom: isMobile ? 32 : 48,
+      gap: isMobile ? 8 : 12,
+      marginBottom: isMobile ? 20 : 48,
     },
     title: {
-      fontSize: isMobile ? 28 : 40,
+      fontSize: isMobile ? 22 : 40,
       fontWeight: '900',
       color: colors.text,
       textAlign: 'center',
       letterSpacing: -0.8,
     },
     subtitle: {
-      fontSize: isMobile ? 15 : 18,
+      fontSize: isMobile ? 14 : 18,
       color: colors.textMuted,
       textAlign: 'center',
-      lineHeight: isMobile ? 22 : 26,
+      lineHeight: isMobile ? 20 : 26,
       maxWidth: 480,
     },
     stepsContainer: {
       flexDirection: isMobile ? 'column' : 'row',
       alignItems: isMobile ? 'stretch' : 'flex-start',
       justifyContent: 'center',
-      gap: isMobile ? 16 : 24,
+      gap: isMobile ? 12 : 24,
     },
     stepWrapper: {
       flex: isMobile ? undefined : 1,
@@ -96,8 +96,8 @@ function HomeHowItWorks() {
       flex: 1,
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.xl,
-      padding: isMobile ? 24 : 28,
-      gap: 16,
+      padding: isMobile ? 16 : 28,
+      gap: isMobile ? 12 : 16,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...Platform.select({

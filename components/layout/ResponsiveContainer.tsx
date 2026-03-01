@@ -48,15 +48,15 @@ export default function ResponsiveContainer({
 
     if (isSmallPhone) {
       return {
-        paddingHorizontal: horizontal ? METRICS.spacing.m : 0,
-        paddingVertical: vertical ? METRICS.spacing.s : 0,
+        paddingHorizontal: horizontal ? METRICS.spacing.s : 0,
+        paddingVertical: vertical ? METRICS.spacing.xs : 0,
       };
     }
 
     if (isPhone || isLargePhone) {
       return {
-        paddingHorizontal: horizontal ? METRICS.spacing.l : 0,
-        paddingVertical: vertical ? METRICS.spacing.m : 0,
+        paddingHorizontal: horizontal ? METRICS.spacing.m : 0,
+        paddingVertical: vertical ? METRICS.spacing.s : 0,
       };
     }
 

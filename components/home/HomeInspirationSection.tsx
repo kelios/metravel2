@@ -194,14 +194,14 @@ function HomeInspirationSection({
       gap: 24,
     },
     sectionMobile: {
-      gap: 18,
+      gap: 12,
     },
     sectionFrame: {
       borderWidth: 1,
       borderColor: colors.borderLight,
       borderRadius: DESIGN_TOKENS.radii.xl,
       backgroundColor: colors.surface,
-      padding: isMobile ? 16 : 28,
+      padding: isMobile ? 10 : 28,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.medium,
@@ -288,8 +288,8 @@ function HomeInspirationSection({
       letterSpacing: -0.8,
     },
     titleMobile: {
-      fontSize: 24,
-      lineHeight: 30,
+      fontSize: 20,
+      lineHeight: 26,
       letterSpacing: -0.4,
     },
     subtitle: {
@@ -687,7 +687,7 @@ function HomeInspirationSections() {
       }),
     },
     bandMobile: {
-      paddingVertical: 40,
+      paddingVertical: 24,
     },
     container: {
       gap: 52,
@@ -695,7 +695,7 @@ function HomeInspirationSections() {
       alignSelf: 'stretch',
     },
     containerMobile: {
-      gap: 32,
+      gap: 20,
     },
     quickFiltersSection: {
       width: '100%',
@@ -703,8 +703,8 @@ function HomeInspirationSections() {
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      padding: isMobile ? 20 : 32,
-      gap: isMobile ? 16 : 24,
+      padding: isMobile ? 10 : 32,
+      gap: isMobile ? 12 : 24,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.medium,
@@ -739,8 +739,8 @@ function HomeInspirationSections() {
     },
     quickFiltersTitle: {
       color: colors.text,
-      fontSize: isMobile ? 24 : 32,
-      lineHeight: isMobile ? 32 : 40,
+      fontSize: isMobile ? 20 : 32,
+      lineHeight: isMobile ? 26 : 40,
       fontWeight: '900',
       letterSpacing: -0.8,
     },

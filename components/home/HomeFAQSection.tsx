@@ -53,8 +53,8 @@ function HomeFAQSection() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingTop: isMobile ? 28 : 40,
-      paddingBottom: isMobile ? 20 : 24,
+      paddingTop: isMobile ? 20 : 40,
+      paddingBottom: isMobile ? 16 : 24,
       backgroundColor: colors.backgroundSecondary,
       ...Platform.select({
         web: {
@@ -71,7 +71,7 @@ function HomeFAQSection() {
     },
     header: {
       alignItems: 'center',
-      marginBottom: isMobile ? 20 : 28,
+      marginBottom: isMobile ? 14 : 28,
       gap: 8,
     },
     eyebrow: {
@@ -93,7 +93,7 @@ function HomeFAQSection() {
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: isMobile ? 24 : 32,
+      fontSize: isMobile ? 20 : 32,
       fontWeight: '800',
       color: colors.text,
       letterSpacing: -0.5,
@@ -135,8 +135,8 @@ function HomeFAQSection() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: isMobile ? 20 : 24,
-      paddingHorizontal: isMobile ? 20 : 28,
+      paddingVertical: isMobile ? 14 : 24,
+      paddingHorizontal: isMobile ? 14 : 28,
       minHeight: 64,
       gap: 16,
       ...Platform.select({
@@ -173,8 +173,8 @@ function HomeFAQSection() {
       borderColor: colors.primaryAlpha30,
     },
     answerWrap: {
-      paddingHorizontal: isMobile ? 20 : 28,
-      paddingBottom: isMobile ? 24 : 28,
+      paddingHorizontal: isMobile ? 14 : 28,
+      paddingBottom: isMobile ? 16 : 28,
       paddingTop: 4,
       ...Platform.select({
         web: {

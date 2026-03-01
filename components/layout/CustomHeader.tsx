@@ -172,7 +172,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         container: {
             backgroundColor: Platform.OS === 'web' ? colors.background : colors.surface,
             paddingTop: Platform.OS === 'ios' ? (StatusBar.currentHeight || 0) : 0,
-            paddingBottom: Platform.OS === 'web' ? 12 : 0,
+            paddingBottom: Platform.OS === 'web' ? (isMobile ? 6 : 12) : 0,
             borderBottomWidth: Platform.OS === 'web' ? StyleSheet.hairlineWidth : 0,
             borderBottomColor: colors.border,
             ...(Platform.OS === 'web'
@@ -221,8 +221,8 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                 },
                 web: {
                     minHeight: 56,
-                    paddingHorizontal: 24,
-                    paddingVertical: 10,
+                    paddingHorizontal: isMobile ? 8 : 24,
+                    paddingVertical: isMobile ? 6 : 10,
                 }
             }),
             ...(Platform.OS === 'web' && {
@@ -231,7 +231,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             }),
         },
         innerMobile: {
-            paddingHorizontal: 10,
+            paddingHorizontal: 6,
         },
         navContainer: {
             flexDirection: 'row',

@@ -217,8 +217,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingTop: isMobile ? 20 : 36,
-      paddingBottom: isMobile ? 36 : 56,
+      paddingTop: isMobile ? 12 : 36,
+      paddingBottom: isMobile ? 20 : 56,
       backgroundColor: colors.background,
       ...Platform.select({
         web: {
@@ -233,8 +233,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 14 : 26,
-      paddingVertical: isMobile ? 14 : 24,
+      paddingHorizontal: isMobile ? 8 : 26,
+      paddingVertical: isMobile ? 10 : 24,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.medium,
@@ -246,17 +246,17 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       flexDirection: showSideSlider ? 'row' : 'column',
       alignItems: showSideSlider ? 'stretch' : 'stretch',
       justifyContent: showSideSlider ? 'space-between' : 'flex-start',
-      gap: showSideSlider ? 30 : 16,
+      gap: showSideSlider ? 30 : 12,
       width: '100%',
     },
     heroSection: {
       alignItems: isMobile ? 'stretch' : 'flex-start',
-      gap: isMobile ? 16 : 20,
+      gap: isMobile ? 12 : 20,
       width: showSideSlider ? '47%' : '100%',
       maxWidth: showSideSlider ? 540 : (isMobile ? '100%' : 720),
       flexShrink: 0,
-      paddingHorizontal: isMobile ? 10 : 12,
-      paddingVertical: isMobile ? 12 : 14,
+      paddingHorizontal: isMobile ? 4 : 12,
+      paddingVertical: isMobile ? 8 : 14,
     },
     sliderSection: {
       flex: 1,
@@ -426,18 +426,18 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: isMobile ? 31 : isTablet ? 38 : (isDesktop ? 48 : 42),
+      fontSize: isSmallPhone ? 24 : isMobile ? 26 : isTablet ? 38 : (isDesktop ? 48 : 42),
       fontWeight: '900',
       color: colors.text,
       letterSpacing: -1,
-      lineHeight: isMobile ? 39 : isTablet ? 46 : (isDesktop ? 54 : 48),
+      lineHeight: isSmallPhone ? 30 : isMobile ? 33 : isTablet ? 46 : (isDesktop ? 54 : 48),
       textAlign: 'left',
     },
     subtitle: {
-      fontSize: isMobile ? 15 : 18,
+      fontSize: isMobile ? 14 : 18,
       fontWeight: '400',
       color: colors.textMuted,
-      lineHeight: isMobile ? 22 : 27,
+      lineHeight: isMobile ? 20 : 27,
       textAlign: 'left',
       maxWidth: 520,
       alignSelf: 'flex-start',
@@ -484,14 +484,14 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       flexDirection: isNarrowLayout ? 'column' : 'row',
       justifyContent: 'flex-start',
       alignItems: 'center',
-      gap: 12,
+      gap: isMobile ? 8 : 12,
       width: isNarrowLayout ? '100%' : undefined,
       marginTop: 4,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 24 : 28,
-      paddingVertical: isMobile ? 14 : 16,
-      minHeight: 50,
+      paddingHorizontal: isMobile ? 18 : 28,
+      paddingVertical: isMobile ? 12 : 16,
+      minHeight: isMobile ? 44 : 50,
       borderRadius: DESIGN_TOKENS.radii.pill,
       width: isMobile ? '100%' : undefined,
       ...Platform.select({
@@ -515,9 +515,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       color: colors.textOnPrimary,
     },
     secondaryButton: {
-      paddingHorizontal: isMobile ? 24 : 28,
-      paddingVertical: isMobile ? 14 : 16,
-      minHeight: 50,
+      paddingHorizontal: isMobile ? 18 : 28,
+      paddingVertical: isMobile ? 12 : 16,
+      minHeight: isMobile ? 44 : 50,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -655,7 +655,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       color: colors.textMuted,
       lineHeight: 16,
     },
-  }), [colors, isMobile, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight]);
+  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight]);
 
   const currentSlide = BOOK_IMAGES[activeSlide];
 

@@ -84,51 +84,53 @@ function getStyles(colors: ThemedColors, ui: UiTheme) {
         mapBtnMobile: { paddingHorizontal: 10, paddingVertical: 6 },
         mapBtnTxt: { color: colors.textOnPrimary, fontWeight: '800', fontSize: 14 },
 
-        citiesContainer: { gap: 10 },
+        citiesContainer: { gap: 6 },
         citiesHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-        citiesHeadTitle: { color: colors.text, fontSize: 14, fontWeight: '800' },
-        citiesHeadMeta: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+        citiesHeadTitle: { color: colors.text, fontSize: 13, fontWeight: '800' },
+        citiesHeadMeta: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
         citySearchInput: {
-            height: 40,
+            height: 34,
             borderWidth: 1,
             borderColor: colors.border,
             backgroundColor: colors.surface,
             borderRadius: 10,
-            paddingHorizontal: 12,
+            paddingHorizontal: 9,
             color: colors.text,
-            fontSize: 14,
+            fontSize: 12,
         },
-        citySearchInputMobile: { height: 36, fontSize: 13, paddingHorizontal: 10 },
+        citySearchInputMobile: { height: 32, fontSize: 12, paddingHorizontal: 8 },
         citiesScroll: { marginHorizontal: -2 },
-        citiesScrollContent: { gap: 8, paddingHorizontal: 2 },
+        citiesScrollContent: { gap: 5, paddingHorizontal: 2 },
         cityCard: {
-            width: 176,
-            padding: 12,
-            borderRadius: 12,
+            width: 146,
+            paddingHorizontal: 9,
+            paddingVertical: 7,
+            borderRadius: 10,
             borderWidth: 1,
             borderColor: colors.border,
             backgroundColor: colors.surface,
         },
-        cityCardMobile: { width: 150, padding: 10, borderRadius: 10 },
+        cityCardMobile: { width: 128, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8 },
+        cityTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
         cityCardActive: { borderColor: ui.primary, backgroundColor: ui.cardAlt },
-        cityName: { color: colors.text, fontSize: 15, fontWeight: '800' },
-        cityNameMobile: { fontSize: 13 },
-        cityCountry: { color: colors.textMuted, fontSize: 12, marginBottom: 6 },
-        cityCountryMobile: { fontSize: 11, marginBottom: 4 },
-        questsCount: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
-        questsCountMobile: { fontSize: 11 },
+        cityName: { color: colors.text, fontSize: 13, fontWeight: '800', flexShrink: 1 },
+        cityNameMobile: { fontSize: 11 },
+        cityCountry: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+        cityCountryMobile: { fontSize: 10, marginTop: 1 },
+        questsCount: { color: colors.textMuted, fontSize: 11, fontWeight: '700', flexShrink: 0 },
+        questsCountMobile: { fontSize: 10 },
 
         divider: { height: 1, backgroundColor: colors.borderLight, marginVertical: 16 },
 
-        filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 },
-        filtersRowMobile: { gap: 4, marginBottom: 6 },
+        filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap', marginBottom: 2 },
+        filtersRowMobile: { gap: 2, marginBottom: 2 },
         filtersLabel: { color: colors.textMuted, fontSize: 13 },
         filtersLabelMobile: { fontSize: 12 },
-        chip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
-        chipMobile: { paddingHorizontal: 6, paddingVertical: 3 },
+        chip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+        chipMobile: { paddingHorizontal: 5, paddingVertical: 2 },
         chipActive: { borderColor: ui.primary, backgroundColor: ui.cardAlt },
-        chipText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
-        chipTextMobile: { fontSize: 11 },
+        chipText: { color: colors.textMuted, fontSize: 11, fontWeight: '700' },
+        chipTextMobile: { fontSize: 10 },
         chipTextActive: { color: colors.text },
 
         questsContainer: { gap: 12 },
@@ -476,7 +478,6 @@ export default function QuestsScreen() {
 
                                 {Platform.OS === 'web' && !isMobile ? (
                                     <SelectComponent
-                                        label="Быстрый выбор локации"
                                         value={selectedCityId || ''}
                                         onChange={(value) => {
                                             if (!value) return;
@@ -506,17 +507,19 @@ export default function QuestsScreen() {
                                                 onPress={() => handleSelectCity(item.id)}
                                                 style={sx(s.cityCard, active && s.cityCardActive, isMobile && s.cityCardMobile)}
                                             >
-                                                <Text style={sx(s.cityName, isMobile && s.cityNameMobile)} numberOfLines={1}>
-                                                    {item.id === NEARBY_ID ? 'Рядом' : item.name}
-                                                </Text>
-                                                <Text style={sx(s.cityCountry, isMobile && s.cityCountryMobile)} numberOfLines={1}>
-                                                    {item.id === NEARBY_ID
-                                                        ? userLoc ? 'по геолокации' : 'гео отключена'
-                                                        : 'город'}
-                                                </Text>
-                                                <Text style={sx(s.questsCount, isMobile && s.questsCountMobile)}>
-                                                    {questsCount} кв.
-                                                </Text>
+                                                <View style={s.cityTopRow}>
+                                                    <Text style={sx(s.cityName, isMobile && s.cityNameMobile)} numberOfLines={1}>
+                                                        {item.id === NEARBY_ID ? 'Рядом' : item.name}
+                                                    </Text>
+                                                    <Text style={sx(s.questsCount, isMobile && s.questsCountMobile)}>
+                                                        {questsCount} кв.
+                                                    </Text>
+                                                </View>
+                                                {item.id === NEARBY_ID ? (
+                                                    <Text style={sx(s.cityCountry, isMobile && s.cityCountryMobile)} numberOfLines={1}>
+                                                        {userLoc ? 'по геолокации' : 'гео отключена'}
+                                                    </Text>
+                                                ) : null}
                                             </Pressable>
                                         );
                                     })}

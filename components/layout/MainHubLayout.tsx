@@ -6,6 +6,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface MainHubLayoutProps {
   children: React.ReactNode;
@@ -19,6 +20,8 @@ export default function MainHubLayout({
   maxWidth = 1400,
 }: MainHubLayoutProps) {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
+  const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isSmallPhone || isPhone || isLargePhone;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -31,10 +34,10 @@ export default function MainHubLayout({
       width: '100%',
       ...Platform.select({
         web: {
-          paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+          paddingHorizontal: isMobile ? DESIGN_TOKENS.spacing.xs : DESIGN_TOKENS.spacing.lg,
         },
         default: {
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
+          paddingHorizontal: isMobile ? DESIGN_TOKENS.spacing.xs : DESIGN_TOKENS.spacing.md,
         },
       }),
     },
@@ -45,14 +48,14 @@ export default function MainHubLayout({
     },
     main: {
       flex: 1,
-      padding: DESIGN_TOKENS.spacing.md,
+      padding: isMobile ? DESIGN_TOKENS.spacing.xs : DESIGN_TOKENS.spacing.md,
       ...Platform.select({
         web: {
-          paddingLeft: DESIGN_TOKENS.spacing.lg,
+          paddingLeft: isMobile ? 0 : DESIGN_TOKENS.spacing.lg,
         },
       }),
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   const webContentStyle: any =
     Platform.OS === 'web' ? { marginHorizontal: 'auto' } : undefined;

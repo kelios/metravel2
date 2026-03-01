@@ -63,9 +63,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
   },
   contentMobile: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingTop: 0,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
+    paddingBottom: DESIGN_TOKENS.spacing.sm,
   },
   sidebar: {
     width: 320,
@@ -102,9 +102,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingBottom: DESIGN_TOKENS.spacing.lg,
   },
   listContainerMobile: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingTop: DESIGN_TOKENS.spacing.md,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingTop: DESIGN_TOKENS.spacing.sm,
+    paddingBottom: DESIGN_TOKENS.spacing.sm,
   },
   exportBar: {
     flexDirection: 'row',
@@ -247,7 +247,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     overflowX: 'hidden',
     ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
     // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
-    paddingTop: DESIGN_TOKENS.spacing.lg,
+    paddingTop: DESIGN_TOKENS.spacing.md,
     paddingBottom: DESIGN_TOKENS.spacing.md,
     ...Platform.select({
       web: {

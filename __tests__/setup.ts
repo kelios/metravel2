@@ -766,8 +766,17 @@ jest.mock('@shopify/flash-list', () => {
 
 // Mock expo web browser dependency
 jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
   openBrowserAsync: jest.fn(() => Promise.resolve({ type: 'dismiss' })),
   dismissBrowser: jest.fn(),
+}))
+
+jest.mock('expo-auth-session/providers/google', () => ({
+  useIdTokenAuthRequest: jest.fn(() => [
+    {},
+    null,
+    jest.fn(async () => ({ type: 'dismiss' })),
+  ]),
 }))
 
 // Mock expo font loader used by vector icons
