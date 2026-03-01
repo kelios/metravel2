@@ -111,13 +111,6 @@ const getTravelHeroPreloadScript = () => String.raw`
     if (window.__metravelTravelPreloadScriptLoaded) return;
     window.__metravelTravelPreloadScriptLoaded = true;
     window.__METRAVEL_API_URL__ = ${JSON.stringify(process.env.EXPO_PUBLIC_API_URL || '')};
-    if (!document.querySelector('link[rel="preload"][href="/travel-hero-preload.js"]')) {
-      var preload = document.createElement('link');
-      preload.rel = 'preload';
-      preload.as = 'script';
-      preload.href = '/travel-hero-preload.js';
-      document.head.appendChild(preload);
-    }
     var s = document.createElement('script');
     s.src = '/travel-hero-preload.js';
     s.async = true;

@@ -48,6 +48,7 @@ const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запро�
 // Base travels endpoint with trailing slash
 const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
+const GET_TRAVEL_FACETS = `${URLAPI}/travels/facets/`;
 
 const travelCache = new Map<number, Travel>();
 
@@ -486,6 +487,155 @@ const applyPublishModeration = (
     }
     if (source.moderation !== undefined) {
         target.moderation = source.moderation;
+    }
+};
+
+export type TravelFacetItem = {
+    id: string | number;
+    name: string;
+    count: number;
+};
+
+export type TravelFacetsResponse = {
+    total: number;
+    facets: Record<string, TravelFacetItem[]>;
+};
+
+export const fetchTravelFacets = async (
+    search: string,
+    urlParams: Record<string, unknown>,
+    options?: { signal?: AbortSignal }
+): Promise<TravelFacetsResponse> => {
+    try {
+        const whereObject: Record<string, unknown> = {};
+
+        const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
+        if (isUserScoped) {
+            if (urlParams?.moderation !== undefined) {
+                whereObject.moderation = urlParams.moderation;
+            }
+            if (urlParams?.publish !== undefined) {
+                whereObject.publish = urlParams.publish;
+            }
+        } else {
+            if (urlParams?.moderation !== undefined) {
+                whereObject.moderation = urlParams.moderation;
+            } else if (urlParams?.publish === undefined) {
+                whereObject.moderation = 1;
+            }
+            if (urlParams?.publish !== undefined) {
+                whereObject.publish = urlParams.publish;
+            } else if (urlParams?.moderation === undefined) {
+                whereObject.publish = 1;
+            }
+        }
+
+        const arrayFields = ['countries', 'categories', 'transports', 'companions', 'complexity', 'month', 'over_nights_stay', 'categoryTravelAddress'];
+        arrayFields.forEach((field) => {
+            if (urlParams[field]) {
+                const normalized = normalizeNumericFilterArray(urlParams[field]);
+                if (normalized.length > 0) {
+                    whereObject[field] = normalized;
+                }
+            }
+        });
+
+        if (urlParams?.year !== undefined && urlParams?.year !== null) {
+            const yearStr = String(urlParams.year).trim();
+            if (yearStr !== '') {
+                whereObject.year = yearStr;
+            }
+        }
+
+        const handledKeys = new Set<string>([
+            ...arrayFields,
+            'year',
+            'moderation',
+            'publish',
+            'sort',
+            'sortBy',
+            'sortOrder',
+            'ordering',
+        ]);
+        Object.entries(urlParams || {}).forEach(([key, value]) => {
+            if (handledKeys.has(key)) {
+                return;
+            }
+            if (value === undefined || value === null || value === '') {
+                return;
+            }
+            if (Array.isArray(value) && value.length === 0) {
+                return;
+            }
+            whereObject[key] = value;
+        });
+
+        const searchParams: Record<string, string> = {
+            where: JSON.stringify(whereObject),
+        };
+        if (search !== undefined) {
+            searchParams.query = search || '';
+        }
+
+        const url = `${GET_TRAVEL_FACETS}?${new URLSearchParams(searchParams).toString()}`;
+
+        const res = options?.signal
+            ? await fetchWithTimeout(url, { signal: options.signal }, LONG_TIMEOUT)
+            : await retry(
+                async () => {
+                    return await fetchWithTimeout(url, {}, LONG_TIMEOUT);
+                },
+                {
+                    maxAttempts: 2,
+                    delay: 1000,
+                    shouldRetry: (error) => {
+                        return isRetryableError(error);
+                    },
+                }
+            );
+
+        const payload = await safeJsonParse<Record<string, unknown>>(res, {});
+        if (!res.ok) {
+            devError('Error fetching travel facets: HTTP', res.status, res.statusText);
+            return { total: 0, facets: {} };
+        }
+
+        const total = coerceTotal(payload?.total, 0);
+        const rawFacets = payload?.facets;
+        if (!rawFacets || typeof rawFacets !== 'object' || Array.isArray(rawFacets)) {
+            return { total, facets: {} };
+        }
+
+        const facets = Object.entries(rawFacets as Record<string, unknown>).reduce<Record<string, TravelFacetItem[]>>(
+            (acc, [facetKey, facetValue]) => {
+                if (!Array.isArray(facetValue)) {
+                    return acc;
+                }
+
+                const normalizedItems = facetValue
+                    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object' && !Array.isArray(item))
+                    .map((item) => {
+                        const count = coerceTotal(item.count, 0);
+                        const id = item.id;
+                        const name = typeof item.name === 'string' ? item.name : String(item.name ?? '');
+                        return {
+                            id: typeof id === 'number' || typeof id === 'string' ? id : String(id ?? ''),
+                            name,
+                            count,
+                        };
+                    })
+                    .filter((item) => item.name.trim().length > 0);
+
+                acc[facetKey] = normalizedItems;
+                return acc;
+            },
+            {}
+        );
+
+        return { total, facets };
+    } catch (e) {
+        devError('Error fetching travel facets:', e);
+        return { total: 0, facets: {} };
     }
 };
 

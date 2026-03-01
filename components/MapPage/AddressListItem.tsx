@@ -755,14 +755,22 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         marginBottom: 10,
         lineHeight: 24,
         letterSpacing: -0.4,
-        textShadowColor: colors.overlay,
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 8,
+        ...(Platform.OS === 'web'
+          ? ({ textShadow: `0px 2px 8px ${colors.overlay}` } as any)
+          : {
+              textShadowColor: colors.overlay,
+              textShadowOffset: { width: 0, height: 2 },
+              textShadowRadius: 8,
+            }),
     },
     titleOnLight: {
-        textShadowColor: 'transparent',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 0,
+        ...(Platform.OS === 'web'
+          ? ({ textShadow: 'none' } as any)
+          : {
+              textShadowColor: 'transparent',
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: 0,
+            }),
     },
     distanceRow: {
         flexDirection: 'row',
@@ -801,14 +809,22 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         fontWeight: '700',
         letterSpacing: 0.3,
         fontFamily: Platform.OS === 'web' ? 'Monaco, Menlo, "Ubuntu Mono", monospace' : 'monospace',
-        textShadowColor: colors.overlay,
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 4,
+        ...(Platform.OS === 'web'
+          ? ({ textShadow: `0px 1px 4px ${colors.overlay}` } as any)
+          : {
+              textShadowColor: colors.overlay,
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 4,
+            }),
     },
     coordOnLight: {
-        textShadowColor: 'transparent',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 0,
+        ...(Platform.OS === 'web'
+          ? ({ textShadow: 'none' } as any)
+          : {
+              textShadowColor: 'transparent',
+              textShadowOffset: { width: 0, height: 0 },
+              textShadowRadius: 0,
+            }),
     },
     catWrap: {
         flexDirection: 'row',
@@ -830,9 +846,13 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         fontSize: 12,
         fontWeight: '700',
         letterSpacing: 0.3,
-        textShadowColor: colors.overlay,
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 3,
+        ...(Platform.OS === 'web'
+          ? ({ textShadow: `0px 1px 3px ${colors.overlay}` } as any)
+          : {
+              textShadowColor: colors.overlay,
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 3,
+            }),
     },
     addButtonRow: {
         marginTop: DESIGN_TOKENS.spacing.md,

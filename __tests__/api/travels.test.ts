@@ -390,6 +390,56 @@ describe('src/api/travelsApi.ts', () => {
     });
   });
 
+  describe('fetchTravelFacets', () => {
+    it('запрашивает /api/travels/facets/ и нормализует facets', async () => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        total: '330',
+        facets: {
+          categories: [
+            { id: 6, name: 'Автопутешествие', count: '226' },
+            { id: '7', name: 'Велопоход', count: 15 },
+          ],
+        },
+      } as any);
+
+      const result = await fetchTravelFacets('авто', { categories: ['6'] }, {} as any);
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      expect(urlObj.pathname).toContain('/api/travels/facets/');
+      expect(urlObj.searchParams.get('query')).toBe('авто');
+
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+      expect(where.categories).toEqual([6]);
+      expect(where.publish).toBe(1);
+      expect(where.moderation).toBe(1);
+
+      expect(result).toEqual({
+        total: 330,
+        facets: {
+          categories: [
+            { id: 6, name: 'Автопутешествие', count: 226 },
+            { id: '7', name: 'Велопоход', count: 15 },
+          ],
+        },
+      });
+    });
+
+    it('возвращает пустые facets при неуспешном HTTP-ответе', async () => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'error' } as any);
+
+      const result = await fetchTravelFacets('', {}, {} as any);
+
+      expect(result).toEqual({ total: 0, facets: {} });
+      expect(devError).toHaveBeenCalledWith('Error fetching travel facets: HTTP', 500, 'Server Error');
+    });
+  });
+
   describe('fetchMyTravels', () => {
     it('ставит publish/moderation по умолчанию и сериализует where', async () => {
       const { fetchMyTravels } = loadTravelsApi();

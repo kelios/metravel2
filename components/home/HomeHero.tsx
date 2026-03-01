@@ -333,9 +333,13 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       fontWeight: '800',
       color: '#FFFFFF',
       marginBottom: 4,
-      textShadowColor: 'rgba(0,0,0,0.45)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
+      ...(Platform.OS === 'web'
+        ? ({ textShadow: '0px 1px 3px rgba(0,0,0,0.45)' } as any)
+        : {
+            textShadowColor: 'rgba(0,0,0,0.45)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 3,
+          }),
     },
     slideSubtitle: {
       fontSize: 14,

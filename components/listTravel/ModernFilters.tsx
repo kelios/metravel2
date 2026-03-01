@@ -427,7 +427,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                         >
                           {option.name}
                         </Text>
-                        {option.count !== undefined && (
+                        {typeof option.count === 'number' && option.count > 0 && (
                           <Text style={styles.filterOptionCount}>
                             {option.count}
                           </Text>

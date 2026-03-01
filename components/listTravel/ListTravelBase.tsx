@@ -31,7 +31,7 @@ import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { calculateColumns } from './utils/listTravelHelpers'
 import { buildSortingOptions } from './utils/sortings'
-import { deleteTravel } from '@/api/travelsApi'
+import { deleteTravel, fetchTravelFacets } from '@/api/travelsApi'
 
 // ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
@@ -590,6 +590,66 @@ function ListTravelBase({
         initialFilter,
     });
 
+    const {
+      data: facetsData,
+    } = useQuery({
+      queryKey: ['travel-facets', debSearch, queryParams],
+      queryFn: ({ signal } = {} as any) => fetchTravelFacets(debSearch, queryParams, { signal }),
+      enabled: shouldFetchFilterOptions,
+      staleTime: 30 * 1000,
+    });
+
+    const facetCounts = useMemo(() => {
+      const rawFacets = facetsData?.facets ?? {};
+      return Object.entries(rawFacets).reduce<Record<string, Map<string, number>>>((acc, [facetKey, items]) => {
+        const map = new Map<string, number>();
+        if (Array.isArray(items)) {
+          items.forEach((item) => {
+            map.set(String(item.id), Number(item.count) || 0);
+          });
+        }
+        acc[facetKey] = map;
+        return acc;
+      }, {});
+    }, [facetsData?.facets]);
+
+    const getFacetCount = useCallback(
+      (facetKey: string, id: string | number) => {
+        const facetMap = facetCounts[facetKey];
+        if (!facetMap) {
+          return undefined;
+        }
+        const value = facetMap.get(String(id));
+        return typeof value === 'number' ? value : undefined;
+      },
+      [facetCounts]
+    );
+
+    const isOptionSelected = useCallback(
+      (filterKey: string, id: string | number) => {
+        const currentValue = (filter as any)?.[filterKey];
+        if (Array.isArray(currentValue)) {
+          return currentValue.some((value: any) => String(value) === String(id));
+        }
+        return currentValue !== undefined && currentValue !== null && String(currentValue) === String(id);
+      },
+      [filter]
+    );
+
+    const shouldIncludeFacetOption = useCallback(
+      (facetKey: string, filterKey: string, id: string | number) => {
+        const count = getFacetCount(facetKey, id);
+        if (count === undefined) {
+          return true;
+        }
+        if (count > 0) {
+          return true;
+        }
+        return isOptionSelected(filterKey, id);
+      },
+      [getFacetCount, isOptionSelected]
+    );
+
     const baseQueryEnabled = useMemo(
       () => (isMeTravel || isExport ? !!userId : true),
       [isMeTravel, isExport, userId]
@@ -934,10 +994,13 @@ function ListTravelBase({
         {
           key: 'countries',
           title: 'Страны',
-          options: (options?.countries || []).map((country: any) => ({
-            id: String(country.country_id ?? country.id),
-            name: country.title_ru || country.name,
-          })),
+          options: (options?.countries || [])
+            .filter((country: any) => shouldIncludeFacetOption('countries', 'countries', country.country_id ?? country.id))
+            .map((country: any) => ({
+              id: String(country.country_id ?? country.id),
+              name: country.title_ru || country.name,
+              count: getFacetCount('countries', country.country_id ?? country.id),
+            })),
           multiSelect: true,
           icon: 'globe',
         },
@@ -952,71 +1015,91 @@ function ListTravelBase({
       {
         key: 'categories',
         title: 'Категории',
-        options: (options?.categories || []).map((cat: any) => ({
-          id: String(cat.id),
-          name: cat.name,
-          count: undefined,
-        })),
+        options: (options?.categories || [])
+          .filter((cat: any) => shouldIncludeFacetOption('categories', 'categories', cat.id))
+          .map((cat: any) => ({
+            id: String(cat.id),
+            name: cat.name,
+            count: getFacetCount('categories', cat.id),
+          })),
         multiSelect: true,
         icon: 'tag',
       },
       {
         key: 'transports',
         title: 'Транспорт',
-        options: (options?.transports || []).map((t: any) => ({
-          id: String(t.id),
-          name: t.name,
-        })),
+        options: (options?.transports || [])
+          .filter((t: any) => shouldIncludeFacetOption('transports', 'transports', t.id))
+          .map((t: any) => ({
+            id: String(t.id),
+            name: t.name,
+            count: getFacetCount('transports', t.id),
+          })),
         multiSelect: true,
         icon: 'truck',
       },
       {
         key: 'categoryTravelAddress',
         title: 'Объекты',
-        options: (options?.categoryTravelAddress || []).map((obj: any) => ({
-          id: String(obj.id),
-          name: obj.name,
-        })),
+        options: (options?.categoryTravelAddress || [])
+          .filter((obj: any) => shouldIncludeFacetOption('categoryTravelAddress', 'categoryTravelAddress', obj.id))
+          .map((obj: any) => ({
+            id: String(obj.id),
+            name: obj.name,
+            count: getFacetCount('categoryTravelAddress', obj.id),
+          })),
         multiSelect: true,
         icon: 'map-pin',
       },
       {
         key: 'companions',
         title: 'Спутники',
-        options: (options?.companions || []).map((c: any) => ({
-          id: String(c.id),
-          name: c.name,
-        })),
+        options: (options?.companions || [])
+          .filter((c: any) => shouldIncludeFacetOption('companions', 'companions', c.id))
+          .map((c: any) => ({
+            id: String(c.id),
+            name: c.name,
+            count: getFacetCount('companions', c.id),
+          })),
         multiSelect: true,
         icon: 'users',
       },
       {
         key: 'complexity',
         title: 'Сложность',
-        options: (options?.complexity || []).map((item: any) => ({
-          id: String(item.id),
-          name: item.name,
-        })),
+        options: (options?.complexity || [])
+          .filter((item: any) => shouldIncludeFacetOption('complexity', 'complexity', item.id))
+          .map((item: any) => ({
+            id: String(item.id),
+            name: item.name,
+            count: getFacetCount('complexity', item.id),
+          })),
         multiSelect: true,
         icon: 'activity',
       },
       {
         key: 'month',
         title: 'Месяц',
-        options: (options?.month || []).map((item: any) => ({
-          id: String(item.id),
-          name: item.name,
-        })),
+        options: (options?.month || [])
+          .filter((item: any) => shouldIncludeFacetOption('month', 'month', item.id))
+          .map((item: any) => ({
+            id: String(item.id),
+            name: item.name,
+            count: getFacetCount('month', item.id),
+          })),
         multiSelect: true,
         icon: 'calendar',
       },
       {
         key: 'over_nights_stay',
         title: 'Ночлег',
-        options: (options?.over_nights_stay || []).map((item: any) => ({
-          id: String(item.id),
-          name: item.name,
-        })),
+        options: (options?.over_nights_stay || [])
+          .filter((item: any) => shouldIncludeFacetOption('over_nights_stay', 'over_nights_stay', item.id))
+          .map((item: any) => ({
+            id: String(item.id),
+            name: item.name,
+            count: getFacetCount('over_nights_stay', item.id),
+          })),
         multiSelect: true,
         icon: 'moon',
       },
@@ -1032,6 +1115,8 @@ function ListTravelBase({
         options?.complexity,
         options?.month,
         options?.over_nights_stay,
+        getFacetCount,
+        shouldIncludeFacetOption,
       ]
     );
     

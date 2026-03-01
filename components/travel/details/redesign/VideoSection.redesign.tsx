@@ -363,9 +363,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     lineHeight: 20,
     textAlign: 'center',
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    ...(Platform.OS === 'web'
+      ? ({ textShadow: '0px 1px 2px rgba(0,0,0,0.5)' } as any)
+      : {
+          textShadowColor: 'rgba(0, 0, 0, 0.5)',
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 2,
+        }),
   },
 
   // ✅ Native видео placeholder
