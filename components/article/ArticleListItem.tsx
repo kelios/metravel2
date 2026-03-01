@@ -5,7 +5,7 @@ import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import RenderHTML from 'react-native-render-html';
-import { router, type Href } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -36,29 +36,31 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
 
   return (
       <View style={styles.container}>
-        <Pressable onPress={() => router.push(articleRoute)}>
-          <Card style={styles.card}>
-            <View style={styles.imageWrapper}>
-              <Card.Cover
-                  source={{ uri: article_image_thumb_url || DEFAULT_IMAGE }}
-                  style={styles.image}
-              />
-            </View>
-            <Card.Content>
-              <Title numberOfLines={2}>{name}</Title>
-              <RenderHTML
-                  source={{ html: description || '' }}
-                  contentWidth={width - wp(6)}
-                  baseStyle={styles.htmlText}
-              />
-              {article_type?.name && (
-                  <Paragraph>
-                    <Text style={styles.textOrange}>{article_type.name}</Text>
-                  </Paragraph>
-              )}
-            </Card.Content>
-          </Card>
-        </Pressable>
+        <Link href={articleRoute} asChild>
+          <Pressable>
+            <Card style={styles.card}>
+              <View style={styles.imageWrapper}>
+                <Card.Cover
+                    source={{ uri: article_image_thumb_url || DEFAULT_IMAGE }}
+                    style={styles.image}
+                />
+              </View>
+              <Card.Content>
+                <Title numberOfLines={2}>{name}</Title>
+                <RenderHTML
+                    source={{ html: description || '' }}
+                    contentWidth={width - wp(6)}
+                    baseStyle={styles.htmlText}
+                />
+                {article_type?.name && (
+                    <Paragraph>
+                      <Text style={styles.textOrange}>{article_type.name}</Text>
+                    </Paragraph>
+                )}
+              </Card.Content>
+            </Card>
+          </Pressable>
+        </Link>
       </View>
   );
 };

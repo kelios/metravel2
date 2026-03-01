@@ -19,6 +19,8 @@ export type UserProfileDto = {
     instagram: string;
     twitter: string;
     vk: string;
+    email_notify_comments: boolean;
+    email_notify_messages: boolean;
     avatar: string;
     user: number;
 };
@@ -26,7 +28,14 @@ export type UserProfileDto = {
 export type UpdateUserProfilePayload = Partial<
     Pick<
         UserProfileDto,
-        'first_name' | 'last_name' | 'youtube' | 'instagram' | 'twitter' | 'vk'
+        | 'first_name'
+        | 'last_name'
+        | 'youtube'
+        | 'instagram'
+        | 'twitter'
+        | 'vk'
+        | 'email_notify_comments'
+        | 'email_notify_messages'
     >
 >;
 
@@ -52,6 +61,10 @@ export const updateUserProfile = async (
     payload: UpdateUserProfilePayload
 ): Promise<UserProfileDto> => {
     return apiClient.put<UserProfileDto>(`/user/${userId}/profile/update/`, payload);
+};
+
+export const deleteCurrentUserAccount = async (): Promise<null> => {
+    return apiClient.delete<null>('/user/delete-account/');
 };
 
 export const uploadUserProfileAvatar = async (

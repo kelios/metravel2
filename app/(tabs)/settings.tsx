@@ -8,10 +8,11 @@ import { buildLoginHref } from '@/utils/authNavigation';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
+import { Toggle } from '@/components/ui/Toggle';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
-import { normalizeAvatar, updateUserProfile, type UpdateUserProfilePayload } from '@/api/user';
+import { deleteCurrentUserAccount, normalizeAvatar, updateUserProfile, type UpdateUserProfilePayload } from '@/api/user';
 import { ApiError } from '@/api/client';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
@@ -58,6 +59,8 @@ export default function SettingsScreen() {
     const [instagram, setInstagram] = useState('');
     const [twitter, setTwitter] = useState('');
     const [vk, setVk] = useState('');
+    const [emailNotifyComments, setEmailNotifyComments] = useState(false);
+    const [emailNotifyMessages, setEmailNotifyMessages] = useState(false);
     const [settingsAvatarError, setSettingsAvatarError] = useState(false);
 
     const derivedDisplayName = useMemo(() => {
@@ -100,9 +103,21 @@ export default function SettingsScreen() {
             norm(youtube) !== norm(profile.youtube) ||
             norm(instagram) !== norm(profile.instagram) ||
             norm(twitter) !== norm(profile.twitter) ||
-            norm(vk) !== norm(profile.vk)
+            norm(vk) !== norm(profile.vk) ||
+            emailNotifyComments !== Boolean(profile.email_notify_comments) ||
+            emailNotifyMessages !== Boolean(profile.email_notify_messages)
         );
-    }, [firstName, instagram, lastName, profile, twitter, vk, youtube]);
+    }, [
+        emailNotifyComments,
+        emailNotifyMessages,
+        firstName,
+        instagram,
+        lastName,
+        profile,
+        twitter,
+        vk,
+        youtube,
+    ]);
 
     // Sync form fields when profile loads
     React.useEffect(() => {
@@ -113,6 +128,8 @@ export default function SettingsScreen() {
         setInstagram(profile.instagram || '');
         setTwitter(profile.twitter || '');
         setVk(profile.vk || '');
+        setEmailNotifyComments(Boolean(profile.email_notify_comments));
+        setEmailNotifyMessages(Boolean(profile.email_notify_messages));
         setAvatarPreviewUrl(profile.avatar || '');
     }, [profile, setAvatarPreviewUrl]);
 
@@ -127,6 +144,8 @@ export default function SettingsScreen() {
                 instagram,
                 twitter,
                 vk,
+                email_notify_comments: emailNotifyComments,
+                email_notify_messages: emailNotifyMessages,
             };
             const saved = await updateUserProfile(userId, payload);
             setProfile(saved);
@@ -137,7 +156,38 @@ export default function SettingsScreen() {
         } finally {
             setProfileSaving(false);
         }
-    }, [firstName, instagram, lastName, setProfile, twitter, userId, vk, youtube]);
+    }, [
+        emailNotifyComments,
+        emailNotifyMessages,
+        firstName,
+        instagram,
+        lastName,
+        setProfile,
+        twitter,
+        userId,
+        vk,
+        youtube,
+    ]);
+
+    const handleDeleteAccount = useCallback(async () => {
+        try {
+            const confirmed = await confirmAction({
+                title: 'Удалить аккаунт',
+                message: 'Аккаунт и ваши путешествия будут удалены без возможности восстановления. Продолжить?',
+                confirmText: 'Удалить',
+                cancelText: 'Отмена',
+            });
+            if (!confirmed) return;
+
+            await deleteCurrentUserAccount();
+            await logout();
+            showToast({ type: 'success', text1: 'Аккаунт удалён', visibilityTime: 3000 });
+            router.replace('/login');
+        } catch (error) {
+            const message = error instanceof ApiError ? error.message : 'Не удалось удалить аккаунт';
+            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
+        }
+    }, [logout, router]);
 
     const handleLogout = useCallback(async () => {
         try {
@@ -391,6 +441,34 @@ export default function SettingsScreen() {
 
                         <View style={styles.divider} />
 
+                        <Text style={styles.subsectionTitle}>Email-уведомления</Text>
+                        <View style={styles.settingsList}>
+                            <View style={styles.settingRow}>
+                                <View style={styles.settingTextBlock}>
+                                    <Text style={styles.settingTitle}>Отзывы</Text>
+                                    <Text style={styles.settingMeta}>Письма о новых комментариях к вашим путешествиям</Text>
+                                </View>
+                                <Toggle
+                                    value={emailNotifyComments}
+                                    onValueChange={setEmailNotifyComments}
+                                    disabled={profileLoading || profileSaving}
+                                />
+                            </View>
+                            <View style={styles.settingRow}>
+                                <View style={styles.settingTextBlock}>
+                                    <Text style={styles.settingTitle}>Сообщения</Text>
+                                    <Text style={styles.settingMeta}>Письма о новых личных сообщениях</Text>
+                                </View>
+                                <Toggle
+                                    value={emailNotifyMessages}
+                                    onValueChange={setEmailNotifyMessages}
+                                    disabled={profileLoading || profileSaving}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
                         <Text style={styles.subsectionTitle}>Аватар</Text>
                         <View style={styles.avatarRow}>
                             <View style={styles.avatarField}>
@@ -534,6 +612,17 @@ export default function SettingsScreen() {
                         >
                             <Feather name="log-out" size={18} color={colors.danger} />
                             <Text style={styles.dangerButtonText}>Выйти</Text>
+                        </Pressable>
+
+                        <Pressable
+                            style={[styles.dangerButton, styles.deleteAccountButton, globalFocusStyles.focusable]}
+                            onPress={handleDeleteAccount}
+                            accessibilityRole="button"
+                            accessibilityLabel="Удалить аккаунт"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="user-x" size={18} color={colors.textOnPrimary} />
+                            <Text style={styles.deleteAccountButtonText}>Удалить аккаунт</Text>
                         </Pressable>
                     </View>
 
@@ -774,6 +863,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 12,
         color: colors.textMuted,
     },
+    settingsList: {
+        gap: 10,
+    },
+    settingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    settingTextBlock: {
+        flex: 1,
+        gap: 2,
+    },
+    settingTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    settingMeta: {
+        fontSize: 12,
+        color: colors.textMuted,
+    },
     formGrid: {
         gap: 12,
         ...Platform.select({
@@ -888,6 +999,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 14,
         fontWeight: '700',
         color: colors.danger,
+    },
+    deleteAccountButton: {
+        borderColor: colors.danger,
+        backgroundColor: colors.danger,
+    },
+    deleteAccountButtonText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.textOnPrimary,
     },
     headerRow: {
         flexDirection: 'row',
