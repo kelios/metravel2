@@ -242,7 +242,17 @@
     "singleQuote": true
   },
   "expo": {
+    "install": {
+      "exclude": [
+        "react",
+        "react-dom",
+        "react-native"
+      ]
+    },
     "doctor": {
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
+      },
       "reactNativeDirectoryCheck": {
         "exclude": [
           "react-native-vector-icons",

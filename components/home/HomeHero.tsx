@@ -217,12 +217,15 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingTop: isMobile ? 12 : 36,
-      paddingBottom: isMobile ? 20 : 56,
+      paddingTop: isMobile ? 16 : 40,
+      paddingBottom: isMobile ? 24 : 64,
       backgroundColor: colors.background,
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 90% 70% at 50% -10%, ${colors.primarySoft} 0%, transparent 65%)`,
+          backgroundImage: [
+            `radial-gradient(ellipse 80% 60% at 50% -5%, ${colors.primarySoft} 0%, transparent 70%)`,
+            `radial-gradient(ellipse 40% 30% at 90% 20%, ${colors.primaryAlpha30} 0%, transparent 60%)`,
+          ].join(', '),
           backgroundRepeat: 'no-repeat',
         },
       }),
@@ -231,14 +234,14 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       width: '100%',
       borderRadius: DESIGN_TOKENS.radii.xl,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 8 : 26,
-      paddingVertical: isMobile ? 10 : 24,
+      paddingHorizontal: isMobile ? 10 : 32,
+      paddingVertical: isMobile ? 14 : 32,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          backgroundImage: `linear-gradient(160deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          backgroundImage: `linear-gradient(155deg, ${colors.surface} 0%, ${colors.primarySoft} 60%, ${colors.backgroundSecondary} 100%)`,
         },
       }),
     },
@@ -361,10 +364,10 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       }),
     },
     sliderNavBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(17, 24, 39, 0.45)',
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(17, 24, 39, 0.55)',
       justifyContent: 'center',
       alignItems: 'center',
       ...Platform.select({
@@ -376,7 +379,12 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       }),
     },
     sliderNavBtnHover: {
-      backgroundColor: 'rgba(17, 24, 39, 0.7)',
+      backgroundColor: 'rgba(17, 24, 39, 0.8)',
+      ...Platform.select({
+        web: {
+          transform: 'scale(1.05)',
+        },
+      }),
     },
     sliderDots: {
       position: 'absolute' as const,
@@ -406,17 +414,45 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.textOnPrimary,
       borderColor: colors.textOnPrimary,
     },
+    slideCounter: {
+      position: 'absolute' as const,
+      bottom: 14,
+      right: 14,
+      zIndex: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: 'rgba(9, 20, 33, 0.52)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.22)',
+      ...Platform.select({
+        web: {
+          backdropFilter: 'blur(6px)',
+        },
+      }),
+    },
+    slideCounterText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: 'rgba(255,255,255,0.9)',
+    },
     badge: {
       flexDirection: 'row',
       alignItems: 'center',
       alignSelf: 'flex-start',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
+      gap: 7,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
+    },
+    badgeDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
+      backgroundColor: colors.success,
     },
     badgeText: {
       fontSize: 11,
@@ -426,18 +462,26 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: isSmallPhone ? 24 : isMobile ? 26 : isTablet ? 38 : (isDesktop ? 48 : 42),
+      fontSize: isSmallPhone ? 26 : isMobile ? 30 : isTablet ? 40 : (isDesktop ? 52 : 46),
       fontWeight: '900',
       color: colors.text,
-      letterSpacing: -1,
-      lineHeight: isSmallPhone ? 30 : isMobile ? 33 : isTablet ? 46 : (isDesktop ? 54 : 48),
+      letterSpacing: -1.5,
+      lineHeight: isSmallPhone ? 32 : isMobile ? 36 : isTablet ? 48 : (isDesktop ? 60 : 54),
+      textAlign: 'left',
+    },
+    titleAccent: {
+      fontSize: isSmallPhone ? 26 : isMobile ? 30 : isTablet ? 40 : (isDesktop ? 52 : 46),
+      fontWeight: '900',
+      color: colors.primary,
+      letterSpacing: -1.5,
+      lineHeight: isSmallPhone ? 32 : isMobile ? 36 : isTablet ? 48 : (isDesktop ? 60 : 54),
       textAlign: 'left',
     },
     subtitle: {
-      fontSize: isMobile ? 14 : 18,
+      fontSize: isMobile ? 15 : 18,
       fontWeight: '400',
       color: colors.textMuted,
-      lineHeight: isMobile ? 20 : 27,
+      lineHeight: isMobile ? 22 : 28,
       textAlign: 'left',
       maxWidth: 520,
       alignSelf: 'flex-start',
@@ -453,21 +497,24 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       minWidth: 0,
       borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
-      paddingVertical: 9,
-      paddingHorizontal: 10,
+      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.primarySoft,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
       gap: 5,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+        },
+      }),
     },
     highlightIconWrap: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.primary,
     },
     highlightTitle: {
       color: colors.text,
@@ -478,7 +525,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     highlightSubtitle: {
       color: colors.textMuted,
       fontSize: 11,
-      lineHeight: 14,
+      lineHeight: 15,
     },
     buttonsContainer: {
       flexDirection: isNarrowLayout ? 'column' : 'row',
@@ -489,15 +536,15 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       marginTop: 4,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 18 : 28,
-      paddingVertical: isMobile ? 12 : 16,
-      minHeight: isMobile ? 44 : 50,
+      paddingHorizontal: isMobile ? 20 : 30,
+      paddingVertical: isMobile ? 13 : 17,
+      minHeight: isMobile ? 46 : 54,
       borderRadius: DESIGN_TOKENS.radii.pill,
       width: isMobile ? '100%' : undefined,
       ...Platform.select({
         web: {
           transition: 'all 0.2s ease',
-          boxShadow: DESIGN_TOKENS.shadows.light,
+          boxShadow: DESIGN_TOKENS.shadows.medium,
         },
       }),
     },
@@ -505,22 +552,23 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
         web: {
-          transform: 'translateY(-1px)',
+          transform: 'translateY(-2px)',
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
         },
       }),
     },
     primaryButtonText: {
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.textOnPrimary,
     },
     secondaryButton: {
-      paddingHorizontal: isMobile ? 18 : 28,
-      paddingVertical: isMobile ? 12 : 16,
-      minHeight: isMobile ? 44 : 50,
+      paddingHorizontal: isMobile ? 20 : 28,
+      paddingVertical: isMobile ? 13 : 17,
+      minHeight: isMobile ? 46 : 54,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: colors.borderLight,
       width: isMobile ? '100%' : undefined,
       ...Platform.select({
@@ -532,6 +580,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     secondaryButtonHover: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primaryAlpha30,
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-2px)',
+        },
+      }),
     },
     secondaryButtonText: {
       fontSize: 15,
@@ -539,8 +592,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       color: colors.text,
     },
     moodChipsContainer: {
-      marginTop: 14,
-      paddingTop: 14,
+      marginTop: 16,
+      paddingTop: 16,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
       width: '100%',
@@ -555,9 +608,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     moodChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      gap: 9,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.backgroundSecondary,
       borderWidth: 1,
@@ -572,6 +625,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     moodChipHover: {
       backgroundColor: colors.primarySoft,
       borderColor: colors.primaryAlpha30,
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-1px)',
+        },
+      }),
     },
     moodChipIcon: {
       width: 32,
@@ -580,6 +638,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primarySoft,
       justifyContent: 'center',
       alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
     },
     moodChipText: {
       gap: 0,
@@ -612,7 +672,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       paddingRight: 16,
     },
     imageCard: {
-      width: isMobile ? 180 : 200,
+      width: isMobile ? 195 : 215,
       borderRadius: DESIGN_TOKENS.radii.lg,
       backgroundColor: colors.surface,
       borderWidth: 1,
@@ -620,7 +680,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          transition: 'all 0.2s ease',
+          transition: 'all 0.22s ease',
           cursor: 'pointer',
           boxShadow: DESIGN_TOKENS.shadows.light,
         },
@@ -629,15 +689,15 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     imageCardHover: {
       ...Platform.select({
         web: {
-          transform: 'translateY(-2px)',
+          transform: 'translateY(-3px)',
           boxShadow: DESIGN_TOKENS.shadows.medium,
           borderColor: colors.primaryAlpha30,
         },
       }),
     },
     imageCardImage: {
-      width: isMobile ? 180 : 200,
-      height: isMobile ? 120 : 140,
+      width: isMobile ? 195 : 215,
+      height: isMobile ? 130 : 148,
     },
     imageCardContent: {
       padding: 12,
@@ -668,13 +728,19 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
           {/* Hero Section - Text */}
           <View style={styles.heroSection}>
             <View style={styles.badge}>
-              <Feather name="zap" size={12} color={colors.primary} />
-              <Text style={styles.badgeText}>Бесплатно и без регистрации</Text>
+              <View style={styles.badgeDot} />
+              <Feather name="zap" size={12} color={colors.primaryText} />
+              <Text style={styles.badgeText}>Бесплатно • Без регистрации</Text>
             </View>
 
-            <Text style={styles.title}>
-              Куда поехать{isNarrowLayout ? ' ' : '\n'}в эти выходные?
-            </Text>
+            <View>
+              <Text style={styles.title}>
+                Куда поехать{isNarrowLayout ? ' ' : '\n'}
+              </Text>
+              <Text style={styles.titleAccent}>
+                в эти выходные?
+              </Text>
+            </View>
 
             <Text style={styles.subtitle}>
               Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.
@@ -684,7 +750,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               {HERO_HIGHLIGHTS.map((item) => (
                 <View key={item.title} style={styles.highlightCard}>
                   <View style={styles.highlightIconWrap}>
-                    <Feather name={item.icon as any} size={14} color={colors.primary} />
+                    <Feather name={item.icon as any} size={16} color={colors.textOnPrimary} />
                   </View>
                   <Text style={styles.highlightTitle}>{item.title}</Text>
                   <Text style={styles.highlightSubtitle}>{item.subtitle}</Text>
@@ -699,6 +765,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 variant="primary"
                 size="md"
                 fullWidth={isNarrowLayout}
+                icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
+                iconPosition="right"
                 style={styles.primaryButton}
                 labelStyle={styles.primaryButtonText}
                 hoverStyle={styles.primaryButtonHover}
@@ -759,6 +827,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                     <Text style={styles.slideTitle}>{currentSlide.title}</Text>
                     <Text style={styles.slideSubtitle}>{currentSlide.subtitle}</Text>
                   </View>
+                </View>
+
+                {/* Slide counter */}
+                <View style={styles.slideCounter}>
+                  <Text style={styles.slideCounterText}>{activeSlide + 1} / {totalSlides}</Text>
                 </View>
               </Pressable>
 
@@ -847,8 +920,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 >
                 <ImageCardMedia
                   source={image.source}
-                  width={isMobile ? 180 : 200}
-                  height={isMobile ? 120 : 140}
+                  width={isMobile ? 195 : 215}
+                  height={isMobile ? 130 : 148}
                   borderRadius={0}
                   fit="contain"
                   blurBackground

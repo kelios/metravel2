@@ -53,8 +53,8 @@ function HomeFAQSection() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingTop: isMobile ? 20 : 40,
-      paddingBottom: isMobile ? 16 : 24,
+      paddingTop: isMobile ? 28 : 56,
+      paddingBottom: isMobile ? 24 : 48,
       backgroundColor: colors.backgroundSecondary,
       ...Platform.select({
         web: {
@@ -71,42 +71,43 @@ function HomeFAQSection() {
     },
     header: {
       alignItems: 'center',
-      marginBottom: isMobile ? 14 : 28,
-      gap: 8,
+      marginBottom: isMobile ? 20 : 36,
+      gap: 10,
     },
     eyebrow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 7,
       borderRadius: DESIGN_TOKENS.radii.full,
-      backgroundColor: colors.primaryLight,
+      backgroundColor: colors.primarySoft,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
     },
     eyebrowText: {
       fontSize: 11,
       fontWeight: '700',
       color: colors.primaryText,
-      letterSpacing: 0.6,
+      letterSpacing: 0.8,
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: isMobile ? 20 : 32,
-      fontWeight: '800',
+      fontSize: isMobile ? 22 : 36,
+      fontWeight: '900',
       color: colors.text,
-      letterSpacing: -0.5,
+      letterSpacing: -0.8,
+      textAlign: 'center',
     },
     subtitle: {
       fontSize: isMobile ? 14 : 16,
       lineHeight: isMobile ? 20 : 24,
       color: colors.textMuted,
       textAlign: 'center',
-      maxWidth: 560,
+      maxWidth: 480,
     },
     list: {
-      gap: isMobile ? 8 : 10,
+      gap: isMobile ? 10 : 12,
     },
     item: {
       width: '100%',
@@ -117,17 +118,15 @@ function HomeFAQSection() {
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          transition: 'border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease',
+          transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
         },
       }),
     },
     itemOpen: {
       borderColor: colors.primaryAlpha40,
-      backgroundColor: colors.primarySoft,
       ...Platform.select({
         web: {
-          boxShadow: `0 8px 24px ${colors.primaryAlpha30}`,
-          transform: 'scale(1.01)',
+          boxShadow: DESIGN_TOKENS.shadows.medium,
         },
       }),
     },
@@ -135,8 +134,8 @@ function HomeFAQSection() {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: isMobile ? 14 : 24,
-      paddingHorizontal: isMobile ? 14 : 28,
+      paddingVertical: isMobile ? 16 : 22,
+      paddingHorizontal: isMobile ? 16 : 28,
       minHeight: 64,
       gap: 16,
       ...Platform.select({
@@ -150,32 +149,39 @@ function HomeFAQSection() {
     itemHeaderHover: {
       backgroundColor: colors.primarySoft,
     },
+    itemHeaderOpen: {
+      backgroundColor: colors.primarySoft,
+    },
     question: {
       flex: 1,
-      fontSize: isMobile ? 16 : 18,
-      fontWeight: '800',
+      fontSize: isMobile ? 15 : 17,
+      fontWeight: '700',
       color: colors.text,
-      lineHeight: isMobile ? 22 : 26,
-      letterSpacing: -0.3,
+      lineHeight: isMobile ? 21 : 25,
+      letterSpacing: -0.2,
     },
-    chevronWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: DESIGN_TOKENS.radii.full,
+    questionOpen: {
+      color: colors.primary,
+    },
+    toggleWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
       backgroundColor: colors.backgroundSecondary,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.borderLight,
+      flexShrink: 0,
     },
-    chevronWrapOpen: {
-      backgroundColor: colors.primaryLight,
-      borderColor: colors.primaryAlpha30,
+    toggleWrapOpen: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
     },
     answerWrap: {
-      paddingHorizontal: isMobile ? 14 : 28,
-      paddingBottom: isMobile ? 16 : 28,
-      paddingTop: 4,
+      paddingHorizontal: isMobile ? 16 : 28,
+      paddingBottom: isMobile ? 18 : 24,
+      paddingTop: 2,
       ...Platform.select({
         web: {
           overflow: 'hidden',
@@ -196,8 +202,8 @@ function HomeFAQSection() {
       }),
     },
     answer: {
-      fontSize: isMobile ? 15 : 16,
-      lineHeight: isMobile ? 22 : 26,
+      fontSize: isMobile ? 14 : 16,
+      lineHeight: isMobile ? 21 : 26,
       color: colors.textMuted,
     },
   }), [colors, isMobile]);
@@ -207,11 +213,11 @@ function HomeFAQSection() {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
           <View style={styles.eyebrow}>
-            <Feather name="help-circle" size={11} color={colors.primary} />
-            <Text style={styles.eyebrowText}>Вопросы и ответы</Text>
+            <Feather name="help-circle" size={12} color={colors.primaryText} />
+            <Text style={styles.eyebrowText}>Частые вопросы</Text>
           </View>
-          <Text style={styles.title}>Частые вопросы</Text>
-          <Text style={styles.subtitle}>Отвечаем на самые частые вопросы</Text>
+          <Text style={styles.title}>Всё, что нужно знать</Text>
+          <Text style={styles.subtitle}>Ответы на самые частые вопросы о сервисе</Text>
         </View>
 
         <View style={styles.inner}>
@@ -228,15 +234,16 @@ function HomeFAQSection() {
                     accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
                     style={({ pressed, hovered }) => [
                       styles.itemHeader,
-                      (pressed || hovered) && Platform.OS === 'web' ? styles.itemHeaderHover : null,
+                      isOpen && styles.itemHeaderOpen,
+                      !isOpen && (pressed || hovered) && Platform.OS === 'web' ? styles.itemHeaderHover : null,
                     ]}
                   >
-                    <Text style={styles.question}>{item.q}</Text>
-                    <View style={[styles.chevronWrap, isOpen && styles.chevronWrapOpen]}>
+                    <Text style={[styles.question, isOpen && styles.questionOpen]}>{item.q}</Text>
+                    <View style={[styles.toggleWrap, isOpen && styles.toggleWrapOpen]}>
                       <Feather
-                        name={isOpen ? 'chevron-up' : 'chevron-down'}
+                        name={isOpen ? 'minus' : 'plus'}
                         size={16}
-                        color={isOpen ? colors.primary : colors.textMuted}
+                        color={isOpen ? colors.textOnPrimary : colors.textMuted}
                       />
                     </View>
                   </Pressable>

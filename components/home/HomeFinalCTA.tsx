@@ -15,6 +15,12 @@ interface HomeFinalCTAProps {
   travelsCount?: number;
 }
 
+const TRUST_BADGES = [
+  { icon: 'check-circle', label: 'Бесплатно' },
+  { icon: 'shield', label: 'Без карты' },
+  { icon: 'zap', label: 'Мгновенно' },
+] as const;
+
 function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -53,7 +59,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       alignItems: 'center',
       ...Platform.select({
         web: {
-          backgroundImage: `radial-gradient(ellipse 85% 70% at 50% 0%, ${colors.primarySoft} 0%, transparent 68%), linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.background} 100%)`,
+          backgroundImage: [
+            `radial-gradient(ellipse 60% 50% at 20% 50%, ${colors.primaryAlpha30} 0%, transparent 65%)`,
+            `radial-gradient(ellipse 60% 50% at 80% 50%, ${colors.primaryAlpha30} 0%, transparent 65%)`,
+            `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.background} 100%)`,
+          ].join(', '),
         },
       }),
     },
@@ -61,18 +71,18 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       width: '100%',
       alignSelf: 'center',
       alignItems: 'center',
-      gap: isMobile ? 14 : 24,
+      gap: isMobile ? 16 : 28,
       maxWidth: 720,
       borderRadius: DESIGN_TOKENS.radii.xl,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 12 : 32,
-      paddingVertical: isMobile ? 16 : 30,
+      paddingHorizontal: isMobile ? 16 : 48,
+      paddingVertical: isMobile ? 24 : 48,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          backgroundImage: `linear-gradient(165deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          backgroundImage: `linear-gradient(165deg, ${colors.surface} 0%, ${colors.primarySoft} 100%)`,
         },
       }),
     },
@@ -84,57 +94,75 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       backgroundColor: colors.primarySoft,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      alignSelf: 'flex-start',
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      alignSelf: 'center',
     },
     eyebrowText: {
       fontSize: 11,
       fontWeight: '800',
       color: colors.primaryText,
-      letterSpacing: 0.7,
+      letterSpacing: 1,
       textTransform: 'uppercase',
     },
     iconWrap: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: colors.primarySoft,
+      width: isMobile ? 60 : 72,
+      height: isMobile ? 60 : 72,
+      borderRadius: isMobile ? 30 : 36,
+      backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 2,
+      marginBottom: 4,
+      ...Platform.select({
+        web: {
+          boxShadow: `0 8px 24px ${colors.primaryAlpha30}`,
+        },
+      }),
+    },
+    titleRow: {
+      alignItems: 'center',
+      gap: 4,
     },
     title: {
-      fontSize: isMobile ? 22 : 44,
+      fontSize: isMobile ? 26 : 48,
       fontWeight: '900',
       color: colors.text,
       textAlign: 'center',
-      letterSpacing: -1,
-      lineHeight: isMobile ? 28 : 52,
+      letterSpacing: -1.2,
+      lineHeight: isMobile ? 32 : 56,
+    },
+    titleAccent: {
+      fontSize: isMobile ? 26 : 48,
+      fontWeight: '900',
+      color: colors.primary,
+      textAlign: 'center',
+      letterSpacing: -1.2,
+      lineHeight: isMobile ? 32 : 56,
     },
     subtitle: {
       fontSize: isMobile ? 14 : 18,
       color: colors.textMuted,
       textAlign: 'center',
-      lineHeight: isMobile ? 20 : 28,
-      maxWidth: 520,
+      lineHeight: isMobile ? 21 : 28,
+      maxWidth: 480,
+      fontWeight: '400',
     },
     buttonsContainer: {
       flexDirection: isMobile ? 'column' : 'row',
       alignItems: 'center',
-      gap: isMobile ? 8 : 12,
+      gap: isMobile ? 10 : 14,
       width: isMobile ? '100%' : undefined,
-      marginTop: 6,
+      marginTop: 4,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 24 : 42,
-      paddingVertical: isMobile ? 14 : 19,
-      minHeight: isMobile ? 48 : 60,
+      paddingHorizontal: isMobile ? 24 : 44,
+      paddingVertical: isMobile ? 15 : 20,
+      minHeight: isMobile ? 50 : 62,
       borderRadius: DESIGN_TOKENS.radii.pill,
       width: isMobile ? '100%' : undefined,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
+          boxShadow: DESIGN_TOKENS.shadows.heavy,
           transition: 'all 0.25s ease',
         },
       }),
@@ -143,8 +171,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
         web: {
-          transform: 'translateY(-2px)',
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          transform: 'translateY(-3px)',
+          boxShadow: `0 12px 32px ${colors.primaryAlpha30}`,
         },
       }),
     },
@@ -160,7 +188,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
       borderWidth: 1.5,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
       width: isMobile ? '100%' : undefined,
       ...Platform.select({
         web: {
@@ -182,6 +210,24 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       fontWeight: '600',
       color: colors.text,
     },
+    trustBadgesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: isMobile ? 12 : 20,
+      marginTop: 4,
+      flexWrap: 'wrap',
+    },
+    trustBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    trustBadgeText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
   }), [colors, isMobile]);
 
   return (
@@ -189,20 +235,21 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       <ResponsiveContainer maxWidth="lg" padding>
         <View style={styles.content}>
           <View style={styles.eyebrow}>
-            <Feather name="star" size={12} color={colors.primary} />
-            <Text style={styles.eyebrowText}>Ваш travel space</Text>
+            <Feather name="star" size={12} color={colors.primaryText} />
+            <Text style={styles.eyebrowText}>Ваш travel-дневник</Text>
           </View>
 
           <View style={styles.iconWrap}>
-            <Feather name="book-open" size={28} color={colors.primary} />
+            <Feather name="book-open" size={isMobile ? 28 : 32} color={colors.textOnPrimary} />
           </View>
-          
-          <Text style={styles.title}>
-            Готовы начать?
-          </Text>
-          
+
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Начните собирать</Text>
+            <Text style={styles.titleAccent}>книгу путешествий</Text>
+          </View>
+
           <Text style={styles.subtitle}>
-            Создайте личную книгу путешествий — бесплатно и без регистрации
+            Сохраняйте маршруты с фото и заметками, экспортируйте в красивый PDF — бесплатно и без лишнего
           </Text>
 
           <View style={styles.buttonsContainer}>
@@ -212,6 +259,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
               variant="primary"
               size="lg"
               fullWidth={isMobile}
+              icon={<Feather name="arrow-right" size={18} color={colors.textOnPrimary} />}
+              iconPosition="right"
               style={styles.primaryButton}
               labelStyle={styles.primaryButtonText}
               hoverStyle={styles.primaryButtonHover}
@@ -231,6 +280,15 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
               pressedStyle={styles.secondaryButtonHover}
               accessibilityLabel="Смотреть маршруты"
             />
+          </View>
+
+          <View style={styles.trustBadgesRow}>
+            {TRUST_BADGES.map((badge) => (
+              <View key={badge.label} style={styles.trustBadge}>
+                <Feather name={badge.icon as any} size={13} color={colors.success ?? colors.primary} />
+                <Text style={styles.trustBadgeText}>{badge.label}</Text>
+              </View>
+            ))}
           </View>
         </View>
       </ResponsiveContainer>

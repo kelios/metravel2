@@ -178,9 +178,9 @@ function HomeInspirationSection({
   }, [title, router]);
 
   const sectionBadge = useMemo(() => {
-    if (queryKey === 'home-travels-of-month') return { icon: 'zap', label: 'Идеи сезона' };
-    if (queryKey === 'home-popular-travels') return { icon: 'trending-up', label: 'Выбор сообщества' };
-    return { icon: 'shuffle', label: 'Маршрут-сюрприз' };
+    if (queryKey === 'home-travels-of-month') return { icon: 'zap', label: 'Идеи сезона', color: 'warning' };
+    if (queryKey === 'home-popular-travels') return { icon: 'trending-up', label: 'Выбор сообщества', color: 'primary' };
+    return { icon: 'shuffle', label: 'Маршрут-сюрприз', color: 'success' };
   }, [queryKey]);
 
   const viewMoreLabel = isMobile ? 'Все маршруты' : 'Смотреть все маршруты';
@@ -507,7 +507,11 @@ function HomeInspirationSection({
         <View style={styles.sectionAccent} />
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.titleContainer}>
-            <View style={styles.sectionBadge}>
+            <View style={[
+              styles.sectionBadge,
+              sectionBadge.color === 'warning' && { backgroundColor: colors.warningSoft ?? colors.primarySoft, borderColor: colors.warningAlpha30 ?? colors.primaryAlpha30 },
+              sectionBadge.color === 'success' && { backgroundColor: colors.successSoft, borderColor: colors.primaryAlpha30 },
+            ]}>
               <Feather name={sectionBadge.icon as any} size={12} color={colors.primary} />
               <Text style={styles.sectionBadgeText}>{sectionBadge.label}</Text>
             </View>
