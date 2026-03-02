@@ -2,7 +2,7 @@
 // E12: Data + thread logic extracted from CommentsSection.tsx
 
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { usePathname, useRouter } from 'expo-router';
+import { usePathname, useRouter, type Href } from 'expo-router';
 import {
   useMainThread,
   useTravelComments,
@@ -172,7 +172,7 @@ export function useCommentsData(travelId: number) {
   const handleLoginPress = useCallback(() => {
     sendAnalyticsEvent('AuthCtaClicked', { source: 'comments', intent: 'comment', travelId });
     const redirectPath = `${pathname || '/'}#comments`;
-    router.push(`/login?intent=comment&redirect=${encodeURIComponent(redirectPath)}` as unknown as string);
+    router.push(`/login?intent=comment&redirect=${encodeURIComponent(redirectPath)}` as Href);
   }, [pathname, router, travelId]);
 
   return {
