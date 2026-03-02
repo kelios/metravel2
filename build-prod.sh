@@ -120,6 +120,15 @@ node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by 
 
 echo "Постобработка билда..."
 node scripts/copy-public-files.js "dist/$ENV"
+
+# Ensure required web icon URLs exist in dist even if some files are missing in public/assets/icons.
+mkdir -p "dist/$ENV/assets/icons"
+for icon in logo_yellow.png logo_yellow_60x60.png logo_yellow_192x192.png logo_yellow_512x512.png apple-touch-icon-180x180.png; do
+  if [[ -f "assets/icons/$icon" ]]; then
+    cp -f "assets/icons/$icon" "dist/$ENV/assets/icons/$icon"
+  fi
+done
+
 node scripts/add-cache-bust-meta.js "dist/$ENV"
 
 if [[ "$DEPLOY" == "1" ]]; then
