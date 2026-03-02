@@ -36,7 +36,7 @@
 
 ---
 
-### C2.2 — Extract MapPopup.tsx into map-core (L, 🟡 Средний)
+### C2.2 — Extract MapPopup.tsx into map-core (L, 🟡 Средний) ✅ DONE
 
 **Файлы:**
 - `map/Map.web.tsx` (строки 643–814): `PopupWithClose`
