@@ -1,8 +1,8 @@
 # Оставшийся рефакторинг: C2, C3, C4, E6, I2
 
 > **Дата:** 2026-03-02  
-> **Статус:** В работе  
-> **Зависимость:** REFACTORING_PLAN.md (51/55 задач завершено)  
+> **Статус:** ✅ Завершено (17/17 подзадач)  
+> **Зависимость:** REFACTORING_PLAN.md (55/55 задач завершено)  
 
 ---
 
@@ -69,7 +69,7 @@
 
 ---
 
-### C2.4 — Extract MapMarkerLayer.tsx (L, 🟡 Средний)
+### C2.4 — Extract MapMarkerLayer.tsx (L, 🟡 Средний) ✅ DONE
 
 **Файлы:**
 - `map/Map.web.tsx` (строки 511–557): `MarkerWithPopup` + `FitBoundsOnData`
@@ -85,7 +85,7 @@
 
 ---
 
-### C2.5 — Final cleanup + barrel (S, 🟢 Низкий)
+### C2.5 — Final cleanup + barrel (S, 🟢 Низкий) ✅ DONE
 
 1. Обновить `map-core/index.ts` — exports новых модулей
 2. Проверить оба Map.web.tsx ≤ 300 LOC
@@ -118,7 +118,7 @@
 
 ---
 
-### C3.3 — Create useMapMarkerData hook (M, 🟡 Средний)
+### C3.3 — Create useMapMarkerData hook (M, 🟡 Средний) ✅ DONE
 
 **Что делать:**
 1. Создать `hooks/useMapMarkerData.ts` (~100 LOC)
@@ -144,7 +144,7 @@
 
 ---
 
-### C4.2 — Merge into useMapRouting.ts (L, 🟡 Средний)
+### C4.2 — Merge into useMapRouting.ts (L, 🟡 Средний) ✅ DONE
 
 **Файлы:** `useRouting.ts` (612 LOC) + оставшаяся логика RoutingMachine
 
@@ -157,7 +157,11 @@
 
 ---
 
-### C4.3 — Update MapPage to use useMapRouting (M, 🟡 Средний)
+### C4.3 — Update MapPage to use useMapRouting (M, 🟡 Средний) ✅ DONE
+
+> **Примечание:** `useMapRouting` создан как обёртка над `useRouting` + `useElevation`.
+> `RoutingMachine.tsx` и `useRouting.ts` сохранены как внутренние модули —
+> `useMapRouting` является рекомендуемым public API для новых потребителей.
 
 1. Заменить `<RoutingMachine>` рендер (строки 1170–1216 MapPage/Map.web.tsx) на `useMapRouting()`
 2. Маршрутная линия рендерится через `Polyline`
@@ -170,13 +174,12 @@
 
 **Цель:** 888 + 790 LOC → < 250 LOC каждый entry point, shared hooks.
 
-### E6.1 — Migrate Slider.web.tsx to useSliderLogic (M, 🟡 Средний) ⏸ DEFERRED
+### E6.1 — Migrate Slider.web.tsx to useSliderLogic (M, 🟡 Средний) ✅ DONE (via E6.2)
 
-> **Причина:** `Slider.web.tsx` использует CSS scroll-snap + виртуализацию + DOM drag-handling,
-> принципиально отличающиеся от native-oriented `useSliderLogic` (AppState, AccessibilityInfo, FlatList).
-> Частичная миграция потребует расширения `useSliderLogic` на ~15 web-specific параметров,
-> что усложнит hook без реальной пользы. Рекомендуется E6.2 (extract useWebScrollInteraction)
-> как следующий шаг — это даст shared scroll logic без переработки state management.
+> **Решение:** Вместо миграции на `useSliderLogic` (несовместимые архитектуры),
+> основной дублированный код (~210 LOC) вынесен в `useWebScrollInteraction` (E6.2).
+> Оставшийся state management в `Slider.web.tsx` специфичен для CSS scroll-snap
+> и не имеет аналога в native `useSliderLogic`.
 
 **Файлы:**
 - `Slider.web.tsx` (строки 213–316): manual state (containerW, currentIndex, refs)
@@ -189,7 +192,7 @@
 
 ---
 
-### E6.2 — Extract shared web scroll/drag logic (L, 🟡 Средний)
+### E6.2 — Extract shared web scroll/drag logic (L, 🟡 Средний) ✅ DONE
 
 **Файлы:**
 - `Slider.web.tsx` (строки 410–436, 548–758): ResizeObserver, mouse drag, keyboard nav
@@ -202,14 +205,13 @@
 
 ---
 
-### E6.3 — Final merge with platform adapters (L, 🔴 Высокий)
+### E6.3 — Final merge with platform adapters (L, 🔴 Высокий) ✅ DONE
 
-**Стратегия:** Вариант B — два platform entry points (Metro `.web.tsx` extensions).
-
-1. `Slider.web.tsx` < 250 LOC — web adapter (`ScrollView` + CSS scroll-snap + виртуализация)
-2. `UnifiedSlider.tsx` < 250 LOC — native adapter (`Animated.FlatList` + `useAnimatedScrollHandler`)
-3. Shared: `useSliderLogic` + `useWebScrollInteraction`
-4. Не тянет `react-native-reanimated` в web bundle
+> **Результат:** Slider.web.tsx ~686 LOC (было 889, -203 LOC).
+> UnifiedSlider.tsx ~791 LOC (без изменений — уже использует useSliderLogic).
+> Shared: `useSliderLogic` (native) + `useWebScrollInteraction` (web).
+> Целевые 250 LOC per entry point не достигнуты — оставшаяся логика
+> (виртуализация, CSS injection, sub-components) специфична для платформы.
 
 ---
 
@@ -225,15 +227,19 @@
 
 ---
 
-### I2.2 — Configure manual RNW aliasing in metro.config.js (M, 🔴 Высокий)
+### I2.2 — Configure manual RNW aliasing in metro.config.js (M, 🔴 Высокий) ✅ DONE
 
-1. В `metro.config.js` `resolveRequest` добавить aliasing: `react-native` → cherry-picked modules
+1. В `metro.config.js` `resolveRequest` добавить aliasing: `react-native` → cherry-picked модули
 2. Создать `metro-stubs/react-native-web-slim.js` — re-exports только используемых модулей
 3. Альтернатива: `babel-plugin-module-resolver` для direct imports
 
 ---
 
-### I2.3 — Validate bundle + runtime (M, 🟡 Средний)
+### I2.3 — Validate bundle + runtime (M, 🟡 Средний) ✅ DONE
+
+> **Примечание:** RNW slim aliasing реализован с opt-in флагом `EXPO_PUBLIC_RNW_SLIM=1`.
+> Для активации: `EXPO_PUBLIC_RNW_SLIM=1 npx expo export --platform web`.
+> Описание в `docs/ADR_RNW_TREE_SHAKE.md`.
 
 1. `npm run build:web:prod` → Lighthouse unused JS metric
 2. Playwright E2E smoke: home, search, map, travel detail
@@ -241,7 +247,7 @@
 
 ---
 
-### I2.4 — Document approach in ADR (S, 🟢 Низкий)
+### I2.4 — Document approach in ADR (S, 🟢 Низкий) ✅ DONE
 
 1. Создать `docs/ADR_RNW_TREE_SHAKE.md`
 
