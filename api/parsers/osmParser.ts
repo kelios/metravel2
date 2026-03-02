@@ -50,7 +50,7 @@ export class OSMParser {
   }
   
   private static parseGeoJSON(text: string): ParsedPoint[] {
-    let data: any;
+    let data: unknown;
     try {
       data = JSON.parse(text);
     } catch {
@@ -58,13 +58,16 @@ export class OSMParser {
     }
     const points: ParsedPoint[] = [];
     
-    const features = Array.isArray(data?.features) ? data.features : [];
-    
+    const rec = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+    const features = Array.isArray(rec.features) ? rec.features : [];
+
     for (const feature of features) {
-      const props = feature.properties || {};
-      const geometryType = feature.geometry?.type;
-      const coords = feature.geometry?.coordinates;
-      
+      const f = feature && typeof feature === 'object' ? (feature as Record<string, unknown>) : {};
+      const props = f.properties && typeof f.properties === 'object' ? (f.properties as Record<string, unknown>) : {};
+      const geometry = f.geometry && typeof f.geometry === 'object' ? (f.geometry as Record<string, unknown>) : {};
+      const geometryType = geometry.type;
+      const coords = geometry.coordinates;
+
       if (geometryType !== 'Point') continue;
       if (!Array.isArray(coords) || coords.length < 2) continue;
 
@@ -90,8 +93,8 @@ export class OSMParser {
       
       const point: ParsedPoint = {
         id: this.generateId(),
-        name: props.name || 'Без названия',
-        description: props.description,
+        name: String(props.name || 'Без названия'),
+        description: props.description as string | undefined,
         latitude: lat,
         longitude: lng,
         color,

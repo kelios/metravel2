@@ -53,7 +53,7 @@ export class GoogleMapsParser {
   }
   
   private static parseJSON(text: string): ParsedPoint[] {
-    let data: any;
+    let data: unknown;
     try {
       data = JSON.parse(text);
     } catch {
@@ -61,12 +61,15 @@ export class GoogleMapsParser {
     }
     const points: ParsedPoint[] = [];
     
-    const features = Array.isArray(data?.features) ? data.features : [];
-    
+    const rec = data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+    const features = Array.isArray(rec.features) ? rec.features : [];
+
     for (const feature of features) {
-      const props = feature.properties || {};
-      const coords = feature.geometry?.coordinates;
-      
+      const f = feature && typeof feature === 'object' ? (feature as Record<string, unknown>) : {};
+      const props = f.properties && typeof f.properties === 'object' ? (f.properties as Record<string, unknown>) : {};
+      const geometry = f.geometry && typeof f.geometry === 'object' ? (f.geometry as Record<string, unknown>) : {};
+      const coords = geometry.coordinates;
+
       if (!Array.isArray(coords) || coords.length < 2) continue;
 
       const lat = Number(coords[1]);
@@ -81,23 +84,24 @@ export class GoogleMapsParser {
 
       if (!hasValidCoords) continue;
 
-      const location = props.Location || props.location || {};
-      const address = props.address ?? props.Address ?? location.Address ?? location.address;
-      
+      const locationRaw = props.Location ?? props.location;
+      const location = locationRaw && typeof locationRaw === 'object' ? (locationRaw as Record<string, unknown>) : {};
+      const address = (props.address ?? props.Address ?? location.Address ?? location.address) as string | undefined;
+
       const point: ParsedPoint = {
         id: this.generateId(),
-        name: props.Title || props.name || 'Без названия',
-        description: props.description,
+        name: String(props.Title || props.name || 'Без названия'),
+        description: props.description as string | undefined,
         latitude: lat,
         longitude: lng,
         address,
-        color: this.mapGoogleCategoryToColor(props.Category),
+        color: this.mapGoogleCategoryToColor(props.Category as string | undefined),
         categoryIds: [],
-        status: this.mapGoogleStatusToStatus(props.Category),
+        status: this.mapGoogleStatusToStatus(props.Category as string | undefined),
         source: 'google_maps',
-        originalId: props['Google Maps URL'],
+        originalId: props['Google Maps URL'] as string | undefined,
         importedAt: new Date().toISOString(),
-        rating: props.rating,
+        rating: typeof props.rating === 'number' ? props.rating : undefined,
       };
       
       points.push(point);
@@ -277,8 +281,8 @@ export class GoogleMapsParser {
   }
 
   private static async readText(file: FileInput): Promise<string> {
-    if ('text' in file && typeof (file as any).text === 'function') {
-      return await (file as any).text();
+    if ('text' in file && typeof (file as { text?: unknown }).text === 'function') {
+      return await (file as File).text();
     }
     const asset = file as DocumentPickerAsset;
     const response = await fetch(asset.uri);
@@ -286,8 +290,8 @@ export class GoogleMapsParser {
   }
 
   private static async readArrayBuffer(file: FileInput): Promise<ArrayBuffer> {
-    if ('arrayBuffer' in file && typeof (file as any).arrayBuffer === 'function') {
-      return await (file as any).arrayBuffer();
+    if ('arrayBuffer' in file && typeof (file as { arrayBuffer?: unknown }).arrayBuffer === 'function') {
+      return await (file as File).arrayBuffer();
     }
     const asset = file as DocumentPickerAsset;
     const response = await fetch(asset.uri);
