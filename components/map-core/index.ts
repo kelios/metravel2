@@ -24,3 +24,16 @@ export {
   normalizePoint,
 } from './types';
 
+// C2.2: Shared popup
+export { default as MapPopup } from './MapPopup';
+export type { MapPopupConfig } from './MapPopup';
+export { getPopupCss } from './mapPopupStyles';
+
+// C2.3: Shared Leaflet lifecycle
+export { useMapLifecycle, hasMapPane } from './useMapLifecycle';
+export type { UseMapLifecycleOptions, UseMapLifecycleReturn } from './useMapLifecycle';
+
+// C4.1: Elevation
+export { useElevation, sampleIndices, computeElevationGainLoss } from './useElevation';
+export type { UseElevationOptions, UseElevationResult } from './useElevation';
+

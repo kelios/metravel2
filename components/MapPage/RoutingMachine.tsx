@@ -215,102 +215,20 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         // Не включаем setters в зависимости - они стабильны
     ])
 
-    // Elevation stats (bike/foot only): fetch elevations for sampled route geometry and compute gain/loss.
-    useEffect(() => {
-        if (!hasTwoPoints) return
-        if (transportMode === 'car') return
-        if (!setRouteElevationStats) return
-        if (routingState.loading) return
-        if (!Array.isArray(routingState.coords) || routingState.coords.length < 2) return
+    // Elevation stats (bike/foot only) — delegated to useElevation
+    const handleElevationResult = useCallback((gain: number | null, loss: number | null) => {
+        setRouteElevationStats?.(gain, loss)
+    }, [setRouteElevationStats])
 
-        const indices = sampleIndices(routingState.coords.length, MAX_ELEVATION_SAMPLES)
-        if (indices.length < 2) return
-
-        const sampled = indices
-            .map((i) => routingState.coords[i])
-            .filter((p) => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))
-
-        if (sampled.length < 2) return
-
-        const latitudes = sampled.map((p) => Number(p[1]).toFixed(5)).join(',')
-        const longitudes = sampled.map((p) => Number(p[0]).toFixed(5)).join(',')
-
-        // Stable cache key (rounded samples) to avoid re-fetching on tiny floating diffs.
-        const cacheKey = `${transportMode}:${latitudes}:${longitudes}`
-        const cached = elevationCache.get(cacheKey)
-        if (cached) {
-            try {
-                setRouteElevationStats(cached.gain, cached.loss)
-            } catch {
-                // noop
-            }
-            return
-        }
-
-        // Clear stale values while we fetch new elevations
-        try {
-            setRouteElevationStats(null, null)
-        } catch {
-            // noop
-        }
-
-        const now = Date.now()
-        if (now < elevationNextAllowedAtMs) return
-        if (now - elevationLastAttemptAtMs < ELEVATION_MIN_INTERVAL_MS) return
-        elevationLastAttemptAtMs = now
-
-        const abortController = new AbortController()
-        let cancelled = false
-
-        const fetchElevations = async () => {
-            try {
-                // Open-Meteo elevation API (no key). Keep sample count <= 100.
-                const url = `https://api.open-meteo.com/v1/elevation?latitude=${latitudes}&longitude=${longitudes}`
-                const res = await fetch(url, { signal: abortController.signal })
-                if (res.status === 429) {
-                    elevationNextAllowedAtMs = Date.now() + ELEVATION_429_COOLDOWN_MS
-                    return
-                }
-                if (!res.ok) return
-                const data = await res.json().catch(() => null)
-                const elevations = (data as any)?.elevation
-                if (!Array.isArray(elevations) || elevations.length < 2) return
-                if (cancelled) return
-
-                const stats = computeElevationGainLoss(elevations.map((x: any) => Number(x)))
-                elevationCache.set(cacheKey, stats)
-                try {
-                    setRouteElevationStats(stats.gain, stats.loss)
-                } catch {
-                    // noop
-                }
-            } catch (e: any) {
-                if (e?.name === 'AbortError') return
-            }
-        }
-
-        fetchElevations()
-
-        return () => {
-            cancelled = true
-            try {
-                abortController.abort()
-            } catch {
-                // noop
-            }
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasTwoPoints, transportMode, coordsKeyForSync, routingState.loading, setRouteElevationStats])
-
-    useEffect(() => {
-        if (!setRouteElevationStats) return
-        if (transportMode !== 'car') return
-        try {
-            setRouteElevationStats(null, null)
-        } catch {
-            // noop
-        }
-    }, [setRouteElevationStats, transportMode])
+    useElevation(
+        {
+            coords: routingState.coords,
+            transportMode,
+            enabled: hasTwoPoints && !routingState.loading && Array.isArray(routingState.coords) && routingState.coords.length >= 2,
+            coordsKey: coordsKeyForSync,
+        },
+        handleElevationResult,
+    )
 
     return null
 }
