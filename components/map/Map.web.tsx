@@ -270,7 +270,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const useMapHook = RL.useMap;
 
 
-  const FitBoundsOnData: React.FC<{ data: Point[] }> = ({ data }) => {
+  const FitBoundsOnData: React.FC<{ data: LegacyMapPoint[] }> = ({ data }) => {
     const map = useMapHook?.();
 
     useEffect(() => {

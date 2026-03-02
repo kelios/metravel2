@@ -37,3 +37,7 @@ export type { UseMapLifecycleOptions, UseMapLifecycleReturn } from './useMapLife
 export { useElevation, sampleIndices, computeElevationGainLoss } from './useElevation';
 export type { UseElevationOptions, UseElevationResult } from './useElevation';
 
+// C2.4: Marker layer
+export { default as MapMarkerLayer, FitBoundsOnData } from './MapMarkerLayer';
+export type { MarkerLayerProps, FitBoundsProps } from './MapMarkerLayer';
+
