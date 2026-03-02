@@ -162,7 +162,6 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     if (Platform.OS === 'web') return;
 
     try {
-      // @ts-ignore - для React Native
       if (navigator.share) {
         await navigator.share({
           title: shareTitle,

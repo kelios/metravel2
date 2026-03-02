@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
             web: {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                // @ts-ignore - hover будет применен через inline стили
+                // RNWeb hover styles applied via Platform.select
             },
         }),
     },

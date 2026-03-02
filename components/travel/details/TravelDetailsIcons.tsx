@@ -74,7 +74,6 @@ export const Icon: React.FC<
 }) => (
   <Suspense fallback={<View style={{ width: size, height: size }} />}>
     <LazyFeather
-      // @ts-ignore - Feather name prop
       name={mapIconName(name)}
       size={size}
       color={color}

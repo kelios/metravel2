@@ -47,7 +47,7 @@ const TravelPdfExportControlLazy = lazy(() => import('@/components/travel/Travel
 // универсальный эмиттер "открой секцию"
 const emitOpenSection = (key: string) => {
   if (Platform.OS === "web") {
-    // @ts-ignore
+    // @ts-expect-error CustomEvent is Web API, not available in RN type defs
     window.dispatchEvent(new CustomEvent("open-section", { detail: { key } }));
   } else {
     DeviceEventEmitter.emit("open-section", key);

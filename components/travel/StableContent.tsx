@@ -598,8 +598,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         iframe.title = "YouTube video";
         iframe.allow =
           "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-        // @ts-ignore
-        iframe.allowFullscreen = true;
+        iframe.setAttribute('allowfullscreen', '');
         Object.assign(iframe.style, {
           position: "absolute",
           inset: "0",
@@ -659,7 +658,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     return {
       img: (props: TDefaultRendererProps<any>) => {
         try {
-          // @ts-ignore
+          // @ts-expect-error CustomImageRenderer accepts extended props beyond TDefaultRendererProps
           return <CustomImageRenderer {...props} contentWidth={contentWidth} />;
         } catch {
           const DefaultRenderer = (props as any).TDefaultRenderer;

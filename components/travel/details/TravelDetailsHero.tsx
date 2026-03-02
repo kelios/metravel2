@@ -262,9 +262,7 @@ const OptimizedLCPHeroInner: React.FC<{
             }}
             loading="eager"
             decoding="sync"
-            // @ts-ignore
             fetchPriority="high"
-            // @ts-ignore
             ref={imgRef as any}
             referrerPolicy="no-referrer-when-downgrade"
             data-lcp
