@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -13,8 +13,8 @@ export default function PrivacyScreen() {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const title = 'Политика конфиденциальности | Metravel';
-  const description = 'Подробная политика конфиденциальности Metravel в соответствии с требованиями GDPR.';
+  const title = 'Политика конфиденциальности и обработка данных | Metravel';
+  const description = 'Подробная политика конфиденциальности Metravel: как мы собираем, обрабатываем и защищаем ваши персональные данные в соответствии с требованиями GDPR.';
 
   return (
     <View style={styles.root}>
@@ -29,6 +29,19 @@ export default function PrivacyScreen() {
         />
       )}
       <ScrollView contentContainerStyle={styles.container}>
+        {Platform.OS === 'web' && (
+            <h1 style={{
+                position: 'absolute' as const,
+                width: 1,
+                height: 1,
+                padding: 0,
+                margin: -1,
+                overflow: 'hidden' as const,
+                clip: 'rect(0,0,0,0)',
+                whiteSpace: 'nowrap',
+                borderWidth: 0,
+            } as any}>{title}</h1>
+        )}
         <Text style={styles.heading}>Политика конфиденциальности</Text>
 
         <Text style={styles.paragraph}>Дата вступления в силу: 27.11.2025</Text>

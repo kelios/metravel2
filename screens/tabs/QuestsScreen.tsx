@@ -402,6 +402,19 @@ export default function QuestsScreen() {
                 <InstantSEO headKey="quests-index" title={titleText} description={descText} canonical={buildCanonicalUrl('/quests')} ogType="website" />
             )}
             <ScrollView style={s.page} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                {Platform.OS === 'web' && (
+                    <h1 style={{
+                        position: 'absolute' as const,
+                        width: 1,
+                        height: 1,
+                        padding: 0,
+                        margin: -1,
+                        overflow: 'hidden' as const,
+                        clip: 'rect(0,0,0,0)',
+                        whiteSpace: 'nowrap',
+                        borderWidth: 0,
+                    } as any}>{titleText}</h1>
+                )}
                 <View style={sx(s.wrap, isMobile && s.wrapMobile)}>
                     {/* Hero */}
                     <View style={sx(s.hero, isMobile && s.heroMobile)}>

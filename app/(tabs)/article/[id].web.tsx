@@ -162,7 +162,7 @@ export default function ArticleDetails() {
           {article.description && (
             <Card style={styles.card}>
               <Card.Content>
-                <Title>{article.name}</Title>
+                <h1 style={{ fontSize: 18, fontWeight: '700', margin: 0 } as any}>{article.name}</h1>
                 <SafeHtml html={article.description} style={{ marginTop: 16 }} />
               </Card.Content>
             </Card>

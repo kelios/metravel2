@@ -267,6 +267,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
           `,
         }}
       />
+      <noscript>
+        <style dangerouslySetInnerHTML={{ __html: '#root { visibility: visible !important; }' }} />
+      </noscript>
 
       {/* Ensure font-display=swap for dynamically injected icon fonts */}
       <script
@@ -278,7 +281,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
 	      <script
 	        dangerouslySetInnerHTML={{
-	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;function finish(){if(done)return;done=true;root.classList.add('rnw-styles-ready')}var inlineSheet=document.getElementById('react-native-stylesheet');if(inlineSheet){if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}else{setTimeout(finish,500)}}catch(_){}})();`,
+	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;function finish(){if(done)return;done=true;root.classList.add('rnw-styles-ready')}var inlineSheet=document.getElementById('react-native-stylesheet');if(inlineSheet){if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}else{setTimeout(finish,200)}}catch(_){}})();`,
 	        }}
 	      />
 

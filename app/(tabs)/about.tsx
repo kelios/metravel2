@@ -158,9 +158,9 @@ function AboutAndContactScreen() {
     return false;
   }, [sending, name, email, message, agree]);
 
-  const title = 'О проекте MeTravel | Кто мы и зачем это всё';
+  const title = 'О проекте MeTravel — сообщество путешественников | Metravel';
   const description =
-      'Проект MeTravel — сообщество путешественников. Делитесь маршрутами, пишите статьи, вдохновляйтесь идеями!';
+      'Проект MeTravel — сообщество путешественников по Беларуси и не только. Делитесь маршрутами, пишите статьи, сохраняйте впечатления и вдохновляйтесь идеями.';
 
   return (
       <>
@@ -178,6 +178,19 @@ function AboutAndContactScreen() {
           <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
             <View style={styles.backgroundImage}>
               <View style={styles.container}>
+                {Platform.OS === 'web' && (
+                    <h1 style={{
+                        position: 'absolute' as const,
+                        width: 1,
+                        height: 1,
+                        padding: 0,
+                        margin: -1,
+                        overflow: 'hidden' as const,
+                        clip: 'rect(0,0,0,0)',
+                        whiteSpace: 'nowrap',
+                        borderWidth: 0,
+                    } as any}>{title}</h1>
+                )}
                 <StatusBar barStyle="dark-content" />
                 <View style={styles.content}>
                   <AboutHeader />

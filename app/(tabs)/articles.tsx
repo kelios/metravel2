@@ -113,14 +113,27 @@ export default function TabOneScreen() {
         {isFocused && (
           <InstantSEO
             headKey="articles"
-            title="Статьи | Metravel"
-            description="Статьи путешественников на платформе Metravel — советы, истории и полезные материалы."
+            title="Статьи о путешествиях, маршрутах и советах в дорогу | Metravel"
+            description="Статьи путешественников на платформе Metravel — советы по маршрутам, истории из поездок, полезные материалы и идеи для вашего следующего путешествия."
             canonical={buildCanonicalUrl('/articles')}
             image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
             ogType="website"
           />
         )}
         <View style={styles.container}>
+          {Platform.OS === 'web' && (
+              <h1 style={{
+                  position: 'absolute' as const,
+                  width: 1,
+                  height: 1,
+                  padding: 0,
+                  margin: -1,
+                  overflow: 'hidden' as const,
+                  clip: 'rect(0,0,0,0)',
+                  whiteSpace: 'nowrap',
+                  borderWidth: 0,
+              } as any}>Статьи о путешествиях, маршрутах и советах в дорогу | Metravel</h1>
+          )}
           <View style={styles.content}>
             {isError && (
               <ErrorDisplay

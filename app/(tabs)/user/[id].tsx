@@ -124,6 +124,19 @@ export default function PublicUserProfileScreen() {
         />
       )}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+        {Platform.OS === 'web' && (
+            <h1 style={{
+                position: 'absolute' as const,
+                width: 1,
+                height: 1,
+                padding: 0,
+                margin: -1,
+                overflow: 'hidden' as const,
+                clip: 'rect(0,0,0,0)',
+                whiteSpace: 'nowrap',
+                borderWidth: 0,
+            } as any}>{`${fullName || 'Пользователь'} | Metravel`}</h1>
+        )}
         <View style={styles.headerCard}>
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
