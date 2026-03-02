@@ -84,7 +84,7 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
       typeof partial.minus === 'undefined' ||
       typeof partial.gallery === 'undefined' ||
       typeof partial.travelAddress === 'undefined' ||
-      typeof (partial as any).travel_image_url === 'undefined'
+      typeof (partial as unknown).travel_image_url === 'undefined'
     );
   }, []);
 

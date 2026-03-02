@@ -169,7 +169,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 await setSecureItem('refreshToken', userData.refresh);
             }
 
-            let profile: any = null;
+            let profile: unknown = null;
             try {
                 const { fetchUserProfile } = await getUserApi();
                 profile = await fetchUserProfile(String(userData.id));
@@ -234,7 +234,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 await setSecureItem('refreshToken', userData.refresh);
             }
 
-            let profile: any = null;
+            let profile: unknown = null;
             try {
                 const { fetchUserProfile } = await getUserApi();
                 profile = await fetchUserProfile(String(userData.id));

@@ -4,20 +4,20 @@ import { Platform } from 'react-native'
 const tdTraceEnabled =
   Platform.OS === 'web' &&
   typeof window !== 'undefined' &&
-  (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as any).__METRAVEL_TD_TRACE === true)
+  (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as unknown).__METRAVEL_TD_TRACE === true)
 
 export function useTdTrace() {
   return useCallback(
-    (event: string, data?: any) => {
+    (event: string, data?: unknown) => {
       if (!tdTraceEnabled) return
       try {
-        const perf = (window as any).performance
+        const perf = (window as unknown).performance
         const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
 
         const base =
-          (window as any).__METRAVEL_TD_TRACE_START ??
+          (window as unknown).__METRAVEL_TD_TRACE_START ??
           (typeof perf?.now === 'function' ? perf.now() : now)
-        ;(window as any).__METRAVEL_TD_TRACE_START = base
+        ;(window as unknown).__METRAVEL_TD_TRACE_START = base
 
         const delta = Math.round(now - base)
         // eslint-disable-next-line no-console

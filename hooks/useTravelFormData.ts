@@ -29,7 +29,7 @@ import {
   mergeOverridePreservingUserInput,
 } from '@/utils/travelFormNormalization';
 
-async function showToastMessage(payload: any) {
+async function showToastMessage(payload: unknown) {
   await showToast(payload);
 }
 
@@ -120,7 +120,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
       } as TravelFormData);
 
-      const normalizedMarkers = normalizeMarkersForSave((mergedData as any).coordsMeTravel);
+      const normalizedMarkers = normalizeMarkersForSave((mergedData as unknown).coordsMeTravel);
       const normalizedGallery = normalizeGalleryForSave(mergedData.gallery);
 
       const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
@@ -150,7 +150,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       return result;
     } catch (error) {
-      const errAny: any = error;
+      const errAny: unknown = error;
       const isAbort = abortController.signal.aborted || errAny?.name === 'AbortError';
       if (isAbort) {
         // Нормализуем отмену, чтобы выше по цепочке можно было её корректно игнорировать.
@@ -172,8 +172,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
       const currentDataSnapshot = formState.data as TravelFormData;
-      const hadId = normalizeTravelId((currentDataSnapshot as any)?.id) != null;
-      const hasId = normalizeTravelId((normalizedSavedData as any)?.id) != null;
+      const hadId = normalizeTravelId((currentDataSnapshot as unknown)?.id) != null;
+      const hasId = normalizeTravelId((normalizedSavedData as unknown)?.id) != null;
 
       // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
       const kf = (key: keyof TravelFormData, mode: Parameters<typeof keepCurrentField>[3]) =>
@@ -196,19 +196,19 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       // If user explicitly deleted cover (set to null) but server returned old URL, keep null.
       if (currentDataSnapshot.travel_image_thumb_url == null && normalizedSavedData.travel_image_thumb_url != null) {
-        normalizedSavedData.travel_image_thumb_url = null as any;
+        normalizedSavedData.travel_image_thumb_url = null as unknown;
       }
       if (currentDataSnapshot.travel_image_thumb_small_url == null && normalizedSavedData.travel_image_thumb_small_url != null) {
-        normalizedSavedData.travel_image_thumb_small_url = null as any;
+        normalizedSavedData.travel_image_thumb_small_url = null as unknown;
       }
 
       kf('gallery', 'emptyArray');
       kf('gallery', 'nilArray');
 
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
-        ? (normalizedSavedData.coordsMeTravel as any)
+        ? (normalizedSavedData.coordsMeTravel as unknown)
         : [];
-      const currentMarkers = Array.isArray(formState.data.coordsMeTravel) ? (formState.data.coordsMeTravel as any) : [];
+      const currentMarkers = Array.isArray(formState.data.coordsMeTravel) ? (formState.data.coordsMeTravel as unknown) : [];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
       const effectiveMarkers = markersFromResponse.length > 0
         ? mergeMarkersPreserveImages(markersFromResponse, currentMarkers)
@@ -283,8 +283,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       console.error('Autosave error (detailed):', errorDetails);
 
       // В продакшене можно отправить в систему мониторинга (Sentry, LogRocket и т.д.)
-      if (typeof window !== 'undefined' && (window as any).Sentry) {
-        (window as any).Sentry.captureException(error, {
+      if (typeof window !== 'undefined' && (window as unknown).Sentry) {
+        (window as unknown).Sentry.captureException(error, {
           tags: { component: 'useTravelFormData', action: 'autosave' },
           extra: errorDetails,
         });
@@ -312,8 +312,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       isAuthenticated &&
       hasAccess &&
       !isManualSaveInFlight &&
-      !(formState.data as any)?.moderation &&
-      !(formState.data as any)?.publish,
+      !(formState.data as unknown)?.moderation &&
+      !(formState.data as unknown)?.publish,
   });
 
   const handleManualSave = useCallback(async (dataOverride?: TravelFormData) => {
@@ -327,7 +327,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       try {
         // Если пользователь меняет статус на "отправить на модерацию" / "опубликовать",
         // то после успешного сохранения он уходит со страницы, и тосты автосейва больше не нужны.
-        const wantsToLeaveSoon = !!(dataOverride as any)?.publish || !!(dataOverride as any)?.moderation;
+        const wantsToLeaveSoon = !!(dataOverride as unknown)?.publish || !!(dataOverride as unknown)?.moderation;
         if (wantsToLeaveSoon) {
           suppressAutosaveErrorToastRef.current = true;
         }
@@ -356,7 +356,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         if ((error as Error)?.message === 'Request aborted') {
           return;
         }
-        const errAny: any = error;
+        const errAny: unknown = error;
         const details =
           errAny instanceof ApiError
             ? errAny.message
@@ -381,7 +381,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, [applySavedData, autosave, cleanAndSave, showToast]);
 
   // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure
-  const updateBaselineRef = useRef<((data: any) => void) | null>(null);
+  const updateBaselineRef = useRef<((data: unknown) => void) | null>(null);
   useEffect(() => {
     updateBaselineRef.current = autosave.updateBaseline;
   }, [autosave.updateBaseline]);
@@ -412,7 +412,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         }
 
         const transformed = normalizeDraftPlaceholders(transformTravelToFormData(travelData));
-        const markersFromData = (transformed.coordsMeTravel as any) || [];
+        const markersFromData = (transformed.coordsMeTravel as unknown) || [];
         const syncedCountries = syncCountriesFromMarkers(markersFromData, transformed.countries || []);
 
         const finalData = {
@@ -449,7 +449,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           setHasAccess(false);
           setLoadError({ status, message });
           const redirect = `/travel/${encodeURIComponent(String(id))}`;
-          router.replace(`/login?redirect=${encodeURIComponent(redirect)}&intent=edit-travel` as any);
+          router.replace(`/login?redirect=${encodeURIComponent(redirect)}&intent=edit-travel` as unknown);
           return;
         }
 
@@ -572,7 +572,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     (updatedMarkers: MarkerData[]) => {
       setHasUserInteracted(true);
       setMarkers(updatedMarkers);
-      formState.updateField('coordsMeTravel', updatedMarkers as any);
+      formState.updateField('coordsMeTravel', updatedMarkers as unknown);
     },
     [formState]
   );

@@ -17,12 +17,12 @@ interface UseMapDataControllerOptions {
   /**
    * Current filter values
    */
-  filterValues: any;
+  filterValues: unknown;
 
   /**
    * Available filters
    */
-  filters: any;
+  filters: unknown;
 
   /**
    * Map mode (radius or route)
@@ -49,12 +49,12 @@ interface UseMapDataControllerResult {
   /**
    * All travels data (unfiltered)
    */
-  allTravelsData: any[];
+  allTravelsData: unknown[];
 
   /**
    * Filtered travels data
    */
-  travelsData: any[];
+  travelsData: unknown[];
 
   /**
    * Is loading initial data
@@ -79,7 +79,7 @@ interface UseMapDataControllerResult {
   /**
    * Error details
    */
-  mapErrorDetails: any;
+  mapErrorDetails: unknown;
 
   /**
    * Refetch data

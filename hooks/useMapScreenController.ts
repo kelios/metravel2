@@ -119,7 +119,7 @@ export function useMapScreenController() {
   const buildRouteToRef = useRef(buildRouteTo);
   buildRouteToRef.current = buildRouteTo;
 
-  const buildRouteToStable = useCallback((item: any) => {
+  const buildRouteToStable = useCallback((item: unknown) => {
     return buildRouteToRef.current?.(item);
   }, []);
 

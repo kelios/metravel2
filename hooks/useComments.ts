@@ -116,7 +116,7 @@ export function useCreateComment() {
     onError: (err, variables, context) => {
       if (context?.previous) {
         (context.previous as Array<[unknown, unknown]>).forEach(([key, value]) => {
-          queryClient.setQueryData(key as any, value);
+          queryClient.setQueryData(key as unknown, value);
         });
       }
     },
@@ -154,7 +154,7 @@ export function useDeleteComment() {
         if (Array.isArray(old)) {
           return (old as TravelComment[]).filter((c) => c?.id !== _commentId);
         }
-        if (typeof old === 'object' && (old as any)?.id === _commentId) {
+        if (typeof old === 'object' && (old as unknown)?.id === _commentId) {
           return undefined;
         }
         return old;
@@ -218,7 +218,7 @@ export function useReplyToComment() {
     onError: (err, variables, context) => {
       if (context?.previous) {
         (context.previous as Array<[unknown, unknown]>).forEach(([key, value]) => {
-          queryClient.setQueryData(key as any, value);
+          queryClient.setQueryData(key as unknown, value);
         });
       }
     },

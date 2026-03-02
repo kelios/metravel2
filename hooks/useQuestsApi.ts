@@ -143,7 +143,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const [progressLoading, setProgressLoading] = useState(isAuthenticated && !!questId);
     const progressIdRef = useRef<number | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const pendingDataRef = useRef<any>(null);
+    const pendingDataRef = useRef<unknown>(null);
 
     // Загрузка прогресса при маунте
     useEffect(() => {

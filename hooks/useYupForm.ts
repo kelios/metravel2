@@ -6,13 +6,13 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import type { ObjectSchema } from 'yup';
 
-interface UseYupFormOptions<T extends Record<string, any>> {
+interface UseYupFormOptions<T extends Record<string, unknown>> {
     initialValues: T;
-    validationSchema: ObjectSchema<any>;
+    validationSchema: ObjectSchema<unknown>;
     onSubmit: (values: T, helpers: { setSubmitting: (v: boolean) => void; resetForm: () => void }) => void | Promise<void>;
 }
 
-export function useYupForm<T extends Record<string, any>>({ initialValues, validationSchema, onSubmit }: UseYupFormOptions<T>) {
+export function useYupForm<T extends Record<string, unknown>>({ initialValues, validationSchema, onSubmit }: UseYupFormOptions<T>) {
     const [values, setValues] = useState<T>(initialValues);
     const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
     const [touched, setTouched] = useState<Partial<Record<keyof T, boolean>>>({});
@@ -42,7 +42,7 @@ export function useYupForm<T extends Record<string, any>>({ initialValues, valid
             await validationSchema.validate(values, { abortEarly: false });
             setErrors({});
             return true;
-        } catch (err: any) {
+        } catch (err: unknown) {
             const fieldErrors: Partial<Record<keyof T, string>> = {};
             if (err?.inner) {
                 for (const e of err.inner) {

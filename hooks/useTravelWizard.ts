@@ -6,7 +6,7 @@ import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
 import { showToast } from '@/utils/toast';
 
-async function showToastMessage(payload: any) {
+async function showToastMessage(payload: unknown) {
   await showToast(payload);
 }
 
@@ -74,7 +74,7 @@ interface UseTravelWizardOptions {
   totalSteps?: number;
   hasUnsavedChanges: boolean;
   canSave: boolean;
-  onSave: () => Promise<any>;
+  onSave: () => Promise<unknown>;
   stepStorageKey?: string;
   stepStorageTtlMs?: number;
 }
@@ -267,8 +267,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
     setTimeout(() => {
       const el = document.getElementById(anchorId);
-      if (el && typeof (el as any).scrollIntoView === 'function') {
-        (el as any).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el && typeof (el as unknown).scrollIntoView === 'function') {
+        (el as unknown).scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       pendingIssueNavRef.current = null;
       setFocusAnchorId(null);
@@ -317,7 +317,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
                       await onSave();
                       reset();
                       onSavedAndLeave?.();
-                    } catch (e: any) {
+                    } catch (e: unknown) {
                       reset();
                       await showToastMessage({
                         type: 'error',
@@ -350,7 +350,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     // Some embeds disallow the `unload`/`beforeunload` permission. Avoid attaching the listener to
     // prevent "Permissions policy violation: unload is not allowed in this document".
     const isTopWindow = window.self === window.top;
-    const permissionsPolicy = (document as any).permissionsPolicy || (document as any).featurePolicy;
+    const permissionsPolicy = (document as unknown).permissionsPolicy || (document as unknown).featurePolicy;
     const unloadAllowed =
       !permissionsPolicy?.allowsFeature ? true : permissionsPolicy.allowsFeature('unload');
     if (!isTopWindow || !unloadAllowed) return;
@@ -369,7 +369,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     if (Platform.OS === 'web') return;
     if (!navigation?.addListener) return;
 
-    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: unknown) => {
       if (!hasUnsavedChanges) return;
       e.preventDefault();
 
@@ -399,7 +399,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   }, [hasUnsavedChanges, confirmLeaveWizard, router]);
 
   const handleFinishWizard = useCallback(async () => {
-    const saved: any = await onSave();
+    const saved: unknown = await onSave();
     const shouldClear = Boolean(saved?.publish || saved?.moderation);
     if (shouldClear) {
       await clearPersistedStep();

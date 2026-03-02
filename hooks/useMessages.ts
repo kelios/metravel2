@@ -43,7 +43,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
             if (mountedRef.current) {
                 setThreads(Array.isArray(data) ? data : []);
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
             devError('useThreads load error:', e);
             if (mountedRef.current) {
                 setError(e?.message || 'Ошибка загрузки сообщений');
@@ -122,7 +122,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
 
             setHasMore(!!data.next);
             pageRef.current += 1;
-        } catch (e: any) {
+        } catch (e: unknown) {
             devError('useThreadMessages load error:', e);
             if (mountedRef.current) {
                 setError(e?.message || 'Ошибка загрузки сообщений');
@@ -206,7 +206,7 @@ export function useSendMessage() {
         try {
             await sendMessage({ participants, text });
             return true;
-        } catch (e: any) {
+        } catch (e: unknown) {
             devError('useSendMessage error:', e);
             setError(e?.message || 'Ошибка отправки сообщения');
             return false;
@@ -228,7 +228,7 @@ export function useDeleteMessage() {
         try {
             await deleteMessage(id);
             return true;
-        } catch (e: any) {
+        } catch (e: unknown) {
             devError('useDeleteMessage error:', e);
             return false;
         } finally {
@@ -250,7 +250,7 @@ export function useAvailableUsers(enabled: boolean = true) {
         try {
             const data = await fetchAvailableUsers();
             setUsers(Array.isArray(data) ? data : []);
-        } catch (e: any) {
+        } catch (e: unknown) {
             devError('useAvailableUsers error:', e);
         } finally {
             setLoading(false);
@@ -299,7 +299,7 @@ export function useMarkThreadRead() {
         if (threadId < 0) return;
         try {
             await markThreadRead(threadId);
-        } catch (e: any) {
+        } catch (e: unknown) {
             devError('useMarkThreadRead error:', e);
         }
     }, []);

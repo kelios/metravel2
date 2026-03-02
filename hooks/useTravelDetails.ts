@@ -30,13 +30,13 @@ export interface UseTravelDetailsReturn {
  */
 function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Travel | undefined {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
-  const preload = (window as any).__metravelTravelPreload;
+  const preload = (window as unknown).__metravelTravelPreload;
   if (!preload?.data) return undefined;
   const matches = isId
     ? preload.isId && String(preload.slug) === String(idNum)
     : !preload.isId && preload.slug === slug;
   if (!matches) return undefined;
-  delete (window as any).__metravelTravelPreload;
+  delete (window as unknown).__metravelTravelPreload;
   try {
     return normalizeTravelItem(preload.data);
   } catch {
@@ -50,8 +50,8 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
   const immediate = consumePreloadedTravel(slug, isId, idNum);
   if (immediate) return immediate;
 
-  const pending = Boolean((window as any).__metravelTravelPreloadPending);
-  const promise: Promise<any> | undefined = (window as any).__metravelTravelPreloadPromise;
+  const pending = Boolean((window as unknown).__metravelTravelPreloadPending);
+  const promise: Promise<unknown> | undefined = (window as unknown).__metravelTravelPreloadPromise;
   if (!pending && !promise) return undefined;
 
   const timeoutMs = 2500;
@@ -73,7 +73,7 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
     await new Promise((resolve) => setTimeout(resolve, 50));
     const retry = consumePreloadedTravel(slug, isId, idNum);
     if (retry) return retry;
-    if (!(window as any).__metravelTravelPreloadPending) break;
+    if (!(window as unknown).__metravelTravelPreloadPending) break;
   }
 
   return consumePreloadedTravel(slug, isId, idNum);
@@ -110,7 +110,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     enabled: !isMissingParam,
     initialData: initialPreloadedTravel,
     initialDataUpdatedAt: initialPreloadedTravel ? Date.now() : undefined,
-    queryFn: async ({ signal } = {} as any) => {
+    queryFn: async ({ signal } = {} as unknown) => {
       // Try to reuse preload from +html.tsx and wait shortly for its in-flight request.
       // This avoids duplicate travel-details fetches on first paint (critical for LCP).
       const preloaded = await waitForTravelPreload(normalizedSlug, isId, idNum);

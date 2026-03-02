@@ -61,9 +61,9 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
           // Fallback: by ref (useful when the section mounted lazily and attribute is not yet assigned)
           try {
-            const refAny: any = (anchors as any)?.[k];
-            const current: any = refAny?.current;
-            const node: any = current?._nativeNode || current?._domNode || current;
+            const refAny: unknown = (anchors as unknown)?.[k];
+            const current: unknown = refAny?.current;
+            const node: unknown = current?._nativeNode || current?._domNode || current;
             if (!node) return null;
             if (typeof node.getBoundingClientRect !== 'function') return null;
 
@@ -96,14 +96,14 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           return 88;
         };
 
-        const isDocumentScrollContainer = (node: any): boolean => {
+        const isDocumentScrollContainer = (node: unknown): boolean => {
           if (!node) return false;
-          const docAny = document as any;
-          const scrollingEl = (document.scrollingElement || docAny.documentElement || docAny.body) as any;
+          const docAny = document as unknown;
+          const scrollingEl = (document.scrollingElement || docAny.documentElement || docAny.body) as unknown;
           return node === window || node === document || node === docAny.body || node === docAny.documentElement || node === scrollingEl;
         };
 
-        const shouldApplyHeaderOffset = (container: any): boolean => {
+        const shouldApplyHeaderOffset = (container: unknown): boolean => {
           try {
             const headerH = getHeaderOffset();
             if (!headerH) return false;
@@ -124,11 +124,11 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           return false;
         };
 
-        const canScrollNode = (node: any): node is HTMLElement => {
+        const canScrollNode = (node: unknown): node is HTMLElement => {
           if (!node) return false;
           if (typeof node.getBoundingClientRect !== 'function') return false;
-          const sh = Number((node as any).scrollHeight ?? 0);
-          const ch = Number((node as any).clientHeight ?? 0);
+          const sh = Number((node as unknown).scrollHeight ?? 0);
+          const ch = Number((node as unknown).clientHeight ?? 0);
           const canScrollBySize = sh > ch + 2;
           return canScrollBySize;
         };
@@ -153,7 +153,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         };
 
         {
-          const safeScrollTo = (node: any, top: number): boolean => {
+          const safeScrollTo = (node: unknown, top: number): boolean => {
             if (!node) return false;
             const before = Number(node.scrollTop ?? 0);
             let didCall = false;
@@ -193,7 +193,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             return didCall;
           };
 
-          const scrollViewAny = scrollRef.current as any;
+          const scrollViewAny = scrollRef.current as unknown;
           const scrollNode: HTMLElement | null =
             (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
             scrollViewAny?._scrollNode ||
@@ -209,13 +209,13 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           if (bestScrollContainer && typeof bestScrollContainer.getBoundingClientRect === 'function') {
             const containerRect = bestScrollContainer.getBoundingClientRect();
             const elRect = el.getBoundingClientRect();
-            const currentTop = (bestScrollContainer as any).scrollTop ?? 0;
+            const currentTop = (bestScrollContainer as unknown).scrollTop ?? 0;
             const HEADER_OFFSET = getHeaderOffset();
             const adjustment = shouldApplyHeaderOffset(bestScrollContainer) ? HEADER_OFFSET : 0;
             const targetTopRaw = currentTop + (elRect.top - containerRect.top) - adjustment;
             const targetTop = Math.max(0, Math.round(targetTopRaw));
 
-            if (safeScrollTo(bestScrollContainer as any, targetTop)) {
+            if (safeScrollTo(bestScrollContainer as unknown, targetTop)) {
               return true;
             }
           }
@@ -224,7 +224,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           {
             const HEADER_OFFSET = getHeaderOffset();
             const elRect = el.getBoundingClientRect();
-            const win = (typeof window !== 'undefined' ? window : undefined) as any;
+            const win = (typeof window !== 'undefined' ? window : undefined) as unknown;
             if (win && typeof win.scrollTo === 'function') {
               const currentScrollY = win.pageYOffset ?? win.scrollY ?? 0;
               const targetY = Math.max(0, Math.round(currentScrollY + elRect.top - HEADER_OFFSET));
@@ -270,7 +270,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       const anchor = anchors[key];
       if (anchor?.current && scrollRef.current) {
         anchor.current.measureLayout(
-          scrollRef.current as any,
+          scrollRef.current as unknown,
           (_x, y) => {
             scrollRef.current?.scrollTo({ y, animated: true });
           },

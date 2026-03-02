@@ -5,7 +5,7 @@ interface UseOptimizedFormStateOptions<T> {
   debounce?: number;
   onSave?: (data: T) => Promise<T>;
   onSuccess?: (savedData: T) => void;
-  onError?: (error: any) => void;
+  onError?: (error: unknown) => void;
   onStart?: () => void;
   validateOnChange?: boolean;
   validationDebounce?: number;

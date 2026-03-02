@@ -68,32 +68,32 @@ interface UseMapUIControllerResult {
   /**
    * Panel animation style
    */
-  panelStyle: any;
+  panelStyle: unknown;
 
   /**
    * Overlay animation style
    */
-  overlayStyle: any;
+  overlayStyle: unknown;
 
   /**
    * Filters tab ref
    */
-  filtersTabRef: any;
+  filtersTabRef: unknown;
 
   /**
    * Panel ref
    */
-  panelRef: any;
+  panelRef: unknown;
 
   /**
    * Themed colors
    */
-  themedColors: any;
+  themedColors: unknown;
 
   /**
    * Component styles
    */
-  styles: any;
+  styles: unknown;
 
   /**
    * Canonical URL for SEO

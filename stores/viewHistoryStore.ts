@@ -95,7 +95,7 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
             const raw = await AsyncStorage.getItem(key);
             if (raw) {
                 const parsed = safeJsonParseString(raw, []);
-                const normalized = (Array.isArray(parsed) ? parsed : []).filter(Boolean).map((item: any) => ({
+                const normalized = (Array.isArray(parsed) ? parsed : []).filter(Boolean).map((item: unknown) => ({
                     ...item,
                     country: item.country ?? item.countryName ?? undefined,
                 }));

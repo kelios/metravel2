@@ -108,7 +108,12 @@ module.exports = [
   {
     files: ["api/**/*.ts", "hooks/**/*.ts", "stores/**/*.ts"],
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn"
+      "@typescript-eslint/no-explicit-any": [
+        "warn",
+        {
+          fixToUnknown: true
+        }
+      ]
     }
   },
   {

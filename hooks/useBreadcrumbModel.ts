@@ -11,12 +11,12 @@ import { queryKeys } from '@/queryKeys';
 const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
   typeof useGlobalSearchParams === 'function'
     ? useGlobalSearchParams
-    : (((_opts?: any) => ({}) as any) as any);
+    : (((_opts?: unknown) => ({}) as unknown) as unknown);
 
 const useLocalSearchParamsSafe: typeof useLocalSearchParams =
   typeof useLocalSearchParams === 'function'
     ? useLocalSearchParams
-    : (((_opts?: any) => ({}) as any) as any);
+    : (((_opts?: unknown) => ({}) as unknown) as unknown);
 
 export type BreadcrumbModelItem = {
   label: string;
@@ -122,7 +122,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   // Prefer global search params when available; otherwise fall back to local params.
   const globalParams = useGlobalSearchParamsSafe<{ returnTo?: string | string[] }>();
   const localParams = useLocalSearchParamsSafe<{ returnTo?: string | string[] }>();
-  const returnTo = (globalParams as any)?.returnTo ?? (localParams as any)?.returnTo;
+  const returnTo = (globalParams as unknown)?.returnTo ?? (localParams as unknown)?.returnTo;
 
   const normalizedReturnToParam = useMemo(() => {
     if (typeof returnTo === 'string') return returnTo;
@@ -147,8 +147,8 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   }, [travelSlug]);
 
   const { data: travelData } = useQuery({
-    queryKey: queryKeys.travel(travelCacheKey as any),
-    queryFn: ({ signal } = {} as any) => {
+    queryKey: queryKeys.travel(travelCacheKey as unknown),
+    queryFn: ({ signal } = {} as unknown) => {
       if (!travelSlug) return null;
       const idNum = Number(travelSlug);
       const isId = !Number.isNaN(idNum);

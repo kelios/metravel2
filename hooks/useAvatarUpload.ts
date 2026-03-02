@@ -26,7 +26,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
     const [avatarFile, setAvatarFile] = useState<UploadUserProfileAvatarFile | null>(null);
     const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
     const [isUploading, setIsUploading] = useState(false);
-    const webFileInputRef = useRef<any>(null);
+    const webFileInputRef = useRef<unknown>(null);
 
     const syncAvatar = useCallback(
         (avatarRaw: unknown) => {
@@ -78,7 +78,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
         }
     }, []);
 
-    const handleWebFileSelected = useCallback((e: any) => {
+    const handleWebFileSelected = useCallback((e: unknown) => {
         const file = e?.target?.files?.[0];
         if (!file) return;
         setAvatarFile(file);

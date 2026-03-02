@@ -48,7 +48,7 @@ interface UseRouteControllerResult {
   /**
    * Route store points (with metadata)
    */
-  routeStorePoints: any[];
+  routeStorePoints: unknown[];
 
   /**
    * Start address
@@ -88,7 +88,7 @@ interface UseRouteControllerResult {
   /**
    * Set route points
    */
-  setRoutePoints: (points: [number, number][], options?: any) => void;
+  setRoutePoints: (points: [number, number][], options?: unknown) => void;
 
   /**
    * Set route distance
@@ -118,7 +118,7 @@ interface UseRouteControllerResult {
   /**
    * Handle address select
    */
-  handleAddressSelect: (address: string, coords: any, isStart: boolean) => void;
+  handleAddressSelect: (address: string, coords: unknown, isStart: boolean) => void;
 
   /**
    * Handle address clear

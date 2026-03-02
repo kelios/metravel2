@@ -176,8 +176,8 @@ export function useMapTravels({
         { signal }
       );
 
-      const total = !Array.isArray(result) ? (result as any)?.__total : undefined;
-      const values = Array.isArray(result) ? result : (Object.values(result || {}) as any[]);
+      const total = !Array.isArray(result) ? (result as unknown)?.__total : undefined;
+      const values = Array.isArray(result) ? result : (Object.values(result || {}) as unknown[]);
       const items = values as TravelCoords[];
       if (typeof total === 'number' && Array.isArray(items)) {
         Object.defineProperty(items, '__total', {
@@ -192,7 +192,7 @@ export function useMapTravels({
     getNextPageParam: (lastPage, allPages) => {
       if (!Array.isArray(lastPage)) return undefined;
 
-      const total = (lastPage as any)?.__total;
+      const total = (lastPage as unknown)?.__total;
       if (typeof total === 'number' && Number.isFinite(total)) {
         const loaded = allPages.reduce((acc, page) => acc + (Array.isArray(page) ? page.length : 0), 0);
         if (loaded < total) return allPages.length;
@@ -260,8 +260,8 @@ export function useMapTravels({
   const isFetching = queryParams.mode === 'radius' ? radiusQuery.isFetching : routeQuery.isFetching;
   const isPlaceholderData =
     queryParams.mode === 'radius'
-      ? Boolean((radiusQuery as any).isPlaceholderData)
-      : Boolean((routeQuery as any).isPlaceholderData);
+      ? Boolean((radiusQuery as unknown).isPlaceholderData)
+      : Boolean((routeQuery as unknown).isPlaceholderData);
   const isError = queryParams.mode === 'radius' ? radiusQuery.isError : routeQuery.isError;
   const error = queryParams.mode === 'radius' ? radiusQuery.error : routeQuery.error;
   const refetch = queryParams.mode === 'radius' ? radiusQuery.refetch : routeQuery.refetch;

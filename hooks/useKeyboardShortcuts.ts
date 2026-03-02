@@ -26,26 +26,26 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
     if (typeof document === 'undefined') return
 
     const handler = (e: KeyboardEvent) => {
-      const target = (e as any).target as HTMLElement | null
-      const targetTag = String((target as any)?.tagName || '').toLowerCase()
+      const target = (e as unknown).target as HTMLElement | null
+      const targetTag = String((target as unknown)?.tagName || '').toLowerCase()
       const isEditableTarget =
         targetTag === 'input' ||
         targetTag === 'textarea' ||
-        (target as any)?.isContentEditable === true
+        (target as unknown)?.isContentEditable === true
 
       if (isEditableTarget) return
 
-      const pressedKey = String((e as any).key || '').toLowerCase()
+      const pressedKey = String((e as unknown).key || '').toLowerCase()
 
       for (const shortcut of shortcuts) {
         if (!shortcut) continue
         const expectedKey = String(shortcut.key || '').toLowerCase()
         if (!expectedKey || pressedKey !== expectedKey) continue
 
-        const ctrlPressed = !!(e as any).ctrlKey
-        const metaPressed = !!(e as any).metaKey
-        const shiftPressed = !!(e as any).shiftKey
-        const altPressed = !!(e as any).altKey
+        const ctrlPressed = !!(e as unknown).ctrlKey
+        const metaPressed = !!(e as unknown).metaKey
+        const shiftPressed = !!(e as unknown).shiftKey
+        const altPressed = !!(e as unknown).altKey
 
         if (shortcut.ctrlKey !== undefined && ctrlPressed !== !!shortcut.ctrlKey) continue
         if (shortcut.metaKey !== undefined && metaPressed !== !!shortcut.metaKey) continue
@@ -57,8 +57,8 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
         if (shortcut.shiftKey === undefined && shiftPressed) continue
         if (shortcut.altKey === undefined && altPressed) continue
 
-        if (typeof (e as any).preventDefault === 'function') {
-          ;(e as any).preventDefault()
+        if (typeof (e as unknown).preventDefault === 'function') {
+          ;(e as unknown).preventDefault()
         }
 
         shortcut.action()

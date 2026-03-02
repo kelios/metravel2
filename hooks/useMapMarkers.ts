@@ -44,7 +44,7 @@ interface UseMapMarkersResult {
   /**
    * Clustered marker data
    */
-  clusters: any[];
+  clusters: unknown[];
 
   /**
    * Individual markers (when clustering is disabled)

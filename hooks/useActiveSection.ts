@@ -9,7 +9,7 @@ import type { RefObject } from 'react';
 
 const isTestEnv =
   (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined) ||
-  (typeof navigator !== 'undefined' && Boolean((navigator as any).webdriver));
+  (typeof navigator !== 'undefined' && Boolean((navigator as unknown).webdriver));
 
 const scheduleObserverCallback = (cb: () => void) => {
   if (isTestEnv) {
@@ -19,7 +19,7 @@ const scheduleObserverCallback = (cb: () => void) => {
 
   const raf =
     (typeof window !== 'undefined' && window.requestAnimationFrame) ||
-    (typeof globalThis !== 'undefined' && (globalThis as any).requestAnimationFrame);
+    (typeof globalThis !== 'undefined' && (globalThis as unknown).requestAnimationFrame);
 
   if (typeof raf === 'function') {
     raf(cb);
@@ -55,9 +55,9 @@ export function useActiveSection(
       return;
     }
 
-    const globalObj: any = typeof globalThis !== 'undefined' ? globalThis : global;
+    const globalObj: unknown = typeof globalThis !== 'undefined' ? globalThis : global;
     const doc: Document | undefined =
-      (typeof window !== 'undefined' && (window as any).document) ||
+      (typeof window !== 'undefined' && (window as unknown).document) ||
       (typeof document !== 'undefined' ? document : undefined);
     const IntersectionObserverCtor: typeof IntersectionObserver | undefined =
       (typeof window !== 'undefined' && window.IntersectionObserver) || globalObj?.IntersectionObserver;
@@ -66,10 +66,10 @@ export function useActiveSection(
       return;
     }
 
-    const isDocumentRoot = (node: any): boolean => {
+    const isDocumentRoot = (node: unknown): boolean => {
       if (!node) return true;
-      const docAny = doc as any;
-      const scrollingEl = (doc.scrollingElement || docAny.documentElement || docAny.body) as any;
+      const docAny = doc as unknown;
+      const scrollingEl = (doc.scrollingElement || docAny.documentElement || docAny.body) as unknown;
       return node === window || node === doc || node === docAny.body || node === docAny.documentElement || node === scrollingEl;
     };
 
@@ -265,7 +265,7 @@ export function useActiveSection(
     // Первая попытка — сразу.
     tryRegister();
 
-    const scrollTarget: any = scrollRoot && !isDocumentRoot(scrollRoot) ? scrollRoot : window;
+    const scrollTarget: unknown = scrollRoot && !isDocumentRoot(scrollRoot) ? scrollRoot : window;
     // Throttle scroll handler to reduce expensive DOM queries (getBoundingClientRect + sort)
     // from 60fps to ~10fps — sufficient for scrollspy accuracy.
     let scrollThrottleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -278,10 +278,10 @@ export function useActiveSection(
       }, SCROLL_THROTTLE_MS);
     };
     try {
-      scrollTarget?.addEventListener?.('scroll', onScroll, { passive: true } as any);
-      window.addEventListener?.('resize', onScroll, { passive: true } as any);
+      scrollTarget?.addEventListener?.('scroll', onScroll, { passive: true } as unknown);
+      window.addEventListener?.('resize', onScroll, { passive: true } as unknown);
       // Capture scroll events from any element (scroll doesn't bubble) to avoid missing container scrolls.
-      doc.addEventListener?.('scroll', onScroll as any, { passive: true, capture: true } as any);
+      doc.addEventListener?.('scroll', onScroll as unknown, { passive: true, capture: true } as unknown);
     } catch {
       // noop
     }
@@ -303,9 +303,9 @@ export function useActiveSection(
       if (timeoutId) clearTimeout(timeoutId);
       if (scrollThrottleTimer) clearTimeout(scrollThrottleTimer);
       try {
-        scrollTarget?.removeEventListener?.('scroll', onScroll as any);
-        window.removeEventListener?.('resize', onScroll as any);
-        doc.removeEventListener?.('scroll', onScroll as any, { capture: true } as any);
+        scrollTarget?.removeEventListener?.('scroll', onScroll as unknown);
+        window.removeEventListener?.('resize', onScroll as unknown);
+        doc.removeEventListener?.('scroll', onScroll as unknown, { capture: true } as unknown);
       } catch {
         // noop
       }

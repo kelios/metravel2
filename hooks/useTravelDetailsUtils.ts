@@ -42,7 +42,7 @@ export function useInterval(
  * Hook to safely get DOM element from React Native ref
  */
 export function useDOMElement(
-  ref: MutableRefObject<any> | null
+  ref: MutableRefObject<unknown> | null
 ): HTMLElement | null {
   const [element, setElement] = useState<HTMLElement | null>(null);
 
@@ -107,13 +107,13 @@ export function useIdleCallback(
     if (!enabled || Platform.OS !== "web") return;
 
     const hasRequestIdleCallback =
-      typeof (window as any)?.requestIdleCallback === "function";
+      typeof (window as unknown)?.requestIdleCallback === "function";
 
     if (hasRequestIdleCallback) {
-      const id = (window as any).requestIdleCallback(callback, { timeout });
+      const id = (window as unknown).requestIdleCallback(callback, { timeout });
       return () => {
         try {
-          (window as any).cancelIdleCallback?.(id);
+          (window as unknown).cancelIdleCallback?.(id);
         } catch {
           // noop
         }
@@ -246,7 +246,7 @@ export function useControlledState<T>(
 /**
  * Hook for debounced callback
  */
-export function useDebouncedCallback<T extends (...args: any[]) => any>(
+export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T {

@@ -43,7 +43,7 @@ interface UseMapLazyLoadResult {
   /**
    * Element ref for IntersectionObserver
    */
-  elementRef: (node: any) => void;
+  elementRef: (node: unknown) => void;
 
   /**
    * Has map been mounted at least once
@@ -95,7 +95,7 @@ export function useMapLazyLoad(options: UseMapLazyLoadOptions = {}): UseMapLazyL
   const elementRef = useRef<Element | null>(null);
 
   // Set element ref callback
-  const setElementRef = useCallback((node: any) => {
+  const setElementRef = useCallback((node: unknown) => {
     if (Platform.OS !== 'web') return;
 
     // Get actual DOM node

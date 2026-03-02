@@ -33,10 +33,10 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
   const [shouldLoad, setShouldLoad] = useState(
     enabled && (priority === 'immediate' || priority === 'high')
   );
-  const elementRef = useRef<any>(null);
+  const elementRef = useRef<unknown>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const setElementRef = useCallback((node: any) => {
+  const setElementRef = useCallback((node: unknown) => {
     elementRef.current = node;
 
     if (Platform.OS !== 'web') return;
@@ -171,7 +171,7 @@ export function ProgressiveWrapper({
 
     return React.createElement(
       View,
-      { ref: elementRef as any, style: { minHeight: 100 } },
+      { ref: elementRef as unknown, style: { minHeight: 100 } },
       fallback
     );
   }

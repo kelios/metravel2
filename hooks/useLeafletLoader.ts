@@ -39,12 +39,12 @@ interface UseLeafletLoaderResult {
   /**
    * Leaflet library instance (null until loaded)
    */
-  L: any | null;
+  L: unknown | null;
 
   /**
    * React-Leaflet library instance (null until loaded)
    */
-  RL: any | null;
+  RL: unknown | null;
 
   /**
    * Loading state
@@ -63,7 +63,7 @@ interface UseLeafletLoaderResult {
 }
 
 const isTestEnv = typeof process !== 'undefined' &&
-  (process as any).env?.NODE_ENV === 'test';
+  (process as unknown).env?.NODE_ENV === 'test';
 
 const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 
@@ -260,8 +260,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     fallbackDelay = 600,
   } = options;
 
-  const [L, setL] = useState<any>(null);
-  const [RL, setRL] = useState<any>(null);
+  const [L, setL] = useState<unknown>(null);
+  const [RL, setRL] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   // When idle callback is disabled and delay is 0, start loading immediately (no extra render cycle).
@@ -289,7 +289,7 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     if (shouldLoad) return;
 
     let cancelled = false;
-    let idleHandle: any = null;
+    let idleHandle: unknown = null;
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
     const enableLoading = () => {
@@ -298,7 +298,7 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     };
 
     if (useIdleCallback && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleHandle = (window as any).requestIdleCallback(enableLoading, { timeout: idleTimeout });
+      idleHandle = (window as unknown).requestIdleCallback(enableLoading, { timeout: idleTimeout });
     } else {
       timeoutHandle = setTimeout(enableLoading, fallbackDelay);
     }
@@ -307,7 +307,7 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
       cancelled = true;
       try {
         if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-          (window as any).cancelIdleCallback(idleHandle);
+          (window as unknown).cancelIdleCallback(idleHandle);
         }
       } catch {
         // Ignore cancellation errors
@@ -349,8 +349,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
 
         // In some bundler/interop modes `import('leaflet')` yields the module namespace
         // without a `default` export. Use `default ?? module` so `L` is always truthy.
-        const LeafletResolved = (LeafletModule as any).default ?? (LeafletModule as any);
-        const ReactLeafletResolved = (ReactLeafletModule as any).default ?? (ReactLeafletModule as any);
+        const LeafletResolved = (LeafletModule as unknown).default ?? (LeafletModule as unknown);
+        const ReactLeafletResolved = (ReactLeafletModule as unknown).default ?? (ReactLeafletModule as unknown);
 
         setL(LeafletResolved);
         setRL(ReactLeafletResolved);

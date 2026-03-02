@@ -7,9 +7,9 @@ type SpeechRecognitionLike = {
   interimResults: boolean;
   start: () => void;
   stop: () => void;
-  onresult: ((event: any) => void) | null;
+  onresult: ((event: unknown) => void) | null;
   onend: (() => void) | null;
-  onerror: ((event: any) => void) | null;
+  onerror: ((event: unknown) => void) | null;
 };
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
@@ -17,7 +17,7 @@ type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (Platform.OS !== 'web') return null;
   if (typeof window === 'undefined') return null;
-  const w = window as any;
+  const w = window as unknown;
   return (w.SpeechRecognition || w.webkitSpeechRecognition || null) as SpeechRecognitionCtor | null;
 }
 
@@ -48,7 +48,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     recognition.continuous = continuous;
     recognition.interimResults = true;
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: unknown) => {
       try {
         let interim = '';
         let finalText = '';
@@ -69,7 +69,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
         if (cleanedFinal && onFinalTextRef.current) {
           onFinalTextRef.current(cleanedFinal);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         setError(e?.message ? String(e.message) : 'Ошибка распознавания речи');
       }
     };
@@ -79,7 +79,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
       setInterimText('');
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: unknown) => {
       const message = typeof event?.error === 'string' ? event.error : 'Ошибка распознавания речи';
       setError(message);
       setIsListening(false);
@@ -87,9 +87,9 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
 
     return () => {
       try {
-        recognition.onresult = null as any;
-        recognition.onend = null as any;
-        recognition.onerror = null as any;
+        recognition.onresult = null as unknown;
+        recognition.onend = null as unknown;
+        recognition.onerror = null as unknown;
         recognition.stop();
       } catch {
         // noop
@@ -106,7 +106,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     try {
       recognitionRef.current.start();
       setIsListening(true);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e?.message ? String(e.message) : 'Не удалось запустить диктовку');
       setIsListening(false);
     }

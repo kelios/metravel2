@@ -55,7 +55,7 @@ export function useNetworkStatus(): NetworkStatus {
       const NetInfo = require('@react-native-community/netinfo');
 
       // Устанавливаем начальное состояние
-      NetInfo.fetch().then((state: any) => {
+      NetInfo.fetch().then((state: unknown) => {
         setNetworkStatus({
           isConnected: state.isConnected ?? false,
           isInternetReachable: state.isInternetReachable ?? null,
@@ -64,7 +64,7 @@ export function useNetworkStatus(): NetworkStatus {
       });
 
       // Подписываемся на изменения
-      const unsubscribe = NetInfo.addEventListener((state: any) => {
+      const unsubscribe = NetInfo.addEventListener((state: unknown) => {
         setNetworkStatus({
           isConnected: state.isConnected ?? false,
           isInternetReachable: state.isInternetReachable ?? null,

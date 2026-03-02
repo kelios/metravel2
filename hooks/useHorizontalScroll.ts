@@ -42,23 +42,23 @@ export function useHorizontalScroll() {
       if (!usingActive && e.cancelable) {
         usingActive = true;
         try {
-          el.removeEventListener('wheel', passiveWheel as any);
+          el.removeEventListener('wheel', passiveWheel as unknown);
         } catch {
           // noop
         }
         try {
-          el.addEventListener('wheel', activeWheel as any, { passive: false } as any);
+          el.addEventListener('wheel', activeWheel as unknown, { passive: false } as unknown);
         } catch {
           // noop
         }
       }
     };
 
-    el.addEventListener('wheel', passiveWheel as any, { passive: true } as any);
+    el.addEventListener('wheel', passiveWheel as unknown, { passive: true } as unknown);
     return () => {
       try {
-        el.removeEventListener('wheel', passiveWheel as any);
-        el.removeEventListener('wheel', activeWheel as any);
+        el.removeEventListener('wheel', passiveWheel as unknown);
+        el.removeEventListener('wheel', activeWheel as unknown);
       } catch {
         // noop
       }

@@ -6,7 +6,7 @@ export interface UseTravelDetailsScrollStateReturn {
   contentHeight: number
   viewportHeight: number
   handleContentSizeChange: (_w: number, h: number) => void
-  handleLayout: (e: any) => void
+  handleLayout: (e: unknown) => void
 }
 
 export function useTravelDetailsScrollState(): UseTravelDetailsScrollStateReturn {
@@ -18,7 +18,7 @@ export function useTravelDetailsScrollState(): UseTravelDetailsScrollStateReturn
     setContentHeight(h)
   }, [])
 
-  const handleLayout = useCallback((e: any) => {
+  const handleLayout = useCallback((e: unknown) => {
     setViewportHeight(e.nativeEvent.layout.height)
   }, [])
 

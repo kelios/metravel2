@@ -256,7 +256,7 @@ export function useButtonHoverAnimation() {
  * Утилита для создания staggered анимации (каскадное появление элементов)
  */
 export function createStaggeredAnimation(
-  items: any[],
+  items: unknown[],
   baseDelay: number = 0,
   itemDelay: number = 100
 ): number[] {
