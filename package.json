@@ -91,6 +91,8 @@
     "guard:no-direct-window-open": "node scripts/guard-no-direct-window-open.js",
     "guard:no-direct-window-open:json": "node scripts/guard-no-direct-window-open.js --json",
     "guard:external-links": "npm run guard:no-direct-linking-openurl && npm run guard:no-direct-window-open",
+    "guard:file-complexity": "node scripts/guard-file-complexity.js",
+    "guard:file-complexity:fail": "node scripts/guard-file-complexity.js --fail",
     "lint": "npm run guard:external-links && eslint . --max-warnings=0",
     "lint:ci": "mkdir -p test-results && npm run guard:external-links && eslint . --max-warnings=0 --format json --output-file test-results/eslint-results.json",
     "audit:high": "node scripts/yarn-audit-high.js",

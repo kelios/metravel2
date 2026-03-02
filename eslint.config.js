@@ -92,7 +92,23 @@ module.exports = [
           varsIgnorePattern: "^_",
           caughtErrorsIgnorePattern: "^_"
         }
+      ],
+      "@typescript-eslint/ban-ts-comment": [
+        "warn",
+        {
+          "ts-ignore": "allow-with-description",
+          "ts-expect-error": "allow-with-description",
+          "ts-nocheck": true,
+          minimumDescriptionLength: 10
+        }
       ]
+    }
+  },
+  // B1: Prevent new `any` in core modules (api, hooks, stores)
+  {
+    files: ["api/**/*.ts", "hooks/**/*.ts", "stores/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn"
     }
   },
   {
