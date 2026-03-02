@@ -4,6 +4,7 @@
 export type {
   MapMarker,
   LegacyMapPoint,
+  Point,
   MapViewState,
   MapBounds,
   Coordinates,
@@ -20,5 +21,6 @@ export type {
 export {
   parseCoordString,
   legacyPointToMarker,
+  normalizePoint,
 } from './types';
 

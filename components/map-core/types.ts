@@ -214,3 +214,63 @@ export const legacyPointToMarker = (point: LegacyMapPoint, index: number): MapMa
   };
 };
 
+/**
+ * Backward-compatible alias for LegacyMapPoint.
+ * Consumers that used `import { Point } from '...'` can use this instead.
+ */
+export type Point = LegacyMapPoint;
+
+/**
+ * Normalize any raw input into a LegacyMapPoint (for bridge during migration).
+ * This consolidates the inline normalizePoint() that lived in map/Map.web.tsx.
+ */
+export const normalizePoint = (input: unknown, index: number): LegacyMapPoint => {
+  const raw = input && typeof input === 'object' ? (input as Record<string, unknown>) : {} as Record<string, unknown>;
+
+  const id =
+    raw.id !== undefined && raw.id !== null && String(raw.id).trim().length > 0
+      ? String(raw.id)
+      : `idx-${index}`;
+
+  const lat = typeof raw.lat === 'number' ? raw.lat : Number(raw.lat);
+  const lng = typeof raw.lng === 'number' ? raw.lng : Number(raw.lng);
+
+  const coord =
+    typeof raw.coord === 'string' && (raw.coord as string).trim()
+      ? (raw.coord as string).trim()
+      : typeof raw.coords === 'string' && (raw.coords as string).trim()
+        ? (raw.coords as string).trim()
+        : Number.isFinite(lat) && Number.isFinite(lng)
+          ? `${lat}, ${lng}`
+          : '';
+
+  const address =
+    typeof raw.address === 'string' && (raw.address as string).trim()
+      ? (raw.address as string).trim()
+      : typeof raw.name === 'string' && (raw.name as string).trim()
+        ? (raw.name as string).trim()
+        : '';
+
+  return {
+    id,
+    coord,
+    address,
+    travelImageThumbUrl:
+      (raw.travelImageThumbUrl as string) ??
+      (raw.travel_image_thumb_url as string) ??
+      (raw.image as string) ??
+      undefined,
+    updated_at: raw.updated_at as string | undefined,
+    categoryName: (raw.categoryName ?? raw.category_name) as LegacyMapPoint['categoryName'],
+    category: raw.category as LegacyMapPoint['category'],
+    categoryId: (raw.categoryId ?? raw.category_id) as string | number | undefined,
+    category_id: (raw.category_id ?? raw.categoryId) as string | number | undefined,
+    categoryIds: (raw.categoryIds ?? raw.category_ids) as Array<string | number> | undefined,
+    category_ids: (raw.category_ids ?? raw.categoryIds) as Array<string | number> | undefined,
+    categories: (raw.categories ?? raw.categoryIds ?? raw.category_ids) as LegacyMapPoint['categories'],
+    articleUrl: (raw.articleUrl ?? raw.article_url) as string | undefined,
+    urlTravel: (raw.urlTravel ?? raw.url_travel ?? raw.url) as string | undefined,
+  };
+};
+
+

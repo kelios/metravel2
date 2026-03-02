@@ -20,80 +20,19 @@ import {
   resolveCategoryIdsByNames,
 } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
+import { normalizePoint } from '@/components/map-core';
+import type { LegacyMapPoint, Coordinates } from '@/components/map-core';
 
 const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-export type Point = {
-  id: string;
-  coord: string;
-  address: string;
-  travelImageThumbUrl?: string;
-  updated_at?: string;
-  categoryName?: string | { name?: string } | Array<string | { name?: string }>;
-  category?: string | number | Array<string | { name?: string }>;
-  categoryId?: string | number;
-  category_id?: string | number;
-  categoryIds?: Array<string | number>;
-  category_ids?: Array<string | number>;
-  categories?: Array<string | number | Record<string, unknown>>;
-  articleUrl?: string;
-  urlTravel?: string;
-};
-
-const normalizePoint = (input: any, index: number): Point => {
-  const raw = input && typeof input === 'object' ? input : {};
-
-  const id =
-    raw.id !== undefined && raw.id !== null && String(raw.id).trim().length > 0
-      ? String(raw.id)
-      : `idx-${index}`;
-
-  const lat = typeof raw.lat === 'number' ? raw.lat : Number(raw.lat);
-  const lng = typeof raw.lng === 'number' ? raw.lng : Number(raw.lng);
-
-  const coord =
-    typeof raw.coord === 'string' && raw.coord.trim()
-      ? raw.coord.trim()
-      : typeof raw.coords === 'string' && raw.coords.trim()
-        ? raw.coords.trim()
-        : Number.isFinite(lat) && Number.isFinite(lng)
-          ? `${lat}, ${lng}`
-          : '';
-
-  const address =
-    typeof raw.address === 'string' && raw.address.trim()
-      ? raw.address.trim()
-      : typeof raw.name === 'string' && raw.name.trim()
-        ? raw.name.trim()
-        : '';
-
-  return {
-    id,
-    coord,
-    address,
-    travelImageThumbUrl: raw.travelImageThumbUrl ?? raw.travel_image_thumb_url ?? raw.image ?? undefined,
-    updated_at: raw.updated_at,
-    categoryName: raw.categoryName ?? raw.category_name,
-    category: raw.category,
-    categoryId: raw.categoryId ?? raw.category_id,
-    category_id: raw.category_id ?? raw.categoryId,
-    categoryIds: raw.categoryIds ?? raw.category_ids,
-    category_ids: raw.category_ids ?? raw.categoryIds,
-    categories: raw.categories ?? raw.categoryIds ?? raw.category_ids,
-    articleUrl: raw.articleUrl ?? raw.article_url,
-    urlTravel: raw.urlTravel ?? raw.url_travel ?? raw.url,
-  };
-};
+/** @deprecated Use LegacyMapPoint from map-core. Kept for backward compat. */
+export type Point = LegacyMapPoint;
 
 type TravelPropsType = {
-  data?: Point[];
+  data?: LegacyMapPoint[];
 };
 
-interface Coordinates {
-  latitude: number;
-  longitude: number;
-}
 
 interface MapClientSideProps {
   travel?: TravelPropsType;

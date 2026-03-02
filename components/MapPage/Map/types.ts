@@ -1,24 +1,9 @@
 // components/MapPage/map/types.ts
 import type { MapUiApi } from '@/types/mapUi';
-export type Point = {
-  id?: number;
-  coord: string;
-  address: string;
-  travelImageThumbUrl: string;
-  categoryName: string;
-  categoryId?: string | number;
-  category_ids?: Array<string | number>;
-  articleUrl?: string;
-  urlTravel?: string;
-};
 
-export interface Coordinates {
-  latitude: number;
-  longitude: number;
-}
-
-export type TransportMode = 'car' | 'bike' | 'foot';
-export type MapMode = 'radius' | 'route';
+// Re-export shared types from map-core for backward compatibility
+export type { Point, Coordinates, TransportMode, MapMode } from '@/components/map-core';
+import type { Point, TransportMode, MapMode, Coordinates } from '@/components/map-core';
 
 export interface MapProps {
   travel?: { data?: Point[] };
