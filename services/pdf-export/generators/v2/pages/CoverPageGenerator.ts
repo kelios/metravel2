@@ -85,7 +85,7 @@ export class CoverPageGenerator extends BasePageGenerator {
             position: absolute;
             inset: 0;
             background:
-              linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0.60) 100%);
+              linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.45) 45%, rgba(0,0,0,0.70) 100%);
             z-index: 2;
           "></div>
         ` : ''}
@@ -103,7 +103,7 @@ export class CoverPageGenerator extends BasePageGenerator {
               font-weight: ${typography.h1.weight};
               line-height: ${typography.h1.lineHeight};
               margin: 0;
-              text-shadow: 0 10px 30px rgba(0,0,0,0.35);
+              text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 4px 16px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.4);
               font-family: ${typography.headingFont};
               overflow-wrap: anywhere;
               word-break: break-word;

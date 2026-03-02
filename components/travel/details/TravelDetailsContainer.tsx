@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
-import { useAuth } from '@/context/AuthContext';
+import * as AuthHookModule from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import * as TravelDetailsHookModule from '@/hooks/travel-details';
@@ -49,6 +49,17 @@ const resolvedUseTravelDetails = resolveExportedFunction<UseTravelDetailsHook>(
   TravelDetailsHookModule as unknown as Record<string, unknown>,
   'useTravelDetails'
 );
+type UseAuthHook = typeof AuthHookModule.useAuth;
+const resolvedUseAuth = resolveExportedFunction<UseAuthHook>(
+  AuthHookModule as unknown as Record<string, unknown>,
+  'useAuth'
+);
+const useAuthResolved: UseAuthHook =
+  resolvedUseAuth ??
+  ((() => ({
+    isSuperuser: false,
+    userId: null,
+  })) as UseAuthHook);
 const useTravelDetailsResolved: UseTravelDetailsHook =
   resolvedUseTravelDetails ??
   ((() => ({
@@ -482,7 +493,7 @@ export default function TravelDetailsContainer() {
   // }, [travel?.id, queryClient]);
 
   /* ---- user flags ---- */
-  const { isSuperuser, userId } = useAuth();
+  const { isSuperuser, userId } = useAuthResolved();
 
   /* -------------------- SEO (must mount before early returns) -------------------- */
   // ⚠️ CRITICAL: InstantSEO must render from the FIRST render, not after async data loads.

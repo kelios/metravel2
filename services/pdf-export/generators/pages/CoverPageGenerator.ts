@@ -256,8 +256,9 @@ export class CoverPageGenerator {
         line-height: 1.15;
         margin: 0;
         text-shadow: 
-          0 2px 4px rgba(0,0,0,0.3),
-          0 4px 12px rgba(0,0,0,0.2);
+          0 2px 4px rgba(0,0,0,0.8),
+          0 4px 16px rgba(0,0,0,0.6),
+          0 8px 32px rgba(0,0,0,0.4);
         letter-spacing: 0.02em;
         font-family: ${typography.headingFont};
         overflow-wrap: anywhere;
