@@ -68,7 +68,7 @@ const AddressListItem: React.FC<Props> = ({
     const isTablet = width > 480 && width <= METRICS.breakpoints.largeTablet;
 
     const {
-      rawCategoryName, categories, isAddingPoint, pointAdded, isAuthenticated, authReady,
+      categories, isAddingPoint, pointAdded, isAuthenticated, authReady,
       copyCoords, openTelegram, openMap, openArticle, handleAddPoint,
     } = useAddressListItemActions(travel);
 

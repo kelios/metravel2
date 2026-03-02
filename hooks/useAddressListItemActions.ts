@@ -123,9 +123,9 @@ export function useAddressListItemActions(travel: TravelCoords) {
     await openExternal(`https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`);
   }, [coord]);
 
-  const openMap = useCallback((e?: unknown) => { (e as Record<string, unknown>)?.stopPropagation?.(); openExternal(buildMapUrl(coord)); }, [coord]);
+  const openMap = useCallback((e?: { stopPropagation?: () => void }) => { e?.stopPropagation?.(); void openExternal(buildMapUrl(coord)); }, [coord]);
 
-  const openArticle = useCallback((e?: unknown) => { (e as Record<string, unknown>)?.stopPropagation?.(); openExternal(articleUrl || urlTravel); }, [articleUrl, urlTravel]);
+  const openArticle = useCallback((e?: { stopPropagation?: () => void }) => { e?.stopPropagation?.(); void openExternal(articleUrl || urlTravel); }, [articleUrl, urlTravel]);
 
   const handleAddPoint = useCallback(async () => {
     if (!authReady) return;

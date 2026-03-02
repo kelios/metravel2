@@ -23,11 +23,9 @@ import { fetchTravelsNear } from '@/api/map';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { queryConfigs } from '@/utils/reactQueryConfig';
-import { queryKeys } from '@/queryKeys';
+import { useNearTravelData } from '@/hooks/useNearTravelData';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
@@ -222,11 +220,9 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
      embedded = false,
    }) => {
     const [viewMode, setViewMode] = useState<Segment>('list');
-    const [visibleCount, setVisibleCount] = useState(6);
     const { isPhone, isLargePhone, isTablet, width } = useResponsive();
-    const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+    const colors = useThemedColors();
     const scrollViewRef = useRef<ScrollView>(null);
-    const [isQueryEnabled, setIsQueryEnabled] = useState(false);
     const segmentOptions = useMemo(
       () => [
         { key: 'list', label: 'Список' },
@@ -237,17 +233,22 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
     const isMobile = isPhone || isLargePhone;
 
-    // Адаптивные высоты для карты
-    const mapHeight = useMemo(() => {
-      if (isMobile) return 320;
-      if (isTablet) return 400;
-      return 500; // desktop
-    }, [isMobile, isTablet]);
+    const mapHeight = useMemo(() => isMobile ? 320 : isTablet ? 400 : 500, [isMobile, isTablet]);
+    const listHeight = useMemo(() => isMobile ? 'auto' : isTablet ? 500 : 600, [isMobile, isTablet]);
 
-    const listHeight = useMemo(() => {
-      if (isMobile) return 'auto';
-      if (isTablet) return 500;
-      return 600; // desktop
+    const numColumns = useMemo(() => width <= 640 ? 1 : width <= 1024 ? 2 : 3, [width]);
+    const loadMoreCount = useMemo(() => isMobile ? 4 : isTablet ? 6 : 8, [isMobile, isTablet]);
+
+    const travelId = useMemo(() => {
+      const id = Number(travel.id);
+      return Number.isFinite(id) && id > 0 ? id : null;
+    }, [travel.id]);
+
+    const {
+      travelsNear, displayedTravels, mapPoints,
+      isLoading, isError, error, visibleCount,
+      refetchTravelsNear, handleLoadMore,
+    } = useNearTravelData(travelId, loadMoreCount, onTravelsLoaded);
     }, [isMobile, isTablet]);
 
     const numColumns = useMemo(() => {
