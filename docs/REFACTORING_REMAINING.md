@@ -19,7 +19,7 @@
 
 **Цель:** `components/map/Map.web.tsx` (969 LOC) и `components/MapPage/Map.web.tsx` (1302 LOC) → тонкие адаптеры < 300 LOC каждый.
 
-### C2.1 — Migrate types + normalization to map-core (M, 🟢 Низкий)
+### C2.1 — Migrate types + normalization to map-core (M, 🟢 Низкий) ✅ DONE
 
 **Файлы:**
 - `components/map/Map.web.tsx` (строки 27–87): inline `Point` type + `normalizePoint()`
