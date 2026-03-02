@@ -1,18 +1,10 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
-import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 
-import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
 import { useLeafletIcons } from '@/components/MapPage/Map/useLeafletIcons';
-import { useAuth } from '@/context/AuthContext';
-import { showToast } from '@/utils/toast';
-import { userPointsApi } from '@/api/userPoints';
-import { PointStatus } from '@/types/userPoints';
 import { fetchFilters } from '@/api/misc';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import {
   CategoryDictionaryItem,
   createCategoryNameToIdsMap,
@@ -22,9 +14,9 @@ import {
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
 import { normalizePoint } from '@/components/map-core';
 import type { LegacyMapPoint, Coordinates } from '@/components/map-core';
-
-const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
-const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+import MapPopup from '@/components/map-core/MapPopup';
+import { getPopupCss } from '@/components/map-core/mapPopupStyles';
+import { useMapLifecycle, hasMapPane } from '@/components/map-core/useMapLifecycle';
 
 /** @deprecated Use LegacyMapPoint from map-core. Kept for backward compat. */
 export type Point = LegacyMapPoint;
@@ -54,8 +46,6 @@ const parseCoordKey = (coordKey: string): [number, number] | null => {
   return [lat, lng];
 };
 
-const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_COLORS.travelPoint;
-const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 const getCountryFromAddress = (address?: string | null) => {
   const addr = String(address ?? '').trim();
@@ -105,7 +95,6 @@ const getLatLng = (latlng: string): [number, number] | null => {
 type LeafletNS = typeof import('leaflet');
 type ReactLeafletNS = typeof import('react-leaflet');
 
-const hasMapPane = (map: any) => !!map && !!(map as any)._mapPane;
 
 const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                                                                 travel = { data: [] },
@@ -114,15 +103,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                                                               }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const queryClient = useQueryClient();
 
   const [L, setL] = useState<LeafletNS | null>(null);
   const [rl, setRl] = useState<ReactLeafletNS | null>(null);
 
   const rootRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
-  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${generateUniqueId()}`);
-  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${generateUniqueId()}`);
+  const { mapInstanceKeyRef, mapContainerIdRef } = useMapLifecycle({ rootRef, mapRef });
   const markersRef = useRef<Map<string, any>>(new Map());
   const pendingHighlightRef = useRef<{ coordKey: string; requestKey: string } | null>(null);
   const siteCategoryDictionaryRef = useRef<CategoryDictionaryItem[]>([]);
@@ -139,47 +126,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return map;
   }, [categoryDictionaryVersion]);
 
-  // Clean stale Leaflet state from containers before MapContainer initializes.
-  // useLayoutEffect runs synchronously before the browser paints, preventing the
-  // "Map container is being reused by another instance" error.
-  useLayoutEffect(() => {
-    if (!isWeb || typeof document === 'undefined') return;
-    try {
-      const allContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
-      allContainers.forEach((el: any) => {
-        if (el.id !== mapContainerIdRef.current) return;
-        if (!el._leaflet_id) return;
-        // Container has a stale _leaflet_id from a previous instance — clean it.
-        // Do NOT call el._leaflet_map.remove() — react-leaflet handles its own
-        // cleanup, and our leafletFix.ts patch makes that safe.
-        try { delete el._leaflet_map; } catch { /* noop */ }
-        try { delete el._leaflet_id; } catch { /* noop */ }
-        try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
-      });
-    } catch { /* noop */ }
-  }, []);
-
-  useEffect(() => {
-    if (!isWeb || typeof document === 'undefined') return;
-
-    try {
-      const allContainers = Array.from(
-        document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`)
-      );
-      allContainers.forEach((el: any) => {
-        if (el.id === mapContainerIdRef.current) return;
-        if (el && typeof el.isConnected === 'boolean' && el.isConnected) return;
-
-        // Do NOT call el._leaflet_map.remove() — react-leaflet handles its own
-        // cleanup, and our leafletFix.ts patch makes that safe.
-        try { if (el._leaflet_map) delete el._leaflet_map; } catch { /* noop */ }
-        try { if (el._leaflet_id) delete el._leaflet_id; } catch { /* noop */ }
-        try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
-      });
-    } catch (error) {
-      console.warn('[Map] Failed to clean orphaned containers', error);
-    }
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -255,77 +201,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     openMarkerPopup(marker);
   }, [highlightedPointRequest, openMarkerPopup]);
 
-  const buildGoogleMapsUrl = useCallback((coord: string) => {
-    const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
-    const [latStr, lonStr] = cleaned.split(',').map((s) => s.trim());
-    const lat = Number(latStr);
-    const lon = Number(lonStr);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
-    return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-  }, []);
 
-  const buildOrganicMapsUrl = useCallback((coord: string) => {
-    const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
-    const [latStr, lonStr] = cleaned.split(',').map((s) => s.trim());
-    const lat = Number(latStr);
-    const lon = Number(lonStr);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
-    return `https://omaps.app/${lat},${lon}`;
-  }, []);
-
-  // Очистка Leaflet контейнера при размонтировании, чтобы избежать "Map container is already initialized"
-  // Do NOT call map.remove() here — react-leaflet's MapContainer handles its own
-  // cleanup via its unmount effect, and our leafletFix.ts patch делает это безопасным.
-  useEffect(() => {
-    const rootEl = rootRef.current;
-    const mapContainerId = mapContainerIdRef.current;
-    return () => {
-      mapRef.current = null;
-
-      try {
-        if (typeof window !== 'undefined') {
-          const w = window as any;
-          if (w.__metravelLeafletMap) {
-            delete w.__metravelLeafletMap;
-          }
-        }
-      } catch {
-        // noop
-      }
-
-      // Доп. страховка: сбрасываем _leaflet_id только для контейнера этого компонента.
-      try {
-        const container = (rootEl as any)?.querySelector?.('.leaflet-container') as any;
-        const idContainer = mapContainerId
-          ? (document.getElementById(mapContainerId) as any)
-          : null;
-        const containers = [container, idContainer].filter(Boolean);
-
-        containers.forEach((el: any) => {
-          try { if (el._leaflet_map) delete el._leaflet_map; } catch { /* noop */ }
-          try { if (el._leaflet_id) delete el._leaflet_id; } catch { /* noop */ }
-          try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
-        });
-      } catch {
-        // noop
-      }
-    };
-  }, []);
-
-  // Invalidate map size when the root container resizes (e.g. tab switch, Suspense resolve)
-  useEffect(() => {
-    if (!isWeb) return;
-    const el = rootRef.current as HTMLElement | null;
-    if (!el || typeof ResizeObserver === 'undefined') return;
-
-    const ro = new ResizeObserver(() => {
-      const map = mapRef.current;
-      if (!map || typeof map.invalidateSize !== 'function') return;
-      try { map.invalidateSize(true); } catch { /* noop */ }
-    });
-    ro.observe(el);
-    return () => { ro.disconnect(); };
-  }, []);
 
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
@@ -579,151 +455,25 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   };
 
   // Компонент для управления закрытием попапа
-  const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
+  const PopupWithClose: React.FC<{ point: LegacyMapPoint }> = ({ point }) => {
     const map = useMapHook?.();
-    const { isAuthenticated, authReady } = useAuth();
-    const [isAddingPoint, setIsAddingPoint] = useState(false);
-
-    const coord = String(point.coord ?? '').trim();
-    const normalizedLatLng = useMemo(() => (coord ? getLatLng(coord) : null), [coord]);
-    const categoryNames = useMemo(() => stripCountryFromCategoryNames(getPointCategoryNames(point), point.address), [point]);
-    const categoryLabel = useMemo(() => categoryNames.join(', '), [categoryNames]);
-    /* eslint-disable react-hooks/exhaustive-deps */
-    const resolvedCategoryIdsFromNames = useMemo(() => {
-      const map = createCategoryNameToIdsMap(siteCategoryDictionaryRef.current);
-      return resolveCategoryIdsByNames(categoryNames, map);
-    }, [categoryNames, categoryDictionaryVersion]);
-    /* eslint-enable react-hooks/exhaustive-deps */
 
     const handleClose = useCallback(() => {
-      map.closePopup();
+      map?.closePopup();
     }, [map]);
 
-    const handleOpenArticle = useCallback(() => {
-      const url = String(point.articleUrl || point.urlTravel || '').trim();
-      if (!url) return;
-      void openExternalUrlInNewTab(url);
-    }, [point.articleUrl, point.urlTravel]);
-
-    const handleCopyCoord = useCallback(async () => {
-      if (!coord) return;
-      try {
-        if ((navigator as any)?.clipboard?.writeText) {
-          await (navigator as any).clipboard.writeText(coord);
-        }
-      } catch {
-        // noop
-      }
-    }, [coord]);
-
-    const handleOpenGoogleMaps = useCallback(() => {
-      if (!coord) return;
-      const url = buildGoogleMapsUrl(coord);
-      if (!url) return;
-      void openExternalUrlInNewTab(url);
-    }, [coord]);
-
-    const handleOpenOrganicMaps = useCallback(() => {
-      if (!coord) return;
-      const url = buildOrganicMapsUrl(coord);
-      if (!url) return;
-      void openExternalUrlInNewTab(url);
-    }, [coord]);
-
-    const handleShareTelegram = useCallback(() => {
-      if (!coord) return;
-      const mapUrl = buildGoogleMapsUrl(coord);
-      const text = `Координаты: ${coord}`;
-      const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`;
-      void openExternalUrlInNewTab(telegramUrl);
-    }, [coord]);
-
-    const handleAddPoint = useCallback(async () => {
-      if (!authReady) return;
-      if (!isAuthenticated) {
-        void showToast({ type: 'info', text1: 'Войдите, чтобы сохранить точку', position: 'bottom' });
-        return;
-      }
-      if (isAddingPoint) return;
-      if (!normalizedLatLng) {
-        void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
-        return;
-      }
-      const [lat, lng] = normalizedLatLng;
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
-        return;
-      }
-
-      const idsFromPoint = getPointCategoryIds(point);
-      const combinedIds = Array.from(new Set([...idsFromPoint, ...resolvedCategoryIdsFromNames]));
-      const filteredIds = stripCountryFromCategoryIds(
-        combinedIds,
-        point.address,
-        categoryIdToName
-      );
-      const categoryNameString = categoryLabel || undefined;
-      const payload: Record<string, unknown> = {
-        name: point.address || 'Точка маршрута',
-        address: point.address,
-        latitude: lat,
-        longitude: lng,
-        color: DEFAULT_TRAVEL_POINT_COLOR,
-        status: DEFAULT_TRAVEL_POINT_STATUS,
-        category: categoryNameString,
-        categoryName: categoryNameString,
-      };
-
-      const photoCandidate =
-        (point as any)?.travelImageThumbUrl ??
-        (point as any)?.travel_image_thumb_url ??
-        (point as any)?.image;
-      if (typeof photoCandidate === 'string' && photoCandidate.trim()) {
-        payload.photo = photoCandidate.trim();
-      }
-      if (filteredIds.length > 0) {
-        payload.categoryIds = filteredIds;
-      }
-      const tags: Record<string, unknown> = {};
-      if (point.urlTravel) {
-        tags.travelUrl = point.urlTravel;
-      }
-      if (point.articleUrl) {
-        tags.articleUrl = point.articleUrl;
-      }
-      if (Object.keys(tags).length > 0) {
-        payload.tags = tags;
-      }
-
-      setIsAddingPoint(true);
-      try {
-        await userPointsApi.createPoint(payload);
-        void showToast({
-          type: 'success',
-          text1: 'Точка добавлена в «Мои точки»',
-          position: 'bottom',
-        });
-        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
-        handleClose();
-      } catch {
-        void showToast({
-          type: 'error',
-          text1: 'Не удалось сохранить точку',
-          position: 'bottom',
-        });
-      } finally {
-        setIsAddingPoint(false);
-      }
-    }, [
-      authReady,
-      categoryLabel,
-      handleClose,
-      isAddingPoint,
-      isAuthenticated,
-      normalizedLatLng,
-      point,
-      resolvedCategoryIdsFromNames,
-    ]);
+    /* eslint-disable react-hooks/exhaustive-deps */
+    const resolveCategoryInfo = useCallback((p: LegacyMapPoint) => {
+      const categoryNames = stripCountryFromCategoryNames(getPointCategoryNames(p), p.address);
+      const categoryLabel = categoryNames.join(', ');
+      const nameToIdsMap = createCategoryNameToIdsMap(siteCategoryDictionaryRef.current);
+      const resolvedFromNames = resolveCategoryIdsByNames(categoryNames, nameToIdsMap);
+      const idsFromPoint = getPointCategoryIds(p);
+      const combinedIds = Array.from(new Set([...idsFromPoint, ...resolvedFromNames]));
+      const filteredIds = stripCountryFromCategoryIds(combinedIds, p.address, categoryIdToName);
+      return { categoryLabel, categoryIds: filteredIds };
+    }, [categoryDictionaryVersion, categoryIdToName]);
+    /* eslint-enable react-hooks/exhaustive-deps */
 
     return (
       <PopupC
@@ -734,19 +484,10 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         autoPanPaddingBottomRight={[16, 280] as any}
         closeButton
       >
-        <PlacePopupCard
-          title={point.address || ''}
-          imageUrl={point.travelImageThumbUrl}
-          categoryLabel={categoryLabel}
-          coord={coord}
-          onOpenArticle={handleOpenArticle}
-          onCopyCoord={handleCopyCoord}
-          onShareTelegram={handleShareTelegram}
-          onOpenGoogleMaps={handleOpenGoogleMaps}
-          onOpenOrganicMaps={handleOpenOrganicMaps}
-          onAddPoint={handleAddPoint}
-          addDisabled={!authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint}
-          isAdding={isAddingPoint}
+        <MapPopup
+          point={point}
+          onClose={handleClose}
+          resolveCategoryInfo={resolveCategoryInfo}
         />
       </PopupC>
     );
@@ -759,71 +500,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       {...({ className: 'metravel-travel-map' } as any)}
     >
       <style>
-        {`
-        .metravel-travel-map .leaflet-popup-content-wrapper,
-        .metravel-travel-map .leaflet-popup-tip {
-          background: ${(colors as any).surface} !important;
-          opacity: 1 !important;
-        }
-        .metravel-travel-map .leaflet-popup-content-wrapper {
-          color: ${(colors as any).text} !important;
-          border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-          border: 1px solid ${(colors as any).border} !important;
-          max-height: 480px !important;
-          overflow: hidden !important;
-        }
-        .metravel-travel-map .leaflet-popup-content {
-          margin: ${DESIGN_TOKENS.spacing.md}px !important;
-          color: ${(colors as any).text} !important;
-          max-height: 460px !important;
-          overflow-y: auto !important;
-          width: 360px !important;
-        }
-        .metravel-travel-map .leaflet-popup-close-button {
-          display: block !important;
-          width: 28px !important;
-          height: 28px !important;
-          line-height: 26px !important;
-          text-align: center !important;
-          border-radius: 999px !important;
-          border: 1px solid ${(colors as any).border} !important;
-          background: ${(colors as any).surface} !important;
-          top: 8px !important;
-          right: 8px !important;
-          z-index: 2 !important;
-          color: ${(colors as any).textMuted} !important;
-          cursor: pointer !important;
-          font-size: 18px !important;
-          transition: all 0.2s !important;
-        }
-        .metravel-travel-map .leaflet-popup-close-button:hover {
-          color: ${(colors as any).text} !important;
-          background: ${(colors as any).backgroundSecondary} !important;
-          transform: scale(1.05) !important;
-        }
-        @media (max-width: 640px) {
-          .metravel-travel-map .leaflet-popup {
-            max-width: 92vw !important;
-          }
-          .metravel-travel-map .leaflet-popup-content-wrapper {
-            max-height: 60vh !important;
-          }
-          .metravel-travel-map .leaflet-popup-content {
-            width: min(92vw, 360px) !important;
-            max-height: calc(60vh - 16px) !important;
-            margin: ${DESIGN_TOKENS.spacing.xs}px !important;
-          }
-        }
-        @media (max-width: 420px) {
-          .metravel-travel-map .leaflet-popup-content-wrapper {
-            max-height: 55vh !important;
-          }
-          .metravel-travel-map .leaflet-popup-content {
-            max-height: calc(55vh - 12px) !important;
-          }
-        }
-        `}
+        {getPopupCss('.metravel-travel-map', colors as any)}
       </style>
       <MapContainerC
         center={initialCenter}

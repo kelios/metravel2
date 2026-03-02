@@ -243,9 +243,9 @@ const MapPopup: React.FC<MapPopupConfig> = ({
     };
 
     const photoCandidate =
-      (point as Record<string, unknown>)?.travelImageThumbUrl ??
-      (point as Record<string, unknown>)?.travel_image_thumb_url ??
-      (point as Record<string, unknown>)?.image;
+      (point as unknown as Record<string, unknown>)?.travelImageThumbUrl ??
+      (point as unknown as Record<string, unknown>)?.travel_image_thumb_url ??
+      (point as unknown as Record<string, unknown>)?.image;
     if (typeof photoCandidate === 'string' && photoCandidate.trim()) {
       payload.photo = photoCandidate.trim();
     }
