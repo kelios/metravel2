@@ -1,6 +1,6 @@
 // components/map-core/MapMarkerLayer.tsx
 // C2.4: Shared marker layer used by both map stacks
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { strToLatLng } from '@/components/MapPage/Map/utils';
 import type { LegacyMapPoint } from './types';
 
@@ -159,9 +159,7 @@ export const FitBoundsOnData: React.FC<FitBoundsProps> = ({
       .map((p) => {
         const parsed = strToLatLng(p.coord, hintCenter);
         if (!parsed) {
-          // Fallback: try simple comma split
-          const simple = getLatLng(p.coord);
-          return simple;
+          return getLatLng(p.coord);
         }
         return [parsed[1], parsed[0]] as [number, number];
       })

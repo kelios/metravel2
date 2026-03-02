@@ -33,6 +33,7 @@
 | Map Core Popup Styles | `components/map-core/mapPopupStyles.ts` | Shared CSS for Leaflet popups | **Done** (C2.2) |
 | Map Core Lifecycle | `components/map-core/useMapLifecycle.ts` | Shared Leaflet container cleanup, ResizeObserver | **Done** (C2.3) |
 | Map Core Elevation | `components/map-core/useElevation.ts` | Elevation fetch + gain/loss computation | **Done** (C4.1) |
+| Map Core Marker Layer | `components/map-core/MapMarkerLayer.tsx` | Shared marker rendering for both map stacks | **Done** (C2.4) |
 | Travel Detail Map | `components/map/Map.web.tsx` | Leaflet map for travel detail | Migrated to map-core (C2.1–C2.3) |
 | Markers List Styles | `components/map/markersListStyles.ts` | Extracted styles for marker list | **Done** (C3.1) |
 | Edit Marker Modal | `components/map/EditMarkerModal.tsx` | Extracted modal for editing markers | **Done** (C3.2) |
