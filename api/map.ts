@@ -69,8 +69,8 @@ const normalizeLatLngString = (value: unknown): string => {
   return '';
 };
 
-const normalizeTravelCoordsItem = (raw: any) => {
-  const t = raw && typeof raw === 'object' ? raw : {};
+const normalizeTravelCoordsItem = (raw: unknown) => {
+  const t = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {} as Record<string, unknown>;
 
   let lat = normalizeLatLngString(t.lat ?? t.latitude);
   let lng = normalizeLatLngString(t.lng ?? t.longitude);
@@ -148,11 +148,12 @@ const normalizeTravelCoordsItem = (raw: any) => {
   };
 };
 
-const tryReadTotal = (payload: any): number | undefined => {
+const tryReadTotal = (payload: unknown): number | undefined => {
   if (!payload || typeof payload !== 'object') return undefined;
-  const maybe = (payload as any).count ?? (payload as any).total;
+  const rec = payload as Record<string, unknown>;
+  const maybe = rec.count ?? rec.total;
   const n = typeof maybe === 'string' ? Number(maybe) : maybe;
-  return Number.isFinite(n) ? n : undefined;
+  return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
 };
 
 const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
@@ -163,7 +164,7 @@ const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
     return payload.map((item) => normalizeTravelCoordsItem(item)) as unknown as TravelsForMap;
   }
   if (typeof payload === 'object') {
-    const obj = payload as any;
+    const obj = payload as Record<string, unknown>;
     const list = Array.isArray(obj?.results)
       ? obj.results
       : Array.isArray(obj?.data)
@@ -171,8 +172,8 @@ const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
         : null;
 
     if (list) {
-      const out: any = {};
-      list.forEach((item: any, index: number) => {
+      const out: Record<string, unknown> = {};
+      list.forEach((item: unknown, index: number) => {
         out[index] = normalizeTravelCoordsItem(item);
       });
 
@@ -189,8 +190,8 @@ const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
       return out as TravelsForMap;
     }
 
-    const out: any = {};
-    Object.entries(payload as Record<string, any>).forEach(([key, value]) => {
+    const out: Record<string, unknown> = {};
+    Object.entries(payload as Record<string, unknown>).forEach(([key, value]) => {
       out[key] = normalizeTravelCoordsItem(value);
     });
     return out as TravelsForMap;
@@ -254,9 +255,9 @@ export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) 
       devError('Error fetching travels near: HTTP', res.status, res.statusText, urlTravel);
       return [];
     }
-    return await safeJsonParse<any[]>(res, []);
-  } catch (e: any) {
-    if (e.name === 'AbortError') {
+    return await safeJsonParse<unknown[]>(res, []);
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching travels near:', e);
@@ -281,8 +282,8 @@ export const fetchTravelsPopular = async (options?: ApiOptions): Promise<Travels
       return {} as TravelsMap;
     }
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching travels popular:', { url: `${GET_TRAVELS}popular/`, error: e });
@@ -301,8 +302,8 @@ export const fetchTravelsOfMonth = async (options?: ApiOptions): Promise<Travels
       return {} as TravelsMap;
     }
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching fetchTravelsOfMonth:', e);
@@ -311,7 +312,7 @@ export const fetchTravelsOfMonth = async (options?: ApiOptions): Promise<Travels
   }
 };
 
-export const fetchTravelsRandom = async (options?: ApiOptions): Promise<any[]> => {
+export const fetchTravelsRandom = async (options?: ApiOptions): Promise<unknown[]> => {
   try {
     const urlTravel = GET_TRAVELS_RANDOM;
     const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
@@ -320,9 +321,9 @@ export const fetchTravelsRandom = async (options?: ApiOptions): Promise<any[]> =
       if (options?.throwOnError) throw err;
       return [];
     }
-    return await safeJsonParse<any[]>(res, []);
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+    return await safeJsonParse<unknown[]>(res, []);
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching fetchTravelsRandom:', e);
@@ -334,17 +335,17 @@ export const fetchTravelsRandom = async (options?: ApiOptions): Promise<any[]> =
 export const fetchTravelsForMap = async (
   page: number,
   itemsPerPage: number,
-  filter: Record<string, any>,
+  filter: Record<string, unknown>,
   options?: ApiOptions,
 ): Promise<TravelsForMap> => {
   try {
-    const radius = parseInt(filter?.radius ?? String(DEFAULT_RADIUS_KM), 10);
+    const radius = parseInt(String(filter?.radius ?? DEFAULT_RADIUS_KM), 10);
     const latRaw = filter?.lat ?? '53.9006';
     const lngRaw = filter?.lng ?? '27.5590';
     const lat = typeof latRaw === 'string' ? latRaw : String(latRaw);
     const lng = typeof lngRaw === 'string' ? lngRaw : String(lngRaw);
 
-    const whereObject: Record<string, any> = {
+    const whereObject: Record<string, unknown> = {
       lat,
       lng,
       radius,
@@ -384,8 +385,8 @@ export const fetchTravelsForMap = async (
     }
     const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
     return normalizeTravelsForMapPayload(payload);
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching fetchTravelsForMap:', e);
@@ -429,8 +430,8 @@ export const fetchTravelsNearRoute = async (
 
     const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
     return normalizeTravelsForMapPayload(payload);
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching fetchTravelsNearRoute:', e);
@@ -460,8 +461,8 @@ export const fetchFiltersMap = async (options?: ApiOptions): Promise<Filters> =>
       return emptyFilters;
     }
     return await safeJsonParse<Filters>(res, emptyFilters);
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
     devWarn('Error fetching filters:', e);

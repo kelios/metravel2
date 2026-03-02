@@ -96,9 +96,16 @@ export const loginApi = async (email: string, password: string): Promise<{
             is_superuser?: boolean;
         }>(response, {});
 
-        if (json.token) return json as any;
+        if (json.token) return json as {
+            token: string;
+            refresh?: string;
+            name: string;
+            email: string;
+            id: string | number;
+            is_superuser: boolean;
+        };
         return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
         devError('Login error:', error);
         const message = getUserFriendlyError(error);
         Alert.alert('Ошибка входа', message);
@@ -263,18 +270,20 @@ export const registration = async (values: FormValues): Promise<string | { ok: b
 
         if (jsonResponse.token) {
             await setSecureItem('userToken', jsonResponse.token);
-            if ((jsonResponse as any).refresh) {
-                await setSecureItem('refreshToken', (jsonResponse as any).refresh);
+            const resp = jsonResponse as Record<string, unknown>;
+            if (typeof resp.refresh === 'string') {
+                await setSecureItem('refreshToken', resp.refresh);
             }
             await AsyncStorage.setItem('userName', jsonResponse.name || '');
         }
 
         const successMessage = 'Пользователь успешно зарегистрирован. Проверьте почту для активации.';
         return successMessage;
-    } catch (error: any) {
+    } catch (error: unknown) {
         devError('Registration error:', error);
         // Тесты ожидают строку с текстом ошибки
-        return (error?.message || 'Произошла неизвестная ошибка.') as any;
+        const msg = error instanceof Error ? error.message : 'Произошла неизвестная ошибка.';
+        return msg;
     }
 };
 
@@ -289,18 +298,20 @@ export const confirmAccount = async (hash: string) => {
         const jsonResponse = await safeJsonParse<{
             userToken?: string;
             userName?: string;
+            refreshToken?: string;
         }>(response, {});
 
         if (jsonResponse.userToken) {
             await setSecureItem('userToken', jsonResponse.userToken);
-            if ((jsonResponse as any).refreshToken) {
-                await setSecureItem('refreshToken', (jsonResponse as any).refreshToken);
+            if (jsonResponse.refreshToken) {
+                await setSecureItem('refreshToken', jsonResponse.refreshToken);
             }
             await AsyncStorage.setItem('userName', jsonResponse.userName || '');
         }
         return jsonResponse;
-    } catch (error: any) {
-        throw new Error(error.message || 'Произошла ошибка при подтверждении учетной записи.');
+    } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : 'Произошла ошибка при подтверждении учетной записи.';
+        throw new Error(msg);
     }
 };
 
@@ -343,9 +354,16 @@ export const googleAuthApi = async (idToken: string): Promise<{
             is_superuser?: boolean;
         }>(response, {});
 
-        if (json.token) return json as any;
+        if (json.token) return json as {
+            token: string;
+            refresh?: string;
+            name: string;
+            email: string;
+            id: string | number;
+            is_superuser: boolean;
+        };
         return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
         devError('Google auth error:', error);
         const message = getUserFriendlyError(error);
         Alert.alert('Ошибка входа через Google', message);

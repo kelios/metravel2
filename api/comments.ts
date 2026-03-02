@@ -9,12 +9,14 @@ import type {
 const getErrorStatus = (error: unknown): number | undefined => {
   if (error instanceof ApiError) return error.status;
   if (!error || typeof error !== 'object') return undefined;
-  const anyErr = error as any;
-  const status =
-    typeof anyErr.status === 'number'
-      ? anyErr.status
-      : (typeof anyErr?.response?.status === 'number' ? anyErr.response.status : undefined);
-  return status;
+  const rec = error as Record<string, unknown>;
+  const status = typeof rec.status === 'number' ? rec.status : undefined;
+  if (status !== undefined) return status;
+  const resp = rec.response;
+  if (resp && typeof resp === 'object' && typeof (resp as Record<string, unknown>).status === 'number') {
+    return (resp as Record<string, unknown>).status as number;
+  }
+  return undefined;
 };
 
 export const commentsApi = {

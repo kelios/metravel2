@@ -1,17 +1,22 @@
 import { fetchFilters, fetchFiltersCountry, fetchAllCountries } from './misc';
 import { devWarn } from '@/utils/logger';
+import type { Filters } from '@/types/types';
 
 // Кэш для хранения результатов запросов
-const filtersCache = new Map<string, any>();
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const filtersCache = new Map<string, CacheEntry<unknown>>();
 const cacheTimeout = 10 * 60 * 1000; // 10 минут
 
 // Оптимизированная функция для получения фильтров с кэшированием
-export const fetchFiltersOptimized = async (options?: { signal?: AbortSignal }) => {
+export const fetchFiltersOptimized = async (options?: { signal?: AbortSignal }): Promise<Filters> => {
   const cacheKey = 'filters';
   const now = Date.now();
   
   // Проверяем кэш
-  const cached = filtersCache.get(cacheKey);
+  const cached = filtersCache.get(cacheKey) as CacheEntry<Filters> | undefined;
   if (cached && (now - cached.timestamp) < cacheTimeout) {
     return cached.data;
   }
@@ -35,12 +40,12 @@ export const fetchFiltersOptimized = async (options?: { signal?: AbortSignal }) 
 };
 
 // Оптимизированная функция для получения стран с кэшированием
-export const fetchFiltersCountryOptimized = async (options?: { signal?: AbortSignal }) => {
+export const fetchFiltersCountryOptimized = async (options?: { signal?: AbortSignal }): Promise<unknown[]> => {
   const cacheKey = 'countries';
   const now = Date.now();
   
   // Проверяем кэш
-  const cached = filtersCache.get(cacheKey);
+  const cached = filtersCache.get(cacheKey) as CacheEntry<unknown[]> | undefined;
   if (cached && (now - cached.timestamp) < cacheTimeout) {
     return cached.data;
   }
@@ -64,12 +69,12 @@ export const fetchFiltersCountryOptimized = async (options?: { signal?: AbortSig
 };
 
 // Объединенная функция для получения всех фильтров за один вызов
-export const fetchAllFiltersOptimized = async (options?: { signal?: AbortSignal }) => {
+export const fetchAllFiltersOptimized = async (options?: { signal?: AbortSignal }): Promise<Filters> => {
   const cacheKey = 'all-filters';
   const now = Date.now();
   
   // Проверяем кэш
-  const cached = filtersCache.get(cacheKey);
+  const cached = filtersCache.get(cacheKey) as CacheEntry<Filters> | undefined;
   if (cached && (now - cached.timestamp) < cacheTimeout) {
     return cached.data;
   }
@@ -81,7 +86,7 @@ export const fetchAllFiltersOptimized = async (options?: { signal?: AbortSignal 
       fetchFiltersCountryOptimized(options)
     ]);
     
-    const result = { ...base, countries };
+    const result: Filters = { ...base, countries: countries as string[] };
     filtersCache.set(cacheKey, {
       data: result,
       timestamp: now

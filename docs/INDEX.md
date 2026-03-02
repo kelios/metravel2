@@ -53,6 +53,11 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/PDF_EXPORT_DESIGN_SPEC.md` — ТЗ по улучшению дизайна PDF-экспорта (книга путешествий)
 - `docs/MAP_PAGE_DESIGN_SPEC.md` — ТЗ по UI/UX-улучшениям страницы карты
 
+## Architecture / Refactoring
+
+- `docs/REFACTORING_PLAN.md` — комплексный план рефакторинга (8 недель, 6 фаз, 12 блоков, ~50 задач)
+- `docs/AUDIT_REPORT.md` — аудит кодовой базы и production (Lighthouse, SEO, security, архитектура)
+
 ## Map page refactoring
 
 - `docs/MAP_PAGE_REFACTORING_SPEC.md` — полное ТЗ по рефакторингу страницы карты (50+ стр)

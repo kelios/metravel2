@@ -117,12 +117,14 @@ export const optimizedSaveFormData = async (
       {
         maxAttempts: retries + 1,
         delay: retryDelay,
-        shouldRetry: (error: any) => {
+        shouldRetry: (error: unknown) => {
           // Don't retry auth errors or client errors
-          if (error?.status >= 400 && error?.status < 500) {
+          const rec = error && typeof error === 'object' ? (error as Record<string, unknown>) : {};
+          const status = typeof rec.status === 'number' ? rec.status : undefined;
+          if (status !== undefined && status >= 400 && status < 500) {
             return false;
           }
-          return isRetryableError(error);
+          return error instanceof Error ? isRetryableError(error) : false;
         },
       }
     );
@@ -165,7 +167,7 @@ export const optimizedSaveFormData = async (
 /**
  * Helper function to clean empty fields
  */
-function cleanEmptyFields(obj: any): any {
+function cleanEmptyFields(obj: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(obj).map(([key, value]) => {
       if (value === '') return [key, null];

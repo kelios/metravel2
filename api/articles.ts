@@ -121,10 +121,11 @@ const extractSlugFromArticleUrl = (urlValue: string): string => {
 };
 
 const extractArticleSlugCandidate = (article: Article): string => {
-  const directSlug = normalizeParamValue(String((article as any)?.slug || ''));
+  const rec = article as Record<string, unknown>;
+  const directSlug = normalizeParamValue(String(rec?.slug || ''));
   if (directSlug) return directSlug;
 
-  const directUrl = String((article as any)?.url || '');
+  const directUrl = String(rec?.url || '');
   const fromUrl = extractSlugFromArticleUrl(directUrl);
   if (fromUrl) return fromUrl;
 
@@ -235,12 +236,12 @@ const findArticleBySlugFallback = async (
 export const fetchArticles = async (
   page: number,
   itemsPerPage: number,
-  urlParams: Record<string, any>,
+  urlParams: Record<string, unknown>,
   options?: { signal?: AbortSignal; throwOnError?: boolean },
-): Promise<{ data: any[]; total: number }> => {
+): Promise<{ data: Article[]; total: number }> => {
   try {
     const signal = options?.signal;
-    const whereObject: Record<string, any> = {
+    const whereObject: Record<string, unknown> = {
       ...urlParams,
     };
 
@@ -271,22 +272,23 @@ export const fetchArticles = async (
       if (options?.throwOnError) throw err;
       return { data: [], total: 0 };
     }
-    const result = await safeJsonParse<any>(res, []);
+    const result = await safeJsonParse<unknown>(res, []);
 
     if (Array.isArray(result)) {
-      return { data: result, total: result.length };
+      return { data: result as Article[], total: result.length };
     }
 
     if (result && typeof result === 'object') {
-      const data = Array.isArray(result.data) ? result.data : [];
-      const total = typeof result.total === 'number' ? result.total : data.length;
+      const rec = result as Record<string, unknown>;
+      const data = Array.isArray(rec.data) ? (rec.data as Article[]) : [];
+      const total = typeof rec.total === 'number' ? rec.total : data.length;
       return { data, total };
     }
 
     return { data: [], total: 0 };
-  } catch (e: any) {
+  } catch (e: unknown) {
     devError('Error fetching Articles:', e);
-    if (e?.name === 'AbortError') {
+    if (e instanceof Error && e.name === 'AbortError') {
       if (options?.throwOnError) throw e;
       return { data: [], total: 0 };
     }
@@ -309,9 +311,9 @@ export const fetchArticle = async (
       return {} as Article;
     }
     return await safeJsonParse<Article>(res, {} as Article);
-  } catch (e: any) {
+  } catch (e: unknown) {
     devError('Error fetching Article:', e);
-    if (e?.name === 'AbortError') {
+    if (e instanceof Error && e.name === 'AbortError') {
       if (options?.throwOnError) throw e;
       return {} as Article;
     }
@@ -346,8 +348,8 @@ export const fetchArticleBySlug = async (
     if (directRes.status !== 404) {
       throw new Error(`HTTP ${directRes.status}: ${directRes.statusText}`);
     }
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
   }
@@ -357,8 +359,8 @@ export const fetchArticleBySlug = async (
     if (fallbackArticle && fallbackArticle.id) {
       return fallbackArticle;
     }
-  } catch (e: any) {
-    if (e?.name === 'AbortError') {
+  } catch (e: unknown) {
+    if (e instanceof Error && e.name === 'AbortError') {
       throw e;
     }
   }

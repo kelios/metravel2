@@ -1,7 +1,7 @@
 // api/travelRating.ts
 // API для работы с рейтингом путешествий
 
-import { apiClient } from '@/api/client';
+import { apiClient, ApiError } from '@/api/client';
 import { devError } from '@/utils/logger';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -75,9 +75,9 @@ export const getUserTravelRating = async (travelId: number): Promise<number | nu
         }
 
         return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
         // 404 означает что пользователь ещё не оценивал
-        if (error?.status === 404) {
+        if (error instanceof ApiError && error.status === 404) {
             return null;
         }
         devError('Error fetching user travel rating:', error);

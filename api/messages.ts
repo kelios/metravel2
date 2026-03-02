@@ -9,6 +9,18 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 // so messaging 401s (from undeployed backend) won't log the user out.
 // ---------------------------------------------------------------------------
 
+const getMessagingErrorStatus = (error: unknown): number | undefined => {
+    if (error instanceof ApiError) return error.status;
+    if (!error || typeof error !== 'object') return undefined;
+    const rec = error as Record<string, unknown>;
+    if (typeof rec.status === 'number') return rec.status;
+    const resp = rec.response;
+    if (resp && typeof resp === 'object' && typeof (resp as Record<string, unknown>).status === 'number') {
+        return (resp as Record<string, unknown>).status as number;
+    }
+    return undefined;
+};
+
 async function messagingFetch<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -29,11 +41,15 @@ async function messagingFetch<T>(
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
-        let errorData: any;
+        let errorData: unknown;
         try { errorData = JSON.parse(errorText); } catch { errorData = errorText; }
+        const rec = errorData && typeof errorData === 'object' ? (errorData as Record<string, unknown>) : {};
+        const message = (typeof rec.message === 'string' ? rec.message : undefined)
+            || (typeof rec.detail === 'string' ? rec.detail : undefined)
+            || `Ошибка запроса: ${response.statusText}`;
         throw new ApiError(
             response.status,
-            errorData?.message || errorData?.detail || `Ошибка запроса: ${response.statusText}`,
+            message,
             errorData,
         );
     }
@@ -115,8 +131,8 @@ export interface ThreadByUserResponse {
 export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
     try {
         return await messagingFetch<MessageThread[]>('/message-threads/');
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
         if (status === 401 || status === 404) return [];
         throw e;
     }
@@ -125,8 +141,8 @@ export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
 export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
     try {
         return await messagingFetch<MessagingUser[]>('/message-threads/available-users/');
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
         if (status === 401 || status === 404) return [];
         throw e;
     }
@@ -137,8 +153,8 @@ export const fetchThreadByUser = async (userId: number): Promise<ThreadByUserRes
         return await messagingFetch<ThreadByUserResponse>(
             `/message-threads/thread-by-user/?user_id=${userId}`,
         );
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
         if (status === 401 || status === 404) return { thread_id: null };
         throw e;
     }
@@ -160,8 +176,8 @@ export const fetchMessages = async (
             previous: raw.previous ?? null,
             results: raw.results ?? raw.data ?? [],
         };
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
         if (status === 401 || status === 404) {
             return { count: 0, next: null, previous: null, results: [] };
         }
@@ -191,8 +207,8 @@ export const markThreadRead = async (
                 body: JSON.stringify(payload ?? {}),
             },
         );
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
         if (status === 401 || status === 404) {
             return { thread_id: threadId, last_read_message_id: null, unread_count: 0 };
         }
@@ -222,8 +238,8 @@ export const sendMessage = async (
             method: 'POST',
             body: JSON.stringify(payload),
         });
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
         if (status === 401) {
             throw new Error('Для отправки сообщений необходимо авторизоваться');
         }
@@ -236,8 +252,8 @@ export const deleteMessage = async (id: number | string): Promise<null> => {
         return await messagingFetch<null>(`/messages/${id}/`, {
             method: 'DELETE',
         });
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
         if (status === 401 || status === 404) return null;
         throw e;
     }

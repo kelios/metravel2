@@ -1,6 +1,6 @@
 // src/api/quests.ts
 // API модуль для работы с квестами через бэкенд
-import { apiClient } from '@/api/client';
+import { apiClient, ApiError } from '@/api/client';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -138,9 +138,10 @@ export async function fetchAllProgress(): Promise<ApiQuestProgress[]> {
 export async function fetchOrCreateProgress(questId: string): Promise<ApiQuestProgress> {
     try {
         return await apiClient.get<ApiQuestProgress>(`/quest-progress/quest/${questId}/`);
-    } catch (err: any) {
+    } catch (err: unknown) {
         // If progress doesn't exist yet (404), create it
-        if (err?.status === 404) {
+        const status = err instanceof ApiError ? err.status : undefined;
+        if (status === 404) {
             // Need numeric quest ID for creation — fetch the quest first
             const quest = await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`);
             return apiClient.post<ApiQuestProgress>('/quest-progress/', {

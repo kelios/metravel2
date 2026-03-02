@@ -19,7 +19,7 @@ type FileInput = File | DocumentPickerAsset;
 
  const USER_POINTS_LIST_TIMEOUT_MS = 30000;
 
-const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
+const normalizeImportPointsResult = (raw: unknown): ImportPointsResult => {
   if (!raw || typeof raw !== 'object') {
     return {
       importId: '',
@@ -32,49 +32,49 @@ const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
     };
   }
 
-  const errors = Array.isArray(raw.errors)
-    ? raw.errors.map((e: any) => (typeof e === 'object' && e != null ? e : { message: String(e) }))
+  const r = raw as Record<string, unknown>;
+
+  const rawErrors = r.errors;
+  const errors: Record<string, unknown>[] = Array.isArray(rawErrors)
+    ? rawErrors.map((e: unknown) =>
+        e && typeof e === 'object' ? (e as Record<string, unknown>) : { message: String(e) }
+      )
     : [];
 
   const created =
-    (typeof raw.created === 'number' ? raw.created : undefined) ??
-    (typeof raw.imported === 'number' ? raw.imported : undefined) ??
-    (Array.isArray(raw.points) ? raw.points.length : undefined) ??
+    (typeof r.created === 'number' ? r.created : undefined) ??
+    (typeof r.imported === 'number' ? r.imported : undefined) ??
+    (Array.isArray(r.points) ? r.points.length : undefined) ??
     0;
 
   const updated =
-    (typeof raw.updated === 'number' ? raw.updated : undefined) ??
-    (typeof raw.updated_count === 'number' ? raw.updated_count : undefined) ??
+    (typeof r.updated === 'number' ? r.updated : undefined) ??
+    (typeof r.updated_count === 'number' ? r.updated_count : undefined) ??
     0;
 
   const skipped =
-    (typeof raw.skipped === 'number' ? raw.skipped : undefined) ??
-    (typeof raw.skipped_count === 'number' ? raw.skipped_count : undefined) ??
+    (typeof r.skipped === 'number' ? r.skipped : undefined) ??
+    (typeof r.skipped_count === 'number' ? r.skipped_count : undefined) ??
     0;
 
   const totalParsed =
-    (typeof raw.totalParsed === 'number' ? raw.totalParsed : undefined) ??
-    (typeof raw.total_parsed === 'number' ? raw.total_parsed : undefined) ??
-    (typeof raw.parsed === 'number' ? raw.parsed : undefined) ??
-    (typeof raw.imported === 'number' && typeof raw.skipped === 'number'
-      ? raw.imported + raw.skipped
+    (typeof r.totalParsed === 'number' ? r.totalParsed : undefined) ??
+    (typeof r.total_parsed === 'number' ? r.total_parsed : undefined) ??
+    (typeof r.parsed === 'number' ? r.parsed : undefined) ??
+    (typeof r.imported === 'number' && typeof r.skipped === 'number'
+      ? (r.imported as number) + (r.skipped as number)
       : undefined) ??
     (created + skipped);
 
   const importId =
-    (typeof raw.importId === 'string' ? raw.importId : undefined) ??
-    (typeof raw.import_id === 'string' ? raw.import_id : undefined) ??
-    (typeof raw.id === 'string' ? raw.id : undefined) ??
+    (typeof r.importId === 'string' ? r.importId : undefined) ??
+    (typeof r.import_id === 'string' ? r.import_id : undefined) ??
+    (typeof r.id === 'string' ? r.id : undefined) ??
     '';
 
-  const dedupePolicy =
-    (raw.dedupePolicy === 'merge' || raw.dedupePolicy === 'skip' || raw.dedupePolicy === 'duplicate'
-      ? raw.dedupePolicy
-      : undefined) ??
-    (raw.dedupe_policy === 'merge' || raw.dedupe_policy === 'skip' || raw.dedupe_policy === 'duplicate'
-      ? raw.dedupe_policy
-      : undefined) ??
-    'skip';
+  const dp = r.dedupePolicy ?? r.dedupe_policy;
+  const dedupePolicy: DedupePolicy =
+    (dp === 'merge' || dp === 'skip' || dp === 'duplicate' ? dp : 'skip');
 
   return {
     importId,
@@ -200,7 +200,7 @@ export const userPointsApi = {
       }
     }
 
-    const raw = await apiClient.uploadFormData<any>('/user-points/import/', formData, 'POST');
+    const raw = await apiClient.uploadFormData<unknown>('/user-points/import/', formData, 'POST');
     return normalizeImportPointsResult(raw);
   },
   
@@ -237,13 +237,12 @@ export const userPointsApi = {
     const queryString = params.toString();
     const endpoint = queryString ? `/user-points/?${queryString}` : '/user-points/';
 
-    const raw = await apiClient.get<any>(endpoint, USER_POINTS_LIST_TIMEOUT_MS);
+    const raw = await apiClient.get<unknown>(endpoint, USER_POINTS_LIST_TIMEOUT_MS);
     if (Array.isArray(raw)) return raw as ImportedPoint[];
     if (raw && typeof raw === 'object') {
-      const data = (raw as any).data;
-      if (Array.isArray(data)) return data as ImportedPoint[];
-      const results = (raw as any).results;
-      if (Array.isArray(results)) return results as ImportedPoint[];
+      const rec = raw as Record<string, unknown>;
+      if (Array.isArray(rec.data)) return rec.data as ImportedPoint[];
+      if (Array.isArray(rec.results)) return rec.results as ImportedPoint[];
     }
     return [] as ImportedPoint[];
   },
@@ -282,12 +281,12 @@ export const userPointsApi = {
   async saveRoute(name: string, route: RouteResponse, pointIds: string[]) {
     return apiClient.post<{
       routeId: string;
-      route: any;
+      route: RouteResponse;
     }>('/user-points/route/save/', { name, route, pointIds });
   },
   
   async getSavedRoutes() {
-    return apiClient.get<{ routes: any[] }>('/user-points/routes/');
+    return apiClient.get<{ routes: unknown[] }>('/user-points/routes/');
   },
   
   async getRecommendations(request: RecommendationRequest) {
