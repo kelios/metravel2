@@ -102,6 +102,15 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         actionBtnTxt: { color: colors.textOnPrimary, fontWeight: '700', fontSize: typography.sizes.sm },
         actionBtnTxtSecondary: { color: colors.text },
 
+        contentWrap: {
+            width: '100%',
+            maxWidth: 1400,
+            alignSelf: 'center',
+            paddingHorizontal: spacing.md,
+            flex: 1,
+        },
+        contentWrapMobile: { paddingHorizontal: spacing.xs },
+
         /* ---- Layout: sidebar + main ---- */
         contentRow: { flex: 1, flexDirection: 'row' },
         contentRowMobile: { flexDirection: 'column' },
@@ -132,7 +141,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
 
         /* ---- Quest card ---- */
         questCard: {
-            flex: 1, minWidth: 260, borderRadius: radii.lg, overflow: 'hidden',
+            flexGrow: 1, flexShrink: 1, flexBasis: 300, minWidth: 260, maxWidth: 520,
+            borderRadius: radii.lg, overflow: 'hidden',
             borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
             ...Platform.select({
                 web: { boxShadow: (colors.boxShadows as any)?.card, transition: 'box-shadow 0.2s ease, transform 0.2s ease' } as any,
@@ -140,7 +150,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                 default: {},
             }),
         },
-        questCardMobile: { minWidth: '100%', borderRadius: radii.md },
+        questCardMobile: { minWidth: '100%', maxWidth: '100%', borderRadius: radii.md },
 
         coverWrap: { width: '100%', aspectRatio: 3 / 2, position: 'relative', backgroundColor: colors.surfaceMuted },
         coverWrapMobile: { aspectRatio: isSmall ? 4 / 3 : 16 / 9 },
@@ -459,84 +469,86 @@ export default function QuestsScreen() {
             </View>
 
             {/* ── Body: sidebar + main ── */}
-            <View style={sx(s.contentRow, isMobile && s.contentRowMobile)}>
-                {/* Desktop sidebar */}
-                {isDesktop && (
-                    <View style={s.sidePanel}>
-                        <QuestsFilterContent {...filterProps} />
+            <View style={sx(s.contentWrap, isMobile && s.contentWrapMobile)}>
+                <View style={sx(s.contentRow, isMobile && s.contentRowMobile)}>
+                    {/* Desktop sidebar */}
+                    {isDesktop && (
+                        <View style={s.sidePanel}>
+                            <QuestsFilterContent {...filterProps} />
+                        </View>
+                    )}
+
+                    {/* Main content area — quests grid */}
+                    <View style={s.mainContent}>
+                        <ScrollView
+                            style={s.mainScroll}
+                            contentContainerStyle={sx(s.mainScrollContent, isMobile && s.mainScrollContentMobile)}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {/* Quest section header */}
+                            {selectedCityId && dataLoaded && selectedCityName && (
+                                <View style={s.sectionHeader}>
+                                    <Text style={sx(s.sectionTitle, isMobile && s.sectionTitleMobile)} numberOfLines={1}>
+                                        {selectedCityId === NEARBY_ID ? 'Квесты поблизости' : `Квесты: ${selectedCityName}`}
+                                    </Text>
+                                    <Text style={s.sectionMeta}>{questsAll.length} шт.</Text>
+                                </View>
+                            )}
+
+                            {/* Nearby empty state */}
+                            {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 && dataLoaded ? (
+                                <EmptyState
+                                    icon="map-pin"
+                                    title="Рядом ничего не найдено"
+                                    description="Попробуйте увеличить радиус поиска."
+                                    variant="empty"
+                                    iconSize={48}
+                                />
+                            ) : null}
+
+                            {/* No city selected */}
+                            {!selectedCityId && dataLoaded ? (
+                                <EmptyState
+                                    icon="compass"
+                                    title="Выберите локацию"
+                                    description={isMobile
+                                        ? 'Нажмите «Фильтры», чтобы выбрать город.'
+                                        : 'Выберите город в панели слева, чтобы увидеть доступные квесты.'}
+                                    variant="empty"
+                                    iconSize={48}
+                                />
+                            ) : null}
+
+                            {/* Skeleton loading */}
+                            {!dataLoaded ? (
+                                <View style={s.skeletonQuestsRow}>
+                                    {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
+                                        <SkeletonLoader key={i} width="100%" height={isMobile ? 180 : 220} borderRadius={radii.lg} />
+                                    ))}
+                                </View>
+                            ) : (
+                                /* Quest cards grid */
+                                <View style={s.questsContainer}>
+                                    {chunkedQuests.map((row, rowIndex) => (
+                                        <View key={`quest-row-${rowIndex}`} style={s.questsRow}>
+                                            {row.map((quest) => (
+                                                <QuestCardLink
+                                                    key={quest.id}
+                                                    cityId={selectedCityId === NEARBY_ID ? (quest.cityId as string) : (selectedCityId as string)}
+                                                    quest={quest}
+                                                    nearby={selectedCityId === NEARBY_ID}
+                                                    isMobile={isMobile}
+                                                    s={s}
+                                                    colors={colors}
+                                                />
+                                            ))}
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </ScrollView>
                     </View>
-                )}
-
-                {/* Main content area — quests grid */}
-                <View style={s.mainContent}>
-                    <ScrollView
-                        style={s.mainScroll}
-                        contentContainerStyle={sx(s.mainScrollContent, isMobile && s.mainScrollContentMobile)}
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        {/* Quest section header */}
-                        {selectedCityId && dataLoaded && selectedCityName && (
-                            <View style={s.sectionHeader}>
-                                <Text style={sx(s.sectionTitle, isMobile && s.sectionTitleMobile)} numberOfLines={1}>
-                                    {selectedCityId === NEARBY_ID ? 'Квесты поблизости' : `Квесты: ${selectedCityName}`}
-                                </Text>
-                                <Text style={s.sectionMeta}>{questsAll.length} шт.</Text>
-                            </View>
-                        )}
-
-                        {/* Nearby empty state */}
-                        {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 && dataLoaded ? (
-                            <EmptyState
-                                icon="map-pin"
-                                title="Рядом ничего не найдено"
-                                description="Попробуйте увеличить радиус поиска."
-                                variant="empty"
-                                iconSize={48}
-                            />
-                        ) : null}
-
-                        {/* No city selected */}
-                        {!selectedCityId && dataLoaded ? (
-                            <EmptyState
-                                icon="compass"
-                                title="Выберите локацию"
-                                description={isMobile
-                                    ? 'Нажмите «Фильтры», чтобы выбрать город.'
-                                    : 'Выберите город в панели слева, чтобы увидеть доступные квесты.'}
-                                variant="empty"
-                                iconSize={48}
-                            />
-                        ) : null}
-
-                        {/* Skeleton loading */}
-                        {!dataLoaded ? (
-                            <View style={s.skeletonQuestsRow}>
-                                {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
-                                    <SkeletonLoader key={i} width="100%" height={isMobile ? 180 : 220} borderRadius={radii.lg} />
-                                ))}
-                            </View>
-                        ) : (
-                            /* Quest cards grid */
-                            <View style={s.questsContainer}>
-                                {chunkedQuests.map((row, rowIndex) => (
-                                    <View key={`quest-row-${rowIndex}`} style={s.questsRow}>
-                                        {row.map((quest) => (
-                                            <QuestCardLink
-                                                key={quest.id}
-                                                cityId={selectedCityId === NEARBY_ID ? (quest.cityId as string) : (selectedCityId as string)}
-                                                quest={quest}
-                                                nearby={selectedCityId === NEARBY_ID}
-                                                isMobile={isMobile}
-                                                s={s}
-                                                colors={colors}
-                                            />
-                                        ))}
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </ScrollView>
                 </View>
             </View>
 

@@ -540,6 +540,33 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
       },
     } as any : {}),
   },
+  // TD-02: На мобайле кнопка расширяется до pill с текстом
+  heroFavoriteBtnMobile: {
+    width: 'auto' as any,
+    height: 'auto' as any,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row' as any,
+    gap: 6,
+    minWidth: 40,
+    minHeight: 40,
+  },
+  heroFavoriteBtnLabel: {
+    fontSize: 13,
+    fontWeight: '600' as any,
+    color: 'rgba(255,255,255,0.9)',
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+    } as any : {
+      textShadowColor: 'rgba(0,0,0,0.4)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
+    }),
+  },
+  heroFavoriteBtnLabelActive: {
+    color: colors.textOnPrimary,
+  },
 
   videoContainer: {
     width: "100%",

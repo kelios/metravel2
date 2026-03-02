@@ -78,7 +78,6 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     showDots = true,
     hideArrowsOnMobile,
     aspectRatio,
-    fit = 'contain',
     fullBleed = false,
     autoPlay = true,
     autoPlayInterval = 6000,

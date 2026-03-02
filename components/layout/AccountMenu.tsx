@@ -174,6 +174,37 @@ function AccountMenu() {
           color: colors.text,
           fontWeight: '600',
         },
+        // NAV-12: CTA кнопка Войти для гостей
+        ctaLoginButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          paddingVertical: 8,
+          paddingHorizontal: 16,
+          borderRadius: 20,
+          backgroundColor: colors.primary,
+          minHeight: 36,
+          ...(Platform.OS === 'web'
+            ? ({
+                cursor: 'pointer',
+                transition: 'background-color 160ms ease, transform 120ms ease',
+              } as any)
+            : null),
+        },
+        ctaLoginButtonHover: {
+          backgroundColor: colors.primaryDark,
+          ...(Platform.OS === 'web' ? ({ transform: 'translateY(-1px)' } as any) : null),
+        },
+        ctaLoginText: {
+          fontSize: 14,
+          fontWeight: '700',
+          color: colors.textOnPrimary,
+        },
+        ctaWrapper: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+        },
         iconMuted: {
           color: colors.textMuted,
         },
@@ -270,6 +301,23 @@ function AccountMenu() {
   );
 
   return (
+    <View style={styles.ctaWrapper}>
+      {/* NAV-12: Отдельная CTA кнопка «Войти» для гостей — видна сразу, без открытия меню */}
+      {!isAuthenticated && (
+        <Pressable
+          onPress={() => handleNavigate(buildLoginHref({ intent: 'menu' }))}
+          accessibilityRole="link"
+          accessibilityLabel="Войти в аккаунт"
+          style={({ pressed }) => [
+            styles.ctaLoginButton,
+            pressed && styles.ctaLoginButtonHover,
+          ]}
+          testID="header-login-cta"
+        >
+          <Feather name="log-in" size={14} color={colors.textOnPrimary} />
+          <Text style={styles.ctaLoginText}>Войти</Text>
+        </Pressable>
+      )}
     <Menu
       visible={visible}
       onDismiss={closeMenu}
@@ -586,6 +634,7 @@ function AccountMenu() {
         </>
       )}
     </Menu>
+    </View>
   );
 }
 

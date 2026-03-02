@@ -109,6 +109,8 @@ export const TravelDeferredSections: React.FC<{
   const [canRenderMap, setCanRenderMap] = useState(false)
   const [canRenderSidebar, setCanRenderSidebar] = useState(false)
   const [canRenderComments, setCanRenderComments] = useState(false)
+  // TD-06: ref для IntersectionObserver на секции комментариев
+  const commentsObserverRef = useRef<View>(null)
 
   const tdTrace = useTdTrace()
 
@@ -214,7 +216,10 @@ export const TravelDeferredSections: React.FC<{
       )}
 
       <View 
-        ref={anchors.comments} 
+        ref={(el) => {
+          (anchors.comments as any).current = el;
+          (commentsObserverRef as any).current = el;
+        }}
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >

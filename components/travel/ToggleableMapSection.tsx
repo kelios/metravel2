@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -7,6 +7,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 type ToggleableMapSectionProps = {
     children: React.ReactNode;
+    // TD-04: По умолчанию закрыто — карта монтируется только после первого открытия
     initiallyOpen?: boolean;
     isLoading?: boolean;
     loadingLabel?: string;
@@ -17,7 +18,7 @@ type ToggleableMapSectionProps = {
 
 const ToggleableMapSection = ({
     children,
-    initiallyOpen = true,
+    initiallyOpen = false,
     isLoading = false,
     loadingLabel = 'Загружаем карту...',
     keepMounted = false,
@@ -26,11 +27,12 @@ const ToggleableMapSection = ({
 }: ToggleableMapSectionProps) => {
     const [showMap, setShowMap] = useState(initiallyOpen);
     const [hasOpened, setHasOpened] = useState(initiallyOpen);
-    const { isPhone } = useResponsive();
+    const { isPhone, isDesktop } = useResponsive();
     const colors = useThemedColors();
     const isMobile = isPhone;
+    // TD-04: ref для Intersection Observer (web desktop — авто-открытие при прокрутке до карты)
+    const wrapperRef = useRef<View>(null);
 
-    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const hintText = useMemo(
@@ -58,8 +60,36 @@ const ToggleableMapSection = ({
         onOpenChange?.(true);
     }, [forceOpenTrigger, onOpenChange]);
 
+    // TD-04: IntersectionObserver — на desktop карта авто-монтируется когда доходит до viewport
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!isDesktop) return; // на мобайле только по клику
+        if (hasOpened) return; // уже открыта — не нужно
+        if (typeof IntersectionObserver === 'undefined') return;
+
+        const node = (wrapperRef.current as any)?._nativeTag
+            ? null // native — не используем
+            : (wrapperRef.current as unknown as Element | null);
+
+        if (!node) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    setShowMap(true);
+                    setHasOpened(true);
+                    onOpenChange?.(true);
+                    observer.disconnect();
+                }
+            },
+            { rootMargin: '200px', threshold: 0 }
+        );
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [isDesktop, hasOpened, onOpenChange]);
+
     return (
-        <View style={styles.wrapper}>
+        <View ref={wrapperRef} style={styles.wrapper}>
             <Pressable
                 onPress={handleToggle}
                 style={({ pressed }) => [

@@ -164,9 +164,9 @@ describe('AccountMenu', () => {
   });
 
   it('shows login and registration options when not authenticated', () => {
-    const { getByText } = renderWithClient(<RenderRightMenu />);
+    const { getAllByText, getByText } = renderWithClient(<RenderRightMenu />);
 
-    expect(getByText('Войти')).toBeTruthy();
+    expect(getAllByText('Войти').length).toBeGreaterThan(0);
     expect(getByText('Зарегистрироваться')).toBeTruthy();
   });
 

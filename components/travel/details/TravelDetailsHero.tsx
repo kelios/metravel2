@@ -192,10 +192,15 @@ function TravelHeroSectionInner({
 
           <Pressable
             onPress={handleFavoriteToggle}
-            style={[styles.heroFavoriteBtn, isFavorite && styles.heroFavoriteBtnActive]}
+            style={[styles.heroFavoriteBtn, isFavorite && styles.heroFavoriteBtnActive, isMobile && styles.heroFavoriteBtnMobile]}
             accessibilityRole="button" accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
           >
             <Feather name="heart" size={20} color={isFavorite ? colors.textOnDark : 'rgba(255,255,255,0.9)'} />
+            {isMobile && (
+              <Text style={[styles.heroFavoriteBtnLabel, isFavorite && styles.heroFavoriteBtnLabelActive]}>
+                {isFavorite ? 'В избранном' : 'В избранное'}
+              </Text>
+            )}
           </Pressable>
         </View>
       </View>
