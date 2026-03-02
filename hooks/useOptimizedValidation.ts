@@ -116,7 +116,7 @@ export function useOptimizedValidation<T extends object>(
   const validateField = useCallback((fieldName: string): ValidationError | null => {
     try {
       // Create a partial validation result for the specific field
-      const result = validateTravelForm(data as any);
+      const result = validateTravelForm(data as unknown as TravelFormValidation);
       return result.errors.find(error => error.field === fieldName) || null;
     } catch (error) {
       console.error(`Field validation error for ${fieldName}:`, error);
@@ -127,7 +127,7 @@ export function useOptimizedValidation<T extends object>(
   // Validate specific fields
   const validateFields = useCallback((fieldNames: string[]): ValidationError[] => {
     try {
-      const result = validateTravelForm(data as any);
+      const result = validateTravelForm(data as unknown as TravelFormValidation);
       return result.errors.filter(error => fieldNames.includes(error.field));
     } catch (error) {
       console.error('Fields validation error:', error);
@@ -241,7 +241,7 @@ export function useOptimizedValidation<T extends object>(
 }
 
 // Helper function for deep equality check
-function _isEqual(a: any, b: any): boolean {
+function _isEqual(a: unknown, b: unknown): boolean {
   try {
     return JSON.stringify(a) === JSON.stringify(b);
   } catch {
