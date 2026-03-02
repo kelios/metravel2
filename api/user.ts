@@ -95,7 +95,7 @@ export const uploadUserProfileAvatarFile = async (
             uri: f.uri,
             name: f.name,
             type: f.type,
-        } as any);
+        } as unknown as Blob);
     }
 
     // apiClient.baseURL уже содержит /api, поэтому здесь без /api в начале
@@ -119,14 +119,16 @@ const unwrapList = <T>(payload: MaybePaginated<T>): T[] => {
     if (!payload) return [];
     if (Array.isArray(payload)) return payload;
 
-    const data = (payload as any).data;
-    if (Array.isArray(data)) return data;
+    const rec = payload as Record<string, unknown>;
+    const data = rec.data;
+    if (Array.isArray(data)) return data as T[];
     if (data && typeof data === 'object') {
-        if (Array.isArray((data as any).results)) return (data as any).results;
-        if (Array.isArray((data as any).data)) return (data as any).data;
+        const dataRec = data as Record<string, unknown>;
+        if (Array.isArray(dataRec.results)) return dataRec.results as T[];
+        if (Array.isArray(dataRec.data)) return dataRec.data as T[];
     }
 
-    if (Array.isArray((payload as any).results)) return (payload as any).results;
+    if (Array.isArray(rec.results)) return rec.results as T[];
     return [];
 };
 

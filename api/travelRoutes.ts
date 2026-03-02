@@ -33,17 +33,20 @@ const normalizeRouteFile = (input: unknown): TravelRouteFile | null => {
 };
 
 const extractRouteFiles = (payload: MaybePaginated<unknown>): TravelRouteFile[] => {
+  const rec = payload && typeof payload === 'object' && !Array.isArray(payload)
+    ? (payload as Record<string, unknown>)
+    : null;
   const raw = Array.isArray(payload)
     ? payload
-    : Array.isArray((payload as any)?.results)
-      ? (payload as any).results
-      : Array.isArray((payload as any)?.data)
-        ? (payload as any).data
-        : Array.isArray((payload as any)?.items)
-          ? (payload as any).items
+    : Array.isArray(rec?.results)
+      ? rec!.results
+      : Array.isArray(rec?.data)
+        ? rec!.data
+        : Array.isArray(rec?.items)
+          ? rec!.items
           : [];
 
-  return raw.map(normalizeRouteFile).filter((item): item is TravelRouteFile => Boolean(item));
+  return (raw as unknown[]).map(normalizeRouteFile).filter((item): item is TravelRouteFile => Boolean(item));
 };
 
 export const listTravelRouteFiles = async (travelId: string | number): Promise<TravelRouteFile[]> => {
@@ -59,7 +62,7 @@ export const uploadTravelRouteFile = async (
   file: File | { uri: string; name: string; type?: string },
 ): Promise<TravelRouteFile | null> => {
   const formData = new FormData();
-  formData.append('file', file as any);
+  formData.append('file', file as unknown as Blob);
 
   const payload = await apiClient.uploadFormData<unknown>(
     `/travels/${encodeURIComponent(String(travelId))}/routes/`,

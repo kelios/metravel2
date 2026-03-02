@@ -160,11 +160,11 @@ export const normalizeTravelItem = (input: unknown): Travel => {
 
     // Backend can return "__draft_placeholder__" for empty draft fields.
     // Treat it as empty so UI doesn't render broken sections (e.g. Video tab with no YouTube id).
-    out.description = stripDraftPlaceholder(out.description) as any;
-    out.youtube_link = stripDraftPlaceholder(out.youtube_link) as any;
-    out.recommendation = stripDraftPlaceholder(out.recommendation) as any;
-    out.plus = stripDraftPlaceholder(out.plus) as any;
-    out.minus = stripDraftPlaceholder(out.minus) as any;
+    out.description = stripDraftPlaceholder(out.description);
+    out.youtube_link = stripDraftPlaceholder(out.youtube_link);
+    out.recommendation = stripDraftPlaceholder(out.recommendation);
+    out.plus = stripDraftPlaceholder(out.plus);
+    out.minus = stripDraftPlaceholder(out.minus);
 
     // Нормализация полей рейтинга
     if (typeof t.rating !== 'undefined') {
