@@ -81,7 +81,7 @@ export function useTravelHeroState(travel: Travel, isMobile: boolean, onFirstIma
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : 'Фото путешествия';
 
   // --- Web LCP hero swap ---
-  const isJSDOM = Platform.OS === 'web' && typeof navigator !== 'undefined' && String((navigator as Record<string, unknown>).userAgent || '').toLowerCase().includes('jsdom');
+  const isJSDOM = Platform.OS === 'web' && typeof navigator !== 'undefined' && String((navigator as unknown as Record<string, unknown>).userAgent || '').toLowerCase().includes('jsdom');
   const [webHeroLoaded, setWebHeroLoaded] = useState(Platform.OS !== 'web' || isJSDOM);
   const [overlayUnmounted, setOverlayUnmounted] = useState(false);
   const [isOverlayFading, setIsOverlayFading] = useState(false);
@@ -151,7 +151,7 @@ export function useTravelHeroState(travel: Travel, isMobile: boolean, onFirstIma
     if (!deferExtras) { setExtrasReady(true); return; }
     let cancelled = false;
     const kick = () => { if (!cancelled) setExtrasReady(true); };
-    if (typeof (window as Record<string, unknown>)?.requestIdleCallback === 'function') {
+    if (typeof (window as unknown as Record<string, unknown>)?.requestIdleCallback === 'function') {
       (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => void }).requestIdleCallback(kick, { timeout: 1200 });
     } else { setTimeout(kick, 800); }
     return () => { cancelled = true; };
