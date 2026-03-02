@@ -111,7 +111,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
 
     // Определяем активную страницу
     const activePath = useMemo(() => {
-        if (pathname === '/' || pathname === '/index') return '/search';
+        if (pathname === '/' || pathname === '/index') return '/';
         if (pathname.startsWith('/travels/')) return '/search';
         if (pathname.startsWith('/travel/')) return '/search';
         if (pathname.startsWith('/search')) return '/search';
