@@ -54,7 +54,7 @@
 
 ---
 
-### C2.3 — Extract shared Leaflet boilerplate (M, 🟢 Низкий)
+### C2.3 — Extract shared Leaflet boilerplate (M, 🟢 Низкий) ✅ DONE
 
 **Файлы:**
 - `map/Map.web.tsx` (строки 203–221, 337–389): cleanup `_leaflet_id`, invalidateSize
@@ -97,7 +97,7 @@
 
 **Цель:** `MarkersListComponent.tsx` (832 LOC) → < 200 LOC + shared modules.
 
-### C3.1 — Extract styles (S, 🟢 Низкий)
+### C3.1 — Extract styles (S, 🟢 Низкий) ✅ DONE
 
 **Файл:** `components/map/MarkersListComponent.tsx` (строки 27–412: 385 LOC стилей)
 
@@ -107,7 +107,7 @@
 
 ---
 
-### C3.2 — Extract EditMarkerModal (M, 🟢 Низкий)
+### C3.2 — Extract EditMarkerModal (M, 🟢 Низкий) ✅ DONE
 
 **Файл:** `MarkersListComponent.tsx` (строки 636–829: ~190 LOC модалка)
 
@@ -133,7 +133,7 @@
 
 **Цель:** `RoutingMachine.tsx` (356) + `useRouting.ts` (612) → `map-core/useMapRouting.ts`
 
-### C4.1 — Extract elevation logic (S, 🟢 Низкий)
+### C4.1 — Extract elevation logic (S, 🟢 Низкий) ✅ DONE
 
 **Файл:** `RoutingMachine.tsx` (строки 6–42, 255–340)
 
@@ -170,7 +170,13 @@
 
 **Цель:** 888 + 790 LOC → < 250 LOC каждый entry point, shared hooks.
 
-### E6.1 — Migrate Slider.web.tsx to useSliderLogic (M, 🟡 Средний)
+### E6.1 — Migrate Slider.web.tsx to useSliderLogic (M, 🟡 Средний) ⏸ DEFERRED
+
+> **Причина:** `Slider.web.tsx` использует CSS scroll-snap + виртуализацию + DOM drag-handling,
+> принципиально отличающиеся от native-oriented `useSliderLogic` (AppState, AccessibilityInfo, FlatList).
+> Частичная миграция потребует расширения `useSliderLogic` на ~15 web-specific параметров,
+> что усложнит hook без реальной пользы. Рекомендуется E6.2 (extract useWebScrollInteraction)
+> как следующий шаг — это даст shared scroll logic без переработки state management.
 
 **Файлы:**
 - `Slider.web.tsx` (строки 213–316): manual state (containerW, currentIndex, refs)
@@ -211,7 +217,7 @@
 
 **Цель:** Уменьшить unused JS на ~150-200KB в web bundle.
 
-### I2.1 — Audit RNW module usage (S, 🟢 Низкий)
+### I2.1 — Audit RNW module usage (S, 🟢 Низкий) ✅ DONE
 
 1. `grep` по `import { ... } from 'react-native'` — список фактически используемых модулей
 2. Сравнить с полным экспортом RNW 0.21

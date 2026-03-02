@@ -99,6 +99,7 @@ export const useMapLifecycle = ({
   // 3. Unmount: cleanup mapRef + DOM container
   useEffect(() => {
     const containerId = mapContainerIdRef.current;
+    const rootEl = rootRef.current;
     return () => {
       mapRef.current = null;
 
@@ -112,7 +113,6 @@ export const useMapLifecycle = ({
 
       if (!isWeb || typeof document === 'undefined') return;
       try {
-        const rootEl = rootRef.current;
         const container =
           (containerElRef.current as any) ||
           (rootEl as any)?.querySelector?.('.leaflet-container') as any ||

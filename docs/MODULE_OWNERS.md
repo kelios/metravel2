@@ -28,12 +28,18 @@
 
 | Module | Path | Responsibility | Status |
 |--------|------|---------------|--------|
-| Map Core Types | `components/map-core/types.ts` | Unified map contract | **New** (C1) |
-| Travel Detail Map | `components/map/Map.web.tsx` | Leaflet map for travel detail | Legacy, pending C2 migration |
-| Full Map Page | `components/MapPage/Map.web.tsx` | Full map with routing/filters | Legacy, pending C2 migration |
+| Map Core Types | `components/map-core/types.ts` | Unified map contract, Point alias, normalizePoint | **Done** (C1, C2.1) |
+| Map Core Popup | `components/map-core/MapPopup.tsx` | Shared popup component for both map stacks | **Done** (C2.2) |
+| Map Core Popup Styles | `components/map-core/mapPopupStyles.ts` | Shared CSS for Leaflet popups | **Done** (C2.2) |
+| Map Core Lifecycle | `components/map-core/useMapLifecycle.ts` | Shared Leaflet container cleanup, ResizeObserver | **Done** (C2.3) |
+| Map Core Elevation | `components/map-core/useElevation.ts` | Elevation fetch + gain/loss computation | **Done** (C4.1) |
+| Travel Detail Map | `components/map/Map.web.tsx` | Leaflet map for travel detail | Migrated to map-core (C2.1–C2.3) |
+| Markers List Styles | `components/map/markersListStyles.ts` | Extracted styles for marker list | **Done** (C3.1) |
+| Edit Marker Modal | `components/map/EditMarkerModal.tsx` | Extracted modal for editing markers | **Done** (C3.2) |
+| Full Map Page | `components/MapPage/Map.web.tsx` | Full map with routing/filters | Types migrated (C2.1) |
 | Travel Map | `components/MapPage/TravelMap.tsx` | Reusable travel map component | Active |
-| Markers | `components/map/MarkersListComponent.tsx` | Marker rendering | Legacy, pending C3 |
-| Routing | `components/MapPage/RoutingMachine.tsx` | Route calculation | Legacy, pending C4 |
+| Markers | `components/map/MarkersListComponent.tsx` | Marker rendering | Refactored (C3.1, C3.2) |
+| Routing | `components/MapPage/RoutingMachine.tsx` | Route calculation | Elevation extracted (C4.1) |
 
 ## State Management
 
