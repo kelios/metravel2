@@ -113,8 +113,18 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 }
 
 // ❌ CSS — игнорируем (Leaflet CSS подключаем вручную)
+// ✅ I2.2: Optional RNW tree-shake via slim barrel.
+// Set EXPO_PUBLIC_RNW_SLIM=1 to enable cherry-picked react-native-web imports.
+const RNW_SLIM_ENABLED = process.env.EXPO_PUBLIC_RNW_SLIM === '1'
 config.resolver.resolveRequest = ((orig) => {
   return (context, moduleName, platform) => {
+    // I2.2: RNW slim aliasing (opt-in)
+    if (RNW_SLIM_ENABLED && platform === 'web' && moduleName === 'react-native') {
+      return {
+        filePath: path.resolve(__dirname, 'metro-stubs/react-native-web-slim.js'),
+        type: 'sourceFile',
+      }
+    }
     if (platform === 'web' && moduleName === 'quill/dist/quill.snow.css') {
       return orig(context, moduleName, platform)
     }
