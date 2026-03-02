@@ -40,6 +40,7 @@ import { buildUriWeb, clamp, SLIDER_MAX_WIDTH, computeSliderHeight, DEFAULT_AR, 
 import { createSliderStyles } from './sliderParts/styles';
 import Slide from './sliderParts/Slide';
 import { prefetchImage } from '@/components/ui/ImageCardMedia';
+import { useWebScrollInteraction } from './sliderParts/useWebScrollInteraction';
 
 // Re-export types for consumers that import from '@/components/travel/Slider.web'
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
@@ -222,11 +223,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const containerWRef = useRef(winW);
   const scrollRef = useRef<any>(null);
   const wrapperRef = useRef<any>(null);
-  const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDraggingRef = useRef(false);
-  const dragStartXRef = useRef(0);
-  const dragScrollLeftRef = useRef(0);
-  const dragStartIndexRef = useRef(0);
+  const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoplayTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const pausedByTouch = useRef(false);
   // Cached DOM node refs — set once, avoid querySelector on every interaction
@@ -545,217 +543,18 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return clearAutoplay;
   }, [scheduleAutoplay, clearAutoplay]);
 
-  // Consolidated effect: keyboard navigation + mouse drag + scrollend + idle timer cleanup
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    resolveNodes();
-    const node = scrollNodeRef.current;
-    if (!node) return;
-
-    // Keyboard navigation
-    const parent = (node.closest?.('[data-testid="slider-wrapper"]') || node.parentElement?.parentElement) as HTMLElement | null;
-    if (parent) parent.setAttribute('tabindex', '0');
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
-        scrollTo(target);
-      } else if (e.key === 'ArrowRight') {
-        const target = (indexRef.current + 1) % images.length;
-        scrollTo(target);
-      }
-    };
-
-    // Mouse drag
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button !== 0) return;
-      isDraggingRef.current = true;
-      dragStartXRef.current = e.pageX;
-      dragScrollLeftRef.current = node.scrollLeft;
-      dragStartIndexRef.current = indexRef.current;
-      node.style.cursor = 'grabbing';
-      node.style.scrollSnapType = 'none';
-      node.style.userSelect = 'none';
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      e.preventDefault();
-      const dx = e.pageX - dragStartXRef.current;
-      node.scrollLeft = dragScrollLeftRef.current - dx;
-    };
-
-    const snapToSlide = (targetIdx: number) => {
-      const cw = containerWRef.current || 1;
-      node.classList.add('slider-snap-disabled');
-      node.scrollLeft = targetIdx * cw;
-      setActiveIndex(targetIdx);
-      requestAnimationFrame(() => {
-        node.scrollLeft = targetIdx * cw;
-        requestAnimationFrame(() => {
-          node.classList.remove('slider-snap-disabled');
-        });
-      });
-    };
-
-    const onMouseUp = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
-      node.style.cursor = '';
-      node.style.userSelect = '';
-      const dx = e.pageX - dragStartXRef.current;
-      const cw = containerWRef.current || 1;
-      const cur = dragStartIndexRef.current;
-      const threshold = cw * 0.15;
-      let target = cur;
-      if (dx < -threshold) target = cur + 1;
-      else if (dx > threshold) target = cur - 1;
-      target = clamp(target, 0, Math.max(0, images.length - 1));
-      snapToSlide(target);
-      // Restore snap after programmatic settle.
-      node.style.scrollSnapType = '';
-    };
-
-    const onMouseLeave = () => {
-      if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
-      node.style.cursor = '';
-      node.style.userSelect = '';
-      const cw = containerWRef.current || 1;
-      const idx = Math.round(node.scrollLeft / cw);
-      const target = clamp(idx, 0, Math.max(0, images.length - 1));
-      snapToSlide(target);
-      node.style.scrollSnapType = '';
-    };
-
-    // Touch / pointer swipe (mobile web)
-    const isTouchPointerEvent = (e: PointerEvent) => {
-      // Some browsers report touch as pointerType === 'touch'.
-      // Safari may omit pointer events entirely; we also attach touch handlers below.
-      return (e as any).pointerType === 'touch' || (e as any).pointerType === 'pen';
-    };
-
-    const settleToNearestSlide = () => {
-      const cw = containerWRef.current || 1;
-      const idx = Math.round(node.scrollLeft / cw);
-      const target = clamp(idx, 0, Math.max(0, images.length - 1));
-      snapToSlide(target);
-      node.style.scrollSnapType = '';
-    };
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (!isTouchPointerEvent(e)) return;
-      isDraggingRef.current = true;
-      dragStartXRef.current = e.pageX;
-      dragScrollLeftRef.current = node.scrollLeft;
-      dragStartIndexRef.current = indexRef.current;
-      node.style.scrollSnapType = 'none';
-      // Prevent vertical scroll gesture from stealing the interaction.
-      // Must be non-passive.
-      try {
-        e.preventDefault();
-      } catch {
-        // noop
-      }
-    };
-
-    const onPointerMove = (e: PointerEvent) => {
-      if (!isDraggingRef.current) return;
-      if (!isTouchPointerEvent(e)) return;
-      try {
-        e.preventDefault();
-      } catch {
-        // noop
-      }
-      const dx = e.pageX - dragStartXRef.current;
-      node.scrollLeft = dragScrollLeftRef.current - dx;
-    };
-
-    const onPointerUp = (e: PointerEvent) => {
-      if (!isDraggingRef.current) return;
-      if (!isTouchPointerEvent(e)) return;
-      isDraggingRef.current = false;
-      settleToNearestSlide();
-    };
-
-    const onPointerCancel = (e: PointerEvent) => {
-      if (!isDraggingRef.current) return;
-      if (!isTouchPointerEvent(e)) return;
-      isDraggingRef.current = false;
-      settleToNearestSlide();
-    };
-
-    // iOS Safari fallback (no PointerEvent)
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return;
-      isDraggingRef.current = true;
-      dragStartXRef.current = e.touches[0].pageX;
-      dragScrollLeftRef.current = node.scrollLeft;
-      dragStartIndexRef.current = indexRef.current;
-      node.style.scrollSnapType = 'none';
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isDraggingRef.current) return;
-      if (e.touches.length !== 1) return;
-      const dx = e.touches[0].pageX - dragStartXRef.current;
-      node.scrollLeft = dragScrollLeftRef.current - dx;
-    };
-
-    const onTouchEnd = () => {
-      if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
-      settleToNearestSlide();
-    };
-
-    const onScrollEnd = () => {
-      const cw = containerWRef.current || 1;
-      const idx = Math.round(node.scrollLeft / cw);
-      const target = clamp(idx, 0, Math.max(0, images.length - 1));
-      setActiveIndex(target);
-    };
-
-    parent?.addEventListener('keydown', handleKeyDown as EventListener);
-    node.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    node.addEventListener('mouseleave', onMouseLeave);
-    node.addEventListener('scrollend', onScrollEnd);
-
-    // Pointer/touch swipe handlers
-    // Use non-passive so preventDefault works when needed.
-    node.addEventListener('pointerdown', onPointerDown as EventListener, { passive: false } as any);
-    node.addEventListener('pointermove', onPointerMove as EventListener, { passive: false } as any);
-    node.addEventListener('pointerup', onPointerUp as EventListener, { passive: true } as any);
-    node.addEventListener('pointercancel', onPointerCancel as EventListener, { passive: true } as any);
-
-    node.addEventListener('touchstart', onTouchStart as EventListener, { passive: true } as any);
-    node.addEventListener('touchmove', onTouchMove as EventListener, { passive: true } as any);
-    node.addEventListener('touchend', onTouchEnd as EventListener, { passive: true } as any);
-
-    return () => {
-      parent?.removeEventListener('keydown', handleKeyDown as EventListener);
-      node.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      node.removeEventListener('mouseleave', onMouseLeave);
-      node.removeEventListener('scrollend', onScrollEnd);
-
-      node.removeEventListener('pointerdown', onPointerDown as EventListener);
-      node.removeEventListener('pointermove', onPointerMove as EventListener);
-      node.removeEventListener('pointerup', onPointerUp as EventListener);
-      node.removeEventListener('pointercancel', onPointerCancel as EventListener);
-
-      node.removeEventListener('touchstart', onTouchStart as EventListener);
-      node.removeEventListener('touchmove', onTouchMove as EventListener);
-      node.removeEventListener('touchend', onTouchEnd as EventListener);
-
-      if (scrollIdleTimerRef.current) {
-        clearTimeout(scrollIdleTimerRef.current);
-        scrollIdleTimerRef.current = null;
-      }
-    };
-  }, [images.length, setActiveIndex, scrollTo, resolveNodes]);
+  // Consolidated web scroll/drag/keyboard/touch interaction (E6.2)
+  useWebScrollInteraction({
+    slideCount: images.length,
+    containerWRef,
+    indexRef,
+    scrollNodeRef,
+    wrapperNodeRef,
+    resolveNodes,
+    setActiveIndex,
+    scrollTo,
+    pausedByTouchRef: pausedByTouch,
+  });
 
   // Invalidate cached DOM nodes on unmount
   useEffect(() => {

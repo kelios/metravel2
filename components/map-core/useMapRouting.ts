@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouting } from '@/components/MapPage/useRouting';
 import { useElevation } from './useElevation';
 import { showRouteBuiltToast, showRouteErrorToast } from '@/utils/mapToasts';
-import type { TransportMode, RouteState } from './types';
+import type { TransportMode } from './types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,11 +21,21 @@ export interface UseMapRoutingOptions {
   enableElevation?: boolean;
 }
 
-export interface UseMapRoutingResult extends RouteState {
+export interface UseMapRoutingResult {
   /** True while the route is being computed */
   loading: boolean;
-  /** Error message (or false if no error) */
-  error: string | false;
+  /** Error message (or null if no error) */
+  error: string | null;
+  /** Distance in meters */
+  distance: number;
+  /** Duration in seconds */
+  duration: number;
+  /** Route geometry as [lng, lat] tuples */
+  coords: [number, number][];
+  /** Elevation gain in meters (bike/foot only) */
+  elevationGain: number | null;
+  /** Elevation loss in meters (bike/foot only) */
+  elevationLoss: number | null;
 }
 
 export type RouteChangeCallback = (result: UseMapRoutingResult) => void;
@@ -82,7 +92,7 @@ export function useMapRouting(
   // Build result
   const result = useMemo<UseMapRoutingResult>(() => ({
     loading: routingState.loading,
-    error: typeof routingState.error === 'string' && routingState.error ? routingState.error : false,
+    error: typeof routingState.error === 'string' && routingState.error ? routingState.error : null,
     distance: routingState.distance,
     duration: routingState.duration,
     coords: routingState.coords,
@@ -99,10 +109,10 @@ export function useMapRouting(
       // Clear when not enough points
       const emptyResult: UseMapRoutingResult = {
         loading: false,
-        error: false,
+        error: null,
         distance: 0,
         duration: 0,
-        coords: [],
+        coords: [] as [number, number][],
         elevationGain: null,
         elevationLoss: null,
       };
@@ -119,7 +129,7 @@ export function useMapRouting(
 
     // Toasts
     if (result.error) {
-      showRouteErrorToast(typeof result.error === 'string' ? result.error : 'Ошибка маршрута');
+      showRouteErrorToast(result.error || 'Ошибка маршрута');
     } else if (!result.loading && result.distance > 0 && result.duration > 0) {
       showRouteBuiltToast(result.distance / 1000, result.duration / 60);
     }
