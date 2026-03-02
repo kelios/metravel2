@@ -224,12 +224,12 @@ export function useRouteStoreAdapter() {
 
   const handleAddressSelect = useCallback((address: string, coords: LatLng, isStart: boolean) => {
     const state = useRouteStore.getState();
-    const canUpdate = typeof (state as any).updatePoint === 'function';
+    const canUpdate = typeof state.updatePoint === 'function';
     if (isStart) {
       const existingStart = state.getStartPoint() ?? state.points[0];
       if (existingStart) {
         if (canUpdate) {
-          (state as any).updatePoint(existingStart.id, { coordinates: coords, address });
+          state.updatePoint(existingStart.id, { coordinates: coords, address });
         } else {
           state.removePoint(existingStart.id);
           state.addPoint(coords, address);
@@ -255,7 +255,7 @@ export function useRouteStoreAdapter() {
     const existingEnd = state.getEndPoint();
     if (existingEnd && state.points.length >= 2) {
       if (canUpdate) {
-        (state as any).updatePoint(existingEnd.id, { coordinates: coords, address });
+        state.updatePoint(existingEnd.id, { coordinates: coords, address });
       } else {
         state.removePoint(existingEnd.id);
         state.addPoint(coords, address);

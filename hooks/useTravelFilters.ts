@@ -84,33 +84,35 @@ export function initFilters(): TravelFilters {
   };
 }
 
-function unwrapArrayCandidate(v: any): any[] {
+function unwrapArrayCandidate(v: unknown): unknown[] {
   if (Array.isArray(v)) return v;
   if (v && typeof v === 'object') {
-    if (Array.isArray((v as any).results)) return (v as any).results;
-    if (Array.isArray((v as any).data)) return (v as any).data;
-    if (Array.isArray((v as any).items)) return (v as any).items;
+    const rec = v as Record<string, unknown>;
+    if (Array.isArray(rec.results)) return rec.results;
+    if (Array.isArray(rec.data)) return rec.data;
+    if (Array.isArray(rec.items)) return rec.items;
   }
   return [];
 }
 
-export function normalizeTravelCategories(raw: any): Array<{ id: string; name: string }> {
+export function normalizeTravelCategories(raw: unknown): Array<{ id: string; name: string }> {
   if (!Array.isArray(raw)) return [];
   return raw
     .map((item, idx) => {
       if (item && typeof item === 'object') {
+        const rec = item as Record<string, unknown>;
         const id =
-          (item as any).id ??
-          (item as any).value ??
-          (item as any).category_id ??
-          (item as any).pk ??
+          rec.id ??
+          rec.value ??
+          rec.category_id ??
+          rec.pk ??
           idx;
         const name =
-          (item as any).name ??
-          (item as any).name_ru ??
-          (item as any).title_ru ??
-          (item as any).title ??
-          (item as any).text ??
+          rec.name ??
+          rec.name_ru ??
+          rec.title_ru ??
+          rec.title ??
+          rec.text ??
           String(id);
         return { id: String(id), name: String(name) };
       }
@@ -119,13 +121,14 @@ export function normalizeTravelCategories(raw: any): Array<{ id: string; name: s
     .filter(Boolean);
 }
 
-function normalizeIdNameList(raw: any): Array<{ id: string; name: string }> {
+function normalizeIdNameList(raw: unknown): Array<{ id: string; name: string }> {
   if (!Array.isArray(raw)) return [];
   return raw
     .map((item, idx) => {
       if (item && typeof item === 'object') {
-        const id = (item as any).id ?? (item as any).value ?? (item as any).pk ?? idx;
-        const name = (item as any).name ?? (item as any).title ?? (item as any).text ?? String(id);
+        const rec = item as Record<string, unknown>;
+        const id = rec.id ?? rec.value ?? rec.pk ?? idx;
+        const name = rec.name ?? rec.title ?? rec.text ?? String(id);
         return { id: String(id), name: String(name) };
       }
       return { id: String(idx), name: String(item) };
@@ -133,7 +136,7 @@ function normalizeIdNameList(raw: any): Array<{ id: string; name: string }> {
     .filter(Boolean);
 }
 
-function normalizeCountries(raw: any): Array<{
+function normalizeCountries(raw: unknown): Array<{
   country_id: string;
   title_ru: string;
   title_en?: string;
@@ -156,42 +159,43 @@ function normalizeCountries(raw: any): Array<{
           title_ru: String(item ?? ''),
         };
       }
+      const rec = item as Record<string, unknown>;
       const id =
-        item.country_id ??
-        item.id ??
-        item.pk ??
-        item.value ??
+        rec.country_id ??
+        rec.id ??
+        rec.pk ??
+        rec.value ??
         idx;
       const titleRu =
-        item.title_ru ??
-        item.name_ru ??
-        item.name ??
-        item.title ??
-        item.title_en ??
-        item.text ??
+        rec.title_ru ??
+        rec.name_ru ??
+        rec.name ??
+        rec.title ??
+        rec.title_en ??
+        rec.text ??
         '';
       const titleEn =
-        item.title_en ??
-        item.title ??
-        item.name_en ??
-        item.name ??
+        rec.title_en ??
+        rec.title ??
+        rec.name_en ??
+        rec.name ??
         '';
       const countryCode =
-        item.country_code ??
-        item.code ??
-        item.iso2 ??
-        item.iso ??
-        item.alpha2 ??
-        item.alpha_2 ??
-        item.ISO3166_1_alpha2 ??
+        rec.country_code ??
+        rec.code ??
+        rec.iso2 ??
+        rec.iso ??
+        rec.alpha2 ??
+        rec.alpha_2 ??
+        rec.ISO3166_1_alpha2 ??
         '';
       const normalizedCode = countryCode ? String(countryCode).trim().toUpperCase() : '';
       return {
         country_id: String(id),
         title_ru: String(titleRu),
         title_en: titleEn ? String(titleEn) : undefined,
-        title: item.title ? String(item.title) : undefined,
-        name: item.name ? String(item.name) : undefined,
+        title: rec.title ? String(rec.title) : undefined,
+        name: rec.name ? String(rec.name) : undefined,
         country_code: normalizedCode || undefined,
         code: normalizedCode || undefined,
         iso2: normalizedCode || undefined,
@@ -204,23 +208,24 @@ function normalizeCountries(raw: any): Array<{
     .filter(Boolean);
 }
 
-export function normalizeCategoryTravelAddress(raw: any): Array<{ id: string; name: string }> {
+export function normalizeCategoryTravelAddress(raw: unknown): Array<{ id: string; name: string }> {
   const arr = unwrapArrayCandidate(raw);
   return arr
     .map((item, idx) => {
       if (item && typeof item === 'object') {
+        const rec = item as Record<string, unknown>;
         const id =
-          (item as any).id ??
-          (item as any).value ??
-          (item as any).category_id ??
-          (item as any).pk ??
+          rec.id ??
+          rec.value ??
+          rec.category_id ??
+          rec.pk ??
           idx;
         const name =
-          (item as any).name ??
-          (item as any).name_ru ??
-          (item as any).title_ru ??
-          (item as any).title ??
-          (item as any).text ??
+          rec.name ??
+          rec.name_ru ??
+          rec.title_ru ??
+          rec.title ??
+          rec.text ??
           String(id);
         return { id: String(id), name: String(name) };
       }

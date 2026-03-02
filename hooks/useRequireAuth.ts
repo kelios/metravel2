@@ -24,7 +24,8 @@ export function useRequireAuth(params: Params = {}) {
     if (!authReady) return false
     if (isAuthenticated) return true
 
-    const href = loginHref as any
+    // buildLoginHref returns string; expo-router expects Href — safe cast
+    const href = loginHref as unknown as Parameters<typeof router.push>[0]
     if (params.replace) router.replace(href)
     else router.push(href)
     return false

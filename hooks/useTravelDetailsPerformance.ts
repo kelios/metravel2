@@ -95,7 +95,7 @@ export function useTravelDetailsPerformance({
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!travel) return
-    const connection = (window as any)?.navigator?.connection
+    const connection = (window as { navigator?: { connection?: { effectiveType?: string; saveData?: boolean } } })?.navigator?.connection
     const effectiveType = String(connection?.effectiveType || '')
     const saveData = Boolean(connection?.saveData)
     const isConstrained =

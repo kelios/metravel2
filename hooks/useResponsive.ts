@@ -104,30 +104,23 @@ const ensureSubscription = () => {
     if (setSnapshotIfChanged({ width: window.width, height: window.height })) {
       notify();
     }
-  }) as any;
+  }) as { remove: () => void };
 
   // On web static/prod builds Dimensions can occasionally report stale/zero values.
   // Keep an additional window resize subscription as the source of truth.
   let removeWebListener: (() => void) | null = null;
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    let raf = 0 as any;
+    let raf: ReturnType<typeof setTimeout> | number = 0;
     const onResize = () => {
       if (raf) return;
-      raf = (window as any).requestAnimationFrame?.(() => {
+      raf = (typeof requestAnimationFrame === 'function' ? requestAnimationFrame : setTimeout)(() => {
         raf = 0;
         const webSnapshot = getWebWindowSnapshot();
         if (!webSnapshot) return;
         if (setSnapshotIfChanged(webSnapshot)) {
           notify();
         }
-      }) ?? setTimeout(() => {
-        raf = 0;
-        const webSnapshot = getWebWindowSnapshot();
-        if (!webSnapshot) return;
-        if (setSnapshotIfChanged(webSnapshot)) {
-          notify();
-        }
-      }, 0);
+      });
     };
 
     window.addEventListener('resize', onResize);
@@ -136,8 +129,8 @@ const ensureSubscription = () => {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
       try {
-        if (raf && typeof (window as any).cancelAnimationFrame === 'function') {
-          (window as any).cancelAnimationFrame(raf);
+        if (raf && typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(raf as number);
         }
       } catch {
         // noop
