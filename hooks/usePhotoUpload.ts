@@ -118,8 +118,8 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
       formData.append('collection', collection);
       formData.append('id', normalizedId);
 
-      const response = await uploadImage(formData);
-      const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
+      const response = await uploadImage(formData) as Record<string, unknown> & { data?: Record<string, unknown> };
+      const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
 
       if (uploadedUrl) {
@@ -253,11 +253,11 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
         });
       }, 200);
 
-      const response = await uploadImage(formData);
+      const response = await uploadImage(formData) as Record<string, unknown> & { data?: Record<string, unknown> };
       if (progressIntervalRef.current) { clearInterval(progressIntervalRef.current); progressIntervalRef.current = null; }
       setUploadProgress(100);
 
-      const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
+      const uploadedUrlRaw = (response?.url || response?.data?.url || response?.path || response?.file_url) as string | undefined;
       const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
 
       if (uploadedUrl) {
