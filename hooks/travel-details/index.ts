@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useTravelDetailsData } from '@/hooks/useTravelDetailsData'
+import { useTravelDetails as useTravelDetailsData } from '@/hooks/useTravelDetails'
 import { useTravelDetailsLayout } from '@/hooks/useTravelDetailsLayout'
 import { useTravelDetailsMenu } from '@/hooks/useTravelDetailsMenu'
 import { useTravelDetailsNavigation } from '@/hooks/useTravelDetailsNavigation'

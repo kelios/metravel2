@@ -17,8 +17,8 @@ jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ isMobile: false, isTablet: false, isDesktop: true, width: 1440 }),
 }));
 
-jest.mock('@/hooks/useTravelDetailsData', () => ({
-  useTravelDetailsData: () => ({
+jest.mock('@/hooks/useTravelDetails', () => ({
+  useTravelDetails: () => ({
     travel: {
       id: 1,
       name: 'Test Travel',

@@ -28,8 +28,8 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 // Make TravelDetailsContainer deterministic: provide travel data and avoid network
-jest.mock('@/hooks/useTravelDetailsData', () => ({
-  useTravelDetailsData: () => ({
+jest.mock('@/hooks/useTravelDetails', () => ({
+  useTravelDetails: () => ({
     travel: {
       id: 1,
       name: 'Demo',
