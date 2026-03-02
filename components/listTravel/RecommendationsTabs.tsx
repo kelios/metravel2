@@ -27,6 +27,7 @@ import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { createRecommendationsTabsStyles, TAB_CONTENT_HEIGHT, TAB_HEADER_HEIGHT, TAB_TOTAL_HEIGHT } from './recommendationsTabsStyles';
 
 /* ---------------- Lazy Components ---------------- */
 
