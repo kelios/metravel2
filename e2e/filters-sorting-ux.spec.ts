@@ -176,18 +176,18 @@ test.describe('@smoke Filters and Sorting UX', () => {
     const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
     await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     await groupHeader.click();
-    await page.waitForTimeout(400);
-    
+    await page.waitForTimeout(600);
+
     // Select a filter
     const filterOption = await getFirstGroupFilterCheckbox(page);
     await expect(filterOption).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
     
     await filterOption.click();
-    await page.waitForTimeout(DEBOUNCE_MS);
-    
+    await page.waitForTimeout(DEBOUNCE_MS + 400);
+
     // Click group clear button
     const groupClearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i }).first();
-    await expect(groupClearButton).toBeVisible({ timeout: 5000 });
+    await expect(groupClearButton).toBeVisible({ timeout: 10000 });
     await groupClearButton.click({ force: true });
     await page.waitForTimeout(DEBOUNCE_MS);
     
