@@ -1,45 +1,8 @@
 // components/MapPage/RoutingMachine.tsx
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouting } from './useRouting'
 import { showRouteBuiltToast, showRouteErrorToast } from '@/utils/mapToasts'
-
-// Open-Meteo elevation endpoint supports batch arrays; keep this comfortably under the limit
-// to reduce URL size and rate-limit pressure.
-const MAX_ELEVATION_SAMPLES = 60
-const elevationCache = new Map<string, { gain: number; loss: number }>()
-let elevationNextAllowedAtMs = 0
-let elevationLastAttemptAtMs = 0
-const ELEVATION_MIN_INTERVAL_MS = 1500
-const ELEVATION_429_COOLDOWN_MS = 30_000
-
-const sampleIndices = (total: number, maxSamples: number) => {
-    if (!Number.isFinite(total) || total <= 0) return [] as number[]
-    if (total <= maxSamples) return Array.from({ length: total }, (_, i) => i)
-    if (maxSamples <= 1) return [0]
-    const out: number[] = []
-    for (let i = 0; i < maxSamples; i++) {
-        const idx = Math.round((i * (total - 1)) / (maxSamples - 1))
-        out.push(idx)
-    }
-    // Ensure unique / sorted indices
-    return Array.from(new Set(out)).sort((a, b) => a - b)
-}
-
-const computeElevationGainLoss = (elevations: number[]) => {
-    let gain = 0
-    let loss = 0
-    const noiseThresholdMeters = 3
-    for (let i = 1; i < elevations.length; i++) {
-        const prev = elevations[i - 1]
-        const next = elevations[i]
-        if (!Number.isFinite(prev) || !Number.isFinite(next)) continue
-        const delta = next - prev
-        if (Math.abs(delta) < noiseThresholdMeters) continue
-        if (delta > 0) gain += delta
-        else loss += Math.abs(delta)
-    }
-    return { gain: Math.round(gain), loss: Math.round(loss) }
-}
+import { useElevation } from '@/components/map-core/useElevation'
 
 interface RoutingMachineProps {
     routePoints: [number, number][]
