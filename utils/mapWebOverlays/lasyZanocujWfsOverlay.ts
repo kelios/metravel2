@@ -2,7 +2,18 @@ import type { WebMapLayerDefinition } from '@/config/mapWebLayers';
 import type { BBox } from '@/utils/overpass';
 import { bboxAreaKm2, normalizeBBox } from '@/utils/overpass';
 
-type LeafletMap = any;
+// Re-export from extracted modules for backward compatibility
+export { filterGeoJsonByBBox, sanitizeGeoJson, computeGeoJsonBounds, bboxesOverlap, swapGeoJsonAxes, geometryHasFiniteCoords } from './geoJsonUtils';
+export { wfsXmlToGeoJson as __wfsXmlToGeoJson } from './wfsXmlParser';
+
+import { wfsXmlToGeoJson } from './wfsXmlParser';
+import { filterGeoJsonByBBox, sanitizeGeoJson, computeGeoJsonBounds, bboxesOverlap, swapGeoJsonAxes } from './geoJsonUtils';
+
+type LeafletMap = Record<string, unknown> & {
+  getBounds: () => { getSouthWest: () => { lat: number; lng: number }; getNorthEast: () => { lat: number; lng: number } };
+  on: (event: string, handler: () => void) => void;
+  off: (event: string, handler: () => void) => void;
+};
 
 export type LasyZanocujWfsOverlayOptions = {
   maxAreaKm2?: number;
@@ -21,10 +32,10 @@ const isProductionHost = () =>
   window.location.hostname !== 'localhost' &&
   !window.location.hostname.startsWith('192.168.');
 
-let staticDataCache: any = null;
+let staticDataCache: Record<string, unknown> | null = null;
 let staticDataFailed = false;
 
-const fetchStaticData = async (signal?: AbortSignal): Promise<any> => {
+const fetchStaticData = async (signal?: AbortSignal): Promise<Record<string, unknown> | null> => {
   if (staticDataCache) return staticDataCache;
   if (staticDataFailed) return null;
 
@@ -47,236 +58,9 @@ const fetchStaticData = async (signal?: AbortSignal): Promise<any> => {
   }
 };
 
-const featureIntersectsBBox = (feature: any, bbox: BBox): boolean => {
-  const geometry = feature?.geometry;
-  if (!geometry) return false;
-
-  const checkCoord = (coord: any): boolean => {
-    if (typeof coord[0] === 'number' && typeof coord[1] === 'number') {
-      const lng = coord[0];
-      const lat = coord[1];
-      return lng >= bbox.west && lng <= bbox.east && lat >= bbox.south && lat <= bbox.north;
-    }
-    if (Array.isArray(coord)) {
-      return coord.some(checkCoord);
-    }
-    return false;
-  };
-
-  return checkCoord(geometry.coordinates);
-};
-
-export const filterGeoJsonByBBox = (geojson: any, bbox: BBox): any => {
-  if (!geojson?.features) return null;
-  const filtered = geojson.features.filter((f: any) => featureIntersectsBBox(f, bbox));
-  if (filtered.length === 0) return null;
-  return { type: 'FeatureCollection', features: filtered };
-};
-
 const looksLikeOwsExceptionReport = (text: string) => {
   const t = (text || '').trim().slice(0, 400).toLowerCase();
   return t.includes('<ows:exceptionreport') || t.includes('exceptionreport') || t.includes('ows:exception');
-};
-
-const localName = (n: string) => (n || '').split(':').pop() || n;
-
-const gmlText = (el: Element | null | undefined) => (el?.textContent || '').trim();
-
-const findFirstByLocalNames = (root: Element, names: Set<string>) => {
-  const els = Array.from(root.getElementsByTagName('*')) as Element[];
-  for (const el of els) {
-    if (names.has(localName(el.tagName))) return el;
-  }
-  return null;
-};
-
-const findAllByLocalNames = (root: Element, names: Set<string>) => {
-  const els = Array.from(root.getElementsByTagName('*')) as Element[];
-  return els.filter((el) => names.has(localName(el.tagName)));
-};
-
-const parseCoords = (raw: string) => {
-  const s = (raw || '').trim();
-  if (!s) return [] as Array<[number, number]>;
-  const hasComma = s.includes(',');
-  const parts = s
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split(hasComma ? /\s+/ : /\s+/)
-    .filter(Boolean);
-
-  const toLngLat = (a: number, b: number): [number, number] => {
-    const aLooksLat = a >= -90 && a <= 90;
-    const bLooksLat = b >= -90 && b <= 90;
-    const aLooksLng = a >= -180 && a <= 180;
-    const bLooksLng = b >= -180 && b <= 180;
-    if (aLooksLat && bLooksLng && !(aLooksLng && bLooksLat)) {
-      return [b, a];
-    }
-    return [a, b];
-  };
-
-  if (hasComma) {
-    const pairs = s
-      .replace(/\s+/g, ' ')
-      .trim()
-      .split(' ')
-      .map((p) => p.split(',').map((x) => Number(x)) as [number, number])
-      .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
-      .map(([a, b]) => toLngLat(a, b));
-    return pairs;
-  }
-
-  const nums = parts.map((x) => Number(x)).filter((x) => Number.isFinite(x));
-  const out: Array<[number, number]> = [];
-  for (let i = 0; i + 1 < nums.length; i += 2) {
-    out.push(toLngLat(nums[i], nums[i + 1]));
-  }
-  return out;
-};
-
-const extractGeometryFromGml = (featureEl: Element) => {
-  const geomEl = findFirstByLocalNames(
-    featureEl,
-    new Set([
-      'Point',
-      'LineString',
-      'Polygon',
-      'MultiPoint',
-      'MultiLineString',
-      'MultiPolygon',
-      'Surface',
-      'MultiSurface',
-    ])
-  );
-  if (!geomEl) return null;
-
-  const name = localName(geomEl.tagName);
-
-  if (name === 'Point') {
-    const pos = findFirstByLocalNames(geomEl, new Set(['pos']));
-    const coords = parseCoords(gmlText(pos));
-    if (coords.length !== 1) return null;
-    return { type: 'Point', coordinates: coords[0] };
-  }
-
-  if (name === 'LineString') {
-    const posList = findFirstByLocalNames(geomEl, new Set(['posList']));
-    const coordinatesEl = findFirstByLocalNames(geomEl, new Set(['coordinates']));
-    const coords = parseCoords(gmlText(posList) || gmlText(coordinatesEl));
-    if (!coords.length) return null;
-    return { type: 'LineString', coordinates: coords };
-  }
-
-  if (name === 'Polygon' || name === 'Surface') {
-    const rings: Array<Array<[number, number]>> = [];
-    const linearRings = findAllByLocalNames(geomEl, new Set(['LinearRing']));
-    for (const ring of linearRings) {
-      const posList = findFirstByLocalNames(ring, new Set(['posList']));
-      const coordinatesEl = findFirstByLocalNames(ring, new Set(['coordinates']));
-      const coords = parseCoords(gmlText(posList) || gmlText(coordinatesEl));
-      if (coords.length) rings.push(coords);
-    }
-    if (!rings.length) {
-      const posList = findFirstByLocalNames(geomEl, new Set(['posList']));
-      const coords = parseCoords(gmlText(posList));
-      if (coords.length) rings.push(coords);
-    }
-    if (!rings.length) return null;
-    return { type: 'Polygon', coordinates: rings };
-  }
-
-  if (name === 'MultiPoint') {
-    const points: Array<[number, number]> = [];
-    const posEls = findAllByLocalNames(geomEl, new Set(['pos']));
-    for (const posEl of posEls) {
-      const coords = parseCoords(gmlText(posEl));
-      if (coords.length === 1) points.push(coords[0]);
-    }
-    if (!points.length) return null;
-    return { type: 'MultiPoint', coordinates: points };
-  }
-
-  if (name === 'MultiLineString') {
-    const lines: Array<Array<[number, number]>> = [];
-    const lineStrings = findAllByLocalNames(geomEl, new Set(['LineString']));
-    for (const ls of lineStrings) {
-      const posList = findFirstByLocalNames(ls, new Set(['posList']));
-      const coordinatesEl = findFirstByLocalNames(ls, new Set(['coordinates']));
-      const coords = parseCoords(gmlText(posList) || gmlText(coordinatesEl));
-      if (coords.length) lines.push(coords);
-    }
-    if (!lines.length) return null;
-    return { type: 'MultiLineString', coordinates: lines };
-  }
-
-  if (name === 'MultiPolygon' || name === 'MultiSurface') {
-    const polys: Array<Array<Array<[number, number]>>> = [];
-    const polygonEls = findAllByLocalNames(geomEl, new Set(['Polygon', 'Surface']));
-    for (const polyEl of polygonEls) {
-      const rings: Array<Array<[number, number]>> = [];
-      const linearRings = findAllByLocalNames(polyEl, new Set(['LinearRing']));
-      for (const ring of linearRings) {
-        const posList = findFirstByLocalNames(ring, new Set(['posList']));
-        const coordinatesEl = findFirstByLocalNames(ring, new Set(['coordinates']));
-        const coords = parseCoords(gmlText(posList) || gmlText(coordinatesEl));
-        if (coords.length) rings.push(coords);
-      }
-      if (rings.length) polys.push(rings);
-    }
-    if (!polys.length) return null;
-    return { type: 'MultiPolygon', coordinates: polys };
-  }
-
-  return null;
-};
-
-export const __wfsXmlToGeoJson = (xmlText: string) => {
-  if (typeof DOMParser === 'undefined') return null;
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, 'text/xml');
-  const parseError = doc.querySelector('parsererror');
-  if (parseError) return null;
-
-  const allEls = Array.from(doc.getElementsByTagName('*')) as Element[];
-  const members = allEls.filter((el) => {
-    const ln = localName(el.tagName);
-    return ln === 'featureMember' || ln === 'member' || ln === 'featureMembers';
-  });
-  const features: any[] = [];
-
-  for (const m of members) {
-    const ln = localName(m.tagName);
-    const candidateFeatures: Element[] =
-      ln === 'featureMembers'
-        ? (Array.from(m.children || []) as Element[])
-        : ([Array.from(m.children || [])[0]] as Array<Element | undefined>).filter(Boolean) as Element[];
-
-    for (const featureEl of candidateFeatures) {
-      if (!featureEl) continue;
-
-      const geometry = extractGeometryFromGml(featureEl);
-      if (!geometry) continue;
-
-      const props: Record<string, any> = {};
-      for (const child of Array.from(featureEl.children)) {
-        const tag = localName(child.tagName);
-        if (tag === localName((geometry as any)?.type || '')) continue;
-
-        const isGeomChild = !!child.querySelector(
-          'Point,LineString,Polygon,MultiPoint,MultiLineString,MultiPolygon,Surface,MultiSurface,gml\\:Point,gml\\:LineString,gml\\:Polygon,gml\\:MultiPoint,gml\\:MultiLineString,gml\\:MultiPolygon,gml\\:Surface,gml\\:MultiSurface'
-        );
-        if (isGeomChild) continue;
-        const val = gmlText(child);
-        if (val) props[tag] = val;
-      }
-
-      features.push({ type: 'Feature', geometry, properties: props });
-    }
-  }
-
-  if (!features.length) return null;
-  return { type: 'FeatureCollection', features };
 };
 
 const tryParseGeoJsonFromResponse = async (res: Response) => {
@@ -296,135 +80,31 @@ const tryParseGeoJsonFromResponse = async (res: Response) => {
     }
   }
 
-  const geojson = __wfsXmlToGeoJson(text);
+  const geojson = wfsXmlToGeoJson(text);
   if (!geojson) return { ok: false as const, errorText: text };
   return { ok: true as const, data: geojson };
 };
 
-const isFiniteNumber = (value: unknown) =>
-  typeof value === 'number' && Number.isFinite(value);
-
-const geometryHasFiniteCoords = (geometry: any): boolean => {
-  if (!geometry) return false;
-  const { type, coordinates } = geometry;
-  if (!type || coordinates == null) return false;
-
-  const isCoordPair = (coord: any) =>
-    Array.isArray(coord) &&
-    coord.length >= 2 &&
-    isFiniteNumber(coord[0]) &&
-    isFiniteNumber(coord[1]);
-
-  const walk = (coords: any): boolean => {
-    if (isCoordPair(coords)) return true;
-    if (!Array.isArray(coords)) return false;
-    return coords.every((c) => walk(c));
-  };
-
-  switch (type) {
-    case 'Point':
-      return isCoordPair(coordinates);
-    case 'MultiPoint':
-    case 'LineString':
-    case 'MultiLineString':
-    case 'Polygon':
-    case 'MultiPolygon':
-      return walk(coordinates);
-    default:
-      return false;
-  }
-};
-
-const sanitizeGeoJson = (geojson: any) => {
-  if (!geojson || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
-    return null;
-  }
-  const features = geojson.features.filter((feature: any) =>
-    geometryHasFiniteCoords(feature?.geometry)
-  );
-  if (features.length === 0) return null;
-  return { ...geojson, features };
-};
-
-const computeGeoJsonBounds = (geojson: any, swapAxes: boolean): BBox | null => {
-  if (!geojson || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) return null;
-
-  let south = Infinity;
-  let west = Infinity;
-  let north = -Infinity;
-  let east = -Infinity;
-
-  const pushPair = (pair: any) => {
-    if (!Array.isArray(pair) || pair.length < 2) return;
-    const a = Number(pair[0]);
-    const b = Number(pair[1]);
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return;
-    const lng = swapAxes ? b : a;
-    const lat = swapAxes ? a : b;
-    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
-    south = Math.min(south, lat);
-    north = Math.max(north, lat);
-    west = Math.min(west, lng);
-    east = Math.max(east, lng);
-  };
-
-  const walk = (coords: any) => {
-    if (!Array.isArray(coords)) return;
-    if (coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-      pushPair(coords);
-      return;
-    }
-    for (const c of coords) walk(c);
-  };
-
-  for (const f of geojson.features) {
-    const g = f?.geometry;
-    if (!g || g.coordinates == null) continue;
-    walk(g.coordinates);
-  }
-
-  if (!Number.isFinite(south) || !Number.isFinite(west) || !Number.isFinite(north) || !Number.isFinite(east)) return null;
-  return normalizeBBox({ south, west, north, east });
-};
-
-const bboxesOverlap = (a: BBox, b: BBox) => {
-  if (!a || !b) return false;
-  return !(a.east < b.west || a.west > b.east || a.north < b.south || a.south > b.north);
-};
-
-const swapGeoJsonAxes = (geojson: any) => {
-  if (!geojson || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) return geojson;
-
-  const swapCoords = (coords: any): any => {
-    if (!Array.isArray(coords)) return coords;
-    if (coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-      return [coords[1], coords[0]];
-    }
-    return coords.map((c) => swapCoords(c));
-  };
-
-  return {
-    ...geojson,
-    features: geojson.features.map((f: any) => {
-      const g = f?.geometry;
-      if (!g || g.coordinates == null) return f;
-      return { ...f, geometry: { ...g, coordinates: swapCoords(g.coordinates) } };
-    }),
-  };
-};
+const escapeHtml = (s: string) =>
+  (s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
 export const attachLasyZanocujWfsOverlay = (
-  L: any,
+  L: Record<string, unknown> & { layerGroup: () => unknown; geoJSON: (data: unknown, opts: unknown) => Record<string, unknown> },
   map: LeafletMap,
   def: WebMapLayerDefinition,
   opts?: LasyZanocujWfsOverlayOptions
 ) => {
   const options = { ...defaultOpts, ...(opts || {}) };
 
-  const layerGroup = L.layerGroup();
+  const layerGroup = L.layerGroup() as Record<string, (...args: unknown[]) => unknown>;
 
   let abort: AbortController | null = null;
-  let timer: any = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
   let lastKey: string | null = null;
   let isLoading = false;
   let nextAllowedAt = 0;
@@ -454,20 +134,16 @@ export const attachLasyZanocujWfsOverlay = (
     if (!(area > maxAreaKm2)) return bbox;
 
     const factor = Math.sqrt(maxAreaKm2 / area);
-
     const centerLat = (bbox.north + bbox.south) / 2;
     const centerLng = (bbox.east + bbox.west) / 2;
     const halfLat = Math.abs(bbox.north - bbox.south) / 2;
     const halfLng = Math.abs(bbox.east - bbox.west) / 2;
 
-    const nextHalfLat = halfLat * factor;
-    const nextHalfLng = halfLng * factor;
-
     return {
-      south: centerLat - nextHalfLat,
-      west: centerLng - nextHalfLng,
-      north: centerLat + nextHalfLat,
-      east: centerLng + nextHalfLng,
+      south: centerLat - halfLat * factor,
+      west: centerLng - halfLng * factor,
+      north: centerLat + halfLat * factor,
+      east: centerLng + halfLng * factor,
     };
   };
 
@@ -478,7 +154,7 @@ export const attachLasyZanocujWfsOverlay = (
 
   const buildUrl = (
     bbox: BBox,
-    options: {
+    urlOpts: {
       version: string;
       typeParam: 'typeNames' | 'typeName';
       outputFormat: string;
@@ -488,11 +164,8 @@ export const attachLasyZanocujWfsOverlay = (
   ) => {
     let base = def.url;
 
-    // Use nginx proxy for Polish Lasy WFS server to bypass CORS
     const lasyDomain = 'mapserver.bdl.lasy.gov.pl';
     if (base.includes(lasyDomain)) {
-      // In production, route through /proxy/wfs/lasy
-      // In development (localhost), use original URL (CORS issues may still occur)
       const isProduction = typeof window !== 'undefined' &&
         window.location.hostname !== 'localhost' &&
         !window.location.hostname.startsWith('192.168.');
@@ -502,20 +175,17 @@ export const attachLasyZanocujWfsOverlay = (
     }
 
     const sep = base.includes('?') ? '&' : '?';
-
     const typeName = def.wfsParams?.typeName;
 
     const params = new URLSearchParams();
     params.set('service', 'WFS');
     params.set('request', 'GetFeature');
-    params.set('version', options.version);
-    if (typeName) params.set(options.typeParam, typeName);
-    params.set('outputFormat', options.outputFormat);
-    params.set('srsName', options.srsName);
-    // ArcGIS WFSServer часто возвращает 400, если в bbox добавлять ",<srsName>".
-    // CRS задаём только через параметр srsName, а bbox оставляем чистым.
+    params.set('version', urlOpts.version);
+    if (typeName) params.set(urlOpts.typeParam, typeName);
+    params.set('outputFormat', urlOpts.outputFormat);
+    params.set('srsName', urlOpts.srsName);
     const bboxValue =
-      options.bboxOrder === 'latlon'
+      urlOpts.bboxOrder === 'latlon'
         ? `${bbox.south},${bbox.west},${bbox.north},${bbox.east}`
         : `${bbox.west},${bbox.south},${bbox.east},${bbox.north}`;
     params.set('bbox', bboxValue);
@@ -523,7 +193,7 @@ export const attachLasyZanocujWfsOverlay = (
     return `${base}${sep}${params.toString()}`;
   };
 
-  const renderGeoJson = (geojson: any) => {
+  const renderGeoJson = (geojson: Record<string, unknown>) => {
     layerGroup.clearLayers();
 
     const sanitized = sanitizeGeoJson(geojson);
@@ -539,8 +209,8 @@ export const attachLasyZanocujWfsOverlay = (
 
     const geoLayer = L.geoJSON(sanitized, {
       style: () => style,
-      onEachFeature: (feature: any, layer: any) => {
-        const props = feature?.properties || {};
+      onEachFeature: (feature: Record<string, unknown>, layer: Record<string, (...args: unknown[]) => void>) => {
+        const props = (feature?.properties || {}) as Record<string, unknown>;
         const name =
           props?.name ||
           props?.Name ||
@@ -559,11 +229,11 @@ export const attachLasyZanocujWfsOverlay = (
       },
     });
 
-    if (def.zIndex != null && typeof geoLayer.setZIndex === 'function') {
-      geoLayer.setZIndex(def.zIndex);
+    if (def.zIndex != null && typeof (geoLayer as Record<string, unknown>).setZIndex === 'function') {
+      (geoLayer as Record<string, (...args: unknown[]) => void>).setZIndex(def.zIndex);
     }
 
-    geoLayer.addTo(layerGroup);
+    (geoLayer as Record<string, (...args: unknown[]) => void>).addTo(layerGroup);
   };
 
   const loadFromStaticData = async (bbox: BBox, signal?: AbortSignal): Promise<boolean> => {
@@ -599,7 +269,6 @@ export const attachLasyZanocujWfsOverlay = (
     isLoading = true;
 
     try {
-      // In production, prefer static pre-fetched data (avoids geo-blocked WFS server)
       if (isProductionHost()) {
         const ok = await loadFromStaticData(bbox, abort.signal);
         if (ok) {
@@ -607,7 +276,6 @@ export const attachLasyZanocujWfsOverlay = (
           nextAllowedAt = Date.now() + 300;
           return;
         }
-        // Static data unavailable — fall through to live WFS
       }
       const version = def.wfsParams?.version || '2.0.0';
       const outputFormat = def.wfsParams?.outputFormat || 'GEOJSON';
@@ -641,111 +309,71 @@ export const attachLasyZanocujWfsOverlay = (
         return [first, 'GML3'];
       })();
 
-      // Attempt list: prefer cached successful params, then config bbox order, then fallback.
-      const attempts: Array<{
+      type Attempt = {
         version: string;
         typeParam: 'typeNames' | 'typeName';
         srsName: string;
         bboxOrder: 'lonlat' | 'latlon';
         outputFormat: string;
-      }> = [];
+      };
 
-      const addAttempt = (a: (typeof attempts)[number]) => {
-        const key = `${a.version}|${a.typeParam}|${a.srsName}|${a.bboxOrder}|${a.outputFormat}`;
-        const seen = new Set(attempts.map((x) => `${x.version}|${x.typeParam}|${x.srsName}|${x.bboxOrder}|${x.outputFormat}`));
-        if (seen.has(key)) return;
+      const attempts: Attempt[] = [];
+      const seen = new Set<string>();
+      const addAttempt = (a: Attempt) => {
+        const k = `${a.version}|${a.typeParam}|${a.srsName}|${a.bboxOrder}|${a.outputFormat}`;
+        if (seen.has(k)) return;
+        seen.add(k);
         attempts.push(a);
       };
 
-      if (preferredAttempt) {
-        addAttempt(preferredAttempt);
-      }
+      if (preferredAttempt) addAttempt(preferredAttempt);
 
-      // Primary attempts: use configured bbox order first
       for (const srs of srsCandidates) {
         for (const fmt of formatsToTry) {
-          addAttempt({
-            version,
-            typeParam: 'typeNames',
-            outputFormat: fmt,
-            srsName: srs,
-            bboxOrder: configBboxOrder,
-          });
+          addAttempt({ version, typeParam: 'typeNames', outputFormat: fmt, srsName: srs, bboxOrder: configBboxOrder });
         }
       }
 
       addAttempt({
-        version,
-        typeParam: 'typeName',
+        version, typeParam: 'typeName',
         outputFormat: formatsToTry[0] || outputFormatCandidates[0] || 'GEOJSON',
-        srsName: srsCandidates[0] || srsName,
-        bboxOrder: configBboxOrder,
+        srsName: srsCandidates[0] || srsName, bboxOrder: configBboxOrder,
       });
 
-      // Fallback attempts: try the opposite bbox order
       const fmt0 = formatsToTry[0] || outputFormatCandidates[0] || 'GEOJSON';
       if (srsCandidates.includes('EPSG:4326')) {
-        addAttempt({
-          version,
-          typeParam: 'typeNames',
-          outputFormat: fmt0,
-          srsName: 'EPSG:4326',
-          bboxOrder: altBboxOrder,
-        });
-        addAttempt({
-          version,
-          typeParam: 'typeName',
-          outputFormat: fmt0,
-          srsName: 'EPSG:4326',
-          bboxOrder: altBboxOrder,
-        });
+        addAttempt({ version, typeParam: 'typeNames', outputFormat: fmt0, srsName: 'EPSG:4326', bboxOrder: altBboxOrder });
+        addAttempt({ version, typeParam: 'typeName', outputFormat: fmt0, srsName: 'EPSG:4326', bboxOrder: altBboxOrder });
       }
 
       if (version !== '1.1.0') {
-        addAttempt({
-          version: '1.1.0',
-          typeParam: 'typeName',
-          outputFormat: 'GML3',
-          srsName: 'EPSG:4326',
-          bboxOrder: 'latlon',
-        });
+        addAttempt({ version: '1.1.0', typeParam: 'typeName', outputFormat: 'GML3', srsName: 'EPSG:4326', bboxOrder: 'latlon' });
       }
 
       let lastErrorText = '';
       let lastErrorStatus: number | null = null;
-      let lastAttempt: (typeof attempts)[number] | null = null;
+      let lastAttemptObj: Attempt | null = null;
+
       for (const attempt of attempts) {
         const url = buildUrl(bbox, attempt);
         const res = await fetch(url, { method: 'GET', signal: abort.signal });
 
-        // Handle gateway errors (504, 502) as timeout — trigger backoff
         if (res.status === 504 || res.status === 502) {
           throw new Error(`Gateway timeout (${res.status}): upstream server too slow`);
         }
 
         if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          lastErrorText = text;
+          lastErrorText = await res.text().catch(() => '');
           lastErrorStatus = res.status;
-          lastAttempt = attempt;
+          lastAttemptObj = attempt;
           continue;
         }
 
         const parsed = await tryParseGeoJsonFromResponse(res);
-        if (!parsed.ok) {
-          lastErrorText = parsed.errorText;
-          lastErrorStatus = res.status;
-          lastAttempt = attempt;
-          continue;
-        }
+        if (!parsed.ok) { lastErrorText = parsed.errorText; lastErrorStatus = res.status; lastAttemptObj = attempt; continue; }
 
-        const initialSanitized = sanitizeGeoJson(parsed.data);
-        if (!initialSanitized) {
-          lastErrorText = 'Empty or invalid FeatureCollection';
-          lastErrorStatus = res.status;
-          lastAttempt = attempt;
-          continue;
-        }
+        const initialSanitized = sanitizeGeoJson(parsed.data as Record<string, unknown>);
+        if (!initialSanitized) { lastErrorText = 'Empty or invalid FeatureCollection'; lastErrorStatus = res.status; lastAttemptObj = attempt; continue; }
 
         let dataToRender = initialSanitized;
         try {
@@ -770,14 +398,15 @@ export const attachLasyZanocujWfsOverlay = (
       }
 
       throw new Error(
-        `WFS: failed to load features (unsupported params or response).` +
-          ` Last status: ${lastErrorStatus ?? 'n/a'}.` +
-          ` Last attempt: ${lastAttempt ? `${lastAttempt.version} ${lastAttempt.typeParam} ${lastAttempt.srsName} ${lastAttempt.bboxOrder} ${lastAttempt.outputFormat}` : 'n/a'}.` +
-          ` Last response: ${String(lastErrorText).slice(0, 200)}`
+        `WFS: failed to load features.` +
+        ` Last status: ${lastErrorStatus ?? 'n/a'}.` +
+        ` Last attempt: ${lastAttemptObj ? `${lastAttemptObj.version} ${lastAttemptObj.typeParam} ${lastAttemptObj.srsName} ${lastAttemptObj.bboxOrder} ${lastAttemptObj.outputFormat}` : 'n/a'}.` +
+        ` Last response: ${String(lastErrorText).slice(0, 200)}`
       );
-    } catch (e: any) {
-      if (e?.name === 'AbortError') return;
-      const msg = String(e?.message || '').toLowerCase();
+    } catch (e: unknown) {
+      const err = e as { name?: string; message?: string };
+      if (err?.name === 'AbortError') return;
+      const msg = String(err?.message || '').toLowerCase();
       const isRateLimited = msg.includes('429') || msg.includes('too many requests');
       const isTimeoutish = msg.includes('timeout') || msg.includes('too busy') || msg.includes('504') || msg.includes('502') || msg.includes('gateway');
 
@@ -787,7 +416,7 @@ export const attachLasyZanocujWfsOverlay = (
       } else {
         nextAllowedAt = Date.now() + 2000;
       }
-      console.warn('[Lasy Zanocuj WFS Overlay] Failed to load data:', e?.message || e);
+      console.warn('[Lasy Zanocuj WFS Overlay] Failed to load data:', err?.message || e);
       layerGroup.clearLayers();
     } finally {
       isLoading = false;
@@ -818,17 +447,5 @@ export const attachLasyZanocujWfsOverlay = (
     layerGroup.clearLayers();
   };
 
-  return {
-    layer: layerGroup,
-    start,
-    stop,
-  };
+  return { layer: layerGroup, start, stop };
 };
-
-const escapeHtml = (s: string) =>
-  (s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
