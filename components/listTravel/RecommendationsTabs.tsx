@@ -27,7 +27,7 @@ import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
-import { createRecommendationsTabsStyles, TAB_CONTENT_HEIGHT, TAB_HEADER_HEIGHT, TAB_TOTAL_HEIGHT } from './recommendationsTabsStyles';
+import { createRecommendationsTabsStyles } from './recommendationsTabsStyles';
 
 /* ---------------- Lazy Components ---------------- */
 
@@ -76,7 +76,7 @@ const AuthGate = ({
 }: {
   message: string;
   onLogin: () => void;
-  styles: ReturnType<typeof createRecommendationsTabsStyles>;
+  styles: TabStyles;
   colors: ReturnType<typeof useThemedColors>;
 }) => (
   <View style={styles.gateContainer}>
@@ -101,7 +101,7 @@ const CardSkeleton = ({
   styles,
   template,
 }: {
-  styles: ReturnType<typeof createRecommendationsTabsStyles>;
+  styles: TabStyles;
   template: ReturnType<typeof createTabCardTemplate>;
 }) => {
   const imageHeight = (template.imageContainer as any)?.height ?? 136;
@@ -126,7 +126,7 @@ const RecommendationsPlaceholder = ({
   styles,
   template,
 }: {
-  styles: ReturnType<typeof createRecommendationsTabsStyles>;
+  styles: TabStyles;
   template: ReturnType<typeof createTabCardTemplate>;
 }) => (
   <View style={styles.placeholderContainer}>
@@ -596,7 +596,7 @@ const EmptyState = ({
 }: {
   message: string;
   icon: any;
-  styles: ReturnType<typeof createRecommendationsTabsStyles>;
+  styles: TabStyles;
   colors: ReturnType<typeof useThemedColors>;
 }) => (
   <View style={styles.emptyState}>
