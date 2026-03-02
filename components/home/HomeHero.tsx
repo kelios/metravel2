@@ -158,6 +158,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   // Auto-advance slider
   useEffect(() => {
     if (!showSideSlider) return;
+    // Уважаем настройку пользователя об уменьшении анимации (WCAG 2.2 SC 2.3.3)
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const mediaQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+      if (mediaQuery?.matches) return;
+    }
     const interval = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % totalSlides);
     }, 5000);
@@ -368,6 +373,13 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
           )}
           </View>
           <View style={styles.moodChipsContainer}>
+            <View
+              style={isWeb ? ({
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                maskImage: 'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                overflow: 'hidden',
+              } as any) : undefined}
+            >
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -395,12 +407,44 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 </Pressable>
               ))}
             </ScrollView>
+            </View>
           </View>
         </View>
 
         {/* Popular Routes Section - only on mobile */}
         {!showSideSlider && (
           <View style={styles.popularSection}>
+            {/* Featured изображение маршрута — даёт визуальный контекст сразу без скролла */}
+            <Pressable
+              onPress={() => handleOpenArticles(BOOK_IMAGES[0].href)}
+              style={({ pressed, hovered }) => [
+                styles.featuredCard,
+                (pressed || hovered) && styles.featuredCardHover,
+              ]}
+              accessibilityRole="link"
+              accessibilityLabel={`Открыть маршрут: ${BOOK_IMAGES[0].title}`}
+            >
+              <ImageCardMedia
+                source={BOOK_IMAGES[0].source}
+                width={undefined}
+                height={isMobile ? 200 : 260}
+                borderRadius={0}
+                fit="contain"
+                blurBackground
+                quality={85}
+                alt={BOOK_IMAGES[0].alt}
+                loading="eager"
+                style={styles.featuredCardImage}
+              />
+              <View style={styles.featuredCardOverlay}>
+                <Text style={styles.featuredCardTitle} numberOfLines={1}>
+                  {BOOK_IMAGES[0].title}
+                </Text>
+                <Text style={styles.featuredCardSubtitle} numberOfLines={1}>
+                  {BOOK_IMAGES[0].subtitle}
+                </Text>
+              </View>
+            </Pressable>
             <Text style={styles.popularTitle}>Популярные маршруты</Text>
             <ScrollView
               horizontal

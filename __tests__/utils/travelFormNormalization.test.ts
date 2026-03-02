@@ -213,10 +213,10 @@ describe('travelFormNormalization', () => {
       expect(normalizeMarkersForSave(undefined as any)).toEqual([]);
     });
 
-    it('nullifies local preview images', () => {
+    it('omits local preview images', () => {
       const markers = [{ lat: 50, lng: 30, image: 'blob:http://localhost/abc' }];
       const result = normalizeMarkersForSave(markers);
-      expect(result[0].image).toBeNull();
+      expect(result[0].image).toBeUndefined();
     });
 
     it('keeps server images', () => {

@@ -23,6 +23,31 @@ interface AutosaveState {
   isOnline: boolean;
 }
 
+const getErrorStatus = (error: unknown): number | null => {
+  if (!error || typeof error !== 'object') return null;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === 'number' && Number.isFinite(status) ? status : null;
+};
+
+const isRetryableSaveError = (error: Error): boolean => {
+  if (error.message === 'Request aborted') {
+    return false;
+  }
+
+  const status = getErrorStatus(error);
+  if (status == null) {
+    return true;
+  }
+
+  // 4xx validation/auth/access errors are non-retriable for autosave.
+  // Keep retries for transient statuses only.
+  if (status >= 400 && status < 500 && status !== 408 && status !== 429) {
+    return false;
+  }
+
+  return true;
+};
+
 export function useImprovedAutoSave<T>(
   data: T,
   originalData: T,
@@ -172,7 +197,7 @@ export function useImprovedAutoSave<T>(
       
       // Retry logic (сохранён, но используется только при необходимости,
       // чтобы не усложнять основную логику автосейва)
-      if (enableRetry && retryAttempt < maxRetries && isOnlineRef.current) {
+      if (enableRetry && retryAttempt < maxRetries && isOnlineRef.current && isRetryableSaveError(saveError)) {
         // ✅ FIX: Проверка монтирования перед setState
         if (mountedRef.current) {
           setState(prev => ({

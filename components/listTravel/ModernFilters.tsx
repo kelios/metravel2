@@ -752,17 +752,27 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         )}
       </ScrollView>
 
-      {/* Apply Button (Mobile) */}
-      {Platform.OS !== 'web' && activeFiltersCount > 0 && (
+      {/* Apply / Reset Buttons (Mobile: native + web-narrow) — sticky footer вне ScrollView */}
+      {(Platform.OS !== 'web' || isNarrowWeb) && (
         <View style={styles.applyButtonContainer}>
+          {activeFiltersCount > 0 && (
+            <Pressable
+              style={styles.resetMobileButton}
+              onPress={onClearAll}
+              accessibilityRole="button"
+              accessibilityLabel={`Сбросить все фильтры (${activeFiltersCount})`}
+            >
+              <Text style={styles.resetMobileButtonText}>Сбросить всё</Text>
+            </Pressable>
+          )}
           <Pressable
             style={styles.applyButton}
-            onPress={onApply}
+            onPress={onClose ?? onApply}
             accessibilityRole="button"
-            accessibilityLabel="Применить фильтры"
+            accessibilityLabel={activeFiltersCount > 0 ? `Показать результаты (фильтров: ${activeFiltersCount})` : 'Показать результаты'}
           >
             <Text style={styles.applyButtonText}>
-              Применить фильтры ({activeFiltersCount})
+              {activeFiltersCount > 0 ? `Показать результаты · ${activeFiltersCount}` : 'Показать результаты'}
             </Text>
           </Pressable>
         </View>
@@ -1347,10 +1357,30 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       backgroundColor: colors.primary,
     },
     applyButtonContainer: {
-      marginTop: spacing.lg,
-      paddingTop: spacing.lg,
+      marginTop: spacing.sm,
+      paddingTop: spacing.md,
+      paddingHorizontal: spacing.xs,
+      paddingBottom: spacing.xs,
       borderTopWidth: 1,
       borderTopColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      ...Platform.select({
+        web: { gap: spacing.xs } as any,
+      }),
+    },
+    resetMobileButton: {
+      paddingVertical: spacing.sm,
+      borderRadius: radii.pill,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      marginBottom: spacing.xs,
+    },
+    resetMobileButtonText: {
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.medium as any,
+      color: colors.textMuted,
     },
     applyButton: {
       backgroundColor: colors.primary,

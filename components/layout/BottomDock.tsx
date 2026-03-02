@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   LayoutChangeEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePathname, useRouter, type Href } from "expo-router";
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem";
@@ -36,6 +37,13 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const colors = useThemedColors();
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+
+  // На iOS учитываем home indicator (safe area bottom)
+  // На web используем фиксированную высоту без insets
+  const safeBottomPadding = Platform.OS === 'web' ? 0 : Math.max(0, insets.bottom);
+
+  const styles = useMemo(() => createStyles(colors, safeBottomPadding), [colors, safeBottomPadding]);
 
   const activePath = useMemo(() => {
     if (pathname === '/' || pathname === '/index') return '/search';
@@ -49,7 +57,6 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     return pathname;
   }, [pathname]);
 
-  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const DockButton = memo(function DockButton({
     label,
@@ -308,7 +315,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadding: number = 0) => StyleSheet.create({
   container: {
     position: Platform.OS === "web" ? ("fixed" as any) : "relative",
     bottom: 0,
@@ -320,7 +327,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   dockWrapper: {
     paddingTop: 6,
-    paddingBottom: Platform.select({ web: 8, default: 6 }),
+    paddingBottom: Platform.select({ web: 8, default: Math.max(6, safeBottomPadding + 4) }),
     paddingHorizontal: 6,
     backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 18,

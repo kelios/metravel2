@@ -24,6 +24,10 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/GOOGLE_OAUTH_SETUP.md` — Google OAuth integration
 
+## UX/UI
+
+- `docs/UX_UI_AUDIT.md` — UX/UI аудит приложения: проблемы адаптивности, навигации, доступности и план улучшений по приоритетам
+
 ## ADRs
 
 - `docs/ADR_MAP_ARCHITECTURE.md` — map-core unified contract

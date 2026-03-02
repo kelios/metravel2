@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, memo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, LayoutAnimation, UIManager } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ResponsiveContainer } from '@/components/layout';
@@ -43,6 +43,14 @@ function HomeFAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const toggleItem = useCallback((idx: number) => {
+    // На native включаем плавную LayoutAnimation
+    if (Platform.OS !== 'web') {
+      // Android требует явного включения LayoutAnimation
+      if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+      }
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
     setOpenIndex((prev) => (prev === idx ? null : idx));
   }, []);
 

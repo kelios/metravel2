@@ -502,6 +502,11 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 extraData={gridColumns}
                 keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
                 ListHeaderComponent={ListHeader}
+                ListFooterComponent={showNextPageLoading ? (
+                  <View style={footerLoaderStyle}>
+                    <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
+                  </View>
+                ) : null}
                 onEndReached={onEndReached}
                 onEndReachedThreshold={onEndReachedThreshold}
                 drawDistance={600}

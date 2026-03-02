@@ -11,15 +11,17 @@ interface MapShowListButtonProps {
   count: number;
   onPress: () => void;
   visible?: boolean;
+  bottomOffset?: number;
 }
 
 export const MapShowListButton: React.FC<MapShowListButtonProps> = React.memo(({
   count,
   onPress,
   visible = true,
+  bottomOffset = 0,
 }) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(colors, bottomOffset), [colors, bottomOffset]);
 
   if (!visible || count <= 0) return null;
 
@@ -42,11 +44,11 @@ export const MapShowListButton: React.FC<MapShowListButtonProps> = React.memo(({
   );
 });
 
-const getStyles = (colors: ThemedColors) =>
+const getStyles = (colors: ThemedColors, bottomOffset: number = 0) =>
   StyleSheet.create({
     button: {
       position: 'absolute',
-      bottom: 52,
+      bottom: 52 + bottomOffset,
       alignSelf: 'center',
       flexDirection: 'row',
       alignItems: 'center',

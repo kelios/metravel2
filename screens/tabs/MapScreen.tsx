@@ -222,6 +222,17 @@ export default function MapScreen() {
                         onPress={selectTravelsTab}
                     />
                 )}
+                {/* На мобайле кнопка «Список» — переключение в MobileLayout (через requestOpenBottomSheet) */}
+                {Platform.OS === 'web' && isMobile && travelsData.length > 0 && (
+                    <MapShowListButton
+                        count={travelsData.length}
+                        bottomOffset={56}
+                        onPress={() => {
+                            selectTravelsTab();
+                            requestOpenBottomSheet();
+                        }}
+                    />
+                )}
                 {mapReady ? (
                     <Suspense fallback={mapPanelPlaceholder}>
                         <LazyMapPanel {...mapPanelProps} />
@@ -258,6 +269,7 @@ export default function MapScreen() {
             quickFilterToggle,
             rightPanelTab,
             selectTravelsTab,
+            requestOpenBottomSheet,
             travelsData.length,
             styles.mapArea,
             showGeoBanner,

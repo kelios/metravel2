@@ -44,6 +44,25 @@ const normalizeImageUrl = (value: unknown): string => {
   // instead of real files. Treat such values as missing image to avoid 404 noise.
   if (isInvalidMediaEndpointUrl(url)) return '';
   
+  // Upgrade absolute http URLs to https for non-local hosts (production CSP requires https images).
+  if (/^http:\/\//i.test(url)) {
+    try {
+      const parsed = new URL(url);
+      const host = String(parsed.hostname || '').trim().toLowerCase();
+      const isPrivateOrLocal =
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        /^10\./.test(host) ||
+        /^192\.168\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+      if (!isPrivateOrLocal) {
+        return url.replace(/^http:\/\//i, 'https://');
+      }
+    } catch {
+      return url.replace(/^http:\/\//i, 'https://');
+    }
+  }
+
   // Если URL уже абсолютный, возвращаем как есть
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;

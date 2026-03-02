@@ -149,6 +149,22 @@ export const createHomeHeroStyles = ({
   popularSection: { marginTop: isMobile ? 28 : 44, width: '100%' },
   popularTitle: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 0.8 },
   popularScrollContent: { flexDirection: 'row', gap: 16, paddingRight: 16 },
+  // HERO-01: Featured card на мобайле
+  featuredCard: {
+    width: '100%', borderRadius: DESIGN_TOKENS.radii.xl, overflow: 'hidden',
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderLight,
+    marginBottom: 20, position: 'relative' as const,
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.22s ease', boxShadow: DESIGN_TOKENS.shadows.medium } }),
+  },
+  featuredCardHover: { ...Platform.select({ web: { transform: 'translateY(-3px)', boxShadow: DESIGN_TOKENS.shadows.heavy, borderColor: colors.primaryAlpha30 } }) },
+  featuredCardImage: { width: '100%', aspectRatio: 16 / 9 },
+  featuredCardOverlay: {
+    position: 'absolute' as const, bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 14, paddingVertical: 12, paddingTop: 32,
+    ...Platform.select({ web: { backgroundImage: 'linear-gradient(to top, rgba(7,17,29,0.85) 0%, rgba(7,17,29,0.4) 60%, transparent 100%)' } }),
+  },
+  featuredCardTitle: { fontSize: 17, fontWeight: '800', color: '#fff', marginBottom: 2 },
+  featuredCardSubtitle: { fontSize: 12, fontWeight: '400', color: 'rgba(255,255,255,0.85)' },
   imageCard: {
     width: isMobile ? 195 : 215, borderRadius: DESIGN_TOKENS.radii.lg, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.borderLight, overflow: 'hidden',

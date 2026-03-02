@@ -244,23 +244,35 @@ export function normalizeNullableStrings(data: TravelFormData): TravelFormData {
 /**
  * Нормализует маркеры для отправки на сервер:
  * - числовые categories
- * - image: null если пустой или локальный превью
+ * - image: отправляем только валидный серверный URL
+ * - id: не отправляем null/пустой id
  */
 export function normalizeMarkersForSave(markers: any[]): any[] {
     if (!Array.isArray(markers)) return [];
     return markers.map((m: any) => {
-        const { image, ...rest } = m ?? {};
+        const { image, id, ...rest } = m ?? {};
         const imageValue = typeof image === 'string' ? image.trim() : '';
         const categories = Array.isArray(m?.categories)
             ? m.categories.map((c: any) => Number(c)).filter((n: number) => Number.isFinite(n))
             : [];
-        return {
+
+        const normalized: Record<string, unknown> = {
             ...rest,
             categories,
-            image: imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)
-                ? imageValue
-                : null,
         };
+
+        // Do not send id=null for new markers: backend serializers may treat null as invalid.
+        if (id != null && String(id).trim() !== '') {
+            normalized.id = id;
+        }
+
+        // Do not send image when empty/local preview.
+        // Sending image:null can trigger 400 on strict backend validators.
+        if (imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)) {
+            normalized.image = imageValue;
+        }
+
+        return normalized;
     });
 }
 

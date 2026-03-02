@@ -86,7 +86,8 @@ export default function RegisterForm() {
                 return;
             }
 
-            setMsg({ text: message, error: false });
+            // AUTH-03: Явное welcome-сообщение
+            setMsg({ text: 'Добро пожаловать! Аккаунт создан. Проверьте почту для подтверждения.', error: false });
             resetForm();
             if (intent) {
                 sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });

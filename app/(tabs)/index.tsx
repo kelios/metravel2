@@ -86,19 +86,6 @@ function HomeScreen() {
                 />
             )}
             <View style={styles.container}>
-                {Platform.OS === 'web' && (
-                    <h1 style={{
-                        position: 'absolute' as const,
-                        width: 1,
-                        height: 1,
-                        padding: 0,
-                        margin: -1,
-                        overflow: 'hidden' as const,
-                        clip: 'rect(0,0,0,0)',
-                        whiteSpace: 'nowrap',
-                        borderWidth: 0,
-                    } as any}>{title}</h1>
-                )}
                 <ErrorBoundary
                     fallback={
                         <View style={styles.errorContainer}>

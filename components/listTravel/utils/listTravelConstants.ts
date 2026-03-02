@@ -29,20 +29,20 @@ export const BREAKPOINTS = {
   MOBILE: METRICS.breakpoints.tablet, // Планшеты портрет
   MD: 900,  // Маленькие планшеты
   TABLET: METRICS.breakpoints.largeTablet, // Планшеты ландшафт
-  TABLET_LANDSCAPE: METRICS.breakpoints.desktop,
+  TABLET_LANDSCAPE: METRICS.breakpoints.largeTablet,
   DESKTOP: 1440,
   DESKTOP_LARGE: 1920,
   XXL: 2560, // Очень большие мониторы
 } as const;
 
 // ✅ АРХИТЕКТУРА: Количество колонок для разных экранов
-// ✅ ОПТИМИЗАЦИЯ: Оптимизировано для лучшей читаемости и производительности
+// RESP-02: Планшет показывает 2 колонки для оптимального использования пространства
 export const GRID_COLUMNS = {
   MOBILE: 1,
-  TABLET: 3,
-  TABLET_LANDSCAPE: 3, // 3 колонки на промежутке 1280-1439px
-  DESKTOP: 4,
-  DESKTOP_LARGE: 4,
+  TABLET: 2,             // 768–1023px: 2 колонки
+  TABLET_LANDSCAPE: 3,   // 1024–1279px: 3 колонки
+  DESKTOP: 4,            // 1280–1439px: 4 колонки
+  DESKTOP_LARGE: 4,      // 1440px+: 4 колонки
 } as const;
 
 export const TRAVEL_CARD_IMAGE_HEIGHT = 220;
