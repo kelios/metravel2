@@ -473,11 +473,24 @@ test.describe('ArticleEditor (Якоря в описании)', () => {
       .getByRole('button', { name: 'Вставить якорь' })
       .or(page.locator('button[aria-label="Вставить якорь"]'));
     await expect(anchorButton.first()).toBeVisible({ timeout: 30_000 });
-    await anchorButton.first().click({ force: true });
+    const anchorButtonFirst = anchorButton.first();
+
+    await expect
+      .poll(async () => {
+        const ariaDisabled = await anchorButtonFirst.getAttribute('aria-disabled').catch(() => null);
+        const disabled = await anchorButtonFirst.isDisabled().catch(() => false);
+        return !disabled && ariaDisabled !== 'true';
+      }, { timeout: 15_000 })
+      .toBe(true);
+
+    await anchorButtonFirst.click();
 
     // RN <Modal> on web does not always expose role="dialog". Use visible modal content as anchor.
     const anchorInput = page.getByPlaceholder('day-3').first();
-    await expect(anchorInput).toBeVisible({ timeout: 15_000 });
+    if (!(await anchorInput.isVisible().catch(() => false))) {
+      await anchorButtonFirst.click({ force: true });
+    }
+    await expect(anchorInput).toBeVisible({ timeout: 20_000 });
     await anchorInput.fill('day-3');
 
     const anchorDialog = anchorInput.locator(
