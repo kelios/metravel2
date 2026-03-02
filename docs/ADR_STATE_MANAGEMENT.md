@@ -75,7 +75,7 @@ Boundaries between these layers are not always clear, leading to:
 
 ## References
 
-- `docs/REFACTORING_PLAN.md` — Phase 4 (F1–F2)
+- Refactoring Phase 4 (F1–F2) — completed
 - `stores/` — Zustand store implementations
 - `context/` — React Context providers
 

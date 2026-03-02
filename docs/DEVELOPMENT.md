@@ -105,4 +105,3 @@ export default function MyPage() {
 - Унікальний `headKey` для кожної сторінки
 - `robots="noindex,nofollow"` для auth/приватних сторінок
 
-**Детальна документація:** `docs/SEO_MIGRATION.md`

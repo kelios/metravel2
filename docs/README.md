@@ -16,8 +16,6 @@
 - `PRODUCTION_CHECKLIST.md` — production release checklist.
 - `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — PR-ready summary for external-link governance changes.
 - `INDEX.md` — docs entrypoint.
-- `REFACTORING_PLAN.md` — комплексный план рефакторинга (51/55 задач завершено).
-- `REFACTORING_REMAINING.md` — подзадачи для оставшихся 5 задач.
 
 ## Quick start
 

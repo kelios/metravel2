@@ -97,5 +97,5 @@ components/
 ## References
 
 - `components/map-core/types.ts` — Unified types
-- `docs/REFACTORING_PLAN.md` — Phase 2 (C1–C4)
+- Refactoring Phase 2 (C1–C4) — completed
 

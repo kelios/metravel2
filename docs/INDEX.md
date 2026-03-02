@@ -10,7 +10,6 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 ## Testing
 
 - `docs/TESTING.md` — Jest + Playwright (E2E)
-- `docs/QA_MANUAL_REPORT.md` — manual QA notes/report
 
 ## Release
 
@@ -22,16 +21,13 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/GOOGLE_OAUTH_SETUP.md` — Google OAuth integration
 
-## Architecture / Refactoring
-
-- `docs/REFACTORING_PLAN.md` — комплексный план рефакторинга (8 недель, 6 фаз, 55 задач, 51 завершена)
-- `docs/REFACTORING_REMAINING.md` — детальные подзадачи для 5 оставшихся задач (C2, C3, C4, E6, I2)
-
 ## ADRs (Architecture Decision Records)
 
 - `docs/ADR_MAP_ARCHITECTURE.md` — map-core unified contract
 - `docs/ADR_STATE_MANAGEMENT.md` — state ownership boundaries (Zustand stores vs Context vs React Query)
 - `docs/ADR_API_ERROR_CONTRACT.md` — API error normalization and parsing
+- `docs/ADR_RNW_TREE_SHAKE.md` — React Native Web tree-shaking (opt-in slim barrel)
+- `docs/RNW_USAGE_AUDIT.md` — RNW module usage audit
 
 ## Module ownership
 

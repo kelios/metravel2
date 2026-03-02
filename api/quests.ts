@@ -55,7 +55,7 @@ export type ApiQuestMeta = {
     lng: string;
     duration_min: number | null;
     difficulty: 'easy' | 'medium' | 'hard' | '' | null;
-    tags: Record<string, any> | null;
+    tags: Record<string, unknown> | null;
     pet_friendly: boolean;
     cover_url: string | null;
 };

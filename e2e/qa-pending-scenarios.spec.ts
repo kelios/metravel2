@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
 
 /**
- * Automates pending QA scenarios from docs/QA_MANUAL_REPORT.md:
+ * QA scenarios: 404, SEO meta, cookie consent, registration canonical, legal pages.
  * Q (404), R (SEO meta), S (cookie consent), V (registration canonical),
  * AO (legal pages).
  */

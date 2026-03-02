@@ -12,7 +12,7 @@ let origLocation: Location;
 
 beforeAll(() => {
   origLocation = (global as any).window?.location;
-  // @ts-ignore
+  // @ts-ignore -- delete non-optional property for test mock setup
   delete ((global as any).window as any).location;
   (global as any).window.location = { ...origLocation, reload: mockReload };
 });
