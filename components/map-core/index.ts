@@ -41,3 +41,7 @@ export type { UseElevationOptions, UseElevationResult } from './useElevation';
 export { default as MapMarkerLayer, FitBoundsOnData } from './MapMarkerLayer';
 export type { MarkerLayerProps, FitBoundsProps } from './MapMarkerLayer';
 
+// C4.2: Unified routing
+export { useMapRouting } from './useMapRouting';
+export type { UseMapRoutingOptions, UseMapRoutingResult, RouteChangeCallback } from './useMapRouting';
+
