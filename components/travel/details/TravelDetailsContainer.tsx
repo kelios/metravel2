@@ -21,9 +21,10 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
+import * as TravelDetailsHookModule from '@/hooks/travel-details';
+import { resolveExportedFunction } from '@/utils/moduleInterop';
 
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
-import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from "@/utils/seo";
 import { createSafeJsonLd, createBreadcrumbJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
@@ -42,6 +43,56 @@ import { useTdTrace } from '@/hooks/useTdTrace';
 import { rIC } from '@/utils/rIC';
 
 /* -------------------- helpers -------------------- */
+
+type UseTravelDetailsHook = typeof TravelDetailsHookModule.useTravelDetails;
+const resolvedUseTravelDetails = resolveExportedFunction<UseTravelDetailsHook>(
+  TravelDetailsHookModule as unknown as Record<string, unknown>,
+  'useTravelDetails'
+);
+const useTravelDetailsResolved: UseTravelDetailsHook =
+  resolvedUseTravelDetails ??
+  ((() => ({
+    data: {
+      travel: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('useTravelDetails is unavailable'),
+      refetch: () => {},
+      slug: '',
+      isId: false,
+      isMissingParam: true,
+    },
+    layout: {
+      contentHorizontalPadding: 0,
+      sideMenuPlatformStyles: {},
+    },
+    navigation: {
+      anchors: {},
+      scrollTo: () => {},
+      scrollRef: { current: null },
+      activeSection: null,
+      setActiveSection: () => {},
+      forceOpenKey: null,
+    },
+    performance: {
+      lcpLoaded: false,
+      setLcpLoaded: () => {},
+      sliderReady: false,
+      deferAllowed: false,
+    },
+    menu: {
+      closeMenu: () => {},
+      animatedX: new Animated.Value(0),
+      menuWidthNum: 0,
+    },
+    scroll: {
+      scrollY: new Animated.Value(0),
+      contentHeight: 0,
+      viewportHeight: 0,
+      handleContentSizeChange: () => {},
+      handleLayout: () => {},
+    },
+  })) as UseTravelDetailsHook);
 
 const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
 const AccessibilityAnnouncer = withLazy(() => import("@/components/accessibility/AccessibilityAnnouncer"));
@@ -115,7 +166,7 @@ export default function TravelDetailsContainer() {
   const tdTrace = useTdTrace()
 
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const travelDetails = useTravelDetails({
+  const travelDetails = useTravelDetailsResolved({
     isMobile,
     screenWidth,
     startTransition,

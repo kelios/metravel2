@@ -72,27 +72,16 @@ function deploy_dev() {
     ./dist/ \
     sergey@192.168.50.36:/home/sergey/metravel/dist/
 
-  rsync -avzhe "ssh" --delete \
-    ./assets/icons/ \
-    sergey@192.168.50.36:/home/sergey/metravel/icons/
-
-  rsync -avzhe "ssh" --delete \
-    ./assets/images/ \
-    sergey@192.168.50.36:/home/sergey/metravel/images/
-
   ssh sergey@192.168.50.36 "set -e
     cd /home/sergey/metravel
     rm -rf static/dist
     mv dist/dev static/dist
-    mkdir -p static/dist/assets/icons static/dist/assets/images
-    cp -R icons/. static/dist/assets/icons/
-    cp -R images/. static/dist/assets/images/
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
       docker compose restart app nginx
     else
       docker-compose restart app nginx
     fi
-    rm -rf dist icons images
+    rm -rf dist
   "
   rm -rf dist
 }

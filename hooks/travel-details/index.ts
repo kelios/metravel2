@@ -43,3 +43,5 @@ export function useTravelDetails(args: {
     scroll,
   }), [data, layout, navigation, performance, menu, scroll])
 }
+
+export default useTravelDetails

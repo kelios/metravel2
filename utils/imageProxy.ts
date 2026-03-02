@@ -99,7 +99,7 @@ export function optimizeImageUrl(
     if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
 
     const imagePath = parsedUrl.pathname + parsedUrl.search;
-    const optimizedUrl = `${publicOrigin}/img${imagePath}${imagePath.includes('?') ? '&' : '?'}${proxyParams.toString()}`;
+    const optimizedUrl = `${publicOrigin}${imagePath}${imagePath.includes('?') ? '&' : '?'}${proxyParams.toString()}`;
 
     if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
       const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 50);

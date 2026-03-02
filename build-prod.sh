@@ -74,14 +74,6 @@ deploy_prod() {
     ./dist/ \
     sx3@178.172.137.129:/home/sx3/metravel/dist/
 
-  rsync -avzhe "ssh" --delete \
-    ./assets/icons/ \
-    sx3@178.172.137.129:/home/sx3/metravel/icons/
-
-  rsync -avzhe "ssh" --delete \
-    ./assets/images/ \
-    sx3@178.172.137.129:/home/sx3/metravel/images/
-
   ssh sx3@178.172.137.129 "set -e
     cd /home/sx3/metravel
     mkdir -p static
@@ -102,15 +94,12 @@ deploy_prod() {
     # HTML shell still switches atomically to the new build below.
     mv static/dist.new static/dist
     rm -rf static/dist.old
-    mkdir -p static/dist/assets/icons static/dist/assets/images
-    cp -R icons/. static/dist/assets/icons/
-    cp -R images/. static/dist/assets/images/
     if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
       docker compose restart app nginx
     else
       docker-compose restart app nginx
     fi
-    rm -rf dist icons images
+    rm -rf dist
   "
 
   rm -rf dist
