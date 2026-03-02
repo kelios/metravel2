@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 /**
  * Глубокая проверка равенства для объектов и массивов
  */
-function deepEqual(a: any, b: any): boolean {
+function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;
@@ -13,11 +13,11 @@ function deepEqual(a: any, b: any): boolean {
     return a.every((item, index) => deepEqual(item, b[index]));
   }
   
-  if (typeof a === 'object') {
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
+  if (typeof a === 'object' && typeof b === 'object') {
+    const keysA = Object.keys(a as Record<string, unknown>);
+    const keysB = Object.keys(b as Record<string, unknown>);
     if (keysA.length !== keysB.length) return false;
-    return keysA.every(key => deepEqual(a[key], b[key]));
+    return keysA.every(key => deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]));
   }
   
   return false;

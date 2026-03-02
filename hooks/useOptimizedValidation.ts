@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
-import { validateTravelForm, ValidationError, ValidationResult } from '@/utils/formValidation';
+import { validateTravelForm, ValidationError, ValidationResult, type TravelFormValidation } from '@/utils/formValidation';
 
 interface UseOptimizedValidationOptions {
   enabled?: boolean;
@@ -75,7 +75,7 @@ export function useOptimizedValidation<T extends object>(
         if (!mountedRef.current) return;
 
         try {
-          const result = validateTravelForm(data as any);
+          const result = validateTravelForm(data as unknown as TravelFormValidation);
           lastValidatedDataRef.current = { ...data };
 
           setState({
