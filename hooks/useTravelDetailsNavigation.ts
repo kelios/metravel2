@@ -15,7 +15,7 @@ export interface UseTravelDetailsNavigationArgs {
 export interface UseTravelDetailsNavigationReturn {
   anchors: AnchorsMap
   scrollTo: (key: string) => void
-  scrollRef: RefObject<any>
+  scrollRef: RefObject<unknown>
   activeSection: string
   setActiveSection: (section: string) => void
   forceOpenKey: string | null
@@ -41,12 +41,11 @@ export function useTravelDetailsNavigation({
     let rafId: number | null = null
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
-    const isDocumentScrollEl = (node: any): boolean => {
+    const isDocumentScrollEl = (node: unknown): boolean => {
       try {
         if (typeof document === 'undefined') return true
-        const docAny = document as any
-        const scrollingEl = (document.scrollingElement || docAny.documentElement || docAny.body) as any
-        return node === window || node === document || node === docAny.body || node === docAny.documentElement || node === scrollingEl
+        const scrollingEl = document.scrollingElement || document.documentElement || document.body
+        return node === window || node === document || node === document.body || node === document.documentElement || node === scrollingEl
       } catch {
         return true
       }
@@ -78,24 +77,24 @@ export function useTravelDetailsNavigation({
     }
 
     const readNode = (): HTMLElement | null => {
-      const scrollViewAny = scrollRef.current as any
+      const scrollViewRef = scrollRef.current as unknown as Record<string, unknown> | null
       const node: HTMLElement | null =
-        (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
-        scrollViewAny?._scrollNode ||
-        scrollViewAny?._innerViewNode ||
-        scrollViewAny?._nativeNode ||
-        scrollViewAny?._domNode ||
+        (typeof scrollViewRef?.getScrollableNode === 'function' && (scrollViewRef.getScrollableNode as () => HTMLElement | null)()) ||
+        (scrollViewRef?._scrollNode as HTMLElement | null) ||
+        (scrollViewRef?._innerViewNode as HTMLElement | null) ||
+        (scrollViewRef?._nativeNode as HTMLElement | null) ||
+        (scrollViewRef?._domNode as HTMLElement | null) ||
         null
 
-      if (node && typeof node === 'object' && typeof (node as any).getBoundingClientRect === 'function') {
+      if (node && typeof node === 'object' && typeof (node as HTMLElement).getBoundingClientRect === 'function') {
         return node
       }
 
       if (typeof document !== 'undefined') {
         try {
-          const byTestId = document.querySelector('[data-testid="travel-details-scroll"]') as any
+          const byTestId = document.querySelector<HTMLElement>('[data-testid="travel-details-scroll"]')
           if (byTestId && typeof byTestId.getBoundingClientRect === 'function') {
-            return byTestId as HTMLElement
+            return byTestId
           }
         } catch {
           // noop
@@ -136,10 +135,10 @@ export function useTravelDetailsNavigation({
 
       const raf =
         (typeof window !== 'undefined' && window.requestAnimationFrame) ||
-        (typeof globalThis !== 'undefined' && (globalThis as any).requestAnimationFrame)
+        (typeof globalThis !== 'undefined' && (globalThis as unknown as { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame)
 
       if (typeof raf === 'function') {
-        rafId = raf(() => tick()) as any
+        rafId = raf(() => tick())
       } else {
         timeoutId = setTimeout(() => tick(), 16)
       }
