@@ -123,19 +123,29 @@ test.describe('@smoke Google auth', () => {
       return Boolean(state?.initialized) && Boolean(state?.rendered);
     });
 
-    const googleButton = page.getByRole('button', { name: 'Войти через Google' });
+    const googleButton = page.getByRole('button', { name: 'Войти через Google' }).first();
     await expect(googleButton).toBeVisible({ timeout: 15_000 });
     await expect(googleButton).toBeEnabled();
 
     await googleButton.click();
 
     await page.evaluate(() => {
+      const win = window as unknown as {
+        google?: {
+          accounts?: {
+            id?: {
+              prompt?: () => void;
+            };
+          };
+        };
+      };
+
       const state = (window as unknown as Record<string, unknown>).__e2eGoogleState as
         | { promptCalls?: number }
         | undefined;
 
       if ((state?.promptCalls ?? 0) === 0) {
-        window.google?.accounts?.id?.prompt();
+        win.google?.accounts?.id?.prompt?.();
       }
     });
 

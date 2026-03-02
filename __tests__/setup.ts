@@ -42,6 +42,9 @@ console.warn = (message, ...args) => {
   if (text.startsWith('Could not load quest progress from server:')) {
     return
   }
+  if (text.includes('InteractionManager has been deprecated')) {
+    return
+  }
   originalWarn(message, ...args);
 };
 
