@@ -42,7 +42,7 @@ const NativeVideoLazy = lazy(() =>
                 <m.Video
                     {...props}
                     resizeMode={m.ResizeMode.CONTAIN}
-                    // @ts-ignore
+                    // @ts-ignore -- playsInline is a web-only video attribute not in expo-av Video types
                     playsInline
                 />
             );
@@ -58,14 +58,14 @@ const WebVideo = memo(function WebVideo({ src, poster, onError }: { src?: string
         }
     }, [src]);
     
-    // @ts-ignore - RNW allows direct DOM element creation
+    // @ts-ignore -- React Native Web allows direct DOM element creation via React.createElement
     return React.createElement('video', {
         src,
         poster,
         controls: true,
         playsInline: true,
         preload: 'metadata',
-        // @ts-ignore
+        // @ts-ignore -- inline style object for web video element, not a RN StyleSheet type
         style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' },
         onError: (e: any) => {
             console.error('[WebVideo] Video error:', e?.target?.error);
@@ -130,7 +130,7 @@ const confirmAsync = async (title: string, message: string): Promise<boolean> =>
 const resolveUri = (src: any | undefined): string | undefined => {
     if (!src) return undefined;
     if (typeof src === 'string') return src;
-    // @ts-ignore
+    // @ts-ignore -- Image.resolveAssetSource is a RN internal API not in public type declarations
     const u = Image.resolveAssetSource?.(src)?.uri;
     return u;
 };
@@ -139,7 +139,7 @@ const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: bool
     const { styles } = useQuestWizardTheme();
     const scale = useRef(new Animated.Value(1)).current;
     const shouldUseNativeDriver = Platform.OS !== 'web';
-    // @ts-ignore
+    // @ts-ignore -- Animated.event nativeEvent type narrowing requires explicit cast for pinch gesture
     const onPinchEvent = Animated.event([{ nativeEvent: { scale } }], { useNativeDriver: shouldUseNativeDriver });
     const onPinchStateChange = (e: any) => {
         if (e.nativeEvent.oldState === State.ACTIVE) Animated.spring(scale, { toValue: 1, useNativeDriver: shouldUseNativeDriver }).start();

@@ -102,9 +102,9 @@ export default function ThemeToggle({
             testID={`theme-toggle-${option.value}`}
             {...(Platform.OS === 'web'
               ? {
-                  // @ts-ignore
+                  // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN Pressable types
                   'aria-label': `Выбрать тему: ${option.label}`,
-                  // @ts-ignore
+                  // @ts-ignore -- aria-checked is a web-only ARIA attribute not in RN Pressable types
                   'aria-checked': isActive,
                 }
               : {})}

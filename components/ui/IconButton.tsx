@@ -159,7 +159,7 @@ const getStyles = (colors: ThemedColors) => {
           transition: 'all 0.2s ease',
           cursor: 'pointer',
           boxShadow: boxShadows.light,
-          // @ts-ignore
+          // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
           ':hover': {
             backgroundColor: colors.primarySoft,
             transform: 'scale(1.05)',

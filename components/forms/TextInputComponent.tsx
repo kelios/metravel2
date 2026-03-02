@@ -138,7 +138,7 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                 {...Platform.select({
                     web: {
                         outlineWidth: 0,
-                        // @ts-ignore
+                        // @ts-ignore -- CSS pseudo-selector :focus is web-only, not in RN style types
                         ':focus': {
                             borderColor: error ? colors.danger : colors.primary,
                             outlineWidth: 2,

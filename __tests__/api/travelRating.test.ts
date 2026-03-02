@@ -5,11 +5,20 @@ import { useAuthStore } from '@/stores/authStore';
 jest.mock('@/api/client', () => {
   const post = jest.fn();
   const get = jest.fn();
+  // Minimal ApiError class so instanceof checks work in tests
+  class ApiError extends Error {
+    status: number;
+    constructor(message: string, status: number) {
+      super(message);
+      this.status = status;
+    }
+  }
   return {
     apiClient: {
       post,
       get,
     },
+    ApiError,
   };
 });
 
@@ -80,7 +89,9 @@ describe('api/travelRating', () => {
   it('getUserTravelRating returns null on 404', async () => {
     useAuthStore.setState({ userId: '77' });
 
-    (apiClient.get as unknown as jest.Mock).mockRejectedValue({ status: 404 });
+    // Create ApiError instance via the mocked module
+    const { ApiError } = jest.requireMock('@/api/client') as { ApiError: new (msg: string, status: number) => Error & { status: number } };
+    (apiClient.get as unknown as jest.Mock).mockRejectedValue(new ApiError('Not found', 404));
 
     const result = await getUserTravelRating(50);
 

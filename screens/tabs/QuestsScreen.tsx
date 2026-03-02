@@ -407,7 +407,7 @@ export default function QuestsScreen() {
                     <View style={sx(s.hero, isMobile && s.heroMobile)}>
                         <View style={s.heroIconWrap}>
                             <Suspense fallback={null}>
-                                {/* @ts-ignore */}
+                                {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                                 <Ion name="compass" size={isMobile ? 20 : 26} color={ui.primary} />
                             </Suspense>
                         </View>
@@ -421,7 +421,7 @@ export default function QuestsScreen() {
                         <Link href="/quests/map" asChild>
                             <Pressable style={sx(s.mapBtn, isMobile && s.mapBtnMobile)}>
                                 <Suspense fallback={null}>
-                                    {/* @ts-ignore */}
+                                    {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                                     <Ion name="map" size={14} color={colors.textOnPrimary} />
                                 </Suspense>
                                 <Text style={s.mapBtnTxt}>Карта</Text>
@@ -528,7 +528,7 @@ export default function QuestsScreen() {
                                 {prioritizedCities.length === 0 ? (
                                     <View style={s.emptyState}>
                                         <Suspense fallback={null}>
-                                            {/* @ts-ignore */}
+                                            {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                                             <Ion name="search" size={16} color={colors.textMuted} />
                                         </Suspense>
                                         <Text style={s.emptyText}>По вашему запросу города не найдены.</Text>
@@ -570,7 +570,7 @@ export default function QuestsScreen() {
                             {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 ? (
                                 <View style={s.emptyState}>
                                     <Suspense fallback={null}>
-                                        {/* @ts-ignore */}
+                                        {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                                         <Ion name="alert-circle" size={16} color={colors.textMuted} />
                                     </Suspense>
                                     <Text style={s.emptyText}>Рядом ничего не найдено. Попробуйте увеличить радиус.</Text>
@@ -620,14 +620,14 @@ function QuestCardLink({
         <View style={sx(s.questMetaRow, isMobile && s.questMetaRowMobile)}>
             <View style={s.metaItem}>
                 <Suspense fallback={null}>
-                    {/* @ts-ignore */}
+                    {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                     <Ion name="navigate" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
                 </Suspense>
                 <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>{quest.points}</Text>
             </View>
             <View style={s.metaItem}>
                 <Suspense fallback={null}>
-                    {/* @ts-ignore */}
+                    {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                     <Ion name="time" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
                 </Suspense>
                 <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>{durationText}</Text>
@@ -635,7 +635,7 @@ function QuestCardLink({
             {nearby && typeof quest._distanceKm === 'number' && (
                 <View style={s.metaItem}>
                     <Suspense fallback={null}>
-                        {/* @ts-ignore */}
+                        {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                         <Ion name="walk" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
                     </Suspense>
                     <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>

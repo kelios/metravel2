@@ -90,7 +90,7 @@ const WebMainImage = memo(function WebMainImage({
       }}
       loading={loading}
       decoding="async"
-      // @ts-ignore
+      // @ts-ignore -- fetchPriority is a valid HTML attribute not yet in React types
       fetchPriority={priority === 'high' ? 'high' : 'auto'}
       onLoad={handleLoad}
       onError={onError}

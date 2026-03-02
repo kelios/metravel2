@@ -167,7 +167,7 @@ export default function ErrorDisplay({
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
-                  // @ts-ignore
+                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
                   ':hover': {
                     opacity: 0.9,
                   },
@@ -193,7 +193,7 @@ export default function ErrorDisplay({
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
-                  // @ts-ignore
+                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
                   ':hover': {
                     opacity: 0.8,
                   },
@@ -214,7 +214,7 @@ export default function ErrorDisplay({
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
-                  // @ts-ignore
+                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
                   ':hover': {
                     opacity: 0.7,
                   },

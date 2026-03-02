@@ -276,7 +276,7 @@ function CollapsibleBlock({
       ]}
       {...Platform.select({
         web: {
-          // @ts-ignore
+          // @ts-ignore -- data-block-id is a web-only data attribute not in RN View types
           'data-block-id': id,
         },
       })}

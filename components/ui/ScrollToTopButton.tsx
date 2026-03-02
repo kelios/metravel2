@@ -41,7 +41,7 @@ function ScrollToTopButton({
 	        ? ({
 	            boxShadow: colors.boxShadows.medium,
 	            transition: 'all 0.2s ease',
-	            // @ts-ignore
+	            // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
 	            ':hover': {
 	              backgroundColor: colors.primaryDark, // Темнее primary для hover
 	              transform: 'translateY(-2px) scale(1.05)',
@@ -135,9 +135,9 @@ function ScrollToTopButton({
         {...Platform.select({
           web: { 
             cursor: 'pointer',
-            // @ts-ignore
+            // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN Pressable types
             'aria-label': 'Прокрутить наверх',
-            // @ts-ignore
+            // @ts-ignore -- tabIndex is a web-only attribute not in RN Pressable types
             tabIndex: 0,
           },
         })}

@@ -42,12 +42,12 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
           <View
             style={{
               ...StyleSheet.absoluteFillObject,
-              // @ts-ignore — web-only CSS property
+              // @ts-ignore -- backgroundImage is a web-only CSS property not in RN style types
               backgroundImage:
                 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.08) 80%, transparent 100%)',
-              // @ts-ignore
+              // @ts-ignore -- animation is a web-only CSS property not in RN style types
               animation: 'slider-shimmer 1.8s ease-in-out infinite',
-              // @ts-ignore
+              // @ts-ignore -- willChange is a web-only CSS property not in RN style types
               willChange: 'transform',
             }}
           />

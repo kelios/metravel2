@@ -128,7 +128,7 @@ describe('ImageGalleryComponent.web', () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://example.test/api';
 
     // jsdom treats window.location as readonly; redefine for deterministic origin.
-    // @ts-ignore
+    // @ts-ignore -- jsdom readonly window.location: must delete before reassigning in tests
     delete (window as any).location;
     const href = 'http://localhost:8081/travel/42';
     (window as any).location = {
@@ -153,7 +153,7 @@ describe('ImageGalleryComponent.web', () => {
     URL.createObjectURL = originalCreateObjectURL;
 
     // restore jsdom location
-    // @ts-ignore
+    // @ts-ignore -- jsdom readonly window.location: must delete before restoring in tests
     delete (window as any).location;
     (window as any).location = originalWindowLocation;
   });

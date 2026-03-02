@@ -125,7 +125,7 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
                 {...Platform.select({
                     web: {
                         outlineWidth: 0,
-                        // @ts-ignore
+                        // @ts-ignore -- CSS pseudo-selector :focus is web-only, not in RN style types
                         ':focus': {
                             borderColor: displayError ? colors.danger : colors.primary,
                         },

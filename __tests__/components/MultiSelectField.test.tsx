@@ -28,7 +28,7 @@ describe('MultiSelectField', () => {
 
   it('renders label when provided', () => {
     const { getByText } = render(
-      // @ts-ignore
+      // @ts-ignore -- test passes intentionally loose props to verify label rendering
       <MultiSelectField
         label="Категории"
         items={items as any}
@@ -44,7 +44,7 @@ describe('MultiSelectField', () => {
 
   it('renders without crashing', () => {
     const { getByTestId } = render(
-      // @ts-ignore
+      // @ts-ignore -- intentional loose props for testing primitive items array
       <MultiSelectField
         label="Одна категория"
         items={['a', 'b'] as any}
@@ -62,7 +62,7 @@ describe('MultiSelectField', () => {
     const handleChange = jest.fn()
 
     const { getByTestId } = render(
-      // @ts-ignore
+      // @ts-ignore -- intentional loose props for testing primitive items array
       <MultiSelectField
         label="Одна категория"
         items={['a', 'b'] as any}
@@ -86,8 +86,7 @@ describe('MultiSelectField', () => {
     const handleChange = jest.fn()
 
     const { getByTestId } = render(
-      // @ts-ignore
-      // @ts-ignore
+      // @ts-ignore -- intentional loose props for testing object items array in single mode
       <MultiSelectField
         label="Несколько категорий"
         items={items as any}
@@ -111,7 +110,7 @@ describe('MultiSelectField', () => {
     const handleChange = jest.fn()
 
     const { getByTestId } = render(
-      // @ts-ignore
+      // @ts-ignore -- intentional loose props for testing multi-select mode
       <MultiSelectField
         label="Несколько категорий"
         items={items as any}
@@ -133,8 +132,7 @@ describe('MultiSelectField', () => {
     const onChange = jest.fn()
 
     const { getByTestId } = render(
-      // @ts-ignore
-      // @ts-ignore
+      // @ts-ignore -- intentional loose props for testing multi-select with object items
       <MultiSelectField
         label="Несколько категорий"
         items={items as any}
@@ -153,7 +151,7 @@ describe('MultiSelectField', () => {
     const onChange = jest.fn()
 
     const { getByTestId } = render(
-      // @ts-ignore
+      // @ts-ignore -- intentional loose props for testing empty value in multi-select
       <MultiSelectField
         label="Несколько категорий"
         items={items as any}

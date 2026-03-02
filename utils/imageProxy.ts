@@ -52,13 +52,13 @@ export function getImageCacheStats(): { size: number; entries: number } {
 }
 
 export function optimizeImageUrl(
-  originalUrl: string,
+  originalUrl: string | null | undefined,
   options: ImageOptimizationOptions = {}
-): string {
-  if (!originalUrl) return originalUrl;
+): string | undefined {
+  if (originalUrl == null || originalUrl === '') return undefined;
 
   const trimmedUrl = originalUrl.trim();
-  if (!trimmedUrl) return originalUrl;
+  if (!trimmedUrl) return undefined;
 
   if (/^data:/i.test(trimmedUrl) || /^blob:/i.test(trimmedUrl)) return originalUrl;
 
@@ -86,7 +86,8 @@ export function optimizeImageUrl(
     }
 
     const format = options.format || 'auto';
-    const quality = options.quality || (Platform.OS === 'web' ? 80 : 75);
+    const rawQuality = options.quality != null ? options.quality : (Platform.OS === 'web' ? 80 : 75);
+    const quality = Math.min(100, Math.max(1, rawQuality));
     const fit = options.fit || 'cover';
 
     const proxyParams = new URLSearchParams();
@@ -95,6 +96,7 @@ export function optimizeImageUrl(
     proxyParams.set('q', String(quality));
     if (format !== 'auto') proxyParams.set('f', format);
     proxyParams.set('fit', fit);
+    if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
 
     const imagePath = parsedUrl.pathname + parsedUrl.search;
     const optimizedUrl = `${publicOrigin}/img${imagePath}${imagePath.includes('?') ? '&' : '?'}${proxyParams.toString()}`;

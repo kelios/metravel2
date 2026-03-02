@@ -14,12 +14,12 @@ describe('Preload URL synchronization', () => {
   };
 
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-ignore -- jsdom test environment: assigning mock window object for isolation
     global.window = mockWindow;
   });
 
   afterEach(() => {
-    // @ts-ignore
+    // @ts-ignore -- jsdom test environment: restoring window to undefined after test
     global.window = undefined;
   });
 

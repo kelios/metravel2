@@ -298,7 +298,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
       transform: [{ scale: 0.99 }],
       ...Platform.select({
         web: {
-          // @ts-ignore
+          // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
           boxShadow: boxShadows.light,
         },
@@ -308,7 +308,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
       transform: [{ scale: 0.99 }],
       ...Platform.select({
         web: {
-          // @ts-ignore
+          // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
         },
       }),
@@ -317,7 +317,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
       transform: [{ scale: 0.99 }],
       ...Platform.select({
         web: {
-          // @ts-ignore
+          // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
         },
       }),
@@ -326,7 +326,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
       transform: [{ scale: 0.99 }],
       ...Platform.select({
         web: {
-          // @ts-ignore
+          // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
           boxShadow: boxShadows.light,
         },
@@ -336,7 +336,7 @@ const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, Vi
       transform: [{ scale: 0.99 }],
       ...Platform.select({
         web: {
-          // @ts-ignore
+          // @ts-ignore -- web transform string type conflicts with RN transform array type
           transform: 'translateY(0)',
         },
       }),

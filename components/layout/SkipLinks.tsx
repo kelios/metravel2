@@ -79,7 +79,7 @@ export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
           accessibilityLabel={link.label}
           {...Platform.select({
             web: {
-              // @ts-ignore
+              // @ts-ignore -- tabIndex is a web-only attribute not in RN Pressable types
               tabIndex: 0,
             },
           })}
@@ -116,7 +116,7 @@ const createLinkStyle = (colors: ThemedColors) => ({
       boxShadow: DESIGN_TOKENS.shadows.medium,
       transition: 'all 0.2s ease',
       cursor: 'pointer',
-      // @ts-ignore
+      // @ts-ignore -- CSS pseudo-selector :focus is web-only, not in RN style types
       ':focus': {
         outlineWidth: 3,
         outlineStyle: 'solid',

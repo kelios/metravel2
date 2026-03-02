@@ -152,7 +152,7 @@ const NumberInputComponent: React.FC<NumberInputComponentProps> = ({
                 accessibilityState={{ disabled }}
                 {...Platform.select({
                     web: {
-                        // @ts-ignore
+                        // @ts-ignore -- aria-required is web-only ARIA attribute not in RN types
                         'aria-required': required,
                         'aria-invalid': !!error,
                         'aria-describedby': error ? 'error-message' : hint ? 'hint-message' : undefined,
@@ -166,7 +166,7 @@ const NumberInputComponent: React.FC<NumberInputComponentProps> = ({
                     style={styles.hint}
                     {...Platform.select({
                         web: {
-                            // @ts-ignore
+                            // @ts-ignore -- id is a web-only attribute not in RN Text style types
                             id: 'hint-message',
                         },
                     })}
@@ -183,7 +183,7 @@ const NumberInputComponent: React.FC<NumberInputComponentProps> = ({
                     accessibilityLiveRegion="polite"
                     {...Platform.select({
                         web: {
-                            // @ts-ignore
+                            // @ts-ignore -- id is a web-only attribute not in RN View style types
                             id: 'error-message',
                             role: 'alert',
                         },

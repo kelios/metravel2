@@ -88,7 +88,7 @@ export default function QuestByIdScreen() {
                 )}
                 <View style={styles.authGate}>
                     <Suspense fallback={null}>
-                        {/* @ts-ignore */}
+                        {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                         <Ion name="lock-closed" size={36} color={colors.primary} />
                     </Suspense>
                     <Text style={styles.authGateTitle}>Войдите, чтобы начать квест</Text>
@@ -98,7 +98,7 @@ export default function QuestByIdScreen() {
                     <Link href="/login" asChild>
                         <Pressable style={styles.backBtn}>
                             <Suspense fallback={null}>
-                                {/* @ts-ignore */}
+                                {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                                 <Ion name="log-in-outline" size={18} color={colors.textOnPrimary} />
                             </Suspense>
                             <Text style={styles.backBtnTxt}>Войти или зарегистрироваться</Text>
@@ -135,7 +135,7 @@ export default function QuestByIdScreen() {
                 )}
                 <View style={styles.notFound}>
                     <Suspense fallback={null}>
-                        {/* @ts-ignore */}
+                        {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                         <Ion name="alert-circle" size={28} color={colors.textMuted} />
                     </Suspense>
                     <Text style={styles.notFoundTitle}>Квест не найден</Text>
@@ -143,7 +143,7 @@ export default function QuestByIdScreen() {
                     <Link href="/quests" asChild>
                         <Pressable style={styles.backBtn}>
                             <Suspense fallback={null}>
-                                {/* @ts-ignore */}
+                                {/* @ts-ignore -- Ionicons name prop types are incomplete for all valid icon names */}
                                 <Ion name="arrow-back" size={16} color={colors.textOnPrimary} />
                             </Suspense>
                             <Text style={styles.backBtnTxt}>К списку квестов</Text>

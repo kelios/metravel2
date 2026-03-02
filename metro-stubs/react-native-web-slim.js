@@ -43,8 +43,7 @@ const Share = require('react-native-web/dist/exports/Share').default;
 const useWindowDimensions = require('react-native-web/dist/exports/useWindowDimensions').default;
 const useColorScheme = require('react-native-web/dist/exports/useColorScheme').default;
 
-// Event types
-const LayoutChangeEvent = undefined; // Type-only, no runtime value
+// Event types (type-only, not exported at runtime)
 
 module.exports = {
   // Components

@@ -222,7 +222,7 @@ function SearchAutocomplete({
         {...Platform.select({
           web: {
             cursor: 'pointer',
-            // @ts-ignore
+            // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
             ':hover': {
               backgroundColor: colors.primarySoft,
             },

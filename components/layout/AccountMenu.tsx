@@ -306,9 +306,9 @@ function AccountMenu() {
           testID="account-menu-anchor"
           {...(Platform.OS === 'web'
             ? ({
-                // @ts-ignore
+                // @ts-ignore -- aria-haspopup is a web-only ARIA attribute not in RN Pressable types
                 'aria-haspopup': 'menu',
-                // @ts-ignore
+                // @ts-ignore -- aria-expanded is a web-only ARIA attribute not in RN Pressable types
                 'aria-expanded': visible,
               } as any)
             : {})}

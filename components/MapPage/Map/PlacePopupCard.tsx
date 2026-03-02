@@ -88,7 +88,7 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
             boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
           }}
           loading="eager"
-          // @ts-ignore
+          // @ts-ignore -- fetchPriority is a valid HTML attribute not yet in React types
           fetchPriority="high"
           decoding="async"
         />

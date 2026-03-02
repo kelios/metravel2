@@ -356,7 +356,7 @@ function StickySearchBar({
             accessibilityLabel="Поиск путешествий"
             {...Platform.select({
               web: {
-                // @ts-ignore
+                // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN TextInput types
                 'aria-label': `Поиск путешествий. Нажмите ${shortcutLabel} для быстрого доступа`,
               },
             })}

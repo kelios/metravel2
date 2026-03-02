@@ -87,15 +87,15 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         ]}
                         {...Platform.select({
                             web: {
-                                // @ts-ignore
+                                // @ts-ignore -- testID is a web-only test attribute not in RN View types
                                 testID: 'confirm-dialog',
-                                // @ts-ignore
+                                // @ts-ignore -- role dialog is a web-only ARIA role not in RN View types
                                 role: 'dialog',
-                                // @ts-ignore
+                                // @ts-ignore -- aria-modal is a web-only ARIA attribute not in RN View types
                                 'aria-modal': true,
-                                // @ts-ignore
+                                // @ts-ignore -- aria-labelledby is a web-only ARIA attribute not in RN View types
                                 'aria-labelledby': 'dialog-title',
-                                // @ts-ignore
+                                // @ts-ignore -- aria-describedby is a web-only ARIA attribute not in RN View types
                                 'aria-describedby': 'dialog-message',
                             },
                         })}
@@ -104,7 +104,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                             style={styles.dialogTitle}
                             {...Platform.select({
                                 web: {
-                                    // @ts-ignore
+                                    // @ts-ignore -- id is a web-only attribute not in RN Text types
                                     id: 'dialog-title',
                                 },
                             })}
@@ -115,7 +115,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                             style={styles.dialogText}
                             {...Platform.select({
                                 web: {
-                                    // @ts-ignore
+                                    // @ts-ignore -- id is a web-only attribute not in RN Text types
                                     id: 'dialog-message',
                                 },
                             })}
@@ -133,9 +133,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                 accessibilityLabel={cancelText}
                                 {...Platform.select({
                                     web: {
-                                        // @ts-ignore
+                                        // @ts-ignore -- ref forwarding for focus trap, web-only TouchableOpacity prop
                                         ref: cancelButtonRef as any,
-                                        // @ts-ignore
+                                        // @ts-ignore -- tabIndex is a web-only attribute not in RN types
                                         tabIndex: 0,
                                     },
                                 })}
@@ -152,7 +152,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                 accessibilityLabel={confirmText}
                                 {...Platform.select({
                                     web: {
-                                        // @ts-ignore
+                                        // @ts-ignore -- tabIndex is a web-only attribute not in RN types
                                         tabIndex: 0,
                                     },
                                 })}
@@ -207,7 +207,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                     style={styles.dialogTitle}
                     {...Platform.select({
                         web: {
-                            // @ts-ignore
+                            // @ts-ignore -- id is a web-only attribute not in RN Dialog.Title types
                             id: 'dialog-title',
                         },
                     })}
@@ -219,7 +219,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         style={styles.dialogText}
                         {...Platform.select({
                             web: {
-                                // @ts-ignore
+                                // @ts-ignore -- id is a web-only attribute not in RN Text types
                                 id: 'dialog-message',
                             },
                         })}
@@ -239,9 +239,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         accessibilityLabel={cancelText}
                         {...Platform.select({
                             web: {
-                                // @ts-ignore - ref для focus trap, только для веб
+                                // @ts-ignore -- ref forwarding for focus trap, web-only TouchableOpacity prop
                                 ref: cancelButtonRef as any,
-                                // @ts-ignore
+                                // @ts-ignore -- tabIndex is a web-only attribute not in RN types
                                 tabIndex: 0,
                             },
                         })}
@@ -259,7 +259,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         accessibilityLabel={confirmText}
                         {...Platform.select({
                             web: {
-                                // @ts-ignore
+                                // @ts-ignore -- tabIndex is a web-only attribute not in RN types
                                 tabIndex: 0,
                             },
                         })}
@@ -337,7 +337,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             web: {
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
-                // @ts-ignore
+                // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
                 ':hover': {
                     backgroundColor: colors.primaryLight,
                 },
@@ -366,7 +366,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 cursor: 'pointer',
                 boxShadow: DESIGN_TOKENS.shadows.light,
-                // @ts-ignore
+                // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
                 ':hover': {
                     backgroundColor: colors.dangerDark,
                     transform: 'translateY(-1px)',

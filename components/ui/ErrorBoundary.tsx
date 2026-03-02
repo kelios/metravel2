@@ -159,7 +159,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: colors.boxShadows.light,
-        // @ts-ignore
+        // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
         ':hover': {
           backgroundColor: colors.primaryDark,
           transform: 'translateY(-1px)',
@@ -174,7 +174,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        // @ts-ignore
+        // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
         ':hover': {
           backgroundColor: colors.primarySoft,
         },

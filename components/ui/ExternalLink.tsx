@@ -40,7 +40,7 @@ export function ExternalLink(
       accessibilityRole="link"
       accessibilityHint="Открывает внешнюю ссылку"
       {...(Platform.OS === 'web' ? {
-        // @ts-ignore
+        // @ts-ignore -- aria-label is a web-only ARIA attribute not in RN Pressable types
         'aria-label': `Перейти по ссылке: ${props.href}`,
       } : {})}
     />

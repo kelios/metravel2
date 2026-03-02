@@ -158,7 +158,7 @@ export function useSliderLogic(options: UseSliderLogicOptions): UseSliderLogicRe
       setReduceMotion(!!v)
     );
     return () => {
-      // @ts-ignore
+      // @ts-ignore -- AccessibilityInfo subscription type changed between RN versions, remove() may not exist
       sub?.remove?.();
       active = false;
     };
@@ -297,7 +297,7 @@ export function useSliderLogic(options: UseSliderLogicOptions): UseSliderLogicRe
       }
     });
     return () => {
-      // @ts-ignore
+      // @ts-ignore -- AppState subscription type changed between RN versions, remove() may not exist
       sub?.remove?.();
     };
   }, [scheduleAutoplay, clearAutoplay, isWeb]);

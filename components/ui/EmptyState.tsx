@@ -206,7 +206,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        // @ts-ignore
+        // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
         ':hover': {
           backgroundColor: colors.primarySoft,
         },
