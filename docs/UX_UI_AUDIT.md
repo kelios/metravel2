@@ -154,11 +154,11 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | TD-01 | Галерея изображений на мобайле — горизонтальный скролл без индикатора количества фото | P1 |
-| TD-02 | Кнопка «В избранное» маленькая (icon-only) — нет текстовой метки на мобайле, трудно понять действие | P1 |
-| TD-03 | `TravelSectionTabs` — горизонтальные табы с текстом. При длинных названиях разделов обрезается текст без tooltip | P2 |
-| TD-04 | Карта маршрута (`ToggleableMapSection`) — загружается даже если пользователь не нажимал «Показать на карте». Нужен lazy-init | P1 |
-| TD-05 | На десктопе боковая колонка (`CompactSideBarTravel`) — нет sticky-поведения при скролле основного контента | P2 |
-| TD-06 | Секция комментариев (`CommentsSection`) загружается мгновенно — конкурирует за ресурсы с главным контентом. Нужен Intersection Observer | P1 |
+| ~~TD-02~~ | Travel Detail | ✅ Текстовая метка «В избранное» / «В избранном» добавлена на мобайле |
+| TD-03 | Travel Detail | `TravelSectionTabs` — горизонтальные табы с текстом. При длинных названиях разделов обрезается текст без tooltip | P2 |
+| ~~TD-04~~ | Travel Detail | ✅ Lazy-init: карта закрыта по умолчанию, авто-открытие через IntersectionObserver на desktop |
+| TD-05 | Travel Detail | На десктопе боковая колонка (`CompactSideBarTravel`) — нет sticky-поведения при скролле основного контента | P2 |
+| ~~TD-06~~ | Travel Detail | ✅ CommentsSection монтируется через IntersectionObserver при scroll до секции + 6s fallback |
 | TD-07 | ✅ Уже реализовано через `HeaderContextBar` + `useBreadcrumbModel` — хлебные крошки показываются в шапке автоматически | — |
 
 ---
@@ -353,7 +353,7 @@ HERO-04: Добавить probes-reduce-motion:
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
 | NAV-02 | BottomDock | `slide-up` sheet вместо fade-Modal |
-| NAV-12 | Header | Визуально выделить кнопку «Войти» как CTA |
+| ~~NAV-12~~ | ~~Header~~ | ~~Визуально выделить кнопку «Войти» как CTA~~ ✅ Реализовано — отдельная pill-кнопка для гостей |
 | HERO-03 | Hero | Первичная кнопка шире вторичной |
 | HERO-06 | Hero | Skeleton/hold для кнопки пока грузится travelsCount |
 | SEC-01 | TrustBlock | Grid планшет |
@@ -366,7 +366,7 @@ HERO-04: Добавить probes-reduce-motion:
 | RESP-04 | Везде | Fluid typography (clamp) |
 | RESP-05 | Везде | Landscape-оптимизация |
 | TYPO-01 | Везде | Градация fontWeight |
-| DARK-01 | ThemeToggle | Доступность переключателя темы на мобайле |
+| ~~DARK-01~~ | ~~ThemeToggle~~ | ~~Доступность переключателя темы на мобайле~~ ✅ Добавлен в меню «Ещё» BottomDock |
 | MAP-02 | Map | Кластеризация pin'ов |
 | EMPTY-01 | Везде | Последовательное применение EmptyState |
 | ANIM-03 | Buttons | Глобальный transition |

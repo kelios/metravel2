@@ -136,12 +136,12 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
 
         /* ---- Quests grid ---- */
         questsContainer: { gap: spacing.sm },
-        questsRow: { flexDirection: 'row', gap: spacing.md, flexWrap: 'wrap', justifyContent: 'flex-start' },
+        questsRow: { flexDirection: 'row', gap: spacing.md, flexWrap: 'nowrap', alignItems: 'stretch' },
         questsRowMobile: { gap: spacing.sm },
 
         /* ---- Quest card ---- */
         questCard: {
-            flexGrow: 1, flexShrink: 1, flexBasis: 300, minWidth: 260, maxWidth: 520,
+            flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0,
             borderRadius: radii.lg, overflow: 'hidden',
             borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
             ...Platform.select({
