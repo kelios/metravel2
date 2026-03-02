@@ -194,12 +194,12 @@ export function useTravelDetailsNavigation({
   useEffect(() => {
     const handler =
       Platform.OS === 'web'
-        ? (e: any) => handleSectionOpen(e?.detail?.key ?? '')
+        ? (e: Event) => handleSectionOpen((e as CustomEvent)?.detail?.key ?? '')
         : (key: string) => handleSectionOpen(key)
 
     if (Platform.OS === 'web') {
-      window.addEventListener('open-section', handler as unknown as EventListener, { passive: true } as any)
-      return () => window.removeEventListener('open-section', handler as unknown as EventListener)
+      window.addEventListener('open-section', handler as EventListener, { passive: true })
+      return () => window.removeEventListener('open-section', handler as EventListener)
     }
     const sub = DeviceEventEmitter.addListener('open-section', handler)
     return () => sub.remove()
@@ -222,7 +222,8 @@ export function useTravelDetailsNavigation({
       if (!ref?.current) return
 
       try {
-        const domNode: any = (ref.current as any)?._nativeNode || (ref.current as any)?._domNode || ref.current
+        const refCurrent = ref.current as unknown as Record<string, unknown> | null
+        const domNode = (refCurrent?._nativeNode || refCurrent?._domNode || ref.current) as HTMLElement | null
         if (!domNode || typeof domNode.setAttribute !== 'function') return
 
         const existing = typeof domNode.getAttribute === 'function' ? domNode.getAttribute('data-section-key') : null
