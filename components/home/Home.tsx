@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, Suspense, lazy, useState, memo, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useRef, Suspense, lazy, useState, memo, useMemo, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -49,8 +49,20 @@ function Home() {
   const isFocused = useIsFocused();
   const { isAuthenticated, userId } = useAuth();
   const colors = useThemedColors();
+  const queryClient = useQueryClient();
   const { isSmallPhone, isPhone } = useResponsive();
   const isMobile = isSmallPhone || isPhone;
+
+  // AND-14: Pull-to-Refresh state
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient]);
 
   // HERO-06: Загружаем количество путешествий для авторизованного пользователя
   // Только для авторизованных, чтобы кнопка сразу показывала нужный текст
@@ -156,6 +168,16 @@ function Home() {
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={isWeb ? 32 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
+      refreshControl={
+        Platform.OS !== 'web' ? (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        ) : undefined
+      }
     >
         <HomeHero travelsCount={travelsCount} travelsCountLoading={isAuthenticated && travelsCountLoading} />
 

@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
+  RefreshControl,
   type ViewStyle,
   type DimensionValue,
 } from 'react-native';
@@ -223,6 +224,17 @@ export default function ProfileScreen() {
       // storage read is non-critical
     }
   }, []);
+
+  // AND-14: Pull-to-Refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadTravels(), loadUserInfo()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadTravels, loadUserInfo]);
 
   const handleDeleteMyTravel = useCallback(async (travelId: number) => {
     try {
@@ -633,6 +645,11 @@ export default function ProfileScreen() {
         <ScrollView
           style={scrollViewStyle}
           contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
+          refreshControl={
+            Platform.OS !== 'web' ? (
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            ) : undefined
+          }
         >
           {Header}
           {isTravelsTabLoading ? ListSkeleton : (
