@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { ProfileStats } from '@/components/profile/ProfileStats';
+import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
 import { deleteTravel, fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
@@ -346,6 +348,7 @@ export default function ProfileScreen() {
   const handleQuickAction = useCallback((key: string) => {
     if (key === 'messages') router.push('/messages');
     else if (key === 'subscriptions') router.push('/subscriptions');
+    else if (key === 'userpoints') router.push('/userpoints');
     else router.push('/settings');
   }, [router]);
 
@@ -502,6 +505,21 @@ export default function ProfileScreen() {
               onAvatarUpload={pickAndUpload}
               avatarUploading={avatarUploading}
             />
+            {/* PROF-01: ProfileStats — visual hierarchy */}
+            <ProfileStats
+              stats={stats}
+              onPressStat={(key) => {
+                if (key === 'travels') setActiveTab('travels');
+                else if (key === 'favorites') setActiveTab('favorites');
+                else if (key === 'views') setActiveTab('history');
+              }}
+            />
+            {/* PROF-02: Прогресс-бар заполненности профиля */}
+            <ProfileCompleteness
+              user={userProp}
+              profile={profile}
+              travelsCount={stats.travelsCount}
+            />
             <ProfileQuickActions onPress={handleQuickAction} />
           </>
         )}
@@ -534,6 +552,7 @@ export default function ProfileScreen() {
       pickAndUpload,
       avatarUploading,
       handleQuickAction,
+      stats,
       tabCounts,
       activeTab,
       showClearButton,

@@ -8,6 +8,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { showToast } from '@/utils/toast';
+import { hapticImpact } from '@/utils/haptics';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 const UNFAVORITED_ICON_STYLE = { opacity: 0.55 } as const;
@@ -112,6 +113,8 @@ function FavoriteButton({
         // Оптимистичное обновление UI
         const newState = !isFav;
         setOptimisticIsFav(newState);
+        // ANIM-01: Haptic feedback при нажатии
+        hapticImpact(newState ? 'medium' : 'light');
 
         try {
             if (newState) {

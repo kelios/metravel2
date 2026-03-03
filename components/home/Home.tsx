@@ -8,6 +8,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
+import FadeInSection from '@/components/ui/FadeInSection';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 
@@ -124,14 +125,6 @@ function Home() {
     });
   }, [isFocused, isAuthenticated]);
 
-  const heavyFadeStyle = useMemo(
-    () =>
-      isWeb
-        ? ({ opacity: showHeavyContent ? 1 : 0, transition: 'opacity 0.3s ease' } as any)
-        : { opacity: showHeavyContent ? 1 : 0 },
-    [showHeavyContent],
-  );
-
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -172,7 +165,7 @@ function Home() {
       </Suspense>
 
       {showHeavyContent ? (
-        <View style={heavyFadeStyle}>
+        <FadeInSection>
           <Suspense fallback={
             <View style={TRUST_PLACEHOLDER_STYLE}>
               <View style={{ paddingHorizontal: skeletonPadH, paddingVertical: skeletonPadV, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
@@ -192,7 +185,7 @@ function Home() {
           }>
             <HomeTrustBlock />
           </Suspense>
-        </View>
+        </FadeInSection>
       ) : (
         <View style={TRUST_PLACEHOLDER_STYLE}>
           <View style={{ paddingHorizontal: skeletonPadH, paddingVertical: skeletonPadV, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
@@ -212,7 +205,7 @@ function Home() {
       )}
 
       {showHeavyContent ? (
-        <View style={heavyFadeStyle}>
+        <FadeInSection delay={100}>
           <Suspense fallback={
             <View style={HOW_IT_WORKS_PLACEHOLDER_STYLE}>
               <View style={{ paddingHorizontal: skeletonPadH, paddingVertical: skeletonPadVLarge, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
@@ -234,7 +227,7 @@ function Home() {
           }>
             <HomeHowItWorks />
           </Suspense>
-        </View>
+        </FadeInSection>
       ) : (
         <View style={HOW_IT_WORKS_PLACEHOLDER_STYLE}>
           <View style={{ paddingHorizontal: skeletonPadH, paddingVertical: skeletonPadVLarge, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
@@ -256,11 +249,11 @@ function Home() {
       )}
 
       {showHeavyContent ? (
-        <View style={heavyFadeStyle}>
+        <FadeInSection delay={200}>
           <Suspense fallback={<SectionSkeleton hydrated />}>
             <HomeInspirationSections />
           </Suspense>
-        </View>
+        </FadeInSection>
       ) : (
         <SectionSkeleton hydrated={false} />
       )}
@@ -283,7 +276,7 @@ function Home() {
       </Suspense>
 
       {showHeavyContent ? (
-        <View style={heavyFadeStyle}>
+        <FadeInSection delay={100}>
           <Suspense fallback={
             <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: isMobile ? 40 : 72 }]}>
               <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />
@@ -293,7 +286,7 @@ function Home() {
           }>
             <HomeFinalCTA />
           </Suspense>
-        </View>
+        </FadeInSection>
       ) : (
         <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: isMobile ? 40 : 72 }]}>
           <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />

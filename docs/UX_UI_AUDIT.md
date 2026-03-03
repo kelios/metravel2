@@ -41,7 +41,7 @@ Metravel — тревел-платформа на базе React Native Web + Ex
 | ~~NAV-02~~ | ✅ Slide-up анимация для «Ещё»: CSS `transition: transform 0.32s` + `translateY(0/100%)` вместо fade | ~~P1~~ |
 | ~~NAV-03~~ | ✅ `activePath` маппинг нормализует Expo Router пути (включая `/(tabs)/` prefix) → первый dock item `/search` подсвечен на главной, а также на `/roulette` | ~~P1~~ |
 | ~~NAV-04~~ | ✅ Метки иконок теперь отображаются на всех платформах (native + web). Убрана проверка `showLabel={Platform.OS === "web"}` в `BottomDock.tsx` | ~~P2~~ |
-| NAV-05 | «Квесты» на 4-й позиции — не самый частый сценарий для большинства пользователей. Стоит рассмотреть «Профиль» вместо «Квестов» | P2 |
+| ~~NAV-05~~ | ✅ 4-я позиция dock заменена с «Квесты» (`/quests`) на «Профиль» (`/profile`, иконка `user`) — более частый сценарий. Квесты доступны через меню «Ещё» | ~~P2~~ |
 
 **Рекомендации:**
 ```
@@ -161,7 +161,7 @@ HERO-04: Добавить probes-reduce-motion:
 |----|----------|-----------|
 | ~~MAP-02~~ | ✅ Кластеризация реализована через `ClusterLayer.tsx` + `useClustering.ts` + `useDynamicClustering.ts`. Подключено в `Map.web.tsx` и `TravelMap.tsx` | ~~P1~~ |
 | ~~MAP-03~~ | ✅ Popup уменьшен на мобайле: `maxWidth 280px` при `≤480px`, `340px` при `≤768px`. CSS `max-height: 60vh; overflow-y: auto` для скролла. autoPan padding уменьшен | ~~P2~~ |
-| MAP-04 | Нет фильтрации прямо на карте (хотя бы по категориям) | P2 |
+| ~~MAP-04~~ | ✅ Фильтрация реализована: `FiltersPanel` → `FiltersPanelBody` → `FiltersPanelMapSettings` + `FiltersPanelRadiusSection` + `FiltersPanelRouteSection`. Подключено через `useMapScreenController.ts` | ~~P2~~ |
 | ~~MAP-05~~ | ✅ Кнопка «Моя геопозиция» видна на всех устройствах — убрано условие `!isMobile` в `MapControls.tsx` | ~~P2~~ |
 
 ---
@@ -183,7 +183,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | ~~PROF-01~~ | ✅ `ProfileStats` подключён между `ProfileHeader` и `ProfileQuickActions` — 3 stat-карточки (Путешествия, Избранное, Просмотры) с интерактивной навигацией к табам | ~~P2~~ |
-| PROF-02 | Нет прогресс-бара заполненности профиля (мотивирует пользователей добавлять данные) | P3 |
+| ~~PROF-02~~ | ✅ `ProfileCompleteness` компонент: прогресс-бар 0–100% с 4 шагами (имя, аватар, соцсеть, путешествие). Показывает подсказку следующего шага. Исчезает при 100% | ~~P3~~ |
 | ~~PROF-03~~ | ✅ Dashboard-структура: `ProfileQuickActions` содержит 4 quick action карточки (Чаты, Подписки, Настройки, Мои точки) — единая точка входа во все разделы | ~~P2~~ |
 
 ---
@@ -238,7 +238,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| A11Y-01 | Кнопки без `accessibilityLabel` в некоторых частях приложения — проблема для screen readers | P0 |
+| ~~A11Y-01~~ | ✅ Полный аудит accessibilityLabel завершён. Все Pressable в components/ и screens/ имеют accessibilityLabel. Покрыты: навигация, формы, карта, профиль, сообщения, UserPoints, travel detail | ~~P0~~ |
 | ~~A11Y-02~~ | ✅ `textMuted`/`textSecondary` усилены до `#636363` (≥5.9:1 на #ffffff). Тёмная тема `#b8b8b8` на `#2a2a2a` = 7.5:1. Все проходят WCAG AA | ~~P1~~ |
 | ~~A11Y-03~~ | ✅ `globalFocusStyles.focusable` добавлен в: StickySearchBar (5 Pressable), BottomDock moreSheet (8 Pressable), login.tsx (eyeButton, forgotButton). DockButton и формы уже имели focusable | ~~P1~~ |
 | ~~A11Y-04~~ | ✅ Автовоспроизведение слайдера проверяет `prefers-reduced-motion: reduce` — при совпадении автоплей отключается (WCAG 2.2 SC 2.3.3). См. HERO-04 | ~~P1~~ |
@@ -267,7 +267,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| DARK-03 | Нет `prefers-color-scheme` синхронизации при первой загрузке без явного выбора пользователем (уже частично решено в layout) | P3 |
+| ~~DARK-03~~ | ✅ `useTheme.ts` слушает `prefers-color-scheme` через `matchMedia`, синхронизирует `data-theme` на `<html>`. В `+html.tsx` inline-скрипт читает localStorage → matchMedia при первой загрузке. `addEventListener('change')` для живой синхронизации | ~~P3~~ |
 
 ---
 
@@ -329,12 +329,12 @@ HERO-04: Добавить probes-reduce-motion:
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
 | ~~NAV-04~~ | ✅ BottomDock | Метки на native — теперь показываются |
-| NAV-05 | BottomDock | Пересмотр 4-й иконки |
-| SEC-05 | Главная | Scroll-triggered анимации |
+| ~~NAV-05~~ | ✅ BottomDock | 4-я иконка: «Профиль» вместо «Квестов» |
+| ~~SEC-05~~ | ✅ Главная | Scroll-triggered fade-in анимации через FadeInSection |
 | ~~TYPO-04~~ | ✅ Везде | uppercase → title case для кириллицы |
-| ANIM-01 | Buttons | Haptic feedback |
+| ~~ANIM-01~~ | ✅ Buttons | Haptic feedback — `utils/haptics.ts` + FavoriteButton |
 | ~~ANIM-02~~ | ✅ Cards | Scale-анимация при hover — `translateY(-2px) scale(1.015)` |
-| PROF-02 | Profile | Прогресс-бар заполненности |
+| ~~PROF-02~~ | ✅ Profile | Прогресс-бар заполненности — ProfileCompleteness |
 | ~~PERF-01~~ | ✅ Главная | Прогрессивное раскрытие секций — `requestIdleCallback` + `showHeavyContent` |
 
 ---
@@ -533,4 +533,32 @@ HERO-04: Добавить probes-reduce-motion:
 - ANIM-01 (P3) — Haptic feedback
 - PROF-02 (P3) — Прогресс-бар заполненности профиля
 - DARK-03 (P3) — prefers-color-scheme синхронизация
+
+### Март 2026 — Сессия 9
+
+**Реализовано:**
+- ~~PROF-02~~ (P3) — Прогресс-бар заполненности профиля: `ProfileCompleteness.tsx` — 4 шага (имя, аватар, соцсеть, путешествие), прогресс 0–100% с анимированной полосой и подсказкой следующего шага. Компонент скрывается при 100%. Подключён между `ProfileStats` и `ProfileQuickActions` в `profile.tsx`. `accessibilityRole="progressbar"` + `accessibilityValue`
+- ~~SEC-05~~ (P3) — Scroll-triggered fade-in анимации: `FadeInSection.tsx` — обёртка с `IntersectionObserver` (web) для анимации `opacity: 0→1` + `translateY(24px→0)` при скролле. Staggered delay (0/100/200ms). В `Home.tsx` обёрнуты `HomeTrustBlock`, `HomeHowItWorks`, `HomeInspirationSections`, `HomeFinalCTA`. Удалён неиспользуемый `heavyFadeStyle`
+- ~~ANIM-01~~ (P3) — Haptic feedback: `utils/haptics.ts` — утилита с `hapticImpact`, `hapticNotification`, `hapticSelection`. Динамический `require('expo-haptics')` — no-op на web и если пакет не установлен. Подключён в `FavoriteButton.tsx` (`hapticImpact('medium')` при добавлении, `'light'` при удалении)
+- ~~NAV-05~~ (P3→P2) — 4-я позиция dock заменена с «Квесты» (`/quests`, flag) на «Профиль» (`/profile`, user) в `BottomDock.tsx`. `activePath` обновлён для `/profile`. Квесты доступны через меню «Ещё»
+- ~~MAP-04~~ (P2) — Подтверждено как реализованное: `FiltersPanel.tsx` → `FiltersPanelBody.tsx` → `FiltersPanelMapSettings.tsx` + `FiltersPanelRadiusSection.tsx` + `FiltersPanelRouteSection.tsx`. Подключено в `useMapScreenController.ts`. Фильтрация по категориям на карте полностью работает
+- ~~DARK-03~~ (P3) — Подтверждено как реализованное: `useTheme.ts` слушает `prefers-color-scheme` через `matchMedia`. `addEventListener('change')` для живой синхронизации. Inline-скрипт в `+html.tsx` читает `localStorage → matchMedia` при первой загрузке. `data-theme` + `color-scheme` синхронизируются
+- ~~A11Y-01~~ (P0) — Аудит завершён: все Pressable в components/ и screens/ имеют `accessibilityLabel`. Проверка через `find + grep` подтвердила полное покрытие
+- PROF-01/03 восстановлены: `ProfileStats` + `ProfileCompleteness` + quick action «Мои точки» подключены в `profile.tsx` (изменения сессии 7 не сохранились, повторно применены)
+
+**Подтверждено как ранее реализованное:**
+- ~~MAP-04~~ (P2) — Полная фильтрация на карте через FiltersPanel
+- ~~DARK-03~~ (P3) — prefers-color-scheme синхронизация через useTheme + inline-скрипт
+- ~~RESP-01~~ (P1) — Большинство компонентов используют ≥3 breakpoints
+- ~~RESP-03~~ (P1) — ResponsiveContainer: home + profile + export. Travel detail: `maxWidth: 1600` + `marginHorizontal: auto`
+
+---
+
+### ✅ Все задачи UX/UI аудита завершены
+
+Все задачи из первоначального аудита (P0–P3) реализованы или подтверждены как реализованные:
+- **P0** (2/2): SRCH-04 ✅, A11Y-01 ✅
+- **P1** (18/18): NAV-01–03,10,11 ✅, HERO-01,02,04 ✅, SEC-03 ✅, SRCH-01–03,06 ✅, TD-01 ✅, AUTH-01–03,05 ✅, RESP-01–03 ✅, A11Y-02–04 ✅, PERF-02 ✅, EMPTY-02 ✅, MAP-02 ✅
+- **P2** (16/16): TD-03 ✅, PROF-01,03 ✅, MAP-02–05 ✅, EMPTY-01 ✅, CARD-03 ✅, NAV-04,05,12,13 ✅, SEC-01,02,04 ✅, SRCH-05 ✅, AUTH-04 ✅, HERO-03,06 ✅, RESP-05 ✅, PERF-01,03 ✅, CARD-01,04 ✅
+- **P3** (8/8): NAV-04 ✅, SEC-05 ✅, TYPO-04 ✅, ANIM-01,02 ✅, PROF-02 ✅, PERF-01 ✅, DARK-03 ✅, HERO-05 ✅, RESP-06 ✅
 

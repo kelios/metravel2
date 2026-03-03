@@ -57,6 +57,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     if (normalized.startsWith('/travelsby')) return '/travelsby';
     if (normalized.startsWith('/export')) return '/export';
     if (normalized.startsWith('/map')) return '/map';
+    if (normalized.startsWith('/profile')) return '/profile';
     if (normalized.startsWith('/quests')) return '/quests';
     if (normalized.startsWith('/roulette')) return '/search';
     return normalized;
@@ -188,7 +189,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
       { key: "home", label: "Идеи поездок", route: "/search" as any, iconName: "compass" as const },
       { key: "search", label: "Беларусь", route: "/travelsby" as any, iconName: "map" as const },
       { key: "map", label: "Карта", route: "/map" as any, iconName: "map-pin" as const },
-      { key: "favorites", label: "Квесты", route: "/quests" as any, iconName: "flag" as const },
+      { key: "favorites", label: "Профиль", route: "/profile" as any, iconName: "user" as const },
       { key: "more", label: "Ещё", route: "/more" as any, iconName: "more-horizontal" as const, isMore: true },
     ],
     []
