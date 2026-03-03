@@ -178,6 +178,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 0.8,
+        exif: false,
         selectionLimit: maxImages - images.length,
       });
 

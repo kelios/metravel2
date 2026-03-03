@@ -60,6 +60,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 quality: 0.85,
+                exif: false,
                 allowsMultipleSelection: false,
             });
 

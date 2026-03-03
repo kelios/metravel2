@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { sendMessage } from '@/api/messages';
 import { devError } from '@/utils/logger';
+import { hapticNotification } from '@/utils/haptics';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData } from '@/types/types';
 import Button from '@/components/ui/Button';
@@ -231,10 +232,13 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 },
             });
 
+            hapticNotification('success');
+
             // После сохранения на последнем шаге логично вывести пользователя из мастера
             // в раздел "Мои путешествия", где он увидит черновик.
             router.replace('/metravel');
         } catch (error) {
+            hapticNotification('error');
             // ✅ FIX: Обработка ошибок сохранения
             void showToastMessage({
                 type: 'error',
@@ -268,6 +272,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
         if (criticalMissing.length > 0) {
             setMissingForModeration(criticalMissing);
+            hapticNotification('warning');
             pulsePrimaryError('Нельзя отправить: исправьте ошибки');
             scrollToMissingBanner();
             finishAction();
@@ -306,6 +311,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 text1: 'Маршрут отправлен на модерацию',
                 text2: 'После одобрения он появится в разделе "Мои путешествия".',
             });
+
+            hapticNotification('success');
 
             // Навигация без повторного сохранения (чтобы не перезаписать publish=false старым стейтом)
             // Используем replace, чтобы мастер точно размонтировался и не продолжал автосохранение.
