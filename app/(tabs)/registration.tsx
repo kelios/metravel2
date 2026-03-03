@@ -20,6 +20,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { registration } from '@/api/auth';
 import type { FormValues } from '@/types/types';
 import { registrationSchema } from '@/utils/validation';
+import { getRegistrationPasswordStrengthMeta } from '@/utils/registrationPasswordStrength';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
@@ -27,27 +28,6 @@ import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
-
-type PasswordStrength = 'weak' | 'medium' | 'strong';
-
-function getPasswordStrength(password: string): PasswordStrength {
-    if (!password || password.length < 4) return 'weak';
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    if (password.length >= 12) score++;
-    if (score <= 1) return 'weak';
-    if (score <= 3) return 'medium';
-    return 'strong';
-}
-
-const STRENGTH_CONFIG: Record<PasswordStrength, { label: string; color: string; width: string }> = {
-    weak: { label: 'Слабый', color: '#ef4444', width: '33%' },
-    medium: { label: 'Средний', color: '#f59e0b', width: '66%' },
-    strong: { label: 'Сильный', color: '#22c55e', width: '100%' },
-};
 
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
@@ -136,6 +116,10 @@ export default function RegisterForm() {
         validationSchema: registrationSchema,
         onSubmit,
     });
+    const passwordStrengthMeta = useMemo(
+        () => getRegistrationPasswordStrengthMeta(values.password),
+        [values.password],
+    );
 
     const title = 'Регистрация | Metravel';
     const description =
@@ -293,15 +277,15 @@ export default function RegisterForm() {
                                                         />
                                                     </Pressable>
                                                 </View>
-                                                {values.password.length > 0 && (
+                                                {passwordStrengthMeta && (
                                                     <View
                                                         style={styles.strengthContainer}
                                                         accessibilityRole="progressbar"
                                                         accessibilityValue={{
                                                             min: 0,
                                                             max: 100,
-                                                            now: getPasswordStrength(values.password) === 'weak' ? 33 : getPasswordStrength(values.password) === 'medium' ? 66 : 100,
-                                                            text: `Надёжность пароля: ${STRENGTH_CONFIG[getPasswordStrength(values.password)].label}`,
+                                                            now: passwordStrengthMeta.progress,
+                                                            text: `Надёжность пароля: ${passwordStrengthMeta.label}`,
                                                         }}
                                                         accessibilityLabel="Надёжность пароля"
                                                     >
@@ -310,8 +294,8 @@ export default function RegisterForm() {
                                                                 style={[
                                                                     styles.strengthBarFill,
                                                                     {
-                                                                        width: STRENGTH_CONFIG[getPasswordStrength(values.password)].width as any,
-                                                                        backgroundColor: STRENGTH_CONFIG[getPasswordStrength(values.password)].color,
+                                                                        width: passwordStrengthMeta.width,
+                                                                        backgroundColor: passwordStrengthMeta.color,
                                                                     },
                                                                 ]}
                                                             />
@@ -319,10 +303,10 @@ export default function RegisterForm() {
                                                         <Text
                                                             style={[
                                                                 styles.strengthLabel,
-                                                                { color: STRENGTH_CONFIG[getPasswordStrength(values.password)].color },
+                                                                { color: passwordStrengthMeta.color },
                                                             ]}
                                                         >
-                                                            {STRENGTH_CONFIG[getPasswordStrength(values.password)].label}
+                                                            {passwordStrengthMeta.label}
                                                         </Text>
                                                     </View>
                                                 )}
@@ -468,7 +452,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     inputWrapError: {
         borderColor: colors.danger,
         borderWidth: 2,
-        backgroundColor: 'rgba(239, 68, 68, 0.05)', // Светло-красный фон для ошибок
+        backgroundColor: colors.dangerSoft,
     },
     input: { 
         flex: 1, 
@@ -498,7 +482,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: 'bold',
         padding: 12,
         borderRadius: 8,
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        backgroundColor: colors.successSoft,
         borderLeftWidth: 3,
         borderLeftColor: colors.success,
     },

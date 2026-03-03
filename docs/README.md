@@ -15,6 +15,7 @@ See `INDEX.md` for full docs map.
 - `TESTING.md` — Jest + Playwright + CI quality gate
 - `RELEASE.md` — release/deploy checklist
 - `PRODUCTION_CHECKLIST.md` — production release checklist
+- `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — external-links governance PR summary/template
 
 ## Quick start
 
