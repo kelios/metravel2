@@ -146,11 +146,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingVertical: 8, // было 10px (-20%)
         paddingHorizontal: 0,
         marginBottom: 0,
-        shadowColor: colors.shadows.light.shadowColor,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
         borderWidth: 0,
         borderColor: 'transparent',
         marginTop: 10, // было 12px (-17%)
