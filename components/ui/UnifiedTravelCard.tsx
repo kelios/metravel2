@@ -11,6 +11,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { hapticImpact } from '@/utils/haptics';
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
 
@@ -27,6 +28,8 @@ type Props = {
   rating?: number | null;
   ratingCount?: number;
   onPress: () => void;
+  /** AND-13: Long press callback — used for share on native */
+  onLongPress?: () => void;
   onMediaPress?: () => void;
   mediaFit?: 'contain' | 'cover';
   heroTitleOverlay?: boolean;
@@ -63,6 +66,7 @@ function UnifiedTravelCard({
   rating: _rating,
   ratingCount: _ratingCount,
   onPress,
+  onLongPress,
   onMediaPress,
   mediaFit = 'contain',
   heroTitleOverlay = false,
@@ -100,6 +104,14 @@ function UnifiedTravelCard({
   const isMobileDevice = isPhone || isLargePhone;
   const cardActionLabel = `Открыть маршрут «${title}»`;
   const mediaActionLabel = `Открыть фото маршрута «${title}»`;
+
+  // AND-13: Long press handler with haptic feedback for share action
+  const handleLongPress = useCallback(() => {
+    if (onLongPress) {
+      hapticImpact('medium');
+      onLongPress();
+    }
+  }, [onLongPress]);
   const optimizedImageUrl = useMemo(() => {
     if (!imageUrl || !isWeb) return imageUrl ?? null;
 
@@ -345,7 +357,7 @@ function UnifiedTravelCard({
   );
 
   const containerProps = useMemo(() => {
-    if (!isWeb) return { onPress };
+    if (!isWeb) return { onPress, ...(onLongPress ? { onLongPress: handleLongPress } : {}) };
 
     const base = webPressableProps ?? defaultWebProps;
     const originalMouseEnter = base?.onMouseEnter;
@@ -372,7 +384,7 @@ function UnifiedTravelCard({
         originalBlur?.(e);
       },
     };
-  }, [defaultWebProps, isWeb, onPress, webPressableProps]);
+  }, [defaultWebProps, isWeb, onPress, onLongPress, handleLongPress, webPressableProps]);
 
   const showHeroTitle = heroTitleOverlay && typeof title === 'string' && title.trim().length > 0;
   const normalizedMetaText = typeof metaText === 'string' ? metaText.trim() : '';

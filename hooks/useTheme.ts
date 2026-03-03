@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
-import { Platform, useColorScheme } from 'react-native';
+import { Appearance, Platform, useColorScheme } from 'react-native';
 import { getThemedColors } from '@/constants/designSystem';
 
 // Re-export helper for callers that historically imported it from this module.
@@ -87,6 +87,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (stored && ['light', 'dark', 'auto'].includes(stored)) {
         setSavedTheme(stored);
       }
+    } else {
+      // AND-24: Native — restore saved theme from AsyncStorage
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        AsyncStorage.getItem('theme').then((stored: string | null) => {
+          if (stored && ['light', 'dark', 'auto'].includes(stored)) {
+            setSavedTheme(stored as Theme);
+          }
+        }).catch(() => {});
+      } catch {
+        // AsyncStorage not available — use default
+      }
     }
   }, []);
 
@@ -110,16 +122,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Слушать изменения системной темы
   useEffect(() => {
-    if (Platform.OS !== 'web' || savedTheme !== 'auto') return;
+    if (savedTheme !== 'auto') return;
 
-    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    if (Platform.OS === 'web') {
+      const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e: MediaQueryListEvent) => {
+        setIsDark(e.matches);
+      };
+      darkModeQuery.addEventListener('change', handleChange);
+      return () => darkModeQuery.removeEventListener('change', handleChange);
+    }
 
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDark(e.matches);
-    };
-
-    darkModeQuery.addEventListener('change', handleChange);
-    return () => darkModeQuery.removeEventListener('change', handleChange);
+    // AND-24: Native — listen to Appearance changes for real-time dark mode sync
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setIsDark(colorScheme === 'dark');
+    });
+    return () => subscription.remove();
   }, [savedTheme]);
 
   // Синхронизация темы для web (data-theme + color-scheme)
@@ -137,6 +155,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     if (Platform.OS === 'web') {
       localStorage.setItem('theme', theme);
+    } else {
+      // AND-24: Persist theme on native via AsyncStorage
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        AsyncStorage.setItem('theme', theme).catch(() => {});
+      } catch {
+        // noop
+      }
     }
   }, []);
 
