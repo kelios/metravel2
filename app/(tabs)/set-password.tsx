@@ -183,11 +183,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
         zIndex: 1,
     },
-    image: {
-        width: '50%',
-        height: 500,
-        marginRight: 10, // Adds some space between the image and the text
-    },
     topImage: {
         width: '100%',
         height: 280,
@@ -211,15 +206,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             },
         }),
     },
-    text: {
-        padding: 10,
-        fontSize: 16,
-        color: colors.text,
-    },
-    link: {
-        color: colors.primary,
-        fontSize: 16,
-    },
     container: {
         flex: 1,
         alignItems: 'center',
@@ -229,9 +215,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     applyButton: {
         backgroundColor: colors.primary
-    },
-    applyButtonContent: {
-        paddingVertical: 10
     },
     message: {
         marginBottom: 15,
@@ -257,13 +240,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderColor: colors.danger,
         borderWidth: 2,
         backgroundColor: colors.dangerSoft,
-    },
-    // ✅ ИСПРАВЛЕНИЕ: Стиль больше не используется (ошибки показываются через FormFieldWithValidation)
-    errorText: {
-        color: colors.danger,
-        fontSize: 12,
-        marginTop: -10,
-        marginBottom: 10,
-        marginLeft: 4,
     },
 })
