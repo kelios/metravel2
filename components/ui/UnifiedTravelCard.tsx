@@ -12,6 +12,12 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { hapticImpact } from '@/utils/haptics';
+// AND-16: Native spring animation on press
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
 
@@ -112,6 +118,22 @@ function UnifiedTravelCard({
       onLongPress();
     }
   }, [onLongPress]);
+
+  // AND-16: Native spring animation on press (scale down → up)
+  const pressScale = useSharedValue(1);
+  const animatedCardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+  const handlePressIn = useCallback(() => {
+    if (!isWeb) {
+      pressScale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
+    }
+  }, [isWeb, pressScale]);
+  const handlePressOut = useCallback(() => {
+    if (!isWeb) {
+      pressScale.value = withSpring(1, { damping: 12, stiffness: 200 });
+    }
+  }, [isWeb, pressScale]);
   const optimizedImageUrl = useMemo(() => {
     if (!imageUrl || !isWeb) return imageUrl ?? null;
 
@@ -390,9 +412,16 @@ function UnifiedTravelCard({
   const normalizedMetaText = typeof metaText === 'string' ? metaText.trim() : '';
   const displayMetaText = normalizedMetaText || 'Локация уточняется';
 
+  // AND-16: Wrap in Animated.View for native spring, plain View for web
+  const CardWrapper = isWeb ? View : Animated.View;
+  const wrapperStyle = isWeb ? (typeof width === 'number' ? { width } : undefined) : [animatedCardStyle, typeof width === 'number' ? { width } : undefined];
+
   return (
+    <CardWrapper style={wrapperStyle as any}>
     <ContainerComponent
       {...containerProps}
+      // AND-16: Press handlers for spring animation on native
+      {...(!isWeb ? { onPressIn: handlePressIn, onPressOut: handlePressOut } : {})}
       style={[
         styles.container,
         isWeb && !isFeatured && isHovered && styles.containerHovered,
@@ -542,6 +571,7 @@ function UnifiedTravelCard({
         ),
       ]}
     </ContainerComponent>
+    </CardWrapper>
   );
 }
 

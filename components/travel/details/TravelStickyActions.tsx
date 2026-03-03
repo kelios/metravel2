@@ -23,6 +23,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { hapticImpact } from '@/utils/haptics';
 import type { Travel } from '@/types/types';
 
 interface TravelStickyActionsProps {
@@ -100,6 +101,7 @@ function TravelStickyActions({
       requireAuth();
       return;
     }
+    hapticImpact('light');
     if (isFav) {
       void removeFavorite(travelId, 'travel');
       void showToast({ type: 'info', text1: 'Удалено из избранного', position: 'bottom' });
@@ -113,6 +115,7 @@ function TravelStickyActions({
   }, [travelId, isAuthenticated, isFav, addFavorite, removeFavorite, requireAuth, travel?.name, travel?.slug]);
 
   const handleShare = useCallback(async () => {
+    hapticImpact('light');
     const url = travel?.slug
       ? buildCanonicalUrl(`/travels/${travel.slug}`)
       : travelId

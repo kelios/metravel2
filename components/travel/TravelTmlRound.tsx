@@ -14,6 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
+import { shareTravel } from '@/utils/shareTravel';
 
 type Props = { travel: Travel };
 
@@ -93,6 +94,15 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         router.push(`/travels/${slug || travel.id}`);
     }, [canOpen, slug, travel.id]);
 
+    // AND-23: Share travel on long press (native only)
+    const handleLongPress = useCallback(() => {
+        shareTravel({
+            id: slug || String(travel.id),
+            title: name,
+            description: countryName !== 'Страна не указана' ? countryName : undefined,
+        });
+    }, [slug, travel.id, name, countryName]);
+
     const overlay = (
         <View style={styles.overlayBottom}>
             <Text
@@ -124,6 +134,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 title={name}
                 imageUrl={optimizedImageUrl ?? null}
                 onPress={onPress}
+                onLongPress={handleLongPress}
                 mediaFit="contain"
                 heroTitleOverlay={false}
                 containerOverlaySlot={overlay}

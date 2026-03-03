@@ -18,6 +18,21 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 import { hapticSelection } from "@/utils/haptics";
 
+// AND-27: Native bottom sheet for "More" menu (native only)
+let GorhomBottomSheet: any = null;
+let GorhomBottomSheetView: any = null;
+let GorhomBottomSheetBackdrop: any = null;
+if (Platform.OS !== 'web') {
+  try {
+    const mod = require('@gorhom/bottom-sheet');
+    GorhomBottomSheet = mod.default;
+    GorhomBottomSheetView = mod.BottomSheetView;
+    GorhomBottomSheetBackdrop = mod.BottomSheetBackdrop;
+  } catch {
+    // @gorhom/bottom-sheet not available — fallback to no sheet on native
+  }
+}
+
 type BottomDockProps = {
   onDockHeight?: (h: number) => void;
 };
@@ -38,6 +53,9 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const [showMore, setShowMore] = useState(false);
   // NAV-02: slide-up анимация — отдельный флаг для CSS transition
   const [sheetVisible, setSheetVisible] = useState(false);
+  // AND-27: ref for native @gorhom/bottom-sheet
+  const nativeSheetRef = useRef<any>(null);
+  const nativeSnapPoints = useMemo(() => ['45%'], []);
   const colors = useThemedColors();
   const router = useRouter();
   const pathname = usePathname();
@@ -51,6 +69,9 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const handleDismissSheet = useCallbackReact(() => {
     if (showMore) {
       setShowMore(false);
+      if (Platform.OS !== 'web' && nativeSheetRef.current) {
+        nativeSheetRef.current.close();
+      }
       return true;
     }
     return false;
@@ -251,7 +272,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   href={item.route}
                   label={item.label}
                   showLabel
-                  onPress={item.isMore ? () => setShowMore(true) : undefined}
+                  onPress={item.isMore ? () => {
+                    if (Platform.OS !== 'web' && GorhomBottomSheet && nativeSheetRef.current) {
+                      nativeSheetRef.current.expand();
+                    }
+                    setShowMore(true);
+                  } : undefined}
                   isActive={isActive}
                 >
                   {item.icon}
@@ -386,6 +412,89 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             </View>
           </View>
         </>
+      )}
+      {/* AND-27: Native bottom sheet for "More" menu (Android/iOS) */}
+      {Platform.OS !== 'web' && GorhomBottomSheet && (
+        <GorhomBottomSheet
+          ref={nativeSheetRef}
+          index={-1}
+          snapPoints={nativeSnapPoints}
+          enablePanDownToClose
+          onClose={() => setShowMore(false)}
+          backdropComponent={(props: any) =>
+            GorhomBottomSheetBackdrop ? (
+              <GorhomBottomSheetBackdrop
+                {...props}
+                disappearsOnIndex={-1}
+                appearsOnIndex={0}
+                opacity={0.5}
+              />
+            ) : null
+          }
+          handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}
+          backgroundStyle={{ backgroundColor: colors.surface }}
+        >
+          {GorhomBottomSheetView && (
+            <GorhomBottomSheetView style={{ paddingHorizontal: 16, paddingBottom: safeBottomPadding + 16 }}>
+              <View style={styles.sheetHeader}>
+                <Text style={styles.sheetTitle}>Ещё</Text>
+              </View>
+              <View style={styles.moreList}>
+                <Pressable
+                  onPress={() => { nativeSheetRef.current?.close(); router.push("/roulette" as any); }}
+                  style={styles.moreItem}
+                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Случайная поездка"
+                >
+                  <Feather name="shuffle" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                  <Text style={styles.moreItemText}>Случайная поездка</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { nativeSheetRef.current?.close(); router.push("/travel/new" as any); }}
+                  style={styles.moreItem}
+                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Создать маршрут"
+                >
+                  <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                  <Text style={styles.moreItemText}>Создать маршрут</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { nativeSheetRef.current?.close(); router.push("/export" as any); }}
+                  style={styles.moreItem}
+                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Книга путешествий"
+                >
+                  <Feather name="book-open" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                  <Text style={styles.moreItemText}>Книга путешествий</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => { nativeSheetRef.current?.close(); router.push("/profile" as any); }}
+                  style={styles.moreItem}
+                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Профиль"
+                >
+                  <Feather name="user" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                  <Text style={styles.moreItemText}>Профиль</Text>
+                </Pressable>
+                <View style={styles.moreDivider} />
+                <Pressable
+                  onPress={() => { nativeSheetRef.current?.close(); router.push("/about" as any); }}
+                  style={styles.moreItem}
+                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+                  accessibilityRole="link"
+                  accessibilityLabel="Связаться с нами"
+                >
+                  <Feather name="mail" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
+                  <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Связаться с нами</Text>
+                </Pressable>
+              </View>
+            </GorhomBottomSheetView>
+          )}
+        </GorhomBottomSheet>
       )}
     </Container>
   );
