@@ -37,7 +37,12 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={baseStyle} testID={testID}>
+      <View
+        style={baseStyle}
+        testID={testID}
+        accessible={false}
+        aria-hidden
+      >
         <View style={shimmerStyles.overflow}>
           <View
             style={{
@@ -75,7 +80,13 @@ const NativeShimmerPulse: React.FC<{ baseStyle: any[]; testID?: string }> = ({ b
     opacity: opacity.value,
   }));
 
-  return <Animated.View style={[...baseStyle, pulseStyle]} testID={testID} />;
+  return (
+    <Animated.View
+      style={[...baseStyle, pulseStyle]}
+      testID={testID}
+      importantForAccessibility="no-hide-descendants"
+    />
+  );
 }
 
 const shimmerStyles = StyleSheet.create({

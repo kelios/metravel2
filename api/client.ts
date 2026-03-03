@@ -741,7 +741,78 @@ class ApiClient {
         method: 'POST' | 'PUT' | 'PATCH' = 'POST',
         timeout: number = LONG_TIMEOUT
     ): Promise<T> {
+        return this.uploadFormDataWithProgress<T>(endpoint, formData, undefined, method, timeout);
+    }
+
+    /**
+     * AND-15: Upload FormData with progress tracking via XMLHttpRequest.
+     * On native, xhr.upload.onprogress fires with loaded/total bytes.
+     * On web, falls back to fetch if XHR is unavailable.
+     */
+    async uploadFormDataWithProgress<T>(
+        endpoint: string,
+        formData: FormData,
+        onProgress?: (percent: number) => void,
+        method: 'POST' | 'PUT' | 'PATCH' = 'POST',
+        timeout: number = LONG_TIMEOUT
+    ): Promise<T> {
         const token = await this.getAccessToken();
+
+        // If no progress callback, use standard fetch
+        if (!onProgress) {
+            return this._uploadViaFetch<T>(endpoint, formData, token, method, timeout);
+        }
+
+        // Use XMLHttpRequest for progress tracking
+        return new Promise<T>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, `${this.baseURL}${endpoint}`);
+
+            if (token) {
+                xhr.setRequestHeader('Authorization', `Token ${token}`);
+            }
+            xhr.timeout = timeout;
+
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable && onProgress) {
+                    onProgress(event.loaded / event.total);
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        resolve(data as T);
+                    } catch {
+                        resolve(xhr.responseText as unknown as T);
+                    }
+                } else if (xhr.status === 401 && token) {
+                    // Retry with refreshed token (no progress on retry)
+                    this.refreshAccessToken()
+                        .then((newToken) => this._uploadViaFetch<T>(endpoint, formData, newToken, method, timeout))
+                        .then(resolve)
+                        .catch(reject);
+                } else {
+                    reject(new ApiError(xhr.status, `Ошибка загрузки: ${xhr.statusText}`));
+                }
+            };
+
+            xhr.onerror = () => reject(new ApiError(0, 'Ошибка сети при загрузке'));
+            xhr.ontimeout = () => reject(new ApiError(0, 'Превышено время загрузки'));
+
+            xhr.send(formData);
+        });
+    }
+
+    /** Internal: upload via fetch (no progress) */
+    private async _uploadViaFetch<T>(
+        endpoint: string,
+        formData: FormData,
+        token: string | null,
+        method: string,
+        timeout: number
+    ): Promise<T> {
         const headers: HeadersInit = {
             ...(token && { Authorization: `Token ${token}` }),
         };
@@ -749,11 +820,7 @@ class ApiClient {
         try {
             const response = await fetchWithTimeout(
                 `${this.baseURL}${endpoint}`,
-                {
-                    method,
-                    headers,
-                    body: formData,
-                },
+                { method, headers, body: formData },
                 timeout
             );
 
@@ -765,39 +832,24 @@ class ApiClient {
                 const retryHeaders: HeadersInit = {
                     Authorization: `Token ${newToken}`,
                 };
-
                 const retryResponse = await fetchWithTimeout(
                     `${this.baseURL}${endpoint}`,
-                    {
-                        method,
-                        headers: retryHeaders,
-                        body: formData,
-                    },
+                    { method, headers: retryHeaders, body: formData },
                     timeout
                 );
-
                 if (!retryResponse.ok) {
-                    throw new ApiError(
-                        retryResponse.status,
-                        `Ошибка загрузки: ${retryResponse.statusText}`
-                    );
+                    throw new ApiError(retryResponse.status, `Ошибка загрузки: ${retryResponse.statusText}`);
                 }
-
                 return await this.parseSuccessResponse<T>(retryResponse);
             }
 
             if (!response.ok) {
-                throw new ApiError(
-                    response.status,
-                    `Ошибка загрузки: ${response.statusText}`
-                );
+                throw new ApiError(response.status, `Ошибка загрузки: ${response.statusText}`);
             }
 
             return await this.parseSuccessResponse<T>(response);
         } catch (error) {
-            if (error instanceof ApiError) {
-                throw error;
-            }
+            if (error instanceof ApiError) throw error;
             devError('FormData upload error:', error);
             throw new ApiError(0, error instanceof Error ? error.message : 'Ошибка загрузки файла');
         }

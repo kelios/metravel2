@@ -155,7 +155,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           }
           router.push(href as any);
         }}
-        accessibilityRole="link"
+        accessibilityRole={Platform.OS === 'web' ? 'link' : 'tab'}
         accessibilityLabel={label}
         accessibilityState={{ selected: isActive }}
         hitSlop={6}
@@ -262,7 +262,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         testID="footer-dock-wrapper"
       >
         <View onLayout={handleDockLayout} testID="footer-dock-measure">
-          <View style={styles.row} testID="footer-dock-row">
+          <View
+            style={styles.row}
+            testID="footer-dock-row"
+            accessibilityRole="tablist"
+            accessibilityLabel="Навигация"
+          >
             {items.map((item) => {
               const isActive = !item.isMore && activePath === String(item.route);
               return (
@@ -311,7 +316,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             } as any)}
           >
             {/* NAV-02: drag-indicator для bottom sheet */}
-            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHandle} accessible={false} importantForAccessibility="no" />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Ещё</Text>
               <Pressable
@@ -543,7 +548,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     flexBasis: 0,
     paddingHorizontal: 6,
     paddingVertical: 6,
-    minHeight: 44,
+    minHeight: 48, // AND-26: Material Design 3 minimum touch target
     borderRadius: 10,
   },
   itemActive: {
@@ -644,7 +649,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 44,
+    minHeight: 48, // AND-26: Material Design 3 minimum touch target
     borderRadius: 8,
   },
   moreItemIcon: {

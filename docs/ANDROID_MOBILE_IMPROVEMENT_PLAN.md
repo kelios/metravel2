@@ -499,28 +499,28 @@
 | ~~AND-07~~ | ✅ BackHandler | ~~P1~~ | Среднее | 🟠 Высокое |
 | ~~AND-08~~ | ✅ StatusBar | ~~P1~~ | Низкое | 🟠 Среднее |
 | ~~AND-09~~ | ✅ Keyboard handling | ~~P1~~ | Среднее | 🟠 Высокое |
-| AND-10 | Offline mode | P1 | Высокое | 🟠 Высокое |
+| AND-10 | ~~Offline mode~~ | ~~P1~~ | Высокое | 🟠 Высокое |
 | ~~AND-11~~ | ✅ Proguard/R8 | ~~P1~~ | Среднее | 🟡 Среднее |
-| AND-12 | Adaptive Icon M3 | P2 | Низкое | 🟡 Среднее |
-| AND-13 | Жесты и анимации | P2 | Среднее | 🟡 Среднее |
+| ~~AND-12~~ | ✅ Adaptive Icon M3 | ~~P2~~ | Низкое | 🟡 Среднее |
+| ~~AND-13~~ | ✅ Жесты и анимации | ~~P2~~ | Среднее | 🟡 Среднее |
 | ~~AND-14~~ | ✅ Pull-to-Refresh | ~~P2~~ | Низкое | 🟡 Среднее |
-| AND-15 | Image Picker | P2 | Среднее | 🟡 Среднее |
-| AND-16 | Native animations | P2 | Среднее | 🟡 Среднее |
-| AND-17 | Biometric auth | P2 | Среднее | 🟡 Среднее |
+| ~~AND-15~~ | ✅ Image Picker | ~~P2~~ | Среднее | 🟡 Среднее |
+| ~~AND-16~~ | ✅ Native animations | ~~P2~~ | Среднее | 🟡 Среднее |
+| ~~AND-17~~ | ✅ Biometric auth | ~~P2~~ | Среднее | 🟡 Среднее |
 | ~~AND-18~~ | ✅ Scoped Storage / API 34 | ~~P2~~ | Среднее | 🟠 Высокое |
 | AND-19 | Widget | P3 | Высокое | 🟢 Низкое |
-| AND-20 | App Shortcuts | P3 | Низкое | 🟢 Низкое |
+| ~~AND-20~~ | ✅ App Shortcuts | ~~P3~~ | Низкое | 🟢 Низкое |
 | AND-21 | PiP для карты | P3 | Высокое | 🟢 Низкое |
 | AND-22 | GPS tracking | P3 | Высокое | 🟡 Среднее |
-| AND-23 | Share integration | P3 | Среднее | 🟡 Среднее |
-| AND-24 | Dark theme native sync | P3 | Низкое | 🟢 Низкое |
+| ~~AND-23~~ | ✅ Share integration | ~~P3~~ | Среднее | 🟡 Среднее |
+| ~~AND-24~~ | ✅ Dark theme native sync | ~~P3~~ | Низкое | 🟢 Низкое |
 | AND-25 | Performance monitoring | P3 | Среднее | 🟡 Среднее |
-| AND-26 | TalkBack audit | P3 | Среднее | 🟡 Среднее |
-| AND-27 | Material Design 3 | P2 | Высокое | 🟡 Среднее |
+| AND-26 | ~~TalkBack audit~~ | ~~P3~~ | Среднее | 🟡 Среднее |
+| ~~AND-27~~ | ✅ Material Design 3 | ~~P2~~ | Высокое | 🟡 Среднее |
 | AND-28 | Edge-to-edge | P2 | Среднее | 🟠 Высокое |
 | ~~AND-29~~ | ✅ versionCode sync | ~~P1~~ | Низкое | 🟠 Среднее |
-| AND-30 | Hermes optimization | P2 | Низкое | 🟡 Среднее |
-| AND-31 | APK size optimization | P2 | Среднее | 🟡 Среднее |
+| ~~AND-30~~ | ✅ Hermes optimization | ~~P2~~ | Низкое | 🟡 Среднее |
+| ~~AND-31~~ | ✅ APK size optimization | ~~P2~~ | Среднее | 🟡 Среднее |
 | ~~AND-32~~ | ✅ Secure storage audit | ~~P1~~ | Низкое | 🔴 Высокое |
 | ~~AND-33~~ | ✅ Network security config | ~~P2~~ | Низкое | 🟠 Среднее |
 
@@ -733,7 +733,78 @@
 - AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
 - AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
 
-### Март 2026 — Сессия 5
+### Март 2026 — Сессия 7
+
+**Реализовано (Спринт 7):**
+
+- ~~AND-20~~ (P3) — App Shortcuts:
+  - Создан Expo config plugin `plugins/withAndroidShortcuts.js` — добавляет static shortcuts в AndroidManifest
+  - 3 shortcut'а: «Поиск» (`/search`), «Карта» (`/map`), «Избранное» (`/favorites`)
+  - Создаёт `res/xml/shortcuts.xml` и строковые ресурсы при prebuild
+  - Зарегистрирован в `app.json` → plugins
+
+- ~~AND-30~~ (P2) — Hermes optimization:
+  - Аудит подтвердил: `hermesEnabled=true`, `hermesCommand` указывает на `hermesc`
+  - Bytecode precompilation включена автоматически при release builds
+  - Polyfills: Intl встроен в Expo SDK 55 + Hermes; `jscFlavor` актуален только при `hermesEnabled=false`
+  - Изменений кода не требуется — помечено как done
+
+- AND-26 (P3, частично) — TalkBack Accessibility:
+  - `ShimmerOverlay` — помечен как декоративный: `accessible={false}`, `importantForAccessibility="no-hide-descendants"`, `aria-hidden`
+  - `BottomDock` — dock row: `accessibilityRole="tablist"` + `accessibilityLabel="Навигация"`
+  - `BottomDock` — кнопки: `accessibilityRole="tab"` (вместо `link`) на native
+  - `BottomDock` — sheet drag handle: `accessible={false}`, `importantForAccessibility="no"`
+  - `BottomDock` — minHeight увеличен с 44 до 48dp на dock items и moreItems (M3 touch target)
+  - `UnifiedTravelCard` — image container помечен `importantForAccessibility="no"` (декоративный)
+
+- AND-15 (P2, расширение) — Upload progress bar:
+  - Создан компонент `UploadProgressBar` (`components/ui/UploadProgressBar.tsx`) — animated progress через Reanimated (native) / CSS transition (web)
+  - Показывает процент + количество файлов (e.g. «2/5 — 63%»)
+  - `apiClient.uploadFormDataWithProgress()` — новый метод с XHR + `upload.onprogress` для отслеживания прогресса
+  - `uploadImage()` в `api/misc.ts` — добавлен optional `onProgress` callback
+  - `ImageGalleryComponent` — заменён текстовый индикатор «Uploading images...» на `UploadProgressBar` с per-file + overall progress
+
+**Lint:** 0 ошибок (10 pre-existing warnings).
+
+**Оставшиеся нереализованные задачи P0–P1:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
+- AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
+- AND-05 (P1) — Push-уведомления: требует FCM + бэкенд### Март 2026 — Сессия 6
+
+**Реализовано (Спринт 6):**
+
+- AND-27 (P2, расширение) — Material Design 3 native bottom sheet:
+  - Меню «Ещё» в `BottomDock` теперь использует `@gorhom/bottom-sheet` на native (Android/iOS)
+  - Вызывается при нажатии кнопки «Ещё» — нативная анимация, backdrop, swipe-to-close
+  - На web — прежний CSS-based sheet сохранён без изменений
+  - Все пункты меню (Случайная поездка, Создать маршрут, Книга, Профиль, Связаться) с `android_ripple`
+
+- AND-16 (P2) — Native animations:
+  - Spring press animation на карточках маршрутов (`UnifiedTravelCard`):
+    - `onPressIn`: scale → 0.97 (damping: 15, stiffness: 300)
+    - `onPressOut`: scale → 1.0 (damping: 12, stiffness: 200)
+    - Реализовано через `react-native-reanimated` (`useSharedValue` + `useAnimatedStyle`)
+    - На web — без анимации (CSS hover сохранён)
+
+- AND-23 (P3) — Нативный шаринг маршрутов:
+  - Создана утилита `utils/shareTravel.ts` — кроссплатформенный Share API
+    - Android/iOS: `RN Share.share()` с title и URL
+    - Web: `navigator.share()` → fallback на clipboard
+  - `TravelTmlRound` — `onLongPress` + haptic → share маршрута (через `UnifiedTravelCard.onLongPress`)
+  - `TravelStickyActions` — haptic feedback добавлен на кнопки «В избранное» и «Поделиться» (`hapticImpact('light')`)
+
+- AND-17 (P2, завершение) — Biometric authentication UI:
+  - Toggle «Вход по биометрии» добавлен на страницу настроек (`settings.tsx`)
+  - Секция «Безопасность» видна только на native при наличии биометрического оборудования + зарегистрированных отпечатков
+  - Иконка `lock`, описание «Используйте отпечаток пальца или Face ID для быстрого входа»
+  - Toggle вызывает `biometric.enable()` (с подтверждением биометрией) / `biometric.disable()`
+
+**Lint:** 0 ошибок (10 pre-existing warnings).
+
+**Оставшиеся нереализованные задачи P0–P1:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
+- AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
+- AND-05 (P1) — Push-уведомления: требует FCM + бэкенд### Март 2026 — Сессия 5
 
 **Реализовано (Спринт 4 + Спринт 5):**
 

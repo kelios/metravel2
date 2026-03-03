@@ -17,6 +17,7 @@ import { uploadImage, deleteImage } from '@/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { compressTravelPhoto } from '@/utils/imageCompressor';
+import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
 
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -73,6 +74,10 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  // AND-15: Upload progress tracking
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadCurrent, setUploadCurrent] = useState(0);
+  const [uploadTotal, setUploadTotal] = useState(0);
 
   const lastReportedUrlsRef = useRef<string>('');
 
@@ -106,8 +111,13 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       }
 
       setIsUploading(true);
+      // AND-15: Reset progress tracking
+      setUploadTotal(assets.length);
+      setUploadCurrent(0);
+      setUploadProgress(0);
       const newLoading = [...loading];
 
+      let completedCount = 0;
       const uploads = assets.map(async (asset, index) => {
         const currentIndex = images.length + index;
         newLoading[currentIndex] = true;
@@ -132,7 +142,11 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           formData.append('collection', collection);
           formData.append('id', idTravel);
 
-          const response = await uploadImage(formData);
+          const response = await uploadImage(formData, (pct) => {
+            // AND-15: Per-file progress combined with overall progress
+            const overall = (completedCount + pct) / assets.length;
+            setUploadProgress(overall);
+          });
           const uploadedUrlRaw =
             (response as any)?.url ||
             (response as any)?.data?.url ||
@@ -155,6 +169,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
         } finally {
           newLoading[currentIndex] = false;
           setLoading([...newLoading]);
+          completedCount++;
+          setUploadCurrent(completedCount);
+          setUploadProgress(completedCount / assets.length);
         }
       });
 
@@ -318,7 +335,11 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       {isUploading && (
         <View style={[styles.uploadingOverlay, { backgroundColor: colors.overlay }]}>
           <ActivityIndicator size="large" color={colors.textInverse} />
-          <Text style={[styles.uploadingText, { color: colors.textInverse }]}>Uploading images...</Text>
+          <UploadProgressBar
+            progress={uploadProgress}
+            label={uploadTotal > 1 ? `${uploadCurrent}/${uploadTotal}` : undefined}
+            visible
+          />
         </View>
       )}
 

@@ -113,7 +113,8 @@
       "expo-image-manipulator",
       "expo-local-authentication",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withAndroidShortcuts"
     ],
     "experiments": {
       "tsconfigPaths": true,

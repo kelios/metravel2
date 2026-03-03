@@ -227,7 +227,10 @@ export const deleteTravelMainImage = async (travelId: string | number) => {
   );
 };
 
-export const uploadImage = async (data: FormData): Promise<Record<string, unknown>> => {
+export const uploadImage = async (
+  data: FormData,
+  onProgress?: (percent: number) => void,
+): Promise<Record<string, unknown>> => {
   const token = await getSecureItem('userToken');
   if (!token) {
     throw new Error('Пользователь не авторизован');
@@ -244,8 +247,8 @@ export const uploadImage = async (data: FormData): Promise<Record<string, unknow
   }
 
   // Use apiClient upload helper so 401 triggers refresh+retry.
-  // Response may be JSON or plain string. apiClient.parseSuccessResponse handles both.
-  const result = await apiClient.uploadFormData<unknown>('/upload', data, 'POST', LONG_TIMEOUT);
+  // AND-15: Pass onProgress for XHR-based progress tracking.
+  const result = await apiClient.uploadFormDataWithProgress<unknown>('/upload', data, onProgress, 'POST', LONG_TIMEOUT);
   if (typeof result === 'string') {
     const rawText = result.trim();
     if (!rawText) return { ok: true };

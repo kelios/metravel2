@@ -439,7 +439,12 @@ function UnifiedTravelCard({
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
       {[
-        <View key="media" style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null, imageHeight === 0 && { display: 'none' }]}>
+        <View
+          key="media"
+          style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null, imageHeight === 0 && { display: 'none' }]}
+          accessible={false}
+          importantForAccessibility="no"
+        >
           {optimizedImageUrl ? (
             <>
               {/* CARD-04: Shimmer placeholder пока изображение грузится */}

@@ -51,6 +51,7 @@ jest.mock('@/api/client', () => ({
   apiClient: {
     put: (...args: any[]) => mockApiClientPut(...args),
     uploadFormData: (...args: any[]) => mockApiClientUploadFormData(...args),
+    uploadFormDataWithProgress: (...args: any[]) => mockApiClientUploadFormData(...args),
     request: (...args: any[]) => mockApiClientRequest(...args),
     delete: (...args: any[]) => mockApiClientDelete(...args),
   },
