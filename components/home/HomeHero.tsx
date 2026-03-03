@@ -320,6 +320,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 onPress={() => handleOpenArticles(currentSlide.href)}
                 style={styles.sliderContainer}
                 accessibilityRole="link"
+                accessibilityLabel={`Маршрут: ${currentSlide.title}`}
                 accessibilityHint="Открыть маршрут"
               >
                 {/* Render only active slide to avoid eager loading hidden images on first paint */}

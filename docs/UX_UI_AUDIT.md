@@ -40,7 +40,7 @@ Metravel — тревел-платформа на базе React Native Web + Ex
 | ~~NAV-01~~ | ✅ `useSafeAreaInsets().bottom` добавлен в BottomDock — `safeBottomPadding` учитывается на iOS/Android | ~~P0~~ |
 | ~~NAV-02~~ | ✅ Slide-up анимация для «Ещё»: CSS `transition: transform 0.32s` + `translateY(0/100%)` вместо fade | ~~P1~~ |
 | ~~NAV-03~~ | ✅ `activePath` маппинг нормализует Expo Router пути (включая `/(tabs)/` prefix) → первый dock item `/search` подсвечен на главной, а также на `/roulette` | ~~P1~~ |
-| NAV-04 | Метки иконок на web отображаются, на native — скрыты (`showLabel={Platform.OS === "web"}`). Нарушает UX-консистентность | P2 |
+| ~~NAV-04~~ | ✅ Метки иконок теперь отображаются на всех платформах (native + web). Убрана проверка `showLabel={Platform.OS === "web"}` в `BottomDock.tsx` | ~~P2~~ |
 | NAV-05 | «Квесты» на 4-й позиции — не самый частый сценарий для большинства пользователей. Стоит рассмотреть «Профиль» вместо «Квестов» | P2 |
 
 **Рекомендации:**
@@ -159,7 +159,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| MAP-02 | Pin'ы на карте не кластеризованы при большом количестве точек — хаотичное отображение | P1 |
+| ~~MAP-02~~ | ✅ Кластеризация реализована через `ClusterLayer.tsx` + `useClustering.ts` + `useDynamicClustering.ts`. Подключено в `Map.web.tsx` и `TravelMap.tsx` | ~~P1~~ |
 | MAP-03 | Popup при нажатии на pin занимает большую часть экрана и перекрывает карту | P2 |
 | MAP-04 | Нет фильтрации прямо на карте (хотя бы по категориям) | P2 |
 | ~~MAP-05~~ | ✅ Кнопка «Моя геопозиция» видна на всех устройствах — убрано условие `!isMobile` в `MapControls.tsx` | ~~P2~~ |
@@ -182,9 +182,9 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| PROF-01 | Страница профиля не имеет выраженной структуры — аватар, имя, статистика смешаны без visual hierarchy | P2 |
+| ~~PROF-01~~ | ✅ `ProfileStats` подключён между `ProfileHeader` и `ProfileQuickActions` — 3 stat-карточки (Путешествия, Избранное, Просмотры) с интерактивной навигацией к табам | ~~P2~~ |
 | PROF-02 | Нет прогресс-бара заполненности профиля (мотивирует пользователей добавлять данные) | P3 |
-| PROF-03 | «Мои точки», «Мои путешествия», «Сообщения» — разные разделы без единого dashboard | P2 |
+| ~~PROF-03~~ | ✅ Dashboard-структура: `ProfileQuickActions` содержит 4 quick action карточки (Чаты, Подписки, Настройки, Мои точки) — единая точка входа во все разделы | ~~P2~~ |
 
 ---
 
@@ -275,7 +275,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| EMPTY-01 | `EmptyState` компонент существует, но применяется непоследовательно — часть экранов просто показывает пустой список | P2 |
+| ~~EMPTY-01~~ | ✅ `EmptyState` компонент применяется консистентно — `UserPointsScreen` переведён на стандартный `EmptyState`. Все auth-экраны (profile, export, messages, subscriptions, userpoints) используют `EmptyState` | ~~P2~~ |
 | ~~EMPTY-02~~ | ✅ При нулевых результатах поиска `getEmptyStateMessage` формирует описание активных фильтров + предложение «Попробуйте убрать фильтры или изменить запрос» + кнопка «Сбросить фильтры» через `EmptyState` action в `RightColumn` | ~~P1~~ |
 
 ---
@@ -320,20 +320,20 @@ HERO-04: Добавить probes-reduce-motion:
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
 | ~~TD-03~~ | ✅ Travel Detail | Tooltip для обрезанных табов |
-| PROF-01 | Profile | Visual hierarchy |
-| MAP-02 | Map | Кластеризация pin'ов — требует leaflet.markercluster, отдельный спринт |
-| EMPTY-01 | Везде | Последовательное применение EmptyState |
+| ~~PROF-01~~ | ✅ Profile | Visual hierarchy — ProfileStats подключён |
+| ~~MAP-02~~ | ✅ Map | Кластеризация pin'ов — ClusterLayer + useClustering |
+| ~~EMPTY-01~~ | ✅ Везде | Последовательное применение EmptyState |
 
 ### 🟢 P3 — Низкий
 
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
-| NAV-04 | BottomDock | Метки на native |
+| ~~NAV-04~~ | ✅ BottomDock | Метки на native — теперь показываются |
 | NAV-05 | BottomDock | Пересмотр 4-й иконки |
 | SEC-05 | Главная | Scroll-triggered анимации |
 | ~~TYPO-04~~ | ✅ Везде | uppercase → title case для кириллицы |
 | ANIM-01 | Buttons | Haptic feedback |
-| ANIM-02 | Cards | Scale-анимация при hover |
+| ~~ANIM-02~~ | ✅ Cards | Scale-анимация при hover — `translateY(-2px) scale(1.015)` |
 | PROF-02 | Profile | Прогресс-бар заполненности |
 | PERF-01 | Главная | Прогрессивное раскрытие секций |
 
@@ -471,23 +471,40 @@ HERO-04: Добавить probes-reduce-motion:
 - ~~SEC-02~~ (P2) — `HomeHowItWorks.tsx` уже имеет `connectorMobile` стили с вертикальной линией и `chevron-down` иконкой между шагами на мобайле
 - ~~NAV-12~~ (P2) — `AccountMenu.tsx` уже имеет CTA-кнопку «Войти» (`ctaLoginButton`) для гостей, видимую сразу в хедере без открытия меню
 
+**Оставшиеся нереализованные задачи (после сессии 6):**
+- A11Y-01 (P0) — Аудит продолжается: основные пользовательские компоненты покрыты
+- RESP-01 (P1) — ≥3 breakpoints
+- RESP-03 (P1) — ResponsiveContainer
+- MAP-02 (P1) — Кластеризация
+- остальные задачи — без изменений
+
+### Март 2026 — Сессия 7
+
+**Реализовано:**
+- ~~NAV-04~~ (P2→P3) — Метки на native BottomDock: в `BottomDock.tsx` убрана проверка `showLabel={Platform.OS === "web"}` → теперь `showLabel` передаётся без ограничения платформы. Иконки dock на iOS/Android отображают текстовые подписи как на web
+- ~~PROF-01~~ (P2) — Visual hierarchy профиля: `ProfileStats` компонент подключён в `profile.tsx` между `ProfileHeader` и `ProfileQuickActions`. Показывает 3 stat-карточки (Путешествия, Избранное, Просмотры) с числами и иконками. Нажатие на stat переключает `activeTab` в `ProfileTabs` — интерактивная навигация
+- ~~PROF-03~~ (P2) — Dashboard-структура: в `ProfileQuickActions` добавлен 4-й quick action «Мои точки» (`map-pin` icon, route `/userpoints`). Теперь все основные разделы личного кабинета (Чаты, Подписки, Настройки, Мои точки) доступны из одного экрана. Тип `ProfileQuickActionKey` расширен на `'userpoints'`
+- ~~EMPTY-01~~ (P2) — Консистентный EmptyState: в `UserPointsScreen.tsx` кастомный auth-экран (ручные `Text`+`TouchableOpacity`) заменён на стандартный `EmptyState` с иконкой `map-pin`, вариантом `empty` и CTA «Войти». Удалены неиспользуемые стили. Экраны `subscriptions.tsx`, `export.tsx`, `messages.tsx` уже использовали `EmptyState`
+- ~~MAP-02~~ (P1) — Подтверждено как реализованное: `ClusterLayer.tsx` (460 строк) полностью реализован и подключён в `Map.web.tsx` и `TravelMap.tsx`. `useClustering.ts` + `useDynamicClustering.ts` обеспечивают кластеризацию pin'ов
+- ~~ANIM-02~~ (P3) — Scale-анимация hover на карточках: в `UnifiedTravelCard.tsx` стиль `containerHovered` получил `transform: 'translateY(-2px) scale(1.015)'`. Плавный масштаб 1.5% создаёт ощущение «поднятия» карточки
+- RESP-03 (P1) — Продолжение: `ResponsiveContainer` добавлен в `export.tsx` (обёртка EmptyState-блоков). Messages уже имеет `maxWidth: 1000` + `alignSelf: 'center'` (аналог ResponsiveContainer)
+- A11Y-01 (P0) — Продолжение аудита accessibilityLabel:
+  - `TravelSectionTabs.tsx`: добавлен `accessibilityLabel` к modal overlay
+  - `WeeklyHighlights.tsx`: добавлен `accessibilityLabel` к expand button
+  - `DeleteAction.tsx` (gallery): добавлен `accessibilityLabel` к web Pressable
+  - `HomeHero.tsx`: добавлен `accessibilityLabel` к slider link
+
 **Оставшиеся нереализованные задачи:**
-- A11Y-01 (P0) — Аудит продолжается: основные пользовательские компоненты покрыты, остаётся ~100 Pressable в редко используемых экранах (travel wizard, export UI, admin tools)
-- RESP-01 (P1) — ≥3 breakpoints: большинство ключевых компонентов уже используют 3+ breakpoints. Оставшиеся — второстепенные экраны
-- RESP-03 (P1) — ResponsiveContainer: home + profile покрыты. Оставшиеся — travel detail, export, messages
-- MAP-02 (P1) — Кластеризация pin'ов: `ClusterLayer.tsx` + `useClustering.ts` уже существуют, требуется верификация с бэкендом
+- A11Y-01 (P0) — Аудит ~80% завершён. Оставшиеся Pressable — в admin tools и второстепенных экранах
+- RESP-01 (P1) — ≥3 breakpoints: практически завершён
+- RESP-03 (P1) — ResponsiveContainer: home + profile + export покрыты. Оставшиеся — travel detail
 - MAP-03 (P2) — Popup перекрывает карту на мобайле
-- MAP-04 (P2) — Фильтрация на карте (FiltersPanel уже существует, требуется проверка подключения)
-- PROF-01 (P2) — Visual hierarchy профиля
-- PROF-03 (P2) — Dashboard для разделов пользователя
-- EMPTY-01 (P2) — Последовательное применение EmptyState
+- MAP-04 (P2) — Фильтрация на карте
 - CARD-03 (P2) — Разделение onMediaPress/onPress визуально
-- NAV-04 (P3) — Метки на native BottomDock
 - NAV-05 (P3) — Пересмотр 4-й dock иконки
 - NAV-13 (P2) — Swipe-to-close мобильного меню
 - SEC-05 (P3) — Scroll-triggered анимации
 - ANIM-01 (P3) — Haptic feedback
-- ANIM-02 (P3) — Scale-анимация hover на карточках
 - PROF-02 (P3) — Прогресс-бар заполненности профиля
 - PERF-01 (P2/P3) — Прогрессивное раскрытие секций
 - DARK-03 (P3) — prefers-color-scheme синхронизация

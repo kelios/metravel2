@@ -6,7 +6,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { ResponsiveContainer } from '@/components/layout';
 
-export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings';
+export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings' | 'userpoints';
 
 export interface ProfileQuickActionsProps {
   onPress: (key: ProfileQuickActionKey) => void;
@@ -132,6 +132,13 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
       hint: 'Редактировать данные',
       icon: 'settings',
       accessibilityHint: 'Перейти к настройкам профиля',
+    },
+    {
+      key: 'userpoints',
+      title: 'Мои точки',
+      hint: 'Сохранённые места',
+      icon: 'map-pin',
+      accessibilityHint: 'Перейти к сохранённым точкам на карте',
     },
   ];
 

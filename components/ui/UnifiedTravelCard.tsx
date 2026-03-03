@@ -140,7 +140,8 @@ function UnifiedTravelCard({
         containerHovered: {
           ...Platform.select({
             web: {
-              transform: 'translateY(-2px)',
+              // ANIM-02: scale + translateY для плавного hover-эффекта
+              transform: 'translateY(-2px) scale(1.015)',
               borderColor: colors.primaryAlpha30,
               boxShadow: DESIGN_TOKENS.shadows.medium,
             } as any,

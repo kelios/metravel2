@@ -271,7 +271,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
           animationType="fade"
           onRequestClose={() => setMoreOpen(false)}
         >
-          <Pressable style={styles.modalOverlay} onPress={() => setMoreOpen(false)}>
+          <Pressable style={styles.modalOverlay} onPress={() => setMoreOpen(false)} accessibilityRole="button" accessibilityLabel="Закрыть меню разделов">
             <View style={styles.modalSheet}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Разделы</Text>

@@ -1,12 +1,13 @@
 // src/screens/tabs/UserPointsScreen.tsx
 import { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Modal, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Modal, ActivityIndicator } from 'react-native';
 import { PointsList } from '@/components/UserPoints/PointsList';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
 import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import EmptyState from '@/components/ui/EmptyState';
 
 export default function UserPointsScreen() {
   const [showImportWizard, setShowImportWizard] = useState(false);
@@ -23,19 +24,20 @@ export default function UserPointsScreen() {
     );
   }
 
+  // EMPTY-01: Используем EmptyState для консистентного UX
   if (!isAuthenticated) {
     return (
       <View style={styles.authContainer}>
-        <Text style={styles.authTitle}>Требуется авторизация</Text>
-        <Text style={styles.authText}>
-          Для использования этой функции необходимо войти в систему
-        </Text>
-        <TouchableOpacity
-          style={styles.authButton}
-          onPress={() => router.push(buildLoginHref({ redirect: '/userpoints', intent: 'userpoints' }) as any)}
-        >
-          <Text style={styles.authButtonText}>Войти</Text>
-        </TouchableOpacity>
+        <EmptyState
+          icon="map-pin"
+          title="Войдите, чтобы управлять точками"
+          description="Для сохранения и просмотра ваших точек на карте необходимо войти в аккаунт."
+          action={{
+            label: 'Войти',
+            onPress: () => router.push(buildLoginHref({ redirect: '/userpoints', intent: 'userpoints' }) as any),
+          }}
+          variant="empty"
+        />
       </View>
     );
   }
@@ -69,28 +71,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     padding: 24,
     backgroundColor: colors.background,
-  },
-  authTitle: {
-    fontSize: 24,
-    fontWeight: '700' as any,
-    color: colors.text,
-    marginBottom: 12,
-  },
-  authText: {
-    fontSize: 16,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  authButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  authButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600' as any,
   },
 });

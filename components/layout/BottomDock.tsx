@@ -218,7 +218,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   testID={`footer-item-${item.key}`}
                   href={item.route}
                   label={item.label}
-                  showLabel={Platform.OS === "web"}
+                  showLabel
                   onPress={item.isMore ? () => setShowMore(true) : undefined}
                   isActive={isActive}
                 >

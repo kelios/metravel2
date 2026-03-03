@@ -46,6 +46,7 @@ export const DeleteAction: React.FC<{
           textDecorationLine: 'none',
         }}
         accessibilityRole="button"
+        accessibilityLabel="Удалить фото"
         testID={testID}
       >
         {children}

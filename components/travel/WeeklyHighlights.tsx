@@ -150,6 +150,8 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         onPress={handleExpand}
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="Развернуть подборку месяца"
                     >
                         <Feather name="chevron-down" size={20} color={colors.primary} />
                         <Text style={[styles.expandButtonText, { color: colors.primary }]}>Подборка месяца</Text>

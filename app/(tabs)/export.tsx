@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import EmptyState from '@/components/ui/EmptyState';
+import { ResponsiveContainer } from '@/components/layout';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import { sendAnalyticsEvent } from '@/utils/analytics';
@@ -79,6 +80,7 @@ export default function ExportScreen() {
             )}
 
             {!isAuthenticated ? (
+                <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
                     icon="lock"
                     title="Войдите, чтобы собрать PDF‑книгу"
@@ -93,7 +95,9 @@ export default function ExportScreen() {
                     }}
                     variant="empty"
                 />
+                </ResponsiveContainer>
             ) : shouldShowEmptyState ? (
+                <ResponsiveContainer maxWidth="lg" padding>
                 <EmptyState
                     icon="file-text"
                     title="Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие"
@@ -108,6 +112,7 @@ export default function ExportScreen() {
                     }}
                     variant="empty"
                 />
+                </ResponsiveContainer>
             ) : (
                 <Suspense
                     fallback={
