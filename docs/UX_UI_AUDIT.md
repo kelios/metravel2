@@ -141,11 +141,7 @@ HERO-04: Добавить probes-reduce-motion:
 **Проблемы:**
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| CARD-01 | Нет единого контракта высоты изображения — высота передаётся prop `imageHeight`, что приводит к разным размерам в разных местах использования | P1 |
-| CARD-02 | На мобайле карточки занимают 100% ширины без `gap` между ними — визуально «стена» без воздуха | P2 |
 | CARD-03 | `onMediaPress` и `onPress` — два действия на карточке не разделены визуально. Пользователь не знает, что нажать | P2 |
-| CARD-04 | Нет skeleton при первой загрузке, когда изображения ещё не пришли (есть `ShimmerOverlay`, но применяется не везде) | P1 |
-| CARD-05 | Rating chip отображается только если есть данные — хорошо. Но счётчик просмотров (`countUnicIpView`) занимает место даже при 0 | P3 |
 
 ---
 
@@ -154,12 +150,8 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | TD-01 | Галерея изображений на мобайле — горизонтальный скролл без индикатора количества фото | P1 |
-| ~~TD-02~~ | Travel Detail | ✅ Текстовая метка «В избранное» / «В избранном» добавлена на мобайле |
-| ~~TD-03~~ | Travel Detail | ✅ `title` атрибут на web-тегах в TravelSectionTabs для показа tooltip при обрезании текста |
-| ~~TD-04~~ | Travel Detail | ✅ Lazy-init: карта закрыта по умолчанию, авто-открытие через IntersectionObserver на desktop |
-| TD-05 | Travel Detail | На десктопе боковая колонка (`CompactSideBarTravel`) — нет sticky-поведения при скролле основного контента | P2 |
-| ~~TD-06~~ | Travel Detail | ✅ CommentsSection монтируется через IntersectionObserver при scroll до секции + 6s fallback |
-| TD-07 | ✅ Уже реализовано через `HeaderContextBar` + `useBreadcrumbModel` — хлебные крошки показываются в шапке автоматически | — |
+
+Закрыто в марте 2026: дублирование хлебных крошек над слайдером устранено, используется единый источник в `HeaderContextBar`.
 
 ---
 
@@ -167,7 +159,6 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| MAP-01 | На мобайле карта занимает весь экран, но нет кнопки «Список» для переключения в режим списка результатов | P0 |
 | MAP-02 | Pin'ы на карте не кластеризованы при большом количестве точек — хаотичное отображение | P1 |
 | MAP-03 | Popup при нажатии на pin занимает большую часть экрана и перекрывает карту | P2 |
 | MAP-04 | Нет фильтрации прямо на карте (хотя бы по категориям) | P2 |
@@ -180,7 +171,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | AUTH-01 | Форма входа `/login` — поле пароля не имеет кнопки «Показать/скрыть пароль» | P1 |
-| AUTH-02 | Нет Google/Apple Sign-In кнопки на web (OAuth настроен, но не вынесен как первичное действие) | P1 |
+| AUTH-02 | Google Sign-In есть, но не вынесен как первичное CTA на экране входа | P1 |
 | AUTH-03 | После успешной регистрации пользователь попадает на главную без welcome-сообщения — непонятно, что произошло | P1 |
 | AUTH-04 | `OnboardingBanner` виден только авторизованным пользователям. Гости не получают никакого онбординга | P2 |
 | AUTH-05 | Форма регистрации — нет inline-валидации при вводе (ошибки появляются только после submit) | P1 |
@@ -214,11 +205,9 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| RESP-01 | Во многих компонентах адаптивность реализована через `isMobile ? X : Y` (бинарный подход) — пропускаются промежуточные состояния планшет/large phone | P1 |
+| RESP-01 | Во многих компонентах адаптивность реализована через `isMobile ? X : Y` (бинарный подход) — в ряде экранов всё ещё пропускаются промежуточные состояния планшет/large phone | P1 |
 | RESP-02 | На планшете (768–1024px) карточки маршрутов показываются в 1 колонку как на мобайле — трата пространства | P1 |
 | RESP-03 | `ResponsiveContainer` корректно ограничивает ширину, но многие компоненты не используют его — рендерятся на 100% ширины | P1 |
-| RESP-04 | Нет fluid typography — текст переключается только между двумя размерами (mobile / desktop). Нет промежуточных значений | P2 |
-| RESP-05 | Landscape-ориентация на мобайле не оптимизирована — hero-блок слишком высокий, карточки не перестраиваются | P2 |
 | RESP-06 | Текст в карточках обрезается `numberOfLines={1}` без расширения при большем экране | P3 |
 
 ### 9.3 Рекомендации по grid
@@ -241,9 +230,6 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| TYPO-01 | Заголовки используют `fontWeight: '900'` повсеместно — нет градации важности (900 → 700 → 500 → 400) | P2 |
-| TYPO-02 | `letterSpacing: -0.8` на заголовках выглядит хорошо на desktop, но на мобайле при `fontSize: 22` слишком плотно | P2 |
-| TYPO-03 | Нет единого компонента `Heading` / `Body` / `Caption` — каждый компонент задаёт стили инлайн | P1 |
 | TYPO-04 | На некоторых секциях используется `textTransform: 'uppercase'` для eyebrow-текстов — снижает читаемость (особенно на кириллице) | P2 |
 
 ---
@@ -256,7 +242,6 @@ HERO-04: Добавить probes-reduce-motion:
 | A11Y-02 | Контраст текста на `textMuted` цвете — нужно проверить соответствие WCAG AA (4.5:1 для нормального текста) | P1 |
 | A11Y-03 | Focus indicators (`globalFocusStyles.focusable`) присутствуют в коде, но в некоторых компонентах не подключены | P1 |
 | A11Y-04 | Автовоспроизведение слайдера без `prefers-reduced-motion` — нарушение WCAG 2.2 SC 2.3.3 | P1 |
-| A11Y-05 | Модальные окна не управляют фокусом — при открытии Modal фокус не перемещается внутрь | P1 |
 
 ---
 
@@ -266,7 +251,6 @@ HERO-04: Добавить probes-reduce-motion:
 |----|----------|-----------|
 | PERF-01 | Главная страница загружает тяжёлый контент через `requestIdleCallback` — хорошо. Но нет прогрессивного раскрытия: все секции появляются одновременно | P2 |
 | PERF-02 | Изображения в карточках загружаются без `blurhash` placeholder — есть поддержка в `ImageCardMedia`, но не используется везде | P1 |
-| PERF-03 | `ListTravel` — бесконечный скролл без индикатора «загружается ещё...» внизу списка при подгрузке страниц | P1 |
 
 ---
 
@@ -276,8 +260,6 @@ HERO-04: Добавить probes-reduce-motion:
 |----|----------|-----------|
 | ANIM-01 | Нет haptic feedback на native при нажатии на кнопки действий (избранное, фильтры) | P3 |
 | ANIM-02 | Hover-эффекты на карточках есть (`isHovered` state), но нет плавного масштабирования — только цвет меняется | P3 |
-| ANIM-03 | Transitions на кнопках — нет `transition: all 0.2s ease` глобально, добавляется точечно | P2 |
-| ANIM-04 | FAQ accordion — нет плавной анимации высоты при открытии/закрытии | P1 |
 
 ---
 
@@ -285,8 +267,6 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| DARK-01 | ThemeToggle есть в хедере на desktop и в мобильном меню. На мобайле в bottom dock — отсутствует. Труднодоступен | P2 |
-| DARK-02 | Некоторые `backgroundImage` (radial-gradient) одинаковы для light и dark — в тёмной теме могут выглядеть неуместно | P2 |
 | DARK-03 | Нет `prefers-color-scheme` синхронизации при первой загрузке без явного выбора пользователем (уже частично решено в layout) | P3 |
 
 ---
@@ -297,7 +277,6 @@ HERO-04: Добавить probes-reduce-motion:
 |----|----------|-----------|
 | EMPTY-01 | `EmptyState` компонент существует, но применяется непоследовательно — часть экранов просто показывает пустой список | P2 |
 | EMPTY-02 | При нулевых результатах поиска нет рекомендации «Попробуйте изменить фильтры» с кнопкой сброса | P1 |
-| EMPTY-03 | Пустой профиль нового пользователя — нет подсказки «Добавьте первую поездку» с иконкой | P2 |
 
 ---
 
@@ -308,7 +287,6 @@ HERO-04: Добавить probes-reduce-motion:
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
 | SRCH-04 | Search | Добавить поле поиска по тексту как первичное действие |
-| MAP-01 | Map | Кнопка «Список» на мобайле для переключения card/map view |
 | NAV-01 | BottomDock | Safe-area padding на iOS |
 | A11Y-01 | Везде | Аудит и добавление accessibilityLabel где отсутствует |
 
@@ -317,20 +295,13 @@ HERO-04: Добавить probes-reduce-motion:
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
 | NAV-10 | Header | Планшетный breakpoint навигации |
-| NAV-11 | Travel Detail | Хлебные крошки |
 | HERO-02 | HomeHero | Fade-edges для mood chips scroll |
 | HERO-04 | HomeHero | prefers-reduced-motion для слайдера |
 | HERO-01 | HomeHero | Одно featured изображение на мобайле в hero |
 | SEC-03 | FAQ | Плавная анимация accordion |
 | SRCH-02 | Filters | Badge-счётчик активных фильтров |
 | SRCH-03 | Filters | Sticky кнопки «Применить» / «Сбросить» |
-| ~~CARD-01~~ | TravelCard | ✅ Единые высоты изображений через `DESIGN_TOKENS.cardImageHeights` (small/medium/large/hero) |
-| ~~CARD-04~~ | TravelCard | ✅ ShimmerOverlay в UnifiedTravelCard при загрузке изображений |
 | TD-01 | Travel Detail | Индикатор количества фото в галерее |
-| TD-02 | Travel Detail | Текстовая метка кнопки «В избранное» на мобайле |
-| TD-04 | Travel Detail | Lazy-init карты |
-| TD-06 | Travel Detail | Intersection Observer для комментариев |
-| ~~TD-07~~ | ~~Travel Detail~~ | ~~Хлебная крошка~~ ✅ уже есть в HeaderContextBar |
 | AUTH-01 | Login | Показать/скрыть пароль |
 | AUTH-02 | Login | Google Sign-In как первичное действие |
 | AUTH-03 | Registration | Welcome-сообщение после регистрации |
@@ -341,40 +312,17 @@ HERO-04: Добавить probes-reduce-motion:
 | A11Y-02 | Везде | Проверить contrast ratio textMuted |
 | A11Y-03 | Везде | Подключить globalFocusStyles везде |
 | A11Y-04 | HomeHero | prefers-reduced-motion |
-| ~~A11Y-05~~ | Modals | ✅ `useFocusTrap` уже реализован, подключён к `CustomHeaderMobileMenu` |
-| ~~TYPO-03~~ | Везде | ✅ Создан `components/ui/Typography.tsx` — Heading (уровни 1-4), Body, Caption, Label, Eyebrow |
 | PERF-02 | Images | blurhash placeholder везде |
-| ~~PERF-03~~ | ListTravel | ✅ Footer-loader показывает текст «Загружаем ещё...» + ActivityIndicator при подгрузке страниц |
 | EMPTY-02 | Search | Empty state с предложением изменить фильтры |
-| ~~ANIM-04~~ | FAQ | ✅ Плавная CSS transition в CollapsibleBlock (max-height + chevron rotate) |
-| ~~CARD-05~~ | TravelCard | ✅ Счётчик просмотров уже скрывается при views === 0 |
-| ~~MAP-01~~ | Map | ✅ MapShowListButton.tsx уже существует |
 
 ### 🟡 P2 — Средний
 
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
-| ~~ANIM-04~~ | FAQ | ✅ Плавная CSS transition анимация в CollapsibleBlock: max-height + chevron rotate |
-| ~~NAV-02~~ | BottomDock | ✅ Slide-up sheet с drag-indicator, заголовком и CSS transition вместо резкого появления |
-| ~~DARK-02~~ | Тёмная тема | ✅ CSS-переменные `--gradient-*` для light/dark mode в global.css |
-| ~~EMPTY-03~~ | Profile | ✅ Вовлекающий EmptyState для нового пользователя с CTA «+ Добавить путешествие» |
-| ~~NAV-12~~ | ~~Header~~ | ~~Визуально выделить кнопку «Войти» как CTA~~ ✅ Реализовано — отдельная pill-кнопка для гостей |
-| ~~HERO-03~~ | Hero | ✅ Первичная кнопка шире вторичной: primary paddingH 24/40 vs secondary 18/24 |
-| ~~HERO-06~~ | Hero | ✅ Skeleton для кнопки пока грузится travelsCount: Home.tsx загружает travelsCount через useQuery, HomeHero показывает ActivityIndicator пока isLoading |
-| ~~SEC-01~~ | TrustBlock | ✅ Grid планшет: isCompact только для phone, на планшете row-layout как desktop |
-| ~~SEC-02~~ | HowItWorks | ✅ Вертикальная связь шагов на мобайле: chevron-down connector между карточками |
-| ~~CARD-02~~ | TravelCard | ✅ gapSize уже responsive (6→8→10→12→14→16px по breakpoints) |
-| ~~SRCH-06~~ | Search | ✅ QuickFilterChip компонент в StickySearchBar: prop `quickFilters` + `onQuickFilterPress` |
 | TD-03 | Travel Detail | Tooltip для обрезанных табов |
-| ~~TD-05~~ | Travel Detail | ✅ Sticky sidebar на desktop: position:sticky, top:80, maxHeight:calc(100vh-100px) |
 | PROF-01 | Profile | Visual hierarchy |
-| ~~RESP-04~~ | Везде | ✅ Fluid typography в Typography.tsx: fluidSize() плавно масштабирует Heading между mobile/tablet/desktop |
-| ~~RESP-05~~ | Везде | ✅ Landscape-оптимизация: homeHeroStyles поддерживает isLandscape, уменьшает padding в landscape-режиме |
-| ~~TYPO-01~~ | Везде | ✅ Градация fontWeight: '900'→'800' для h2, '800'→'700' для h3 в FAQ, HowItWorks |
-| ~~DARK-01~~ | ~~ThemeToggle~~ | ~~Доступность переключателя темы на мобайле~~ ✅ Добавлен в меню «Ещё» BottomDock |
 | MAP-02 | Map | Кластеризация pin'ов — требует leaflet.markercluster, отдельный спринт |
 | EMPTY-01 | Везде | Последовательное применение EmptyState |
-| ~~ANIM-03~~ | Buttons | ✅ Button уже имеет transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' |
 
 ### 🟢 P3 — Низкий
 
@@ -383,14 +331,10 @@ HERO-04: Добавить probes-reduce-motion:
 | NAV-04 | BottomDock | Метки на native |
 | NAV-05 | BottomDock | Пересмотр 4-й иконки |
 | SEC-05 | Главная | Scroll-triggered анимации |
-| ~~TYPO-02~~ | Везде | ✅ letterSpacing на мобайле — уменьшен в Heading + HowItWorks + FAQ (isMobile ? -0.4 : -0.8) |
 | TYPO-04 | Везде | uppercase → title case для кириллицы |
-| ~~DARK-02~~ | Темная тема | ✅ CSS-переменные `--gradient-*` для light/dark mode в global.css |
 | ANIM-01 | Buttons | Haptic feedback |
 | ANIM-02 | Cards | Scale-анимация при hover |
 | PROF-02 | Profile | Прогресс-бар заполненности |
-| ~~CARD-05~~ | TravelCard | ✅ Счётчик просмотров скрыт при 0 (уже реализовано) |
-| ~~EMPTY-03~~ | Profile | ✅ Вовлекающий EmptyState для нового пользователя |
 | PERF-01 | Главная | Прогрессивное раскрытие секций |
 
 ---
@@ -400,17 +344,13 @@ HERO-04: Добавить probes-reduce-motion:
 ### Спринт 1 (1–2 недели) — Критические P0 + P1 навигация
 1. Safe-area на iOS в BottomDock
 2. Поле поиска по тексту на странице поиска
-3. Хлебные крошки на странице маршрута
-4. Кнопка «Список» на карте (мобайл)
-5. Аудит accessibilityLabel
+3. Аудит accessibilityLabel
 
 ### Спринт 2 (1–2 недели) — Hero + Карточки + Фильтры
 1. Fade-edges для horizontal scroll
 2. prefers-reduced-motion для слайдера
 3. Badge активных фильтров
 4. Sticky кнопки фильтров
-5. Единый imageHeight токен для карточек
-6. Skeleton для загружаемых изображений
 
 ### Спринт 3 (1–2 недели) — Авторизация + Адаптивность
 1. Inline-валидация форм
@@ -421,17 +361,13 @@ HERO-04: Добавить probes-reduce-motion:
 
 ### Спринт 4 (1–2 недели) — Detail Page + Map + Доступность
 1. Galley indicator
-2. Lazy-init карты в деталях
-3. Focus management в модалках
-4. Contrast ratio аудит
-5. Кластеризация map pins
+2. Contrast ratio аудит
+3. Кластеризация map pins
 
 ### Спринт 5 — Типографика + Анимации + Полировка
-1. Компоненты Heading/Body/Caption
-2. FAQ accordion анимация
-3. Transitions на кнопках
-4. Dark mode gradient-fixes
-5. Empty state consistency
+1. Empty state consistency
+2. Typography: uppercase → title case для кириллицы
+3. Hover scale-анимации карточек + haptic feedback на native
 
 ---
 

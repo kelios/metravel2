@@ -35,7 +35,6 @@ import { TravelDetailPageSkeleton } from '@/components/travel/TravelDetailPageSk
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
-import Breadcrumb from "@/components/ui/Breadcrumb";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import { useAccessibilityAnnounce } from "@/hooks/useKeyboardNavigation";
@@ -710,15 +709,6 @@ export default function TravelDetailsContainer() {
                 {travel ? (
                   <>
                     <View collapsable={false}>
-                      {/* TD-07: Хлебная крошка — только web, видна сразу при загрузке */}
-                      <Breadcrumb
-                        testID="travel-breadcrumb"
-                        items={[
-                          { label: 'Главная', href: '/' },
-                          { label: 'Маршруты', href: '/search' },
-                          { label: travel.name ?? 'Маршрут' },
-                        ]}
-                      />
                       <TravelHeroSection
                         travel={travel}
                         anchors={anchors}
