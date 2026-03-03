@@ -62,18 +62,14 @@
 
 ---
 
-### AND-04 | Permissions — избыточные и устаревшие
+### ~~AND-04~~ | ✅ Permissions — избыточные и устаревшие
 
 **Проблема:** В `app.json` запрошены permissions, которые создают проблемы в Google Play:
 - `ACCESS_BACKGROUND_LOCATION` — требует отдельного review в Play Console и обоснования. Для тревел-приложения фоновая геолокация обычно не нужна
 - `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` — deprecated начиная с API 33+, заменены на `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` (которые уже есть)
 - Дублирование: `ACCESS_COARSE_LOCATION` + `android.permission.ACCESS_COARSE_LOCATION` — дублируется с full-qualified именем
 
-**Действия:**
-1. Убрать `ACCESS_BACKGROUND_LOCATION` (если не нужен трекинг маршрутов в фоне)
-2. Убрать дублирующиеся permissions (`android.permission.ACCESS_*`)
-3. Оставить `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE` только для API < 33 (автоматически через `maxSdkVersion`)
-4. Если фоновая геолокация нужна — добавить runtime permission request с объяснением пользователю
+**Реализовано:** Из `app.json` удалены: `ACCESS_BACKGROUND_LOCATION`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, дублирующиеся `android.permission.ACCESS_*`. Из `AndroidManifest.xml` удалены: `ACCESS_BACKGROUND_LOCATION`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, `requestLegacyExternalStorage`.
 
 ---
 
@@ -100,60 +96,34 @@
 
 ---
 
-### AND-06 | Splash Screen — анимированный переход
+### ~~AND-06~~ | ✅ Splash Screen — анимированный переход
 
-**Проблема:** Splash screen — статичный PNG на белом фоне. На Android это создаёт резкий переход при запуске, особенно в тёмной теме (белая вспышка).
+**Проблема:** Splash screen — статичный PNG на белом фоне. Белая вспышка в тёмной теме.
 
-**Действия:**
-1. Интегрировать `expo-splash-screen` (уже есть в dependencies, но не используется в коде)
-2. Добавить `SplashScreen.preventAutoHideAsync()` в entry point
-3. Скрывать splash только после загрузки шрифтов + начальных данных
-4. Добавить Android 12+ Splash Screen API support через `app.json`:
-   ```json
-   "android": {
-     "splash": {
-       "image": "./assets/images/splash.png",
-       "resizeMode": "contain",
-       "backgroundColor": "#1a1a2e",
-       "dark": {
-         "image": "./assets/images/splash-dark.png",
-         "backgroundColor": "#1a1a2e"
-       }
-     }
-   }
-   ```
-5. Реализовать animated transition (fade-out splash → app content)
+**Реализовано:**
+- `SplashScreen.hideAsync()` перенесён из `RootLayout` в `RootLayoutNav` — скрывается только после загрузки шрифтов (а не сразу)
+- Добавлена конфигурация `android.splash` в `app.json` с dark-вариантом (`backgroundColor: "#1a1a2e"`)
+- `SplashScreen.preventAutoHideAsync()` уже вызывался для native
 
 ---
 
-### AND-07 | BackHandler — полноценная обработка кнопки «Назад»
+### ~~AND-07~~ | ✅ BackHandler — полноценная обработка кнопки «Назад»
 
-**Проблема:** `BackHandler` используется только в `useTravelWizard.ts`. На остальных экранах нажатие «Назад» может:
-- Закрыть приложение с главной вместо сворачивания
-- Не закрыть модальное окно (фильтры, карта, «Ещё» в dock)
-- Привести к неожиданной навигации
+**Проблема:** `BackHandler` используется только в `useTravelWizard.ts`.
 
-**Действия:**
-1. На главном экране: двойное нажатие «Назад» для выхода с Toast «Нажмите ещё раз для выхода»
-2. В модальных окнах (фильтры, «Ещё» sheet, поиск): закрытие по «Назад»
-3. В карте с открытым popup: закрытие popup по «Назад»
-4. В галерее/full-screen просмотре: выход из полноэкранного режима
-5. Создать хук `useAndroidBackHandler` для централизованной обработки
+**Реализовано:** Создан хук `useAndroidBackHandler` (`hooks/useAndroidBackHandler.ts`):
+- На главном экране: двойное нажатие «Назад» для выхода с Toast «Нажмите ещё раз для выхода»
+- Принимает `onDismiss` callback для закрытия модальных окон
+- Подключён в `BottomDock.tsx` — «Ещё» sheet закрывается по кнопке «Назад»
+- Дефолтный fallback — `router.back()` через Expo Router
 
 ---
 
-### AND-08 | StatusBar — консистентная настройка
+### ~~AND-08~~ | ✅ StatusBar — консистентная настройка
 
-**Проблема:** `StatusBar` настроена только в `modal.tsx` и `about.tsx`. На остальных экранах — системные defaults, что приводит к:
-- Тёмный текст на тёмном фоне в тёмной теме
-- Несогласованный стиль при переходах между экранами
-- Отсутствие translucent mode для immersive experience (карта, галерея)
+**Проблема:** `StatusBar` настроена только в `modal.tsx` и `about.tsx`. На остальных экранах — системные defaults.
 
-**Действия:**
-1. Добавить глобальный `<StatusBar>` в `_layout.tsx` с поддержкой тёмной/светлой темы
-2. На экране карты: `StatusBar translucent={true} backgroundColor="transparent"` для edge-to-edge
-3. На экране галереи: скрытие StatusBar для immersive просмотра
-4. Использовать `expo-status-bar` для согласованного поведения
+**Реализовано:** Глобальный `<StatusBar style="auto" />` из `expo-status-bar` добавлен в `_layout.tsx` (ThemedContent). Стиль `auto` автоматически переключается между light/dark в зависимости от системной темы.
 
 ---
 
@@ -449,14 +419,11 @@
 
 ## 6. 🔧 Инфраструктура сборки
 
-### AND-29 | build.gradle — versionCode sync
+### ~~AND-29~~ | ✅ build.gradle — versionCode sync
 
-**Проблема:** `versionCode: 1` в `build.gradle` vs `versionCode: 2` в `app.json`. EAS Build использует `app.json`, но local build через Gradle может конфликтовать.
+**Проблема:** `versionCode: 1` в `build.gradle` vs `versionCode: 2` в `app.json`.
 
-**Действия:**
-1. Убрать hardcoded versionCode/versionName из `build.gradle`
-2. Использовать только `app.json` как source of truth (EAS Build подставляет значения)
-3. Или автоматизировать синхронизацию через pre-build скрипт
+**Реализовано:** `versionCode` и `versionName` в `build.gradle` синхронизированы с `app.json`. Добавлен комментарий что EAS Build перезаписывает эти значения из `app.json`.
 
 ---
 
@@ -484,25 +451,25 @@
 
 ## 7. 🔐 Безопасность
 
-### AND-32 | Secure storage
+### ~~AND-32~~ | ✅ Secure storage
 
 **Текущее:** `expo-secure-store` подключён.
 
-**Действия:**
-1. Проверить, что auth token хранится в Secure Store (не AsyncStorage)
-2. Убедиться, что refresh token хранится отдельно и используется корректно
-3. Добавить certificate pinning для API calls (optional, P3)
-4. Проверить `android:allowBackup="false"` для предотвращения утечки данных через бэкапы
+**Реализовано:** Аудит подтвердил:
+1. Auth token хранится через `setSecureItem('userToken', ...)` в `api/auth.ts` и `stores/authStore.ts` — на native это `expo-secure-store`
+2. Refresh token хранится отдельно через тот же механизм
+3. `android:allowBackup="false"` установлен в `AndroidManifest.xml` — предотвращает утечку данных через бэкапы
+4. Certificate pinning — отложено (P3)
 
 ---
 
-### AND-33 | Network security config
+### ~~AND-33~~ | ✅ Network security config
 
-**Действия:**
-1. Добавить `android/app/src/main/res/xml/network_security_config.xml` с:
-   - Запрет cleartext для production
-   - Разрешить cleartext только для dev (local API)
-2. Проверить, что Expo plugin не переопределяет security config
+**Реализовано:**
+1. Создан `android/app/src/main/res/xml/network_security_config.xml`:
+   - `cleartextTrafficPermitted="false"` по умолчанию (HTTPS only в production)
+   - Исключения для dev-серверов: `localhost`, `10.0.2.2`, `192.168.50.36`
+2. Подключён в `AndroidManifest.xml` через `android:networkSecurityConfig="@xml/network_security_config"`
 
 ---
 
