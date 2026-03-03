@@ -55,7 +55,6 @@ export function useRouteStoreAdapter() {
     }
 
     return end?.address || '';
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points]);
 
   // Get route data
