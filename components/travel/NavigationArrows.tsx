@@ -150,7 +150,8 @@ function NavigationArrows({
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
       fontWeight: '500',
-      textTransform: 'uppercase',
+      // TYPO-04: capitalize вместо uppercase — лучше читаемость на кириллице
+      textTransform: 'capitalize',
       letterSpacing: 0.5,
     },
     navTitle: {

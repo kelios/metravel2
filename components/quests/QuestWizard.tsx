@@ -155,7 +155,7 @@ const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: bool
                         </Animated.View>
                     </PinchGestureHandler>
                 </GestureHandlerRootView>
-                <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10}><Text style={styles.closeButtonText}>✕</Text></Pressable>
+                <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть просмотр фото"><Text style={styles.closeButtonText}>✕</Text></Pressable>
                 <View style={styles.zoomHintContainer}><Text style={styles.zoomHint}>Используйте два пальца, чтобы увеличить фото</Text></View>
             </View>
         </Modal>
@@ -259,7 +259,7 @@ const StepCard = memo((props: StepCardProps) => {
                 )}
                 <View style={styles.headerContent}>
                     <Text style={styles.stepTitle}>{step.title}</Text>
-                    <Pressable onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')}>
+                    <Pressable onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} accessibilityRole="button" accessibilityLabel={`Открыть в картах: ${step.location}`}>
                         <Text style={styles.location}>{step.location}</Text>
                     </Pressable>
                 </View>
@@ -276,7 +276,7 @@ const StepCard = memo((props: StepCardProps) => {
                 {step.id !== 'intro' && !isPassed && (
                     ((step.answer as any)._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()))
                         ? (
-                            <Pressable style={styles.primaryButton} onPress={() => onSubmit('ok')} hitSlop={6}>
+                            <Pressable style={styles.primaryButton} onPress={() => onSubmit('ok')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Далее">
                                 <Text style={styles.buttonText}>Далее</Text>
                             </Pressable>
                         ) : (
@@ -361,17 +361,17 @@ const StepCard = memo((props: StepCardProps) => {
             {step.id !== 'intro' && (
                 <View style={styles.section}>
                     <View style={styles.navRow}>
-                        <Pressable style={styles.navButton} onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6}>
+                        <Pressable style={styles.navButton} onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
                             <Text style={styles.navButtonText}>Навигация</Text>
                         </Pressable>
-                        <Pressable style={styles.navToggle} onPress={() => setNavExpanded(v => !v)} hitSlop={6}>
+                        <Pressable style={styles.navToggle} onPress={() => setNavExpanded(v => !v)} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
                             <Text style={styles.navToggleText}>{navExpanded ? '▲' : '▼'}</Text>
                         </Pressable>
-                        <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6}>
+                        <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}`}>
                             <Text style={styles.coordsButtonText}>{step.lat.toFixed(4)}, {step.lng.toFixed(4)}</Text>
                         </Pressable>
                         {step.image && (
-                            <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8}>
+                            <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}>
                                 <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
                             </Pressable>
                         )}
@@ -947,7 +947,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     completedText: { color: colors.textOnPrimary, fontWeight: 'bold', fontSize: 12 },
 
     section: { marginBottom: SPACING.lg },
-    sectionTitle: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: SPACING.sm, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionTitle: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: SPACING.sm, textTransform: 'capitalize', letterSpacing: 0.5 },
     storyText: { fontSize: 14, lineHeight: 20, color: colors.text },
 
     taskText: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: SPACING.md, lineHeight: 22 },
