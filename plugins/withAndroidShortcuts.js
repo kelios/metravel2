@@ -3,7 +3,6 @@
 // Long-press on app icon → "Поиск", "Карта", "Избранное".
 //
 /* global module, require */
-/* eslint-disable no-undef */
 //
 // This plugin:
 // 1. Creates res/xml/shortcuts.xml with 3 static shortcuts
