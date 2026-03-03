@@ -6,13 +6,13 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/RULES.md` — mandatory project rules and policies
 - `docs/DEVELOPMENT.md` — local setup and day-to-day workflow
-- `docs/TESTING.md` — Jest + Playwright (E2E) + governance commands
+- `docs/TESTING.md` — Jest + Playwright (E2E) + CI quality gate
 - `docs/RELEASE.md` — release/deploy flow
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
 
 ## Development and operations
 
-- `docs/README.md` — project docs quick start + API notes
+- `docs/README.md` — project docs quick start + API reference
 - `docs/MODULE_OWNERS.md` — module ownership matrix
 
 ## Policy and PR templates
@@ -24,19 +24,13 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/GOOGLE_OAUTH_SETUP.md` — Google OAuth integration
 
-## UX/UI
+## Android
 
-- `docs/UX_UI_AUDIT.md` — UX/UI аудит приложения: проблемы адаптивности, навигации, доступности и план улучшений по приоритетам
-- `docs/ANDROID_MOBILE_IMPROVEMENT_PLAN.md` — Android & Mobile UX: план доработок native-платформы, Android-специфичные улучшения, Material Design, безопасность
+- `docs/ANDROID_TODO.md` — нереализованные Android-задачи (App Links, Google Sign-In native, Push, etc.)
 
-## Performance
-
-- `docs/PERFORMANCE_IMPROVEMENT_PLAN.md` — план улучшения производительности: bundle splitting, LCP, runtime, caching, мониторинг
-
-## ADRs
+## ADRs (Architecture Decision Records)
 
 - `docs/ADR_MAP_ARCHITECTURE.md` — map-core unified contract
-- `docs/ADR_STATE_MANAGEMENT.md` — state ownership boundaries (Zustand stores vs Context vs React Query)
+- `docs/ADR_STATE_MANAGEMENT.md` — state ownership boundaries (Zustand / Context / React Query)
 - `docs/ADR_API_ERROR_CONTRACT.md` — API error normalization and parsing
 - `docs/ADR_RNW_TREE_SHAKE.md` — React Native Web tree-shaking (opt-in slim barrel)
-- `docs/RNW_USAGE_AUDIT.md` — RNW module usage audit
