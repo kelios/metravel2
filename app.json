@@ -14,7 +14,10 @@
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
-      "**/*"
+      "assets/images/*",
+      "assets/fonts/*",
+      "assets/travel/*",
+      "assets/icons/*"
     ],
     "ios": {
       "supportsTablet": true,
@@ -40,6 +43,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
+        "monochromeImage": "./assets/images/monochrome-icon.png",
         "backgroundColor": "#ffffff"
       },
       "splash": {

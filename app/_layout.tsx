@@ -26,6 +26,14 @@ const NetworkStatusLazy = safeLazy(
   }),
   'NetworkStatus'
 );
+const SyncIndicatorLazy = safeLazy(
+  () => import('@/components/ui/SyncIndicator').then(m => {
+    const Component = m.SyncIndicator ?? (m as any).default;
+    if (!Component) throw new Error('SyncIndicator export not found');
+    return { default: Component };
+  }),
+  'SyncIndicator'
+);
 const ReactQueryDevtoolsLazy: any = React.lazy(() =>
   import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
 );
@@ -465,6 +473,13 @@ function ThemedContent({
                               {(!isWeb || isMounted) && (
                                 <React.Suspense fallback={null}>
                                   <NetworkStatusLazy position="top" />
+                                </React.Suspense>
+                              )}
+
+                              {/* AND-10: Индикатор синхронизации при восстановлении сети (native only) */}
+                              {!isWeb && (
+                                <React.Suspense fallback={null}>
+                                  <SyncIndicatorLazy />
                                 </React.Suspense>
                               )}
 

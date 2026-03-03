@@ -8,6 +8,24 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
+/** AND-10: Detect network-related errors from message text */
+function isNetworkRelatedMessage(msg: string): boolean {
+  if (!msg) return false;
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes('network') ||
+    lower.includes('сет') || // сеть, сетевая
+    lower.includes('подключен') ||
+    lower.includes('соединен') ||
+    lower.includes('timeout') ||
+    lower.includes('failed to fetch') ||
+    lower.includes('превышено время') ||
+    lower.includes('network request failed') ||
+    lower.includes('нет интернета') ||
+    lower.includes('offline')
+  );
+}
+
 interface ErrorDisplayProps {
   title?: string;
   message: string;
@@ -28,13 +46,19 @@ export default function ErrorDisplay({
   onDismiss,
   showContact = true,
   variant = 'error',
-  isNetworkError = false,
+  isNetworkError: isNetworkErrorProp = false,
 }: ErrorDisplayProps) {
   const colors = useThemedColors();
+
+  // AND-10: Auto-detect network errors from message text
+  const isNetworkError = isNetworkErrorProp || isNetworkRelatedMessage(message);
 
   // AND-10: При сетевой ошибке переопределяем defaults
   const effectiveTitle = title ?? (isNetworkError ? 'Нет подключения к интернету' : 'Что-то пошло не так');
   const effectiveVariant = isNetworkError ? 'warning' : variant;
+  const effectiveMessage = isNetworkError && !message
+    ? 'Проверьте подключение к интернету и попробуйте ещё раз'
+    : message;
 
   const iconName = isNetworkError ? 'wifi-off' :
                    effectiveVariant === 'warning' ? 'alert-triangle' :
@@ -155,8 +179,8 @@ export default function ErrorDisplay({
         {/* Текст ошибки */}
         <View style={styles.textContainer}>
           <Text style={styles.title}>{effectiveTitle}</Text>
-          <Text style={styles.message}>{message}</Text>
-          
+          <Text style={styles.message}>{effectiveMessage}</Text>
+
           {/* Детали (только в dev режиме) */}
           {details && __DEV__ && (
             <View style={styles.detailsContainer}>
@@ -173,7 +197,7 @@ export default function ErrorDisplay({
               style={[styles.button, styles.primaryButton]}
               onPress={onRetry}
               accessibilityRole="button"
-              accessibilityLabel="Попробовать снова"
+              accessibilityLabel={isNetworkError ? 'Повторить попытку подключения' : 'Попробовать снова'}
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
@@ -184,8 +208,10 @@ export default function ErrorDisplay({
                 },
               })}
             >
-              <Feather name="refresh-cw" size={16} color={colors.textOnPrimary} />
-              <Text style={styles.buttonText}>Попробовать снова</Text>
+              <Feather name={isNetworkError ? 'wifi' : 'refresh-cw'} size={16} color={colors.textOnPrimary} />
+              <Text style={styles.buttonText}>
+                {isNetworkError ? 'Повторить' : 'Попробовать снова'}
+              </Text>
             </Pressable>
           )}
 
