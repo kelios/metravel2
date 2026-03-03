@@ -517,7 +517,7 @@
 | AND-25 | Performance monitoring (код готов, нужен Sentry DSN) | P3 | Среднее | 🟡 Среднее |
 | ~~AND-26~~ | ✅ TalkBack audit (touch targets 48dp) | ~~P3~~ | Среднее | 🟡 Среднее |
 | ~~AND-27~~ | ✅ Material Design 3 | ~~P2~~ | Высокое | 🟡 Среднее |
-| AND-28 | Edge-to-edge | P2 | Среднее | 🟠 Высокое |
+| ~~AND-28~~ | ✅ Edge-to-edge (fullscreen gallery + nav bar sync) | ~~P2~~ | Среднее | 🟠 Высокое |
 | ~~AND-29~~ | ✅ versionCode sync | ~~P1~~ | Низкое | 🟠 Среднее |
 | ~~AND-30~~ | ✅ Hermes optimization | ~~P2~~ | Низкое | 🟡 Среднее |
 | ~~AND-31~~ | ✅ APK size optimization | ~~P2~~ | Среднее | 🟡 Среднее |
@@ -925,4 +925,42 @@
 - AND-19 — Android App Widget (требует native Kotlin)
 - AND-21 — Picture-in-Picture для карты
 - AND-22 — GPS tracking (фоновая геолокация)
+
+### Март 2026 — Сессия 9
+
+**Реализовано (Спринт 9):**
+
+- AND-28 (P2, завершено) — Edge-to-edge fullscreen gallery:
+  - Создан компонент `FullscreenGallery.tsx` (`components/travel/FullscreenGallery.tsx`):
+    - Immersive fullscreen: StatusBar hidden + NavigationBar hidden (Android) при открытии
+    - FlatList с horizontal paging и smooth swipe navigation
+    - Instagram-style counter `1/N` (bottom center, semi-transparent)
+    - Close button 48dp touch target (M3 compliant) с safe area respect
+    - Восстановление system bars при закрытии (cleanup в useEffect)
+    - expo-image для рендеринга с `contentFit="contain"` и transition
+    - Web: не рендерится (web имеет свой lightbox)
+    - Modal с `statusBarTranslucent` и `supportedOrientations` (portrait + landscape)
+  - Интегрирован в `TravelDetailsHero.tsx`:
+    - `onImagePress` добавлен в оба Slider (web-optimized и native)
+    - FullscreenGallery lazy-loaded через `React.lazy` (только на native)
+    - State: `fullscreenVisible`, `fullscreenIndex`, `handleCloseFullscreen`
+  - Тест `__tests__/components/travel/FullscreenGallery.test.tsx` — 3 теста
+  - Ранее реализовано: `expo-navigation-bar` sync с темой, StatusBar translucent
+
+- AND-26 (P3, дополнение Сессии 8) — Все оставшиеся touch target обновления подтверждены
+
+**Тесты:** 472 suite, 4073+ tests — все прошли. Lint: 0 ошибок (10 pre-existing warnings).
+
+**Оставшиеся нереализованные задачи P0:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 fingerprint и серверная верификация `assetlinks.json`
+- AND-03 (P0, частично) — Google Sign-In native: код готов, требуется настройка Android Client ID в Google Cloud Console + SHA-1/SHA-256 fingerprint
+
+**Оставшиеся задачи (инфраструктурные, требующие внешних действий):**
+- AND-05 (P1) — Push-уведомления: код готов, нужен `google-services.json` (FCM) + бэкенд endpoint
+- AND-25 (P3) — Performance monitoring: код готов, нужен `@sentry/react-native` + `EXPO_PUBLIC_SENTRY_DSN`
+
+**Оставшиеся задачи P3 (nice to have, требуют native Kotlin / значительных усилий):**
+- AND-19 — Android App Widget (требует native Kotlin модуль)
+- AND-21 — Picture-in-Picture для карты (Android PiP API)
+- AND-22 — GPS tracking (фоновая геолокация, expo-location background)
 

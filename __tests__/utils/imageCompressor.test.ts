@@ -7,13 +7,13 @@ describe('imageCompressor', () => {
   const originalPlatform = Platform.OS;
 
   afterEach(() => {
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = originalPlatform;
     jest.resetModules();
   });
 
   it('returns original URI on web', async () => {
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'web';
 
     // Re-import to get web behavior
@@ -25,7 +25,7 @@ describe('imageCompressor', () => {
   });
 
   it('compressAvatar returns compressed result on native', async () => {
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'android';
 
     jest.resetModules();
@@ -39,7 +39,7 @@ describe('imageCompressor', () => {
   });
 
   it('compressTravelPhoto returns compressed result on native', async () => {
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'android';
 
     jest.resetModules();
@@ -50,7 +50,7 @@ describe('imageCompressor', () => {
   });
 
   it('compressImage with squareCrop option', async () => {
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'ios';
 
     jest.resetModules();

@@ -110,7 +110,6 @@
       "expo-secure-store",
       "expo-font",
       "expo-image",
-      "expo-image-manipulator",
       "expo-local-authentication",
       "expo-sharing",
       "expo-web-browser",

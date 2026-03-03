@@ -20,12 +20,12 @@ import * as secureStorage from '@/utils/secureStorage';
 describe('useBiometricAuth', () => {
   afterEach(() => {
     jest.clearAllMocks();
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = originalPlatform;
   });
 
   it('returns default state on web', async () => {
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'web';
 
     const { result } = renderHook(() => useBiometricAuth());
@@ -40,7 +40,7 @@ describe('useBiometricAuth', () => {
   });
 
   it('authenticate returns false on web', async () => {
-    // @ts-ignore
+    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'web';
 
     const { result } = renderHook(() => useBiometricAuth());

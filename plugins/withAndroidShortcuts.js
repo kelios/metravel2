@@ -2,7 +2,7 @@
 // AND-20: Expo config plugin to add Android App Shortcuts.
 // Long-press on app icon → "Поиск", "Карта", "Избранное".
 //
-/* eslint-env node */
+/* global module, require */
 /* eslint-disable no-undef */
 //
 // This plugin:
