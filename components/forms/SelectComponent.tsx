@@ -50,32 +50,6 @@ const SelectComponent: React.FC<SelectProps> = ({
         required: {
             color: colors.danger,
         },
-        selectContainer: {
-            borderRadius: DESIGN_TOKENS.radii.md,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: error ? colors.danger : colors.border,
-            overflow: 'hidden',
-            minHeight: 44, // ✅ УЛУЧШЕНИЕ: Минимальная высота для touch-целей
-            ...Platform.select({
-                web: {
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: DESIGN_TOKENS.shadows.light,
-                },
-                default: {
-                    ...DESIGN_TOKENS.shadowsNative.light,
-                },
-            }),
-        },
-        selectContainerError: {
-            backgroundColor: colors.dangerLight,
-            borderColor: colors.danger,
-            borderWidth: 2,
-        },
-        selectContainerDisabled: {
-            opacity: 0.6,
-            backgroundColor: colors.mutedBackground,
-        },
         hint: {
             fontSize: DESIGN_TOKENS.typography.sizes.xs,
             color: colors.textMuted,
@@ -98,7 +72,7 @@ const SelectComponent: React.FC<SelectProps> = ({
             fontWeight: '500',
             flex: 1,
         },
-    }), [colors, error]);
+    }), [colors]);
 
     const handleChange = (event: any) => {
         if (!disabled) {
