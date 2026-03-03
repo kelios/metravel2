@@ -393,6 +393,8 @@ function UnifiedTravelCard({
       accessibilityRole={isWeb ? undefined : 'button'}
       accessibilityLabel={cardActionLabel}
       testID={testID}
+      // AND-27: Material Design ripple effect on Android
+      {...(!isWeb ? { android_ripple: { color: 'rgba(0,0,0,0.08)', borderless: false } } : {})}
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
       {[

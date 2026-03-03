@@ -136,6 +136,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         accessibilityState={{ selected: isActive }}
         hitSlop={6}
         testID={testID}
+        // AND-27: Material Design ripple effect on Android
+        android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
         style={({ pressed }) => [
           styles.item,
           isActive && styles.itemActive,
