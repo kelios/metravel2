@@ -78,6 +78,23 @@
   max-width: min(560px, calc(100vw - 28px)) !important;
 }
 
+/* MAP-03: На мобайле popup компактнее и скроллируется, чтобы не перекрывать карту */
+@media (max-width: 480px) {
+  .leaflet-popup.metravel-place-popup .leaflet-popup-content {
+    padding: 10px !important;
+    padding-right: 36px !important;
+    font-size: 13px !important;
+    line-height: 19px !important;
+    max-width: calc(100vw - 40px) !important;
+    max-height: 60vh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+  .leaflet-popup.metravel-place-popup .leaflet-popup-content-wrapper {
+    border-radius: 14px !important;
+  }
+}
+
 .leaflet-popup.metravel-user-point-popup .leaflet-popup-content {
   padding-right: 14px !important;
 }

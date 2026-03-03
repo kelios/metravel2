@@ -927,15 +927,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [rl, userLocationLatLng]);
 
   const popupAutoPanPadding = useMemo(() => {
-    const isNarrowViewport = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const isNarrowViewport = vw <= 768;
+    const isVeryNarrow = vw <= 480;
     return {
       autoPan: true,
       keepInView: true,
-      maxWidth: isNarrowViewport ? 360 : 560,
-      minWidth: isNarrowViewport ? 280 : 420,
+      // MAP-03: уменьшаем popup на мобайле чтобы не перекрывал карту
+      maxWidth: isVeryNarrow ? 280 : isNarrowViewport ? 340 : 560,
+      minWidth: isVeryNarrow ? 220 : isNarrowViewport ? 260 : 420,
       className: 'metravel-place-popup',
-      autoPanPaddingTopLeft: [24, 140],
-      autoPanPaddingBottomRight: [400, 240],
+      autoPanPaddingTopLeft: isNarrowViewport ? [12, 60] : [24, 140],
+      autoPanPaddingBottomRight: isNarrowViewport ? [12, 60] : [400, 240],
     };
   }, []);
 

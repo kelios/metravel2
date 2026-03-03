@@ -76,6 +76,21 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   }, [showMore]);
 
 
+  // NAV-13: Swipe-to-close для moreSheet
+  const swipeStartY = useRef<number | null>(null);
+  const handleSwipeStart = (e: React.PointerEvent | React.TouchEvent) => {
+    const y = 'touches' in e ? (e as React.TouchEvent).touches[0]?.clientY : (e as React.PointerEvent).clientY;
+    if (typeof y === 'number') swipeStartY.current = y;
+  };
+  const handleSwipeEnd = (e: React.PointerEvent | React.TouchEvent) => {
+    if (swipeStartY.current == null) return;
+    const y = 'changedTouches' in e ? (e as React.TouchEvent).changedTouches[0]?.clientY : (e as React.PointerEvent).clientY;
+    if (typeof y === 'number' && y - swipeStartY.current > 60) {
+      setShowMore(false);
+    }
+    swipeStartY.current = null;
+  };
+
   const DockButton = memo(function DockButton({
     label,
     href,
