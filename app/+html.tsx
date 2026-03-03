@@ -244,6 +244,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
+      {/* Preload critical text fonts — stable URLs via /public/assets/fonts/.
+          Reduces FCP by ensuring font bytes arrive before first paint. */}
+      <link rel="preload" as="font" type="font/ttf" href="/assets/fonts/Roboto-Regular.ttf" crossOrigin="anonymous" />
+      <link rel="preload" as="font" type="font/ttf" href="/assets/fonts/Roboto-Medium.ttf" crossOrigin="anonymous" />
+
       {/* Icon fonts (Feather, etc.) are loaded by expo-font at runtime.
           Avoid hard-coding Metro's dev asset URLs here: they are not stable and can 404. */}
       

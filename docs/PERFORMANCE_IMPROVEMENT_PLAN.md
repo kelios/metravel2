@@ -421,23 +421,23 @@ yarn install
 
 ## 8. Матрица приоритетов
 
-| Фаза | Задача | Усилия | Влияние | Приоритет |
-|------|--------|--------|---------|-----------|
-| P1.1 | Route-level code splitting | Среднее | 🔴 Высокое | **P0** |
-| P1.2 | Lazy Leaflet import | Низкое | 🔴 Высокое | **P0** |
-| P1.3 | Lazy PDF/export | Низкое | 🟠 Высокое | **P0** |
-| P1.4 | Icon tree-shaking | Низкое | 🟡 Среднее | P1 |
-| P2.1 | RNW slim в production | Низкое | 🟡 Среднее | P1 |
-| P3.1 | Preload hero image | Низкое | 🔴 Высокое | **P0** |
-| P3.2 | Critical CSS inline | Среднее | 🟡 Среднее | P1 |
-| P3.3 | Font preload + swap | Низкое | 🟡 Среднее | P1 |
-| P3.4 | Image optimization | Среднее | 🔴 Высокое | **P0** |
-| P3.5 | SSG для ключевых страниц | Высокое | 🔴 Высокое | P1 |
-| P4.2 | Re-render оптимизация | Среднее | 🟡 Среднее | P2 |
-| P4.3 | Проверка Flash List config | Низкое | 🟡 Среднее | P2 |
-| P4.5 | Web Workers | Высокое | 🟡 Среднее | P3 |
-| P5.1 | React Query prefetch | Низкое | 🟡 Среднее | P2 |
-| P5.2 | HTTP cache headers | Низкое | 🟠 Высокое | P1 |
+| Фаза | Задача | Усилия | Влияние | Приоритет | Статус |
+|------|--------|--------|---------|-----------|--------|
+| P1.1 | Route-level code splitting | Среднее | 🔴 Высокое | **P0** | ✅ Готово (/map, /quests, /userpoints, /export, /travels/[param]) |
+| P1.2 | Lazy Leaflet import | Низкое | 🔴 Высокое | **P0** | ✅ Готово (useLeafletLoader + requestIdleCallback) |
+| P1.3 | Lazy PDF/export | Низкое | 🟠 Высокое | **P0** | ✅ Готово (dynamic import / CDN) |
+| P1.4 | Icon tree-shaking | Низкое | 🟡 Среднее | P1 | ✅ Готово (lucide-react не используется) |
+| P2.1 | RNW slim в production | Низкое | 🟡 Среднее | P1 | ✅ Включён (EXPO_PUBLIC_RNW_SLIM=1 в build:web:prod) |
+| P3.1 | Preload hero image | Низкое | 🔴 Высокое | **P0** | ✅ Готово (travel-hero-preload.js) |
+| P3.2 | Critical CSS inline | Среднее | 🟡 Среднее | P1 | ✅ Готово (criticalCSSBuilder.ts) |
+| P3.3 | Font preload + swap | Низкое | 🟡 Среднее | P1 | ✅ Готово (inline скрипт + preload links) |
+| P3.4 | Image optimization | Среднее | 🔴 Высокое | **P0** | ✅ Готово (fetchPriority, data-lcp, loading=lazy) |
+| P3.5 | SSG для ключевых страниц | Высокое | 🔴 Высокое | P1 | ⬜ Не начато |
+| P4.2 | Re-render оптимизация | Среднее | 🟡 Среднее | P2 | ⬜ Не начато |
+| P4.3 | Проверка Flash List config | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
+| P4.5 | Web Workers | Высокое | 🟡 Среднее | P3 | ⬜ Не начато |
+| P5.1 | React Query prefetch | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
+| P5.2 | HTTP cache headers | Низкое | 🟠 Высокое | P1 | ⬜ Не начато (needs server verification) |
 | P5.3 | API compression | Низкое | 🟡 Среднее | P1 |
 | P5.4 | Image CDN | Высокое | 🔴 Высокое | P2 |
 | P6.5 | Deduplicate deps | Низкое | 🟡 Среднее | P2 |
@@ -448,13 +448,14 @@ yarn install
 
 ### 🔥 Спринт 1 (1 неделя) — Quick wins: bundle & LCP
 
-| # | Задача | Ожидаемый эффект |
-|---|--------|-----------------|
-| 1 | P1.3 — Lazy import PDF/export | Bundle −600 KB |
-| 2 | P1.2 — Lazy Leaflet (только на страницах карты) | Bundle −400 KB |
-| 3 | P3.1 — Preload hero image | LCP −1–2 с |
-| 4 | P3.3 — Font preload + display:swap | FCP −200–300 мс |
-| 5 | P1.4 — Lucide icon cleanup | Bundle −60–120 KB |
+| # | Задача | Ожидаемый эффект | Статус |
+|---|--------|-----------------|--------|
+| 1 | P1.3 — Lazy import PDF/export | Bundle −600 KB | ✅ Готово (PDF не импортируется статически, jszip — dynamic import, html2canvas — CDN) |
+| 2 | P1.2 — Lazy Leaflet (только на страницах карты) | Bundle −400 KB | ✅ Готово (useLeafletLoader с requestIdleCallback + dynamic import) |
+| 3 | P3.1 — Preload hero image | LCP −1–2 с | ✅ Готово (travel-hero-preload.js + fetchPriority=high + data-lcp) |
+| 4 | P3.3 — Font preload + display:swap | FCP −200–300 мс | ✅ Готово (font-display:swap через inline скрипт + preload links для Roboto в +html.tsx) |
+| 5 | P1.4 — Lucide icon cleanup | Bundle −60–120 KB | ✅ Готово (lucide-react не используется в production-коде, только @expo/vector-icons/Feather) |
+| 6 | P1.1 — Route splitting /travels/[param] | Entry bundle −300+ KB | ✅ Готово (React.lazy + Suspense + TravelDetailPageSkeleton) |
 
 **Валидация спринта:**
 ```bash
@@ -466,12 +467,12 @@ npm run lighthouse:travel:desktop
 
 ### 🟠 Спринт 2 (1 неделя) — Route splitting & RNW
 
-| # | Задача | Ожидаемый эффект |
-|---|--------|-----------------|
-| 1 | P1.1 — Route-level code splitting (/map, /export) | Entry bundle −40% |
-| 2 | P2.1 — RNW slim barrel в production | Unused JS −150 KB |
-| 3 | P3.4 — Image optimization (priority, lazy, thumb) | LCP −1–2 с |
-| 4 | P5.2 — HTTP cache headers (fonts, images) | Повторные загрузки −60% |
+| # | Задача | Ожидаемый эффект | Статус |
+|---|--------|-----------------|--------|
+| 1 | P1.1 — Route-level code splitting (/map, /export) | Entry bundle −40% | ✅ Готово (все ключевые маршруты используют React.lazy) |
+| 2 | P2.1 — RNW slim barrel в production | Unused JS −150 KB | ✅ Готово (EXPO_PUBLIC_RNW_SLIM=1 в build:web:prod) |
+| 3 | P3.4 — Image optimization (priority, lazy, thumb) | LCP −1–2 с | ✅ Готово (fetchPriority=high, data-lcp, loading=lazy для below-fold) |
+| 4 | P5.2 — HTTP cache headers (fonts, images) | Повторные загрузки −60% | ⬜ Не начато (needs server verification) |
 
 ### 🟡 Спринт 3 (1–2 недели) — Runtime & Network
 

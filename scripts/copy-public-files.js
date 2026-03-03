@@ -25,6 +25,8 @@ const filesToCopy = [
   'manifest.json',
   'robots.txt',
   'icon.svg',
+  'assets/fonts/Roboto-Regular.ttf',
+  'assets/fonts/Roboto-Medium.ttf',
 ];
 
 if (!fs.existsSync(buildDir)) {
@@ -51,6 +53,10 @@ for (const file of filesToCopy) {
   }
   
   try {
+    const destDir = path.dirname(destPath);
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
     fs.copyFileSync(srcPath, destPath);
     console.log(`✅ Copied: ${file}`);
     copiedCount++;
