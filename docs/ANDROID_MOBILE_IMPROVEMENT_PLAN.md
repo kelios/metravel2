@@ -130,18 +130,19 @@
 
 ---
 
-### AND-09 | Keyboard handling — единообразная обработка клавиатуры
+### ~~AND-09~~ | ✅ Keyboard handling — единообразная обработка клавиатуры
 
 **Проблема:** `KeyboardAvoidingView` используется в 6+ компонентах Travel Wizard, но:
 - Нет единообразного `keyboardVerticalOffset` (на Android vs iOS разное)
 - В чатах (`ChatView.tsx`) клавиатура может перекрывать поле ввода
 - TextInput в поиске и фильтрах — нет автоматического scroll to field при фокусе
 
-**Действия:**
-1. Создать обёртку `KeyboardAwareContainer` с правильными offsets для Android/iOS
-2. `behavior="height"` для Android (не `"padding"` — ведёт себя некорректно)
-3. Автоматический scroll к активному `TextInput` при фокусе
-4. В чат-экране: `android:windowSoftInputMode="adjustResize"` через `app.json` plugin
+**Реализовано:**
+1. Создан компонент `KeyboardAwareContainer` (`components/ui/KeyboardAwareContainer.tsx`) с правильными offsets для Android/iOS
+2. Android: `behavior="height"` (вместо `undefined`) во всех 6 Travel Wizard шагах и ChatView
+3. iOS: `behavior="padding"` сохранён
+4. `android.softwareKeyboardLayoutMode: "resize"` добавлен в `app.json` для корректного adjustResize
+5. Web: KeyboardAvoidingView не рендерится (не нужен)
 
 ---
 
@@ -152,12 +153,15 @@
 - Нет offline-доступа к просмотренным маршрутам
 - Нет retry-механизма с экспоненциальной задержкой для пользователя
 
-**Действия:**
-1. Добавить persistent `NetworkStatusBanner` на Android native (overlay поверх контента)
-2. Кэшировать последние просмотренные маршруты через AsyncStorage для offline-просмотра
-3. Кнопка «Повторить» при ошибке сети вместо пустого экрана
-4. Индикатор синхронизации при восстановлении связи
-5. React Query `networkMode: 'offlineFirst'` для graceful degradation
+**Частично реализовано:**
+1. ✅ React Query `networkMode: 'offlineFirst'` добавлен в `utils/reactQueryConfig.ts` — запросы используют кэш при отсутствии сети, автоматический refetch при восстановлении
+2. ✅ `NetworkStatus` компонент уже подключён глобально в `_layout.tsx` — persistent баннер при потере сети с анимированным появлением/скрытием
+3. ✅ `refetchOnReconnect: true` уже включён в React Query config
+
+**Оставшиеся действия:**
+1. Кэшировать последние просмотренные маршруты через AsyncStorage для offline-просмотра
+2. Кнопка «Повторить» при ошибке сети вместо пустого экрана (в ErrorDisplay)
+3. Индикатор синхронизации при восстановлении связи
 
 ---
 
@@ -214,7 +218,7 @@
 
 ---
 
-### AND-14 | Pull-to-Refresh — расширить на все списки
+### ~~AND-14~~ | ✅ Pull-to-Refresh — расширить на все списки
 
 **Проблема:** `RefreshControl` используется в:
 - `PointsListGrid` ✅
@@ -223,12 +227,12 @@
 - `articles.tsx` ✅
 - **Отсутствует** на: главной странице, странице поиска маршрутов, профиле, избранном, истории
 
-**Действия:**
-1. Добавить `RefreshControl` на главную страницу (обновление рекомендаций и hero)
-2. Добавить `RefreshControl` на страницу поиска (пере-fetch списка маршрутов)
-3. Добавить `RefreshControl` на профиль (обновление stats и данных)
-4. Добавить `RefreshControl` на избранное и историю
-5. Использовать `invalidateQueries` из React Query для корректной инвалидации
+**Реализовано:**
+1. ✅ `RefreshControl` добавлен на главную страницу (`Home.tsx`) — `invalidateQueries()` при pull-to-refresh
+2. ✅ `refreshing`/`onRefresh` добавлены в профиль (`profile.tsx`) — обновление stats и данных через `loadTravels` + `loadUserInfo`
+3. ✅ `refreshing`/`onRefresh` добавлены в избранное (`favorites.tsx`) — FlashList native pull-to-refresh
+4. ✅ `refreshing`/`onRefresh` добавлены в историю (`history.tsx`) — FlashList native pull-to-refresh
+5. Используется `invalidateQueries` из React Query для корректной инвалидации (Home), прямые вызовы API для Profile
 
 ---
 
@@ -487,12 +491,12 @@
 | ~~AND-06~~ | ✅ Splash screen | ~~P1~~ | Низкое | 🟠 Среднее |
 | ~~AND-07~~ | ✅ BackHandler | ~~P1~~ | Среднее | 🟠 Высокое |
 | ~~AND-08~~ | ✅ StatusBar | ~~P1~~ | Низкое | 🟠 Среднее |
-| AND-09 | Keyboard handling | P1 | Среднее | 🟠 Высокое |
+| ~~AND-09~~ | ✅ Keyboard handling | ~~P1~~ | Среднее | 🟠 Высокое |
 | AND-10 | Offline mode | P1 | Высокое | 🟠 Высокое |
 | ~~AND-11~~ | ✅ Proguard/R8 | ~~P1~~ | Среднее | 🟡 Среднее |
 | AND-12 | Adaptive Icon M3 | P2 | Низкое | 🟡 Среднее |
 | AND-13 | Жесты и анимации | P2 | Среднее | 🟡 Среднее |
-| AND-14 | Pull-to-Refresh | P2 | Низкое | 🟡 Среднее |
+| ~~AND-14~~ | ✅ Pull-to-Refresh | ~~P2~~ | Низкое | 🟡 Среднее |
 | AND-15 | Image Picker | P2 | Среднее | 🟡 Среднее |
 | AND-16 | Native animations | P2 | Среднее | 🟡 Среднее |
 | AND-17 | Biometric auth | P2 | Среднее | 🟡 Среднее |
@@ -631,6 +635,29 @@
 - AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
 - AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
 - AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
-- AND-09 (P1) — Keyboard handling: KeyboardAwareContainer
-- AND-10 (P1) — Offline mode: NetworkStatusBanner + кэширование
+- AND-10 (P1, частично) — Offline mode: `networkMode: 'offlineFirst'` добавлен, NetworkStatus баннер есть — осталось кэширование маршрутов через AsyncStorage
+
+### Март 2026 — Сессия 2
+
+**Реализовано (Спринт 2 + Спринт 3):**
+
+- ~~AND-09~~ (P1) — Keyboard handling:
+  - Создан компонент `KeyboardAwareContainer` (`components/ui/KeyboardAwareContainer.tsx`) — кроссплатформенная обёртка с правильными offsets
+  - Android: `behavior="height"` (вместо `undefined`) во всех 6 Travel Wizard шагах (Basic, Extras, Media, Route, Details, Publish) и ChatView
+  - iOS: `behavior="padding"` сохранён
+  - `android.softwareKeyboardLayoutMode: "resize"` добавлен в `app.json`
+  - Web: KeyboardAvoidingView не рендерится (не нужен)
+
+- AND-10 (P1, частично) — Offline mode:
+  - React Query `networkMode: 'offlineFirst'` добавлен в `utils/reactQueryConfig.ts` — запросы используют кэш при отсутствии сети
+  - `NetworkStatus` компонент уже подключён глобально (persistent баннер)
+  - `refetchOnReconnect: true` уже включён
+
+- ~~AND-14~~ (P2) — Pull-to-Refresh расширение:
+  - `RefreshControl` добавлен на главную страницу (`Home.tsx`) — `queryClient.invalidateQueries()` при pull-to-refresh
+  - `refreshing`/`onRefresh` добавлены в профиль (`profile.tsx`) — обновление через `loadTravels` + `loadUserInfo`
+  - `refreshing`/`onRefresh` добавлены в избранное (`favorites.tsx`) — FlashList native pull-to-refresh
+  - `refreshing`/`onRefresh` добавлены в историю (`history.tsx`) — FlashList native pull-to-refresh
+
+**Тесты:** 463 suite, 4031 test — все прошли. Lint: 0 ошибок.
 
