@@ -31,11 +31,22 @@ interface UseBiometricAuthReturn extends BiometricAuthState {
   authenticate: (promptMessage?: string) => Promise<boolean>;
 }
 
-let LocalAuth: any = null;
+interface LocalAuthModule {
+  hasHardwareAsync: () => Promise<boolean>;
+  isEnrolledAsync: () => Promise<boolean>;
+  supportedAuthenticationTypesAsync: () => Promise<number[]>;
+  authenticateAsync: (options: {
+    promptMessage: string;
+    cancelLabel: string;
+    disableDeviceFallback: boolean;
+  }) => Promise<{ success: boolean }>;
+}
+
+let LocalAuth: LocalAuthModule | null = null;
 
 if (Platform.OS !== 'web') {
   try {
-    LocalAuth = require('expo-local-authentication');
+    LocalAuth = require('expo-local-authentication') as LocalAuthModule;
   } catch {
     // expo-local-authentication not installed
   }

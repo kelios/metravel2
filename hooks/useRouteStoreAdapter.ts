@@ -37,8 +37,7 @@ export function useRouteStoreAdapter() {
 
   // Get addresses — пересчитываются при изменении points
   const startAddress = useMemo(() => {
-    const start = useRouteStore.getState().getStartPoint();
-    return start?.address || '';
+    return points[0]?.address || '';
   }, [points]);
 
   const endAddress = useMemo(() => {
