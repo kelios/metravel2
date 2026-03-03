@@ -90,12 +90,12 @@ function StarRating({
             Animated.timing(anim, {
                 toValue: 1.3,
                 duration: 100,
-                useNativeDriver: true,
+                useNativeDriver: shouldUseNativeDriver,
             }),
             Animated.timing(anim, {
                 toValue: 1,
                 duration: 150,
-                useNativeDriver: true,
+                useNativeDriver: shouldUseNativeDriver,
             }),
         ]).start(() => setPressedStar(null));
 

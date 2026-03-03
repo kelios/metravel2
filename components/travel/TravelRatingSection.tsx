@@ -3,7 +3,7 @@
 // 🎨 УЛУЧШЕНО: Анимация изменения рейтинга, улучшенная визуальная иерархия, success feedback
 
 import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
@@ -28,6 +28,7 @@ function TravelRatingSection({
 }: Props) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const shouldUseNativeDriver = Platform.OS !== 'web';
 
     // 🎨 Анимация для изменения рейтинга
     const ratingChangeAnim = useRef(new Animated.Value(1)).current;
@@ -59,12 +60,12 @@ function TravelRatingSection({
                 Animated.timing(ratingChangeAnim, {
                     toValue: 1.1,
                     duration: 200,
-                    useNativeDriver: true,
+                    useNativeDriver: shouldUseNativeDriver,
                 }),
                 Animated.timing(ratingChangeAnim, {
                     toValue: 1,
                     duration: 200,
-                    useNativeDriver: true,
+                    useNativeDriver: shouldUseNativeDriver,
                 }),
             ]).start();
         }
@@ -81,7 +82,7 @@ function TravelRatingSection({
             Animated.timing(spinAnim, {
                 toValue: 1,
                 duration: 800,
-                useNativeDriver: true,
+                useNativeDriver: shouldUseNativeDriver,
             }),
         );
         loop.start();
@@ -96,13 +97,13 @@ function TravelRatingSection({
                 Animated.timing(successPulseAnim, {
                     toValue: 1,
                     duration: 300,
-                    useNativeDriver: true,
+                    useNativeDriver: shouldUseNativeDriver,
                 }),
                 Animated.delay(2000),
                 Animated.timing(successPulseAnim, {
                     toValue: 0,
                     duration: 300,
-                    useNativeDriver: true,
+                    useNativeDriver: shouldUseNativeDriver,
                 }),
             ]).start(() => setShowSuccess(false));
         }
