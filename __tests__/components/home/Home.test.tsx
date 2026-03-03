@@ -114,7 +114,7 @@ describe('Home Component', () => {
       expect(mockFetchMyTravels).not.toHaveBeenCalled();
     });
 
-    it('should not fetch travels on home even when authenticated', () => {
+    it('should fetch travels count for authenticated users (HERO-06)', () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: true,
         userId: '123',
@@ -124,9 +124,12 @@ describe('Home Component', () => {
         triggerProfileRefresh: jest.fn(),
       } as any);
 
+      // HERO-06: fetchMyTravels should be called to load travelsCount for the hero button
+      mockFetchMyTravels.mockResolvedValue({ data: [], total: 3 } as any);
+
       const { getByTestId } = renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
-      expect(mockFetchMyTravels).not.toHaveBeenCalled();
+      expect(mockFetchMyTravels).toHaveBeenCalledWith({ user_id: '123' });
     });
   });
 
