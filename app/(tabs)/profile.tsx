@@ -735,6 +735,8 @@ export default function ProfileScreen() {
           keyExtractor={keyExtractor}
           numColumns={Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1)}
           renderItem={renderItem}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             isTravelsTabLoading ? ListSkeleton : (
               <View style={styles.emptyWrap}>
