@@ -279,7 +279,7 @@ function GoogleSignInButtonNative({ onSuccess, onError, disabled }: GoogleSignIn
         <Pressable
             onPress={handlePress}
             disabled={disabled || isLoading || !hasRequiredClientId}
-            android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
+            android_ripple={{ color: colors.overlay, borderless: false }}
             style={({ pressed }) => [
                 styles.button,
                 (disabled || isLoading || !hasRequiredClientId) && styles.buttonDisabled,

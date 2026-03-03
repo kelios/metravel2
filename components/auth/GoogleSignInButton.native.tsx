@@ -94,7 +94,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
         <Pressable
             onPress={handlePress}
             disabled={disabled || isLoading || !hasRequiredClientId}
-            android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
+            android_ripple={{ color: colors.overlay, borderless: false }}
             style={({ pressed }) => [
                 styles.button,
                 (disabled || isLoading || !hasRequiredClientId) && styles.buttonDisabled,
@@ -159,4 +159,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.text,
     },
 });
-
