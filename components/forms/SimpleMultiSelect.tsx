@@ -344,7 +344,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     flex: 1,
     ...(Platform.OS === 'web' ? ({ height: '80vh' } as any) : ({} as any)),
     ...(Platform.OS === 'web'
-      ? ({ boxShadow: colors.boxShadows?.modal ?? '0 8px 24px rgba(0,0,0,0.12)' } as any)
+      ? ({ boxShadow: colors.boxShadows.modal } as any)
       : ((colors.shadows?.heavy ?? {}) as any)),
   },
   modalHeader: {
