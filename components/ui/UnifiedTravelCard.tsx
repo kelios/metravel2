@@ -9,6 +9,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
@@ -95,6 +96,8 @@ function UnifiedTravelCard({
   const [imageLoaded, setImageLoaded] = useState(false);
   const handleImageLoad = useCallback(() => setImageLoaded(true), []);
   const isFeatured = visualVariant === 'featured';
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobileDevice = isPhone || isLargePhone;
   const cardActionLabel = `Открыть маршрут «${title}»`;
   const mediaActionLabel = `Открыть фото маршрута «${title}»`;
   const optimizedImageUrl = useMemo(() => {
@@ -188,6 +191,19 @@ function UnifiedTravelCard({
           justifyContent: 'center',
           alignItems: 'center',
           backgroundColor: colors.backgroundSecondary,
+        },
+        // CARD-03: Иконка-подсказка «фото кликабельно»
+        mediaActionHint: {
+          position: 'absolute',
+          bottom: 8,
+          right: 8,
+          width: 28,
+          height: 28,
+          borderRadius: 8,
+          backgroundColor: 'rgba(0,0,0,0.35)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 3,
         },
         imageTitleOverlay: {
           position: 'absolute',
@@ -450,6 +466,13 @@ function UnifiedTravelCard({
             )
           ) : null}
 
+          {/* CARD-03: Визуальный индикатор, что фото кликабельно отдельно от карточки */}
+          {onMediaPress && !showHeroTitle ? (
+            <View style={styles.mediaActionHint} pointerEvents="none">
+              <Feather name="maximize-2" size={14} color="#fff" />
+            </View>
+          ) : null}
+
           {showHeroTitle ? (
             <View style={StyleSheet.absoluteFillObject}>
               <View style={styles.imageVignetteOverlay} />
@@ -490,7 +513,8 @@ function UnifiedTravelCard({
         ) : (
           <View key="content-default" style={styles.content}>
             {!heroTitleOverlay && (
-              <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
+              {/* RESP-06: На desktop 2 строки заголовка, на mobile 1 */}
+              <Text style={styles.title} numberOfLines={isMobileDevice ? 1 : 2} ellipsizeMode="tail">
                 {title}
               </Text>
             )}

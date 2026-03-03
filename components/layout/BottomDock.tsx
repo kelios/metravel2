@@ -256,7 +256,16 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           <View
             testID="footer-more-sheet"
             style={[styles.moreSheet, !sheetVisible && styles.moreSheetHidden]}
-            {...({ role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Дополнительное меню' } as any)}
+            {...({
+              role: 'dialog',
+              'aria-modal': 'true',
+              'aria-label': 'Дополнительное меню',
+              // NAV-13: swipe-to-close handlers
+              onPointerDown: handleSwipeStart,
+              onPointerUp: handleSwipeEnd,
+              onTouchStart: handleSwipeStart,
+              onTouchEnd: handleSwipeEnd,
+            } as any)}
           >
             {/* NAV-02: drag-indicator для bottom sheet */}
             <View style={styles.sheetHandle} />
