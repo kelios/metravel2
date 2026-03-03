@@ -15,6 +15,7 @@ import {
   extractDeepLinkFromNotification,
   NotificationPayload,
 } from '@/services/notifications';
+import { registerPushTokenApi } from '@/api/auth';
 import { devError } from '@/utils/logger';
 
 interface UsePushNotificationsOptions {
@@ -54,6 +55,7 @@ export function usePushNotifications(
       const token = await registerForPushNotifications();
       if (token) {
         setPushToken(token);
+        void registerPushTokenApi(token);
         onTokenRef.current?.(token);
       }
       return token;

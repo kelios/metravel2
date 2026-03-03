@@ -562,5 +562,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
         fontWeight: '500',
     },
-    btnContent: { paddingVertical: 12 },
 });

@@ -393,9 +393,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.lg,
         marginTop: 8,
     },
-    btnContent: {
-        paddingVertical: 12,
-    },
     passwordContainer: {
         position: 'relative' as const,
         width: '100%',
@@ -481,14 +478,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderColor: colors.danger,
         borderWidth: 2,
         backgroundColor: colors.dangerSoft,
-    },
-    // ✅ ИСПРАВЛЕНИЕ: Стиль больше не используется (ошибки показываются через FormFieldWithValidation)
-    errorText: {
-        color: colors.danger,
-        fontSize: 12,
-        marginTop: -10,
-        marginBottom: 10,
-        marginLeft: 4,
     },
     dividerContainer: {
         flexDirection: 'row',
