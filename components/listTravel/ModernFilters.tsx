@@ -1,11 +1,11 @@
-// ✅ УЛУЧШЕНИЕ: ModernFilters - мигрирован на DESIGN_TOKENS и useThemedColors
+// ✅ УЛУЧШЕНИЕ: ModernFilters - декомпозирован на подкомпоненты (SRCH-01)
+// Подкомпоненты вынесены в ./filters/
 import React, { memo, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
-  StyleSheet,
   Platform,
   Animated,
   TextInput,
@@ -16,7 +16,15 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
-import CardActionPressable from '@/components/ui/CardActionPressable';
+
+// Подкомпоненты из filters/
+import {
+  FilterCheckbox,
+  FilterOptionItem,
+  GroupClearButton,
+  SortDropdown,
+  createModernFiltersStyles,
+} from './filters';
 
 export interface FilterOption {
   id: string;
@@ -33,304 +41,6 @@ export interface FilterGroup {
 }
 
 export type FilterState = Record<string, string[]> & { year?: string | number; moderation?: number };
-
-const FilterCheckbox = memo(({ checked, checkboxStyle, checkboxCheckedStyle, checkColor }: {
-  checked: boolean;
-  checkboxStyle: any;
-  checkboxCheckedStyle: any;
-  checkColor: string;
-}) => (
-  <View style={[checkboxStyle, checked && checkboxCheckedStyle]}>
-    {checked && <Feather name="check" size={14} color={checkColor} />}
-  </View>
-));
-
-const FilterRadio = memo(({ checked, radioStyle, radioCheckedStyle, radioDotStyle }: {
-  checked: boolean;
-  radioStyle: any;
-  radioCheckedStyle: any;
-  radioDotStyle: any;
-}) => (
-  <View style={[radioStyle, checked && radioCheckedStyle]}>
-    {checked && <View style={radioDotStyle} />}
-  </View>
-));
-
-const GroupClearButton = memo(({ onPress, count, colors }: {
-  onPress: () => void;
-  count: number;
-  colors: ReturnType<typeof useThemedColors>;
-}) => (
-  <CardActionPressable
-    onPress={onPress}
-    title={`Очистить ${count} выбранных`}
-    style={{
-      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: 2,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.dangerSoft,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
-    }}
-    accessibilityRole="button"
-    accessibilityLabel={`Очистить ${count} выбранных`}
-  >
-    <Feather name="x" size={12} color={colors.danger} />
-    <Text style={{
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      color: colors.danger,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-    }} numberOfLines={1}>
-      Очистить
-    </Text>
-  </CardActionPressable>
-));
-
-const SortDropdown = memo(({ 
-  sortGroup, 
-  selectedFilters, 
-  onFilterChange, 
-  styles, 
-  colors 
-}: {
-  sortGroup: FilterGroup;
-  selectedFilters: FilterState;
-  onFilterChange: (groupKey: string, optionId: string) => void;
-  styles: any;
-  colors: ReturnType<typeof useThemedColors>;
-}) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  
-  const selectedOption = useMemo(() => {
-    const selectedId = String(selectedFilters.sort ?? '');
-    return sortGroup.options.find(opt => String(opt.id) === selectedId) || sortGroup.options[0];
-  }, [sortGroup.options, selectedFilters.sort]);
-
-  const handleSelect = useCallback((optionId: string) => {
-    onFilterChange(sortGroup.key, optionId);
-    setIsExpanded(false);
-  }, [onFilterChange, sortGroup.key]);
-
-  return (
-    <View style={styles.sortSection}>
-      {/* Dropdown trigger */}
-      <Pressable
-        onPress={() => setIsExpanded(!isExpanded)}
-        style={[
-          styles.sortDropdownTrigger,
-          isExpanded && styles.sortDropdownTriggerActive,
-          Platform.OS === 'web' && isHovered && !isExpanded && styles.sortDropdownTriggerHover,
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel={`Сортировка: ${selectedOption?.name || 'Новые'}`}
-        accessibilityState={{ expanded: isExpanded }}
-        {...(Platform.OS === 'web'
-          ? {
-              onMouseEnter: () => setIsHovered(true),
-              onMouseLeave: () => setIsHovered(false),
-            } as any
-          : {})}
-      >
-        <View style={styles.sortDropdownTriggerLeft}>
-          <View style={styles.sortDropdownIcon}>
-            <Feather name="sliders" size={16} color={colors.primary} />
-          </View>
-          <View style={styles.sortDropdownTextContainer}>
-            <Text style={styles.sortDropdownLabel}>Сортировка</Text>
-            <Text style={styles.sortDropdownValue} numberOfLines={1}>
-              {selectedOption?.name || 'Новые'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.sortDropdownChevron}>
-          <Feather 
-            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-            size={18} 
-            color={colors.textSecondary} 
-          />
-        </View>
-      </Pressable>
-
-      {/* Dropdown content */}
-      {isExpanded && (
-        <View style={styles.sortDropdownContent}>
-          {sortGroup.options.map((option) => {
-            const optionId = String(option.id);
-            const isSelected = String(selectedFilters.sort ?? '') === optionId;
-
-            return (
-              <SortOptionItem
-                key={option.id}
-                option={option}
-                isSelected={isSelected}
-                onPress={() => handleSelect(option.id)}
-                styles={styles}
-                colors={colors}
-                isCompact
-              />
-            );
-          })}
-        </View>
-      )}
-    </View>
-  );
-});
-
-const SORT_ICONS: Record<string, string> = {
-  'new': 'clock',
-  'old': 'archive',
-  'popular_desc': 'trending-up',
-  'popular_asc': 'trending-down',
-  'rating_desc': 'star',
-  'added_desc': 'plus-circle',
-  'added_asc': 'minus-circle',
-  'name_asc': 'type',
-  'name_desc': 'type',
-  'year_desc': 'calendar',
-  'year_asc': 'calendar',
-};
-
-const getSortIcon = (optionId: string): string => {
-  return SORT_ICONS[optionId] || 'list';
-};
-
-const SortOptionItem = memo(({ 
-  option, 
-  isSelected, 
-  onPress, 
-  styles, 
-  colors,
-  isCompact = false,
-}: {
-  option: FilterOption;
-  isSelected: boolean;
-  onPress: () => void;
-  styles: any;
-  colors: ReturnType<typeof useThemedColors>;
-  isCompact?: boolean;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const iconName = getSortIcon(option.id);
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.filterOption,
-        styles.sortOption,
-        isCompact && styles.sortOptionCompact,
-        isSelected && styles.sortOptionSelected,
-        Platform.OS === 'web' && isHovered && !isSelected && styles.sortOptionHover,
-      ]}
-      accessibilityRole="radio"
-      accessibilityLabel={option.name}
-      accessibilityState={{ checked: isSelected }}
-      {...(Platform.OS === 'web'
-        ? {
-            onMouseEnter: () => setIsHovered(true),
-            onMouseLeave: () => setIsHovered(false),
-          } as any
-        : {})}
-    >
-      <View style={[
-        styles.sortIconContainer,
-        isSelected && styles.sortIconContainerSelected,
-      ]}>
-        <Feather 
-          name={iconName as any} 
-          size={14} 
-          color={isSelected ? colors.primary : colors.textMuted} 
-        />
-      </View>
-      <Text
-        style={[
-          styles.sortOptionText,
-          isSelected && styles.sortOptionTextSelected,
-        ]}
-        numberOfLines={1}
-      >
-        {option.name}
-      </Text>
-      {isSelected && (
-        <View style={styles.sortCheckIcon}>
-          <Feather name="check" size={16} color={colors.primary} />
-        </View>
-      )}
-    </Pressable>
-  );
-});
-
-const FilterOptionItem = memo(({ 
-  option, 
-  isSelected, 
-  isMultiSelect,
-  onPress, 
-  styles, 
-  colors 
-}: {
-  option: FilterOption;
-  isSelected: boolean;
-  isMultiSelect: boolean;
-  onPress: () => void;
-  styles: any;
-  colors: ReturnType<typeof useThemedColors>;
-}) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.filterOption,
-        isSelected && styles.filterOptionSelected,
-        Platform.OS === 'web' && isHovered && !isSelected && styles.filterOptionHover,
-      ]}
-      accessibilityRole={isMultiSelect ? 'checkbox' : 'radio'}
-      accessibilityLabel={option.name}
-      accessibilityState={{ checked: isSelected }}
-      {...(Platform.OS === 'web'
-        ? ({
-            'aria-checked': isSelected,
-            onMouseEnter: () => setIsHovered(true),
-            onMouseLeave: () => setIsHovered(false),
-          } as any)
-        : null)}
-    >
-      {isMultiSelect ? (
-        <FilterCheckbox 
-          checked={isSelected} 
-          checkboxStyle={styles.checkbox} 
-          checkboxCheckedStyle={styles.checkboxChecked} 
-          checkColor={colors.textOnPrimary} 
-        />
-      ) : (
-        <FilterRadio 
-          checked={isSelected} 
-          radioStyle={styles.radio} 
-          radioCheckedStyle={styles.radioChecked} 
-          radioDotStyle={styles.radioDot} 
-        />
-      )}
-      <Text 
-        style={[
-          styles.filterOptionText,
-          isSelected && styles.filterOptionTextSelected
-        ]}
-        numberOfLines={1}
-      >
-        {option.name}
-      </Text>
-      {typeof option.count === 'number' && option.count > 0 && (
-        <Text style={styles.filterOptionCount}>
-          {option.count}
-        </Text>
-      )}
-    </Pressable>
-  );
-});
 
 interface ModernFiltersProps {
   filterGroups: FilterGroup[];
@@ -365,9 +75,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onApply,
   onClose,
 }) => {
-  // ✅ УЛУЧШЕНИЕ: Поддержка тем через useThemedColors
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
 
   const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
   const hasOptions = filterGroups.some((group) => (group.options || []).length > 0);
@@ -378,7 +87,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
-  const [animatedValues] = useState(() => 
+  const [animatedValues] = useState(() =>
     filterGroups.reduce((acc, group) => {
       acc[group.key] = new Animated.Value(1);
       return acc;
@@ -389,8 +98,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     setExpandedGroups(prev => {
       const next = new Set(prev);
 
-      // Если по какой-то причине нет Animated.Value для этой группы (например, группа добавлена позже),
-      // инициализируем его на лету, чтобы избежать runtime-ошибок.
       if (!animatedValues[groupKey]) {
         animatedValues[groupKey] = new Animated.Value(next.has(groupKey) ? 1 : 0);
       }
@@ -470,7 +177,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         </View>
         <View style={styles.headerRight}>
           {activeFiltersCount > 0 && (
-            <Pressable onPress={onClearAll} style={styles.clearButton}>
+            <Pressable
+              onPress={onClearAll}
+              style={styles.clearButton}
+              accessibilityRole="button"
+              accessibilityLabel={`Очистить все фильтры (${activeFiltersCount})`}
+            >
               <Text style={styles.clearButtonText}>
                 Очистить ({activeFiltersCount})
               </Text>
@@ -489,7 +201,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         </View>
       </View>
 
-      {/* Mobile/Narrow web: explicit clear-all button (avoid tiny icon-only control) */}
+      {/* Mobile/Narrow web: explicit clear-all button */}
       {activeFiltersCount > 0 && (Platform.OS !== 'web' || isNarrowWeb) && (
         <Pressable
           onPress={onClearAll}
@@ -512,7 +224,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           const next = new Set<string>();
 
           allKeys.forEach((key) => {
-            // Инициализируем анимационные значения при необходимости
             if (!animatedValues[key]) {
               animatedValues[key] = new Animated.Value(allExpanded ? 1 : 0);
             }
@@ -535,6 +246,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           }
         }}
         style={styles.toggleAllButton}
+        accessibilityRole="button"
+        accessibilityLabel={areAllGroupsExpanded ? 'Свернуть все группы фильтров' : 'Развернуть все группы фильтров'}
       >
         <View style={styles.toggleAllButtonInner}>
           <View style={styles.iconSlot16}>
@@ -603,7 +316,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       )}
 
       {/* Filter Groups */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={true}
         contentContainerStyle={styles.scrollContent}
@@ -614,8 +327,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
           const isMultiSelect = group.multiSelect !== false;
           const selectedArray = isMultiSelect
             ? (Array.isArray(rawSelected) ? rawSelected : [])
-            : (rawSelected !== undefined && rawSelected !== null && rawSelected !== ''
-              ? [rawSelected]
+            : (rawSelected !== undefined && rawSelected !== null && (rawSelected as any) !== ''
+              ? [rawSelected].flat()
               : []);
           const selectedSet = new Set(selectedArray.map(String));
           const selectedCount = selectedArray.length;
@@ -630,10 +343,10 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               if (aSelected === bSelected) return 0;
               return aSelected ? -1 : 1;
             });
-          
+
           return (
-            <View 
-              key={group.key} 
+            <View
+              key={group.key}
               style={[
                 styles.filterGroup,
                 index === groupsWithoutSort.length - 1 && styles.filterGroupLast
@@ -668,7 +381,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   {selectedCount > 0 && (
                     <GroupClearButton
                       onPress={() => {
-                        selectedArray.forEach(id => onFilterChange(group.key, id));
+                        selectedArray.forEach(id => onFilterChange(group.key, String(id)));
                       }}
                       count={selectedCount}
                       colors={colors}
@@ -686,7 +399,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
               {/* Group Options */}
               {isExpanded && (
-                <Animated.View 
+                <Animated.View
                   style={[
                     styles.groupContent as any,
                     {
@@ -746,6 +459,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 keyboardType="numeric"
                 maxLength={4}
                 style={styles.yearInput}
+                accessibilityLabel="Фильтр по году"
               />
             </View>
           </View>
@@ -783,617 +497,5 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
 ModernFilters.displayName = 'ModernFilters';
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
-  const { spacing, typography, radii } = DESIGN_TOKENS;
-
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.lg,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      ...Platform.select({
-        web: {
-          boxShadow: colors.boxShadows.card,
-          width: 280,
-          position: 'sticky' as any,
-          top: spacing.lg,
-          maxHeight: '100%',
-        },
-        default: {},
-      }),
-    },
-    containerMobile: {
-      flex: 1,
-      borderRadius: 0,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.lg,
-      backgroundColor: colors.surface,
-      elevation: 0,
-    },
-    containerWebFull: {
-      width: '100%',
-      maxWidth: '100%',
-      height: '100vh' as any,
-      borderRadius: 0,
-      position: 'relative',
-      top: 0,
-      maxHeight: '100vh' as any,
-      boxShadow: 'none' as any,
-      display: 'flex' as any,
-      flexDirection: 'column' as any,
-      overflowY: 'hidden' as any,
-    },
-    containerCompact: {
-      padding: spacing.md,
-      ...Platform.select({
-        web: {
-          width: 240,
-        },
-      }),
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: spacing.sm,
-    },
-    headerTitle: {
-      fontSize: typography.sizes.lg,
-      fontWeight: typography.weights.semibold as any,
-      color: colors.text,
-    },
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      flex: 1,
-    },
-    iconSlot16: {
-      width: 16,
-      height: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
-    iconSlot18: {
-      width: 18,
-      height: 18,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
-    headerRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    closeButton: {
-      padding: spacing.xs,
-    },
-    toggleAllButton: {
-      marginBottom: spacing.xs,
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: radii.pill,
-      paddingVertical: 8,
-      paddingHorizontal: spacing.sm,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-        },
-      }),
-    },
-    toggleAllButtonInner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    toggleAllButtonText: {
-      fontSize: typography.sizes.xs,
-      color: colors.textSecondary,
-      fontWeight: typography.weights.medium as any,
-    },
-    clearButton: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: radii.pill,
-      backgroundColor: colors.primarySoft,
-    },
-    clearButtonText: {
-      fontSize: typography.sizes.xs,
-      fontWeight: typography.weights.medium as any,
-      color: colors.primaryText,
-    },
-    clearAllMobileButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.xs,
-      paddingVertical: 10,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.pill,
-      backgroundColor: colors.surfaceMuted,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginBottom: spacing.xs,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-        },
-      }),
-    },
-    clearAllMobileButtonText: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.medium as any,
-      color: colors.textSecondary,
-    },
-    resultsBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      backgroundColor: colors.surfaceMuted,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 6,
-      borderRadius: radii.pill,
-      marginBottom: spacing.xs,
-    },
-    resultsBadgeText: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.medium as any,
-      color: colors.textSecondary,
-    },
-    sortSection: {
-      marginBottom: spacing.md,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-      overflow: 'hidden',
-      ...Platform.select({
-        web: {
-          boxShadow: colors.boxShadows.light,
-        },
-      }),
-    },
-    sortDropdownTrigger: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.surface,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.default}`,
-        },
-      }),
-    },
-    sortDropdownTriggerHover: Platform.select({
-      web: {
-        backgroundColor: colors.surfaceMuted,
-      } as any,
-    }),
-    sortDropdownTriggerActive: {
-      backgroundColor: colors.primarySoft,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    sortDropdownTriggerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      flex: 1,
-    },
-    sortDropdownIcon: {
-      width: 32,
-      height: 32,
-      borderRadius: radii.md,
-      backgroundColor: colors.primarySoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sortDropdownTextContainer: {
-      flex: 1,
-    },
-    sortDropdownLabel: {
-      fontSize: typography.sizes.xs,
-      color: colors.textMuted,
-      fontWeight: typography.weights.medium as any,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    sortDropdownValue: {
-      fontSize: typography.sizes.sm,
-      color: colors.text,
-      fontWeight: typography.weights.semibold as any,
-      marginTop: 2,
-    },
-    sortDropdownChevron: {
-      width: 24,
-      height: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sortDropdownContent: {
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.xs,
-      backgroundColor: colors.surface,
-      gap: 2,
-    },
-    sortOption: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: 'transparent',
-      marginBottom: 0,
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      ...Platform.select({
-        web: {
-          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.default}`,
-        },
-      }),
-    },
-    sortOptionCompact: {
-      paddingVertical: 8,
-      paddingHorizontal: spacing.sm,
-      minHeight: 40,
-    },
-    sortOptionSelected: {
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.primaryAlpha30,
-    },
-    sortOptionHover: Platform.select({
-      web: {
-        backgroundColor: colors.surfaceMuted,
-      } as any,
-    }),
-    sortIconContainer: {
-      width: 24,
-      height: 24,
-      borderRadius: radii.sm,
-      backgroundColor: colors.surfaceMuted,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sortIconContainerSelected: {
-      backgroundColor: colors.primaryAlpha30,
-    },
-    sortCheckIcon: {
-      width: 20,
-      height: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    sortOptionTextSelected: {
-      color: colors.primaryDark,
-      fontWeight: typography.weights.semibold as any,
-    },
-    extraFilters: {
-      marginBottom: spacing.xs,
-      gap: spacing.xs,
-    },
-    yearGroup: {
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      borderBottomWidth: 0,
-      marginTop: spacing.md,
-      marginBottom: 0,
-      paddingTop: spacing.sm,
-      paddingBottom: 0,
-    },
-    yearInlineRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: spacing.sm,
-      marginTop: spacing.sm,
-    },
-    yearGroupContent: {
-      marginTop: spacing.sm,
-    },
-    yearRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      gap: spacing.sm,
-      marginTop: spacing.xs,
-    },
-    yearLabelContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    yearLabel: {
-      fontSize: typography.sizes.sm,
-      color: colors.textSecondary,
-      fontWeight: typography.weights.semibold as any,
-    },
-    yearInput: {
-      flexBasis: 96,
-      maxWidth: 96,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 6,
-      borderRadius: radii.pill,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceMuted,
-      fontSize: typography.sizes.sm,
-      textAlign: 'center',
-      alignSelf: 'flex-start',
-      minHeight: 32,
-      ...Platform.select({
-        web: {
-          outlineWidth: 0,
-        },
-      }),
-    },
-    moderationRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingVertical: 6,
-      paddingHorizontal: spacing.xs,
-      borderRadius: radii.md,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-        },
-      }),
-    },
-    moderationRowSelected: {
-      backgroundColor: colors.primarySoft,
-    },
-    moderationLabel: {
-      fontSize: typography.sizes.sm,
-      color: colors.textSecondary,
-    },
-    moderationLabelSelected: {
-      color: colors.primaryDark,
-      fontWeight: typography.weights.medium as any,
-    },
-    scrollView: {
-      flex: 1,
-      ...Platform.select({
-        web: {
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-        } as any,
-      }),
-    },
-    scrollContent: {
-      flexGrow: 1,
-      paddingBottom: spacing.lg,
-    },
-    filterGroup: {
-      marginBottom: spacing.sm,
-      paddingBottom: spacing.sm,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    filterGroupLast: {
-      borderBottomWidth: 0,
-      marginBottom: 0,
-      paddingBottom: 0,
-    },
-    groupHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.xs,
-      minHeight: 36,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-        },
-      }),
-    },
-    groupHeaderLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      flex: 1,
-      minWidth: 0,
-    },
-    groupHeaderRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      flexShrink: 0,
-      marginLeft: spacing.xs,
-    },
-    groupTitle: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.semibold as any,
-      color: colors.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      flexShrink: 1,
-    },
-    selectedBadge: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: spacing.xs,
-      paddingVertical: 2,
-      borderRadius: radii.pill,
-      minWidth: 20,
-      alignItems: 'center',
-      flexShrink: 0,
-    },
-    selectedBadgeText: {
-      fontSize: typography.sizes.xs,
-      fontWeight: typography.weights.semibold as any,
-      color: colors.textOnPrimary,
-    },
-    selectedSummaryRow: {
-      marginBottom: spacing.xs,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      gap: 2,
-    },
-    selectedSummaryLabel: {
-      fontSize: typography.sizes.xs,
-      fontWeight: typography.weights.semibold as any,
-      color: colors.primaryText,
-    },
-    selectedSummaryText: {
-      fontSize: typography.sizes.xs,
-      color: colors.textSecondary,
-      lineHeight: 16,
-      fontWeight: typography.weights.medium as any,
-    },
-    groupContent: {
-      marginTop: spacing.xs,
-      overflow: 'hidden',
-    },
-    filterOption: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      marginBottom: spacing.xxs,
-      minHeight: 44,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.default}`,
-        },
-      }),
-    },
-    filterOptionHover: Platform.select({
-      web: {
-        backgroundColor: colors.surfaceMuted,
-        transform: 'translateX(2px)',
-      } as any,
-    }),
-    filterOptionSelected: {
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-    },
-    filterOptionText: {
-      flex: 1,
-      fontSize: typography.sizes.sm,
-      color: colors.text,
-      marginLeft: spacing.sm,
-      fontWeight: typography.weights.regular as any,
-    },
-    sortOptionText: {
-      flex: 1,
-      fontSize: typography.sizes.md,
-      color: colors.text,
-      marginLeft: spacing.sm,
-      fontWeight: typography.weights.medium as any,
-    },
-    filterOptionTextSelected: {
-      color: colors.primaryDark,
-      fontWeight: typography.weights.medium as any,
-    },
-    filterOptionCount: {
-      fontSize: typography.sizes.xs,
-      color: colors.textMuted,
-      backgroundColor: colors.surfaceMuted,
-      paddingHorizontal: spacing.xs,
-      paddingVertical: 2,
-      borderRadius: radii.pill,
-    },
-    checkbox: {
-      width: 20,
-      height: 20,
-      borderRadius: radii.sm,
-      borderWidth: 2,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-    },
-    checkboxChecked: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    radio: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      borderWidth: 2,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-    },
-    radioLarge: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      borderWidth: 2,
-      borderColor: colors.border,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-    },
-    radioChecked: {
-      borderColor: colors.primary,
-      borderWidth: 2,
-    },
-    radioDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: colors.primary,
-    },
-    radioDotLarge: {
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      backgroundColor: colors.primary,
-    },
-    applyButtonContainer: {
-      marginTop: spacing.sm,
-      paddingTop: spacing.md,
-      paddingHorizontal: spacing.xs,
-      paddingBottom: spacing.xs,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      ...Platform.select({
-        web: { gap: spacing.xs } as any,
-      }),
-    },
-    resetMobileButton: {
-      paddingVertical: spacing.sm,
-      borderRadius: radii.pill,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.background,
-      marginBottom: spacing.xs,
-    },
-    resetMobileButtonText: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.medium as any,
-      color: colors.textMuted,
-    },
-    applyButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: spacing.md,
-      borderRadius: radii.pill,
-      alignItems: 'center',
-    },
-    applyButtonText: {
-      fontSize: typography.sizes.md,
-      fontWeight: typography.weights.semibold as any,
-      color: colors.textOnPrimary,
-    },
-  });
-};
 
 export default ModernFilters;
