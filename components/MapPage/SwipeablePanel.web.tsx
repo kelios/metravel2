@@ -162,7 +162,7 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
       // @ts-ignore - web-only pointer events
       onPointerCancel={handlePointerCancel as any}
     >
-      <Pressable style={styles.overlay} onPress={onClose} />
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Закрыть панель" />
       <View style={[styles.panel, style]}>{children}</View>
     </View>
   );

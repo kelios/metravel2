@@ -461,7 +461,8 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             fontSize: 13,
             color: colors.textMuted,
             fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
-            textTransform: 'uppercase',
+            // TYPO-04: capitalize вместо uppercase для кириллицы
+            textTransform: 'capitalize',
             letterSpacing: 0.6,
         },
         modalNavItem: {

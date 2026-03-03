@@ -127,7 +127,8 @@ function AccountMenu() {
           paddingBottom: 4,
           fontSize: 11,
           letterSpacing: 0.5,
-          textTransform: 'uppercase',
+          // TYPO-04: capitalize вместо uppercase
+          textTransform: 'capitalize',
           color: colors.textMuted,
           fontWeight: '600',
         },
@@ -142,7 +143,8 @@ function AccountMenu() {
         sectionHeaderText: {
           fontSize: 11,
           letterSpacing: 0.5,
-          textTransform: 'uppercase',
+          // TYPO-04: capitalize вместо uppercase
+          textTransform: 'capitalize',
           color: colors.textMuted,
           fontWeight: '600',
           flex: 1,
@@ -454,7 +456,7 @@ function AccountMenu() {
           />
 
           <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('travels')} style={styles.sectionHeader}>
+          <Pressable onPress={() => toggleSection('travels')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Путешествия" accessibilityState={{ expanded: expandedSections.travels }}>
             <Text style={styles.sectionHeaderText}>Путешествия</Text>
             <Feather 
               name={expandedSections.travels ? 'chevron-up' : 'chevron-down'} 
@@ -495,7 +497,7 @@ function AccountMenu() {
           )}
 
           <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('account')} style={styles.sectionHeader}>
+          <Pressable onPress={() => toggleSection('account')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Аккаунт" accessibilityState={{ expanded: expandedSections.account }}>
             <Text style={styles.sectionHeaderText}>Аккаунт</Text>
             <Feather 
               name={expandedSections.account ? 'chevron-up' : 'chevron-down'} 
@@ -567,7 +569,7 @@ function AccountMenu() {
           )}
 
           <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('navigation')} style={styles.sectionHeader}>
+          <Pressable onPress={() => toggleSection('navigation')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Навигация" accessibilityState={{ expanded: expandedSections.navigation }}>
             <Text style={styles.sectionHeaderText}>Навигация</Text>
             <Feather 
               name={expandedSections.navigation ? 'chevron-up' : 'chevron-down'} 
@@ -588,7 +590,7 @@ function AccountMenu() {
           ))}
 
           <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('theme')} style={styles.sectionHeader}>
+          <Pressable onPress={() => toggleSection('theme')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Тема оформления" accessibilityState={{ expanded: expandedSections.theme }}>
             <Text style={styles.sectionHeaderText}>Тема оформления</Text>
             <Feather 
               name={expandedSections.theme ? 'chevron-up' : 'chevron-down'} 
@@ -604,7 +606,7 @@ function AccountMenu() {
           )}
 
           <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('documents')} style={styles.sectionHeader}>
+          <Pressable onPress={() => toggleSection('documents')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Документы" accessibilityState={{ expanded: expandedSections.documents }}>
             <Text style={styles.sectionHeaderText}>Документы</Text>
             <Feather 
               name={expandedSections.documents ? 'chevron-up' : 'chevron-down'} 

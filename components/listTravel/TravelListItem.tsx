@@ -545,6 +545,8 @@ const contentSlotWithoutTitle = hasContentInfo ? (
             <Pressable
               onPress={handleAuthorPress}
               style={({ pressed }) => [{ flexShrink: 1, minWidth: 0 }, pressed && authorUserId ? { opacity: 0.85 } : null]}
+              accessibilityRole="button"
+              accessibilityLabel={`Автор: ${authorName}`}
             >
               <Text style={styles.metaTxt} numberOfLines={1}>
                 {authorName}

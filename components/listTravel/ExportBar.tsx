@@ -53,18 +53,18 @@ export const ExportBar = memo(function ExportBar({
           {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
         </Text>
         <View style={resolvedStyles.exportBarInfoActions}>
-          <Pressable onPress={onToggleSelectAll} accessibilityRole="button">
+          <Pressable onPress={onToggleSelectAll} accessibilityRole="button" accessibilityLabel={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}>
             <Text style={resolvedStyles.linkButton as any}>
               {selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
             </Text>
           </Pressable>
           {hasSelection && (
-            <Pressable onPress={onClearSelection} accessibilityRole="button">
+            <Pressable onPress={onClearSelection} accessibilityRole="button" accessibilityLabel="Очистить выбор">
               <Text style={resolvedStyles.linkButton as any}>Очистить выбор</Text>
             </Pressable>
           )}
           {hasSelection && (
-            <Pressable onPress={onSettings} accessibilityRole="button">
+            <Pressable onPress={onSettings} accessibilityRole="button" accessibilityLabel="Настройки экспорта">
               <Text style={resolvedStyles.linkButton as any}>Настройки</Text>
             </Pressable>
           )}
