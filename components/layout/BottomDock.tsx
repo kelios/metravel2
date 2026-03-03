@@ -34,6 +34,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const { isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
   const [showMore, setShowMore] = useState(false);
+  // NAV-02: slide-up анимация — отдельный флаг для CSS transition
+  const [sheetVisible, setSheetVisible] = useState(false);
   const colors = useThemedColors();
   const router = useRouter();
   const pathname = usePathname();
@@ -56,6 +58,19 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     if (pathname.startsWith('/quests')) return '/quests';
     return pathname;
   }, [pathname]);
+
+  // NAV-02: Управление slide-up анимацией для moreSheet
+  // При открытии: сначала монтируем (showMore=true), потом через RAF делаем visible
+  // При закрытии: сначала убираем visible, ждём transition, потом размонтируем
+  useEffect(() => {
+    if (!showMore) {
+      setSheetVisible(false);
+      return;
+    }
+    // Монтируем → через RAF выставляем visible чтобы CSS transition сработал
+    const raf = requestAnimationFrame(() => setSheetVisible(true));
+    return () => cancelAnimationFrame(raf);
+  }, [showMore]);
 
 
   const DockButton = memo(function DockButton({
@@ -215,12 +230,29 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         <>
           <Pressable
             testID="footer-more-backdrop"
-            style={styles.moreBackdrop}
+            style={[styles.moreBackdrop, !sheetVisible && styles.moreBackdropHidden]}
             onPress={() => setShowMore(false)}
             accessibilityRole="button"
             accessibilityLabel="Закрыть меню"
           />
-          <View testID="footer-more-sheet" style={styles.moreSheet}>
+          <View
+            testID="footer-more-sheet"
+            style={[styles.moreSheet, !sheetVisible && styles.moreSheetHidden]}
+            {...({ role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Дополнительное меню' } as any)}
+          >
+            {/* NAV-02: drag-indicator для bottom sheet */}
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Ещё</Text>
+              <Pressable
+                onPress={() => setShowMore(false)}
+                style={styles.sheetCloseBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть"
+              >
+                <Feather name="x" size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
             <View testID="footer-more-list" style={styles.moreList}>
               <Pressable
                 onPress={() => {
@@ -396,19 +428,61 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     inset: 0,
     backgroundColor: colors.overlay,
     zIndex: 10900,
-  },
+    // NAV-02: fade-in backdrop
+    transition: 'opacity 0.28s ease',
+  } as any,
+  moreBackdropHidden: {
+    opacity: 0,
+    pointerEvents: 'none',
+  } as any,
   moreSheet: {
     position: "fixed",
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 16,
     zIndex: 11000,
     boxShadow: DESIGN_TOKENS.shadows.modal,
+    // NAV-02: slide-up анимация
+    transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
+    transform: 'translateY(0)',
   } as any,
+  moreSheetHidden: {
+    transform: 'translateY(100%)',
+  } as any,
+  // NAV-02: drag indicator + заголовок sheet
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.borderStrong,
+    alignSelf: 'center',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  } as any,
+  sheetTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  sheetCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSecondary,
+  },
   moreList: {
     gap: 4,
   } as any,

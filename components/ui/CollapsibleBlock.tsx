@@ -213,6 +213,15 @@ function CollapsibleBlock({
         },
       }),
     },
+    // ANIM-04: обёртка иконки для CSS rotate-transition
+    chevronIcon: {
+      ...Platform.select({
+        web: {
+          transition: 'transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)',
+          display: 'inline-block',
+        } as any,
+      }),
+    },
     content: {},
     contentInner: {
       padding: spacing.md,
@@ -336,9 +345,14 @@ function CollapsibleBlock({
               })}
             >
               <Feather 
-                name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                size={16} 
+                name="chevron-down"
+                size={16}
                 color={colors.textMuted}
+                style={
+                  Platform.OS === 'web'
+                    ? ([styles.chevronIcon, { transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }] as any)
+                    : { transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }
+                }
               />
             </Pressable>
           )}
@@ -368,12 +382,20 @@ function CollapsibleBlock({
       <Animated.View
         style={[
           styles.content,
-          {
-            maxHeight: Platform.OS === 'web' ? (isExpanded ? 10000 : 0) : heightInterpolated,
-            overflow: Platform.OS === 'web' ? (isExpanded ? 'visible' : 'hidden') : 'hidden',
-          },
+          Platform.OS === 'web'
+            ? ({
+                // ANIM-04: плавная анимация высоты на web через CSS transition
+                maxHeight: isExpanded ? 10000 : 0,
+                overflow: 'hidden',
+                transition: 'max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1)',
+                willChange: 'max-height',
+              } as any)
+            : {
+                maxHeight: heightInterpolated,
+                overflow: 'hidden',
+              },
         ]}
-        onLayout={handleContentLayout}
+        onLayout={Platform.OS !== 'web' ? handleContentLayout : undefined}
       >
         <View ref={contentRef} style={styles.contentInner}>
           {children}

@@ -311,23 +311,30 @@ export default function ProfileScreen() {
     switch (activeTab) {
       case 'travels':
         return {
-          title: 'Нет путешествий',
-          description: 'Вы еще не создали ни одного путешествия.',
-          action: { label: 'Создать', onPress: () => router.push('/metravel') },
+          icon: 'map',
+          title: 'Ваши маршруты появятся здесь',
+          description: 'Добавьте первое путешествие — поделитесь маршрутом, фотографиями и впечатлениями с сообществом.',
+          variant: 'inspire' as const,
+          action: { label: '+ Добавить путешествие', onPress: () => router.push('/travel/new' as any) },
+          secondaryAction: { label: 'Посмотреть чужие маршруты', onPress: () => router.push('/travelsby' as any) },
         };
       case 'favorites':
         return {
-          title: 'Нет избранного',
-          description: 'Добавляйте интересные маршруты в избранное.',
-          action: { label: 'Найти', onPress: () => router.push('/travelsby') },
+          icon: 'heart',
+          title: 'Нет сохранённых маршрутов',
+          description: 'Нажмите ♥ на любом маршруте, чтобы сохранить его сюда.',
+          variant: 'empty' as const,
+          action: { label: 'Найти маршруты', onPress: () => router.push('/travelsby' as any) },
         };
       case 'history':
         return {
-          title: 'История пуста',
-          description: 'История просмотров появится здесь.',
-          action: { label: 'Смотреть', onPress: () => router.push('/travelsby') },
+          icon: 'clock',
+          title: 'История просмотров пуста',
+          description: 'Открытые маршруты будут сохраняться здесь автоматически.',
+          variant: 'empty' as const,
+          action: { label: 'Смотреть маршруты', onPress: () => router.push('/travelsby' as any) },
         };
-      default: return { title: 'Пусто', description: '' };
+      default: return { icon: 'layers', title: 'Пусто', description: '' };
     }
   }, [activeTab, router]);
 
@@ -612,7 +619,7 @@ export default function ProfileScreen() {
           {isTravelsTabLoading ? ListSkeleton : (
             currentData.length === 0 ? (
               <View style={styles.emptyWrap}>
-                <EmptyState icon="layers" {...emptyStateProps} />
+                <EmptyState {...emptyStateProps} />
               </View>
             ) : (
               rows.map((rowItems, rowIndex) => {
@@ -695,7 +702,7 @@ export default function ProfileScreen() {
           ListEmptyComponent={
             isTravelsTabLoading ? ListSkeleton : (
               <View style={styles.emptyWrap}>
-                <EmptyState icon="layers" {...emptyStateProps} />
+                <EmptyState {...emptyStateProps} />
               </View>
             )
           }

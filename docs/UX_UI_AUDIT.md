@@ -352,7 +352,10 @@ HERO-04: Добавить probes-reduce-motion:
 
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
-| NAV-02 | BottomDock | `slide-up` sheet вместо fade-Modal |
+| ~~ANIM-04~~ | FAQ | ✅ Плавная CSS transition анимация в CollapsibleBlock: max-height + chevron rotate |
+| ~~NAV-02~~ | BottomDock | ✅ Slide-up sheet с drag-indicator, заголовком и CSS transition вместо резкого появления |
+| ~~DARK-02~~ | Тёмная тема | ✅ CSS-переменные `--gradient-*` для light/dark mode в global.css |
+| ~~EMPTY-03~~ | Profile | ✅ Вовлекающий EmptyState для нового пользователя с CTA «+ Добавить путешествие» |
 | ~~NAV-12~~ | ~~Header~~ | ~~Визуально выделить кнопку «Войти» как CTA~~ ✅ Реализовано — отдельная pill-кнопка для гостей |
 | HERO-03 | Hero | Первичная кнопка шире вторичной |
 | HERO-06 | Hero | Skeleton/hold для кнопки пока грузится travelsCount |
