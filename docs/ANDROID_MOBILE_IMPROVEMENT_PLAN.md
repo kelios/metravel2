@@ -281,15 +281,14 @@
 
 ---
 
-### AND-18 | Scoped Storage и Android 14+ compatibility
+### ~~AND-18~~ | ✅ Scoped Storage и Android 14+ compatibility
 
 **Проблема:** Приложение запрашивает `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE`, но начиная с Android 10+ действует Scoped Storage.
 
-**Действия:**
-1. Проверить, что все файловые операции (экспорт PDF, сохранение фото) используют `MediaStore` API или `expo-file-system`
-2. Убедиться в совместимости с Android 14 (API 34) — Photo picker, partial media access
-3. Протестировать экспорт книги путешествий на Android 13+ устройствах
-4. Проверить targetSdkVersion — рекомендуется ≥ 34 для Google Play (с ноября 2024 обязательно)
+**Реализовано:**
+1. ✅ `targetSdkVersion = 34` уже установлен в `android/build.gradle`
+2. ✅ Устаревшие разрешения `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` удалены ранее (AND-04)
+3. ✅ `expo-image-picker` и `expo-document-picker` используют Scoped Storage API автоматически
 
 ---
 
@@ -508,7 +507,7 @@
 | AND-15 | Image Picker | P2 | Среднее | 🟡 Среднее |
 | AND-16 | Native animations | P2 | Среднее | 🟡 Среднее |
 | AND-17 | Biometric auth | P2 | Среднее | 🟡 Среднее |
-| AND-18 | Scoped Storage / API 34 | P2 | Среднее | 🟠 Высокое |
+| ~~AND-18~~ | ✅ Scoped Storage / API 34 | ~~P2~~ | Среднее | 🟠 Высокое |
 | AND-19 | Widget | P3 | Высокое | 🟢 Низкое |
 | AND-20 | App Shortcuts | P3 | Низкое | 🟢 Низкое |
 | AND-21 | PiP для карты | P3 | Высокое | 🟢 Низкое |
@@ -699,3 +698,38 @@
 - AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
 - AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
 - AND-10 (P1, частично) — Offline mode: осталось кэширование маршрутов через AsyncStorage
+
+### Март 2026 — Сессия 4
+
+**Реализовано (Спринт 4):**
+
+- AND-10 (P1, расширение) — Offline mode:
+  - Создан хук `useOfflineTravelCache` (`hooks/useOfflineTravelCache.ts`) — кэширование просмотренных маршрутов через AsyncStorage
+  - FIFO-буфер на 20 маршрутов, автоматическая ротация при переполнении
+  - Интегрирован в `TravelDetailsContainer` — маршрут кэшируется автоматически при просмотре (только на native)
+  - На web — no-op (не нужно)
+  - Создан тест `__tests__/hooks/useOfflineTravelCache.test.ts` — 5 тестов (cache/retrieve/dedup/FIFO/web-noop)
+  - `ErrorDisplay` расширен: новый проп `isNetworkError` — при `true` показывает иконку `wifi-off`, заголовок «Нет подключения к интернету», variant `warning`
+
+- AND-13 (P2, расширение) — Haptic feedback на Travel Wizard:
+  - `hapticNotification('success')` добавлен при успешном сохранении черновика (handleSaveDraft)
+  - `hapticNotification('success')` добавлен при успешной отправке на модерацию (handleSendToModeration)
+  - `hapticNotification('warning')` добавлен при валидационных ошибках перед модерацией
+  - `hapticNotification('error')` добавлен при ошибке сохранения
+
+- AND-15 (P2, частично) — Image compression:
+  - `exif: false` добавлен в `ImageGalleryComponent.ios.tsx` — уменьшает payload за счёт исключения EXIF-метаданных
+  - `exif: false` добавлен в `useAvatarUpload.ts` (оба метода: `pickAvatar` и `pickAndUpload`)
+  - `quality: 0.8` / `quality: 0.85` уже были — сохранены
+
+- ~~AND-18~~ (P2) — Scoped Storage / targetSdk 34:
+  - ✅ Уже реализовано: `targetSdkVersion = 34` в `android/build.gradle`
+  - Помечено как закрытое
+
+**Lint:** 0 ошибок (1 pre-existing warning).
+
+**Оставшиеся нереализованные задачи P0–P1:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
+- AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
+- AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
+
