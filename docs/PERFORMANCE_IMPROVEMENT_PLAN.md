@@ -433,14 +433,14 @@ yarn install
 | P3.3 | Font preload + swap | Низкое | 🟡 Среднее | P1 | ✅ Готово (inline скрипт + preload links) |
 | P3.4 | Image optimization | Среднее | 🔴 Высокое | **P0** | ✅ Готово (fetchPriority, data-lcp, loading=lazy) |
 | P3.5 | SSG для ключевых страниц | Высокое | 🔴 Высокое | P1 | ⬜ Не начато |
-| P4.2 | Re-render оптимизация | Среднее | 🟡 Среднее | P2 | ⬜ Не начато |
+| P4.2 | Re-render оптимизация | Среднее | 🟡 Среднее | P2 | ✅ Готово (гранулярные Zustand селекторы в useRouteStoreAdapter, useRouteBuilding, RouteDebugPanel) |
 | P4.3 | Проверка Flash List config | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
 | P4.5 | Web Workers | Высокое | 🟡 Среднее | P3 | ⬜ Не начато |
-| P5.1 | React Query prefetch | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
+| P5.1 | React Query prefetch | Низкое | 🟡 Среднее | P2 | ✅ Готово (hover-prefetch в TravelListItem + idle-prefetch фильтров/стран) |
 | P5.2 | HTTP cache headers | Низкое | 🟠 Высокое | P1 | ⬜ Не начато (needs server verification) |
-| P5.3 | API compression | Низкое | 🟡 Среднее | P1 |
-| P5.4 | Image CDN | Высокое | 🔴 Высокое | P2 |
-| P6.5 | Deduplicate deps | Низкое | 🟡 Среднее | P2 |
+| P5.3 | API compression | Низкое | 🟡 Среднее | P1 | ✅ Готово (gzip + brotli настроены в nginx.conf) |
+| P5.4 | Image CDN | Высокое | 🔴 Высокое | P2 | ⬜ Не начато |
+| P6.5 | Deduplicate deps | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
 
 ---
 
@@ -476,12 +476,12 @@ npm run lighthouse:travel:desktop
 
 ### 🟡 Спринт 3 (1–2 недели) — Runtime & Network
 
-| # | Задача | Ожидаемый эффект |
-|---|--------|-----------------|
-| 1 | P4.2 — Re-render оптимизация (Zustand selectors) | TBT −50–100 мс |
-| 2 | P5.1 — React Query prefetch при hover | Perceived latency −500 мс |
-| 3 | P5.3 — API gzip/brotli | Transfer size −40% |
-| 4 | P3.2 — Critical CSS inline | FCP −200 мс |
+| # | Задача | Ожидаемый эффект | Статус |
+|---|--------|-----------------|--------|
+| 1 | P4.2 — Re-render оптимизация (Zustand selectors) | TBT −50–100 мс | ✅ Готово (гранулярные селекторы в useRouteStoreAdapter, useRouteBuilding, RouteDebugPanel) |
+| 2 | P5.1 — React Query prefetch при hover | Perceived latency −500 мс | ✅ Готово (hover-prefetch onPointerEnter + idle-prefetch фильтров/стран) |
+| 3 | P5.3 — API gzip/brotli | Transfer size −40% | ✅ Готово (gzip + brotli настроены в nginx.conf) |
+| 4 | P3.2 — Critical CSS inline | FCP −200 мс | ✅ Готово (criticalCSSBuilder.ts + +html.tsx) |
 
 ### 🟢 Спринт 4 (2 недели) — Advanced
 
