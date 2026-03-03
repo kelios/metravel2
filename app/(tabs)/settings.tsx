@@ -604,6 +604,34 @@ export default function SettingsScreen() {
                         </View>
                     </View>
 
+                    {/* AND-17: Biometric authentication toggle (native only) */}
+                    {showBiometricToggle ? (
+                        <>
+                            <Text style={styles.sectionTitle}>Безопасность</Text>
+                            <View style={styles.card}>
+                                <View style={styles.settingRow}>
+                                    <View style={styles.settingTextBlock}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                            <Feather name="lock" size={16} color={colors.primary} />
+                                            <Text style={styles.settingTitle}>Вход по биометрии</Text>
+                                        </View>
+                                        <Text style={styles.settingMeta}>
+                                            Используйте отпечаток пальца или Face ID для быстрого входа
+                                        </Text>
+                                    </View>
+                                    <Toggle
+                                        value={biometric.isEnabled}
+                                        onValueChange={async (val) => {
+                                            if (val) await biometric.enable();
+                                            else await biometric.disable();
+                                        }}
+                                        disabled={biometric.isChecking}
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    ) : null}
+
                     <Text style={styles.sectionTitle}>Сообщения</Text>
 
                     <Pressable
