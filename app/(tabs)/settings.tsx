@@ -22,6 +22,7 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from '@react-navigation/native';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
+import { useBiometricAuth } from '@/hooks/useBiometricAuth';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -52,6 +53,10 @@ export default function SettingsScreen() {
     } = useAvatarUpload({ onSuccess: (updated) => setProfile(updated) });
 
     const [profileSaving, setProfileSaving] = useState(false);
+
+    // AND-17: Biometric auth toggle (native only)
+    const biometric = useBiometricAuth();
+    const showBiometricToggle = !isWeb && biometric.isAvailable && biometric.isEnrolled && isAuthenticated;
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
