@@ -94,6 +94,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       overflowY: 'auto',
       WebkitOverflowScrolling: 'touch',
       borderBottomWidth: 0,
+      // SRCH-05: slide-up анимация вместо резкого появления
+      animation: 'sheet-slide-up 0.32s cubic-bezier(0.4, 0, 0.2, 1)',
     } as any) : {}),
   },
   listContainer: {

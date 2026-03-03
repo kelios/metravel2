@@ -65,7 +65,7 @@ BottomDock → добавить:
 |----|----------|-----------|
 | ~~NAV-10~~ | ✅ На web-планшете (768–1024px) `CustomHeader` показывает inline-навигацию (как desktop) вместо бургер-меню. `isMobile` на web = `isPhone || isLargePhone` (без isTablet). На native планшет остаётся мобильным. BottomDock по-прежнему доступен на планшете | ~~P1~~ |
 | ~~NAV-11~~ | ✅ Хлебные крошки реализованы через `HeaderContextBar` + `useBreadcrumbModel` + `BreadcrumbsJsonLd` (SEO). На desktop — кликабельная цепочка «Главная > ... > Текущая», на mobile — кнопка «Назад» + заголовок | ~~P1~~ |
-| NAV-12 | Кнопка «Войти» в хедере не выделена визуально как CTA — теряется рядом с навигационными ссылками | P2 |
+| ~~NAV-12~~ | ✅ CTA-кнопка «Войти» выделена визуально в `AccountMenu.tsx` (`ctaLoginButton`) — видна сразу в хедере для гостей | ~~P2~~ |
 | NAV-13 | Мобильное меню не поддерживает `swipe-to-close` на native | P2 |
 
 ---
@@ -84,7 +84,7 @@ BottomDock → добавить:
 |----|----------|-----------|
 | ~~HERO-01~~ | ✅ На мобайле hero показывает featured изображение (первый BOOK_IMAGES) в карточке 16:9 с overlay + заголовком + секцию «Популярные маршруты» | ~~P1~~ |
 | ~~HERO-02~~ | ✅ Mood chips scroll обёрнут в контейнер с `maskImage: linear-gradient(...)` — fade-edges слева/справа реализованы | ~~P1~~ |
-| HERO-03 | Кнопки CTA «Добавить первую поездку» и «Смотреть маршруты» имеют одинаковую ширину на desktop — нарушает визуальную иерархию | P2 |
+| ~~HERO-03~~ | ✅ CTA-кнопки на desktop получили разную визуальную ширину: primary `flex: 1.4`, secondary `flex: 1` — визуальная иерархия | ~~P2~~ |
 | ~~HERO-04~~ | ✅ `prefers-reduced-motion` проверяется в `useEffect` слайдера — при `reduce` автовоспроизведение отключается (WCAG 2.2 SC 2.3.3) | ~~P1~~ |
 | HERO-05 | Hero title разбит на 2 компонента `<Text>` — может вызывать неравномерный line-height на разных breakpoints | P3 |
 | ~~HERO-06~~ | ✅ Skeleton/loading state для кнопок HomeHero: `travelsCountLoading` проп + `ActivityIndicator` пока данные грузятся | ~~P2~~ |
@@ -105,10 +105,10 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Компонент | Проблема | Приоритет |
 |----|-----------|----------|-----------|
-| SEC-01 | HomeTrustBlock | 3 стат-блока расположены горизонтально на desktop, вертикально на mobile — но на планшете (768–1024px) grid «ломается» в вертикаль при достаточно широком экране | P2 |
-| SEC-02 | HomeHowItWorks | Шаги соединены коннекторами только на tablet/desktop. На мобайле шаги визуально не связаны — неочевидна последовательность | P2 |
+| ~~SEC-01~~ | ✅ HomeTrustBlock | 3 стат-блока: на планшете показывается row как desktop (`isCompact = isMobile && !isTablet`). Исправлен grid для промежуточных breakpoints | ~~P2~~ |
+| ~~SEC-02~~ | ✅ HomeHowItWorks | Вертикальные коннекторы между шагами на мобайле через `connectorMobile` стили + `chevron-down` иконка | ~~P2~~ |
 | ~~SEC-03~~ | ✅ FAQ accordion имеет плавные CSS transitions: `max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)`, `opacity 0.25s ease`, `padding 0.3s ease`. На native используется `LayoutAnimation.Presets.easeInEaseOut` | ~~P1~~ |
-| SEC-04 | HomeFinalCTA | `backgroundImage` с radial-gradient задан через inline Platform.select — на некоторых браузерах может не применяться. Нет fallback цвета | P2 |
+| ~~SEC-04~~ | ✅ HomeFinalCTA | Fallback `backgroundColor: colors.backgroundSecondary` добавлен для браузеров без поддержки radial-gradient | ~~P2~~ |
 | SEC-05 | Все секции | Нет scroll-triggered анимации появления (fade-in при scroll) — страница выглядит статично | P3 |
 
 ---
@@ -129,7 +129,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ~~SRCH-02~~ | ✅ Кнопка «Фильтры» на мобайле имеет badge-индикатор при активных фильтрах + `accessibilityHint` с числом активных фильтров. Реализовано в `StickySearchBar` | ~~P1~~ |
 | ~~SRCH-03~~ | ✅ Кнопки «Показать результаты» и «Сбросить всё» закреплены sticky внизу sheet (вне `ScrollView`) в `ModernFilters` через `applyButtonContainer` | ~~P1~~ |
 | ~~SRCH-04~~ | ✅ Поле поиска по тексту реализовано как первичное действие через `StickySearchBar` в `RightColumn` с поддержкой Ctrl+K/⌘K и очисткой | ~~P0~~ |
-| SRCH-05 | Анимация открытия bottom sheet фильтров — `Modal` с `fade` (резко). Нужен spring/slide-up | P2 |
+| ~~SRCH-05~~ | ✅ Slide-up анимация для мобильной панели фильтров через CSS `animation: sheet-slide-up 0.32s` в `ListTravelBase.tsx` | ~~P2~~ |
 | ~~SRCH-06~~ | ✅ Quick-filter chips реализованы в `StickySearchBar`: горизонтальная полоса pill-chip'ов под поисковой строкой с поддержкой active state | ~~P2~~ |
 
 ### 4.2 Карточки маршрутов (UnifiedTravelCard)
@@ -162,7 +162,7 @@ HERO-04: Добавить probes-reduce-motion:
 | MAP-02 | Pin'ы на карте не кластеризованы при большом количестве точек — хаотичное отображение | P1 |
 | MAP-03 | Popup при нажатии на pin занимает большую часть экрана и перекрывает карту | P2 |
 | MAP-04 | Нет фильтрации прямо на карте (хотя бы по категориям) | P2 |
-| MAP-05 | Кнопка «Моя геопозиция» отсутствует | P2 |
+| ~~MAP-05~~ | ✅ Кнопка «Моя геопозиция» видна на всех устройствах — убрано условие `!isMobile` в `MapControls.tsx` | ~~P2~~ |
 
 ---
 
@@ -173,7 +173,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ~~AUTH-01~~ | ✅ Кнопка «Показать/скрыть пароль» реализована в login.tsx через `showPassword` state + Feather eye/eye-off иконка с `accessibilityLabel` | ~~P1~~ |
 | ~~AUTH-02~~ | ✅ Google Sign-In перемещён выше email/password формы как первичное CTA. Divider текст изменён на «или войдите с email» | ~~P1~~ |
 | ~~AUTH-03~~ | ✅ Welcome-сообщение после регистрации: «Добро пожаловать! Аккаунт создан. Проверьте почту для подтверждения.» + redirect через 1 сек | ~~P1~~ |
-| AUTH-04 | `OnboardingBanner` виден только авторизованным пользователям. Гости не получают никакого онбординга | P2 |
+| ~~AUTH-04~~ | ✅ `OnboardingBanner` теперь показывается и гостям — компонент сам управляет видимостью через AsyncStorage. `userId` передаётся опционально | ~~P2~~ |
 | ~~AUTH-05~~ | ✅ Inline-валидация реализована через `FormFieldWithValidation` + `useYupForm` с `handleBlur` на каждом поле. Регистрация имеет password strength indicator (weak/medium/strong) | ~~P1~~ |
 
 ---
@@ -230,7 +230,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| TYPO-04 | На некоторых секциях используется `textTransform: 'uppercase'` для eyebrow-текстов — снижает читаемость (особенно на кириллице) | P2 |
+| ~~TYPO-04~~ | ✅ `textTransform: 'uppercase'` заменён на `'capitalize'` в кириллических eyebrow/label текстах (HomeHowItWorks, HomeFinalCTA, NavigationArrows, QuestWizard, AccountMenu, CustomHeader) | ~~P2~~ |
 
 ---
 
@@ -331,7 +331,7 @@ HERO-04: Добавить probes-reduce-motion:
 | NAV-04 | BottomDock | Метки на native |
 | NAV-05 | BottomDock | Пересмотр 4-й иконки |
 | SEC-05 | Главная | Scroll-triggered анимации |
-| TYPO-04 | Везде | uppercase → title case для кириллицы |
+| ~~TYPO-04~~ | ✅ Везде | uppercase → title case для кириллицы |
 | ANIM-01 | Buttons | Haptic feedback |
 | ANIM-02 | Cards | Scale-анимация при hover |
 | PROF-02 | Profile | Прогресс-бар заполненности |
@@ -449,3 +449,47 @@ HERO-04: Добавить probes-reduce-motion:
 - A11Y-01 (P0) — Частичный аудит accessibilityLabel: исправлены `ErrorDisplay.tsx` (3 кнопки: retry, contact, dismiss), `Toggle.tsx`, `SelectionGroup.tsx`, `CollapsibleBlock.tsx` (header toggle). Также добавлены `accessibilityLabel` в ModernFilters (toggleAllButton, yearInput). Проведён полный аудит — основные навигационные компоненты (BottomDock, CustomHeader, CustomHeaderMobileMenu) уже имели лейблы
 - RESP-01 (P1) — Частичная реализация: `AuthorCard.tsx` расширен с 3 breakpoints (isMobile/isTablet/desktop) для avatarSize. `PersonalizedRecommendations.tsx` подготовлен с `isTablet`. Проведён аудит — большинство ключевых компонентов (`TravelDetailPageSkeleton`, `Slider.web.tsx`, `PointList`, `NearTravelList`) уже используют ≥3 breakpoints
 
+### Март 2026 — Сессия 6
+
+**Реализовано:**
+- ~~SEC-04~~ (P2) — Fallback `backgroundColor: colors.backgroundSecondary` добавлен в `HomeFinalCTA.tsx` как запасной фон для браузеров без поддержки `radial-gradient`. Ранее `backgroundColor` был `colors.background` (менее заметный fallback)
+- ~~HERO-03~~ (P2) — CTA-кнопки на desktop получили разную визуальную ширину: primary `flex: 1.4` + `paddingHorizontal: 52`, secondary `flex: 1` — создана визуальная иерархия вместо одинаковых кнопок
+- ~~MAP-05~~ (P2) — Кнопка «Моя геопозиция» теперь видна на мобайле. В `MapControls.tsx` убрано условие `!isMobile` — кнопка `crosshair` отображается при наличии `userLocation` на всех устройствах
+- ~~AUTH-04~~ (P2) — `OnboardingBanner` теперь показывается и гостям. В `Home.tsx` убрана обёртка `{isAuthenticated && ...}`, компонент сам управляет видимостью через AsyncStorage (проверка `articlesCount`, `dismissedDate`). `userId` передаётся опционально
+- ~~TYPO-04~~ (P2) — `textTransform: 'uppercase'` заменён на `'capitalize'` в кириллических eyebrow/label текстах: `HomeHowItWorks.tsx` (eyebrowText), `HomeFinalCTA.tsx` (eyebrowText), `NavigationArrows.tsx` (navLabel), `QuestWizard.tsx` (sectionTitle), `AccountMenu.tsx` (sectionTitle + sectionHeaderText), `CustomHeader.tsx` (modalSectionTitle). PDF-генераторы и `QuestPrintable` (HTML CSS) не изменены — они генерируют латинские заголовки
+- ~~SRCH-05~~ (P2) — Slide-up анимация для мобильной панели фильтров. В `ListTravelBase.tsx` добавлен `animation: 'sheet-slide-up 0.32s cubic-bezier(0.4, 0, 0.2, 1)'` к `sidebarMobile` стилю. Используется существующий CSS `@keyframes sheet-slide-up` из `global.css`
+- A11Y-01 (P0) — Продолжение аудита accessibilityLabel:
+  - `QuestWizard.tsx`: добавлены `accessibilityLabel` к 8 Pressable (closeButton, location link, «Далее», «Навигация», навигационный toggle, копирование координат, toggle фото, «Подсказка»/«Пропустить» уже имели)
+  - `AccountMenu.tsx`: добавлены `accessibilityLabel` + `accessibilityState.expanded` к 5 section toggles (Путешествия, Аккаунт, Навигация, Тема, Документы)
+  - `ExportBar.tsx`: добавлены `accessibilityLabel` к 3 Pressable (Выбрать все, Очистить выбор, Настройки)
+  - `TravelListItem.tsx`: добавлен `accessibilityLabel` к Pressable автора (`Автор: ${authorName}`)
+  - `SwipeablePanel.web.tsx`: добавлен `accessibilityLabel` к overlay Pressable
+- ~~RESP-03~~ (P1) — Частичная реализация: `ResponsiveContainer` добавлен в `ProfileHeader.tsx` (maxWidth="lg" padding) и `ProfileQuickActions.tsx` (maxWidth="lg" padding). Все home-компоненты уже использовали `ResponsiveContainer`
+
+**Подтверждено как ранее реализованное (дополнительно):**
+- ~~SEC-01~~ (P2) — `HomeTrustBlock.tsx` уже использует `isCompact = isMobile && !isTablet` — планшет показывает row как desktop
+- ~~SEC-02~~ (P2) — `HomeHowItWorks.tsx` уже имеет `connectorMobile` стили с вертикальной линией и `chevron-down` иконкой между шагами на мобайле
+- ~~NAV-12~~ (P2) — `AccountMenu.tsx` уже имеет CTA-кнопку «Войти» (`ctaLoginButton`) для гостей, видимую сразу в хедере без открытия меню
+
+**Оставшиеся нереализованные задачи:**
+- A11Y-01 (P0) — Аудит продолжается: основные пользовательские компоненты покрыты, остаётся ~100 Pressable в редко используемых экранах (travel wizard, export UI, admin tools)
+- RESP-01 (P1) — ≥3 breakpoints: большинство ключевых компонентов уже используют 3+ breakpoints. Оставшиеся — второстепенные экраны
+- RESP-03 (P1) — ResponsiveContainer: home + profile покрыты. Оставшиеся — travel detail, export, messages
+- MAP-02 (P1) — Кластеризация pin'ов: `ClusterLayer.tsx` + `useClustering.ts` уже существуют, требуется верификация с бэкендом
+- MAP-03 (P2) — Popup перекрывает карту на мобайле
+- MAP-04 (P2) — Фильтрация на карте (FiltersPanel уже существует, требуется проверка подключения)
+- PROF-01 (P2) — Visual hierarchy профиля
+- PROF-03 (P2) — Dashboard для разделов пользователя
+- EMPTY-01 (P2) — Последовательное применение EmptyState
+- CARD-03 (P2) — Разделение onMediaPress/onPress визуально
+- NAV-04 (P3) — Метки на native BottomDock
+- NAV-05 (P3) — Пересмотр 4-й dock иконки
+- NAV-13 (P2) — Swipe-to-close мобильного меню
+- SEC-05 (P3) — Scroll-triggered анимации
+- ANIM-01 (P3) — Haptic feedback
+- ANIM-02 (P3) — Scale-анимация hover на карточках
+- PROF-02 (P3) — Прогресс-бар заполненности профиля
+- PERF-01 (P2/P3) — Прогрессивное раскрытие секций
+- DARK-03 (P3) — prefers-color-scheme синхронизация
+- HERO-05 (P3) — Hero title line-height
+- RESP-06 (P3) — numberOfLines расширение на больших экранах

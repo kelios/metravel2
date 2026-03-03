@@ -168,7 +168,7 @@ function Home() {
 
       {/* AUTH-04: OnboardingBanner доступен и гостям — сам компонент управляет видимостью */}
       <Suspense fallback={null}>
-        <OnboardingBanner userId={isAuthenticated ? userId : undefined} />
+        <OnboardingBanner userId={isAuthenticated && userId ? userId : undefined} />
       </Suspense>
 
       {showHeavyContent ? (

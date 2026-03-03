@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { ResponsiveContainer } from '@/components/layout';
 
 export type ProfileQuickActionKey = 'messages' | 'subscriptions' | 'settings';
 
@@ -135,6 +136,7 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
   ];
 
   return (
+    <ResponsiveContainer maxWidth="lg" padding>
     <View style={styles.container}>
       <Text style={styles.title}>Быстрые действия</Text>
       <View style={styles.row}>
@@ -182,6 +184,7 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         })}
       </View>
     </View>
+    </ResponsiveContainer>
   );
 }
 

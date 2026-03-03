@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { ResponsiveContainer } from '@/components/layout';
 import { UserProfileDto } from '@/api/user';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { ProfileMenu } from './ProfileMenu';
@@ -195,6 +196,8 @@ export function ProfileHeader({
 
   return (
     <View style={styles.container}>
+      {/* RESP-03: ResponsiveContainer ограничивает ширину на больших экранах */}
+      <ResponsiveContainer maxWidth="lg" padding>
       {/* Main Profile Info */}
       <View style={styles.mainRow}>
         <Pressable
@@ -286,6 +289,7 @@ export function ProfileHeader({
 
       {/* Section Divider */}
       <View style={styles.divider} />
+      </ResponsiveContainer>
     </View>
   );
 }
