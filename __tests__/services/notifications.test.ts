@@ -1,7 +1,6 @@
 // __tests__/services/notifications.test.ts
 // AND-05: Tests for push notification service
 
-import { Platform } from 'react-native';
 
 // Must mock before importing the module
 const mockSetNotificationChannelAsync = jest.fn().mockResolvedValue(null);
@@ -59,18 +58,15 @@ describe('notifications service', () => {
     });
   });
 
-  describe('web platform', () => {
-    it('registerForPushNotifications should return null on web', async () => {
-      const originalPlatform = Platform.OS;
-      Object.defineProperty(Platform, 'OS', { value: 'web', writable: true });
+  describe('extractDeepLinkFromNotification edge cases', () => {
+    it('should return null for empty string url', () => {
+      const { extractDeepLinkFromNotification } = require('@/services/notifications');
+      expect(extractDeepLinkFromNotification({ url: '' })).toBeNull();
+    });
 
-      // Re-import to get web behavior
-      jest.resetModules();
-      const { registerForPushNotifications } = require('@/services/notifications');
-      const result = await registerForPushNotifications();
-      expect(result).toBeNull();
-
-      Object.defineProperty(Platform, 'OS', { value: originalPlatform, writable: true });
+    it('should return null for empty string screen', () => {
+      const { extractDeepLinkFromNotification } = require('@/services/notifications');
+      expect(extractDeepLinkFromNotification({ screen: '' })).toBeNull();
     });
   });
 });

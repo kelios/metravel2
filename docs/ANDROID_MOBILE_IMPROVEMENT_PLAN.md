@@ -494,7 +494,7 @@
 | ~~AND-02~~ | ✅ Package name fix | ~~P0~~ | Низкое | 🔴 Высокое |
 | AND-03 | Google Sign-In native | P0 | Среднее | 🔴 Высокое |
 | ~~AND-04~~ | ✅ Permissions cleanup | ~~P0~~ | Низкое | 🔴 Высокое |
-| AND-05 | Push-уведомления | P1 | Высокое | 🔴 Высокое |
+| AND-05 | Push-уведомления (код готов, нужен FCM) | P1 | Высокое | 🔴 Высокое |
 | ~~AND-06~~ | ✅ Splash screen | ~~P1~~ | Низкое | 🟠 Среднее |
 | ~~AND-07~~ | ✅ BackHandler | ~~P1~~ | Среднее | 🟠 Высокое |
 | ~~AND-08~~ | ✅ StatusBar | ~~P1~~ | Низкое | 🟠 Среднее |
@@ -514,8 +514,8 @@
 | AND-22 | GPS tracking | P3 | Высокое | 🟡 Среднее |
 | ~~AND-23~~ | ✅ Share integration | ~~P3~~ | Среднее | 🟡 Среднее |
 | ~~AND-24~~ | ✅ Dark theme native sync | ~~P3~~ | Низкое | 🟢 Низкое |
-| AND-25 | Performance monitoring | P3 | Среднее | 🟡 Среднее |
-| AND-26 | ~~TalkBack audit~~ | ~~P3~~ | Среднее | 🟡 Среднее |
+| AND-25 | Performance monitoring (код готов, нужен Sentry DSN) | P3 | Среднее | 🟡 Среднее |
+| ~~AND-26~~ | ✅ TalkBack audit (touch targets 48dp) | ~~P3~~ | Среднее | 🟡 Среднее |
 | ~~AND-27~~ | ✅ Material Design 3 | ~~P2~~ | Высокое | 🟡 Среднее |
 | AND-28 | Edge-to-edge | P2 | Среднее | 🟠 Высокое |
 | ~~AND-29~~ | ✅ versionCode sync | ~~P1~~ | Низкое | 🟠 Среднее |
@@ -858,3 +858,71 @@
 - AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
 - AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
 - AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
+
+### Март 2026 — Сессия 8
+
+**Реализовано (Спринт 8):**
+
+- AND-05 (P1) — Push-уведомления (код-часть):
+  - Установлен `expo-notifications` (~55.0.10)
+  - Создан сервис `services/notifications.ts`:
+    - `setupNotificationChannels()` — 3 Android канала (Сообщения, Обновления, Рекомендации)
+    - `registerForPushNotifications()` — запрос разрешений + получение Expo push token
+    - `setForegroundNotificationHandler()` — отображение уведомлений в foreground
+    - `addNotificationReceivedListener()` / `addNotificationResponseListener()` — подписка на события
+    - `clearBadge()` — очистка badge при возврате в приложение
+    - `extractDeepLinkFromNotification()` — маршрутизация по deep link из payload
+  - Создан хук `hooks/usePushNotifications.ts`:
+    - Инициализация каналов, foreground handler, listeners при mount
+    - Deep link routing из notification tap → `router.push()`
+    - Badge clearing при AppState → active
+    - `requestPermission()` — для вызова из UI (после авторизации)
+  - `registerPushTokenApi()` добавлен в `api/auth.ts` — отправка push token на бэкенд
+  - Интегрирован в `app/_layout.tsx` (ThemedContent) — `onTokenReceived` → `registerPushTokenApi`
+  - Plugin `expo-notifications` добавлен в `app.json` с notification icon и brand color
+  - `notification-icon.png` создан из monochrome icon
+  - Mock `expo-notifications` добавлен в `__tests__/setup.ts`
+  - Тест `__tests__/services/notifications.test.ts` — 7 тестов
+  - ⚠️ Требуется: `google-services.json` (FCM) для production + бэкенд endpoint `POST /api/user/push-token/`
+
+- AND-03 (P0, расширение) — Google Sign-In platform split:
+  - Создан `GoogleSignInButton.web.tsx` — web-only GSI SDK реализация
+  - Создан `GoogleSignInButton.native.tsx` — native-only expo-auth-session реализация с `android_ripple`
+  - `GoogleSignInButton.tsx` сохранён как fallback для Jest (runtime platform split)
+  - Metro автоматически разрешает `.web.tsx` / `.native.tsx` в production builds
+  - Native: minHeight увеличен до 48dp (M3 touch target)
+  - ⚠️ Требуется: Android Client ID в Google Cloud Console + SHA-1 fingerprint для native flow
+
+- AND-26 (P3, расширение) — TalkBack touch targets 48dp:
+  - `Button` (`components/ui/Button.tsx`) — minHeight: 48dp на Android
+  - `FavoriteButton` (`components/travel/FavoriteButton.tsx`) — min 48×48dp на Android
+  - `TravelWizardFooter` — backButton, backButtonMobile, saveButton: 48dp на Android
+  - `PaginationComponent` — bar и barMobile: 48dp на Android
+  - `ShareButtons` — button, buttonSticky, collapsedIndicatorSticky: 48dp на Android
+  - `TravelStickyActions` — button: 48dp на Android
+  - `ConfirmDialog` — cancelButtonContainer, deleteButtonContainer: 48dp на Android
+  - Все изменения через `Platform.OS === 'android' ? 48 : <original>` — web/iOS не затронуты
+
+- AND-25 (P3) — Performance monitoring:
+  - Создан сервис `services/performanceMonitoring.ts`:
+    - `initPerformanceMonitoring()` — инициализация Sentry (graceful no-op если DSN не задан)
+    - `startTransaction()` — кастомные performance transactions
+    - `captureException()` — отправка ошибок в Sentry с контекстом
+    - `setUser()` — установка пользователя для Sentry (после логина)
+    - `addBreadcrumb()` — навигационные breadcrumbs
+  - На web: `@sentry/react`, на native: `@sentry/react-native` (dynamic require)
+  - Graceful degradation: работает как no-op если Sentry не установлен или DSN не задан
+  - Тест `__tests__/services/performanceMonitoring.test.ts` — 5 тестов
+  - ⚠️ Требуется: `npm install @sentry/react-native` + `EXPO_PUBLIC_SENTRY_DSN` для активации
+
+**Тесты:** 469 suite, 4058 tests — все прошли. Lint: 0 ошибок (10 pre-existing warnings).
+
+**Оставшиеся нереализованные задачи P0:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 fingerprint и серверная верификация `assetlinks.json`
+- AND-03 (P0, частично) — Google Sign-In native: код готов, требуется настройка Android Client ID в Google Cloud Console + SHA-1/SHA-256 fingerprint
+
+**Оставшиеся задачи P3 (nice to have):**
+- AND-19 — Android App Widget (требует native Kotlin)
+- AND-21 — Picture-in-Picture для карты
+- AND-22 — GPS tracking (фоновая геолокация)
+
