@@ -54,6 +54,5 @@ The app uses React Native with `react-native-web` (RNW) for web builds. RNW re-e
 |------|--------|
 | `metro-stubs/react-native-web-slim.js` | New: slim RNW barrel |
 | `metro.config.js` | Added: resolver alias (opt-in) |
-| `docs/RNW_USAGE_AUDIT.md` | New: audit of RNW usage |
 | `docs/ADR_RNW_TREE_SHAKE.md` | This document |
 
