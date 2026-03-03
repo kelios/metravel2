@@ -164,7 +164,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
 
         /* ---- Quests grid ---- */
         questsContainer: { gap: spacing.md },
-        questsRow: { flexDirection: 'row', gap: spacing.md, flexWrap: 'nowrap', alignItems: 'stretch' },
+        questsRow: { flexDirection: 'row', gap: spacing.md, flexWrap: 'nowrap', alignItems: 'stretch', width: '100%' },
         questsRowMobile: { gap: spacing.sm },
 
         /* ---- Quest card ---- */
@@ -172,6 +172,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0,
             borderRadius: radii.lg, overflow: 'hidden',
             borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+            alignSelf: 'stretch',
             ...Platform.select({
                 web: { boxShadow: (colors.boxShadows as any)?.card, transition: 'box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease' } as any,
                 android: { elevation: 2 },
@@ -204,7 +205,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         questBody: {
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
-            gap: spacing.xs,
+            gap: spacing.xxs,
             justifyContent: 'flex-start',
         },
         questBodyMobile: { paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
@@ -218,8 +219,6 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderTopWidth: 1,
-            borderTopColor: colors.borderLight,
             paddingTop: spacing.xs,
             marginTop: spacing.xs,
         },
@@ -227,6 +226,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         questCardSingleDesktop: {
             flexGrow: 0,
             flexBasis: '100%',
+            width: '100%',
             maxWidth: '100%',
         },
 
