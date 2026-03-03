@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+const { injectSkeletonShell } = require('./ssg-skeletons');
 
 // ---------------------------------------------------------------------------
 // CLI args
@@ -511,13 +512,16 @@ async function main() {
   console.log('📄 Generating static pages...');
   for (const page of STATIC_PAGES) {
     const canonical = `${SITE_URL}${page.route === '/' ? '/' : page.route}`;
-    const html = injectMeta(baseHtml, {
+    let html = injectMeta(baseHtml, {
       title: page.title,
       description: page.description,
       canonical,
       image: OG_IMAGE,
       robots: page.robots,
     });
+
+    // P3.5: Inject SSG skeleton shell for key pages (improves FCP/LCP)
+    html = injectSkeletonShell(html, page.route);
 
     if (page.route === '/') {
       // Overwrite root index.html with correct home meta
@@ -529,7 +533,7 @@ async function main() {
       writeFileSafe(path.join(DIST_DIR, routePath, 'index.html'), html);
     }
     totalPages++;
-    console.log(`  ✅ ${page.route}`);
+    console.log(`  ✅ ${page.route}${(page.route === '/' || page.route === '/search') ? ' (with SSG skeleton)' : ''}`);
   }
 
   // --- 2. Travel pages ---

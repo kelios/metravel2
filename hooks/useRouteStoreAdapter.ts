@@ -39,7 +39,6 @@ export function useRouteStoreAdapter() {
   const startAddress = useMemo(() => {
     const start = useRouteStore.getState().getStartPoint();
     return start?.address || '';
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points]);
 
   const endAddress = useMemo(() => {

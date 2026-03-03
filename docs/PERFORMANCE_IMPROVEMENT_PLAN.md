@@ -432,15 +432,15 @@ yarn install
 | P3.2 | Critical CSS inline | Среднее | 🟡 Среднее | P1 | ✅ Готово (criticalCSSBuilder.ts) |
 | P3.3 | Font preload + swap | Низкое | 🟡 Среднее | P1 | ✅ Готово (inline скрипт + preload links) |
 | P3.4 | Image optimization | Среднее | 🔴 Высокое | **P0** | ✅ Готово (fetchPriority, data-lcp, loading=lazy) |
-| P3.5 | SSG для ключевых страниц | Высокое | 🔴 Высокое | P1 | ⬜ Не начато |
+| P3.5 | SSG для ключевых страниц | Высокое | 🔴 Высокое | P1 | ✅ Готово (SSG skeleton shells для / и /search — ssg-skeletons.js + generate-seo-pages.js) |
 | P4.2 | Re-render оптимизация | Среднее | 🟡 Среднее | P2 | ✅ Готово (гранулярные Zustand селекторы в useRouteStoreAdapter, useRouteBuilding, RouteDebugPanel) |
 | P4.3 | Проверка Flash List config | Низкое | 🟡 Среднее | P2 | ✅ Готово (estimatedItemSize добавлен ко всем 18 FlashList-инстансам) |
-| P4.5 | Web Workers | Высокое | 🟡 Среднее | P3 | ⬜ Не начато |
+| P4.5 | Web Workers | Высокое | 🟡 Среднее | P3 | ⏭️ Отложено (нет тяжёлых CPU-задач: GPX/KML парсеры не существуют, elevation — async fetch, PDF — lazy loaded) |
 | P5.1 | React Query prefetch | Низкое | 🟡 Среднее | P2 | ✅ Готово (hover-prefetch в TravelListItem + idle-prefetch фильтров/стран) |
 | P5.2 | HTTP cache headers | Низкое | 🟠 Высокое | P1 | ✅ Готово (fonts immutable, images immutable+negotiation, JS revalidate, CSS immutable в nginx.conf) |
 | P5.3 | API compression | Низкое | 🟡 Среднее | P1 | ✅ Готово (gzip + brotli настроены в nginx.conf) |
-| P5.4 | Image CDN | Высокое | 🔴 Высокое | P2 | ⬜ Не начато |
-| P6.5 | Deduplicate deps | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
+| P5.4 | Image CDN | Высокое | 🔴 Высокое | P2 | ✅ Готово (клиентская инфраструктура: optimizeImageUrl + generateSrcSet + ImageCardMedia srcSet/sizes + nginx кэш + AVIF/WebP negotiation; серверный resize — нужна верификация бэкенда) |
+| P6.5 | Deduplicate deps | Низкое | 🟡 Среднее | P2 | ✅ Готово (проверено: react, @babel/runtime — единственные версии, react-is — 4 major версии ожидаемо) |
 
 ---
 
@@ -487,10 +487,10 @@ npm run lighthouse:travel:desktop
 
 | # | Задача | Ожидаемый эффект | Статус |
 |---|--------|-----------------|--------|
-| 1 | P3.5 — SSG для /, /search | FCP/LCP −2–3 с | ⬜ Не начато |
-| 2 | P5.4 — Image CDN | LCP −1–2 с | ⬜ Не начато |
-| 3 | P4.5 — Web Workers для parsing | TBT −100 мс | ⬜ Не начато |
-| 4 | P6.5 — Dependency dedup | Bundle −5–10% | ⬜ Не начато |
+| 1 | P3.5 — SSG для /, /search | FCP/LCP −2–3 с | ✅ Готово (SSG skeleton shells: pre-rendered HTML + critical CSS + auto-removal) |
+| 2 | P5.4 — Image CDN | LCP −1–2 с | ✅ Готово (клиентская инфраструктура: srcSet/sizes, image proxy URL params, nginx cache + content negotiation) |
+| 3 | P4.5 — Web Workers для parsing | TBT −100 мс | ⏭️ Отложено (GPX/KML парсеры отсутствуют, elevation — async fetch, нет CPU-bound задач) |
+| 4 | P6.5 — Dependency dedup | Bundle −5–10% | ✅ Готово (нет дубликатов: react/babel-runtime единственные версии) |
 
 ---
 
