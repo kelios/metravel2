@@ -12,7 +12,7 @@ The app uses React Native with `react-native-web` (RNW) for web builds. RNW re-e
 
 ### Approach: Cherry-picked RNW re-exports via Metro resolver aliasing
 
-1. **`metro-stubs/react-native-web-slim.js`** — a slim barrel that only re-exports the RNW modules actually used by the app (audited in `docs/RNW_USAGE_AUDIT.md`).
+1. **`metro-stubs/react-native-web-slim.js`** — a slim barrel that only re-exports the RNW modules actually used by the app.
 
 2. **Metro resolver aliasing** — in `metro.config.js`, when `EXPO_PUBLIC_RNW_SLIM=1` is set, `import { ... } from 'react-native'` on web is redirected to the slim barrel instead of the full RNW package.
 

@@ -19,7 +19,7 @@ See `INDEX.md` for full docs map.
 ## Quick start
 
 ```bash
-yarn
+yarn install
 yarn start
 ```
 
