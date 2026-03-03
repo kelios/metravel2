@@ -9,12 +9,12 @@ import { useOfflineTravelCache } from '@/hooks/useOfflineTravelCache';
 describe('useOfflineTravelCache', () => {
   beforeEach(async () => {
     await AsyncStorage.clear();
-    // @ts-ignore — override Platform for tests
+    // @ts-ignore -- override Platform.OS for native test scenario
     Platform.OS = 'android';
   });
 
   afterEach(() => {
-    // @ts-ignore
+    // @ts-ignore -- restore Platform.OS default for test isolation
     Platform.OS = 'web';
   });
 
@@ -88,7 +88,7 @@ describe('useOfflineTravelCache', () => {
   });
 
   it('is a no-op on web', async () => {
-    // @ts-ignore
+    // @ts-ignore -- override Platform.OS to test web no-op behavior
     Platform.OS = 'web';
 
     const { result } = renderHook(() => useOfflineTravelCache());
