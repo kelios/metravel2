@@ -40,6 +40,7 @@ import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 import { useAccessibilityAnnounce } from "@/hooks/useKeyboardNavigation";
 import { useThemedColors } from "@/hooks/useTheme";
 import { useTdTrace } from '@/hooks/useTdTrace';
+import { useOfflineTravelCache } from '@/hooks/useOfflineTravelCache';
 import { rIC } from '@/utils/rIC';
 
 /* -------------------- helpers -------------------- */
@@ -192,6 +193,14 @@ export default function TravelDetailsContainer() {
   const { closeMenu, animatedX, menuWidthNum } = travelDetails.menu
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
     travelDetails.scroll
+
+  // AND-10: Кэшировать просмотренный маршрут для offline-доступа
+  const { cacheTravel } = useOfflineTravelCache();
+  useEffect(() => {
+    if (travel && travel.id && !isLoading && !isError) {
+      cacheTravel(travel.id, travel);
+    }
+  }, [travel, isLoading, isError, cacheTravel]);
 
   useEffect(() => {
     tdTrace('container:mount')

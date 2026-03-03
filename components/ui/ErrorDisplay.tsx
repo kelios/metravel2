@@ -16,28 +16,36 @@ interface ErrorDisplayProps {
   onDismiss?: () => void;
   showContact?: boolean; // Показывать ли кнопку связи с поддержкой
   variant?: 'error' | 'warning' | 'info';
+  /** AND-10: Сетевая ошибка — показывает специализированную иконку и текст */
+  isNetworkError?: boolean;
 }
 
 export default function ErrorDisplay({
-  title = 'Что-то пошло не так',
+  title,
   message,
   details,
   onRetry,
   onDismiss,
   showContact = true,
   variant = 'error',
+  isNetworkError = false,
 }: ErrorDisplayProps) {
   const colors = useThemedColors();
 
-  const iconName = variant === 'warning' ? 'alert-triangle' :
-                   variant === 'info' ? 'info' : 'alert-circle';
-  
-  const iconColor = variant === 'warning' ? colors.warning :
-                    variant === 'info' ? colors.info :
+  // AND-10: При сетевой ошибке переопределяем defaults
+  const effectiveTitle = title ?? (isNetworkError ? 'Нет подключения к интернету' : 'Что-то пошло не так');
+  const effectiveVariant = isNetworkError ? 'warning' : variant;
+
+  const iconName = isNetworkError ? 'wifi-off' :
+                   effectiveVariant === 'warning' ? 'alert-triangle' :
+                   effectiveVariant === 'info' ? 'info' : 'alert-circle';
+
+  const iconColor = effectiveVariant === 'warning' ? colors.warning :
+                    effectiveVariant === 'info' ? colors.info :
                     colors.danger;
 
-  const backgroundColor = variant === 'warning' ? colors.warningLight :
-                          variant === 'info' ? colors.infoLight :
+  const backgroundColor = effectiveVariant === 'warning' ? colors.warningLight :
+                          effectiveVariant === 'info' ? colors.infoLight :
                           colors.dangerLight;
 
   // ✅ Динамические стили на основе текущей темы
@@ -146,7 +154,7 @@ export default function ErrorDisplay({
 
         {/* Текст ошибки */}
         <View style={styles.textContainer}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>{effectiveTitle}</Text>
           <Text style={styles.message}>{message}</Text>
           
           {/* Детали (только в dev режиме) */}
