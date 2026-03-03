@@ -9,7 +9,12 @@ import { useRouteStore } from '@/stores/routeStore';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export const RouteDebugPanel: React.FC = () => {
-  const routeStore = useRouteStore();
+  // P4.2: Гранулярные селекторы вместо подписки на весь store
+  const points = useRouteStore((s) => s.points);
+  const mode = useRouteStore((s) => s.mode);
+  const transportMode = useRouteStore((s) => s.transportMode);
+  const clearRoute = useRouteStore((s) => s.clearRoute);
+  const addPoint = useRouteStore((s) => s.addPoint);
   const [logs, setLogs] = useState<string[]>([]);
 
   const addLog = (message: string) => {
@@ -17,27 +22,27 @@ export const RouteDebugPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    addLog(`Points: ${routeStore.points.length}`);
-    if (routeStore.points.length > 0) {
-      addLog(`First: [${routeStore.points[0]?.coordinates.lng}, ${routeStore.points[0]?.coordinates.lat}]`);
+    addLog(`Points: ${points.length}`);
+    if (points.length > 0) {
+      addLog(`First: [${points[0]?.coordinates.lng}, ${points[0]?.coordinates.lat}]`);
     }
-    if (routeStore.points.length > 1) {
-      addLog(`Last: [${routeStore.points[routeStore.points.length - 1]?.coordinates.lng}, ${routeStore.points[routeStore.points.length - 1]?.coordinates.lat}]`);
+    if (points.length > 1) {
+      addLog(`Last: [${points[points.length - 1]?.coordinates.lng}, ${points[points.length - 1]?.coordinates.lat}]`);
     }
-  }, [routeStore.points]);
+  }, [points]);
 
   const testMinskToVitebsk = () => {
     addLog('Testing Minsk → Vitebsk');
-    routeStore.clearRoute();
+    clearRoute();
 
     // Минск
-    routeStore.addPoint(
+    addPoint(
       { lat: 53.9006, lng: 27.5590 },
       'Минск'
     );
 
     // Витебск
-    routeStore.addPoint(
+    addPoint(
       { lat: 55.1904, lng: 30.2049 },
       'Витебск'
     );
@@ -45,16 +50,16 @@ export const RouteDebugPanel: React.FC = () => {
 
   const testBrestToGomel = () => {
     addLog('Testing Brest → Gomel');
-    routeStore.clearRoute();
+    clearRoute();
 
     // Брест
-    routeStore.addPoint(
+    addPoint(
       { lat: 52.0977, lng: 23.6847 },
       'Брест'
     );
 
     // Гомель
-    routeStore.addPoint(
+    addPoint(
       { lat: 52.4345, lng: 30.9754 },
       'Гомель'
     );
@@ -65,9 +70,9 @@ export const RouteDebugPanel: React.FC = () => {
       <Text style={styles.title}>🔍 Route Debug Panel</Text>
 
       <View style={styles.stats}>
-        <Text style={styles.stat}>Points: {routeStore.points.length}</Text>
-        <Text style={styles.stat}>Mode: {routeStore.mode}</Text>
-        <Text style={styles.stat}>Transport: {routeStore.transportMode}</Text>
+        <Text style={styles.stat}>Points: {points.length}</Text>
+        <Text style={styles.stat}>Mode: {mode}</Text>
+        <Text style={styles.stat}>Transport: {transportMode}</Text>
         <Text style={styles.stat}>Distance: N/A</Text>
       </View>
 
@@ -84,7 +89,7 @@ export const RouteDebugPanel: React.FC = () => {
           style={[styles.button, styles.clearButton]}
           onPress={() => {
             addLog('Clearing route');
-            routeStore.clearRoute();
+            clearRoute();
           }}
         >
           <Text style={styles.buttonText}>Clear</Text>

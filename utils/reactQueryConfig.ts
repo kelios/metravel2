@@ -75,11 +75,27 @@ export function createOptimizedQueryClient(
   // ✅ НОВОЕ: Настройка для React 19 - автоматический batching
   // React 19 автоматически батчит обновления, но мы можем оптимизировать дальше
   if (typeof window !== 'undefined') {
-    // Prefetch критичных данных при idle
+    // P5.1: Prefetch статических данных (фильтры, страны) при idle
     if ('requestIdleCallback' in window) {
       (window as any).requestIdleCallback(() => {
-        // Здесь можно добавить prefetch критичных данных
-      }, { timeout: 2000 });
+        import('@/api/misc').then(({ fetchFilters, fetchAllCountries }) => {
+          const { queryKeys } = require('@/queryKeys');
+
+          client.prefetchQuery({
+            queryKey: queryKeys.filters(),
+            queryFn: () => fetchFilters(),
+            staleTime: 30 * 60 * 1000, // 30 минут (static config)
+          });
+
+          client.prefetchQuery({
+            queryKey: queryKeys.countries(),
+            queryFn: () => fetchAllCountries(),
+            staleTime: 30 * 60 * 1000, // 30 минут (static config)
+          });
+        }).catch(() => {
+          // Не блокируем приложение при ошибке prefetch
+        });
+      }, { timeout: 5000 });
     }
   }
 

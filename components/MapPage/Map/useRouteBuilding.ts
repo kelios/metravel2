@@ -39,13 +39,12 @@ const getOSRMProfile = (mode: TransportMode) => {
  * Hook for building routes using external routing services
  */
 export function useRouteBuilding(ORS_API_KEY?: string) {
-  const {
-    points,
-    transportMode,
-    setRoute,
-    setBuilding,
-    setError,
-  } = useRouteStore();
+  // P4.2: Гранулярные Zustand селекторы вместо подписки на весь store
+  const points = useRouteStore((s) => s.points);
+  const transportMode = useRouteStore((s) => s.transportMode);
+  const setRoute = useRouteStore((s) => s.setRoute);
+  const setBuilding = useRouteStore((s) => s.setBuilding);
+  const setError = useRouteStore((s) => s.setError);
 
   const abortRef = useRef<AbortController | null>(null);
   const lastRouteKeyRef = useRef<string | null>(null);

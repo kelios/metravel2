@@ -25,6 +25,8 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
 const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
+/** P5.1: Hover-prefetch — менее агрессивный, чем IntersectionObserver, только при явном наведении */
+const ENABLE_HOVER_PREFETCH = Platform.OS === 'web';
 const EMPTY_STYLE = {} as const;
 
 // Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
@@ -257,6 +259,8 @@ function TravelListItem({
     const queryClient = useQueryClient();
     const anchorRef = useRef<any>(null);
     const hasPrefetchedRef = useRef(false);
+    /** P5.1: Guard для hover-prefetch — чтобы не повторять при повторных наведениях */
+    const hasHoverPrefetchedRef = useRef(false);
 
     const authorUserId = useMemo(() => {
         const ownerId =
@@ -289,6 +293,37 @@ function TravelListItem({
         const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
         if (cachedData) return;
 
+        queryClient.prefetchQuery({
+            queryKey: queryKeys.travel(travelId),
+            queryFn: ({ signal }) =>
+              isId
+                ? fetchTravel(Number(travelId), { signal })
+                : fetchTravelBySlug(travelId as string, { signal }),
+            staleTime: 5 * 60 * 1000,
+        });
+    }, [slug, id, queryClient]);
+
+    /**
+     * P5.1: Hover-prefetch — предзагружаем данные путешествия при наведении мыши.
+     * Менее агрессивный, чем IntersectionObserver: срабатывает только при явном
+     * пользовательском действии (hover), не вызывает лишних запросов при скролле.
+     */
+    const handlePointerEnter = useCallback(() => {
+        if (!ENABLE_HOVER_PREFETCH) return;
+        if (hasHoverPrefetchedRef.current) return;
+
+        const travelId = slug ?? id;
+        if (!travelId) return;
+        const isId = !isNaN(Number(travelId));
+
+        // Не делаем запрос, если данные уже в кеше
+        const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
+        if (cachedData) {
+            hasHoverPrefetchedRef.current = true;
+            return;
+        }
+
+        hasHoverPrefetchedRef.current = true;
         queryClient.prefetchQuery({
             queryKey: queryKeys.travel(travelId),
             queryFn: ({ signal }) =>
@@ -672,6 +707,8 @@ return (
                     role: isNavigable ? 'link' : 'group',
                     tabIndex: isNavigable ? 0 : -1,
                     'aria-disabled': !isNavigable,
+                    // P5.1: Hover-prefetch при наведении мыши
+                    onPointerEnter: handlePointerEnter,
                     onClick: (e: any) => {
                       if (!isNavigable) return;
                       e.stopPropagation();

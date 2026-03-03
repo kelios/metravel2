@@ -1,6 +1,8 @@
 /**
  * Adapter hook to bridge RouteStore with existing map.tsx interface
  * This allows gradual migration without breaking existing code
+ *
+ * P4.2: Используем гранулярные Zustand селекторы для предотвращения лишних re-renders
  */
 import { useRouteStore } from '@/stores/routeStore';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
@@ -8,45 +10,64 @@ import type { LatLng } from '@/types/coordinates';
 import { useMemo, useCallback } from 'react';
 
 export function useRouteStoreAdapter() {
-  const store = useRouteStore();
+  // P4.2: Гранулярные селекторы вместо подписки на весь store
+  const points = useRouteStore((s) => s.points);
+  const mode = useRouteStore((s) => s.mode);
+  const transportMode = useRouteStore((s) => s.transportMode);
+  const route = useRouteStore((s) => s.route);
+  const isBuilding = useRouteStore((s) => s.isBuilding);
+  const error = useRouteStore((s) => s.error);
+
+  // Actions — стабильные ссылки, не вызывают re-render
+  const setMode = useRouteStore((s) => s.setMode);
+  const setTransportMode = useRouteStore((s) => s.setTransportMode);
+  const setBuilding = useRouteStore((s) => s.setBuilding);
+  const setError = useRouteStore((s) => s.setError);
+  const addPoint = useRouteStore((s) => s.addPoint);
+  const removePoint = useRouteStore((s) => s.removePoint);
+  const updatePoint = useRouteStore((s) => s.updatePoint);
+  const clearRoute = useRouteStore((s) => s.clearRoute);
+  const swapStartEnd = useRouteStore((s) => s.swapStartEnd);
 
   // Convert RoutePoint[] to legacy [lng, lat][] format
   const routePoints = useMemo(() => {
-    return store.points.map(p => [p.coordinates.lng, p.coordinates.lat] as [number, number]);
-  }, [store.points]);
+    return points.map(p => [p.coordinates.lng, p.coordinates.lat] as [number, number]);
+  }, [points]);
 
-  // Get addresses
+  // Get addresses — пересчитываются при изменении points
   const startAddress = useMemo(() => {
-    const start = store.getStartPoint();
+    const start = useRouteStore.getState().getStartPoint();
     return start?.address || '';
-  }, [store]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points]);
 
   const endAddress = useMemo(() => {
-    const start = store.getStartPoint?.();
-    const end = store.getEndPoint?.();
+    const start = useRouteStore.getState().getStartPoint?.();
+    const end = useRouteStore.getState().getEndPoint?.();
 
     // If end points to the same entity as start, treat as not selected.
     if (start && end && start.id && end.id && start.id === end.id) return '';
 
     // In production, end should be empty until at least 2 points exist.
     // But tests may mock getEndPoint without populating points; respect getEndPoint if present.
-    if (store.points.length < 2) {
+    if (points.length < 2) {
       return end?.address || '';
     }
 
     return end?.address || '';
-  }, [store]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [points]);
 
   // Get route data
-  const routeDistance = store.route?.distance ?? null;
-  const routeDuration = store.route?.duration ?? null;
-  const routeElevationGain = store.route?.elevationGain ?? null;
-  const routeElevationLoss = store.route?.elevationLoss ?? null;
-  
+  const routeDistance = route?.distance ?? null;
+  const routeDuration = route?.duration ?? null;
+  const routeElevationGain = route?.elevationGain ?? null;
+  const routeElevationLoss = route?.elevationLoss ?? null;
+
   const fullRouteCoords = useMemo(() => {
-    if (!store.route?.coordinates) return [];
-    return store.route.coordinates.map(c => [c.lng, c.lat] as [number, number]);
-  }, [store.route?.coordinates]);
+    if (!route?.coordinates) return [];
+    return route.coordinates.map(c => [c.lng, c.lat] as [number, number]);
+  }, [route?.coordinates]);
 
   // Adapter methods
   const setRoutePoints = useCallback((
@@ -240,8 +261,6 @@ export function useRouteStoreAdapter() {
         if (state.points.length === 1) {
           const endCandidate = state.getEndPoint();
           if (endCandidate && endCandidate.id === existingStart.id) {
-            // Remove and re-add start to clear any persisted end address mirroring.
-            // We keep only the start point.
             state.removePoint(existingStart.id);
             state.addPoint(coords, address);
           }
@@ -266,20 +285,22 @@ export function useRouteStoreAdapter() {
     state.addPoint(coords, address);
   }, []);
 
+  // P4.2: Используем getState() вместо store для handleAddressClear
   const handleAddressClear = useCallback((isStart: boolean) => {
+    const state = useRouteStore.getState();
     const target = isStart
-      ? (store.getStartPoint() ?? store.points[0])
-      : (store.getEndPoint() ?? store.points[store.points.length - 1]);
+      ? (state.getStartPoint() ?? state.points[0])
+      : (state.getEndPoint() ?? state.points[state.points.length - 1]);
 
     if (target) {
-      store.removePoint(target.id);
+      state.removePoint(target.id);
     }
-  }, [store]);
+  }, []);
 
   return useMemo(() => ({
     // State
-    mode: store.mode,
-    transportMode: store.transportMode,
+    mode,
+    transportMode,
     routePoints,
     startAddress,
     endAddress,
@@ -288,20 +309,20 @@ export function useRouteStoreAdapter() {
     routeElevationGain,
     routeElevationLoss,
     fullRouteCoords,
-    isBuilding: store.isBuilding,
-    error: store.error,
+    isBuilding,
+    error,
 
     // Routing status setters (for map/routing components)
-    setBuilding: store.setBuilding,
-    setError: store.setError,
-    
+    setBuilding,
+    setError,
+
     // Direct store access for new code
-    points: store.points,
-    route: store.route,
-    
+    points,
+    route,
+
     // Actions
-    setMode: store.setMode,
-    setTransportMode: store.setTransportMode,
+    setMode,
+    setTransportMode,
     setRoutePoints,
     setRouteDistance,
     setRouteDuration,
@@ -313,14 +334,14 @@ export function useRouteStoreAdapter() {
     handleAddressClear,
     
     // Direct store actions for new code
-    addPoint: store.addPoint,
-    removePoint: store.removePoint,
-    updatePoint: store.updatePoint,
-    clearRoute: store.clearRoute,
-    swapStartEnd: store.swapStartEnd,
+    addPoint,
+    removePoint,
+    updatePoint,
+    clearRoute,
+    swapStartEnd,
   }), [
-    store.mode,
-    store.transportMode,
+    mode,
+    transportMode,
     routePoints,
     startAddress,
     endAddress,
@@ -329,14 +350,14 @@ export function useRouteStoreAdapter() {
     routeElevationGain,
     routeElevationLoss,
     fullRouteCoords,
-    store.isBuilding,
-    store.error,
-    store.setBuilding,
-    store.setError,
-    store.points,
-    store.route,
-    store.setMode,
-    store.setTransportMode,
+    isBuilding,
+    error,
+    setBuilding,
+    setError,
+    points,
+    route,
+    setMode,
+    setTransportMode,
     setRoutePoints,
     setRouteDistance,
     setRouteDuration,
@@ -346,10 +367,10 @@ export function useRouteStoreAdapter() {
     handleClearRoute,
     handleAddressSelect,
     handleAddressClear,
-    store.addPoint,
-    store.removePoint,
-    store.updatePoint,
-    store.clearRoute,
-    store.swapStartEnd,
+    addPoint,
+    removePoint,
+    updatePoint,
+    clearRoute,
+    swapStartEnd,
   ]);
 }
