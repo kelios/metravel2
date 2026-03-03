@@ -211,7 +211,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         questMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
         questMetaRowMobile: { gap: spacing.xs },
         metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-        metaText: { color: colors.text, fontSize: typography.sizes.xs, fontWeight: '600' },
+        metaText: { color: colors.textOnDark, fontSize: typography.sizes.xs, fontWeight: '600' },
         metaTextAlt: { color: colors.textMuted, fontSize: typography.sizes.xs, fontWeight: '600' },
         metaTextMobile: { fontSize: 11 },
         questFooter: {
