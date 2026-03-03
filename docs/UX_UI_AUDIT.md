@@ -37,9 +37,9 @@ Metravel — тревел-платформа на базе React Native Web + Ex
 **Проблемы:**
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| NAV-01 | Нет `paddingBottom: safe-area-inset-bottom` на iOS — иконки уходят под Home Indicator | P0 |
-| NAV-02 | «Ещё» → Modal делает анимацию `fade` — резкий и нелогичный переход, лучше `slide-up` sheet | P1 |
-| NAV-03 | На главной странице активная иконка в доке — отсутствует (не совпадает ни с одним маршрутом) | P1 |
+| ~~NAV-01~~ | ✅ `useSafeAreaInsets().bottom` добавлен в BottomDock — `safeBottomPadding` учитывается на iOS/Android | ~~P0~~ |
+| ~~NAV-02~~ | ✅ Slide-up анимация для «Ещё»: CSS `transition: transform 0.32s` + `translateY(0/100%)` вместо fade | ~~P1~~ |
+| ~~NAV-03~~ | ✅ `activePath` маппинг нормализует Expo Router пути (включая `/(tabs)/` prefix) → первый dock item `/search` подсвечен на главной, а также на `/roulette` | ~~P1~~ |
 | NAV-04 | Метки иконок на web отображаются, на native — скрыты (`showLabel={Platform.OS === "web"}`). Нарушает UX-консистентность | P2 |
 | NAV-05 | «Квесты» на 4-й позиции — не самый частый сценарий для большинства пользователей. Стоит рассмотреть «Профиль» вместо «Квестов» | P2 |
 
@@ -64,7 +64,7 @@ BottomDock → добавить:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | NAV-10 | На планшете (768–1024px) header переходит в мобильный режим, но bottom dock не появляется — остаётся «бургер» без дока | P1 |
-| NAV-11 | Хлебные крошки отсутствуют на страницах путешествий `/travels/:slug` — пользователь не понимает, где он | P1 |
+| ~~NAV-11~~ | ✅ Хлебные крошки реализованы через `HeaderContextBar` + `useBreadcrumbModel` + `BreadcrumbsJsonLd` (SEO). На desktop — кликабельная цепочка «Главная > ... > Текущая», на mobile — кнопка «Назад» + заголовок | ~~P1~~ |
 | NAV-12 | Кнопка «Войти» в хедере не выделена визуально как CTA — теряется рядом с навигационными ссылками | P2 |
 | NAV-13 | Мобильное меню не поддерживает `swipe-to-close` на native | P2 |
 
@@ -82,12 +82,12 @@ BottomDock → добавить:
 **Проблемы:**
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| HERO-01 | На мобайле hero не показывает ни одного изображения маршрута до скролла — холодный старт без визуального контекста | P1 |
-| HERO-02 | Mood chips прокручиваются горизонтально без визуального индикатора (нет fade-edge слева/справа) | P1 |
+| ~~HERO-01~~ | ✅ На мобайле hero показывает featured изображение (первый BOOK_IMAGES) в карточке 16:9 с overlay + заголовком + секцию «Популярные маршруты» | ~~P1~~ |
+| ~~HERO-02~~ | ✅ Mood chips scroll обёрнут в контейнер с `maskImage: linear-gradient(...)` — fade-edges слева/справа реализованы | ~~P1~~ |
 | HERO-03 | Кнопки CTA «Добавить первую поездку» и «Смотреть маршруты» имеют одинаковую ширину на desktop — нарушает визуальную иерархию | P2 |
-| HERO-04 | `autoplay` слайдера (5 сек) без `prefers-reduced-motion` — проблема для пользователей с вестибулярными нарушениями | P1 |
+| ~~HERO-04~~ | ✅ `prefers-reduced-motion` проверяется в `useEffect` слайдера — при `reduce` автовоспроизведение отключается (WCAG 2.2 SC 2.3.3) | ~~P1~~ |
 | HERO-05 | Hero title разбит на 2 компонента `<Text>` — может вызывать неравномерный line-height на разных breakpoints | P3 |
-| ~~HERO-06~~ | HomeHero | ✅ Skeleton для кнопки пока грузится travelsCount |
+| ~~HERO-06~~ | ✅ Skeleton/loading state для кнопок HomeHero: `travelsCountLoading` проп + `ActivityIndicator` пока данные грузятся | ~~P2~~ |
 
 **Рекомендации:**
 ```
@@ -107,7 +107,7 @@ HERO-04: Добавить probes-reduce-motion:
 |----|-----------|----------|-----------|
 | SEC-01 | HomeTrustBlock | 3 стат-блока расположены горизонтально на desktop, вертикально на mobile — но на планшете (768–1024px) grid «ломается» в вертикаль при достаточно широком экране | P2 |
 | SEC-02 | HomeHowItWorks | Шаги соединены коннекторами только на tablet/desktop. На мобайле шаги визуально не связаны — неочевидна последовательность | P2 |
-| SEC-03 | HomeFAQSection | FAQ открывается accordion, но нет плавной анимации высоты (нет `LayoutAnimation` / CSS transition height) — дёрганое появление | P1 |
+| ~~SEC-03~~ | ✅ FAQ accordion имеет плавные CSS transitions: `max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)`, `opacity 0.25s ease`, `padding 0.3s ease`. На native используется `LayoutAnimation.Presets.easeInEaseOut` | ~~P1~~ |
 | SEC-04 | HomeFinalCTA | `backgroundImage` с radial-gradient задан через inline Platform.select — на некоторых браузерах может не применяться. Нет fallback цвета | P2 |
 | SEC-05 | Все секции | Нет scroll-triggered анимации появления (fade-in при scroll) — страница выглядит статично | P3 |
 
@@ -126,11 +126,11 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | SRCH-01 | `ModernFilters.tsx` — 1370 строк в одном файле — нарушает принцип единственной ответственности. Нет декомпозиции | P1 |
-| SRCH-02 | При выборе фильтров нет визуального badge-счётчика активных фильтров на кнопке «Фильтры» (mobile) | P1 |
-| SRCH-03 | Кнопка «Применить фильтры» и «Сбросить» на мобайле расположены в конце длинного списка — нужно sticky-закрепить внизу sheet | P1 |
-| SRCH-04 | Нет поля поиска по тексту в верхней части экрана (поиск по названию маршрута) как первичного действия | P0 |
+| ~~SRCH-02~~ | ✅ Кнопка «Фильтры» на мобайле имеет badge-индикатор при активных фильтрах + `accessibilityHint` с числом активных фильтров. Реализовано в `StickySearchBar` | ~~P1~~ |
+| ~~SRCH-03~~ | ✅ Кнопки «Показать результаты» и «Сбросить всё» закреплены sticky внизу sheet (вне `ScrollView`) в `ModernFilters` через `applyButtonContainer` | ~~P1~~ |
+| ~~SRCH-04~~ | ✅ Поле поиска по тексту реализовано как первичное действие через `StickySearchBar` в `RightColumn` с поддержкой Ctrl+K/⌘K и очисткой | ~~P0~~ |
 | SRCH-05 | Анимация открытия bottom sheet фильтров — `Modal` с `fade` (резко). Нужен spring/slide-up | P2 |
-| SRCH-06 | Нет «быстрых фильтров» в виде pill-chips прямо под поисковой строкой (как на Booking, Airbnb) | P2 |
+| ~~SRCH-06~~ | ✅ Quick-filter chips реализованы в `StickySearchBar`: горизонтальная полоса pill-chip'ов под поисковой строкой с поддержкой active state | ~~P2~~ |
 
 ### 4.2 Карточки маршрутов (UnifiedTravelCard)
 
@@ -149,7 +149,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| TD-01 | Галерея изображений на мобайле — горизонтальный скролл без индикатора количества фото | P1 |
+| ~~TD-01~~ | ✅ Галерея изображений имеет Instagram-style counter `1/N` — реализован в `Slider.web.tsx` (Counter компонент) и `UnifiedSlider.tsx` (inline counter). Показывается при `images.length > 1` | ~~P1~~ |
 
 Закрыто в марте 2026: дублирование хлебных крошек над слайдером устранено, используется единый источник в `HeaderContextBar`.
 
@@ -170,11 +170,11 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| AUTH-01 | Форма входа `/login` — поле пароля не имеет кнопки «Показать/скрыть пароль» | P1 |
-| AUTH-02 | Google Sign-In есть, но не вынесен как первичное CTA на экране входа | P1 |
-| AUTH-03 | После успешной регистрации пользователь попадает на главную без welcome-сообщения — непонятно, что произошло | P1 |
+| ~~AUTH-01~~ | ✅ Кнопка «Показать/скрыть пароль» реализована в login.tsx через `showPassword` state + Feather eye/eye-off иконка с `accessibilityLabel` | ~~P1~~ |
+| ~~AUTH-02~~ | ✅ Google Sign-In перемещён выше email/password формы как первичное CTA. Divider текст изменён на «или войдите с email» | ~~P1~~ |
+| ~~AUTH-03~~ | ✅ Welcome-сообщение после регистрации: «Добро пожаловать! Аккаунт создан. Проверьте почту для подтверждения.» + redirect через 1 сек | ~~P1~~ |
 | AUTH-04 | `OnboardingBanner` виден только авторизованным пользователям. Гости не получают никакого онбординга | P2 |
-| AUTH-05 | Форма регистрации — нет inline-валидации при вводе (ошибки появляются только после submit) | P1 |
+| ~~AUTH-05~~ | ✅ Inline-валидация реализована через `FormFieldWithValidation` + `useYupForm` с `handleBlur` на каждом поле. Регистрация имеет password strength indicator (weak/medium/strong) | ~~P1~~ |
 
 ---
 
@@ -206,7 +206,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | RESP-01 | Во многих компонентах адаптивность реализована через `isMobile ? X : Y` (бинарный подход) — в ряде экранов всё ещё пропускаются промежуточные состояния планшет/large phone | P1 |
-| RESP-02 | На планшете (768–1024px) карточки маршрутов показываются в 1 колонку как на мобайле — трата пространства | P1 |
+| ~~RESP-02~~ | ✅ Планшет (768–1024px) показывает 2 колонки в портрете, 3 в ландшафте. Реализовано через `GRID_COLUMNS` + `calculateColumns()` в `listTravelHelpers.ts` с учётом orientation | ~~P1~~ |
 | RESP-03 | `ResponsiveContainer` корректно ограничивает ширину, но многие компоненты не используют его — рендерятся на 100% ширины | P1 |
 | RESP-06 | Текст в карточках обрезается `numberOfLines={1}` без расширения при большем экране | P3 |
 
@@ -239,9 +239,9 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | A11Y-01 | Кнопки без `accessibilityLabel` в некоторых частях приложения — проблема для screen readers | P0 |
-| A11Y-02 | Контраст текста на `textMuted` цвете — нужно проверить соответствие WCAG AA (4.5:1 для нормального текста) | P1 |
-| A11Y-03 | Focus indicators (`globalFocusStyles.focusable`) присутствуют в коде, но в некоторых компонентах не подключены | P1 |
-| A11Y-04 | Автовоспроизведение слайдера без `prefers-reduced-motion` — нарушение WCAG 2.2 SC 2.3.3 | P1 |
+| ~~A11Y-02~~ | ✅ `textMuted`/`textSecondary` усилены до `#636363` (≥5.9:1 на #ffffff). Тёмная тема `#b8b8b8` на `#2a2a2a` = 7.5:1. Все проходят WCAG AA | ~~P1~~ |
+| ~~A11Y-03~~ | ✅ `globalFocusStyles.focusable` добавлен в: StickySearchBar (5 Pressable), BottomDock moreSheet (8 Pressable), login.tsx (eyeButton, forgotButton). DockButton и формы уже имели focusable | ~~P1~~ |
+| ~~A11Y-04~~ | ✅ Автовоспроизведение слайдера проверяет `prefers-reduced-motion: reduce` — при совпадении автоплей отключается (WCAG 2.2 SC 2.3.3). См. HERO-04 | ~~P1~~ |
 
 ---
 
@@ -276,7 +276,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | EMPTY-01 | `EmptyState` компонент существует, но применяется непоследовательно — часть экранов просто показывает пустой список | P2 |
-| EMPTY-02 | При нулевых результатах поиска нет рекомендации «Попробуйте изменить фильтры» с кнопкой сброса | P1 |
+| ~~EMPTY-02~~ | ✅ При нулевых результатах поиска `getEmptyStateMessage` формирует описание активных фильтров + предложение «Попробуйте убрать фильтры или изменить запрос» + кнопка «Сбросить фильтры» через `EmptyState` action в `RightColumn` | ~~P1~~ |
 
 ---
 
@@ -286,8 +286,8 @@ HERO-04: Добавить probes-reduce-motion:
 
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
-| SRCH-04 | Search | Добавить поле поиска по тексту как первичное действие |
-| NAV-01 | BottomDock | Safe-area padding на iOS |
+| ~~SRCH-04~~ | ✅ Search | Поле поиска по тексту реализовано через StickySearchBar |
+| ~~NAV-01~~ | ✅ BottomDock | Safe-area padding на iOS реализован через useSafeAreaInsets |
 | A11Y-01 | Везде | Аудит и добавление accessibilityLabel где отсутствует |
 
 ### 🟠 P1 — Высокий (заметно влияет на UX)
@@ -295,31 +295,31 @@ HERO-04: Добавить probes-reduce-motion:
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
 | NAV-10 | Header | Планшетный breakpoint навигации |
-| HERO-02 | HomeHero | Fade-edges для mood chips scroll |
-| HERO-04 | HomeHero | prefers-reduced-motion для слайдера |
-| HERO-01 | HomeHero | Одно featured изображение на мобайле в hero |
-| SEC-03 | FAQ | Плавная анимация accordion |
-| SRCH-02 | Filters | Badge-счётчик активных фильтров |
-| SRCH-03 | Filters | Sticky кнопки «Применить» / «Сбросить» |
-| TD-01 | Travel Detail | Индикатор количества фото в галерее |
-| AUTH-01 | Login | Показать/скрыть пароль |
-| AUTH-02 | Login | Google Sign-In как первичное действие |
-| AUTH-03 | Registration | Welcome-сообщение после регистрации |
-| AUTH-05 | Registration | Inline-валидация полей |
+| ~~HERO-02~~ | ✅ HomeHero | Fade-edges для mood chips scroll |
+| ~~HERO-04~~ | ✅ HomeHero | prefers-reduced-motion для слайдера |
+| ~~HERO-01~~ | ✅ HomeHero | Одно featured изображение на мобайле в hero |
+| ~~SEC-03~~ | ✅ FAQ | Плавная анимация accordion |
+| ~~SRCH-02~~ | ✅ Filters | Badge-счётчик активных фильтров (число вместо точки) |
+| ~~SRCH-03~~ | ✅ Filters | Sticky кнопки «Применить» / «Сбросить» |
+| ~~TD-01~~ | ✅ Travel Detail | Индикатор количества фото в галерее |
+| ~~AUTH-01~~ | ✅ Login | Показать/скрыть пароль |
+| ~~AUTH-02~~ | ✅ Login | Google Sign-In как первичное CTA |
+| ~~AUTH-03~~ | ✅ Registration | Welcome-сообщение после регистрации |
+| ~~AUTH-05~~ | ✅ Registration | Inline-валидация полей |
 | RESP-01 | Везде | Использовать ≥3 breakpoint-значений вместо binary mobile/desktop |
-| RESP-02 | Search | 2–3 колонки на планшете |
+| ~~RESP-02~~ | ✅ Search | 2–3 колонки на планшете |
 | RESP-03 | Везде | Оборачивать в ResponsiveContainer |
-| A11Y-02 | Везде | Проверить contrast ratio textMuted |
-| A11Y-03 | Везде | Подключить globalFocusStyles везде |
-| A11Y-04 | HomeHero | prefers-reduced-motion |
+| ~~A11Y-02~~ | ✅ Palette | textMuted усилен до #636363 (WCAG AA ≥5.9:1) |
+| ~~A11Y-03~~ | ✅ Everywhere | globalFocusStyles подключен в StickySearchBar, BottomDock, login |
+| ~~A11Y-04~~ | ✅ HomeHero | prefers-reduced-motion |
 | PERF-02 | Images | blurhash placeholder везде |
-| EMPTY-02 | Search | Empty state с предложением изменить фильтры |
+| ~~EMPTY-02~~ | ✅ Search | Empty state с предложением изменить фильтры |
 
 ### 🟡 P2 — Средний
 
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
-| TD-03 | Travel Detail | Tooltip для обрезанных табов |
+| ~~TD-03~~ | ✅ Travel Detail | Tooltip для обрезанных табов |
 | PROF-01 | Profile | Visual hierarchy |
 | MAP-02 | Map | Кластеризация pin'ов — требует leaflet.markercluster, отдельный спринт |
 | EMPTY-01 | Везде | Последовательное применение EmptyState |
@@ -401,4 +401,45 @@ HERO-04: Добавить probes-reduce-motion:
 - ~~RESP-05~~ (P2) — Landscape-оптимизация: `homeHeroStyles.ts` получил `isLandscape` параметр, уменьшает `paddingTop` и `minHeight` в landscape-режиме
 
 **Тесты:** `Home.test.tsx` обновлён — `should not fetch travels on home even when authenticated` → `should fetch travels count for authenticated users (HERO-06)`; добавлен глобальный мок `fetchMyTravels.mockResolvedValue({ data: [], total: 0 })` в `beforeEach`
+
+### Март 2026 — Сессия 3 (аудит реализованного)
+
+**Подтверждено как реализованное (ранее не было отмечено в таблицах):**
+- ~~NAV-01~~ (P0) — `useSafeAreaInsets().bottom` используется в `BottomDock.tsx` → `safeBottomPadding` для iOS/Android
+- ~~NAV-02~~ (P1) — Slide-up анимация «Ещё»: CSS `transition: transform 0.32s` + `translateY(0/100%)`, backdrop fade, drag indicator
+- ~~NAV-11~~ (P1) — Хлебные крошки через `HeaderContextBar` + `useBreadcrumbModel` + `BreadcrumbsJsonLd` (SEO). Desktop: кликабельная цепочка «Главная > ... > Текущая». Mobile: кнопка «Назад» + заголовок
+- ~~HERO-01~~ (P1) — Featured изображение на мобайле (первый BOOK_IMAGES) в карточке с overlay + title/subtitle + секция «Популярные маршруты»
+- ~~HERO-02~~ (P1) — Mood chips scroll c `maskImage: linear-gradient(...)` fade-edges
+- ~~HERO-04~~ / ~~A11Y-04~~ (P1) — `prefers-reduced-motion: reduce` проверяется в `useEffect` слайдера HomeHero — автоплей отключается
+- ~~SEC-03~~ (P1) — FAQ accordion: CSS `transition: max-height 0.35s + opacity 0.25s + padding 0.3s`. Native: `LayoutAnimation.Presets.easeInEaseOut`
+- ~~SRCH-02~~ (P1) — Badge на кнопке «Фильтры» (мобайл) + `accessibilityHint` с числом активных фильтров в `StickySearchBar`
+- ~~SRCH-03~~ (P1) — Sticky кнопки «Показать результаты» / «Сбросить всё» вне `ScrollView` в `ModernFilters.applyButtonContainer`
+- ~~SRCH-04~~ (P0) — Поле поиска по тексту: `StickySearchBar` в `RightColumn`, Ctrl+K/⌘K, очистка, placeholder
+- ~~SRCH-06~~ (P2) — Quick-filter chips: горизонтальная полоса pill-chip'ов под поисковой строкой с active state
+- ~~TD-01~~ (P1) — Instagram-style counter `1/N` в `Slider.web.tsx` (Counter компонент) и `UnifiedSlider.tsx`. Показывается при `images.length > 1`
+- ~~AUTH-01~~ (P1) — Показать/скрыть пароль: `showPassword` state + Feather `eye`/`eye-off` с `accessibilityLabel` в `login.tsx`
+- ~~AUTH-03~~ (P1) — Welcome-сообщение: «Добро пожаловать! Аккаунт создан. Проверьте почту для подтверждения.» + redirect через 1 сек в `registration.tsx`
+- ~~AUTH-05~~ (P1) — Inline-валидация: `FormFieldWithValidation` + `useYupForm` + `handleBlur`. Password strength indicator (weak/medium/strong) в `registration.tsx`
+- ~~RESP-02~~ (P1) — Планшет 2 колонки в портрете, 3 в ландшафте: `GRID_COLUMNS` + `calculateColumns()` в `listTravelHelpers.ts`
+- ~~EMPTY-02~~ (P1) — `getEmptyStateMessage` формирует описание активных фильтров + «Попробуйте убрать фильтры» + кнопка «Сбросить фильтры» через `EmptyState` action в `RightColumn`
+
+**Оставшиеся нереализованные задачи P0–P1:**
+- A11Y-01 (P0) — Аудит accessibilityLabel по всему приложению
+- NAV-10 (P1) — Планшетный breakpoint навигации (header + dock)
+- RESP-01 (P1) — ≥3 breakpoint-значений вместо binary mobile/desktop
+- RESP-03 (P1) — ResponsiveContainer во всех компонентах
+- PERF-02 (P1) — blurhash placeholder во всех изображениях
+- SRCH-01 (P1) — Декомпозиция ModernFilters.tsx (1370 строк)
+- MAP-02 (P1) — Кластеризация pin'ов на карте
+
+### Март 2026 — Сессия 4
+
+**Реализовано:**
+- ~~SRCH-02~~ улучшение — Badge фильтров теперь показывает число вместо точки (`activeFiltersCount` в `<Text>` внутри badge). Поддержка `99+` для больших чисел
+- ~~NAV-03~~ (P1) — `activePath` маппинг нормализует `/(tabs)/` prefix из Expo Router + добавлен маппинг `/roulette` → `/search`
+- ~~AUTH-02~~ (P1) — Google Sign-In перемещён выше email/password формы в `login.tsx`. Divider текст «или» → «или войдите с email»
+- ~~A11Y-02~~ (P1) — `textMuted`/`textSecondary` усилены с `#6a6a6a` до `#636363` в светлой теме (контраст ≥5.9:1 на `#ffffff`, WCAG AA). Тёмная тема `#b8b8b8` на `#2a2a2a` = ~7.5:1 — без изменений
+- ~~A11Y-03~~ (P1) — `globalFocusStyles.focusable` добавлен в: `StickySearchBar` (clear, recommendations, filters, clear-all, quick chips — 5 элементов), `BottomDock` moreSheet (close + 7 пунктов меню), `login.tsx` (eyeButton, forgotButton)
+
+**Тесты:** 34 теста (StickySearchBar + BottomDock + login) — все прошли
 

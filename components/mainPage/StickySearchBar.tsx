@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
@@ -424,7 +425,7 @@ function StickySearchBar({
             <Pressable
               onPress={() => onSearchChange('')}
               accessibilityLabel="Очистить поиск"
-              style={[styles.clearButton, { pointerEvents: 'box-only' }]}
+              style={[styles.clearButton, { pointerEvents: 'box-only' }, globalFocusStyles.focusable]}
             >
               <Feather name="x" size={16} color={colors.textMuted} style={{ pointerEvents: 'none' }} />
             </Pressable>
@@ -465,6 +466,7 @@ function StickySearchBar({
                 isMobile ? styles.actionButtonMobile : null,
                 isRecommendationsVisible && styles.actionButtonActive,
                 !isRecommendationsVisible && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
+                globalFocusStyles.focusable,
               ]}
               accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
               accessibilityState={{ selected: !!isRecommendationsVisible }}
@@ -488,6 +490,7 @@ function StickySearchBar({
                 isMobile ? styles.actionButtonMobile : null,
                 hasActiveFilters && styles.actionButtonActive,
                 !hasActiveFilters && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
+                globalFocusStyles.focusable,
               ]}
               accessibilityLabel="Открыть фильтры"
               accessibilityHint={hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined}
@@ -497,9 +500,9 @@ function StickySearchBar({
                 size={filterIconSize}
                 color={hasActiveFilters ? colors.primary : colors.textMuted}
               />
-              {hasActiveFilters && (
+              {hasActiveFilters && activeFiltersCount != null && activeFiltersCount > 0 && (
                 <View style={styles.badge} testID="filters-badge">
-                  <View style={styles.badgeDot} />
+                  <Text style={styles.badgeCount}>{activeFiltersCount > 99 ? '99+' : activeFiltersCount}</Text>
                 </View>
               )}
             </Pressable>
@@ -515,6 +518,7 @@ function StickySearchBar({
                 styles.clearAllButton,
                 !showClearAll ? ({ opacity: 0 } as any) : null,
                 ({ pointerEvents: showClearAll ? 'auto' : 'none' } as any),
+                globalFocusStyles.focusable,
               ]}
               accessibilityLabel="Сбросить все фильтры и поиск"
             >
@@ -532,7 +536,7 @@ function StickySearchBar({
             <Pressable
               key={chip.id}
               onPress={() => onQuickFilterPress?.(chip.id)}
-              style={[styles.quickChip, chip.active && styles.quickChipActive]}
+              style={[styles.quickChip, chip.active && styles.quickChipActive, globalFocusStyles.focusable]}
               accessibilityRole="button"
               accessibilityLabel={chip.label}
               accessibilityState={{ selected: !!chip.active }}

@@ -48,15 +48,18 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const styles = useMemo(() => createStyles(colors, safeBottomPadding), [colors, safeBottomPadding]);
 
   const activePath = useMemo(() => {
-    if (pathname === '/' || pathname === '/index') return '/search';
-    if (pathname.startsWith('/travels/')) return '/search';
-    if (pathname.startsWith('/travel/')) return '/search';
-    if (pathname.startsWith('/search')) return '/search';
-    if (pathname.startsWith('/travelsby')) return '/travelsby';
-    if (pathname.startsWith('/export')) return '/export';
-    if (pathname.startsWith('/map')) return '/map';
-    if (pathname.startsWith('/quests')) return '/quests';
-    return pathname;
+    // Normalize: Expo Router may include group prefixes like /(tabs)/
+    const normalized = pathname.replace(/^\/\(tabs\)/, '') || '/';
+    if (normalized === '/' || normalized === '/index') return '/search';
+    if (normalized.startsWith('/travels/')) return '/search';
+    if (normalized.startsWith('/travel/')) return '/search';
+    if (normalized.startsWith('/search')) return '/search';
+    if (normalized.startsWith('/travelsby')) return '/travelsby';
+    if (normalized.startsWith('/export')) return '/export';
+    if (normalized.startsWith('/map')) return '/map';
+    if (normalized.startsWith('/quests')) return '/quests';
+    if (normalized.startsWith('/roulette')) return '/search';
+    return normalized;
   }, [pathname]);
 
   // NAV-02: Управление slide-up анимацией для moreSheet
@@ -246,7 +249,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               <Text style={styles.sheetTitle}>Ещё</Text>
               <Pressable
                 onPress={() => setShowMore(false)}
-                style={styles.sheetCloseBtn}
+                style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
                 accessibilityRole="button"
                 accessibilityLabel="Закрыть"
               >
@@ -259,7 +262,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   setShowMore(false);
                   router.push("/roulette" as any);
                 }}
-                style={styles.moreItem}
+                style={[styles.moreItem, globalFocusStyles.focusable]}
                 accessibilityRole="link"
                 accessibilityLabel="Случайная поездка"
               >
@@ -271,7 +274,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   setShowMore(false);
                   router.push("/travel/new" as any);
                 }}
-                style={styles.moreItem}
+                style={[styles.moreItem, globalFocusStyles.focusable]}
                 accessibilityRole="link"
                 accessibilityLabel="Создать маршрут"
               >
@@ -283,7 +286,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   setShowMore(false);
                   router.push("/export" as any);
                 }}
-                style={styles.moreItem}
+                style={[styles.moreItem, globalFocusStyles.focusable]}
                 accessibilityRole="link"
                 accessibilityLabel="Книга путешествий"
               >
@@ -295,7 +298,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   setShowMore(false);
                   router.push("/profile" as any);
                 }}
-                style={styles.moreItem}
+                style={[styles.moreItem, globalFocusStyles.focusable]}
                 accessibilityRole="link"
                 accessibilityLabel="Профиль"
               >
@@ -308,7 +311,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   setShowMore(false);
                   router.push("/privacy" as any);
                 }}
-                style={styles.moreItem}
+                style={[styles.moreItem, globalFocusStyles.focusable]}
                 accessibilityRole="link"
                 accessibilityLabel="Политика конфиденциальности"
               >
@@ -320,7 +323,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   setShowMore(false);
                   router.push("/cookies" as any);
                 }}
-                style={styles.moreItem}
+                style={[styles.moreItem, globalFocusStyles.focusable]}
                 accessibilityRole="link"
                 accessibilityLabel="Настройки cookies"
               >
@@ -332,7 +335,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   setShowMore(false);
                   router.push("/about" as any);
                 }}
-                style={styles.moreItem}
+                style={[styles.moreItem, globalFocusStyles.focusable]}
                 accessibilityRole="link"
                 accessibilityLabel="Связаться с нами"
               >

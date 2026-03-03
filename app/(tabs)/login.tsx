@@ -253,7 +253,7 @@ export default function Login() {
                                                         />
                                                         <Pressable
                                                             onPress={() => setShowPassword((v) => !v)}
-                                                            style={styles.eyeButton}
+                                                            style={[styles.eyeButton, globalFocusStyles.focusable]}
                                                             accessibilityRole="button"
                                                             accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
                                                             hitSlop={8}
@@ -283,6 +283,7 @@ export default function Login() {
                                                     style={({ pressed }) => [
                                                         styles.forgotButton,
                                                         pressed && { opacity: 0.7 },
+                                                        globalFocusStyles.focusable,
                                                     ]}
                                                     accessibilityRole="button"
                                                     accessibilityLabel="Сбросить пароль"
