@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, RefreshControl } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -29,6 +29,14 @@ export default function FavoritesScreen() {
     const { favorites, removeFavorite, clearFavorites } = useFavorites() as any;
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
+
+    // AND-14: Pull-to-Refresh
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        // Favorites come from context/store — trigger a short delay to simulate refresh
+        setTimeout(() => setRefreshing(false), 500);
+    }, []);
 
     const handleBackToProfile = useCallback(() => {
         router.push('/profile' as any);
@@ -280,6 +288,8 @@ export default function FavoritesScreen() {
                     {...({ estimatedItemSize: 280 } as any)}
                     contentContainerStyle={styles.listContent}
                     drawDistance={500}
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
                     renderItem={({ item, index }: { item: any; index: number }) => {
                         const columnIndex = numColumns > 0 ? index % numColumns : 0;
                         const isFirstColumn = numColumns <= 1 || columnIndex === 0;

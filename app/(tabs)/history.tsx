@@ -27,6 +27,13 @@ export default function HistoryScreen() {
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
 
+    // AND-14: Pull-to-Refresh
+    const [refreshing, setRefreshing] = useState(false);
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        setTimeout(() => setRefreshing(false), 500);
+    }, []);
+
     const handleBackToProfile = useCallback(() => {
         router.push('/profile' as any);
     }, [router]);
@@ -230,6 +237,8 @@ export default function HistoryScreen() {
                     {...({ estimatedItemSize: 280 } as any)}
                     contentContainerStyle={styles.gridContent}
                     drawDistance={500}
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
                     renderItem={({ item, index }: { item: any; index: number }) => {
                         const gap = 14;
                         const columnIndex = numColumns > 0 ? index % numColumns : 0;
