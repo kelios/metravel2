@@ -31,6 +31,7 @@ export function useRouteStoreAdapter() {
 
   // Convert RoutePoint[] to legacy [lng, lat][] format
   const routePoints = useMemo(() => {
+    if (!Array.isArray(points)) return [];
     return points.map(p => [p.coordinates.lng, p.coordinates.lat] as [number, number]);
   }, [points]);
 

@@ -92,8 +92,8 @@ describe('UserPointsScreen', () => {
 
     render(<UserPointsScreen />);
 
-    expect(await screen.findByText('Требуется авторизация')).toBeTruthy();
-    expect(screen.getByText('Для использования этой функции необходимо войти в систему')).toBeTruthy();
+    expect(await screen.findByText('Войдите, чтобы управлять точками')).toBeTruthy();
+    expect(screen.getByText('Для сохранения и просмотра ваших точек на карте необходимо войти в аккаунт.')).toBeTruthy();
     expect(screen.getByText('Войти')).toBeTruthy();
   });
 
