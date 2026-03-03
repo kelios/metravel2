@@ -31,7 +31,7 @@ function SafeView({ children, ...rest }: ViewProps) {
 
 function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
   const router = useRouter();
-  const { isPhone, isLargePhone } = useResponsive();
+  const { isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
@@ -192,8 +192,8 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
   }, [authorProfile?.avatar, travelUserAvatar, normalizeMediaUrl]);
 
   const avatarSize = useMemo(
-    () => (isMobile ? 64 : Platform.select({ default: 72, web: 96 })!),
-    [isMobile]
+    () => (isMobile ? 64 : isTablet ? 72 : Platform.select({ default: 80, web: 96 })!),
+    [isMobile, isTablet]
   );
   const avatarBorderRadius = useMemo(() => Math.round(avatarSize / 2), [avatarSize]);
 

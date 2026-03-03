@@ -63,7 +63,7 @@ BottomDock → добавить:
 **Проблемы:**
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| NAV-10 | На планшете (768–1024px) header переходит в мобильный режим, но bottom dock не появляется — остаётся «бургер» без дока | P1 |
+| ~~NAV-10~~ | ✅ На web-планшете (768–1024px) `CustomHeader` показывает inline-навигацию (как desktop) вместо бургер-меню. `isMobile` на web = `isPhone || isLargePhone` (без isTablet). На native планшет остаётся мобильным. BottomDock по-прежнему доступен на планшете | ~~P1~~ |
 | ~~NAV-11~~ | ✅ Хлебные крошки реализованы через `HeaderContextBar` + `useBreadcrumbModel` + `BreadcrumbsJsonLd` (SEO). На desktop — кликабельная цепочка «Главная > ... > Текущая», на mobile — кнопка «Назад» + заголовок | ~~P1~~ |
 | NAV-12 | Кнопка «Войти» в хедере не выделена визуально как CTA — теряется рядом с навигационными ссылками | P2 |
 | NAV-13 | Мобильное меню не поддерживает `swipe-to-close` на native | P2 |
@@ -125,7 +125,7 @@ HERO-04: Добавить probes-reduce-motion:
 **Проблемы:**
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| SRCH-01 | `ModernFilters.tsx` — 1370 строк в одном файле — нарушает принцип единственной ответственности. Нет декомпозиции | P1 |
+| ~~SRCH-01~~ | ✅ `ModernFilters.tsx` декомпозирован: подкомпоненты `FilterCheckbox`, `FilterRadio`, `GroupClearButton`, `SortDropdown`, `SortOptionItem`, `FilterOptionItem` вынесены в `filters/`, стили в `modernFiltersStyles.ts`. Главный файл ~340 строк вместо 1400 | ~~P1~~ |
 | ~~SRCH-02~~ | ✅ Кнопка «Фильтры» на мобайле имеет badge-индикатор при активных фильтрах + `accessibilityHint` с числом активных фильтров. Реализовано в `StickySearchBar` | ~~P1~~ |
 | ~~SRCH-03~~ | ✅ Кнопки «Показать результаты» и «Сбросить всё» закреплены sticky внизу sheet (вне `ScrollView`) в `ModernFilters` через `applyButtonContainer` | ~~P1~~ |
 | ~~SRCH-04~~ | ✅ Поле поиска по тексту реализовано как первичное действие через `StickySearchBar` в `RightColumn` с поддержкой Ctrl+K/⌘K и очисткой | ~~P0~~ |
@@ -250,7 +250,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | PERF-01 | Главная страница загружает тяжёлый контент через `requestIdleCallback` — хорошо. Но нет прогрессивного раскрытия: все секции появляются одновременно | P2 |
-| PERF-02 | Изображения в карточках загружаются без `blurhash` placeholder — есть поддержка в `ImageCardMedia`, но не используется везде | P1 |
+| ~~PERF-02~~ | ✅ `DESIGN_TOKENS.defaultBlurhash` добавлен как fallback. `ImageCardMedia` использует `placeholderBlurhash || DESIGN_TOKENS.defaultBlurhash` — все изображения теперь имеют blurhash placeholder по умолчанию | ~~P1~~ |
 
 ---
 
@@ -294,7 +294,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | Задача | Компонент | Описание |
 |--------|-----------|----------|
-| NAV-10 | Header | Планшетный breakpoint навигации |
+| ~~NAV-10~~ | ✅ Header | Планшетный breakpoint навигации |
 | ~~HERO-02~~ | ✅ HomeHero | Fade-edges для mood chips scroll |
 | ~~HERO-04~~ | ✅ HomeHero | prefers-reduced-motion для слайдера |
 | ~~HERO-01~~ | ✅ HomeHero | Одно featured изображение на мобайле в hero |
@@ -312,7 +312,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ~~A11Y-02~~ | ✅ Palette | textMuted усилен до #636363 (WCAG AA ≥5.9:1) |
 | ~~A11Y-03~~ | ✅ Everywhere | globalFocusStyles подключен в StickySearchBar, BottomDock, login |
 | ~~A11Y-04~~ | ✅ HomeHero | prefers-reduced-motion |
-| PERF-02 | Images | blurhash placeholder везде |
+| ~~PERF-02~~ | ✅ Images | blurhash placeholder везде |
 | ~~EMPTY-02~~ | ✅ Search | Empty state с предложением изменить фильтры |
 
 ### 🟡 P2 — Средний
@@ -424,12 +424,9 @@ HERO-04: Добавить probes-reduce-motion:
 - ~~EMPTY-02~~ (P1) — `getEmptyStateMessage` формирует описание активных фильтров + «Попробуйте убрать фильтры» + кнопка «Сбросить фильтры» через `EmptyState` action в `RightColumn`
 
 **Оставшиеся нереализованные задачи P0–P1:**
-- A11Y-01 (P0) — Аудит accessibilityLabel по всему приложению
-- NAV-10 (P1) — Планшетный breakpoint навигации (header + dock)
-- RESP-01 (P1) — ≥3 breakpoint-значений вместо binary mobile/desktop
+- A11Y-01 (P0) — Аудит accessibilityLabel по всему приложению (частично выполнен: ErrorDisplay, Toggle, SelectionGroup, CollapsibleBlock, ModernFilters — исправлены; остаётся ~200 Pressable в второстепенных компонентах)
+- RESP-01 (P1) — ≥3 breakpoint-значений вместо binary mobile/desktop (частично: AuthorCard исправлен, многие компоненты уже используют 3+ breakpoints)
 - RESP-03 (P1) — ResponsiveContainer во всех компонентах
-- PERF-02 (P1) — blurhash placeholder во всех изображениях
-- SRCH-01 (P1) — Декомпозиция ModernFilters.tsx (1370 строк)
 - MAP-02 (P1) — Кластеризация pin'ов на карте
 
 ### Март 2026 — Сессия 4
@@ -442,4 +439,13 @@ HERO-04: Добавить probes-reduce-motion:
 - ~~A11Y-03~~ (P1) — `globalFocusStyles.focusable` добавлен в: `StickySearchBar` (clear, recommendations, filters, clear-all, quick chips — 5 элементов), `BottomDock` moreSheet (close + 7 пунктов меню), `login.tsx` (eyeButton, forgotButton)
 
 **Тесты:** 34 теста (StickySearchBar + BottomDock + login) — все прошли
+
+### Март 2026 — Сессия 5
+
+**Реализовано:**
+- ~~SRCH-01~~ (P1) — Декомпозиция `ModernFilters.tsx`: 1400 строк → ~340 строк. Подкомпоненты вынесены в `components/listTravel/filters/`: `FilterCheckbox.tsx`, `FilterRadio.tsx`, `GroupClearButton.tsx`, `SortDropdown.tsx`, `SortOptionItem.tsx`, `FilterOptionItem.tsx`. Стили вынесены в `modernFiltersStyles.ts`. Barrel export через `filters/index.ts`
+- ~~NAV-10~~ (P1) — Планшетный breakpoint навигации в `CustomHeader.tsx`: на web-планшете (768–1024px) `isMobile = isPhone || isLargePhone` (без `isTablet`) → header показывает inline-навигацию вместо бургер-меню. На native планшет остаётся мобильным. `BottomDock` (Footer.tsx) по-прежнему включает `isTablet` в мобильный режим — оба способа навигации доступны
+- ~~PERF-02~~ (P1) — `DESIGN_TOKENS.defaultBlurhash` добавлен в `constants/designSystem.ts` как fallback-placeholder. `ImageCardMedia` использует `placeholderBlurhash || DESIGN_TOKENS.defaultBlurhash` — все изображения теперь имеют blurhash placeholder по умолчанию
+- A11Y-01 (P0) — Частичный аудит accessibilityLabel: исправлены `ErrorDisplay.tsx` (3 кнопки: retry, contact, dismiss), `Toggle.tsx`, `SelectionGroup.tsx`, `CollapsibleBlock.tsx` (header toggle). Также добавлены `accessibilityLabel` в ModernFilters (toggleAllButton, yearInput). Проведён полный аудит — основные навигационные компоненты (BottomDock, CustomHeader, CustomHeaderMobileMenu) уже имели лейблы
+- RESP-01 (P1) — Частичная реализация: `AuthorCard.tsx` расширен с 3 breakpoints (isMobile/isTablet/desktop) для avatarSize. `PersonalizedRecommendations.tsx` подготовлен с `isTablet`. Проведён аудит — большинство ключевых компонентов (`TravelDetailPageSkeleton`, `Slider.web.tsx`, `PointList`, `NearTravelList`) уже используют ≥3 breakpoints
 
