@@ -733,3 +733,56 @@
 - AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
 - AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
 
+### Март 2026 — Сессия 5
+
+**Реализовано (Спринт 4 + Спринт 5):**
+
+- AND-31 (P2) — APK size optimization:
+  - Добавлена конфигурация `splits { abi { ... } }` в `build.gradle` — разделение APK по CPU-архитектуре (arm64-v8a, armeabi-v7a, x86_64)
+  - Конфигурация управляется через `android.enableSeparateBuildPerCPUArchitecture` в gradle.properties
+  - `assetBundlePatterns` в `app.json` сужены с `["**/*"]` до `["assets/images/*", "assets/fonts/*", "assets/travel/*", "assets/icons/*"]` — исключены docs, scripts, тесты из native бандла
+
+- ~~AND-12~~ (P2) — Adaptive Icon Material You:
+  - Добавлено поле `monochromeImage` в `app.json` → `android.adaptiveIcon`
+  - Создан placeholder `assets/images/monochrome-icon.png` (требуется замена дизайнером на настоящий монохромный вариант)
+
+- AND-10 (P1, завершение) — Offline mode:
+  - Создан компонент `SyncIndicator` (`components/ui/SyncIndicator.tsx`) — индикатор «Синхронизация данных...» при восстановлении сети (native only)
+  - Показывается на 3 секунды при переходе offline → online, с анимацией через Reanimated
+  - Подключён глобально в `_layout.tsx` рядом с `NetworkStatus`
+  - `ErrorDisplay` улучшен: автоматическое определение сетевых ошибок по тексту сообщения (`isNetworkRelatedMessage`)
+  - При сетевых ошибках кнопка «Повторить» показывает иконку `wifi` и текст «Повторить»
+
+- AND-24 (P3) — Dark theme native sync:
+  - Добавлен `Appearance.addChangeListener` для native-платформ в `useTheme.ts` — тема обновляется в реальном времени при переключении системной темы Android
+  - Добавлено сохранение/восстановление темы через AsyncStorage на native (ранее работало только через localStorage на web)
+
+- AND-13 (P2, расширение) — Жесты:
+  - `onLongPress` проп добавлен в `UnifiedTravelCard` — haptic feedback (`hapticImpact('medium')`) при long press
+  - Import `hapticImpact` из `utils/haptics` интегрирован в карточку
+  - Overscroll glow: добавлен `android:colorEdgeEffect` в `styles.xml` с брендовым цветом `#7a9d8f`
+  - `colors.xml` обновлён: `colorPrimary` = `#7a9d8f` (matches DESIGN_TOKENS)
+
+- AND-15 (P2, расширение) — Image compression:
+  - Установлен `expo-image-manipulator` (~55.0.9)
+  - Создана утилита `utils/imageCompressor.ts`: `compressImage()`, `compressAvatar()`, `compressTravelPhoto()`
+  - Аватар: сжимается до 512×512px, quality 0.85 перед загрузкой (`useAvatarUpload.ts`)
+  - Travel фото: сжимаются до max 1920px, quality 0.8 перед загрузкой (`ImageGalleryComponent.ios.tsx`)
+  - На web — no-op (сервер обрабатывает)
+
+- AND-17 (P2, частично) — Biometric authentication:
+  - Добавлен `expo-local-authentication` (~55.0.8) в зависимости и plugins
+  - Создан хук `hooks/useBiometricAuth.ts`: проверка доступности, аутентификация, enable/disable
+  - Хранит флаг биометрии через `expo-secure-store`
+  - Fallback на PIN/pattern через `disableDeviceFallback: false`
+  - Тест `__tests__/hooks/useBiometricAuth.test.ts` — 5 тестов
+
+- Тесты: добавлены `__tests__/utils/imageCompressor.test.ts` (4 теста), `__tests__/hooks/useBiometricAuth.test.ts` (5 тестов), `__tests__/components/SyncIndicator.test.tsx` (1 тест)
+- Моки: `expo-local-authentication` и `expo-image-manipulator` добавлены в `__tests__/setup.ts` (virtual mocks)
+
+**Lint:** 0 ошибок (1 pre-existing warning).
+
+**Оставшиеся нереализованные задачи P0–P1:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
+- AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
+- AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
