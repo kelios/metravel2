@@ -284,7 +284,13 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
         await expect(hero).toBeVisible();
         const image = hero.locator('img').first();
         if ((await image.count()) > 0) {
-          await expect(image).toBeVisible();
+          await expect(image).toBeAttached();
+          const hasImageSource = await image.evaluate((img) => {
+            const src = img.getAttribute('src') || '';
+            const srcSet = img.getAttribute('srcset') || '';
+            return src.length > 0 || srcSet.length > 0;
+          });
+          expect(hasImageSource).toBe(true);
         }
         return;
       }

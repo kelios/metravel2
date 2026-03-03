@@ -484,7 +484,9 @@ test.describe('Slider — accessibility', () => {
     const hasAnySlideContent = await page.evaluate(() => {
       return (
         document.querySelector('[data-testid^="slider-image-"]') !== null ||
-        document.querySelector('[data-testid^="slider-neutral-placeholder-"]') !== null
+        document.querySelector('[testID^="slider-image-"]') !== null ||
+        document.querySelector('[data-testid^="slider-neutral-placeholder-"]') !== null ||
+        document.querySelector('[testID^="slider-neutral-placeholder-"]') !== null
       );
     });
     expect(hasAnySlideContent).toBe(true);

@@ -105,6 +105,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             color: colors.text,
             fontSize: typography.sizes.sm,
             fontWeight: '700',
+            flexShrink: 1,
         },
         heroBtns: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center' },
         heroBtnsMobile: { alignSelf: 'stretch' },
@@ -204,10 +205,9 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             gap: spacing.xs,
-            minHeight: 112,
-            justifyContent: 'space-between',
+            justifyContent: 'flex-start',
         },
-        questBodyMobile: { minHeight: 96, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
+        questBodyMobile: { paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
         questMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
         questMetaRowMobile: { gap: spacing.xs },
         metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
@@ -221,8 +221,14 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             borderTopWidth: 1,
             borderTopColor: colors.borderLight,
             paddingTop: spacing.xs,
+            marginTop: spacing.xs,
         },
         questFooterText: { color: colors.primaryText, fontSize: typography.sizes.xs, fontWeight: '700' },
+        questCardSingleDesktop: {
+            flexGrow: 0,
+            flexBasis: '100%',
+            maxWidth: '100%',
+        },
 
         /* ---- Difficulty badge ---- */
         difficultyBadge: {
@@ -490,7 +496,7 @@ export default function QuestsScreen() {
                                             </View>
                                             <View style={s.heroStatCard}>
                                                 <Text style={s.heroStatLabel}>Выбор</Text>
-                                                <Text style={s.heroStatValue}>{selectedCityName || 'Не выбран'}</Text>
+                                                <Text style={s.heroStatValue} numberOfLines={1}>{selectedCityName || 'Не выбран'}</Text>
                                             </View>
                                         </View>
                                     )}
@@ -539,7 +545,7 @@ export default function QuestsScreen() {
                                         </View>
                                         <View style={s.heroStatCard}>
                                             <Text style={s.heroStatLabel}>Локация</Text>
-                                            <Text style={s.heroStatValue}>{selectedCityName || 'Не выбрана'}</Text>
+                                            <Text style={s.heroStatValue} numberOfLines={1}>{selectedCityName || 'Не выбрана'}</Text>
                                         </View>
                                     </View>
                                 )}
@@ -627,6 +633,7 @@ export default function QuestsScreen() {
                                                     cityId={selectedCityId === NEARBY_ID ? (quest.cityId as string) : (selectedCityId as string)}
                                                     quest={quest}
                                                     nearby={selectedCityId === NEARBY_ID}
+                                                    isSingleInRow={row.length === 1}
                                                     isMobile={isMobile}
                                                     s={s}
                                                     colors={colors}
@@ -656,11 +663,12 @@ export default function QuestsScreen() {
 // ───────────── Quest card ─────────────
 
 function QuestCardLink({
-    cityId, quest, nearby, isMobile, s, colors,
+    cityId, quest, nearby, isSingleInRow, isMobile, s, colors,
 }: {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
     nearby?: boolean;
+    isSingleInRow?: boolean;
     isMobile?: boolean;
     s: QuestStyles;
     colors: ThemedColors;
@@ -699,6 +707,7 @@ function QuestCardLink({
             <Pressable
                 style={({ hovered, pressed }) => sx(
                     s.questCard,
+                    !isMobile && isSingleInRow && s.questCardSingleDesktop,
                     isMobile && s.questCardMobile,
                     hovered && s.questCardHover,
                     pressed && s.questCardPressed,
