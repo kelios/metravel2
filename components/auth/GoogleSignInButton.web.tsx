@@ -3,7 +3,7 @@
 // Platform split: this file is used only on web builds.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 

@@ -147,6 +147,8 @@ export function setForegroundNotificationHandler(): void {
       shouldShowAlert: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
     }),
   });
 }
