@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, RefreshControl } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
