@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorScheme } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import AppProviders from "@/components/layout/AppProviders";
@@ -413,6 +414,8 @@ function ThemedContent({
 
   return (
     <AppProviders queryClient={queryClient}>
+                          {/* AND-08: Global StatusBar — syncs style with current theme */}
+                          <StatusBar style="auto" />
                           <View style={styles.container}>
                               {showMapBackground && (
                                 <Image

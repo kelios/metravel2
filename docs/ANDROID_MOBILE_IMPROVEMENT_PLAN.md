@@ -1,0 +1,640 @@
+# 📱 Android & Mobile UX — План доработок и улучшений
+
+> **Дата:** Март 2026  
+> **Автор:** Android Engineering  
+> **Статус:** Новый  
+> **Платформа:** Android (Expo + React Native)  
+> **Приоритеты:** P0 = критично, P1 = высокий, P2 = средний, P3 = низкий (nice to have)
+
+---
+
+## 0. Контекст
+
+Приложение MeTravel — тревел-платформа на React Native (Expo SDK) + Expo Router. На данный момент UX/UI аудит (docs/UX_UI_AUDIT.md) и Performance Plan (docs/PERFORMANCE_IMPROVEMENT_PLAN.md) **полностью закрыты** по web-вектору. Этот документ фокусируется на **Android-специфичных** доработках и улучшении мобильного UX для native-платформы, которые остались за рамками предыдущих аудитов.
+
+### Текущее состояние Android
+- Сборка через EAS Build (dev APK / prod AAB)
+- `versionCode: 2`, пакет `by.metravel.app`
+- Hermes engine, Proguard отключён
+- Deep links настроены (`metravel.by`)
+- Минимум SDK не указан явно (берётся из Expo defaults ≈ API 24)
+- Google Sign-In — только web (native Android flow не реализован)
+- Push-уведомления — не реализованы (`expo-notifications` не подключён)
+- Splash screen — базовая конфигурация (статичный PNG, белый фон)
+
+---
+
+## 1. 🔴 P0 — Критичные проблемы
+
+### AND-01 | Android App Links — верификация и тестирование
+
+**Проблема:** `intentFilters` в `app.json` настроены для `metravel.by`, но:
+- `autoVerify: true` требует `.well-known/assetlinks.json` на сервере — не проверено, работает ли
+- Нет fallback-навигации внутри приложения при переходе по deep link на несуществующий маршрут
+- `[...missing].tsx` — есть catch-all, но не адаптирован для native deep link ошибок
+
+**Действия:**
+1. Проверить наличие `/.well-known/assetlinks.json` на `metravel.by`
+2. Добавить тест deep link → экран маршрута (`/travels/[slug]`)
+3. Добавить friendly error screen для невалидных deep links на native
+4. Протестировать на реальном устройстве через `adb shell am start`
+
+---
+
+### AND-02 | Package naming — несоответствие
+
+**Проблема:** В `app.json` пакет = `by.metravel.app`, а в `android/app/build.gradle` namespace и applicationId = `com.yourcompany.metravel`. Это шаблонные значения, которые не были обновлены.
+
+**Действия:**
+1. Привести `build.gradle` в соответствие: `namespace 'by.metravel.app'`, `applicationId 'by.metravel.app'`
+2. Убедиться, что `google-services.json` (Firebase) содержит правильный package name
+3. Проверить Google Play Console — package name должен совпадать
+
+---
+
+### AND-03 | Google Sign-In на Android native
+
+**Проблема:** `GoogleSignInButton.tsx` загружает Google SDK через web-скрипт и работает **только на web**. На Android native нет аутентификации через Google.
+
+**Действия:**
+1. Интегрировать `expo-auth-session` или `@react-native-google-signin/google-signin` для native flow
+2. Добавить Android `clientId` (type = Android) в Google Cloud Console
+3. Добавить SHA-1 fingerprint debug/release keystore в Cloud Console
+4. Реализовать platform-split: `GoogleSignInButton.native.tsx` + `GoogleSignInButton.web.tsx`
+5. Подключить к существующему `loginWithGoogle(credential)` в `authStore`
+
+---
+
+### AND-04 | Permissions — избыточные и устаревшие
+
+**Проблема:** В `app.json` запрошены permissions, которые создают проблемы в Google Play:
+- `ACCESS_BACKGROUND_LOCATION` — требует отдельного review в Play Console и обоснования. Для тревел-приложения фоновая геолокация обычно не нужна
+- `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` — deprecated начиная с API 33+, заменены на `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` (которые уже есть)
+- Дублирование: `ACCESS_COARSE_LOCATION` + `android.permission.ACCESS_COARSE_LOCATION` — дублируется с full-qualified именем
+
+**Действия:**
+1. Убрать `ACCESS_BACKGROUND_LOCATION` (если не нужен трекинг маршрутов в фоне)
+2. Убрать дублирующиеся permissions (`android.permission.ACCESS_*`)
+3. Оставить `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE` только для API < 33 (автоматически через `maxSdkVersion`)
+4. Если фоновая геолокация нужна — добавить runtime permission request с объяснением пользователю
+
+---
+
+## 2. 🟠 P1 — Высокий приоритет
+
+### AND-05 | Push-уведомления
+
+**Проблема:** `expo-notifications` не установлен. Для тревел-приложения уведомления — ключевой retention канал.
+
+**Сценарии уведомлений:**
+- Новые сообщения в чате
+- Ответ на комментарий
+- Новый маршрут в избранном регионе
+- Напоминание о незаконченном путешествии (черновик)
+- Еженедельный дайджест рекомендаций
+
+**Действия:**
+1. Установить `expo-notifications` + настроить FCM (Firebase Cloud Messaging)
+2. Добавить `google-services.json` в production конфигурацию
+3. Реализовать регистрацию push token при авторизации → отправка на бэкенд
+4. Notification channels для Android (Сообщения, Обновления, Рекомендации)
+5. Обработка foreground/background/killed state уведомлений
+6. Deep link из notification → целевой экран
+
+---
+
+### AND-06 | Splash Screen — анимированный переход
+
+**Проблема:** Splash screen — статичный PNG на белом фоне. На Android это создаёт резкий переход при запуске, особенно в тёмной теме (белая вспышка).
+
+**Действия:**
+1. Интегрировать `expo-splash-screen` (уже есть в dependencies, но не используется в коде)
+2. Добавить `SplashScreen.preventAutoHideAsync()` в entry point
+3. Скрывать splash только после загрузки шрифтов + начальных данных
+4. Добавить Android 12+ Splash Screen API support через `app.json`:
+   ```json
+   "android": {
+     "splash": {
+       "image": "./assets/images/splash.png",
+       "resizeMode": "contain",
+       "backgroundColor": "#1a1a2e",
+       "dark": {
+         "image": "./assets/images/splash-dark.png",
+         "backgroundColor": "#1a1a2e"
+       }
+     }
+   }
+   ```
+5. Реализовать animated transition (fade-out splash → app content)
+
+---
+
+### AND-07 | BackHandler — полноценная обработка кнопки «Назад»
+
+**Проблема:** `BackHandler` используется только в `useTravelWizard.ts`. На остальных экранах нажатие «Назад» может:
+- Закрыть приложение с главной вместо сворачивания
+- Не закрыть модальное окно (фильтры, карта, «Ещё» в dock)
+- Привести к неожиданной навигации
+
+**Действия:**
+1. На главном экране: двойное нажатие «Назад» для выхода с Toast «Нажмите ещё раз для выхода»
+2. В модальных окнах (фильтры, «Ещё» sheet, поиск): закрытие по «Назад»
+3. В карте с открытым popup: закрытие popup по «Назад»
+4. В галерее/full-screen просмотре: выход из полноэкранного режима
+5. Создать хук `useAndroidBackHandler` для централизованной обработки
+
+---
+
+### AND-08 | StatusBar — консистентная настройка
+
+**Проблема:** `StatusBar` настроена только в `modal.tsx` и `about.tsx`. На остальных экранах — системные defaults, что приводит к:
+- Тёмный текст на тёмном фоне в тёмной теме
+- Несогласованный стиль при переходах между экранами
+- Отсутствие translucent mode для immersive experience (карта, галерея)
+
+**Действия:**
+1. Добавить глобальный `<StatusBar>` в `_layout.tsx` с поддержкой тёмной/светлой темы
+2. На экране карты: `StatusBar translucent={true} backgroundColor="transparent"` для edge-to-edge
+3. На экране галереи: скрытие StatusBar для immersive просмотра
+4. Использовать `expo-status-bar` для согласованного поведения
+
+---
+
+### AND-09 | Keyboard handling — единообразная обработка клавиатуры
+
+**Проблема:** `KeyboardAvoidingView` используется в 6+ компонентах Travel Wizard, но:
+- Нет единообразного `keyboardVerticalOffset` (на Android vs iOS разное)
+- В чатах (`ChatView.tsx`) клавиатура может перекрывать поле ввода
+- TextInput в поиске и фильтрах — нет автоматического scroll to field при фокусе
+
+**Действия:**
+1. Создать обёртку `KeyboardAwareContainer` с правильными offsets для Android/iOS
+2. `behavior="height"` для Android (не `"padding"` — ведёт себя некорректно)
+3. Автоматический scroll к активному `TextInput` при фокусе
+4. В чат-экране: `android:windowSoftInputMode="adjustResize"` через `app.json` plugin
+
+---
+
+### AND-10 | Offline mode — базовая поддержка
+
+**Проблема:** `useNetworkStatus` и API client имеют offline-обработку, но UX при потере сети:
+- Нет persistent баннера/индикатора отсутствия сети
+- Нет offline-доступа к просмотренным маршрутам
+- Нет retry-механизма с экспоненциальной задержкой для пользователя
+
+**Действия:**
+1. Добавить persistent `NetworkStatusBanner` на Android native (overlay поверх контента)
+2. Кэшировать последние просмотренные маршруты через AsyncStorage для offline-просмотра
+3. Кнопка «Повторить» при ошибке сети вместо пустого экрана
+4. Индикатор синхронизации при восстановлении связи
+5. React Query `networkMode: 'offlineFirst'` для graceful degradation
+
+---
+
+### AND-11 | Proguard/R8 — включить минификацию
+
+**Проблема:** `enableProguardInReleaseBuilds = false` в `build.gradle`. Production AAB не минифицирован на уровне Java/Kotlin bytecode.
+
+**Действия:**
+1. Включить `enableProguardInReleaseBuilds = true`
+2. Добавить правила ProGuard для React Native + Hermes + Expo модулей
+3. Протестировать release build на предмет crash'ей (reflection, serialization)
+4. Ожидаемый эффект: APK/AAB размер −15–25%
+
+---
+
+## 3. 🟡 P2 — Средний приоритет
+
+### AND-12 | Adaptive Icon — Material You
+
+**Проблема:** Adaptive icon настроен (`adaptive-icon.png`), но:
+- Нет monochrome icon для Android 13+ (Material You themed icons)
+- Нет round icon для старых лаунчеров
+- Фон — белый (#ffffff), может выглядеть чужеродно на тёмных темах Material You
+
+**Действия:**
+1. Добавить `monochromeImage` в `app.json`:
+   ```json
+   "adaptiveIcon": {
+     "foregroundImage": "./assets/images/adaptive-icon.png",
+     "monochromeImage": "./assets/images/monochrome-icon.png",
+     "backgroundColor": "#ffffff"
+   }
+   ```
+2. Создать monochrome вариант иконки (силуэт/контур)
+3. Рассмотреть динамический backgroundColor, соответствующий brand
+
+---
+
+### AND-13 | Жесты и навигация — native feel
+
+**Проблема:** Навигация работает через Expo Router, но:
+- Нет swipe-back на Android (iOS-style gesture back)
+- Haptic feedback используется только в `FavoriteButton` — не покрывает остальные интерактивные элементы
+- Нет shared element transitions между карточкой и detail page
+
+**Действия:**
+1. Haptic feedback на ключевых действиях:
+   - Добавление в избранное (✅ уже есть)
+   - Нажатие на tab в BottomDock
+   - Подтверждение отправки формы
+   - Pull-to-refresh начало
+   - Long press на карточке маршрута (share action)
+2. Shared element transition для перехода карточка → travel detail (React Navigation 7+ / Expo Router v4)
+3. Overscroll glow кастомизация (бренд-цвет вместо стандартного)
+
+---
+
+### AND-14 | Pull-to-Refresh — расширить на все списки
+
+**Проблема:** `RefreshControl` используется в:
+- `PointsListGrid` ✅
+- `ActivityFeed` ✅
+- `TravelListPanel` ✅
+- `articles.tsx` ✅
+- **Отсутствует** на: главной странице, странице поиска маршрутов, профиле, избранном, истории
+
+**Действия:**
+1. Добавить `RefreshControl` на главную страницу (обновление рекомендаций и hero)
+2. Добавить `RefreshControl` на страницу поиска (пере-fetch списка маршрутов)
+3. Добавить `RefreshControl` на профиль (обновление stats и данных)
+4. Добавить `RefreshControl` на избранное и историю
+5. Использовать `invalidateQueries` из React Query для корректной инвалидации
+
+---
+
+### AND-15 | Image Picker — улучшение для Android
+
+**Проблема:** Загрузка фото для маршрутов и аватара работает, но:
+- Нет crop/resize перед загрузкой → отправляются полноразмерные фото (5–10 MB)
+- Нет множественного выбора фото (gallery grid)
+- Нет preview перед загрузкой
+- Нет progress bar при загрузке
+
+**Действия:**
+1. Использовать `expo-image-picker` с `allowsMultipleSelection: true`
+2. Добавить crop перед загрузкой (аватар: square, маршрут: 16:9 / free)
+3. Сжимать изображения до max 1920px / quality 0.8 перед отправкой
+4. Показывать progress bar при upload
+5. Добавить preview grid выбранных фото перед финальной загрузкой
+
+---
+
+### AND-16 | Animations — native performance
+
+**Проблема:** `react-native-reanimated` установлен, но анимации часто используют JS-driven подходы вместо native-driven.
+
+**Действия:**
+1. Перевести BottomDock sheet на `Reanimated.SharedValue` + `useAnimatedStyle` (вместо CSS transitions)
+2. Перевести FAQ accordion на native `LayoutAnimation` (✅ уже есть на native) — проверить плавность
+3. Карточки маршрутов: native spring animation при press (scale down → up)
+4. Skeleton loaders: native shimmer через Reanimated (вместо CSS animation)
+5. Page transitions: shared element transitions для карточка → travel detail
+
+---
+
+### AND-17 | Biometric authentication
+
+**Проблема:** Авторизация — только email/password и Google (web). Нет быстрого повторного входа.
+
+**Действия:**
+1. Интегрировать `expo-local-authentication` (fingerprint / face unlock)
+2. После первого успешного входа — предложить включить биометрию
+3. При повторном запуске — биометрическая проверка вместо логин-экрана
+4. Fallback на PIN/password если биометрия недоступна
+
+---
+
+### AND-18 | Scoped Storage и Android 14+ compatibility
+
+**Проблема:** Приложение запрашивает `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE`, но начиная с Android 10+ действует Scoped Storage.
+
+**Действия:**
+1. Проверить, что все файловые операции (экспорт PDF, сохранение фото) используют `MediaStore` API или `expo-file-system`
+2. Убедиться в совместимости с Android 14 (API 34) — Photo picker, partial media access
+3. Протестировать экспорт книги путешествий на Android 13+ устройствах
+4. Проверить targetSdkVersion — рекомендуется ≥ 34 для Google Play (с ноября 2024 обязательно)
+
+---
+
+## 4. 🟢 P3 — Улучшения (nice to have)
+
+### AND-19 | Widget — быстрый доступ к избранным маршрутам
+
+**Действия:**
+- Android App Widget (1×1 или 4×2) со случайным маршрутом дня
+- Tap → open travel detail в приложении
+- Реализация через `react-native-widget-extension` или native Kotlin widget
+
+---
+
+### AND-20 | Shortcuts — App Shortcuts
+
+**Действия:**
+- Long press на иконке → shortcuts: «Поиск», «Карта», «Избранное»
+- Реализация через Expo config plugin или `app.json` shortcuts
+
+---
+
+### AND-21 | Picture-in-Picture для карты
+
+**Действия:**
+- При переходе с карты на другой экран — PiP окно с мини-картой
+- Полезно при навигации по маршруту
+
+---
+
+### AND-22 | Отслеживание маршрута в реальном времени (GPS tracking)
+
+**Действия:**
+- Запись GPS-трека во время поездки
+- Фоновая геолокация (требует `ACCESS_BACKGROUND_LOCATION` + Play review)
+- Генерация GPX из записанного трека
+- Привязка фото к точкам на маршруте по timestamp
+
+---
+
+### AND-23 | Share — нативный шаринг маршрутов
+
+**Проблема:** `expo-sharing` подключен, но не видно deep integration:
+- Нет Share Sheet для маршрутов с preview image
+- Нет Short Dynamic Links для маршрутов
+- Нет шаринга в социальные сети с rich preview
+
+**Действия:**
+1. Добавить кнопку «Поделиться» на странице маршрута
+2. Использовать `expo-sharing` с preview image и title
+3. Генерировать short link через Firebase Dynamic Links (или server-side)
+4. Принимать shared content (share target): ссылки на другие тревел-ресурсы → парсить и добавлять в «Хочу посетить»
+
+---
+
+### AND-24 | Dark theme — Android system sync
+
+**Проблема:** Тёмная тема работает через `useTheme.ts` + `matchMedia` (web-подход). На Android native:
+- Нет `Appearance.addChangeListener` для native dark mode
+- Splash screen — всегда белый фон (вспышка в dark mode)
+- Navigation bar (внизу, системная) — не перекрашивается
+
+**Действия:**
+1. Использовать `Appearance` API из React Native для синхронизации с Android system dark mode
+2. Navigation bar color через `expo-navigation-bar`
+3. Splash screen dark вариант (AND-06)
+
+---
+
+### AND-25 | Performance monitoring — Android Vitals
+
+**Действия:**
+1. Интегрировать Firebase Performance Monitoring (или Sentry Performance)
+2. Отслеживать: cold start time, warm start time, screen render time
+3. Мониторить ANR (Application Not Responding) через Play Console
+4. Целевые метрики:
+   - Cold start: ≤ 2 с
+   - Screen transition: ≤ 300 мс
+   - ANR rate: < 0.5%
+
+---
+
+### AND-26 | Accessibility — Android TalkBack
+
+**Проблема:** `accessibilityLabel` добавлены повсеместно (A11Y-01 закрыт), но Android-специфичные a11y не проверены:
+- TalkBack навигация (swipe-based)
+- `accessibilityRole` на custom components
+- Content grouping (`accessible={true}` на контейнерах)
+- Минимальный touch target 48×48dp (Material Design guideline)
+
+**Действия:**
+1. Провести manual TalkBack audit на Android устройстве
+2. Проверить touch target size — минимум 48dp (Android Material Design)
+3. Добавить `importantForAccessibility` на декоративные элементы
+4. Протестировать navigation flow с TalkBack: Главная → Поиск → Маршрут → Назад
+
+---
+
+## 5. 📊 Специфические Android UI-паттерны
+
+### AND-27 | Material Design 3 alignment
+
+Хотя приложение использует собственную дизайн-систему (`DESIGN_TOKENS`), для Android native feel рекомендуется:
+
+| Элемент | Текущее | Рекомендация |
+|---------|---------|-------------|
+| Bottom Navigation | Custom BottomDock (56px) | Проверить высоту 80dp (M3 spec), ripple effect |
+| FAB | Нет | Добавить FAB «Добавить маршрут» на странице поиска/карты |
+| Snackbar | Toast (custom) | Snackbar с action button (Material style) |
+| Bottom Sheet | CSS transitions (web) | `@gorhom/bottom-sheet` для native performance |
+| Top App Bar | Custom Header | Проверить elevation/scroll behavior (collapse on scroll) |
+| Cards | UnifiedTravelCard | Проверить elevation/shadow на Android (не box-shadow) |
+| Ripple | Нет | `android_ripple` prop на Pressable для Material ripple effect |
+| Chip | Custom Chip | Проверить Material Chip spec (32dp height, 8dp padding) |
+| Switch | Custom Toggle | Проверить Material Switch spec (track/thumb) |
+
+**Действия:**
+1. Добавить `android_ripple={{ color: 'rgba(0,0,0,0.12)' }}` на все Pressable в BottomDock, карточках, кнопках
+2. Рассмотреть `@gorhom/bottom-sheet` для «Ещё» menu и фильтров (вместо CSS-based sheet)
+3. FAB «Создать маршрут» для авторизованных пользователей
+4. Collapse-on-scroll для header на длинных списках
+
+---
+
+### AND-28 | Edge-to-edge display (Android 15+)
+
+**Проблема:** Android 15 делает edge-to-edge обязательным. Контент должен отрисовываться под system bars.
+
+**Действия:**
+1. Проверить `react-native-safe-area-context` — покрывает ли system bars на Android
+2. Карта: edge-to-edge с translucent status bar и navigation bar
+3. Галерея: полноэкранный просмотр с скрытыми system bars
+4. Проверить поведение при gestural navigation (3-button nav vs gesture nav)
+
+---
+
+## 6. 🔧 Инфраструктура сборки
+
+### AND-29 | build.gradle — versionCode sync
+
+**Проблема:** `versionCode: 1` в `build.gradle` vs `versionCode: 2` в `app.json`. EAS Build использует `app.json`, но local build через Gradle может конфликтовать.
+
+**Действия:**
+1. Убрать hardcoded versionCode/versionName из `build.gradle`
+2. Использовать только `app.json` как source of truth (EAS Build подставляет значения)
+3. Или автоматизировать синхронизацию через pre-build скрипт
+
+---
+
+### AND-30 | Hermes — проверка и оптимизация
+
+**Текущее:** Hermes включён по умолчанию через Expo.
+
+**Действия:**
+1. Проверить, что bytecode precompilation включена для release builds
+2. Протестировать startup time с и без Hermes (для baseline)
+3. Убедиться, что все polyfills совместимы с Hermes (Intl, Temporal, etc.)
+
+---
+
+### AND-31 | APK/AAB size optimization
+
+**Действия:**
+1. Включить Proguard/R8 (AND-11)
+2. Проверить `enableSeparateBuildPerCPUArchitecture` — разделение по ABI (arm64-v8a, armeabi-v7a, x86_64)
+3. Удалить неиспользуемые assets из bundle
+4. Проверить `assetBundlePatterns: ["**/*"]` — слишком широкий, может включать лишнее
+5. Целевой размер AAB: ≤ 50 MB (Play Store limit 150 MB, но меньше = лучше conversion)
+
+---
+
+## 7. 🔐 Безопасность
+
+### AND-32 | Secure storage
+
+**Текущее:** `expo-secure-store` подключён.
+
+**Действия:**
+1. Проверить, что auth token хранится в Secure Store (не AsyncStorage)
+2. Убедиться, что refresh token хранится отдельно и используется корректно
+3. Добавить certificate pinning для API calls (optional, P3)
+4. Проверить `android:allowBackup="false"` для предотвращения утечки данных через бэкапы
+
+---
+
+### AND-33 | Network security config
+
+**Действия:**
+1. Добавить `android/app/src/main/res/xml/network_security_config.xml` с:
+   - Запрет cleartext для production
+   - Разрешить cleartext только для dev (local API)
+2. Проверить, что Expo plugin не переопределяет security config
+
+---
+
+## 8. 📋 Итоговая матрица приоритетов
+
+| ID | Задача | Приоритет | Усилия | Влияние |
+|----|--------|-----------|--------|---------|
+| AND-01 | App Links verification | P0 | Низкое | 🔴 Высокое |
+| AND-02 | Package name fix | P0 | Низкое | 🔴 Высокое |
+| AND-03 | Google Sign-In native | P0 | Среднее | 🔴 Высокое |
+| AND-04 | Permissions cleanup | P0 | Низкое | 🔴 Высокое |
+| AND-05 | Push-уведомления | P1 | Высокое | 🔴 Высокое |
+| AND-06 | Splash screen | P1 | Низкое | 🟠 Среднее |
+| AND-07 | BackHandler | P1 | Среднее | 🟠 Высокое |
+| AND-08 | StatusBar | P1 | Низкое | 🟠 Среднее |
+| AND-09 | Keyboard handling | P1 | Среднее | 🟠 Высокое |
+| AND-10 | Offline mode | P1 | Высокое | 🟠 Высокое |
+| AND-11 | Proguard/R8 | P1 | Среднее | 🟡 Среднее |
+| AND-12 | Adaptive Icon M3 | P2 | Низкое | 🟡 Среднее |
+| AND-13 | Жесты и анимации | P2 | Среднее | 🟡 Среднее |
+| AND-14 | Pull-to-Refresh | P2 | Низкое | 🟡 Среднее |
+| AND-15 | Image Picker | P2 | Среднее | 🟡 Среднее |
+| AND-16 | Native animations | P2 | Среднее | 🟡 Среднее |
+| AND-17 | Biometric auth | P2 | Среднее | 🟡 Среднее |
+| AND-18 | Scoped Storage / API 34 | P2 | Среднее | 🟠 Высокое |
+| AND-19 | Widget | P3 | Высокое | 🟢 Низкое |
+| AND-20 | App Shortcuts | P3 | Низкое | 🟢 Низкое |
+| AND-21 | PiP для карты | P3 | Высокое | 🟢 Низкое |
+| AND-22 | GPS tracking | P3 | Высокое | 🟡 Среднее |
+| AND-23 | Share integration | P3 | Среднее | 🟡 Среднее |
+| AND-24 | Dark theme native sync | P3 | Низкое | 🟢 Низкое |
+| AND-25 | Performance monitoring | P3 | Среднее | 🟡 Среднее |
+| AND-26 | TalkBack audit | P3 | Среднее | 🟡 Среднее |
+| AND-27 | Material Design 3 | P2 | Высокое | 🟡 Среднее |
+| AND-28 | Edge-to-edge | P2 | Среднее | 🟠 Высокое |
+| AND-29 | versionCode sync | P1 | Низкое | 🟠 Среднее |
+| AND-30 | Hermes optimization | P2 | Низкое | 🟡 Среднее |
+| AND-31 | APK size optimization | P2 | Среднее | 🟡 Среднее |
+| AND-32 | Secure storage audit | P1 | Низкое | 🔴 Высокое |
+| AND-33 | Network security config | P2 | Низкое | 🟠 Среднее |
+
+---
+
+## 9. 📅 Рекомендуемый план спринтов
+
+### 🔥 Спринт 1 (1 неделя) — Критические P0 + быстрые P1
+
+| # | Задача | Описание |
+|---|--------|----------|
+| 1 | AND-02 | Исправить package name в build.gradle |
+| 2 | AND-04 | Вычистить permissions |
+| 3 | AND-01 | Проверить и настроить App Links |
+| 4 | AND-29 | Синхронизировать versionCode |
+| 5 | AND-08 | StatusBar глобальная настройка |
+| 6 | AND-32 | Аудит secure storage |
+
+### 🟠 Спринт 2 (1–2 недели) — Core Android UX
+
+| # | Задача | Описание |
+|---|--------|----------|
+| 1 | AND-03 | Google Sign-In native |
+| 2 | AND-07 | BackHandler на всех экранах |
+| 3 | AND-06 | Splash screen с dark mode support |
+| 4 | AND-09 | Keyboard handling |
+| 5 | AND-11 | Proguard/R8 |
+| 6 | AND-27 | Ripple effects + android_ripple |
+
+### 🟡 Спринт 3 (2 недели) — Push & Offline
+
+| # | Задача | Описание |
+|---|--------|----------|
+| 1 | AND-05 | Push-уведомления (FCM) |
+| 2 | AND-10 | Offline mode базовый |
+| 3 | AND-14 | Pull-to-Refresh расширение |
+| 4 | AND-18 | Scoped Storage / targetSdk 34 |
+
+### 🟢 Спринт 4 (2 недели) — Polish & Features
+
+| # | Задача | Описание |
+|---|--------|----------|
+| 1 | AND-12 | Monochrome icon для Material You |
+| 2 | AND-13 | Haptic feedback расширение |
+| 3 | AND-15 | Image Picker с crop/compress |
+| 4 | AND-16 | Native animations (bottom sheet, transitions) |
+| 5 | AND-17 | Biometric authentication |
+| 6 | AND-28 | Edge-to-edge display |
+
+### 🟣 Спринт 5 (2 недели) — Advanced
+
+| # | Задача | Описание |
+|---|--------|----------|
+| 1 | AND-23 | Share integration |
+| 2 | AND-25 | Performance monitoring |
+| 3 | AND-26 | TalkBack audit |
+| 4 | AND-31 | APK size optimization |
+| 5 | AND-33 | Network security config |
+
+---
+
+## 10. Критерии готовности (Definition of Done)
+
+Для каждого Android-изменения:
+- [ ] Протестировано на реальном Android устройстве (не только эмулятор)
+- [ ] Работает на Android 10+ (API 29+)
+- [ ] Не ломает iOS сборку
+- [ ] Не ломает web сборку
+- [ ] `npm run lint` — 0 ошибок
+- [ ] `npm run test:run` — все тесты проходят
+- [ ] Проверено в светлой и тёмной теме
+- [ ] `accessibilityLabel` задан для интерактивных элементов
+- [ ] Touch target ≥ 48dp для всех кнопок
+- [ ] Используются `DESIGN_TOKENS` — без hardcoded цветов
+- [ ] Production build (AAB) собирается без ошибок
+
+---
+
+## 11. Связь с существующими документами
+
+| Документ | Связь |
+|----------|-------|
+| `docs/UX_UI_AUDIT.md` | Все задачи закрыты — этот документ продолжает работу для Android native |
+| `docs/PERFORMANCE_IMPROVEMENT_PLAN.md` | Web-оптимизации выполнены — AND-11, AND-30, AND-31 адресуют native performance |
+| `docs/RULES.md` | Все правила UI/компонентов применимы к Android-разработке |
+| `docs/ADR_STATE_MANAGEMENT.md` | State management правила те же: Zustand + React Query |
+| `docs/GOOGLE_OAUTH_SETUP.md` | AND-03 расширяет OAuth на native Android |
+| `ANDROID-README.md` | Build/deploy инструкции для Android |
+
+---
+
+*Документ создан на основе анализа кодовой базы metravel2 с позиции Android-инженера.  
+Обновлять при выполнении задач — отмечать ~~зачёркиванием~~ завершённые.*
+

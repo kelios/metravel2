@@ -27,6 +27,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 ## UX/UI
 
 - `docs/UX_UI_AUDIT.md` — UX/UI аудит приложения: проблемы адаптивности, навигации, доступности и план улучшений по приоритетам
+- `docs/ANDROID_MOBILE_IMPROVEMENT_PLAN.md` — Android & Mobile UX: план доработок native-платформы, Android-специфичные улучшения, Material Design, безопасность
 
 ## Performance
 

@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback as useCallbackReact, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { useThemedColors } from "@/hooks/useTheme";
 import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
+import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 
 type BottomDockProps = {
   onDockHeight?: (h: number) => void;
@@ -44,6 +45,16 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   // На iOS учитываем home indicator (safe area bottom)
   // На web используем фиксированную высоту без insets
   const safeBottomPadding = Platform.OS === 'web' ? 0 : Math.max(0, insets.bottom);
+
+  // AND-07: Close "More" sheet on Android back press
+  const handleDismissSheet = useCallbackReact(() => {
+    if (showMore) {
+      setShowMore(false);
+      return true;
+    }
+    return false;
+  }, [showMore]);
+  useAndroidBackHandler(handleDismissSheet);
 
   const styles = useMemo(() => createStyles(colors, safeBottomPadding), [colors, safeBottomPadding]);
 
