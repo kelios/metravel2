@@ -1,9 +1,10 @@
-import React from 'react'
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native'
+import React, { useRef } from 'react'
+import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 
 type Props = {
   visible: boolean
@@ -40,6 +41,10 @@ export default function CustomHeaderMobileMenu({
   unreadCount = 0,
   themeToggleNode,
 }: Props) {
+  // A11Y-05: focus trap для web — при открытии меню фокус остаётся внутри панели
+  const panelRef = useRef<any>(null);
+  useFocusTrap(panelRef as any, { enabled: visible && Platform.OS === 'web' });
+
   return (
     <Modal
       visible={visible}
@@ -60,9 +65,10 @@ export default function CustomHeaderMobileMenu({
         </Pressable>
 
         <View
+          ref={panelRef}
           style={styles.modalContent}
           testID="mobile-menu-panel"
-          {...({ role: 'dialog', 'aria-modal': 'true' } as any)}
+          {...({ role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Меню навигации' } as any)}
         >
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Меню</Text>

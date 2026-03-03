@@ -341,8 +341,8 @@ HERO-04: Добавить probes-reduce-motion:
 | A11Y-02 | Везде | Проверить contrast ratio textMuted |
 | A11Y-03 | Везде | Подключить globalFocusStyles везде |
 | A11Y-04 | HomeHero | prefers-reduced-motion |
-| A11Y-05 | Modals | Focus management |
-| TYPO-03 | Везде | Создать общие компоненты Heading/Body/Caption |
+| ~~A11Y-05~~ | Modals | ✅ `useFocusTrap` уже реализован, подключён к `CustomHeaderMobileMenu` |
+| ~~TYPO-03~~ | Везде | ✅ Создан `components/ui/Typography.tsx` — Heading (уровни 1-4), Body, Caption, Label, Eyebrow |
 | PERF-02 | Images | blurhash placeholder везде |
 | PERF-03 | ListTravel | Loading indicator при подгрузке страниц |
 | EMPTY-02 | Search | Empty state с предложением изменить фильтры |
