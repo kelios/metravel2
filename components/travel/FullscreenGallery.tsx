@@ -151,7 +151,7 @@ export default function FullscreenGallery({
           accessibilityLabel="Закрыть галерею"
           hitSlop={12}
         >
-          <Feather name="x" size={24} color="#fff" />
+          <Feather name="x" size={24} color={DESIGN_TOKENS.colors.textOnDark} />
         </Pressable>
 
         {/* Counter (bottom-center) */}
@@ -170,7 +170,7 @@ export default function FullscreenGallery({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: DESIGN_TOKENS.colors.overlay,
   },
   slideContainer: {
     width: SCREEN_WIDTH,
@@ -203,10 +203,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   counterText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
 });
-
