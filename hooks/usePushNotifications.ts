@@ -89,6 +89,7 @@ export function usePushNotifications(
       const deepLink = extractDeepLinkFromNotification(data);
       if (deepLink) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deep link URL is dynamic
           router.push(deepLink as any);
         } catch {
           // Invalid route — ignore
