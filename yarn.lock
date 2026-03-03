@@ -4955,7 +4955,7 @@ expo-image-loader@~55.0.0:
   resolved "https://registry.yarnpkg.com/expo-image-loader/-/expo-image-loader-55.0.0.tgz#56ae6631a0f43191432296a1f7f1e9737e653cfe"
   integrity sha512-NOjp56wDrfuA5aiNAybBIjqIn1IxKeGJ8CECWZncQ/GzjZfyTYAHTCyeApYkdKkMBLHINzI4BbTGSlbCa0fXXQ==
 
-expo-image-manipulator@^55.0.9:
+expo-image-manipulator@~55.0.9:
   version "55.0.9"
   resolved "https://registry.yarnpkg.com/expo-image-manipulator/-/expo-image-manipulator-55.0.9.tgz#bdb631bbc12013eaeb902627bd3bb86c2a4f7f10"
   integrity sha512-hEponYwRHwYlmYn2KTVr57U6i7dJ4NI6gYUT6LwxxLFspiev+ntlXL0e6M7qT0VIHMkLPtBcvP/z3+vaJCNgeQ==

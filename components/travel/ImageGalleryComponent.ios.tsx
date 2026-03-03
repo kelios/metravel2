@@ -16,6 +16,7 @@ import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { uploadImage, deleteImage } from '@/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { compressTravelPhoto } from '@/utils/imageCompressor';
 
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -114,7 +115,9 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
         try {
           const formData = new FormData();
-          const uri = asset.uri;
+          // AND-15: Compress image before upload (max 1920px, quality 0.8)
+          const compressed = await compressTravelPhoto(asset.uri);
+          const uri = compressed.uri || asset.uri;
           const filename = uri.split('/').pop() || 'image.jpg';
           const match = /\.(\w+)$/.exec(filename);
           const extRaw = match ? match[1].toLowerCase() : '';

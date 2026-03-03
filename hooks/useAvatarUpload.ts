@@ -11,6 +11,7 @@ import {
 import { ApiError } from '@/api/client';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import { showToast } from '@/utils/toast';
+import { compressAvatar } from '@/utils/imageCompressor';
 
 interface UseAvatarUploadOptions {
     onSuccess?: (updated: UserProfileDto) => void;
@@ -66,13 +67,16 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
 
             if (!result.canceled && result.assets[0]) {
                 const asset = result.assets[0];
+                // AND-15: Compress avatar before upload (512px square, quality 0.85)
+                const compressed = await compressAvatar(asset.uri);
+                const compressedUri = compressed.uri || asset.uri;
                 const file: UploadUserProfileAvatarFile = {
-                    uri: asset.uri,
+                    uri: compressedUri,
                     name: asset.fileName || `avatar_${Date.now()}.jpg`,
                     type: asset.mimeType || 'image/jpeg',
                 };
                 setAvatarFile(file);
-                setAvatarPreviewUrl(asset.uri);
+                setAvatarPreviewUrl(compressedUri);
             }
         } catch {
             showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось выбрать изображение', visibilityTime: 3000 });
@@ -137,8 +141,11 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
                 const asset = result.assets[0];
                 if (!userId) return;
 
+                // AND-15: Compress avatar before upload (512px square, quality 0.85)
+                const compressed = await compressAvatar(asset.uri);
+                const compressedUri = compressed.uri || asset.uri;
                 const file: UploadUserProfileAvatarFile = {
-                    uri: asset.uri,
+                    uri: compressedUri,
                     name: asset.fileName || 'avatar.jpg',
                     type: asset.mimeType || 'image/jpeg',
                 };
