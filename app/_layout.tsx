@@ -45,6 +45,8 @@ import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { registerPushTokenApi } from "@/api/auth";
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -421,6 +423,14 @@ function ThemedContent({
       // expo-navigation-bar not available — ok
     }
   }, [colors.background, currentColorScheme]);
+
+  // AND-05: Push notifications — register token and send to backend
+  usePushNotifications({
+    autoRequest: false, // Token requested after user logs in (see authStore)
+    onTokenReceived: (token) => {
+      void registerPushTokenApi(token);
+    },
+  });
 
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
   const WEB_FOOTER_RESERVE_HEIGHT = 56;

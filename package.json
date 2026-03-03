@@ -146,6 +146,7 @@
     "expo-location": "~55.1.2",
     "expo-media-library": "~55.0.9",
     "expo-navigation-bar": "~55.0.8",
+    "expo-notifications": "~55.0.10",
     "expo-print": "~55.0.8",
     "expo-router": "~55.0.3",
     "expo-secure-store": "~55.0.8",

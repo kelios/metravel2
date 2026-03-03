@@ -3555,6 +3555,11 @@ babel-preset-jest@^29.6.3:
     babel-plugin-jest-hoist "^29.6.3"
     babel-preset-current-node-syntax "^1.0.0"
 
+badgin@^1.1.5:
+  version "1.2.3"
+  resolved "https://registry.yarnpkg.com/badgin/-/badgin-1.2.3.tgz#994b5f519827d7d5422224825b2c8faea2bc43ad"
+  integrity sha512-NQGA7LcfCpSzIbGRbkgjgdWkjy7HI+Th5VLxTJfW5EeaAf3fnS+xWQaQOCYiny+q6QSvxqoSO04vCx+4u++EJw==
+
 balanced-match@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"
@@ -4999,6 +5004,13 @@ expo-linking@~55.0.7:
     expo-constants "~55.0.7"
     invariant "^2.2.4"
 
+expo-local-authentication@~55.0.8:
+  version "55.0.8"
+  resolved "https://registry.yarnpkg.com/expo-local-authentication/-/expo-local-authentication-55.0.8.tgz#7718085759862702c8c87640364336906303bc56"
+  integrity sha512-Rv0mv8z8yvTMm+oR7Q0DmpN/FIjdEV5z9NJoZNVI7CyUVV9vFkCALjF95mcCO4VCmuPHDbzKPD50IzM1c5vNQg==
+  dependencies:
+    invariant "^2.2.4"
+
 expo-location@~55.1.2:
   version "55.1.2"
   resolved "https://registry.yarnpkg.com/expo-location/-/expo-location-55.1.2.tgz#79056070bd3fc8ef393a0ea699bdba0fa3771fd8"
@@ -5043,6 +5055,17 @@ expo-navigation-bar@~55.0.8:
   dependencies:
     debug "^4.3.2"
     react-native-is-edge-to-edge "^1.2.1"
+
+expo-notifications@~55.0.10:
+  version "55.0.10"
+  resolved "https://registry.yarnpkg.com/expo-notifications/-/expo-notifications-55.0.10.tgz#7e0e27d9a1168fa01cd1b90009b7396a56de7825"
+  integrity sha512-F+ozrVFthKCwfqz2cXmcqrqwzBMTAwoNBqTZERuFtgc+6I++mweVzLLTtbAy8kBDZ33MA13GKyeq7mw13/rDgw==
+  dependencies:
+    "@expo/image-utils" "^0.8.12"
+    abort-controller "^3.0.0"
+    badgin "^1.1.5"
+    expo-application "~55.0.8"
+    expo-constants "~55.0.7"
 
 expo-print@~55.0.8:
   version "55.0.8"

@@ -51,6 +51,7 @@ const CONFIRM_REGISTER = `${URLAPI}/user/confirm-registration/`;
 const SETNEWPASSWORD = `${URLAPI}/user/set-password-after-reset/`;
 const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 const GOOGLE_LOGIN = `${URLAPI}/user/google-login/`;
+const PUSH_TOKEN = `${URLAPI}/user/push-token/`;
 
 export const loginApi = async (email: string, password: string): Promise<{
     token: string;
@@ -370,3 +371,33 @@ export const googleAuthApi = async (idToken: string): Promise<{
         return null;
     }
 };
+
+/**
+ * AND-05: Register Expo push token on the backend.
+ * Sends the push token so the server can send notifications to this device.
+ * Silently fails — push token registration is non-critical.
+ */
+export const registerPushTokenApi = async (pushToken: string): Promise<boolean> => {
+    try {
+        const token = await getSecureItem('userToken');
+        if (!token) return false;
+
+        const response = await fetchWithTimeout(PUSH_TOKEN, {
+            method: 'POST',
+            headers: {
+                Authorization: `Token ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                push_token: pushToken,
+                platform: Platform.OS,
+            }),
+        }, DEFAULT_TIMEOUT);
+
+        return response.ok;
+    } catch (error: unknown) {
+        devError('Push token registration error:', error);
+        return false;
+    }
+};
+
