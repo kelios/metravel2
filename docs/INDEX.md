@@ -28,6 +28,10 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/UX_UI_AUDIT.md` — UX/UI аудит приложения: проблемы адаптивности, навигации, доступности и план улучшений по приоритетам
 
+## Performance
+
+- `docs/PERFORMANCE_IMPROVEMENT_PLAN.md` — план улучшения производительности: bundle splitting, LCP, runtime, caching, мониторинг
+
 ## ADRs
 
 - `docs/ADR_MAP_ARCHITECTURE.md` — map-core unified contract
