@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorScheme } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import AppProviders from "@/components/layout/AppProviders";
@@ -398,6 +397,7 @@ function ThemedContent({
   queryClient: any;
 }) {
   const colors = useThemedColors();
+  const currentColorScheme = useColorScheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
@@ -417,8 +417,14 @@ function ThemedContent({
 
   return (
     <AppProviders queryClient={queryClient}>
-                          {/* AND-08: Global StatusBar — syncs style with current theme */}
-                          <StatusBar style="auto" />
+                          {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
+                          {Platform.OS !== 'web' && (
+                            <RNStatusBar
+                              barStyle={currentColorScheme === 'dark' ? 'light-content' : 'dark-content'}
+                              backgroundColor="transparent"
+                              translucent
+                            />
+                          )}
                           <View style={styles.container}>
                               {showMapBackground && (
                                 <Image

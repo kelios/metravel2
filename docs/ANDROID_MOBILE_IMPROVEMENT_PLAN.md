@@ -480,16 +480,16 @@
 | ID | Задача | Приоритет | Усилия | Влияние |
 |----|--------|-----------|--------|---------|
 | AND-01 | App Links verification | P0 | Низкое | 🔴 Высокое |
-| AND-02 | Package name fix | P0 | Низкое | 🔴 Высокое |
+| ~~AND-02~~ | ✅ Package name fix | ~~P0~~ | Низкое | 🔴 Высокое |
 | AND-03 | Google Sign-In native | P0 | Среднее | 🔴 Высокое |
-| AND-04 | Permissions cleanup | P0 | Низкое | 🔴 Высокое |
+| ~~AND-04~~ | ✅ Permissions cleanup | ~~P0~~ | Низкое | 🔴 Высокое |
 | AND-05 | Push-уведомления | P1 | Высокое | 🔴 Высокое |
-| AND-06 | Splash screen | P1 | Низкое | 🟠 Среднее |
-| AND-07 | BackHandler | P1 | Среднее | 🟠 Высокое |
-| AND-08 | StatusBar | P1 | Низкое | 🟠 Среднее |
+| ~~AND-06~~ | ✅ Splash screen | ~~P1~~ | Низкое | 🟠 Среднее |
+| ~~AND-07~~ | ✅ BackHandler | ~~P1~~ | Среднее | 🟠 Высокое |
+| ~~AND-08~~ | ✅ StatusBar | ~~P1~~ | Низкое | 🟠 Среднее |
 | AND-09 | Keyboard handling | P1 | Среднее | 🟠 Высокое |
 | AND-10 | Offline mode | P1 | Высокое | 🟠 Высокое |
-| AND-11 | Proguard/R8 | P1 | Среднее | 🟡 Среднее |
+| ~~AND-11~~ | ✅ Proguard/R8 | ~~P1~~ | Среднее | 🟡 Среднее |
 | AND-12 | Adaptive Icon M3 | P2 | Низкое | 🟡 Среднее |
 | AND-13 | Жесты и анимации | P2 | Среднее | 🟡 Среднее |
 | AND-14 | Pull-to-Refresh | P2 | Низкое | 🟡 Среднее |
@@ -507,11 +507,11 @@
 | AND-26 | TalkBack audit | P3 | Среднее | 🟡 Среднее |
 | AND-27 | Material Design 3 | P2 | Высокое | 🟡 Среднее |
 | AND-28 | Edge-to-edge | P2 | Среднее | 🟠 Высокое |
-| AND-29 | versionCode sync | P1 | Низкое | 🟠 Среднее |
+| ~~AND-29~~ | ✅ versionCode sync | ~~P1~~ | Низкое | 🟠 Среднее |
 | AND-30 | Hermes optimization | P2 | Низкое | 🟡 Среднее |
 | AND-31 | APK size optimization | P2 | Среднее | 🟡 Среднее |
-| AND-32 | Secure storage audit | P1 | Низкое | 🔴 Высокое |
-| AND-33 | Network security config | P2 | Низкое | 🟠 Среднее |
+| ~~AND-32~~ | ✅ Secure storage audit | ~~P1~~ | Низкое | 🔴 Высокое |
+| ~~AND-33~~ | ✅ Network security config | ~~P2~~ | Низкое | 🟠 Среднее |
 
 ---
 
@@ -603,4 +603,34 @@
 
 *Документ создан на основе анализа кодовой базы metravel2 с позиции Android-инженера.  
 Обновлять при выполнении задач — отмечать ~~зачёркиванием~~ завершённые.*
+
+---
+
+## 12. История обновлений
+
+### Март 2026 — Сессия 1
+
+**Реализовано (Спринт 1 + частично Спринт 2):**
+
+- ~~AND-02~~ (P0) — Package name: `build.gradle` namespace/applicationId исправлены с `com.yourcompany.metravel` на `by.metravel.app`. `AndroidManifest.xml` scheme тоже исправлен
+- ~~AND-04~~ (P0) — Permissions cleanup: из `app.json` и `AndroidManifest.xml` удалены `ACCESS_BACKGROUND_LOCATION`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`, дублирующиеся full-qualified permissions, `requestLegacyExternalStorage`
+- AND-01 (P0, частично) — App Links: создан `public/.well-known/assetlinks.json` (шаблон). Требуется замена SHA-256 fingerprint из release keystore
+- ~~AND-29~~ (P1) — versionCode sync: `build.gradle` versionCode=2, versionName="1.0.0" синхронизированы с `app.json`
+- ~~AND-08~~ (P1) — StatusBar: глобальный `<StatusBar style="auto" />` из `expo-status-bar` добавлен в `_layout.tsx`
+- ~~AND-32~~ (P1) — Secure storage audit: подтверждено что auth token хранится через `setSecureItem` → `expo-secure-store` на native. `allowBackup="false"` установлен
+- ~~AND-07~~ (P1) — BackHandler: создан хук `useAndroidBackHandler` с double-tap exit на home, `onDismiss` callback. Подключён в BottomDock
+- ~~AND-06~~ (P1) — Splash Screen: `SplashScreen.hideAsync()` перемещён в `RootLayoutNav` после загрузки шрифтов. Android dark splash конфигурация добавлена
+- ~~AND-11~~ (P1) — Proguard/R8: включён (`enableProguardInReleaseBuilds = true`). ProGuard rules расширены для Hermes, Expo, gesture-handler, safe-area-context, OkHttp
+- ~~AND-33~~ (P2) — Network security config: создан `network_security_config.xml` (HTTPS only, исключения для dev). Подключён в `AndroidManifest.xml`
+- AND-27 (P2, частично) — Material Design 3: `android_ripple` добавлен на BottomDock кнопки и UnifiedTravelCard
+- AND-13 (P2, частично) — Haptic feedback: `hapticSelection()` добавлен в BottomDock при нажатии на tab
+
+**Тесты:** 463 suite, 4031 test — все прошли. Lint: 0 ошибок.
+
+**Оставшиеся нереализованные задачи P0–P1:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
+- AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
+- AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
+- AND-09 (P1) — Keyboard handling: KeyboardAwareContainer
+- AND-10 (P1) — Offline mode: NetworkStatusBanner + кэширование
 

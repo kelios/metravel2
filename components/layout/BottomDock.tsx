@@ -16,6 +16,7 @@ import { useThemedColors } from "@/hooks/useTheme";
 import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
+import { hapticSelection } from "@/utils/haptics";
 
 type BottomDockProps = {
   onDockHeight?: (h: number) => void;
