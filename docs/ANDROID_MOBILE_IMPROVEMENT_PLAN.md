@@ -744,7 +744,8 @@
 
 - ~~AND-12~~ (P2) — Adaptive Icon Material You:
   - Добавлено поле `monochromeImage` в `app.json` → `android.adaptiveIcon`
-  - Создан placeholder `assets/images/monochrome-icon.png` (требуется замена дизайнером на настоящий монохромный вариант)
+  - Создан `assets/images/monochrome-icon.png` — белый силуэт птички (логотип) на прозрачном фоне, 512×512 RGBA
+  - Генератор: `scripts/generate-monochrome-icon.js` (конвертирует `logo_yellow_512x512.png` → monochrome)
 
 - AND-10 (P1, завершение) — Offline mode:
   - Создан компонент `SyncIndicator` (`components/ui/SyncIndicator.tsx`) — индикатор «Синхронизация данных...» при восстановлении сети (native only)
