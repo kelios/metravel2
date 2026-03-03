@@ -39,7 +39,15 @@ describe('useRouteStoreAdapter', () => {
       swapStartEnd: jest.fn(),
     };
 
-    ;(useRouteStore as unknown as jest.Mock).mockReturnValue(mockStore);
+    // P4.2: useRouteStore теперь вызывается с селекторами:
+    // useRouteStore((s) => s.points), useRouteStore((s) => s.mode), etc.
+    // Мок должен поддерживать вызовы с селектор-функцией.
+    ;(useRouteStore as unknown as jest.Mock).mockImplementation((selector?: (state: any) => any) => {
+      if (typeof selector === 'function') {
+        return selector(mockStore);
+      }
+      return mockStore;
+    });
     ;(useRouteStore as any).getState = jest.fn(() => mockStore);
   });
 
