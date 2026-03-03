@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 jest.mock('expo-router', () => ({
   usePathname: jest.fn(() => '/'),
+  useRouter: jest.fn(() => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() })),
   useLocalSearchParams: jest.fn(() => ({ param: 'test-slug' })),
 }))
 
@@ -23,6 +24,14 @@ jest.mock('@/components/seo/InstantSEO', () => {
     default: () => null,
   }
 })
+
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: jest.fn(() => ({
+    isAuthenticated: false,
+    authReady: true,
+    userId: null,
+  })),
+}))
 
 jest.mock('@/components/home/Home', () => {
   const React = require('react')

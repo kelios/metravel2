@@ -161,6 +161,15 @@ jest.mock('@react-native-community/netinfo', () => {
   }
 })
 
+// AND-13: Mock expo-haptics for test environment (no native module available)
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
+  notificationAsync: jest.fn(),
+  selectionAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
+}))
+
 jest.mock('@/hooks/useTheme', () => {
   const React = require('react')
   const {

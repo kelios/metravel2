@@ -206,13 +206,16 @@
 - Haptic feedback используется только в `FavoriteButton` — не покрывает остальные интерактивные элементы
 - Нет shared element transitions между карточкой и detail page
 
-**Действия:**
-1. Haptic feedback на ключевых действиях:
-   - Добавление в избранное (✅ уже есть)
-   - Нажатие на tab в BottomDock
-   - Подтверждение отправки формы
-   - Pull-to-refresh начало
-   - Long press на карточке маршрута (share action)
+**Частично реализовано:**
+1. ✅ `expo-haptics` установлен — haptic feedback теперь работает на native
+2. ✅ Haptic на BottomDock tab нажатие (`hapticSelection`)
+3. ✅ Haptic на pull-to-refresh (Home, Profile) — `hapticImpact('light')`
+4. ✅ Haptic на FAB «Создать маршрут» — `hapticImpact('medium')`
+5. ✅ Добавление/удаление из избранного (FavoriteButton) — уже было
+
+**Оставшиеся действия:**
+1. Haptic на подтверждение отправки формы (travel wizard submit)
+2. Long press на карточке маршрута (share action)
 2. Shared element transition для перехода карточка → travel detail (React Navigation 7+ / Expo Router v4)
 3. Overscroll glow кастомизация (бренд-цвет вместо стандартного)
 
@@ -404,9 +407,9 @@
 | Switch | Custom Toggle | Проверить Material Switch spec (track/thumb) |
 
 **Действия:**
-1. Добавить `android_ripple={{ color: 'rgba(0,0,0,0.12)' }}` на все Pressable в BottomDock, карточках, кнопках
+1. ✅ Добавить `android_ripple={{ color: 'rgba(0,0,0,0.12)' }}` на все Pressable — реализовано на BottomDock, UnifiedTravelCard, Button, IconButton
 2. Рассмотреть `@gorhom/bottom-sheet` для «Ещё» menu и фильтров (вместо CSS-based sheet)
-3. FAB «Создать маршрут» для авторизованных пользователей
+3. ✅ FAB «Создать маршрут» для авторизованных пользователей — `FloatingActionButton.tsx` + подключён на search page
 4. Collapse-on-scroll для header на длинных списках
 
 ---
@@ -415,7 +418,12 @@
 
 **Проблема:** Android 15 делает edge-to-edge обязательным. Контент должен отрисовываться под system bars.
 
-**Действия:**
+**Частично реализовано:**
+1. ✅ `expo-navigation-bar` установлен — Android navigation bar синхронизируется с темой приложения
+2. ✅ `NavigationBar.setBackgroundColorAsync(colors.background)` + `setButtonStyleAsync()` в `_layout.tsx`
+3. ✅ StatusBar `translucent` + `backgroundColor: "transparent"` — уже было
+
+**Оставшиеся действия:**
 1. Проверить `react-native-safe-area-context` — покрывает ли system bars на Android
 2. Карта: edge-to-edge с translucent status bar и navigation bar
 3. Галерея: полноэкранный просмотр с скрытыми system bars
@@ -661,3 +669,33 @@
 
 **Тесты:** 463 suite, 4031 test — все прошли. Lint: 0 ошибок.
 
+### Март 2026 — Сессия 3
+
+**Реализовано (Спринт 3 + Спринт 4):**
+
+- AND-13 (P2, расширение) — Haptic feedback:
+  - Установлен `expo-haptics` (`npx expo install expo-haptics`)
+  - `hapticImpact('light')` добавлен при pull-to-refresh на главной (`Home.tsx`) и профиле (`profile.tsx`)
+  - Добавлен mock `expo-haptics` в `__tests__/setup.ts` для тестовой среды (no-op)
+  - Вся haptic-логика уже была в `utils/haptics.ts` — теперь работает реально на native
+
+- AND-27 (P2, расширение) — Material Design 3:
+  - `android_ripple` добавлен на `Button` (`components/ui/Button.tsx`) — `{ color: 'rgba(0,0,0,0.12)', borderless: false }`
+  - `android_ripple` добавлен на `IconButton` (`components/ui/IconButton.tsx`) — оба варианта (labeled и icon-only)
+  - Создан компонент `FloatingActionButton` (`components/ui/FloatingActionButton.tsx`) — M3 FAB (56×56dp, borderRadius 16, elevation 6)
+  - FAB «Создать маршрут» добавлен на страницу поиска (`search.tsx`) для авторизованных пользователей (native only)
+  - FAB использует `hapticImpact('medium')` при нажатии
+
+- AND-28 (P2, частично) — Edge-to-edge display:
+  - Установлен `expo-navigation-bar` (`npx expo install expo-navigation-bar`)
+  - Добавлен `useEffect` в `ThemedContent` (`_layout.tsx`) — синхронизация цвета Android navigation bar с текущей темой
+  - `NavigationBar.setBackgroundColorAsync(colors.background)` + `setButtonStyleAsync('light'/'dark')`
+  - Динамический require — не ломает web/iOS
+
+**Тесты:** 463 suite — все прошли. Lint: 0 ошибок.
+
+**Оставшиеся нереализованные задачи P0–P1:**
+- AND-01 (P0) — App Links: нужна замена SHA-256 и серверная верификация
+- AND-03 (P0) — Google Sign-In native: требует настройки Google Cloud Console + native SDK
+- AND-05 (P1) — Push-уведомления: требует FCM + бэкенд
+- AND-10 (P1, частично) — Offline mode: осталось кэширование маршрутов через AsyncStorage
