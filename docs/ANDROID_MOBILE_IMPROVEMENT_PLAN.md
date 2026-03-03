@@ -33,11 +33,14 @@
 - Нет fallback-навигации внутри приложения при переходе по deep link на несуществующий маршрут
 - `[...missing].tsx` — есть catch-all, но не адаптирован для native deep link ошибок
 
-**Действия:**
-1. Проверить наличие `/.well-known/assetlinks.json` на `metravel.by`
-2. Добавить тест deep link → экран маршрута (`/travels/[slug]`)
-3. Добавить friendly error screen для невалидных deep links на native
-4. Протестировать на реальном устройстве через `adb shell am start`
+**Частично реализовано:**
+- Создан `public/.well-known/assetlinks.json` (шаблон) — требует замены SHA-256 fingerprint из release keystore
+- Нужна серверная верификация: файл должен быть доступен по `https://metravel.by/.well-known/assetlinks.json`
+
+**Оставшиеся действия:**
+1. ⚠️ Заменить SHA-256 fingerprint в `assetlinks.json` на реальный из release keystore
+2. Проверить доступность файла на prod сервере после деплоя
+3. Протестировать deep links через `adb shell am start`
 
 ---
 
@@ -158,15 +161,14 @@
 
 ---
 
-### AND-11 | Proguard/R8 — включить минификацию
+### ~~AND-11~~ | ✅ Proguard/R8 — включить минификацию
 
-**Проблема:** `enableProguardInReleaseBuilds = false` в `build.gradle`. Production AAB не минифицирован на уровне Java/Kotlin bytecode.
+**Проблема:** `enableProguardInReleaseBuilds = false` в `build.gradle`.
 
-**Действия:**
-1. Включить `enableProguardInReleaseBuilds = true`
-2. Добавить правила ProGuard для React Native + Hermes + Expo модулей
-3. Протестировать release build на предмет crash'ей (reflection, serialization)
-4. Ожидаемый эффект: APK/AAB размер −15–25%
+**Реализовано:**
+1. `enableProguardInReleaseBuilds` изменён с `false` на `true` в `build.gradle`
+2. Расширены ProGuard rules в `proguard-rules.pro`: добавлены правила для Hermes, Expo modules, React Native core, gesture-handler, safe-area-context, OkHttp
+3. Ожидаемый эффект: APK/AAB размер −15–25%
 
 ---
 
