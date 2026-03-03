@@ -98,14 +98,6 @@ export default function RootLayout() {
         }
     }, []);
 
-    useEffect(() => {
-        if (!isWeb) SplashScreen.hideAsync().catch((error) => {
-            // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки скрытия splash screen
-            if (__DEV__) {
-                console.warn('[RootLayout] Ошибка hideAsync:', error);
-            }
-        });
-    }, []);
     return <RootLayoutNav />;
 }
 
@@ -240,6 +232,17 @@ export default function RootLayout() {
             ...(require('@expo/vector-icons/Feather') as any).font,
           }
     );
+
+    // AND-06: Hide splash screen only after fonts are loaded (native).
+    useEffect(() => {
+      if (!isWeb && fontsLoaded) {
+        SplashScreen.hideAsync().catch((error) => {
+          if (__DEV__) {
+            console.warn('[RootLayout] Ошибка hideAsync:', error);
+          }
+        });
+      }
+    }, [fontsLoaded]);
 
     // Font timeout suppression (web only).
     useEffect(() => {

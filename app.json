@@ -42,6 +42,15 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "splash": {
+        "image": "./assets/images/splash.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff",
+        "dark": {
+          "image": "./assets/images/splash.png",
+          "backgroundColor": "#1a1a2e"
+        }
+      },
       "package": "by.metravel.app",
       "versionCode": 2,
       "permissions": [

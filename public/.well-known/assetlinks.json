@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "by.metravel.app",
+      "sha256_cert_fingerprints": [
+        "NEEDS_SERVER_VERIFICATION:REPLACE_WITH_ACTUAL_SHA256_FROM_KEYSTORE"
+      ]
+    }
+  }
+]
+
