@@ -78,7 +78,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
+        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target 48dp on Android
         borderRadius: DESIGN_TOKENS.radii.pill,
         backgroundColor: colors.surfaceMuted,
     },
@@ -88,8 +88,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.text,
     },
     backButtonMobile: {
-        width: 44, // ✅ ДОСТУПНОСТЬ: Минимальный размер touch target
-        height: 44,
+        width: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target 48dp on Android
+        height: Platform.OS === 'android' ? 48 : 44,
         borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
@@ -123,7 +123,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: 6,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
+        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target 48dp on Android
         borderRadius: DESIGN_TOKENS.radii.pill,
     },
     saveButtonText: {

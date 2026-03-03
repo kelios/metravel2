@@ -1,12 +1,9 @@
-// components/auth/GoogleSignInButton.tsx
-// AND-03: Platform-agnostic barrel.
-// Metro resolves GoogleSignInButton.web.tsx / GoogleSignInButton.native.tsx automatically.
-// This file exists as fallback for test environments and tooling that don't resolve platform extensions.
+// components/auth/GoogleSignInButton.web.tsx
+// AND-03: Web-only Google Sign-In using Google Identity Services (GSI) SDK.
+// Platform split: this file is used only on web builds.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import { StyleSheet, Text, View, ActivityIndicator, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -15,23 +12,6 @@ interface GoogleSignInButtonProps {
     onError?: (error: string) => void;
     disabled?: boolean;
 }
-
-WebBrowser.maybeCompleteAuthSession();
-
-/**
- * AND-03: Google Sign-In button — runtime platform split.
- * In production builds, Metro resolves .web.tsx or .native.tsx directly.
- * This file is the fallback for Jest and other non-Metro environments.
- */
-export default function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
-    if (Platform.OS === 'web') {
-        return <GoogleSignInButtonWeb onSuccess={onSuccess} onError={onError} disabled={disabled} />;
-    }
-
-    return <GoogleSignInButtonNative onSuccess={onSuccess} onError={onError} disabled={disabled} />;
-}
-
-// --- Web implementation (GSI SDK) ---
 
 declare global {
     interface Window {
@@ -64,7 +44,7 @@ declare global {
 
 const GOOGLE_GSI_SCRIPT_ID = 'google-gsi-client-script';
 
-function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
+export default function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [isLoading, setIsLoading] = useState(false);
@@ -75,7 +55,6 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     const hasClientId = googleClientId.length > 0;
 
     useEffect(() => {
-        if (Platform.OS !== 'web') return;
         if (!hasClientId) {
             onError?.('Google Sign-In не настроен: отсутствует EXPO_PUBLIC_GOOGLE_CLIENT_ID');
             return;
@@ -118,7 +97,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     }, [hasClientId, onError]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web' || !isGoogleLoaded || !window.google) return;
+        if (!isGoogleLoaded || !window.google) return;
         if (!hasClientId) return;
 
         try {
@@ -144,7 +123,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     }, [googleClientId, hasClientId, isGoogleLoaded, onSuccess, onError]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web' || !isGoogleLoaded || !window.google || !hasClientId) return;
+        if (!isGoogleLoaded || !window.google || !hasClientId) return;
         if (!buttonContainerRef.current || isGoogleButtonRendered) return;
 
         try {
@@ -166,10 +145,6 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             onError?.('Ошибка отображения кнопки Google Sign-In');
         }
     }, [hasClientId, isGoogleButtonRendered, isGoogleLoaded, onError]);
-
-    if (Platform.OS !== 'web') {
-        return null;
-    }
 
     return (
         <View
@@ -200,130 +175,18 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     );
 }
 
-// --- Native implementation (expo-auth-session) ---
-
-function GoogleSignInButtonNative({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
-    const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    const webClientId = String(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
-    const expoClientId = String(process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID || '').trim();
-    const androidClientId = String(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || webClientId).trim();
-    const iosClientId = String(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || webClientId).trim();
-
-    const hasRequiredClientId = Platform.OS === 'ios' ? iosClientId.length > 0 : androidClientId.length > 0;
-
-    const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-        webClientId: webClientId || undefined,
-        clientId: expoClientId || undefined,
-        androidClientId: androidClientId || undefined,
-        iosClientId: iosClientId || undefined,
-        scopes: ['openid', 'profile', 'email'],
-    });
-
-    useEffect(() => {
-        if (!response) return;
-
-        if (response.type === 'success') {
-            const token = response.params?.id_token;
-            setIsLoading(false);
-            if (token) {
-                onSuccess(token);
-            } else {
-                onError?.('Не удалось получить id_token от Google');
-            }
-            return;
-        }
-
-        if (response.type === 'error') {
-            setIsLoading(false);
-            onError?.('Ошибка авторизации Google');
-        }
-    }, [onError, onSuccess, response]);
-
-    const handlePress = async () => {
-        if (disabled || isLoading) return;
-
-        if (!hasRequiredClientId) {
-            onError?.(
-                'Google Sign-In не настроен для мобильного приложения: задайте EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID и EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID'
-            );
-            return;
-        }
-
-        if (!request) {
-            onError?.('Google Sign-In инициализируется, попробуйте еще раз');
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const result = await promptAsync();
-            if (result.type !== 'success') {
-                setIsLoading(false);
-                if (result.type === 'error') {
-                    onError?.('Не удалось завершить Google Sign-In');
-                }
-            }
-        } catch (error) {
-            if (__DEV__) {
-                console.error('Google native sign-in error:', error);
-            }
-            setIsLoading(false);
-            onError?.('Ошибка при открытии Google Sign-In');
-        }
-    };
-
-    return (
-        <Pressable
-            onPress={handlePress}
-            disabled={disabled || isLoading || !hasRequiredClientId}
-            android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
-            style={({ pressed }) => [
-                styles.button,
-                (disabled || isLoading || !hasRequiredClientId) && styles.buttonDisabled,
-                pressed && styles.buttonPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Войти через Google"
-        >
-            <View style={styles.content}>
-                {isLoading ? (
-                    <ActivityIndicator size="small" color={colors.text} />
-                ) : (
-                    <>
-                        <View style={styles.iconContainer}>
-                            <Text style={styles.googleIcon}>G</Text>
-                        </View>
-                        <Text style={styles.text}>Войти через Google</Text>
-                    </>
-                )}
-            </View>
-        </Pressable>
-    );
-}
-
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     button: {
         backgroundColor: colors.background,
         borderRadius: DESIGN_TOKENS.radii.lg,
-        minHeight: 48, // M3 touch target (48dp)
+        minHeight: 44,
         alignItems: 'center',
         justifyContent: 'center',
-        ...Platform.select({
-            web: {
-                width: '100%' as any,
-            },
-        }),
+        width: '100%' as any,
     },
     buttonDisabled: {
         opacity: 0.5,
-        ...Platform.select({
-            web: {
-                cursor: 'not-allowed' as any,
-            },
-        }),
+        cursor: 'not-allowed' as any,
     },
     loadingContainer: {
         flexDirection: 'row',
@@ -336,32 +199,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 14,
         color: colors.text,
     },
-    buttonPressed: {
-        opacity: 0.8,
-        transform: [{ scale: 0.98 }],
-    },
-    content: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
-    },
-    iconContainer: {
-        width: 20,
-        height: 20,
-        borderRadius: 4,
-        backgroundColor: colors.surfaceMuted,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    googleIcon: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: colors.primary,
-    },
-    text: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: colors.text,
-    },
 });
+

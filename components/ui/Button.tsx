@@ -131,7 +131,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    minHeight: 44, // ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target 48dp on Android
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.xs,

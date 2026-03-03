@@ -6,6 +6,7 @@ import {
     TextInput,
     StyleSheet,
     TouchableOpacity,
+    Platform,
     NativeSyntheticEvent,
     TextInputSubmitEditingEventData,
 } from "react-native";
@@ -33,11 +34,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderColor: colors.border,
         backgroundColor: colors.surface,
         paddingVertical: DESIGN_TOKENS.spacing.xs,
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target 48dp on Android
     },
     barMobile: {
         paddingVertical: DESIGN_TOKENS.spacing.xs / 2,
-        minHeight: 40,
+        minHeight: Platform.OS === 'android' ? 48 : 40,
     },
 
     centerContainer: {
