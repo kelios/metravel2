@@ -1,5 +1,5 @@
 // E11: Refactored — state/logic extracted to useTravelHeroState hook
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import Feather from '@expo/vector-icons/Feather'
@@ -14,6 +14,10 @@ import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
+// AND-28: Fullscreen gallery for native
+const FullscreenGallery = Platform.OS !== 'web'
+  ? React.lazy(() => import('@/components/travel/FullscreenGallery'))
+  : () => null;
 
 const Slider: React.FC<any> = withLazy(() => import('@/components/travel/Slider'))
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
@@ -143,6 +147,16 @@ function TravelHeroSectionInner({
 
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
 
+  // AND-28: Fullscreen gallery state (native only)
+  const [fullscreenVisible, setFullscreenVisible] = useState(false)
+  const [fullscreenIndex, setFullscreenIndex] = useState(0)
+  const handleImagePress = useCallback((index: number) => {
+    if (Platform.OS === 'web') return
+    setFullscreenIndex(index)
+    setFullscreenVisible(true)
+  }, [])
+  const handleCloseFullscreen = useCallback(() => setFullscreenVisible(false), [])
+
   const quickJumpLinks = useMemo(() => {
     return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(Boolean) as TravelSectionLink[]
   }, [sectionLinks])
@@ -167,7 +181,7 @@ function TravelHeroSectionInner({
             <>
               {webHeroLoaded && (
                 <View style={{ position: 'absolute', inset: 0, zIndex: 1 } as any} collapsable={false}>
-                  <Slider images={galleryImages} showArrows={!isMobile} hideArrowsOnMobile showDots={isMobile} autoPlay={false} preloadCount={0} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={handleSliderImageLoad} firstImagePreloaded={webHeroLoaded} />
+                  <Slider images={galleryImages} showArrows={!isMobile} hideArrowsOnMobile showDots={isMobile} autoPlay={false} preloadCount={0} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={handleSliderImageLoad} firstImagePreloaded={webHeroLoaded} onImagePress={handleImagePress} />
                 </View>
               )}
               {!overlayUnmounted && (
@@ -178,7 +192,7 @@ function TravelHeroSectionInner({
             </>
           ) : (
             <View style={{ position: 'absolute', inset: 0 } as any} collapsable={false}>
-              <Slider images={galleryImages} showArrows={!isMobile} hideArrowsOnMobile showDots={isMobile} autoPlay={false} preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={onFirstImageLoad} firstImagePreloaded={renderSlider && Platform.OS === 'web'} />
+              <Slider images={galleryImages} showArrows={!isMobile} hideArrowsOnMobile showDots={isMobile} autoPlay={false} preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={onFirstImageLoad} firstImagePreloaded={renderSlider && Platform.OS === 'web'} onImagePress={handleImagePress} />
             </View>
           )}
 
@@ -236,6 +250,18 @@ function TravelHeroSectionInner({
             <Suspense fallback={<View style={AUTHOR_PLACEHOLDER_STYLE} />}><AuthorCard travel={travel} /></Suspense>
           </View>
         </View>
+      )}
+
+      {/* AND-28: Fullscreen gallery (native only) */}
+      {Platform.OS !== 'web' && galleryImages.length > 0 && (
+        <Suspense fallback={null}>
+          <FullscreenGallery
+            visible={fullscreenVisible}
+            images={galleryImages.filter((img) => !!img.url).map((img) => ({ url: img.url! }))}
+            initialIndex={fullscreenIndex}
+            onClose={handleCloseFullscreen}
+          />
+        </Suspense>
       )}
     </>
   )
