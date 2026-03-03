@@ -227,6 +227,7 @@ export default function HistoryScreen() {
                     keyExtractor={(item: any) => `history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
                     numColumns={numColumns}
                     key={numColumns}
+                    {...({ estimatedItemSize: 280 } as any)}
                     contentContainerStyle={styles.gridContent}
                     drawDistance={500}
                     renderItem={({ item, index }: { item: any; index: number }) => {

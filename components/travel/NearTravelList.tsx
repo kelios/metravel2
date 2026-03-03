@@ -649,7 +649,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 data={displayedTravels}
                 keyExtractor={keyExtractor}
                 renderItem={renderTravelItem}
-                estimatedItemSize={300}
+                {...({ estimatedItemSize: 300 } as any)}
                 drawDistance={500}
                 contentContainerStyle={styles.mobileListContent}
                 scrollEnabled={!embedded}

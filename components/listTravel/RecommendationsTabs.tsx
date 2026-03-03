@@ -392,6 +392,7 @@ const RecommendationsTabs = memo(
                       />
                     )}
                     keyExtractor={(item: any) => `${item.type || 'item'}-${item.id}`}
+                    {...({ estimatedItemSize: 220 } as any)}
                     showsHorizontalScrollIndicator={false}
                     style={styles.horizontalList}
                     contentContainerStyle={styles.horizontalListContent}
@@ -498,6 +499,7 @@ const RecommendationsTabs = memo(
                       />
                     )}
                     keyExtractor={(item: any) => `history-${item.id}-${item.viewedAt}`}
+                    {...({ estimatedItemSize: 220 } as any)}
                     showsHorizontalScrollIndicator={false}
                     style={styles.horizontalList}
                     contentContainerStyle={styles.horizontalListContent}

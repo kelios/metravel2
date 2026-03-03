@@ -173,6 +173,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               renderItem={renderSelectedChip}
               keyExtractor={(item) => String(item[valueField])}
               horizontal
+              {...({ estimatedItemSize: 36 } as any)}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsContainer}
               drawDistance={600}
@@ -236,6 +237,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               data={filteredData}
               renderItem={renderItem}
               keyExtractor={(item) => String(item[valueField])}
+              {...({ estimatedItemSize: 44 } as any)}
               style={StyleSheet.flatten([styles.list, { flex: 1 }]) as any}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={true}

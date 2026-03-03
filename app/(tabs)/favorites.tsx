@@ -277,6 +277,7 @@ export default function FavoritesScreen() {
                     keyExtractor={(item: any) => `${item.type || 'travel'}-${item.id}`}
                     numColumns={numColumns}
                     key={numColumns}
+                    {...({ estimatedItemSize: 280 } as any)}
                     contentContainerStyle={styles.listContent}
                     drawDistance={500}
                     renderItem={({ item, index }: { item: any; index: number }) => {

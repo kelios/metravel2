@@ -163,6 +163,7 @@ export default function TabOneScreen() {
                 data={articles?.data}
                 renderItem={({ item }: any) => <ArticleListItem article={item} />}
                 keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
+                {...({ estimatedItemSize: 120 } as any)}
                 refreshing={isFetching}
                 onRefresh={() => refetch()}
                 drawDistance={600}

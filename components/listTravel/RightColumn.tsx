@@ -503,6 +503,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 renderItem={renderRow as any}
                 extraData={gridColumns}
                 keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
+                {...({ estimatedItemSize: 300 } as any)}
                 ListHeaderComponent={ListHeader}
                 ListFooterComponent={showNextPageLoading ? (
                   <View style={footerLoaderStyle}>

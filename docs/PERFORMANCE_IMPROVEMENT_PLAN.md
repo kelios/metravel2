@@ -434,10 +434,10 @@ yarn install
 | P3.4 | Image optimization | Среднее | 🔴 Высокое | **P0** | ✅ Готово (fetchPriority, data-lcp, loading=lazy) |
 | P3.5 | SSG для ключевых страниц | Высокое | 🔴 Высокое | P1 | ⬜ Не начато |
 | P4.2 | Re-render оптимизация | Среднее | 🟡 Среднее | P2 | ✅ Готово (гранулярные Zustand селекторы в useRouteStoreAdapter, useRouteBuilding, RouteDebugPanel) |
-| P4.3 | Проверка Flash List config | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
+| P4.3 | Проверка Flash List config | Низкое | 🟡 Среднее | P2 | ✅ Готово (estimatedItemSize добавлен ко всем 18 FlashList-инстансам) |
 | P4.5 | Web Workers | Высокое | 🟡 Среднее | P3 | ⬜ Не начато |
 | P5.1 | React Query prefetch | Низкое | 🟡 Среднее | P2 | ✅ Готово (hover-prefetch в TravelListItem + idle-prefetch фильтров/стран) |
-| P5.2 | HTTP cache headers | Низкое | 🟠 Высокое | P1 | ⬜ Не начато (needs server verification) |
+| P5.2 | HTTP cache headers | Низкое | 🟠 Высокое | P1 | ✅ Готово (fonts immutable, images immutable+negotiation, JS revalidate, CSS immutable в nginx.conf) |
 | P5.3 | API compression | Низкое | 🟡 Среднее | P1 | ✅ Готово (gzip + brotli настроены в nginx.conf) |
 | P5.4 | Image CDN | Высокое | 🔴 Высокое | P2 | ⬜ Не начато |
 | P6.5 | Deduplicate deps | Низкое | 🟡 Среднее | P2 | ⬜ Не начато |
@@ -472,7 +472,7 @@ npm run lighthouse:travel:desktop
 | 1 | P1.1 — Route-level code splitting (/map, /export) | Entry bundle −40% | ✅ Готово (все ключевые маршруты используют React.lazy) |
 | 2 | P2.1 — RNW slim barrel в production | Unused JS −150 KB | ✅ Готово (EXPO_PUBLIC_RNW_SLIM=1 в build:web:prod) |
 | 3 | P3.4 — Image optimization (priority, lazy, thumb) | LCP −1–2 с | ✅ Готово (fetchPriority=high, data-lcp, loading=lazy для below-fold) |
-| 4 | P5.2 — HTTP cache headers (fonts, images) | Повторные загрузки −60% | ⬜ Не начато (needs server verification) |
+| 4 | P5.2 — HTTP cache headers (fonts, images) | Повторные загрузки −60% | ✅ Готово (fonts immutable, images immutable + AVIF/WebP negotiation, JS revalidate per RULES.md) |
 
 ### 🟡 Спринт 3 (1–2 недели) — Runtime & Network
 
@@ -485,12 +485,12 @@ npm run lighthouse:travel:desktop
 
 ### 🟢 Спринт 4 (2 недели) — Advanced
 
-| # | Задача | Ожидаемый эффект |
-|---|--------|-----------------|
-| 1 | P3.5 — SSG для /, /search | FCP/LCP −2–3 с |
-| 2 | P5.4 — Image CDN | LCP −1–2 с |
-| 3 | P4.5 — Web Workers для parsing | TBT −100 мс |
-| 4 | P6.5 — Dependency dedup | Bundle −5–10% |
+| # | Задача | Ожидаемый эффект | Статус |
+|---|--------|-----------------|--------|
+| 1 | P3.5 — SSG для /, /search | FCP/LCP −2–3 с | ⬜ Не начато |
+| 2 | P5.4 — Image CDN | LCP −1–2 с | ⬜ Не начато |
+| 3 | P4.5 — Web Workers для parsing | TBT −100 мс | ⬜ Не начато |
+| 4 | P6.5 — Dependency dedup | Bundle −5–10% | ⬜ Не начато |
 
 ---
 

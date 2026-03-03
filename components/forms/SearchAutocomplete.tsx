@@ -260,6 +260,7 @@ function SearchAutocomplete({
           data={suggestions}
           renderItem={renderItem}
           keyExtractor={(item, index) => `${item.text}-${index}`}
+          {...({ estimatedItemSize: 44 } as any)}
           keyboardShouldPersistTaps="handled"
           style={styles.list}
           nestedScrollEnabled

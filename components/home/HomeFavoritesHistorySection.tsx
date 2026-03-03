@@ -209,6 +209,7 @@ function HorizontalCards({
       data={data}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
+      {...({ estimatedItemSize: 220 } as any)}
       showsHorizontalScrollIndicator={false}
       style={styles.horizontalList}
       contentContainerStyle={styles.horizontalListContent}

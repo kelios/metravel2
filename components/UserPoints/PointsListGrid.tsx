@@ -356,7 +356,7 @@ export const PointsListGrid: React.FC<{
           data={filteredPoints}
           extraData={listExtraData}
           keyExtractor={(item) => String((item as any)?.id)}
-          estimatedItemSize={120}
+          {...({ estimatedItemSize: 120 } as any)}
           testID="userpoints-panel-content-list"
           renderItem={({ item }) => {
             const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
@@ -578,6 +578,7 @@ export const PointsListGrid: React.FC<{
           )
         }}
         keyExtractor={(item) => String(item.id)}
+        {...({ estimatedItemSize: 120 } as any)}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={!isLoading ? renderEmpty : null}
         ListFooterComponent={renderFooter}
