@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
@@ -6,6 +6,7 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
@@ -90,6 +91,9 @@ function UnifiedTravelCard({
   const colors = useThemedColors();
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  // CARD-04: Отслеживаем загрузку изображения для показа shimmer
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
   const isFeatured = visualVariant === 'featured';
   const cardActionLabel = `Открыть маршрут «${title}»`;
   const mediaActionLabel = `Открыть фото маршрута «${title}»`;
@@ -173,7 +177,8 @@ function UnifiedTravelCard({
         },
         imageContainer: {
           width: '100%',
-          height: isWeb ? 200 : 180,
+          // CARD-01: Используем единый токен высоты изображения вместо hardcoded
+          height: isWeb ? DESIGN_TOKENS.cardImageHeights.medium : DESIGN_TOKENS.cardImageHeights.medium - 20,
           position: 'relative',
           backgroundColor: colors.backgroundSecondary,
         },
@@ -376,18 +381,27 @@ function UnifiedTravelCard({
       {[
         <View key="media" style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null, imageHeight === 0 && { display: 'none' }]}>
           {optimizedImageUrl ? (
-            <ImageCardMedia
-              src={optimizedImageUrl}
-              alt={title}
-              fit={mediaFit}
-              blurBackground={mediaProps?.blurBackground ?? true}
-              blurRadius={mediaProps?.blurRadius ?? 16}
-              placeholderBlurhash={mediaProps?.placeholderBlurhash}
-              style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
-              loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
-              priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
-              prefetch={mediaProps?.prefetch ?? false}
-            />
+            <>
+              {/* CARD-04: Shimmer placeholder пока изображение грузится */}
+              {!imageLoaded && (
+                <ShimmerOverlay
+                  style={StyleSheet.absoluteFill}
+                />
+              )}
+              <ImageCardMedia
+                src={optimizedImageUrl}
+                alt={title}
+                fit={mediaFit}
+                blurBackground={mediaProps?.blurBackground ?? true}
+                blurRadius={mediaProps?.blurRadius ?? 16}
+                placeholderBlurhash={mediaProps?.placeholderBlurhash}
+                style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
+                loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
+                priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
+                prefetch={mediaProps?.prefetch ?? false}
+                onLoad={handleImageLoad}
+              />
+            </>
           ) : (
             <View
               testID="image-stub"

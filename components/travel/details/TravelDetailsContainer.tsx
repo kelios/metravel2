@@ -10,12 +10,12 @@ import React, {
 import {
   Animated,
   Platform,
-  SafeAreaView,
   ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
 import * as AuthHookModule from '@/context/AuthContext';
@@ -75,6 +75,7 @@ const useTravelDetailsResolved: UseTravelDetailsHook =
       isMissingParam: true,
     },
     layout: {
+      headerOffset: 0,
       contentHorizontalPadding: 0,
       sideMenuPlatformStyles: {},
     },
@@ -104,7 +105,7 @@ const useTravelDetailsResolved: UseTravelDetailsHook =
       handleContentSizeChange: () => {},
       handleLayout: () => {},
     },
-  })) as UseTravelDetailsHook);
+  })) as unknown as UseTravelDetailsHook);
 
 const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
 const AccessibilityAnnouncer = withLazy(() => import("@/components/accessibility/AccessibilityAnnouncer"));
@@ -272,7 +273,7 @@ export default function TravelDetailsContainer() {
     breadcrumbLd,
   } = useMemo(() => {
     const slugTitle =
-      typeof slug === 'string' && slug.trim().length > 0
+      slug.trim().length > 0
         ? slug
             .split('-')
             .map((part) => part.trim())
@@ -340,7 +341,7 @@ export default function TravelDetailsContainer() {
       if (!el) {
         // Create the meta tag if Helmet never rendered it
         el = document.createElement('meta');
-        const m = sel.match(/\[(\w+)="([^"]+)"\]/);
+        const m = sel.match(/\[(\w+)="([^"]+)"]/);
         if (m) el.setAttribute(m[1], m[2]);
         el.setAttribute('data-rh', 'true');
         document.head.appendChild(el);
@@ -691,7 +692,7 @@ export default function TravelDetailsContainer() {
 
           <ScrollView
             testID="travel-details-scroll"
-            ref={scrollRef}
+            ref={scrollRef as any}
             contentContainerStyle={[styles.scrollContent]}
             keyboardShouldPersistTaps="handled"
             onScroll={scrollEventHandler}

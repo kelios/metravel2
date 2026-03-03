@@ -276,6 +276,11 @@ console.error = (message, ...args) => {
   if (text.includes('is using incorrect casing')) {
     return
   }
+  // HERO-06: TanStack Query предупреждение о undefined данных — это ожидаемо в тестах
+  // где fetchMyTravels не мокирован явно
+  if (text.includes('Query data cannot be undefined') && text.includes('my-travels-count')) {
+    return
+  }
   if (text.includes('The tag <View> is unrecognized in this browser')) {
     return
   }

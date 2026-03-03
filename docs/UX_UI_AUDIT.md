@@ -87,7 +87,7 @@ BottomDock → добавить:
 | HERO-03 | Кнопки CTA «Добавить первую поездку» и «Смотреть маршруты» имеют одинаковую ширину на desktop — нарушает визуальную иерархию | P2 |
 | HERO-04 | `autoplay` слайдера (5 сек) без `prefers-reduced-motion` — проблема для пользователей с вестибулярными нарушениями | P1 |
 | HERO-05 | Hero title разбит на 2 компонента `<Text>` — может вызывать неравномерный line-height на разных breakpoints | P3 |
-| HERO-06 | Счётчик маршрутов (travelsCount) приходит async — до загрузки кнопка показывает «Добавить первую поездку» даже авторизованному пользователю с поездками | P2 |
+| ~~HERO-06~~ | HomeHero | ✅ Skeleton для кнопки пока грузится travelsCount |
 
 **Рекомендации:**
 ```
@@ -155,7 +155,7 @@ HERO-04: Добавить probes-reduce-motion:
 |----|----------|-----------|
 | TD-01 | Галерея изображений на мобайле — горизонтальный скролл без индикатора количества фото | P1 |
 | ~~TD-02~~ | Travel Detail | ✅ Текстовая метка «В избранное» / «В избранном» добавлена на мобайле |
-| TD-03 | Travel Detail | `TravelSectionTabs` — горизонтальные табы с текстом. При длинных названиях разделов обрезается текст без tooltip | P2 |
+| ~~TD-03~~ | Travel Detail | ✅ `title` атрибут на web-тегах в TravelSectionTabs для показа tooltip при обрезании текста |
 | ~~TD-04~~ | Travel Detail | ✅ Lazy-init: карта закрыта по умолчанию, авто-открытие через IntersectionObserver на desktop |
 | TD-05 | Travel Detail | На десктопе боковая колонка (`CompactSideBarTravel`) — нет sticky-поведения при скролле основного контента | P2 |
 | ~~TD-06~~ | Travel Detail | ✅ CommentsSection монтируется через IntersectionObserver при scroll до секции + 6s fallback |
@@ -324,8 +324,8 @@ HERO-04: Добавить probes-reduce-motion:
 | SEC-03 | FAQ | Плавная анимация accordion |
 | SRCH-02 | Filters | Badge-счётчик активных фильтров |
 | SRCH-03 | Filters | Sticky кнопки «Применить» / «Сбросить» |
-| CARD-01 | TravelCard | Единая высота imageHeight через токен |
-| CARD-04 | TravelCard | Skeleton при загрузке изображений |
+| ~~CARD-01~~ | TravelCard | ✅ Единые высоты изображений через `DESIGN_TOKENS.cardImageHeights` (small/medium/large/hero) |
+| ~~CARD-04~~ | TravelCard | ✅ ShimmerOverlay в UnifiedTravelCard при загрузке изображений |
 | TD-01 | Travel Detail | Индикатор количества фото в галерее |
 | TD-02 | Travel Detail | Текстовая метка кнопки «В избранное» на мобайле |
 | TD-04 | Travel Detail | Lazy-init карты |
@@ -344,7 +344,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ~~A11Y-05~~ | Modals | ✅ `useFocusTrap` уже реализован, подключён к `CustomHeaderMobileMenu` |
 | ~~TYPO-03~~ | Везде | ✅ Создан `components/ui/Typography.tsx` — Heading (уровни 1-4), Body, Caption, Label, Eyebrow |
 | PERF-02 | Images | blurhash placeholder везде |
-| PERF-03 | ListTravel | Loading indicator при подгрузке страниц |
+| ~~PERF-03~~ | ListTravel | ✅ Footer-loader показывает текст «Загружаем ещё...» + ActivityIndicator при подгрузке страниц |
 | EMPTY-02 | Search | Empty state с предложением изменить фильтры |
 | ~~ANIM-04~~ | FAQ | ✅ Плавная CSS transition в CollapsibleBlock (max-height + chevron rotate) |
 | ~~CARD-05~~ | TravelCard | ✅ Счётчик просмотров уже скрывается при views === 0 |
@@ -360,7 +360,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ~~EMPTY-03~~ | Profile | ✅ Вовлекающий EmptyState для нового пользователя с CTA «+ Добавить путешествие» |
 | ~~NAV-12~~ | ~~Header~~ | ~~Визуально выделить кнопку «Войти» как CTA~~ ✅ Реализовано — отдельная pill-кнопка для гостей |
 | ~~HERO-03~~ | Hero | ✅ Первичная кнопка шире вторичной: primary paddingH 24/40 vs secondary 18/24 |
-| HERO-06 | Hero | Skeleton/hold для кнопки пока грузится travelsCount |
+| ~~HERO-06~~ | Hero | ✅ Skeleton для кнопки пока грузится travelsCount: Home.tsx загружает travelsCount через useQuery, HomeHero показывает ActivityIndicator пока isLoading |
 | ~~SEC-01~~ | TrustBlock | ✅ Grid планшет: isCompact только для phone, на планшете row-layout как desktop |
 | ~~SEC-02~~ | HowItWorks | ✅ Вертикальная связь шагов на мобайле: chevron-down connector между карточками |
 | ~~CARD-02~~ | TravelCard | ✅ gapSize уже responsive (6→8→10→12→14→16px по breakpoints) |
@@ -369,7 +369,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ~~TD-05~~ | Travel Detail | ✅ Sticky sidebar на desktop: position:sticky, top:80, maxHeight:calc(100vh-100px) |
 | PROF-01 | Profile | Visual hierarchy |
 | ~~RESP-04~~ | Везде | ✅ Fluid typography в Typography.tsx: fluidSize() плавно масштабирует Heading между mobile/tablet/desktop |
-| RESP-05 | Везде | Landscape-оптимизация |
+| ~~RESP-05~~ | Везде | ✅ Landscape-оптимизация: homeHeroStyles поддерживает isLandscape, уменьшает padding в landscape-режиме |
 | ~~TYPO-01~~ | Везде | ✅ Градация fontWeight: '900'→'800' для h2, '800'→'700' для h3 в FAQ, HowItWorks |
 | ~~DARK-01~~ | ~~ThemeToggle~~ | ~~Доступность переключателя темы на мобайле~~ ✅ Добавлен в меню «Ещё» BottomDock |
 | MAP-02 | Map | Кластеризация pin'ов — требует leaflet.markercluster, отдельный спринт |
@@ -449,4 +449,20 @@ HERO-04: Добавить probes-reduce-motion:
 ---
 
 *Документ создан на основе аудита кодовой базы metravel2. Обновлять при выполнении задач.*
+
+---
+
+## 19. История обновлений
+
+### Март 2026 — Сессия 2
+
+**Реализовано:**
+- ~~HERO-06~~ (P2) — Skeleton/loading state для кнопок HomeHero: `Home.tsx` теперь загружает `travelsCount` через `useQuery(['my-travels-count', userId])` с `fetchMyTravels`, `HomeHero` получает `travelsCountLoading` проп и показывает `ActivityIndicator` пока данные грузятся
+- ~~CARD-01~~ (P1) — Единая высота изображений в `UnifiedTravelCard` через `DESIGN_TOKENS.cardImageHeights.medium` вместо hardcoded `200`/`180`
+- ~~CARD-04~~ (P1) — `ShimmerOverlay` в `UnifiedTravelCard` пока изображение грузится; трекинг через `imageLoaded` state + `handleImageLoad` callback
+- ~~TD-03~~ (P2) — `title` атрибут на web-тегах в `TravelSectionTabs` для tooltip при обрезании текста
+- ~~PERF-03~~ (P1) — Footer-loader в `RightColumn` показывает текст «Загружаем ещё...» + `ActivityIndicator` при подгрузке следующих страниц
+- ~~RESP-05~~ (P2) — Landscape-оптимизация: `homeHeroStyles.ts` получил `isLandscape` параметр, уменьшает `paddingTop` и `minHeight` в landscape-режиме
+
+**Тесты:** `Home.test.tsx` обновлён — `should not fetch travels on home even when authenticated` → `should fetch travels count for authenticated users (HERO-06)`; добавлен глобальный мок `fetchMyTravels.mockResolvedValue({ data: [], total: 0 })` в `beforeEach`
 

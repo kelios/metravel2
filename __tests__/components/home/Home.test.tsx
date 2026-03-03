@@ -47,7 +47,8 @@ describe('Home Component', () => {
         queries: { retry: false },
       },
     });
-    
+    // HERO-06: Мок fetchMyTravels для загрузки travelsCount
+    mockFetchMyTravels.mockResolvedValue({ data: [], total: 0 } as any);
     mockUseIsFocused.mockReturnValue(true);
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
@@ -115,6 +116,9 @@ describe('Home Component', () => {
     });
 
     it('should fetch travels count for authenticated users (HERO-06)', () => {
+      // HERO-06: устанавливаем мок ДО рендера чтобы queryFn получил правильные данные
+      mockFetchMyTravels.mockResolvedValue({ data: [], total: 3 } as any);
+
       mockUseAuth.mockReturnValue({
         isAuthenticated: true,
         userId: '123',
@@ -124,8 +128,6 @@ describe('Home Component', () => {
         triggerProfileRefresh: jest.fn(),
       } as any);
 
-      // HERO-06: fetchMyTravels should be called to load travelsCount for the hero button
-      mockFetchMyTravels.mockResolvedValue({ data: [], total: 3 } as any);
 
       const { getByTestId } = renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();

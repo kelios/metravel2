@@ -55,14 +55,19 @@ function Home() {
   // Только для авторизованных, чтобы кнопка сразу показывала нужный текст
   const { data: myTravelsData, isLoading: travelsCountLoading } = useQuery({
     queryKey: ['my-travels-count', userId],
-    queryFn: async () => {
-      if (!userId) return null;
-      // Запрашиваем только total, передаём минимальный набор параметров
-      const payload = await fetchMyTravels({ user_id: userId });
-      return unwrapMyTravelsPayload(payload);
+    queryFn: async (): Promise<{ items: Record<string, unknown>[]; total: number }> => {
+      // Никогда не возвращаем undefined — TanStack Query требует валидные данные
+      if (!userId) return { items: [], total: 0 };
+      try {
+        const payload = await fetchMyTravels({ user_id: userId });
+        return unwrapMyTravelsPayload(payload);
+      } catch {
+        return { items: [], total: 0 };
+      }
     },
     enabled: isAuthenticated && !!userId,
     staleTime: 5 * 60 * 1000,
+    initialData: undefined,
   });
 
   const travelsCount = myTravelsData?.total ?? 0;
@@ -159,7 +164,7 @@ function Home() {
       scrollEventThrottle={isWeb ? 32 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
     >
-      <HomeHero travelsCount={travelsCount} travelsCountLoading={!!(isAuthenticated && travelsCountLoading)} />
+        <HomeHero travelsCount={travelsCount} travelsCountLoading={isAuthenticated && travelsCountLoading} />
 
       {isAuthenticated && (
         <Suspense fallback={null}>

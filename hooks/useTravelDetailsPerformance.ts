@@ -83,11 +83,17 @@ export function useTravelDetailsPerformance({
       // Defer non-critical performance utilities well past LCP/TBT window.
       // Critical CSS is already inlined in +html.tsx — no need to inject again.
       rIC(async () => {
-        const [{ initPerformanceMonitoring }] =
-          await Promise.all([
-            import('@/utils/performance'),
-          ])
-        initPerformanceMonitoring()
+        try {
+          const [{ initPerformanceMonitoring }] =
+            await Promise.all([
+              import('@/utils/performance'),
+            ])
+          if (typeof initPerformanceMonitoring === 'function') {
+            initPerformanceMonitoring()
+          }
+        } catch {
+          // Non-critical — silently ignore if performance module fails to load
+        }
       }, 3000)
     }
   }, [])

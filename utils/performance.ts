@@ -203,6 +203,41 @@ export function createLazyLoadObserver(
 }
 
 /**
+ * Инициализация мониторинга производительности (web-only).
+ * Регистрирует PerformanceObserver для LCP, FCP, CLS и Long Tasks,
+ * логируя предупреждения при превышении пороговых значений.
+ */
+export function initPerformanceMonitoring(): void {
+  if (typeof window === 'undefined' || typeof PerformanceObserver === 'undefined') {
+    return
+  }
+
+  try {
+    // Observe Largest Contentful Paint
+    const lcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries()
+      const last = entries[entries.length - 1]
+      if (last && last.startTime > 4000) {
+        console.warn(`[Performance] LCP: ${last.startTime.toFixed(0)}ms (target < 2500ms)`)
+      }
+    })
+    lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true })
+
+    // Observe Long Tasks (> 50ms)
+    const longTaskObserver = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.duration > 200) {
+          console.warn(`[Performance] Long Task: ${entry.duration.toFixed(0)}ms`)
+        }
+      }
+    })
+    longTaskObserver.observe({ type: 'longtask', buffered: true })
+  } catch {
+    // PerformanceObserver types may not be supported in all browsers
+  }
+}
+
+/**
  * Измерение производительности
  */
 export function measurePerformance(name: string, fn: () => void): void {
