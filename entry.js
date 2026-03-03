@@ -78,8 +78,68 @@
 // Without these, the bundle crashes with "X is not a function" on older iPhones.
 (function() {
   if (typeof structuredClone === 'undefined') {
+    const cloneWithCycles = function cloneWithCycles(value, seen) {
+      if (value === null || typeof value !== 'object') return value;
+
+      if (seen.has(value)) return seen.get(value);
+
+      if (value instanceof Date) return new Date(value.getTime());
+      if (value instanceof RegExp) return new RegExp(value.source, value.flags);
+      if (value instanceof ArrayBuffer) return value.slice(0);
+
+      if (ArrayBuffer.isView(value)) {
+        if (value instanceof DataView) {
+          const clonedBuffer = cloneWithCycles(value.buffer, seen);
+          return new DataView(clonedBuffer, value.byteOffset, value.byteLength);
+        }
+        return new value.constructor(value);
+      }
+
+      if (value instanceof Map) {
+        const clonedMap = new Map();
+        seen.set(value, clonedMap);
+        value.forEach((mapValue, mapKey) => {
+          clonedMap.set(cloneWithCycles(mapKey, seen), cloneWithCycles(mapValue, seen));
+        });
+        return clonedMap;
+      }
+
+      if (value instanceof Set) {
+        const clonedSet = new Set();
+        seen.set(value, clonedSet);
+        value.forEach((setValue) => {
+          clonedSet.add(cloneWithCycles(setValue, seen));
+        });
+        return clonedSet;
+      }
+
+      if (Array.isArray(value)) {
+        const clonedArray = new Array(value.length);
+        seen.set(value, clonedArray);
+        for (let i = 0; i < value.length; i += 1) {
+          clonedArray[i] = cloneWithCycles(value[i], seen);
+        }
+        return clonedArray;
+      }
+
+      const prototype = Object.getPrototypeOf(value);
+      const clonedObject = Object.create(prototype);
+      seen.set(value, clonedObject);
+
+      for (const key of Reflect.ownKeys(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor) continue;
+        if (Object.prototype.hasOwnProperty.call(descriptor, 'value')) {
+          descriptor.value = cloneWithCycles(descriptor.value, seen);
+        }
+        Object.defineProperty(clonedObject, key, descriptor);
+      }
+
+      return clonedObject;
+    };
+
     globalThis.structuredClone = function structuredClone(value) {
-      return JSON.parse(JSON.stringify(value));
+      return cloneWithCycles(value, new Map());
     };
   }
 

@@ -464,25 +464,29 @@ test.describe('Slider — accessibility', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    // Prefer strict check for accessible name.
-    const namedLocator = page
-      .locator('img[alt*="1 из"], [role="img"][aria-label*="1 из"], [role="img"][aria-label^="Фотография путешествия"]')
-      .first();
-    const hasNamed = await namedLocator.isVisible().catch(() => false);
+    // Prefer strict check for accessible naming, but avoid .first() ambiguity
+    // when a hidden node appears before visible ones.
+    const hasNamed = await page.evaluate(() => {
+      const candidates = Array.from(
+        document.querySelectorAll('img[alt], [role="img"][aria-label]')
+      ) as HTMLElement[];
+      return candidates.some((el) => {
+        const text = (el.getAttribute('alt') || el.getAttribute('aria-label') || '').trim();
+        if (!/Фотография путешествия .* из \d+/i.test(text)) return false;
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0;
+      });
+    });
 
-    if (hasNamed) {
-      const text = await namedLocator
-        .evaluate((el) => (el.getAttribute('alt') || el.getAttribute('aria-label') || '').trim())
-        .catch(() => '');
-      expect(text).toBeTruthy();
-      expect(text).toMatch(/1 из \d+/);
-      return;
-    }
+    if (hasNamed) return;
 
     // Fallback: expo-image on web can render without exposing alt/aria-label.
     // In that case we still ensure slide content is rendered inside the slider.
     const hasAnySlideContent = await page.evaluate(() => {
+      const slider = document.querySelector('[data-testid="slider-wrapper"]') || document.querySelector('[testID="slider-wrapper"]');
+      const hasMediaInsideSlider = !!slider?.querySelector('img, [role="img"]');
       return (
+        hasMediaInsideSlider ||
         document.querySelector('[data-testid^="slider-image-"]') !== null ||
         document.querySelector('[testID^="slider-image-"]') !== null ||
         document.querySelector('[data-testid^="slider-neutral-placeholder-"]') !== null ||

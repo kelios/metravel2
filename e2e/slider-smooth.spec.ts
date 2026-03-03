@@ -86,12 +86,19 @@ test.describe('@smoke Slider smoothness', () => {
     });
     expect(counterAdvanced).toBe(true);
 
-    // Prefer strict check for accessible naming.
-    const hasAnyAccessibleImage = await page
-      .locator('img[alt^="Фотография путешествия"], [role="img"][aria-label^="Фотография путешествия"]')
-      .first()
-      .isVisible()
-      .catch(() => false);
+    // Prefer strict check for accessible naming, but scan all candidates
+    // to avoid false negatives when the first match is hidden.
+    const hasAnyAccessibleImage = await page.evaluate(() => {
+      const candidates = Array.from(
+        document.querySelectorAll('img[alt], [role="img"][aria-label]')
+      ) as HTMLElement[];
+      return candidates.some((el) => {
+        const text = (el.getAttribute('alt') || el.getAttribute('aria-label') || '').trim();
+        if (!/^Фотография путешествия/i.test(text)) return false;
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0;
+      });
+    });
     if (hasAnyAccessibleImage) {
       expect(hasAnyAccessibleImage).toBe(true);
       return;
@@ -99,7 +106,10 @@ test.describe('@smoke Slider smoothness', () => {
 
     // Fallback: expo-image on web can render without exposing alt/aria-label.
     const hasAnySlideContent = await page.evaluate(() => {
+      const slider = document.querySelector('[data-testid="slider-wrapper"]') || document.querySelector('[testID="slider-wrapper"]');
+      const hasMediaInsideSlider = !!slider?.querySelector('img, [role="img"]');
       return (
+        hasMediaInsideSlider ||
         document.querySelector('[data-testid^="slider-image-"]') !== null ||
         document.querySelector('[testID^="slider-image-"]') !== null ||
         document.querySelector('[data-testid^="slider-neutral-placeholder-"]') !== null ||

@@ -162,10 +162,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         padding: 32,
         ...Platform.select({
             web: {
-                boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+                boxShadow: colors.boxShadows.modal,
             },
             ios: {
-                shadowColor: '#000',
+                shadowColor: colors.shadows.medium.shadowColor,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.10,
                 shadowRadius: 12,
@@ -174,7 +174,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 elevation: 6,
             },
             default: {
-                shadowColor: '#000',
+                shadowColor: colors.shadows.medium.shadowColor,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.10,
                 shadowRadius: 12,
@@ -243,20 +243,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     err: {
         color: colors.danger,
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        backgroundColor: colors.dangerSoft,
         borderLeftWidth: 3,
         borderLeftColor: colors.danger,
     },
     ok: {
         color: colors.success,
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        backgroundColor: colors.successSoft,
         borderLeftWidth: 3,
         borderLeftColor: colors.success,
     },
     inputError: {
         borderColor: colors.danger,
         borderWidth: 2,
-        backgroundColor: 'rgba(239, 68, 68, 0.05)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон для ошибок
+        backgroundColor: colors.dangerSoft,
     },
     // ✅ ИСПРАВЛЕНИЕ: Стиль больше не используется (ошибки показываются через FormFieldWithValidation)
     errorText: {

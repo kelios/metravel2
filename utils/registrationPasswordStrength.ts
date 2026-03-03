@@ -35,17 +35,24 @@ const REGISTRATION_STRENGTH_META: Record<
   },
 };
 
-const getTierByScore = (score: number): RegistrationPasswordStrengthTier => {
+const STRONG_PASSWORD_MIN_LENGTH = 12;
+const SPECIAL_CHAR_REGEX = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/;
+
+const getTierByScore = (score: number, password: string): RegistrationPasswordStrengthTier => {
   if (score <= 1) return 'weak';
-  if (score <= 3) return 'medium';
-  return 'strong';
+  const isStrongByPolicy =
+    score >= 4 &&
+    password.length >= STRONG_PASSWORD_MIN_LENGTH &&
+    SPECIAL_CHAR_REGEX.test(password);
+
+  return isStrongByPolicy ? 'strong' : 'medium';
 };
 
 export function getRegistrationPasswordStrengthMeta(password: string): RegistrationPasswordStrengthMeta | null {
   if (!password) return null;
 
   const { score } = checkPasswordStrength(password);
-  const tier = getTierByScore(score);
+  const tier = getTierByScore(score, password);
   return {
     tier,
     ...REGISTRATION_STRENGTH_META[tier],

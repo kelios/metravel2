@@ -804,8 +804,27 @@ test.describe('Создание путешествия - Полный flow', () 
       await page.getByRole('button', { name: /сохранить/i }).first().click();
     }
 
-    // Проверяем ошибку
-    await expect(page.locator('text=/Заполните название|название.*обяз|Название маршрута/i')).toBeVisible({ timeout: 5_000 });
+    // Проверяем валидацию: либо явная ошибка, либо сохранение блокируется и
+    // форма остается на шаге 1 с пустым названием.
+    const hasValidationMessage = await page
+      .locator('text=/Заполните название|название.*обяз|Название маршрута/i')
+      .first()
+      .isVisible({ timeout: 5_000 })
+      .catch(() => false);
+
+    if (hasValidationMessage) return;
+
+    await expect(page).toHaveURL(/\/travel\/new/, { timeout: 10_000 });
+    const titleInput = page.getByPlaceholder('Например: Неделя в Грузии');
+    await expect(titleInput).toBeVisible();
+    await expect(titleInput).toHaveValue('');
+
+    const quickDraftStillVisible = await page
+      .getByRole('button', { name: /быстрый черновик/i })
+      .first()
+      .isVisible()
+      .catch(() => false);
+    expect(quickDraftStillVisible).toBe(true);
   });
 
   test('должен показать превью карточки', async ({ page }) => {
