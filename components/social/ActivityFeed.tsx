@@ -118,6 +118,7 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
         data={activities}
         renderItem={renderActivity}
         keyExtractor={(item) => item.id}
+        estimatedItemSize={80}
         contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />

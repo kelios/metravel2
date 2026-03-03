@@ -356,6 +356,7 @@ export const PointsListGrid: React.FC<{
           data={filteredPoints}
           extraData={listExtraData}
           keyExtractor={(item) => String((item as any)?.id)}
+          estimatedItemSize={120}
           testID="userpoints-panel-content-list"
           renderItem={({ item }) => {
             const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]

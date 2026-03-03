@@ -959,6 +959,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
             renderItem={renderItem as any}
             numColumns={numColumns as any}
             keyExtractor={keyExtractor as any}
+            estimatedItemSize={200}
             contentContainerStyle={styles.listContent as any}
             {...(numColumns > 1 ? ({ columnWrapperStyle: styles.columnWrap } as any) : null)}
           />

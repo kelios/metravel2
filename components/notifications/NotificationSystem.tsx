@@ -150,6 +150,7 @@ const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) =>
         data={notifications}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
+        estimatedItemSize={80}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         drawDistance={Platform.OS === 'web' ? 800 : 500}

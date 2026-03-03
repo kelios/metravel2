@@ -281,6 +281,7 @@ function RecentViews({
           showsHorizontalScrollIndicator={false}
           keyExtractor={flashListKeyExtractor}
           renderItem={flashListRenderItem}
+          estimatedItemSize={220}
           contentContainerStyle={styles.listContent}
           drawDistance={800}
         />
