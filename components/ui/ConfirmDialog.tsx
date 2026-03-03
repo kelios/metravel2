@@ -326,8 +326,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: 8,
     },
     cancelButtonContainer: {
-        minWidth: 44,
-        minHeight: 44,
+        minWidth: Platform.OS === 'android' ? 48 : 44,
+        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 16,
@@ -356,8 +356,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.md,
         paddingVertical: 8,
         paddingHorizontal: 16,
-        minWidth: 44,
-        minHeight: 44,
+        minWidth: Platform.OS === 'android' ? 48 : 44,
+        minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target
         justifyContent: 'center',
         alignItems: 'center',
         ...DESIGN_TOKENS.shadowsNative.light,
