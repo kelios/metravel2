@@ -127,7 +127,7 @@ test.describe('Auth logout', () => {
         throw new Error('Auth logout: unable to locate login inputs');
       }
 
-      await page.getByRole('button', { name: 'Войти' }).click();
+      await page.getByRole('button', { name: /^Войти$/ }).click();
       await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60_000 });
       await page.goto('/profile', { waitUntil: 'domcontentloaded' });
       await loginPrompt.waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => null);
@@ -198,7 +198,7 @@ test.describe('Auth logout', () => {
     ]);
 
     // Login screen UI currently uses "Войти" button and input labels, not a "Вход" heading.
-    await expect(page.getByRole('button', { name: 'Войти' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /^Войти$/ })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('textbox', { name: 'Email' })).toBeVisible({ timeout: 15_000 });
   });
 });
