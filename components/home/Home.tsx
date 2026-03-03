@@ -166,11 +166,10 @@ function Home() {
     >
         <HomeHero travelsCount={travelsCount} travelsCountLoading={isAuthenticated && travelsCountLoading} />
 
-      {isAuthenticated && (
-        <Suspense fallback={null}>
-          <OnboardingBanner />
-        </Suspense>
-      )}
+      {/* AUTH-04: OnboardingBanner доступен и гостям — сам компонент управляет видимостью */}
+      <Suspense fallback={null}>
+        <OnboardingBanner userId={isAuthenticated ? userId : undefined} />
+      </Suspense>
 
       {showHeavyContent ? (
         <View style={heavyFadeStyle}>

@@ -84,7 +84,8 @@ function HomeHowItWorks() {
       fontWeight: '700',
       color: colors.primaryText,
       letterSpacing: 0.8,
-      textTransform: 'uppercase',
+      // TYPO-04: capitalize вместо uppercase — лучше читаемость на кириллице
+      textTransform: 'capitalize',
     },
     title: {
       fontSize: isMobile ? 22 : 40,

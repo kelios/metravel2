@@ -55,7 +55,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       width: '100%',
       paddingTop: isMobile ? 20 : 48,
       paddingBottom: isMobile ? 40 : 80,
-      backgroundColor: colors.background,
+      // SEC-04: fallback backgroundColor для браузеров без поддержки radial-gradient
+      backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       ...Platform.select({
         web: {
@@ -103,7 +104,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       fontWeight: '800',
       color: colors.primaryText,
       letterSpacing: 1,
-      textTransform: 'uppercase',
+      // TYPO-04: capitalize вместо uppercase — лучше читаемость на кириллице
+      textTransform: 'capitalize',
     },
     iconWrap: {
       width: isMobile ? 60 : 72,
@@ -155,11 +157,13 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       marginTop: 4,
     },
     primaryButton: {
-      paddingHorizontal: isMobile ? 24 : 44,
+      // HERO-03: primary CTA шире secondary для визуальной иерархии
+      paddingHorizontal: isMobile ? 24 : 52,
       paddingVertical: isMobile ? 15 : 20,
       minHeight: isMobile ? 50 : 62,
       borderRadius: DESIGN_TOKENS.radii.pill,
       width: isMobile ? '100%' : undefined,
+      flex: isMobile ? undefined : 1.4,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.heavy,
@@ -190,6 +194,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       borderWidth: 1.5,
       borderColor: colors.border,
       width: isMobile ? '100%' : undefined,
+      // HERO-03: secondary CTA уже primary
+      flex: isMobile ? undefined : 1,
       ...Platform.select({
         web: {
           transition: 'all 0.25s ease',

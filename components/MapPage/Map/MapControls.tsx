@@ -114,7 +114,8 @@ const MapControls: React.FC<MapControlsProps> = ({
           colors={colors}
         />
       )}
-      {userLocation && !isMobile && (
+      {/* MAP-05: Кнопка «Моя геопозиция» видна на всех устройствах */}
+      {userLocation && (
         <MapControlButton
           onClick={onCenterUserLocation}
           title="Мое местоположение"
