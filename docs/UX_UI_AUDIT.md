@@ -66,7 +66,7 @@ BottomDock → добавить:
 | ~~NAV-10~~ | ✅ На web-планшете (768–1024px) `CustomHeader` показывает inline-навигацию (как desktop) вместо бургер-меню. `isMobile` на web = `isPhone || isLargePhone` (без isTablet). На native планшет остаётся мобильным. BottomDock по-прежнему доступен на планшете | ~~P1~~ |
 | ~~NAV-11~~ | ✅ Хлебные крошки реализованы через `HeaderContextBar` + `useBreadcrumbModel` + `BreadcrumbsJsonLd` (SEO). На desktop — кликабельная цепочка «Главная > ... > Текущая», на mobile — кнопка «Назад» + заголовок | ~~P1~~ |
 | ~~NAV-12~~ | ✅ CTA-кнопка «Войти» выделена визуально в `AccountMenu.tsx` (`ctaLoginButton`) — видна сразу в хедере для гостей | ~~P2~~ |
-| NAV-13 | Мобильное меню не поддерживает `swipe-to-close` на native | P2 |
+| ~~NAV-13~~ | ✅ Swipe-to-close для «Ещё» sheet в `BottomDock.tsx`: pointer/touch events отслеживают `dy > 60px` → закрывают sheet | ~~P2~~ |
 
 ---
 
@@ -141,7 +141,7 @@ HERO-04: Добавить probes-reduce-motion:
 **Проблемы:**
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| CARD-03 | `onMediaPress` и `onPress` — два действия на карточке не разделены визуально. Пользователь не знает, что нажать | P2 |
+| ~~CARD-03~~ | ✅ Иконка `maximize-2` в правом нижнем углу фото при наличии `onMediaPress` — визуальный hint что фото кликабельно отдельно от карточки | ~~P2~~ |
 
 ---
 
@@ -160,7 +160,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
 | ~~MAP-02~~ | ✅ Кластеризация реализована через `ClusterLayer.tsx` + `useClustering.ts` + `useDynamicClustering.ts`. Подключено в `Map.web.tsx` и `TravelMap.tsx` | ~~P1~~ |
-| MAP-03 | Popup при нажатии на pin занимает большую часть экрана и перекрывает карту | P2 |
+| ~~MAP-03~~ | ✅ Popup уменьшен на мобайле: `maxWidth 280px` при `≤480px`, `340px` при `≤768px`. CSS `max-height: 60vh; overflow-y: auto` для скролла. autoPan padding уменьшен | ~~P2~~ |
 | MAP-04 | Нет фильтрации прямо на карте (хотя бы по категориям) | P2 |
 | ~~MAP-05~~ | ✅ Кнопка «Моя геопозиция» видна на всех устройствах — убрано условие `!isMobile` в `MapControls.tsx` | ~~P2~~ |
 
@@ -249,7 +249,7 @@ HERO-04: Добавить probes-reduce-motion:
 
 | ID | Проблема | Приоритет |
 |----|----------|-----------|
-| PERF-01 | Главная страница загружает тяжёлый контент через `requestIdleCallback` — хорошо. Но нет прогрессивного раскрытия: все секции появляются одновременно | P2 |
+| ~~PERF-01~~ | ✅ Прогрессивное раскрытие через `requestIdleCallback` + `showHeavyContent` state + `Suspense` с skeleton fallbacks + `heavyFadeStyle` opacity transition | ~~P2~~ |
 | ~~PERF-02~~ | ✅ `DESIGN_TOKENS.defaultBlurhash` добавлен как fallback. `ImageCardMedia` использует `placeholderBlurhash || DESIGN_TOKENS.defaultBlurhash` — все изображения теперь имеют blurhash placeholder по умолчанию | ~~P1~~ |
 
 ---
@@ -335,7 +335,7 @@ HERO-04: Добавить probes-reduce-motion:
 | ANIM-01 | Buttons | Haptic feedback |
 | ~~ANIM-02~~ | ✅ Cards | Scale-анимация при hover — `translateY(-2px) scale(1.015)` |
 | PROF-02 | Profile | Прогресс-бар заполненности |
-| PERF-01 | Главная | Прогрессивное раскрытие секций |
+| ~~PERF-01~~ | ✅ Главная | Прогрессивное раскрытие секций — `requestIdleCallback` + `showHeavyContent` |
 
 ---
 
@@ -510,3 +510,27 @@ HERO-04: Добавить probes-reduce-motion:
 - DARK-03 (P3) — prefers-color-scheme синхронизация
 - HERO-05 (P3) — Hero title line-height
 - RESP-06 (P3) — numberOfLines расширение на больших экранах
+
+### Март 2026 — Сессия 8
+
+**Реализовано:**
+- ~~MAP-03~~ (P2) — Popup не перекрывает карту на мобайле: в `Map.web.tsx` popup получил адаптивные размеры — `maxWidth: 280px` при `≤480px`, `340px` при `≤768px` (было 360/560). `autoPanPadding` уменьшен до `[12, 60]` на мобайле. В `leaflet-overrides.css` добавлен `@media (max-width: 480px)` с `max-height: 60vh; overflow-y: auto` — popup скроллируется вместо перекрытия карты
+- ~~NAV-13~~ (P2) — Swipe-to-close для «Ещё» bottom sheet: в `BottomDock.tsx` добавлены `onPointerDown/Up` и `onTouchStart/End` обработчики на `moreSheet`. При свайпе вниз `dy > 60px` sheet закрывается (`setShowMore(false)`)
+- ~~CARD-03~~ (P2) — Визуальное разделение onMediaPress/onPress: в `UnifiedTravelCard.tsx` добавлена иконка `maximize-2` (14px) в полупрозрачном круге (rgba(0,0,0,0.35)) в правом нижнем углу фото при наличии `onMediaPress` и отсутствии `heroTitleOverlay`. Стиль `mediaActionHint` создан
+- ~~RESP-06~~ (P3) — numberOfLines responsive: в `UnifiedTravelCard.tsx` заголовок карточки показывает `numberOfLines={2}` на desktop и `numberOfLines={1}` на mobile. Добавлен `useResponsive()` для определения `isMobileDevice`
+- ~~PERF-01~~ (P2) — Подтверждено как реализованное: `Home.tsx` уже использует `requestIdleCallback` + `showHeavyContent` state + `Suspense` с skeleton fallbacks + `heavyFadeStyle` с opacity transition для прогрессивного раскрытия секций
+- ~~HERO-05~~ (P3) — Подтверждено как реализованное: `title` и `titleAccent` в `homeHeroStyles.ts` уже имеют идентичные `fontSize` и `lineHeight` на всех breakpoints (4 уровня: smallPhone/mobile/tablet/desktop). Оба Text рендерятся inline с одинаковым line-height
+- A11Y-01 (P0) — Продолжение аудита accessibilityLabel:
+  - `UserPointPopup.tsx`: добавлены `accessibilityLabel` к 6 Pressable (копирование координат, редактировать, удалить, ссылки на карты, поделиться в Telegram)
+
+**Оставшиеся нереализованные задачи:**
+- A11Y-01 (P0) — Аудит ~90% завершён. Оставшиеся — admin tools, второстепенные экраны
+- RESP-01 (P1) — ≥3 breakpoints: практически полностью завершён
+- RESP-03 (P1) — ResponsiveContainer: home + profile + export покрыты. Travel detail использует свой `maxWidth: 1600` + `marginHorizontal: auto`
+- MAP-04 (P2) — Фильтрация на карте (FiltersPanel существует, требуется проверка подключения)
+- NAV-05 (P3) — Пересмотр 4-й dock иконки
+- SEC-05 (P3) — Scroll-triggered анимации
+- ANIM-01 (P3) — Haptic feedback
+- PROF-02 (P3) — Прогресс-бар заполненности профиля
+- DARK-03 (P3) — prefers-color-scheme синхронизация
+

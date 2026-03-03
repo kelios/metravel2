@@ -512,8 +512,8 @@ function UnifiedTravelCard({
           </View>
         ) : (
           <View key="content-default" style={styles.content}>
+            {/* RESP-06: На desktop 2 строки заголовка, на mobile 1 */}
             {!heroTitleOverlay && (
-              {/* RESP-06: На desktop 2 строки заголовка, на mobile 1 */}
               <Text style={styles.title} numberOfLines={isMobileDevice ? 1 : 2} ellipsizeMode="tail">
                 {title}
               </Text>

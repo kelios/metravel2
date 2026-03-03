@@ -197,7 +197,7 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
       )}
 
       {/* Coordinates */}
-      <Pressable onPress={handleCopyCoords} style={styles.coordsRow}>
+      <Pressable onPress={handleCopyCoords} style={styles.coordsRow} accessibilityRole="button" accessibilityLabel="Скопировать координаты">
         <Text style={styles.coordsText}>{coordsText}</Text>
         <Feather name="copy" size={14} color={colors.textMuted} />
       </Pressable>
@@ -208,6 +208,8 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
           <Pressable
             onPress={() => onEdit(point)}
             style={[styles.actionButton, styles.editButton]}
+            accessibilityRole="button"
+            accessibilityLabel="Редактировать точку"
           >
             <Feather name="edit-2" size={16} color={colors.primary} />
             <Text style={styles.actionText}>Редактировать</Text>
@@ -218,6 +220,8 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
           <Pressable
             onPress={() => onDelete(point)}
             style={[styles.actionButton, styles.deleteButton]}
+            accessibilityRole="button"
+            accessibilityLabel="Удалить точку"
           >
             <Feather name="trash-2" size={16} color={colors.danger} />
             <Text style={[styles.actionText, { color: colors.danger }]}>Удалить</Text>
@@ -234,6 +238,8 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
               key={link.key}
               onPress={() => openExternalMap(link.url)}
               style={styles.mapLink}
+              accessibilityRole="link"
+              accessibilityLabel={`Открыть в ${link.key}`}
             >
               <Text style={styles.mapLinkText}>{link.key}</Text>
             </Pressable>
@@ -242,7 +248,7 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
       </View>
 
       {/* Share */}
-      <Pressable onPress={handleShareTelegram} style={styles.shareButton}>
+      <Pressable onPress={handleShareTelegram} style={styles.shareButton} accessibilityRole="button" accessibilityLabel="Поделиться в Telegram">
         <Feather name="send" size={14} color={colors.primary} />
         <Text style={[styles.actionText, { color: colors.primaryText }]}>
           Поделиться в Telegram
