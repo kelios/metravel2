@@ -170,6 +170,23 @@ jest.mock('expo-haptics', () => ({
   NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }))
 
+// AND-17: Mock expo-local-authentication for test environment
+jest.mock('expo-local-authentication', () => ({
+  hasHardwareAsync: jest.fn().mockResolvedValue(false),
+  isEnrolledAsync: jest.fn().mockResolvedValue(false),
+  supportedAuthenticationTypesAsync: jest.fn().mockResolvedValue([]),
+  authenticateAsync: jest.fn().mockResolvedValue({ success: false }),
+  AuthenticationType: { FINGERPRINT: 1, FACIAL_RECOGNITION: 2, IRIS: 3 },
+}), { virtual: true })
+
+// AND-15: Mock expo-image-manipulator for test environment
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: jest.fn().mockImplementation((uri: string) =>
+    Promise.resolve({ uri, width: 512, height: 512 })
+  ),
+  SaveFormat: { JPEG: 'jpeg', PNG: 'png', WEBP: 'webp' },
+}), { virtual: true })
+
 jest.mock('@/hooks/useTheme', () => {
   const React = require('react')
   const {
