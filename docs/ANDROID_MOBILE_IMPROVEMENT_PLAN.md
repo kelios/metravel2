@@ -41,14 +41,11 @@
 
 ---
 
-### AND-02 | Package naming — несоответствие
+### ~~AND-02~~ | ✅ Package naming — несоответствие
 
 **Проблема:** В `app.json` пакет = `by.metravel.app`, а в `android/app/build.gradle` namespace и applicationId = `com.yourcompany.metravel`. Это шаблонные значения, которые не были обновлены.
 
-**Действия:**
-1. Привести `build.gradle` в соответствие: `namespace 'by.metravel.app'`, `applicationId 'by.metravel.app'`
-2. Убедиться, что `google-services.json` (Firebase) содержит правильный package name
-3. Проверить Google Play Console — package name должен совпадать
+**Реализовано:** `build.gradle` — namespace и applicationId исправлены на `by.metravel.app`. `AndroidManifest.xml` — scheme исправлен с `com.yourcompany.metravel` на `by.metravel.app`.
 
 ---
 

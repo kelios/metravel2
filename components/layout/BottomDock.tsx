@@ -125,6 +125,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     return (
       <Pressable
         onPress={() => {
+          // AND-13: haptic feedback on tab selection
+          hapticSelection();
           if (onPress) {
             onPress();
             return;
