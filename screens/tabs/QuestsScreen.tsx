@@ -61,7 +61,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         page: { flex: 1, backgroundColor: colors.background },
 
         /* ---- Hero (full-width top bar) ---- */
-        heroWrap: { width: '100%', maxWidth: 1400, alignSelf: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.md },
+        heroWrap: { width: '100%', maxWidth: 1400, alignSelf: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs },
         heroWrapMobile: { paddingHorizontal: spacing.xs, paddingTop: spacing.xs },
         hero: {
             flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -84,6 +84,28 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         titleMobile: { fontSize: isSmall ? typography.sizes.md : typography.sizes.lg },
         subtitle: { color: colors.textMuted, fontSize: typography.sizes.sm, marginTop: 2, lineHeight: 20 },
         subtitleMobile: { fontSize: typography.sizes.xs, marginTop: 1 },
+        heroStats: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap' },
+        heroStatsMobile: { marginTop: spacing.xs, gap: spacing.xxs },
+        heroStatCard: {
+            minWidth: 92,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: radii.sm,
+            borderWidth: 1,
+            borderColor: colors.primaryLight,
+            backgroundColor: colors.surface,
+        },
+        heroStatLabel: {
+            color: colors.textMuted,
+            fontSize: 11,
+            fontWeight: '600',
+            marginBottom: 1,
+        },
+        heroStatValue: {
+            color: colors.text,
+            fontSize: typography.sizes.sm,
+            fontWeight: '700',
+        },
         heroBtns: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center' },
         heroBtnsMobile: { alignSelf: 'stretch' },
         actionBtn: {
@@ -128,14 +150,19 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         /* ---- Section headers ---- */
         sectionHeader: {
             flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-            marginBottom: spacing.sm, paddingHorizontal: spacing.xxs,
+            marginBottom: spacing.sm, paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: radii.md,
+            backgroundColor: colors.surface,
         },
         sectionTitle: { color: colors.text, fontSize: typography.sizes.md, fontWeight: '700', flexShrink: 1 },
         sectionTitleMobile: { fontSize: typography.sizes.sm },
         sectionMeta: { color: colors.textMuted, fontSize: typography.sizes.xs, fontWeight: '600', flexShrink: 0 },
 
         /* ---- Quests grid ---- */
-        questsContainer: { gap: spacing.sm },
+        questsContainer: { gap: spacing.md },
         questsRow: { flexDirection: 'row', gap: spacing.md, flexWrap: 'nowrap', alignItems: 'stretch' },
         questsRowMobile: { gap: spacing.sm },
 
@@ -145,31 +172,57 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             borderRadius: radii.lg, overflow: 'hidden',
             borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
             ...Platform.select({
-                web: { boxShadow: (colors.boxShadows as any)?.card, transition: 'box-shadow 0.2s ease, transform 0.2s ease' } as any,
+                web: { boxShadow: (colors.boxShadows as any)?.card, transition: 'box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease' } as any,
                 android: { elevation: 2 },
                 default: {},
             }),
         },
+        questCardHover: {
+            borderColor: colors.primaryLight,
+            ...Platform.select({ web: { boxShadow: (colors.boxShadows as any)?.hover, transform: 'translateY(-2px)' } as any }),
+        },
+        questCardPressed: {
+            ...Platform.select({ web: { transform: 'translateY(0px)' } as any }),
+        },
         questCardMobile: { minWidth: '100%', maxWidth: '100%', borderRadius: radii.md },
 
-        coverWrap: { width: '100%', aspectRatio: 3 / 2, position: 'relative', backgroundColor: colors.surfaceMuted },
+        coverWrap: { width: '100%', aspectRatio: 16 / 9, position: 'relative', backgroundColor: colors.surfaceMuted },
         coverWrapMobile: { aspectRatio: isSmall ? 4 / 3 : 16 / 9 },
 
         questCover: { width: '100%', height: '100%' },
+        coverFallback: { flex: 1, backgroundColor: colors.backgroundSecondary },
         coverOverlay: {
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            padding: spacing.md,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
             backgroundColor: colors.overlay ?? 'rgba(0,0,0,0.45)',
         },
         coverOverlayMobile: { padding: spacing.sm },
-        questTitle: { color: colors.textOnDark, fontSize: typography.sizes.md, fontWeight: '700', marginBottom: spacing.xxs },
-        questTitleMobile: { fontSize: typography.sizes.sm, marginBottom: 2 },
+        questTitle: { color: colors.text, fontSize: typography.sizes.md, fontWeight: '700', marginBottom: spacing.xxs, lineHeight: 22 },
+        questTitleMobile: { fontSize: typography.sizes.sm, lineHeight: 20, marginBottom: 2 },
+        questBody: {
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            gap: spacing.xs,
+            minHeight: 112,
+            justifyContent: 'space-between',
+        },
+        questBodyMobile: { minHeight: 96, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
         questMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
         questMetaRowMobile: { gap: spacing.xs },
         metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-        metaText: { color: colors.textOnDark, fontSize: typography.sizes.xs, fontWeight: '600' },
+        metaText: { color: colors.text, fontSize: typography.sizes.xs, fontWeight: '600' },
         metaTextAlt: { color: colors.textMuted, fontSize: typography.sizes.xs, fontWeight: '600' },
         metaTextMobile: { fontSize: 11 },
+        questFooter: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderTopWidth: 1,
+            borderTopColor: colors.borderLight,
+            paddingTop: spacing.xs,
+        },
+        questFooterText: { color: colors.primaryText, fontSize: typography.sizes.xs, fontWeight: '700' },
 
         /* ---- Difficulty badge ---- */
         difficultyBadge: {
@@ -177,7 +230,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs,
             borderRadius: radii.pill, backgroundColor: 'rgba(0,0,0,0.55)',
         },
-        difficultyText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+        difficultyText: { color: colors.textOnDark, fontSize: 11, fontWeight: '700' },
 
         /* ---- Skeleton ---- */
         skeletonQuestsRow: { gap: spacing.sm },
@@ -349,6 +402,10 @@ export default function QuestsScreen() {
     // ── SEO ──
     const selectedCityName =
         selectedCityId === NEARBY_ID ? 'Рядом' : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
+    const citiesWithQuestsCount = useMemo(
+        () => CITIES.reduce((acc, city) => acc + ((CITY_QUESTS[city.id]?.length || 0) > 0 ? 1 : 0), 0),
+        [CITIES, CITY_QUESTS],
+    );
 
     const titleText = useMemo(() => {
         if (!selectedCityId) return 'Квесты | MeTravel';
@@ -421,6 +478,22 @@ export default function QuestsScreen() {
                                             ? `${ALL_QUESTS.length} квестов в ${CITIES.length} городах`
                                             : 'Приключения в городах'}
                                     </Text>
+                                    {dataLoaded && (
+                                        <View style={sx(s.heroStats, s.heroStatsMobile)}>
+                                            <View style={s.heroStatCard}>
+                                                <Text style={s.heroStatLabel}>Квестов</Text>
+                                                <Text style={s.heroStatValue}>{ALL_QUESTS.length}</Text>
+                                            </View>
+                                            <View style={s.heroStatCard}>
+                                                <Text style={s.heroStatLabel}>Городов</Text>
+                                                <Text style={s.heroStatValue}>{citiesWithQuestsCount}</Text>
+                                            </View>
+                                            <View style={s.heroStatCard}>
+                                                <Text style={s.heroStatLabel}>Выбор</Text>
+                                                <Text style={s.heroStatValue}>{selectedCityName || 'Не выбран'}</Text>
+                                            </View>
+                                        </View>
+                                    )}
                                 </View>
                             </View>
                             <View style={sx(s.heroBtns, s.heroBtnsMobile)}>
@@ -454,6 +527,22 @@ export default function QuestsScreen() {
                                         ? `${ALL_QUESTS.length} квестов в ${CITIES.length} городах`
                                         : 'Находи приключения в городах и парках'}
                                 </Text>
+                                {dataLoaded && (
+                                    <View style={s.heroStats}>
+                                        <View style={s.heroStatCard}>
+                                            <Text style={s.heroStatLabel}>Городов с квестами</Text>
+                                            <Text style={s.heroStatValue}>{citiesWithQuestsCount}</Text>
+                                        </View>
+                                        <View style={s.heroStatCard}>
+                                            <Text style={s.heroStatLabel}>Сейчас в подборке</Text>
+                                            <Text style={s.heroStatValue}>{questsAll.length}</Text>
+                                        </View>
+                                        <View style={s.heroStatCard}>
+                                            <Text style={s.heroStatLabel}>Локация</Text>
+                                            <Text style={s.heroStatValue}>{selectedCityName || 'Не выбрана'}</Text>
+                                        </View>
+                                    </View>
+                                )}
                             </View>
                             <View style={s.heroBtns}>
                                 <Link href="/quests/map" asChild>
@@ -531,7 +620,7 @@ export default function QuestsScreen() {
                                 /* Quest cards grid */
                                 <View style={s.questsContainer}>
                                     {chunkedQuests.map((row, rowIndex) => (
-                                        <View key={`quest-row-${rowIndex}`} style={s.questsRow}>
+                                        <View key={`quest-row-${rowIndex}`} style={sx(s.questsRow, isMobile && s.questsRowMobile)}>
                                             {row.map((quest) => (
                                                 <QuestCardLink
                                                     key={quest.id}
@@ -578,22 +667,23 @@ function QuestCardLink({
 }) {
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 часа';
     const diffLabel = quest.difficulty ? DIFFICULTY_LABELS[quest.difficulty] : null;
+    const iconColor = quest.cover ? colors.textOnDark : colors.textMuted;
 
     const metaRow = (
         <View style={sx(s.questMetaRow, isMobile && s.questMetaRowMobile)}>
             <View style={s.metaItem}>
-                <Feather name="navigation" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
+                <Feather name="navigation" size={12} color={iconColor} />
                 <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>
                     {quest.points} точек
                 </Text>
             </View>
             <View style={s.metaItem}>
-                <Feather name="clock" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
+                <Feather name="clock" size={12} color={iconColor} />
                 <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>{durationText}</Text>
             </View>
             {nearby && typeof quest._distanceKm === 'number' && (
                 <View style={s.metaItem}>
-                    <Feather name="map-pin" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
+                    <Feather name="map-pin" size={12} color={iconColor} />
                     <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>
                         {quest._distanceKm < 1
                             ? `${Math.round(quest._distanceKm * 1000)} м`
@@ -606,7 +696,14 @@ function QuestCardLink({
 
     return (
         <Link href={`/quests/${cityId}/${quest.id}`} asChild>
-            <Pressable style={sx(s.questCard, isMobile && s.questCardMobile)}>
+            <Pressable
+                style={({ hovered, pressed }) => sx(
+                    s.questCard,
+                    isMobile && s.questCardMobile,
+                    hovered && s.questCardHover,
+                    pressed && s.questCardPressed,
+                )}
+            >
                 <View style={sx(s.coverWrap, isMobile && s.coverWrapMobile)}>
                     {quest.cover ? (
                         <Image
@@ -614,19 +711,28 @@ function QuestCardLink({
                             style={s.questCover}
                             resizeMode="cover"
                         />
-                    ) : null}
+                    ) : <View style={s.coverFallback} />}
 
                     {diffLabel ? (
                         <View style={s.difficultyBadge}>
                             <Text style={s.difficultyText}>{diffLabel}</Text>
                         </View>
                     ) : null}
+                    {quest.cover ? (
+                        <View style={sx(s.coverOverlay, isMobile && s.coverOverlayMobile)}>
+                            {metaRow}
+                        </View>
+                    ) : null}
+                </View>
 
-                    <View style={sx(s.coverOverlay, isMobile && s.coverOverlayMobile)}>
-                        <Text style={sx(s.questTitle, isMobile && s.questTitleMobile)} numberOfLines={2}>
-                            {quest.title}
-                        </Text>
-                        {metaRow}
+                <View style={sx(s.questBody, isMobile && s.questBodyMobile)}>
+                    <Text style={sx(s.questTitle, isMobile && s.questTitleMobile)} numberOfLines={2}>
+                        {quest.title}
+                    </Text>
+                    {!quest.cover ? metaRow : null}
+                    <View style={s.questFooter}>
+                        <Text style={s.questFooterText}>Открыть квест</Text>
+                        <Feather name="arrow-right" size={14} color={colors.primaryText} />
                     </View>
                 </View>
             </Pressable>
