@@ -296,6 +296,8 @@ function CollapsibleBlock({
           onPress={collapsible ? handleToggle : undefined}
           style={styles.headerLeft}
           disabled={!collapsible}
+          accessibilityRole={collapsible ? 'button' : undefined}
+          accessibilityLabel={collapsible ? `${isExpanded ? 'Свернуть' : 'Развернуть'}: ${title}` : title}
           {...Platform.select({
             web: {
               cursor: collapsible ? 'pointer' : 'default',

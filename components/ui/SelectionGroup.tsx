@@ -49,6 +49,7 @@ export function SelectionGroup<T extends string | number>({
             onPress={() => onChange(option.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: isActive }}
+            accessibilityLabel={option.label}
           >
             <Text
               style={[

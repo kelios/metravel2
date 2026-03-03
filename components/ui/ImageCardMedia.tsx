@@ -6,6 +6,7 @@ import type { ImageProps as ExpoImageProps } from 'expo-image';
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl, generateSrcSet } from '@/utils/imageOptimization';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type Priority = 'low' | 'normal' | 'high';
 
@@ -368,7 +369,7 @@ function ImageCardMedia({
               blurBackgroundRadius={blurRadius}
               blurOnly={blurOnly}
               borderRadius={borderRadius}
-              placeholder={placeholderBlurhash}
+              placeholder={placeholderBlurhash || DESIGN_TOKENS.defaultBlurhash}
               priority={priority}
               loading={loading}
               alt={alt}

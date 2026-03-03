@@ -164,6 +164,8 @@ export default function ErrorDisplay({
             <Pressable
               style={[styles.button, styles.primaryButton]}
               onPress={onRetry}
+              accessibilityRole="button"
+              accessibilityLabel="Попробовать снова"
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
@@ -190,6 +192,8 @@ export default function ErrorDisplay({
                   // или показать email
                 }
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Связаться с поддержкой"
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
@@ -211,6 +215,8 @@ export default function ErrorDisplay({
             <Pressable
               style={styles.dismissButton}
               onPress={onDismiss}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть уведомление об ошибке"
               {...Platform.select({
                 web: {
                   cursor: 'pointer',

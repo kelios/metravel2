@@ -56,7 +56,11 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { isPhone, isLargePhone, isTablet } = useResponsive();
-    const isMobile = isPhone || isLargePhone || isTablet;
+    // NAV-10: На web-планшете (768–1024px) показываем inline-навигацию вместо бургера.
+    // На native планшет остаётся мобильным (бургер + dock).
+    const isMobile = Platform.OS === 'web'
+        ? (isPhone || isLargePhone)
+        : (isPhone || isLargePhone || isTablet);
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const mobileMenuOpenedAtRef = useRef(0);
     const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();

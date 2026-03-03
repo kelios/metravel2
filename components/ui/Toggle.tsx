@@ -32,6 +32,7 @@ export const Toggle: React.FC<ToggleProps> = ({
       }}
       accessibilityRole="switch"
       accessibilityState={{ checked: value, disabled }}
+      accessibilityLabel={value ? 'Включено' : 'Выключено'}
     >
       <View 
         style={[
