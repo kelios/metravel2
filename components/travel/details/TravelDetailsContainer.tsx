@@ -455,7 +455,20 @@ export default function TravelDetailsContainer() {
   );
 
   const sideMenuContainerStyle = useMemo(
-    () => ({ width: menuWidthNum }),
+    () => ({
+      width: menuWidthNum,
+      // TD-05: sticky sidebar на desktop — прилипает к верху при скролле
+      ...Platform.select({
+        web: {
+          position: 'sticky',
+          top: 80, // высота хедера
+          alignSelf: 'flex-start',
+          maxHeight: 'calc(100vh - 100px)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        } as any,
+      }),
+    }),
     [menuWidthNum]
   );
 

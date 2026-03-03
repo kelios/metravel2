@@ -88,10 +88,10 @@ function HomeHowItWorks() {
     },
     title: {
       fontSize: isMobile ? 22 : 40,
-      fontWeight: '900',
+      fontWeight: '800',
       color: colors.text,
       textAlign: 'center',
-      letterSpacing: -0.8,
+      letterSpacing: isMobile ? -0.4 : -0.8,
     },
     subtitle: {
       fontSize: isMobile ? 14 : 18,
@@ -189,7 +189,7 @@ function HomeHowItWorks() {
     },
     stepTitle: {
       fontSize: isMobile ? 17 : 20,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
     },
@@ -220,6 +220,18 @@ function HomeHowItWorks() {
     connectorLine: {
       width: 24,
       height: 2,
+      borderRadius: 1,
+      backgroundColor: colors.primaryAlpha30,
+    },
+    // SEC-02: вертикальная связь шагов на мобайле
+    connectorMobile: {
+      alignItems: 'center',
+      paddingVertical: 2,
+      gap: 2,
+    },
+    connectorMobileVLine: {
+      width: 2,
+      height: 12,
       borderRadius: 1,
       backgroundColor: colors.primaryAlpha30,
     },
@@ -280,6 +292,14 @@ function HomeHowItWorks() {
                   <View style={styles.connectorLine} />
                   <Feather name="chevron-right" size={18} color={colors.primaryAlpha30} />
                   <View style={styles.connectorLine} />
+                </View>
+              )}
+              {/* SEC-02: вертикальная связь шагов на мобайле */}
+              {index < STEPS.length - 1 && isMobile && (
+                <View style={styles.connectorMobile}>
+                  <View style={styles.connectorMobileVLine} />
+                  <Feather name="chevron-down" size={16} color={colors.primaryAlpha30} />
+                  <View style={styles.connectorMobileVLine} />
                 </View>
               )}
             </React.Fragment>

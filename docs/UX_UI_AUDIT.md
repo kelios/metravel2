@@ -346,7 +346,9 @@ HERO-04: Добавить probes-reduce-motion:
 | PERF-02 | Images | blurhash placeholder везде |
 | PERF-03 | ListTravel | Loading indicator при подгрузке страниц |
 | EMPTY-02 | Search | Empty state с предложением изменить фильтры |
-| ANIM-04 | FAQ | Плавный accordion |
+| ~~ANIM-04~~ | FAQ | ✅ Плавная CSS transition в CollapsibleBlock (max-height + chevron rotate) |
+| ~~CARD-05~~ | TravelCard | ✅ Счётчик просмотров уже скрывается при views === 0 |
+| ~~MAP-01~~ | Map | ✅ MapShowListButton.tsx уже существует |
 
 ### 🟡 P2 — Средний
 
@@ -357,22 +359,22 @@ HERO-04: Добавить probes-reduce-motion:
 | ~~DARK-02~~ | Тёмная тема | ✅ CSS-переменные `--gradient-*` для light/dark mode в global.css |
 | ~~EMPTY-03~~ | Profile | ✅ Вовлекающий EmptyState для нового пользователя с CTA «+ Добавить путешествие» |
 | ~~NAV-12~~ | ~~Header~~ | ~~Визуально выделить кнопку «Войти» как CTA~~ ✅ Реализовано — отдельная pill-кнопка для гостей |
-| HERO-03 | Hero | Первичная кнопка шире вторичной |
+| ~~HERO-03~~ | Hero | ✅ Первичная кнопка шире вторичной: primary paddingH 24/40 vs secondary 18/24 |
 | HERO-06 | Hero | Skeleton/hold для кнопки пока грузится travelsCount |
-| SEC-01 | TrustBlock | Grid планшет |
-| SEC-02 | HowItWorks | Визуальная связь шагов на мобайле |
-| CARD-02 | TravelCard | Gap между карточками на мобайле |
-| SRCH-06 | Search | Quick-filter chips под строкой поиска |
+| ~~SEC-01~~ | TrustBlock | ✅ Grid планшет: isCompact только для phone, на планшете row-layout как desktop |
+| ~~SEC-02~~ | HowItWorks | ✅ Вертикальная связь шагов на мобайле: chevron-down connector между карточками |
+| ~~CARD-02~~ | TravelCard | ✅ gapSize уже responsive (6→8→10→12→14→16px по breakpoints) |
+| ~~SRCH-06~~ | Search | ✅ QuickFilterChip компонент в StickySearchBar: prop `quickFilters` + `onQuickFilterPress` |
 | TD-03 | Travel Detail | Tooltip для обрезанных табов |
-| TD-05 | Travel Detail | Sticky sidebar на desktop |
+| ~~TD-05~~ | Travel Detail | ✅ Sticky sidebar на desktop: position:sticky, top:80, maxHeight:calc(100vh-100px) |
 | PROF-01 | Profile | Visual hierarchy |
-| RESP-04 | Везде | Fluid typography (clamp) |
+| ~~RESP-04~~ | Везде | ✅ Fluid typography в Typography.tsx: fluidSize() плавно масштабирует Heading между mobile/tablet/desktop |
 | RESP-05 | Везде | Landscape-оптимизация |
-| TYPO-01 | Везде | Градация fontWeight |
+| ~~TYPO-01~~ | Везде | ✅ Градация fontWeight: '900'→'800' для h2, '800'→'700' для h3 в FAQ, HowItWorks |
 | ~~DARK-01~~ | ~~ThemeToggle~~ | ~~Доступность переключателя темы на мобайле~~ ✅ Добавлен в меню «Ещё» BottomDock |
-| MAP-02 | Map | Кластеризация pin'ов |
+| MAP-02 | Map | Кластеризация pin'ов — требует leaflet.markercluster, отдельный спринт |
 | EMPTY-01 | Везде | Последовательное применение EmptyState |
-| ANIM-03 | Buttons | Глобальный transition |
+| ~~ANIM-03~~ | Buttons | ✅ Button уже имеет transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' |
 
 ### 🟢 P3 — Низкий
 
@@ -381,14 +383,14 @@ HERO-04: Добавить probes-reduce-motion:
 | NAV-04 | BottomDock | Метки на native |
 | NAV-05 | BottomDock | Пересмотр 4-й иконки |
 | SEC-05 | Главная | Scroll-triggered анимации |
-| TYPO-02 | Везде | letterSpacing на мобайле |
+| ~~TYPO-02~~ | Везде | ✅ letterSpacing на мобайле — уменьшен в Heading + HowItWorks + FAQ (isMobile ? -0.4 : -0.8) |
 | TYPO-04 | Везде | uppercase → title case для кириллицы |
-| DARK-02 | Темная тема | Отдельные gradients для dark mode |
+| ~~DARK-02~~ | Темная тема | ✅ CSS-переменные `--gradient-*` для light/dark mode в global.css |
 | ANIM-01 | Buttons | Haptic feedback |
 | ANIM-02 | Cards | Scale-анимация при hover |
 | PROF-02 | Profile | Прогресс-бар заполненности |
-| CARD-05 | TravelCard | Скрывать счётчик просмотров при 0 |
-| EMPTY-03 | Profile | Подсказка для нового пользователя |
+| ~~CARD-05~~ | TravelCard | ✅ Счётчик просмотров скрыт при 0 (уже реализовано) |
+| ~~EMPTY-03~~ | Profile | ✅ Вовлекающий EmptyState для нового пользователя |
 | PERF-01 | Главная | Прогрессивное раскрытие секций |
 
 ---

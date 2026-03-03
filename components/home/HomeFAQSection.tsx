@@ -102,9 +102,9 @@ function HomeFAQSection() {
     },
     title: {
       fontSize: isMobile ? 22 : 36,
-      fontWeight: '900',
+      fontWeight: '800',
       color: colors.text,
-      letterSpacing: -0.8,
+      letterSpacing: isMobile ? -0.4 : -0.8,
       textAlign: 'center',
     },
     subtitle: {

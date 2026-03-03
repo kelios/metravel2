@@ -13,15 +13,17 @@ const STATS = [
 ] as const;
 
 function HomeTrustBlock() {
-  const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = isSmallPhone || isPhone || isLargePhone;
+  // SEC-01: планшет показывает row (как desktop), не column как mobile
+  const isCompact = isMobile && !isTablet;
   const colors = useThemedColors();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingVertical: isMobile ? 20 : 48,
+      paddingVertical: isCompact ? 20 : 48,
       backgroundColor: colors.background,
     },
     content: {
@@ -29,12 +31,12 @@ function HomeTrustBlock() {
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      paddingVertical: isMobile ? 16 : 28,
-      paddingHorizontal: isMobile ? 12 : 28,
-      flexDirection: isMobile ? 'column' : 'row',
-      alignItems: isMobile ? 'stretch' : 'center',
+      paddingVertical: isCompact ? 16 : 28,
+      paddingHorizontal: isCompact ? 12 : 28,
+      flexDirection: isCompact ? 'column' : 'row',
+      alignItems: isCompact ? 'stretch' : 'center',
       justifyContent: 'space-between',
-      gap: isMobile ? 0 : 0,
+      gap: 0,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
@@ -43,10 +45,10 @@ function HomeTrustBlock() {
       }),
     },
     statItem: {
-      flex: isMobile ? undefined : 1,
+      flex: isCompact ? undefined : 1,
       alignItems: 'center',
-      paddingVertical: isMobile ? 14 : 16,
-      paddingHorizontal: isMobile ? 8 : 16,
+      paddingVertical: isCompact ? 14 : 16,
+      paddingHorizontal: isCompact ? 8 : 16,
       gap: 6,
       borderRadius: DESIGN_TOKENS.radii.lg,
       ...Platform.select({
@@ -65,9 +67,9 @@ function HomeTrustBlock() {
       }),
     },
     iconOuter: {
-      width: isMobile ? 52 : 60,
-      height: isMobile ? 52 : 60,
-      borderRadius: isMobile ? 26 : 30,
+      width: isCompact ? 52 : 60,
+      height: isCompact ? 52 : 60,
+      borderRadius: isCompact ? 26 : 30,
       backgroundColor: colors.background,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
@@ -76,8 +78,8 @@ function HomeTrustBlock() {
       marginBottom: 4,
     },
     iconInner: {
-      width: isMobile ? 40 : 46,
-      height: isMobile ? 40 : 46,
+      width: isCompact ? 40 : 46,
+      height: isCompact ? 40 : 46,
       borderRadius: isMobile ? 20 : 23,
       backgroundColor: colors.primarySoft,
       justifyContent: 'center',
@@ -89,38 +91,38 @@ function HomeTrustBlock() {
       gap: 0,
     },
     statValue: {
-      fontSize: isMobile ? 32 : 44,
+      fontSize: isCompact ? 32 : 44,
       fontWeight: '900',
       color: colors.primary,
       letterSpacing: -1.5,
-      lineHeight: isMobile ? 36 : 50,
+      lineHeight: isCompact ? 36 : 50,
     },
     statUnit: {
-      fontSize: isMobile ? 20 : 28,
+      fontSize: isCompact ? 20 : 28,
       fontWeight: '700',
       color: colors.primary,
       letterSpacing: -0.5,
-      lineHeight: isMobile ? 28 : 38,
+      lineHeight: isCompact ? 28 : 38,
     },
     statLabel: {
-      fontSize: isMobile ? 13 : 14,
+      fontSize: isCompact ? 13 : 14,
       fontWeight: '600',
       color: colors.text,
     },
     statDesc: {
-      fontSize: isMobile ? 11 : 12,
+      fontSize: isCompact ? 11 : 12,
       fontWeight: '400',
       color: colors.textMuted,
       textAlign: 'center',
       maxWidth: 120,
     },
     divider: {
-      width: isMobile ? '80%' : 1,
-      height: isMobile ? 1 : 64,
+      width: isCompact ? '80%' : 1,
+      height: isCompact ? 1 : 64,
       backgroundColor: colors.borderLight,
       alignSelf: 'center',
     },
-  }), [colors, isMobile]);
+  }), [colors, isCompact, isMobile]);
 
   return (
     <View style={styles.container} testID="home-trust-block">
@@ -130,9 +132,9 @@ function HomeTrustBlock() {
             <React.Fragment key={stat.label}>
               {index > 0 && <View style={styles.divider} />}
               <Pressable
-                style={({ hovered }) => [
+                style={[
                   styles.statItem,
-                  (hovered || hoveredIndex === index) && styles.statItemHover,
+                  hoveredIndex === index && styles.statItemHover,
                 ]}
                 onHoverIn={() => setHoveredIndex(index)}
                 onHoverOut={() => setHoveredIndex(null)}
@@ -140,7 +142,7 @@ function HomeTrustBlock() {
               >
                 <View style={styles.iconOuter}>
                   <View style={styles.iconInner}>
-                    <Feather name={stat.icon as any} size={isMobile ? 20 : 24} color={colors.primary} />
+                    <Feather name={stat.icon as any} size={isCompact ? 20 : 24} color={colors.primary} />
                   </View>
                 </View>
                 <View style={styles.statValueRow}>

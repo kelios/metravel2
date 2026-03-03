@@ -16,6 +16,12 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
+interface QuickFilterChip {
+  id: string;
+  label: string;
+  active?: boolean;
+}
+
 interface StickySearchBarProps {
   search: string;
   onSearchChange: (value: string) => void;
@@ -28,6 +34,9 @@ interface StickySearchBarProps {
   isRecommendationsVisible?: boolean;
   onClearAll?: () => void;
   activeFiltersCount?: number;
+  // SRCH-06: Quick-filter chips
+  quickFilters?: QuickFilterChip[];
+  onQuickFilterPress?: (id: string) => void;
 }
 
 const spacing = DESIGN_TOKENS.spacing;
@@ -168,6 +177,45 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
       default: 'monospace',
     }),
   },
+  // SRCH-06: Quick-filter chips
+  quickFiltersRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
+    ...Platform.select({
+      web: { overflowX: 'auto', paddingBottom: 2 } as any,
+    }),
+  },
+  quickChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+    ...Platform.select({
+      web: { cursor: 'pointer', transition: 'all 0.18s ease' } as any,
+    }),
+  },
+  quickChipActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primaryAlpha30,
+  },
+  quickChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textMuted,
+    lineHeight: 16,
+  },
+  quickChipTextActive: {
+    color: colors.primaryText,
+    fontWeight: '600',
+  },
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,6 +337,8 @@ function StickySearchBar({
   isRecommendationsVisible,
   onClearAll,
   activeFiltersCount,
+  quickFilters,
+  onQuickFilterPress,
 }: StickySearchBarProps) {
   const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
@@ -475,6 +525,28 @@ function StickySearchBar({
         </View>
       </View>
       </View>
+      {/* SRCH-06: Quick-filter chips */}
+      {quickFilters && quickFilters.length > 0 && (
+        <View style={styles.quickFiltersRow} accessibilityRole="toolbar" accessibilityLabel="Быстрые фильтры">
+          {quickFilters.map((chip) => (
+            <Pressable
+              key={chip.id}
+              onPress={() => onQuickFilterPress?.(chip.id)}
+              style={[styles.quickChip, chip.active && styles.quickChipActive]}
+              accessibilityRole="button"
+              accessibilityLabel={chip.label}
+              accessibilityState={{ selected: !!chip.active }}
+            >
+              {chip.active && (
+                <Feather name="check" size={11} color={colors.primaryText} />
+              )}
+              <Text style={[styles.quickChipText, chip.active && styles.quickChipTextActive]}>
+                {chip.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

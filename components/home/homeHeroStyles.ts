@@ -114,14 +114,14 @@ export const createHomeHeroStyles = ({
     gap: isMobile ? 8 : 12, width: isNarrowLayout ? '100%' : undefined, marginTop: 4,
   },
   primaryButton: {
-    paddingHorizontal: isMobile ? 20 : 30, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 46 : 54,
+    paddingHorizontal: isMobile ? 24 : 40, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 46 : 54,
     borderRadius: DESIGN_TOKENS.radii.pill, width: isMobile ? '100%' : undefined,
     ...Platform.select({ web: { transition: 'all 0.2s ease', boxShadow: DESIGN_TOKENS.shadows.medium } }),
   },
   primaryButtonHover: { backgroundColor: colors.primaryDark, ...Platform.select({ web: { transform: 'translateY(-2px)', boxShadow: DESIGN_TOKENS.shadows.heavy } }) },
-  primaryButtonText: { fontSize: 15, fontWeight: '700', color: colors.textOnPrimary },
+  primaryButtonText: { fontSize: isMobile ? 15 : 16, fontWeight: '700', color: colors.textOnPrimary },
   secondaryButton: {
-    paddingHorizontal: isMobile ? 20 : 28, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 46 : 54,
+    paddingHorizontal: isMobile ? 18 : 24, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 46 : 54,
     borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.borderLight,
     width: isMobile ? '100%' : undefined,
     ...Platform.select({ web: { transition: 'all 0.2s ease' } }),
