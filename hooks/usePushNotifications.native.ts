@@ -1,10 +1,9 @@
-// hooks/usePushNotifications.ts
+// hooks/usePushNotifications.native.ts
 // AND-05: Hook for integrating push notifications into app lifecycle.
 // Handles permission request, token registration, notification handling, and deep link routing.
-// On web — no-op.
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Platform, AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   setupNotificationChannels,
@@ -43,18 +42,14 @@ export function usePushNotifications(
   const router = useRouter();
   const [pushToken, setPushToken] = useState<string | null>(null);
   const isInitialized = useRef(false);
-  const isSupported = Platform.OS !== 'web';
+  const isSupported = true;
 
-  // Stable refs for callbacks
   const onTokenRef = useRef(onTokenReceived);
   onTokenRef.current = onTokenReceived;
   const onNotificationRef = useRef(onNotificationReceived);
   onNotificationRef.current = onNotificationReceived;
 
-  // Request permission and get token
   const requestPermission = useCallback(async (): Promise<string | null> => {
-    if (!isSupported) return null;
-
     try {
       const token = await registerForPushNotifications();
       if (token) {
@@ -66,25 +61,19 @@ export function usePushNotifications(
       devError('[usePushNotifications] requestPermission error:', error);
       return null;
     }
-  }, [isSupported]);
+  }, []);
 
-  // Initialize: channels + foreground handler + listeners
   useEffect(() => {
-    if (!isSupported || isInitialized.current) return;
+    if (isInitialized.current) return;
     isInitialized.current = true;
 
-    // Setup Android notification channels (idempotent)
     void setupNotificationChannels();
-
-    // Configure foreground presentation
     setForegroundNotificationHandler();
 
-    // Listen for foreground notifications
     const removeReceived = addNotificationReceivedListener((payload) => {
       onNotificationRef.current?.(payload);
     });
 
-    // Listen for notification taps (background/killed → deep link)
     const removeResponse = addNotificationResponseListener((data) => {
       const deepLink = extractDeepLinkFromNotification(data);
       if (deepLink) {
@@ -97,7 +86,6 @@ export function usePushNotifications(
       }
     });
 
-    // Auto-request if enabled
     if (autoRequest) {
       void requestPermission();
     }
@@ -106,12 +94,9 @@ export function usePushNotifications(
       removeReceived();
       removeResponse();
     };
-  }, [isSupported, autoRequest, requestPermission, router]);
+  }, [autoRequest, requestPermission, router]);
 
-  // Clear badge when app comes to foreground
   useEffect(() => {
-    if (!isSupported) return;
-
     const handleAppStateChange = (nextState: AppStateStatus) => {
       if (nextState === 'active') {
         void clearBadge();
@@ -119,14 +104,12 @@ export function usePushNotifications(
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    // Clear badge on initial mount too
     void clearBadge();
 
     return () => {
       subscription.remove();
     };
-  }, [isSupported]);
+  }, []);
 
   return { pushToken, requestPermission, isSupported };
 }
-
