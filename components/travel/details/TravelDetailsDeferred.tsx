@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useEffect, useState } from 'react'
+import React, { Suspense, memo, useEffect, useRef, useState } from 'react'
 import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import {
