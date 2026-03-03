@@ -1,5 +1,5 @@
 import { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, Pressable, Platform, ScrollView } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +15,8 @@ import { createHomeHeroStyles } from './homeHeroStyles';
 
 interface HomeHeroProps {
   travelsCount?: number;
+  /** HERO-06: показывать skeleton для кнопки пока загружается travelsCount */
+  travelsCountLoading?: boolean;
 }
 
 type QuickFilterValue = string | number | Array<string | number>;
@@ -138,13 +140,14 @@ const HERO_HIGHLIGHTS = [
 
 export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
 
-const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
+const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading = false }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop, width } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop, width, isPortrait } = useResponsive();
 
   const isMobile = isSmallPhone || isPhone || isLargePhone;
+  const isLandscape = !isPortrait && isMobile; // RESP-05
   const isWeb = Platform.OS === 'web';
   const isNarrowLayout = isMobile || (isWeb && width <= 860);
   const showSideSlider = isWeb && (isDesktop || isLargeTablet || isTablet);
@@ -221,7 +224,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const styles = useMemo(() => createHomeHeroStyles({
     colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight,
-  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight]);
+    isLandscape,
+  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight, isLandscape]);
 
   const currentSlide = BOOK_IMAGES[activeSlide];
 
@@ -265,20 +269,33 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
             </View>
 
             <View style={styles.buttonsContainer}>
-              <Button
-                onPress={handleCreateBook}
-                label={primaryButtonLabel}
-                variant="primary"
-                size="md"
-                fullWidth={isNarrowLayout}
-                icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
-                iconPosition="right"
-                style={styles.primaryButton}
-                labelStyle={styles.primaryButtonText}
-                hoverStyle={styles.primaryButtonHover}
-                pressedStyle={styles.primaryButtonHover}
-                accessibilityLabel={primaryButtonLabel}
-              />
+              {travelsCountLoading ? (
+                /* HERO-06: skeleton кнопки пока грузится travelsCount */
+                <View style={[styles.primaryButton, {
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  opacity: 0.6,
+                  flexDirection: 'row',
+                  gap: 8,
+                }]}>
+                  <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                </View>
+              ) : (
+                <Button
+                  onPress={handleCreateBook}
+                  label={primaryButtonLabel}
+                  variant="primary"
+                  size="md"
+                  fullWidth={isNarrowLayout}
+                  icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
+                  iconPosition="right"
+                  style={styles.primaryButton}
+                  labelStyle={styles.primaryButtonText}
+                  hoverStyle={styles.primaryButtonHover}
+                  pressedStyle={styles.primaryButtonHover}
+                  accessibilityLabel={primaryButtonLabel}
+                />
+              )}
               <Button
                 onPress={handleOpenSearch}
                 label="Смотреть маршруты"

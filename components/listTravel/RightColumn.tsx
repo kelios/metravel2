@@ -488,9 +488,11 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                     {renderRow({ item: rowItems, index: rowIndex })}
                   </React.Fragment>
                 ))}
+                {/* PERF-03: Информативный индикатор при подгрузке страниц */}
                 {showNextPageLoading && (
-                  <View style={footerLoaderStyle}>
-                    <ActivityIndicator size="small" />
+                  <View style={[footerLoaderStyle, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                    <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
+                    <Text style={{ fontSize: 13, color: '#888' }}>Загружаем ещё...</Text>
                   </View>
                 )}
               </ScrollView>

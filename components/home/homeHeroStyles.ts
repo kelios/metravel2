@@ -16,13 +16,20 @@ interface HeroStyleParams {
   isDesktop: boolean;
   showSideSlider: boolean;
   sliderHeight: number;
+  /** RESP-05: landscape orientation on mobile */
+  isLandscape?: boolean;
 }
 
 export const createHomeHeroStyles = ({
   colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight,
+  isLandscape = false,
 }: HeroStyleParams) => StyleSheet.create({
   container: {
-    width: '100%', paddingTop: isMobile ? 16 : 40, paddingBottom: isMobile ? 24 : 64, backgroundColor: colors.background,
+    width: '100%',
+    // RESP-05: Уменьшаем padding в landscape-режиме на мобайле
+    paddingTop: isMobile ? (isLandscape ? 8 : 16) : 40,
+    paddingBottom: isMobile ? (isLandscape ? 12 : 24) : 64,
+    backgroundColor: colors.background,
     ...Platform.select({ web: { backgroundImage: [`radial-gradient(ellipse 80% 60% at 50% -5%, ${colors.primarySoft} 0%, transparent 70%)`, `radial-gradient(ellipse 40% 30% at 90% 20%, ${colors.primaryAlpha30} 0%, transparent 60%)`].join(', '), backgroundRepeat: 'no-repeat' } }),
   },
   heroShell: {

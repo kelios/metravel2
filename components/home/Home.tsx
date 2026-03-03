@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, Suspense, lazy, useState, memo, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -8,6 +9,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
 import { queueAnalyticsEvent } from '@/utils/analytics';
+import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 
 const isWeb = Platform.OS === 'web';
 const TRUST_PLACEHOLDER_STYLE = { minHeight: 220 } as const;
@@ -44,10 +46,26 @@ SectionSkeleton.displayName = 'SectionSkeleton';
 
 function Home() {
   const isFocused = useIsFocused();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId } = useAuth();
   const colors = useThemedColors();
   const { isSmallPhone, isPhone } = useResponsive();
   const isMobile = isSmallPhone || isPhone;
+
+  // HERO-06: Загружаем количество путешествий для авторизованного пользователя
+  // Только для авторизованных, чтобы кнопка сразу показывала нужный текст
+  const { data: myTravelsData, isLoading: travelsCountLoading } = useQuery({
+    queryKey: ['my-travels-count', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      // Запрашиваем только total, передаём минимальный набор параметров
+      const payload = await fetchMyTravels({ user_id: userId });
+      return unwrapMyTravelsPayload(payload);
+    },
+    enabled: isAuthenticated && !!userId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const travelsCount = myTravelsData?.total ?? 0;
 
   const shouldRenderHeavyContentImmediately =
     typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
@@ -141,7 +159,7 @@ function Home() {
       scrollEventThrottle={isWeb ? 32 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
     >
-      <HomeHero />
+      <HomeHero travelsCount={travelsCount} travelsCountLoading={!!(isAuthenticated && travelsCountLoading)} />
 
       {isAuthenticated && (
         <Suspense fallback={null}>

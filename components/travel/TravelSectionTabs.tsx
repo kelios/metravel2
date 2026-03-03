@@ -216,6 +216,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
               accessibilityRole="tab"
               accessibilityLabel={label}
               accessibilityState={{ selected: isActive }}
+              {...(Platform.OS === 'web' ? ({ title: label } as any) : {})}
             >
               <Feather
                 name={icon as any}
