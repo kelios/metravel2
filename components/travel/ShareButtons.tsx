@@ -509,8 +509,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 2,
-    minHeight: 40,
-    minWidth: 40,
+    minHeight: Platform.OS === 'android' ? 48 : 40,
+    minWidth: Platform.OS === 'android' ? 48 : 40,
   },
   collapsedIndicatorPressed: {
     backgroundColor: colors.backgroundTertiary,
@@ -540,8 +540,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: 14,
     borderRadius: DESIGN_TOKENS.radii.sm,
     backgroundColor: colors.backgroundSecondary,
-    minHeight: 44,
-    minWidth: 44,
+    minHeight: Platform.OS === 'android' ? 48 : 44, // AND-26: M3 touch target
+    minWidth: Platform.OS === 'android' ? 48 : 44,
     justifyContent: 'center',
     borderWidth: 0,
     borderColor: 'transparent',
@@ -556,8 +556,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 999,
-    minHeight: 40,
-    minWidth: 40,
+    minHeight: Platform.OS === 'android' ? 48 : 40,
+    minWidth: Platform.OS === 'android' ? 48 : 40,
   },
   buttonPressed: {
     backgroundColor: colors.backgroundTertiary,
