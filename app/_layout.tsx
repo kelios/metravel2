@@ -400,6 +400,20 @@ function ThemedContent({
   const currentColorScheme = useColorScheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  // AND-28: Edge-to-edge — sync Android navigation bar with theme
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    try {
+      const NavigationBar = require('expo-navigation-bar');
+      NavigationBar.setBackgroundColorAsync(colors.background);
+      NavigationBar.setButtonStyleAsync(
+        currentColorScheme === 'dark' ? 'light' : 'dark'
+      );
+    } catch {
+      // expo-navigation-bar not available — ok
+    }
+  }, [colors.background, currentColorScheme]);
+
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
   const WEB_FOOTER_RESERVE_HEIGHT = 56;
 

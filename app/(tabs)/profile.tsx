@@ -38,6 +38,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { getStorageBatch } from '@/utils/storageBatch';
+import { hapticImpact } from '@/utils/haptics';
 
 interface UserStats {
   travelsCount: number;
@@ -228,6 +229,7 @@ export default function ProfileScreen() {
   // AND-14: Pull-to-Refresh
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
+    hapticImpact('light');
     setRefreshing(true);
     try {
       await Promise.all([loadTravels(), loadUserInfo()]);

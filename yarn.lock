@@ -4945,6 +4945,11 @@ expo-glass-effect@^55.0.7:
   resolved "https://registry.yarnpkg.com/expo-glass-effect/-/expo-glass-effect-55.0.7.tgz#e8584bc078c8987dbcc468dfcdd0d82a1df8b8e3"
   integrity sha512-G7Q9rUaEY0YC36fGE6irDljfsfvzz/y49zagARAKvSJSyQMUSrhR25WOr5LK5Cw7gQNNBEy9U1ctlr7yCay/fQ==
 
+expo-haptics@~55.0.8:
+  version "55.0.8"
+  resolved "https://registry.yarnpkg.com/expo-haptics/-/expo-haptics-55.0.8.tgz#9ccf3527f4622d5e267a7820da43075a257777b1"
+  integrity sha512-yVR6EsQwl1WuhFITc0PpfI/7dsBdjK/F2YA8xB80UUW9iTa+Tqz21FpH4n/vtbargpzFxkhl5WNYMa419+QWFQ==
+
 expo-image-loader@~55.0.0:
   version "55.0.0"
   resolved "https://registry.yarnpkg.com/expo-image-loader/-/expo-image-loader-55.0.0.tgz#56ae6631a0f43191432296a1f7f1e9737e653cfe"
@@ -5023,6 +5028,14 @@ expo-modules-core@55.0.13:
   integrity sha512-DYLQTOJAR7jD3M9S0sH9myZaPEtShdicHrPiWcupIXMeMkQxFzErx+adUI8gZPy4AU45BgeGgtaogRfT25iLfw==
   dependencies:
     invariant "^2.2.4"
+
+expo-navigation-bar@~55.0.8:
+  version "55.0.8"
+  resolved "https://registry.yarnpkg.com/expo-navigation-bar/-/expo-navigation-bar-55.0.8.tgz#8daea7955b0b65c762f3c4dd069668137e071df9"
+  integrity sha512-3Wa7m1zXuuH7FjwvwBR44ZRW+Ixn/GxS2anUCiWXFdPXjKLIYtAtr37vJ2c3KgFqNyhRlg1sgFawk4A8V5swhg==
+  dependencies:
+    debug "^4.3.2"
+    react-native-is-edge-to-edge "^1.2.1"
 
 expo-print@~55.0.8:
   version "55.0.8"

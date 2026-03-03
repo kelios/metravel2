@@ -1,14 +1,16 @@
 import { Suspense, lazy, memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
-import { usePathname } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
+import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useAuth } from '@/context/AuthContext';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton';
 import { fetchTravels } from '@/api/travelsApi';
@@ -17,8 +19,10 @@ const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
 function SearchScreen() {
     const pathname = usePathname();
+    const router = useRouter();
     const isFocused = useIsFocused();
     const colors = useThemedColors();
+    const { isAuthenticated } = useAuth();
     const { isHydrated: isResponsiveHydrated = true } = useResponsive();
     const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
     const canMountContent = hydrated && isResponsiveHydrated;
@@ -158,6 +162,16 @@ function SearchScreen() {
                         <SearchPageSkeleton />
                     )}
                 </ErrorBoundary>
+
+                {/* AND-27: FAB «Создать маршрут» для авторизованных (native only) */}
+                {isAuthenticated && Platform.OS !== 'web' && (
+                    <FloatingActionButton
+                        icon="plus"
+                        label="Создать маршрут"
+                        onPress={() => router.push('/travel/new' as any)}
+                        testID="fab-create-travel"
+                    />
+                )}
             </View>
         </>
     );

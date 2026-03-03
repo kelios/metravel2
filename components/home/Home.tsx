@@ -10,6 +10,7 @@ import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
 import FadeInSection from '@/components/ui/FadeInSection';
 import { queueAnalyticsEvent } from '@/utils/analytics';
+import { hapticImpact } from '@/utils/haptics';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 
 const isWeb = Platform.OS === 'web';
@@ -56,6 +57,7 @@ function Home() {
   // AND-14: Pull-to-Refresh state
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
+    hapticImpact('light');
     setRefreshing(true);
     try {
       await queryClient.invalidateQueries();

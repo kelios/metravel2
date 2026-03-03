@@ -78,6 +78,7 @@ const ButtonComponent = ({
       testID={testID}
       disabled={isDisabled}
       onPress={onPress}
+      android_ripple={!isDisabled ? { color: 'rgba(0,0,0,0.12)', borderless: false } : undefined}
       style={({ pressed, hovered }) => [
         styles.base,
         globalFocusStyles.focusable, // ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
