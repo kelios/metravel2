@@ -101,7 +101,7 @@ function StarRating({
         ]).start(() => setPressedStar(null));
 
         onRate(starIndex);
-    }, [interactive, disabled, onRate, scaleAnims]);
+    }, [interactive, disabled, onRate, scaleAnims, shouldUseNativeDriver]);
 
     const handleHoverIn = useCallback((starIndex: number) => {
         if (!interactive || disabled) return;

@@ -201,7 +201,7 @@ export function QuestsFilterDrawer({
         } else {
             slideAnim.setValue(-1);
         }
-    }, [visible, slideAnim]);
+    }, [visible, slideAnim, shouldUseNativeDriver]);
 
     return (
         <Modal

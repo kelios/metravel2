@@ -70,7 +70,7 @@ function TravelRatingSection({
             ]).start();
         }
         prevRatingRef.current = rating;
-    }, [rating, ratingChangeAnim]);
+    }, [rating, ratingChangeAnim, shouldUseNativeDriver]);
 
     // Spinner rotation animation
     useEffect(() => {
@@ -87,7 +87,7 @@ function TravelRatingSection({
         );
         loop.start();
         return () => loop.stop();
-    }, [isSubmitting, spinAnim]);
+    }, [isSubmitting, spinAnim, shouldUseNativeDriver]);
 
     // 🎨 Success feedback после сохранения оценки
     useEffect(() => {
@@ -107,7 +107,7 @@ function TravelRatingSection({
                 }),
             ]).start(() => setShowSuccess(false));
         }
-    }, [isSubmitting, userRating, successPulseAnim]);
+    }, [isSubmitting, userRating, successPulseAnim, shouldUseNativeDriver]);
 
     if (compact) {
         return (
