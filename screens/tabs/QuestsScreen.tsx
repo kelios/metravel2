@@ -3,16 +3,17 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, Pressable, Platform,
-    Image, ScrollView,
+    ScrollView,
     ViewStyle, TextStyle,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import EmptyState from '@/components/ui/EmptyState';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -53,7 +54,7 @@ const STORAGE_NEARBY_RADIUS = 'quests_nearby_radius_km';
 const DEFAULT_NEARBY_RADIUS_KM = 15;
 const NEARBY_ID = '__nearby__';
 
-const { spacing, radii, typography, shadows } = DESIGN_TOKENS;
+const { spacing, radii, typography } = DESIGN_TOKENS;
 
 const DIFFICULTY_LABELS: Record<string, string> = {
     easy: 'Лёгкий',
@@ -301,110 +302,6 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             gap: spacing.lg,
         },
 
-        /* ---- Quest Card ---- */
-        questCard: {
-            width: isMobileW ? '100%' : 'calc(50% - 12px)',
-            minWidth: isMobileW ? undefined : 320,
-            borderRadius: radii.lg,
-            overflow: 'hidden',
-            backgroundColor: colors.surface,
-            ...Platform.select({
-                web: {
-                    boxShadow: shadows.light,
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                } as any,
-                android: { elevation: 2 },
-            }),
-        },
-        questCardHover: {
-            ...Platform.select({
-                web: {
-                    boxShadow: shadows.medium,
-                    transform: 'translateY(-2px)',
-                } as any,
-            }),
-        },
-        questCardPressed: {
-            ...Platform.select({
-                web: { transform: 'scale(0.98)' } as any,
-            }),
-        },
-        coverWrap: {
-            width: '100%',
-            aspectRatio: 3 / 2,
-            position: 'relative',
-            backgroundColor: colors.backgroundTertiary,
-        },
-        questCover: {
-            width: '100%',
-            height: '100%',
-        },
-        coverFallback: {
-            flex: 1,
-            backgroundColor: colors.backgroundSecondary,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        coverGradient: {
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '50%',
-            ...Platform.select({
-                web: {
-                    backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 100%)',
-                } as any,
-                default: { backgroundColor: 'transparent' },
-            }),
-        },
-        difficultyBadge: {
-            position: 'absolute',
-            top: spacing.sm,
-            left: spacing.sm,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs,
-            borderRadius: radii.sm,
-        },
-        difficultyBadgeEasy: { backgroundColor: 'rgba(34,197,94,0.9)' },
-        difficultyBadgeMedium: { backgroundColor: 'rgba(245,158,11,0.9)' },
-        difficultyBadgeHard: { backgroundColor: 'rgba(239,68,68,0.9)' },
-        difficultyBadgeDefault: { backgroundColor: 'rgba(0,0,0,0.5)' },
-        difficultyText: {
-            color: '#fff',
-            fontSize: 11,
-            fontWeight: '700',
-            textTransform: 'uppercase',
-            letterSpacing: 0.3,
-        },
-        questCardBody: {
-            padding: spacing.md,
-        },
-        questTitle: {
-            color: colors.text,
-            fontSize: typography.sizes.md,
-            fontWeight: '600',
-            lineHeight: 22,
-            marginBottom: spacing.xs,
-        },
-        questMeta: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.md,
-            flexWrap: 'wrap',
-        },
-        questMetaItem: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.xxs,
-        },
-        questMetaText: {
-            color: colors.textMuted,
-            fontSize: typography.sizes.xs,
-            fontWeight: '500',
-        },
-
         /* ---- Skeleton ---- */
         skeletonGrid: {
             flexDirection: 'row',
@@ -412,8 +309,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             gap: spacing.lg,
         },
         skeletonCard: {
-            width: isMobileW ? '100%' : 'calc(50% - 12px)',
-            minWidth: isMobileW ? undefined : 320,
+            width: '100%',
+            maxWidth: 600,
         },
 
         /* ---- Mobile filter toggle ---- */
@@ -467,8 +364,6 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
     });
 }
 
-type QuestStyles = ReturnType<typeof getStyles>;
-
 // ───────────── Main screen (Redesigned) ─────────────
 
 export default function QuestsScreen() {
@@ -490,6 +385,12 @@ export default function QuestsScreen() {
     const { width, isPhone } = useResponsive();
     const isMobile = isPhone;
     const s = useMemo(() => getStyles(colors, width), [colors, width]);
+    const questCardWidth = useMemo(() => {
+        if (isMobile) {
+            return Math.max(280, width - spacing.lg * 2);
+        }
+        return 380;
+    }, [isMobile, width]);
 
     // ── Persistent city selection ──
     useEffect(() => {
@@ -916,8 +817,7 @@ export default function QuestsScreen() {
                                     cityId={selectedCityId === NEARBY_ID ? (quest.cityId || '') : (selectedCityId || '')}
                                     quest={quest}
                                     nearby={selectedCityId === NEARBY_ID}
-                                    s={s}
-                                    colors={colors}
+                                    cardWidth={questCardWidth}
                                 />
                             ))}
                         </View>
@@ -928,87 +828,56 @@ export default function QuestsScreen() {
     );
 }
 
-// ───────────────── Quest card (Redesigned) ─────────────────
+// ───────────────── Quest card (Using UnifiedTravelCard) ─────────────────
 
 function QuestCard({
-    cityId, quest, nearby, s, colors,
+    cityId, quest, nearby, cardWidth,
 }: {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
     nearby?: boolean;
-    s: QuestStyles;
-    colors: ThemedColors;
+    cardWidth: number;
 }) {
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
     const diffLabel = quest.difficulty ? DIFFICULTY_LABELS[quest.difficulty] : null;
-    const diffBadgeStyle = quest.difficulty === 'easy' ? s.difficultyBadgeEasy
-        : quest.difficulty === 'medium' ? s.difficultyBadgeMedium
-        : quest.difficulty === 'hard' ? s.difficultyBadgeHard
-        : s.difficultyBadgeDefault;
+    
+    // Формируем метатекст
+    const metaParts: string[] = [`${quest.points} точек`, durationText];
+    if (nearby && typeof quest._distanceKm === 'number') {
+        metaParts.push(
+            quest._distanceKm < 1
+                ? `${Math.round(quest._distanceKm * 1000)} м`
+                : `${quest._distanceKm.toFixed(1)} км`
+        );
+    }
+    const metaText = metaParts.join(' • ');
+
+    // Badge для сложности
+    const badge = diffLabel ? {
+        icon: 'flag' as const,
+        backgroundColor: quest.difficulty === 'easy' ? 'rgba(34,197,94,0.9)'
+            : quest.difficulty === 'medium' ? 'rgba(245,158,11,0.9)'
+            : quest.difficulty === 'hard' ? 'rgba(239,68,68,0.9)'
+            : 'rgba(0,0,0,0.5)',
+        iconColor: '#fff',
+    } : undefined;
+
+    const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
+
+    const handlePress = useCallback(() => {
+        router.push(`/quests/${cityId}/${quest.id}`);
+    }, [cityId, quest.id]);
 
     return (
-        <Link href={`/quests/${cityId}/${quest.id}`} asChild>
-            <Pressable
-                style={({ hovered, pressed }: { hovered?: boolean; pressed?: boolean }) => [
-                    s.questCard,
-                    hovered && s.questCardHover,
-                    pressed && s.questCardPressed,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Квест: ${quest.title}`}
-            >
-                {/* Cover */}
-                <View style={s.coverWrap}>
-                    {quest.cover ? (
-                        <Image
-                            source={typeof quest.cover === 'string' ? { uri: quest.cover } : quest.cover}
-                            style={s.questCover}
-                            resizeMode="cover"
-                        />
-                    ) : (
-                        <View style={s.coverFallback}>
-                            <Feather name="compass" size={32} color={colors.border} />
-                        </View>
-                    )}
-
-                    {/* Gradient */}
-                    {quest.cover && <View style={s.coverGradient} />}
-
-                    {/* Difficulty badge */}
-                    {diffLabel && (
-                        <View style={[s.difficultyBadge, diffBadgeStyle]}>
-                            <Text style={s.difficultyText}>{diffLabel}</Text>
-                        </View>
-                    )}
-                </View>
-
-                {/* Card body */}
-                <View style={s.questCardBody}>
-                    <Text style={s.questTitle} numberOfLines={2}>
-                        {quest.title}
-                    </Text>
-                    <View style={s.questMeta}>
-                        <View style={s.questMetaItem}>
-                            <Feather name="navigation" size={12} color={colors.textMuted} />
-                            <Text style={s.questMetaText}>{quest.points} точек</Text>
-                        </View>
-                        <View style={s.questMetaItem}>
-                            <Feather name="clock" size={12} color={colors.textMuted} />
-                            <Text style={s.questMetaText}>{durationText}</Text>
-                        </View>
-                        {nearby && typeof quest._distanceKm === 'number' && (
-                            <View style={s.questMetaItem}>
-                                <Feather name="map-pin" size={12} color={colors.textMuted} />
-                                <Text style={s.questMetaText}>
-                                    {quest._distanceKm < 1
-                                        ? `${Math.round(quest._distanceKm * 1000)} м`
-                                        : `${quest._distanceKm.toFixed(1)} км`}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                </View>
-            </Pressable>
-        </Link>
+        <UnifiedTravelCard
+            title={quest.title}
+            imageUrl={imageUrl}
+            metaText={metaText}
+            onPress={handlePress}
+            badge={badge}
+            width={cardWidth}
+            imageHeight={220}
+            testID={`quest-card-${quest.id}`}
+        />
     );
 }
