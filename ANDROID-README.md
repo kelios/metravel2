@@ -115,8 +115,8 @@ npm run build:all:prod           # iOS + Android (Production)
 
 ## 📚 Документация
 
-- **Полное руководство**: [docs/ANDROID-BUILD-GUIDE.md](./docs/ANDROID-BUILD-GUIDE.md)
-- **Быстрый старт**: [docs/ANDROID-QUICK-START.md](./docs/ANDROID-QUICK-START.md)
+- **Полная карта документации**: [docs/INDEX.md](./docs/INDEX.md)
+- **Базовый гайд проекта**: [docs/README.md](./docs/README.md)
 
 ## 🔐 Безопасность
 
@@ -144,7 +144,7 @@ npm run clean
 eas build --platform android --profile production --clear-cache
 ```
 
-Подробнее см. [Troubleshooting](./docs/ANDROID-BUILD-GUIDE.md#troubleshooting)
+Подробнее см. [базовый troubleshooting в docs](./docs/README.md)
 
 ## 📞 Поддержка
 

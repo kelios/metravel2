@@ -16,6 +16,7 @@
 
 import { test, expect } from './fixtures';
 import { preacceptCookies, navigateToFirstTravel, gotoWithRetry, hasTravelDetailsLoadError } from './helpers/navigation';
+import { loginAsUser } from './helpers/e2eApi';
 import {
   isAuthenticated,
   ensureAuthedStorageFallback,
@@ -228,7 +229,8 @@ test.describe('Travel Rating', () => {
 
 test.describe('Travel Rating - Authenticated', () => {
   test.beforeEach(async ({ page }) => {
-    // Устанавливаем фейковую авторизацию
+    // Предпочитаем реальный e2e-login; fallback на seeded token в средах без кредов.
+    await loginAsUser(page).catch(() => null);
     await ensureAuthedStorageFallback(page);
     await mockFakeAuthApis(page);
   });
@@ -533,6 +535,7 @@ test.describe('Travel Rating - List View', () => {
  */
 test.describe('Travel Rating - API Integration', () => {
   test.beforeEach(async ({ page }) => {
+    await loginAsUser(page).catch(() => null);
     await ensureAuthedStorageFallback(page);
     await mockFakeAuthApis(page);
   });

@@ -44,8 +44,7 @@ We use **only free, open-source mapping solutions**:
 
 *Get free OpenRouteService key at: https://openrouteservice.org/sign-up/*
 
-📖 **Full documentation:** [docs/MAPS_CONFIGURATION.md](./docs/MAPS_CONFIGURATION.md)  
-📊 **Migration report:** [docs/GOOGLE_MAPS_REMOVAL_SUMMARY.md](./docs/GOOGLE_MAPS_REMOVAL_SUMMARY.md)
+📖 **Documentation:** [docs/INDEX.md](./docs/INDEX.md)
 
 ### Optional: Setup Routing (OpenRouteService)
 
