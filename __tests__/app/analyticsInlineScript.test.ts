@@ -151,16 +151,16 @@ describe('analytics inline script', () => {
     expect(windowMock.dataLayer.length).toBeGreaterThan(0)
   })
 
-  it('treats missing analytics field as allowed (backward compatible)', () => {
+  it('treats missing analytics field as denied (opt-in default)', () => {
     const { windowMock } = setupDomEnv({
       consent: { necessary: true } as any,
     })
 
     runAnalyticsSnippet()
 
-    expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
-    expect(windowMock.gtag).toBeDefined()
-    expect(windowMock.dataLayer.length).toBeGreaterThan(0)
+    expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+    expect(windowMock.gtag).toBeUndefined()
+    expect(windowMock.dataLayer).toHaveLength(0)
   })
 
   it('skips analytics injection on non-production hosts', () => {
