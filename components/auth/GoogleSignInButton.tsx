@@ -63,6 +63,7 @@ declare global {
 }
 
 const GOOGLE_GSI_SCRIPT_ID = 'google-gsi-client-script';
+const LOOPBACK_WEB_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const colors = useThemedColors();
@@ -72,6 +73,36 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
     const googleClientId = String(process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '').trim();
     const hasClientId = googleClientId.length > 0;
+    const googleAvailability = useMemo(() => {
+        if (!hasClientId) {
+            return {
+                enabled: false,
+                fallbackText: 'Google Sign-In не настроен.',
+            };
+        }
+        if (typeof window === 'undefined') {
+            return { enabled: true, fallbackText: '' };
+        }
+
+        const hostname = String(window.location.hostname || '').toLowerCase();
+        const isLoopbackHost = LOOPBACK_WEB_HOSTS.has(hostname);
+        if (!isLoopbackHost) {
+            return { enabled: true, fallbackText: '' };
+        }
+
+        const localOverride = String(process.env.EXPO_PUBLIC_ENABLE_GOOGLE_SIGN_IN_LOCAL || '').trim().toLowerCase() === 'true';
+        const hasInjectedGoogle = Boolean(window.google?.accounts?.id);
+        if (localOverride || hasInjectedGoogle) {
+            return { enabled: true, fallbackText: '' };
+        }
+
+        return {
+            enabled: false,
+            fallbackText: 'Google Sign-In недоступен на localhost. Используйте email и пароль.',
+        };
+    }, [hasClientId]);
+    const shouldShowFallback = !googleAvailability.enabled;
+    const isButtonDisabled = disabled || !isGoogleLoaded || shouldShowFallback || !hasClientId;
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -79,6 +110,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             onError?.('Google Sign-In не настроен: отсутствует EXPO_PUBLIC_GOOGLE_CLIENT_ID');
             return;
         }
+        if (!googleAvailability.enabled) return;
 
         const loadGoogleScript = () => {
             if (window.google?.accounts?.id) {
@@ -114,9 +146,10 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
         };
 
         loadGoogleScript();
-    }, [hasClientId, onError]);
+    }, [hasClientId, googleAvailability.enabled, onError]);
 
     useEffect(() => {
+        if (!googleAvailability.enabled) return;
         if (Platform.OS !== 'web' || !isGoogleLoaded || !window.google) return;
         if (!hasClientId) return;
 
@@ -139,9 +172,10 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             }
             onError?.('Ошибка инициализации Google Sign-In');
         }
-    }, [googleClientId, hasClientId, isGoogleLoaded, onSuccess, onError]);
+    }, [googleAvailability.enabled, googleClientId, hasClientId, isGoogleLoaded, onSuccess, onError]);
 
     useEffect(() => {
+        if (!googleAvailability.enabled) return;
         if (Platform.OS !== 'web' || !isGoogleLoaded || !window.google || !hasClientId) return;
         if (!buttonContainerRef.current || isGoogleButtonRendered) return;
 
@@ -163,7 +197,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
             }
             onError?.('Ошибка отображения кнопки Google Sign-In');
         }
-    }, [hasClientId, isGoogleButtonRendered, isGoogleLoaded, onError]);
+    }, [googleAvailability.enabled, hasClientId, isGoogleButtonRendered, isGoogleLoaded, onError]);
 
     if (Platform.OS !== 'web') {
         return null;
@@ -173,12 +207,16 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
         <View
             style={[
                 styles.button,
-                (disabled || !isGoogleLoaded || !hasClientId) && styles.buttonDisabled,
+                isButtonDisabled && styles.buttonDisabled,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Войти через Google"
         >
-            {!isGoogleLoaded && (
+            {shouldShowFallback ? (
+                <View style={styles.fallbackContainer}>
+                    <Text style={styles.fallbackText}>{googleAvailability.fallbackText}</Text>
+                </View>
+            ) : !isGoogleLoaded && (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="small" color={colors.text} />
                     <Text style={styles.loadingText}>Загрузка Google Sign-In...</Text>
@@ -189,7 +227,7 @@ function GoogleSignInButtonWeb({ onSuccess, onError, disabled }: GoogleSignInBut
                 style={{
                     width: '100%',
                     minHeight: 44,
-                    display: isGoogleLoaded ? 'block' : 'none',
+                    display: isGoogleLoaded && !shouldShowFallback ? 'block' : 'none',
                     pointerEvents: disabled ? 'none' : 'auto',
                     opacity: disabled ? 0.6 : 1,
                 }}
@@ -333,6 +371,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     loadingText: {
         fontSize: 14,
         color: colors.text,
+    },
+    fallbackContainer: {
+        width: '100%',
+        minHeight: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    },
+    fallbackText: {
+        fontSize: 13,
+        color: colors.textMuted,
+        textAlign: 'center',
     },
     buttonPressed: {
         opacity: 0.8,

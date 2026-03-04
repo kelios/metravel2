@@ -272,12 +272,25 @@ function ImageCardMedia({
     return src ?? null;
   }, [webOptimizedSource, resolvedSource, src]);
 
+  const canUseResourceHint = useMemo(() => {
+    if (Platform.OS !== 'web') return false;
+    if (!prefetchHref) return false;
+    if (typeof window === 'undefined') return false;
+    try {
+      const resolved = new URL(prefetchHref, window.location.origin);
+      return resolved.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }, [prefetchHref]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (shouldDisableNetwork) return;
     if (!prefetch) return;
     if (priority !== 'high') return;
     if (!prefetchHref) return;
+    if (!canUseResourceHint) return;
     if (typeof document === 'undefined') return;
 
     const shouldPreload = loading === 'eager' && document.readyState !== 'complete';
@@ -290,13 +303,12 @@ function ImageCardMedia({
     link.rel = rel;
     link.as = 'image';
     link.href = prefetchHref;
-    link.crossOrigin = 'anonymous';
     if (shouldPreload) {
       link.fetchPriority = 'high';
       link.setAttribute('fetchPriority', 'high');
     }
     document.head.appendChild(link);
-  }, [prefetch, priority, prefetchHref, loading, shouldDisableNetwork]);
+  }, [prefetch, priority, prefetchHref, loading, shouldDisableNetwork, canUseResourceHint]);
 
   return (
     <View

@@ -51,11 +51,19 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         gap: DESIGN_TOKENS.spacing.sm,
         marginTop: DESIGN_TOKENS.spacing.xs,
     },
+    titleRowMobile: {
+        alignItems: 'flex-start',
+        flexDirection: 'column',
+        gap: DESIGN_TOKENS.spacing.xs,
+    },
     titleActionsRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
         flexShrink: 0,
+    },
+    titleActionsRowMobile: {
+        flexWrap: 'wrap',
     },
     headerRow: {
         flexDirection: 'row',
@@ -408,4 +416,3 @@ export const createWizardHeaderStyles = (colors: ReturnType<typeof useThemedColo
         color: colors.primaryText,
     },
 });
-

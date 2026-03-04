@@ -164,24 +164,49 @@ const maybeDismissRouteCoachmark = async (page: Page) => {
 };
 
 const maybeAcceptCookies = async (page: Page) => {
-  const acceptAll = page.getByText('Принять всё', { exact: true });
-  const necessaryOnly = page.getByText('Только необходимые', { exact: true });
-  const bannerTitle = page.getByText('Мы ценим вашу приватность', { exact: true });
+  const acceptCandidates = [
+    page.getByText('Принять', { exact: true }),
+    page.getByText('Принять всё', { exact: true }),
+    page.getByRole('button', { name: /принять/i }).first(),
+  ];
+  const rejectCandidates = [
+    page.getByText('Отклонить', { exact: true }),
+    page.getByText('Только необходимые', { exact: true }),
+  ];
+  const bannerTitleCandidates = [
+    page.getByText('Мы ценим вашу приватность', { exact: true }),
+    page.getByText(/Используем аналитику/i).first(),
+    page.getByTestId('consent-banner'),
+  ];
 
   await Promise.race([
-    bannerTitle.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null),
-    acceptAll.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null),
-    necessaryOnly.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null),
+    ...bannerTitleCandidates.map((c) => c.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null)),
+    ...acceptCandidates.map((c) => c.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null)),
+    ...rejectCandidates.map((c) => c.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null)),
   ]);
 
-  if (await acceptAll.isVisible().catch(() => false)) {
-    await acceptAll.click({ force: true });
-  } else if (await necessaryOnly.isVisible().catch(() => false)) {
-    await necessaryOnly.click({ force: true });
+  let clicked = false;
+  for (const candidate of acceptCandidates) {
+    if (await candidate.isVisible().catch(() => false)) {
+      await candidate.click({ force: true }).catch(() => null);
+      clicked = true;
+      break;
+    }
   }
 
-  if (await bannerTitle.isVisible().catch(() => false)) {
-    await bannerTitle.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => null);
+  if (!clicked) {
+    for (const candidate of rejectCandidates) {
+      if (await candidate.isVisible().catch(() => false)) {
+        await candidate.click({ force: true }).catch(() => null);
+        break;
+      }
+    }
+  }
+
+  for (const banner of bannerTitleCandidates) {
+    if (await banner.isVisible().catch(() => false)) {
+      await banner.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => null);
+    }
   }
 };
 

@@ -515,6 +515,12 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     const first = extractFirstImgSrc(prepared);
     if (!first) return;
     const safeHref = buildWeservProxyUrl(first) || first;
+    try {
+      const resolved = new URL(safeHref, window.location.origin);
+      if (resolved.origin !== window.location.origin) return;
+    } catch {
+      return;
+    }
     const linkId = `prefetch-stable-content-first-img-${encodeURIComponent(safeHref)}`;
     if (document.getElementById(linkId)) return;
 
@@ -529,14 +535,6 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
       link.as = "image";
       link.href = safeHref;
       link.id = linkId;
-      try {
-        const resolved = new URL(safeHref, window.location.origin);
-        if (resolved.origin !== window.location.origin) {
-          link.crossOrigin = "anonymous";
-        }
-      } catch {
-        // noop
-      }
       document.head.appendChild(link);
     };
 

@@ -266,14 +266,14 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 </View>
             ) : null}
 
-            <View style={styles.titleRow}>
+            <View style={[styles.titleRow, isMobile && styles.titleRowMobile]}>
                 <View style={styles.titleColumn}>
-                    <Text style={isMobile ? styles.headerTitleMobile : styles.headerTitle} numberOfLines={1}>
+                    <Text style={isMobile ? styles.headerTitleMobile : styles.headerTitle} numberOfLines={isMobile ? 2 : 1}>
                         {title}
                     </Text>
                 </View>
 
-                <View style={styles.titleActionsRow}>
+                <View style={[styles.titleActionsRow, isMobile && styles.titleActionsRowMobile]}>
                     {onPreview && (
                         <Pressable
                             onPress={onPreview}
