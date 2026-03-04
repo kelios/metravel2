@@ -138,12 +138,16 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginBottom: 12,
     },
     sectionCard: {
-      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
+      backgroundColor: colors.surface,
       borderRadius: 12,
       padding: 12,
-      marginBottom: 12,
+      marginBottom: 10,
       gap: 10,
-      ...DESIGN_TOKENS.shadowsNative.light,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web'
+        ? ({ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' } as any)
+        : DESIGN_TOKENS.shadowsNative.light),
     },
     dualInputRow: {
       flexDirection: 'row',
@@ -201,15 +205,18 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginBottom: 8,
     },
     sectionLabel: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '700',
-      color: colors.text,
+      color: colors.textMuted,
       marginBottom: 6,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase' as const,
     },
     sectionHint: {
       fontSize: 12,
       color: colors.textMuted,
       marginBottom: 6,
+      lineHeight: 17,
     },
     input: {
       height: 40,
@@ -273,22 +280,25 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginTop: 6,
     },
     radiusOptionButton: {
-      paddingHorizontal: 14,
-      paddingVertical: 7,
-      minHeight: 36,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      minHeight: 34,
+      borderRadius: 20,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
+      ...(Platform.OS === 'web'
+        ? ({ transition: 'background-color 0.12s ease, border-color 0.12s ease' } as any)
+        : null),
     },
     radiusOptionButtonSelected: {
       borderColor: colors.primary,
       backgroundColor: colors.primarySoft,
     },
     radiusOptionText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
     },
@@ -297,12 +307,14 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     transportTabs: {
       flexDirection: 'row',
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: colors.backgroundSecondary,
       borderRadius: 10,
-      padding: 2,
+      padding: 3,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
     },
     transportTabsDisabled: {
-      opacity: 0.5,
+      opacity: 0.45,
     },
     routeInfo: {
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
@@ -447,10 +459,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       alignItems: 'center',
       gap: 10,
       padding: 10,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: colors.border,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
     },
     stepItemDone: {
       borderColor: colors.primary,
@@ -630,8 +642,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       justifyContent: 'space-between',
     },
     accordionTitle: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 13,
+      fontWeight: '600',
       color: colors.text,
     },
     mapControlsRow: {
@@ -666,11 +678,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       justifyContent: 'space-between',
       gap: 12,
       paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingVertical: 9,
       borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.backgroundSecondary,
     },
     mapToggleRowPressed: {
       backgroundColor: colors.surfaceMuted ?? colors.backgroundSecondary,

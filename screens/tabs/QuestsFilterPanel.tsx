@@ -43,9 +43,6 @@ export interface QuestsFilterPanelProps {
     isMobile?: boolean;
 }
 
-const sx = (...args: Array<object | false | null | undefined>) =>
-    StyleSheet.flatten(args.filter(Boolean));
-
 /* ─── Filter panel content (used in both sidebar and drawer) ─── */
 
 export function QuestsFilterContent({
@@ -66,10 +63,12 @@ export function QuestsFilterContent({
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
         >
-            {/* Section: Location */}
+            {/* Section header */}
             <View style={s.sectionHeader}>
-                <Text style={s.sectionTitle}>Локация</Text>
-                <Text style={s.sectionMeta}>{citiesWithNearbyCount}</Text>
+                <Text style={s.sectionLabel}>Город</Text>
+                <View style={s.sectionCountBadge}>
+                    <Text style={s.sectionCountText}>{citiesWithNearbyCount}</Text>
+                </View>
             </View>
 
             {!dataLoaded ? (
@@ -80,16 +79,20 @@ export function QuestsFilterContent({
                 </View>
             ) : (
                 <>
-                    <TextInput
-                        value={citySearchQuery}
-                        onChangeText={onCitySearchChange}
-                        placeholder="Поиск города…"
-                        placeholderTextColor={colors.textMuted}
-                        style={s.searchInput}
-                        autoCorrect={false}
-                        autoCapitalize="none"
-                        clearButtonMode="while-editing"
-                    />
+                    {/* Search */}
+                    <View style={s.searchWrap}>
+                        <Feather name="search" size={14} color={colors.textMuted} style={s.searchIcon} />
+                        <TextInput
+                            value={citySearchQuery}
+                            onChangeText={onCitySearchChange}
+                            placeholder="Поиск…"
+                            placeholderTextColor={colors.textMuted}
+                            style={s.searchInput}
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            clearButtonMode="while-editing"
+                        />
+                    </View>
 
                     {/* Quick filter chips */}
                     <View style={s.chipsRow}>
@@ -107,7 +110,7 @@ export function QuestsFilterContent({
                         ))}
                     </View>
 
-                    {/* Desktop select */}
+                    {/* Desktop native select (hidden on mobile) */}
                     {Platform.OS === 'web' && !isMobile ? (
                         <SelectComponent
                             value={selectedCityId || ''}
@@ -120,28 +123,42 @@ export function QuestsFilterContent({
                         />
                     ) : null}
 
-                    {/* City list (vertical in panel) */}
+                    {/* City list */}
                     <View style={s.cityList}>
                         {prioritizedCities.map((item) => {
                             const active = selectedCityId === item.id;
                             const count = cityQuestCountById[item.id] || 0;
+                            const isNearby = item.id === NEARBY_ID;
                             return (
                                 <Pressable
                                     key={item.id}
                                     onPress={() => onSelectCity(item.id)}
-                                    style={sx(s.cityCard, active && s.cityCardActive)}
+                                    style={({ pressed }) => [s.cityCard, active && s.cityCardActive, pressed && s.cityCardPressed]}
                                 >
-                                    <View style={s.cityTopRow}>
-                                        <Text style={sx(s.cityName, active && s.cityNameActive)} numberOfLines={1}>
-                                            {item.id === NEARBY_ID ? 'Рядом' : item.name}
-                                        </Text>
-                                        <Text style={s.questsCount}>{count}</Text>
+                                    <View style={s.cityCardLeft}>
+                                        <View style={[s.cityIcon, active && s.cityIconActive]}>
+                                            <Feather
+                                                name={isNearby ? 'navigation' : 'map-pin'}
+                                                size={12}
+                                                color={active ? colors.primaryText : colors.textMuted}
+                                            />
+                                        </View>
+                                        <View style={s.cityTextBlock}>
+                                            <Text style={[s.cityName, active && s.cityNameActive]} numberOfLines={1}>
+                                                {isNearby ? 'Рядом' : item.name}
+                                            </Text>
+                                            {isNearby && (
+                                                <Text style={s.cityHint} numberOfLines={1}>
+                                                    {userLoc ? 'по геолокации' : 'гео отключена'}
+                                                </Text>
+                                            )}
+                                        </View>
                                     </View>
-                                    {item.id === NEARBY_ID ? (
-                                        <Text style={s.cityHint} numberOfLines={1}>
-                                            {userLoc ? 'по геолокации' : 'гео отключена'}
-                                        </Text>
-                                    ) : null}
+                                    {count > 0 && (
+                                        <View style={[s.countBadge, active && s.countBadgeActive]}>
+                                            <Text style={[s.countBadgeText, active && s.countBadgeTextActive]}>{count}</Text>
+                                        </View>
+                                    )}
                                 </Pressable>
                             );
                         })}
@@ -162,8 +179,10 @@ export function QuestsFilterContent({
             {/* Radius (only for Nearby) */}
             {selectedCityId === NEARBY_ID && (
                 <>
-                    <View style={[s.divider]} />
-                    <Text style={s.sectionTitle}>Радиус поиска</Text>
+                    <View style={s.divider} />
+                    <View style={s.sectionHeader}>
+                        <Text style={s.sectionLabel}>Радиус</Text>
+                    </View>
                     <View style={s.chipsRow}>
                         {[2, 5, 10, 15, 20].map((km) => (
                             <Chip
@@ -227,14 +246,17 @@ export function QuestsFilterDrawer({
                 >
                     {/* Drawer header */}
                     <View style={s.drawerHeader}>
-                        <Text style={s.drawerTitle}>Фильтры</Text>
+                        <View style={s.drawerTitleRow}>
+                            <Feather name="compass" size={16} color={colors.primary} />
+                            <Text style={s.drawerTitle}>Город</Text>
+                        </View>
                         <Pressable
                             onPress={onClose}
                             accessibilityRole="button"
                             accessibilityLabel="Закрыть фильтры"
                             style={s.closeBtn}
                         >
-                            <Feather name="x" size={20} color={colors.text} />
+                            <Feather name="x" size={18} color={colors.text} />
                         </Pressable>
                     </View>
                     <QuestsFilterContent {...filterProps} isMobile />
@@ -257,54 +279,126 @@ export function QuestsFilterDrawer({
 function panelStyles(colors: ThemedColors, isMobile: boolean) {
     return StyleSheet.create({
         scroll: { flex: 1 },
-        scrollContent: { paddingVertical: spacing.sm, gap: isMobile ? spacing.xs : spacing.sm },
+        scrollContent: { paddingVertical: spacing.sm, gap: spacing.sm, paddingBottom: spacing.xl },
 
         sectionHeader: {
-            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
+            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
         },
-        sectionTitle: {
-            color: colors.text, fontSize: isMobile ? typography.sizes.xs : typography.sizes.sm,
-            fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5,
+        sectionLabel: {
+            color: colors.textMuted,
+            fontSize: 10,
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
         },
-        sectionMeta: { color: colors.textMuted, fontSize: typography.sizes.xs, fontWeight: '600' },
+        sectionCountBadge: {
+            backgroundColor: colors.backgroundSecondary,
+            paddingHorizontal: 7,
+            paddingVertical: 2,
+            borderRadius: radii.pill,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+        },
+        sectionCountText: {
+            color: colors.textMuted,
+            fontSize: 10,
+            fontWeight: '700',
+        },
 
+        searchWrap: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.backgroundSecondary,
+            borderRadius: radii.sm,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            paddingHorizontal: spacing.sm,
+            height: isMobile ? 44 : 36,
+            gap: spacing.xs,
+        },
+        searchIcon: { flexShrink: 0 },
         searchInput: {
-            height: isMobile ? 40 : 38,
-            minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-            borderWidth: 1, borderColor: colors.border,
-            backgroundColor: colors.surface, borderRadius: radii.sm,
-            paddingHorizontal: spacing.sm, color: colors.text,
+            flex: 1,
+            height: '100%',
+            color: colors.text,
             fontSize: typography.sizes.sm,
+            ...Platform.select({ web: { outlineStyle: 'none' } as any }),
         },
 
         chipsRow: {
             flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs,
         },
 
-        cityList: { gap: isMobile ? 2 : spacing.xxs },
+        cityList: { gap: 2 },
         cityCard: {
-            paddingHorizontal: spacing.sm,
-            paddingVertical: isMobile ? spacing.sm : spacing.xs,
-            borderRadius: radii.sm, borderWidth: 1, borderColor: colors.border,
-            backgroundColor: colors.surface,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: spacing.xs,
+            paddingVertical: isMobile ? 10 : 7,
+            borderRadius: radii.sm,
             minHeight: isMobile ? DESIGN_TOKENS.touchTarget.minHeight : undefined,
-            justifyContent: 'center',
-            ...Platform.select({ web: { transition: 'all 0.15s ease', cursor: 'pointer' } as any }),
+            gap: spacing.xs,
+            ...Platform.select({ web: { transition: 'background-color 0.12s ease', cursor: 'pointer' } as any }),
         },
-        cityCardActive: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
-        cityTopRow: {
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs,
+        cityCardActive: { backgroundColor: colors.primarySoft },
+        cityCardPressed: { opacity: 0.75 },
+        cityCardLeft: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            flex: 1,
+            minWidth: 0,
         },
-        cityName: { color: colors.text, fontSize: typography.sizes.sm, fontWeight: '600', flexShrink: 1 },
-        cityNameActive: { color: colors.primaryText, fontWeight: '700' },
-        questsCount: {
-            color: colors.textMuted, fontSize: typography.sizes.xs, fontWeight: '600',
+        cityIcon: {
+            width: 26,
+            height: 26,
+            borderRadius: radii.sm,
             backgroundColor: colors.backgroundSecondary,
-            paddingHorizontal: spacing.xxs + 2, paddingVertical: 1,
-            borderRadius: radii.pill, overflow: 'hidden',
-            minWidth: 22, textAlign: 'center',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
         },
-        cityHint: { color: colors.textMuted, fontSize: 11, marginTop: 1 },
+        cityIconActive: {
+            backgroundColor: colors.primarySoft,
+        },
+        cityTextBlock: {
+            flex: 1,
+            minWidth: 0,
+        },
+        cityName: {
+            color: colors.text,
+            fontSize: typography.sizes.sm,
+            fontWeight: '500',
+            flexShrink: 1,
+        },
+        cityNameActive: { color: colors.primaryText, fontWeight: '700' },
+        cityHint: { color: colors.textMuted, fontSize: 10, marginTop: 1 },
+
+        countBadge: {
+            backgroundColor: colors.backgroundSecondary,
+            paddingHorizontal: 7,
+            paddingVertical: 2,
+            borderRadius: radii.pill,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            minWidth: 24,
+            alignItems: 'center',
+            flexShrink: 0,
+        },
+        countBadgeActive: {
+            backgroundColor: colors.primary,
+            borderColor: colors.primary,
+        },
+        countBadgeText: {
+            color: colors.textMuted,
+            fontSize: 10,
+            fontWeight: '700',
+            textAlign: 'center',
+        },
+        countBadgeTextActive: {
+            color: colors.textOnPrimary,
+        },
 
         divider: { height: 1, backgroundColor: colors.borderLight, marginVertical: spacing.xs },
 
@@ -319,7 +413,7 @@ function drawerStyles(colors: ThemedColors, drawerWidth: number) {
         },
         panel: {
             width: drawerWidth, backgroundColor: colors.surface,
-            borderRightWidth: 1, borderRightColor: colors.border,
+            borderRightWidth: 1, borderRightColor: colors.borderLight,
             paddingHorizontal: spacing.sm,
             paddingBottom: spacing.xl,
             ...Platform.select({
@@ -336,16 +430,27 @@ function drawerStyles(colors: ThemedColors, drawerWidth: number) {
             paddingTop: Platform.OS === 'ios' ? spacing.xxl : spacing.md,
             paddingBottom: spacing.sm,
             borderBottomWidth: 1, borderBottomColor: colors.borderLight,
+            marginBottom: spacing.xxs,
+        },
+        drawerTitleRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
         },
         drawerTitle: {
-            color: colors.text, fontSize: typography.sizes.md, fontWeight: '700',
+            color: colors.text,
+            fontSize: typography.sizes.md,
+            fontWeight: '800',
+            letterSpacing: -0.3,
         },
         closeBtn: {
             width: DESIGN_TOKENS.touchTarget.minWidth,
             height: DESIGN_TOKENS.touchTarget.minHeight,
-            borderRadius: radii.sm,
+            borderRadius: radii.pill,
             alignItems: 'center', justifyContent: 'center',
             backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
         },
     });
 }

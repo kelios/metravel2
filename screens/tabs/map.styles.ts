@@ -7,7 +7,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 48; // 384px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 42; // 336px
 const PANEL_GAP = METRICS.spacing.m; // 16px
-const TRANSITION_MS = 180;
+const TRANSITION_MS = 200;
 const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
 
 export const getStyles = (
@@ -132,12 +132,12 @@ export const getStyles = (
         flexShrink: 0,
         ...(Platform.OS === 'web'
           ? ({
-              boxShadow: isMobile ? themedColors.boxShadows.heavy : 'none',
-              borderTopLeftRadius: isMobile ? 24 : 0,
-              borderBottomLeftRadius: isMobile ? 0 : 0,
-              borderTopRightRadius: isMobile ? 24 : 0,
-              borderLeftWidth: isMobile ? 0 : StyleSheet.hairlineWidth,
-              borderLeftColor: isMobile ? undefined : themedColors.border,
+              boxShadow: isMobile
+                ? themedColors.boxShadows.heavy
+                : '-1px 0 0 rgba(0,0,0,0.05), -4px 0 16px rgba(0,0,0,0.04)',
+              borderTopLeftRadius: isMobile ? 20 : 0,
+              borderTopRightRadius: isMobile ? 20 : 0,
+              borderLeftWidth: 0,
             } as any)
           : Platform.OS === 'ios'
           ? shadowHeavy
@@ -200,56 +200,64 @@ export const getStyles = (
         position: 'absolute',
         top: 8,
         left: '50%',
-        marginLeft: -20,
-        width: 40,
+        marginLeft: -18,
+        width: 36,
         height: 4,
-        backgroundColor: themedColors.border,
+        backgroundColor: themedColors.borderLight,
         borderRadius: 2,
-        opacity: 0.6,
+        opacity: 0.8,
       },
       tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingTop: isMobile ? Math.max(14, insetTop + 4) : 10,
         paddingBottom: isMobile ? 10 : 10,
-        paddingHorizontal: isMobile ? 14 : 10,
+        paddingHorizontal: isMobile ? 14 : 12,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: themedColors.border,
-        columnGap: isMobile ? 6 : 8,
+        borderBottomColor: themedColors.borderLight,
+        columnGap: 8,
         minHeight: isMobile ? 54 : undefined,
+        ...(Platform.OS === 'web'
+          ? ({ boxShadow: '0 1px 0 rgba(0,0,0,0.05)' } as any)
+          : null),
       },
       tabsSegment: {
         flexDirection: 'row',
-        backgroundColor: themedColors.surfaceLight,
-        borderRadius: 12,
+        backgroundColor: themedColors.backgroundSecondary,
+        borderRadius: 10,
         padding: 3,
         columnGap: 2,
         alignSelf: isMobile ? 'flex-start' : 'stretch',
         flex: isMobile ? 0 : 1,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
       },
       tab: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: isMobile ? 8 : 8,
-        paddingHorizontal: isMobile ? 14 : 10,
-        borderRadius: 10,
-        gap: isMobile ? 0 : 8,
+        paddingVertical: 7,
+        paddingHorizontal: isMobile ? 14 : 12,
+        borderRadius: 8,
+        gap: isMobile ? 0 : 6,
         minWidth: isMobile ? 48 : undefined,
-        minHeight: isMobile ? 40 : undefined,
+        minHeight: isMobile ? 36 : undefined,
       },
       tabActive: {
         backgroundColor: themedColors.primary,
+        ...(Platform.OS === 'web'
+          ? ({ boxShadow: `0 1px 6px ${themedColors.primary}30` } as any)
+          : null),
       },
       tabPressed: {
-        opacity: 0.88,
+        opacity: 0.78,
       },
       tabIconBubble: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.surfaceLight,
@@ -258,12 +266,13 @@ export const getStyles = (
         backgroundColor: themedColors.primaryLight,
       },
       tabText: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '600',
-        color: themedColors.text,
+        color: themedColors.textMuted,
+        letterSpacing: 0.1,
       },
       tabTextActive: {
-        color: themedColors.textInverse,
+        color: themedColors.textOnPrimary,
       },
       panelContent: {
         flex: 1,
@@ -275,11 +284,16 @@ export const getStyles = (
       resetButton: {
         width: 32,
         height: 32,
-        borderRadius: 8,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.surfaceLight,
-        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+        backgroundColor: themedColors.backgroundSecondary,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
+        ...(Platform.OS === 'web' ? ({
+          cursor: 'pointer',
+          transition: 'background-color 0.15s ease',
+        } as any) : null),
       },
       resetButtonText: {
         fontSize: 12,
@@ -289,11 +303,16 @@ export const getStyles = (
       closePanelButton: {
         width: 32,
         height: 32,
-        borderRadius: 8,
-        backgroundColor: themedColors.surfaceLight,
+        borderRadius: 9,
+        backgroundColor: themedColors.backgroundSecondary,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
         alignItems: 'center',
         justifyContent: 'center',
-        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+        ...(Platform.OS === 'web' ? ({
+          cursor: 'pointer',
+          transition: 'background-color 0.15s ease',
+        } as any) : null),
       },
       travelsListContainer: {
         flex: 1,
@@ -352,15 +371,15 @@ export const getStyles = (
         position: 'absolute',
         right: 16,
         bottom: 16,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         backgroundColor: themedColors.primary,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1001,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: themedColors.boxShadows.medium } as any)
+          ? ({ boxShadow: `0 4px 16px ${themedColors.primary}50, 0 1px 4px rgba(0,0,0,0.08)` } as any)
           : Platform.OS === 'ios'
           ? shadowMedium
           : { elevation: shadowMedium.elevation }),
@@ -383,25 +402,28 @@ export const getStyles = (
         color: themedColors.textMuted,
       },
       badge: {
-        backgroundColor: themedColors.surfaceLight,
+        backgroundColor: themedColors.backgroundSecondary,
         borderRadius: 10,
         minWidth: 20,
-        height: 20,
-        paddingHorizontal: 6,
+        height: 18,
+        paddingHorizontal: 5,
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 6,
+        marginLeft: 4,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
       },
       badgeActive: {
         backgroundColor: 'rgba(255, 255, 255, 0.25)',
+        borderColor: 'transparent',
       },
       badgeText: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: '700',
-        color: themedColors.text,
+        color: themedColors.textMuted,
       },
       badgeTextActive: {
-        color: themedColors.textInverse,
+        color: themedColors.textOnPrimary,
       },
       collapsedPanel: {
         width: 44,
@@ -411,22 +433,27 @@ export const getStyles = (
         gap: 10,
         backgroundColor: themedColors.surface,
         borderLeftWidth: StyleSheet.hairlineWidth,
-        borderLeftColor: themedColors.border,
+        borderLeftColor: themedColors.borderLight,
+        ...(Platform.OS === 'web'
+          ? ({ boxShadow: '-1px 0 0 rgba(0,0,0,0.05)' } as any)
+          : null),
       },
       collapseToggle: {
         width: 32,
         height: 32,
-        borderRadius: 10,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.surfaceLight,
+        backgroundColor: themedColors.backgroundSecondary,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
         ...(Platform.OS === 'web'
-          ? ({ cursor: 'pointer' } as any)
+          ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease' } as any)
           : null),
       },
       collapseToggleInPanel: {
         position: 'absolute',
-        top: 10,
+        top: 12,
         left: -14,
         width: 28,
         height: 28,
@@ -435,39 +462,40 @@ export const getStyles = (
         justifyContent: 'center',
         backgroundColor: themedColors.surface,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.border,
+        borderColor: themedColors.borderLight,
         zIndex: 1002,
         ...(Platform.OS === 'web'
           ? ({
               cursor: 'pointer',
-              boxShadow: themedColors.boxShadows.light,
+              boxShadow: '0 1px 6px rgba(0,0,0,0.10)',
+              transition: 'background-color 0.15s ease',
             } as any)
           : null),
       },
       collapsedIconBtn: {
         width: 32,
         height: 32,
-        borderRadius: 10,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
         ...(Platform.OS === 'web'
-          ? ({ cursor: 'pointer' } as any)
+          ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease' } as any)
           : null),
       },
       collapsedBadge: {
         position: 'absolute',
-        top: -4,
-        right: -4,
+        top: -3,
+        right: -3,
         backgroundColor: themedColors.primary,
-        borderRadius: 8,
-        minWidth: 16,
-        height: 16,
-        paddingHorizontal: 4,
+        borderRadius: 7,
+        minWidth: 14,
+        height: 14,
+        paddingHorizontal: 3,
         alignItems: 'center',
         justifyContent: 'center',
       },
       collapsedBadgeText: {
-        fontSize: 9,
+        fontSize: 8,
         fontWeight: '700',
         color: themedColors.textOnPrimary,
       },
@@ -484,7 +512,7 @@ export const getStyles = (
       },
       geoBanner: {
         position: 'absolute',
-        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT + 12 : 16,
+        bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT + 16 : 20,
         left: 16,
         right: 16,
         flexDirection: 'row',
@@ -493,26 +521,31 @@ export const getStyles = (
         paddingHorizontal: 14,
         paddingVertical: 10,
         backgroundColor: themedColors.surface,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.warningLight,
+        borderColor: themedColors.warningSoft,
         zIndex: 1010,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: themedColors.boxShadows.medium } as any)
+          ? ({
+              boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+            } as any)
           : themedColors.shadows.medium),
       },
       geoBannerText: {
         flex: 1,
         fontSize: 13,
+        fontWeight: '500',
         color: themedColors.text,
       },
       geoBannerClose: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.surfaceLight,
+        backgroundColor: themedColors.backgroundSecondary,
         ...(Platform.OS === 'web'
           ? ({ cursor: 'pointer' } as any)
           : null),

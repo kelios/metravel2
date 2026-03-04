@@ -38,7 +38,7 @@ describe('Preload URL synchronization', () => {
     expect(result.src).toBeTruthy();
   });
 
-  test('optimizeImageUrl uses Math.min(devicePixelRatio, 2) by default', () => {
+  test('optimizeImageUrl returns a URL for a responsive candidate width', () => {
     const testUrl = 'https://example.com/image.jpg';
     const result = optimizeImageUrl(testUrl, {
       width: 860,
@@ -58,8 +58,7 @@ describe('Preload URL synchronization', () => {
     const quality = 65;
 
     // Simulate preload script logic
-    const dpr = Math.min(mockWindow.devicePixelRatio, 2);
-    const preloadWidth = Math.round(targetWidth * dpr);
+    const preloadWidth = targetWidth;
 
     // Component logic
     const componentResult = buildResponsiveImageProps(testUrl, {
@@ -72,7 +71,7 @@ describe('Preload URL synchronization', () => {
 
     // In Jest we may intentionally skip CDN transforms for unknown hosts.
     // Verify that the computed preload width is consistent and src is present.
-    expect(preloadWidth).toBe(1720);
+    expect(preloadWidth).toBe(860);
     expect(componentResult.src).toBeTruthy();
   });
 
@@ -82,8 +81,7 @@ describe('Preload URL synchronization', () => {
     const quality = 60;
 
     // Simulate preload script logic
-    const dpr = Math.min(mockWindow.devicePixelRatio, 2);
-    const preloadWidth = Math.round(targetWidth * dpr);
+    const preloadWidth = targetWidth;
 
     // Component logic
     const componentResult = buildResponsiveImageProps(testUrl, {
@@ -96,7 +94,7 @@ describe('Preload URL synchronization', () => {
 
     // In Jest we may intentionally skip CDN transforms for unknown hosts.
     // Verify that the computed preload width is consistent and src is present.
-    expect(preloadWidth).toBe(800);
+    expect(preloadWidth).toBe(400);
     expect(componentResult.src).toBeTruthy();
   });
 

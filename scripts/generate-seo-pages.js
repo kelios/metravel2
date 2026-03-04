@@ -37,6 +37,15 @@ const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
+const IMAGE_OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
+
+const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE).origin;
+  } catch {
+    return SITE_URL;
+  }
+})();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -93,6 +102,66 @@ function toAbsoluteUrl(input) {
   if (value.startsWith('http://') || value.startsWith('https://')) return value;
   if (value.startsWith('/')) return `${SITE_URL}${value}`;
   return value;
+}
+
+function isPrivateOrLocalHost(hostname) {
+  const host = String(hostname || '').trim().toLowerCase();
+  if (!host) return false;
+  if (host === 'localhost' || host === '127.0.0.1') return true;
+  if (/^10\./.test(host)) return true;
+  if (/^192\.168\./.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return true;
+  return false;
+}
+
+function buildVersionedTravelImageUrl(rawUrl, updatedAt, id) {
+  const absolute = toAbsoluteUrl(rawUrl);
+  if (!absolute) return '';
+  try {
+    const parsed = new URL(absolute);
+    if (parsed.protocol === 'http:' && !isPrivateOrLocalHost(parsed.hostname)) {
+      parsed.protocol = 'https:';
+    }
+    if (updatedAt) {
+      const ts = Date.parse(updatedAt);
+      if (Number.isFinite(ts)) {
+        parsed.searchParams.set('v', String(ts));
+      }
+    } else if (id != null && id !== '') {
+      parsed.searchParams.set('v', String(id));
+    }
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
+  const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
+  if (!versioned) return '';
+
+  try {
+    const parsed = new URL(versioned);
+    if (parsed.origin !== API_ORIGIN) {
+      return parsed.toString();
+    }
+
+    IMAGE_OPTIMIZATION_QUERY_PARAMS.forEach((key) => {
+      try {
+        parsed.searchParams.delete(key);
+      } catch {
+        // noop
+      }
+    });
+
+    if (width) parsed.searchParams.set('w', String(Math.round(width)));
+    if (quality) parsed.searchParams.set('q', String(Math.round(quality)));
+    parsed.searchParams.set('fit', 'contain');
+
+    return parsed.toString();
+  } catch {
+    return versioned;
+  }
 }
 
 function buildSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
@@ -169,6 +238,71 @@ function pickTravelSeoImage(travel, detail) {
   if (upgradedSmall && !upgradedSmall.includes('thumb_200') && !isBareMediaEndpointUrl(upgradedSmall)) return upgradedSmall;
 
   return OG_IMAGE;
+}
+
+function pickTravelHeroImageSource(travel, detail) {
+  const thumbUrl = String(travel?.travel_image_thumb_url || travel?.travelImageThumbUrl || '').trim();
+  if (thumbUrl) {
+    return {
+      url: thumbUrl,
+      updatedAt: travel?.updated_at || travel?.updatedAt || null,
+      id: travel?.id ?? null,
+    };
+  }
+
+  const galleryFirst = detail?.gallery?.[0];
+  if (galleryFirst) {
+    const galleryUrl = typeof galleryFirst === 'string' ? galleryFirst : galleryFirst.url;
+    const galleryUpdatedAt = typeof galleryFirst === 'string' ? null : galleryFirst.updated_at;
+    const galleryId = typeof galleryFirst === 'string' ? null : galleryFirst.id;
+    if (galleryUrl) {
+      return { url: galleryUrl, updatedAt: galleryUpdatedAt, id: galleryId };
+    }
+  }
+
+  return null;
+}
+
+function buildTravelHeroPreloadData(travel, detail) {
+  const source = pickTravelHeroImageSource(travel, detail);
+  if (!source?.url) return null;
+
+  const candidates = [
+    { width: 320, quality: 35 },
+    { width: 400, quality: 35 },
+    { width: 480, quality: 45 },
+    { width: 720, quality: 45 },
+  ];
+
+  const srcSetParts = [];
+  const seen = new Set();
+  for (const candidate of candidates) {
+    const optimized = buildOptimizedTravelImageUrl(source.url, {
+      width: candidate.width,
+      quality: candidate.quality,
+      updatedAt: source.updatedAt,
+      id: source.id,
+    });
+    if (!optimized || seen.has(optimized)) continue;
+    seen.add(optimized);
+    srcSetParts.push(`${optimized} ${candidate.width}w`);
+  }
+
+  if (srcSetParts.length === 0) return null;
+
+  const href = buildOptimizedTravelImageUrl(source.url, {
+    width: 720,
+    quality: 45,
+    updatedAt: source.updatedAt,
+    id: source.id,
+  });
+  if (!href) return null;
+
+  return {
+    href,
+    srcSet: srcSetParts.join(', '),
+    sizes: '(max-width: 767px) 100vw, (max-width: 1024px) 92vw, 720px',
+  };
 }
 
 /** Escape a string for safe insertion into HTML attribute values. */
@@ -398,6 +532,17 @@ function injectBreadcrumbJsonLd(baseHtml, breadcrumb) {
   const payload = JSON.stringify(breadcrumb).replace(/<\/script/gi, '<\\/script');
   const scriptTag = `<script type="application/ld+json">${payload}</script>`;
   return cleanedHtml.replace('</head>', `${scriptTag}\n</head>`);
+}
+
+function injectTravelHeroPreload(baseHtml, preloadData) {
+  if (!preloadData?.href) return baseHtml;
+
+  const preloadTag = `<link data-travel-hero-preload="true" rel="preload" as="image" href="${escapeAttr(preloadData.href)}" imagesrcset="${escapeAttr(preloadData.srcSet || '')}" imagesizes="${escapeAttr(preloadData.sizes || '')}" fetchpriority="high" crossorigin="anonymous"/>`;
+  return replaceOrInsert(
+    baseHtml,
+    /<link[^>]*data-travel-hero-preload="true"[^>]*\/?>/i,
+    preloadTag
+  );
 }
 
 /** Write file, creating directories as needed. */
@@ -670,11 +815,14 @@ async function main() {
         ],
       });
 
+      const travelHeroPreload = buildTravelHeroPreloadData(travel, detail);
+      const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithBreadcrumb, travelHeroPreload);
+
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
       // it conflicts with creating `${routeKey}/index.html` on POSIX filesystems.
-      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), htmlWithBreadcrumb);
-      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), htmlWithBreadcrumb);
+      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), htmlWithTravelPreload);
+      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), htmlWithTravelPreload);
 
       generated++;
     }
@@ -799,6 +947,9 @@ if (typeof module !== 'undefined' && module.exports) {
     upgradeThumbToDetailUrl,
     buildTravelSeoDescription,
     pickTravelSeoImage,
+    buildOptimizedTravelImageUrl,
+    buildTravelHeroPreloadData,
+    injectTravelHeroPreload,
     injectBreadcrumbJsonLd,
   };
 }

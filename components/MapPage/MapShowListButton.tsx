@@ -2,7 +2,7 @@
  * MapShowListButton — плавающая pill-кнопка «Показать N мест списком» поверх карты
  */
 import React, { useMemo } from 'react';
-import { Platform, StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -25,21 +25,25 @@ export const MapShowListButton: React.FC<MapShowListButtonProps> = React.memo(({
 
   if (!visible || count <= 0) return null;
 
-  const label = count === 1
-    ? 'Показать 1 место'
+  const shortLabel = count === 1
+    ? '1 место'
     : count < 5
-    ? `Показать ${count} места`
-    : `Показать ${count} мест`;
+    ? `${count} места`
+    : `${count} мест`;
+  const ariaLabel = `Показать ${shortLabel} списком`;
 
   return (
     <CardActionPressable
-      accessibilityLabel={label}
+      accessibilityLabel={ariaLabel}
       onPress={onPress}
-      title={label}
+      title={ariaLabel}
       style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
     >
-      <Feather name="list" size={14} color={colors.primary} />
-      <Text style={styles.text}>{label}</Text>
+      <Feather name="list" size={13} color={colors.textOnPrimary} />
+      <Text style={styles.text}>Список</Text>
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{count > 999 ? '999+' : shortLabel}</Text>
+      </View>
     </CardActionPressable>
   );
 });
@@ -48,34 +52,49 @@ const getStyles = (colors: ThemedColors, bottomOffset: number = 0) =>
   StyleSheet.create({
     button: {
       position: 'absolute',
-      bottom: 52 + bottomOffset,
+      bottom: 60 + bottomOffset,
       alignSelf: 'center',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      paddingHorizontal: 16,
+      paddingHorizontal: 18,
       paddingVertical: 10,
-      borderRadius: 20,
-      backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
+      borderRadius: 999,
+      backgroundColor: colors.primary,
+      borderWidth: 0,
       zIndex: 6,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            boxShadow: `0 4px 20px ${colors.primary}55, 0 1px 4px rgba(0,0,0,0.08)`,
             cursor: 'pointer',
+            transition: 'opacity 0.12s ease, box-shadow 0.12s ease',
           } as any)
-        : colors.shadows.medium),
+        : {
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 14,
+            elevation: 8,
+          }),
     },
     buttonPressed: {
-      opacity: 0.88,
-      transform: [{ scale: 0.97 }],
+      opacity: 0.82,
     },
     text: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.text,
+      color: colors.textOnPrimary,
+      letterSpacing: 0.1,
+    },
+    badge: {
+      backgroundColor: 'rgba(255,255,255,0.20)',
+      borderRadius: 999,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    badgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.textOnPrimary,
     },
   });

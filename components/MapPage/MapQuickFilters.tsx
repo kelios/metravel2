@@ -96,9 +96,9 @@ const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
       position: 'absolute',
-      top: 10,
-      left: 10,
-      right: 10,
+      top: 14,
+      left: 14,
+      right: 14,
       zIndex: 5,
     },
     scroll: {
@@ -115,19 +115,19 @@ const getStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
+      paddingHorizontal: 13,
+      paddingVertical: 7,
       borderRadius: 20,
       backgroundColor: colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.05)',
             cursor: 'pointer',
-            transition: 'transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+            transition: 'background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease',
           } as any)
         : colors.shadows.light),
     },
@@ -136,23 +136,18 @@ const getStyles = (colors: ThemedColors) =>
       borderColor: colors.primary,
       ...(Platform.OS === 'web'
         ? ({
-            transform: 'scale(1.05)',
-            boxShadow: `0 2px 8px ${colors.primary}44`,
+            boxShadow: `0 2px 12px ${colors.primary}45`,
           } as any)
         : null),
     },
     chipPressed: {
-      opacity: 0.82,
-      ...(Platform.OS === 'web'
-        ? ({
-            transform: 'scale(0.95)',
-          } as any)
-        : null),
+      opacity: 0.75,
     },
     chipText: {
       fontSize: 12,
       fontWeight: '600',
       color: colors.text,
+      letterSpacing: 0.15,
     },
     chipTextActive: {
       color: colors.textOnPrimary,

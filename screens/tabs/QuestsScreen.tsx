@@ -1,8 +1,9 @@
 // src/screens/tabs/QuestsScreen.tsx
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+// Redesigned: Modern minimalist UI with horizontal city filters
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, Pressable, Platform,
-    Image, ScrollView,
+    Image, ScrollView, TextInput,
 } from 'react-native';
 import { Link } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -19,8 +20,6 @@ import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
-
-import { QuestsFilterContent, QuestsFilterDrawer } from '@/screens/tabs/QuestsFilterPanel';
 
 // ---- типы данных ----
 type City = { id: string; name: string; country?: string; lat?: number; lng?: number };
@@ -42,7 +41,6 @@ const DEFAULT_NEARBY_RADIUS_KM = 15;
 const NEARBY_ID = '__nearby__';
 
 const { spacing, radii, typography } = DESIGN_TOKENS;
-const SIDE_PANEL_WIDTH = 300;
 
 const DIFFICULTY_LABELS: Record<string, string> = {
     easy: 'Лёгкий',
@@ -50,211 +48,380 @@ const DIFFICULTY_LABELS: Record<string, string> = {
     hard: 'Сложный',
 };
 
-const sx = (...args: Array<object | false | null | undefined>) =>
-    StyleSheet.flatten(args.filter(Boolean));
-
-// ───────────── Styles ─────────────
+// ───────────── Styles (Redesigned) ─────────────
 
 function getStyles(colors: ThemedColors, screenWidth: number) {
-    const isSmall = screenWidth < 380;
+    const isMobileW = screenWidth < 768;
+    const isTablet = screenWidth >= 768 && screenWidth < 1024;
+    
     return StyleSheet.create({
-        page: { flex: 1, backgroundColor: colors.background },
+        page: { 
+            flex: 1, 
+            backgroundColor: colors.background,
+        },
 
-        /* ---- Hero (full-width top bar) ---- */
-        heroWrap: { width: '100%', maxWidth: 1400, alignSelf: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xs },
-        heroWrapMobile: { paddingHorizontal: spacing.xs, paddingTop: spacing.xs },
-        hero: {
-            flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-            backgroundColor: colors.primarySoft, borderRadius: radii.lg, padding: spacing.lg,
-            borderWidth: 1, borderColor: colors.primaryLight,
-            ...Platform.select({ web: { boxShadow: (colors.boxShadows as any)?.light } as any }),
+        /* ---- Hero (Minimalist) ---- */
+        heroSection: {
+            width: '100%',
+            paddingTop: isMobileW ? spacing.lg : spacing.xl,
+            paddingBottom: isMobileW ? spacing.md : spacing.lg,
+            paddingHorizontal: isMobileW ? spacing.md : spacing.xl,
+            backgroundColor: colors.background,
         },
-        heroMobile: {
-            flexDirection: 'column', alignItems: 'stretch',
-            padding: spacing.sm, gap: spacing.sm, borderRadius: radii.md,
+        heroInner: {
+            maxWidth: 1200,
+            alignSelf: 'center',
+            width: '100%',
         },
-        heroTopRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-        heroIconWrap: {
-            width: 48, height: 48, borderRadius: radii.sm, backgroundColor: colors.surface,
-            alignItems: 'center', justifyContent: 'center',
-            ...Platform.select({ web: { boxShadow: (colors.boxShadows as any)?.light } as any }),
+        heroTitleRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.md,
+            flexWrap: 'wrap',
         },
-        heroIconWrapMobile: { width: 36, height: 36, borderRadius: 8 },
-        title: { color: colors.text, fontSize: typography.sizes.xl, fontWeight: '700', letterSpacing: -0.3 },
-        titleMobile: { fontSize: isSmall ? typography.sizes.md : typography.sizes.lg },
-        subtitle: { color: colors.textMuted, fontSize: typography.sizes.sm, marginTop: 2, lineHeight: 20 },
-        subtitleMobile: { fontSize: typography.sizes.xs, marginTop: 1 },
-        heroStats: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm, flexWrap: 'wrap' },
-        heroStatsMobile: { marginTop: spacing.xs, gap: spacing.xxs },
-        heroStatCard: {
-            minWidth: 92,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xs,
-            borderRadius: radii.sm,
-            borderWidth: 1,
-            borderColor: colors.primaryLight,
-            backgroundColor: colors.surface,
+        heroTitleBlock: {
+            flex: 1,
+            minWidth: 200,
         },
-        heroStatLabel: {
-            color: colors.textMuted,
-            fontSize: 11,
-            fontWeight: '600',
-            marginBottom: 1,
-        },
-        heroStatValue: {
+        title: {
             color: colors.text,
-            fontSize: typography.sizes.sm,
+            fontSize: isMobileW ? 28 : 36,
             fontWeight: '700',
-            flexShrink: 1,
+            letterSpacing: -0.5,
+            lineHeight: isMobileW ? 34 : 44,
         },
-        heroBtns: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center' },
-        heroBtnsMobile: { alignSelf: 'stretch' },
+        subtitle: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.md,
+            marginTop: spacing.xs,
+            lineHeight: 24,
+            maxWidth: 480,
+        },
+        heroActions: {
+            flexDirection: 'row',
+            gap: spacing.sm,
+            alignItems: 'center',
+        },
         actionBtn: {
-            flexDirection: 'row', gap: spacing.xs, backgroundColor: colors.primary,
-            paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-            borderRadius: radii.sm, minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-            alignItems: 'center', justifyContent: 'center',
-        },
-        actionBtnMobile: {
-            flex: 1, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-            minHeight: 40,
+            flexDirection: 'row',
+            gap: spacing.xs,
+            backgroundColor: colors.primary,
+            paddingHorizontal: spacing.lg,
+            paddingVertical: spacing.sm,
+            borderRadius: radii.lg,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+            ...Platform.select({
+                web: {
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer',
+                } as any,
+            }),
         },
         actionBtnSecondary: {
-            backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
         },
-        actionBtnTxt: { color: colors.textOnPrimary, fontWeight: '700', fontSize: typography.sizes.sm },
-        actionBtnTxtSecondary: { color: colors.text },
+        actionBtnText: {
+            color: colors.textOnPrimary,
+            fontWeight: '600',
+            fontSize: typography.sizes.sm,
+        },
+        actionBtnTextSecondary: {
+            color: colors.text,
+        },
 
-        contentWrap: {
+        /* ---- Filters Bar (Horizontal) ---- */
+        filtersSection: {
             width: '100%',
-            maxWidth: 1400,
+            backgroundColor: colors.background,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.borderLight,
+            ...Platform.select({
+                web: {
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 100,
+                } as any,
+            }),
+        },
+        filtersInner: {
+            maxWidth: 1200,
             alignSelf: 'center',
-            paddingHorizontal: spacing.md,
+            width: '100%',
+            paddingHorizontal: isMobileW ? spacing.md : spacing.xl,
+            paddingVertical: spacing.sm,
+        },
+        filtersRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+        },
+        searchWrap: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: colors.backgroundSecondary,
+            borderRadius: radii.lg,
+            paddingHorizontal: spacing.sm,
+            height: 40,
+            minWidth: isMobileW ? 120 : 180,
+            maxWidth: isMobileW ? 160 : 220,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+        },
+        searchInput: {
+            flex: 1,
+            height: '100%',
+            color: colors.text,
+            fontSize: typography.sizes.sm,
+            marginLeft: spacing.xs,
+            ...Platform.select({ web: { outlineStyle: 'none' } as any }),
+        },
+        cityChipsScroll: {
             flex: 1,
         },
-        contentWrapMobile: { paddingHorizontal: spacing.xs },
-
-        /* ---- Layout: sidebar + main ---- */
-        contentRow: { flex: 1, flexDirection: 'row' },
-        contentRowMobile: { flexDirection: 'column' },
-
-        sidePanel: {
-            width: SIDE_PANEL_WIDTH, borderRightWidth: 1, borderRightColor: colors.border,
-            paddingHorizontal: spacing.md, backgroundColor: colors.surface,
+        cityChipsContent: {
+            flexDirection: 'row',
+            gap: spacing.xs,
+            paddingRight: spacing.md,
         },
-
-        mainContent: { flex: 1 },
-        mainScroll: { flex: 1 },
-        mainScrollContent: { flexGrow: 1, padding: spacing.md, paddingBottom: spacing.xxxl },
-        mainScrollContentMobile: { padding: spacing.xs, paddingBottom: spacing.xxxl + spacing.lg },
-
-        /* ---- Section headers ---- */
-        sectionHeader: {
-            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-            marginBottom: spacing.sm, paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xs,
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderRadius: radii.md,
+        cityChip: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xxs,
             backgroundColor: colors.surface,
-        },
-        sectionTitle: { color: colors.text, fontSize: typography.sizes.md, fontWeight: '700', flexShrink: 1 },
-        sectionTitleMobile: { fontSize: typography.sizes.sm },
-        sectionMeta: { color: colors.textMuted, fontSize: typography.sizes.xs, fontWeight: '600', flexShrink: 0 },
-
-        /* ---- Quests grid ---- */
-        questsContainer: { gap: spacing.md },
-        questsRow: { flexDirection: 'row', gap: spacing.md, flexWrap: 'nowrap', alignItems: 'stretch', width: '100%' },
-        questsRowMobile: { gap: spacing.sm },
-
-        /* ---- Quest card ---- */
-        questCard: {
-            flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0,
-            borderRadius: radii.lg, overflow: 'hidden',
-            borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
-            alignSelf: 'stretch',
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
             ...Platform.select({
-                web: { boxShadow: (colors.boxShadows as any)?.card, transition: 'box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease' } as any,
+                web: {
+                    transition: 'all 0.15s ease',
+                    cursor: 'pointer',
+                } as any,
+            }),
+        },
+        cityChipActive: {
+            backgroundColor: colors.primary,
+            borderColor: colors.primary,
+        },
+        cityChipText: {
+            color: colors.text,
+            fontSize: typography.sizes.sm,
+            fontWeight: '500',
+        },
+        cityChipTextActive: {
+            color: colors.textOnPrimary,
+        },
+        cityChipCount: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.xs,
+            fontWeight: '600',
+        },
+        cityChipCountActive: {
+            color: colors.textOnPrimary,
+            opacity: 0.8,
+        },
+
+        /* ---- Main Content ---- */
+        contentSection: {
+            flex: 1,
+            width: '100%',
+        },
+        contentInner: {
+            maxWidth: 1200,
+            alignSelf: 'center',
+            width: '100%',
+            paddingHorizontal: isMobileW ? spacing.md : spacing.xl,
+            paddingTop: spacing.lg,
+            paddingBottom: spacing.xxxl,
+        },
+
+        /* ---- Section Header ---- */
+        sectionHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: spacing.lg,
+        },
+        sectionTitle: {
+            color: colors.text,
+            fontSize: typography.sizes.lg,
+            fontWeight: '600',
+            letterSpacing: -0.3,
+        },
+        sectionCount: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.sm,
+            fontWeight: '500',
+        },
+
+        /* ---- Quests Grid ---- */
+        questsGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: isMobileW ? spacing.md : spacing.lg,
+        },
+
+        /* ---- Quest Card (Clean Design) ---- */
+        questCard: {
+            width: isMobileW ? '100%' : isTablet ? 'calc(50% - 12px)' : 'calc(33.333% - 16px)',
+            borderRadius: radii.lg,
+            overflow: 'hidden',
+            backgroundColor: colors.surface,
+            ...Platform.select({
+                web: {
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer',
+                } as any,
                 android: { elevation: 2 },
                 default: {},
             }),
         },
         questCardHover: {
-            borderColor: colors.primaryLight,
-            ...Platform.select({ web: { boxShadow: (colors.boxShadows as any)?.hover, transform: 'translateY(-2px)' } as any }),
+            ...Platform.select({
+                web: {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    transform: 'translateY(-2px)',
+                } as any,
+            }),
         },
         questCardPressed: {
-            ...Platform.select({ web: { transform: 'translateY(0px)' } as any }),
+            ...Platform.select({
+                web: {
+                    transform: 'scale(0.98)',
+                } as any,
+            }),
         },
-        questCardMobile: { minWidth: '100%', maxWidth: '100%', borderRadius: radii.md },
-
-        coverWrap: { width: '100%', aspectRatio: 16 / 9, position: 'relative', backgroundColor: colors.surfaceMuted },
-        coverWrapMobile: { aspectRatio: isSmall ? 4 / 3 : 16 / 9 },
-
-        questCover: { width: '100%', height: '100%' },
-        coverFallback: { flex: 1, backgroundColor: colors.backgroundSecondary },
-        coverOverlay: {
-            position: 'absolute', bottom: 0, left: 0, right: 0,
+        coverWrap: {
+            width: '100%',
+            aspectRatio: 16 / 10,
+            position: 'relative',
+            backgroundColor: colors.backgroundTertiary,
+        },
+        questCover: {
+            width: '100%',
+            height: '100%',
+        },
+        coverFallback: {
+            flex: 1,
+            backgroundColor: colors.backgroundSecondary,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        coverGradient: {
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '60%',
+            ...Platform.select({
+                web: {
+                    backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)',
+                } as any,
+                default: { backgroundColor: 'transparent' },
+            }),
+        },
+        difficultyBadge: {
+            position: 'absolute',
+            top: spacing.sm,
+            left: spacing.sm,
             paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xs,
-            backgroundColor: colors.overlay ?? 'rgba(0,0,0,0.45)',
+            paddingVertical: spacing.xxs,
+            borderRadius: radii.sm,
         },
-        coverOverlayMobile: { padding: spacing.sm },
-        questTitle: { color: colors.text, fontSize: typography.sizes.md, fontWeight: '700', marginBottom: spacing.xxs, lineHeight: 22 },
-        questTitleMobile: { fontSize: typography.sizes.sm, lineHeight: 20, marginBottom: 2 },
-        questBody: {
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
-            gap: spacing.xxs,
-            justifyContent: 'flex-start',
+        difficultyBadgeEasy: { backgroundColor: 'rgba(34,197,94,0.9)' },
+        difficultyBadgeMedium: { backgroundColor: 'rgba(245,158,11,0.9)' },
+        difficultyBadgeHard: { backgroundColor: 'rgba(239,68,68,0.9)' },
+        difficultyBadgeDefault: { backgroundColor: 'rgba(0,0,0,0.5)' },
+        difficultyText: {
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: 0.3,
         },
-        questBodyMobile: { paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
-        questMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-        questMetaRowMobile: { gap: spacing.xs },
-        metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
-        metaText: { color: colors.textOnDark, fontSize: typography.sizes.xs, fontWeight: '600' },
-        metaTextAlt: { color: colors.textMuted, fontSize: typography.sizes.xs, fontWeight: '600' },
-        metaTextMobile: { fontSize: 11 },
-        questFooter: {
+        questCardBody: {
+            padding: spacing.md,
+        },
+        questTitle: {
+            color: colors.text,
+            fontSize: typography.sizes.md,
+            fontWeight: '600',
+            lineHeight: 22,
+            marginBottom: spacing.xs,
+        },
+        questMeta: {
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: spacing.xs,
-            marginTop: spacing.xs,
+            gap: spacing.md,
         },
-        questFooterText: { color: colors.primaryText, fontSize: typography.sizes.xs, fontWeight: '700' },
-        questCardSingleDesktop: {
-            flexGrow: 0,
-            flexBasis: '100%',
-            width: '100%',
-            maxWidth: '100%',
+        questMetaItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xxs,
         },
-
-        /* ---- Difficulty badge ---- */
-        difficultyBadge: {
-            position: 'absolute', top: spacing.sm, left: spacing.sm,
-            paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs,
-            borderRadius: radii.pill, backgroundColor: 'rgba(0,0,0,0.55)',
+        questMetaText: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.xs,
+            fontWeight: '500',
         },
-        difficultyText: { color: colors.textOnDark, fontSize: 11, fontWeight: '700' },
 
         /* ---- Skeleton ---- */
-        skeletonQuestsRow: { gap: spacing.sm },
+        skeletonGrid: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: isMobileW ? spacing.md : spacing.lg,
+        },
+        skeletonCard: {
+            width: isMobileW ? '100%' : isTablet ? 'calc(50% - 12px)' : 'calc(33.333% - 16px)',
+        },
+
+        /* ---- Radius selector ---- */
+        radiusSection: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            paddingTop: spacing.xs,
+        },
+        radiusChip: {
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xxs,
+            borderRadius: radii.sm,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+        },
+        radiusChipActive: {
+            backgroundColor: colors.primarySoft,
+            borderColor: colors.primary,
+        },
+        radiusChipText: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.xs,
+            fontWeight: '600',
+        },
+        radiusChipTextActive: {
+            color: colors.primaryText,
+        },
     });
 }
 
 type QuestStyles = ReturnType<typeof getStyles>;
-type CityQuickFilter = 'all' | 'withQuests' | 'nearby';
 
-// ───────────── Main screen ─────────────
+// ───────────── Main screen (Redesigned) ─────────────
 
 export default function QuestsScreen() {
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
     const [citySearchQuery, setCitySearchQuery] = useState('');
-    const [cityQuickFilter, setCityQuickFilter] = useState<CityQuickFilter>('all');
-    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+    const cityChipsScrollRef = useRef<ScrollView>(null);
 
     // API data
     const { quests: ALL_QUESTS, cityQuestsIndex: CITY_QUESTS, loading: questsLoading } = useQuestsList();
@@ -268,11 +435,7 @@ export default function QuestsScreen() {
     const colors = useThemedColors();
     const { width, isPhone } = useResponsive();
     const isMobile = isPhone;
-    const isDesktop = !isMobile;
     const s = useMemo(() => getStyles(colors, width), [colors, width]);
-
-    // columns — desktop with sidebar gets 2, wide screens get 3
-    const questColumns = isMobile ? 1 : width >= 1200 ? 3 : 2;
 
     // ── Persistent city selection ──
     useEffect(() => {
@@ -372,19 +535,10 @@ export default function QuestsScreen() {
         return counts;
     }, [citiesWithNearby, nearbyCount, CITY_QUESTS]);
 
+    // Filter to show only cities with quests (plus Nearby always visible)
     const visibleCities = useMemo(() => {
-        if (cityQuickFilter === 'nearby') return filteredCities.filter((c) => c.id === NEARBY_ID);
-        if (cityQuickFilter === 'withQuests') return filteredCities.filter((c) => cityQuestCountById[c.id] > 0);
-        return filteredCities;
-    }, [cityQuickFilter, filteredCities, cityQuestCountById]);
-
-    const prioritizedCities = useMemo(() => {
-        if (!selectedCityId) return visibleCities;
-        const idx = visibleCities.findIndex((c) => c.id === selectedCityId);
-        if (idx <= 0) return visibleCities;
-        const sel = visibleCities[idx];
-        return [sel, ...visibleCities.slice(0, idx), ...visibleCities.slice(idx + 1)];
-    }, [visibleCities, selectedCityId]);
+        return filteredCities.filter((c) => c.id === NEARBY_ID || cityQuestCountById[c.id] > 0);
+    }, [filteredCities, cityQuestCountById]);
 
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!selectedCityId || !dataLoaded) return [];
@@ -398,20 +552,9 @@ export default function QuestsScreen() {
         return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
     }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded]);
 
-    const chunkArray = <T,>(arr: T[], cols: number): T[][] => {
-        const res: T[][] = [];
-        for (let i = 0; i < arr.length; i += cols) res.push(arr.slice(i, i + cols));
-        return res;
-    };
-    const chunkedQuests = useMemo(() => chunkArray(questsAll, questColumns), [questsAll, questColumns]);
-
     // ── SEO ──
     const selectedCityName =
         selectedCityId === NEARBY_ID ? 'Рядом' : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
-    const citiesWithQuestsCount = useMemo(
-        () => CITIES.reduce((acc, city) => acc + ((CITY_QUESTS[city.id]?.length || 0) > 0 ? 1 : 0), 0),
-        [CITIES, CITY_QUESTS],
-    );
 
     const titleText = useMemo(() => {
         if (!selectedCityId) return 'Квесты | MeTravel';
@@ -430,29 +573,7 @@ export default function QuestsScreen() {
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
     }, [selectedCityId, selectedCityName]);
 
-    // ── Shared filter props ──
-    const filterProps = useMemo(() => ({
-        selectedCityId,
-        onSelectCity: handleSelectCity,
-        citySearchQuery,
-        onCitySearchChange: setCitySearchQuery,
-        cityQuickFilter,
-        onCityQuickFilterChange: setCityQuickFilter,
-        nearbyRadiusKm,
-        onRadiusChange: handleSetRadius,
-        prioritizedCities,
-        cityQuestCountById,
-        citiesWithNearbyCount: citiesWithNearby.length,
-        userLoc,
-        dataLoaded,
-        isMobile,
-    }), [
-        selectedCityId, handleSelectCity, citySearchQuery, cityQuickFilter,
-        nearbyRadiusKm, handleSetRadius, prioritizedCities, cityQuestCountById,
-        citiesWithNearby.length, userLoc, dataLoaded, isMobile,
-    ]);
-
-    // ── Render ──
+    // ── Render (Redesigned) ──
     return (
         <View style={s.page}>
             {isFocused && (
@@ -467,281 +588,271 @@ export default function QuestsScreen() {
                 } as any}>{titleText}</h1>
             )}
 
-            {/* ── Hero (full width) ── */}
-            <View style={sx(s.heroWrap, isMobile && s.heroWrapMobile)}>
-                <View style={sx(s.hero, isMobile && s.heroMobile)}>
-                    {isMobile ? (
-                        <>
-                            {/* Mobile: two rows */}
-                            <View style={s.heroTopRow}>
-                                <View style={sx(s.heroIconWrap, s.heroIconWrapMobile)}>
-                                    <Feather name="compass" size={18} color={colors.primary} />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={sx(s.title, s.titleMobile)}>Квесты</Text>
-                                    <Text style={sx(s.subtitle, s.subtitleMobile)}>
-                                        {dataLoaded
-                                            ? `${ALL_QUESTS.length} квестов в ${CITIES.length} городах`
-                                            : 'Приключения в городах'}
-                                    </Text>
-                                    {dataLoaded && (
-                                        <View style={sx(s.heroStats, s.heroStatsMobile)}>
-                                            <View style={s.heroStatCard}>
-                                                <Text style={s.heroStatLabel}>Квестов</Text>
-                                                <Text style={s.heroStatValue}>{ALL_QUESTS.length}</Text>
-                                            </View>
-                                            <View style={s.heroStatCard}>
-                                                <Text style={s.heroStatLabel}>Городов</Text>
-                                                <Text style={s.heroStatValue}>{citiesWithQuestsCount}</Text>
-                                            </View>
-                                            <View style={s.heroStatCard}>
-                                                <Text style={s.heroStatLabel}>Выбор</Text>
-                                                <Text style={s.heroStatValue} numberOfLines={1}>{selectedCityName || 'Не выбран'}</Text>
-                                            </View>
-                                        </View>
-                                    )}
-                                </View>
-                            </View>
-                            <View style={sx(s.heroBtns, s.heroBtnsMobile)}>
-                                <Pressable
-                                    onPress={() => setFilterDrawerOpen(true)}
-                                    style={sx(s.actionBtn, s.actionBtnSecondary, s.actionBtnMobile)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Открыть фильтры"
-                                >
-                                    <Feather name="sliders" size={16} color={colors.text} />
-                                    <Text style={sx(s.actionBtnTxt, s.actionBtnTxtSecondary)}>Фильтры</Text>
-                                </Pressable>
-                                <Link href="/quests/map" asChild>
-                                    <Pressable style={sx(s.actionBtn, s.actionBtnMobile)}>
-                                        <Feather name="map" size={16} color={colors.textOnPrimary} />
-                                        <Text style={s.actionBtnTxt}>Карта</Text>
-                                    </Pressable>
-                                </Link>
-                            </View>
-                        </>
-                    ) : (
-                        <>
-                            {/* Desktop: single row */}
-                            <View style={s.heroIconWrap}>
-                                <Feather name="compass" size={24} color={colors.primary} />
-                            </View>
-                            <View style={{ flex: 1 }}>
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ flexGrow: 1 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* ── Hero (Minimalist) ── */}
+                <View style={s.heroSection}>
+                    <View style={s.heroInner}>
+                        <View style={s.heroTitleRow}>
+                            <View style={s.heroTitleBlock}>
                                 <Text style={s.title}>Квесты</Text>
                                 <Text style={s.subtitle}>
-                                    {dataLoaded
-                                        ? `${ALL_QUESTS.length} квестов в ${CITIES.length} городах`
-                                        : 'Находи приключения в городах и парках'}
+                                    Исследуй города, решай загадки и открывай новые места
                                 </Text>
-                                {dataLoaded && (
-                                    <View style={s.heroStats}>
-                                        <View style={s.heroStatCard}>
-                                            <Text style={s.heroStatLabel}>Городов с квестами</Text>
-                                            <Text style={s.heroStatValue}>{citiesWithQuestsCount}</Text>
-                                        </View>
-                                        <View style={s.heroStatCard}>
-                                            <Text style={s.heroStatLabel}>Сейчас в подборке</Text>
-                                            <Text style={s.heroStatValue}>{questsAll.length}</Text>
-                                        </View>
-                                        <View style={s.heroStatCard}>
-                                            <Text style={s.heroStatLabel}>Локация</Text>
-                                            <Text style={s.heroStatValue} numberOfLines={1}>{selectedCityName || 'Не выбрана'}</Text>
-                                        </View>
-                                    </View>
-                                )}
                             </View>
-                            <View style={s.heroBtns}>
+                            <View style={s.heroActions}>
                                 <Link href="/quests/map" asChild>
-                                    <Pressable style={s.actionBtn}>
-                                        <Feather name="map" size={14} color={colors.textOnPrimary} />
-                                        <Text style={s.actionBtnTxt}>Карта</Text>
+                                    <Pressable style={s.actionBtn} accessibilityRole="button" accessibilityLabel="Открыть карту квестов">
+                                        <Feather name="map" size={16} color={colors.textOnPrimary} />
+                                        <Text style={s.actionBtnText}>Карта</Text>
                                     </Pressable>
                                 </Link>
                             </View>
-                        </>
-                    )}
-                </View>
-            </View>
-
-            {/* ── Body: sidebar + main ── */}
-            <View style={sx(s.contentWrap, isMobile && s.contentWrapMobile)}>
-                <View style={sx(s.contentRow, isMobile && s.contentRowMobile)}>
-                    {/* Desktop sidebar */}
-                    {isDesktop && (
-                        <View style={s.sidePanel}>
-                            <QuestsFilterContent {...filterProps} />
                         </View>
-                    )}
-
-                    {/* Main content area — quests grid */}
-                    <View style={s.mainContent}>
-                        <ScrollView
-                            style={s.mainScroll}
-                            contentContainerStyle={sx(s.mainScrollContent, isMobile && s.mainScrollContentMobile)}
-                            showsVerticalScrollIndicator={false}
-                            keyboardShouldPersistTaps="handled"
-                        >
-                            {/* Quest section header */}
-                            {selectedCityId && dataLoaded && selectedCityName && (
-                                <View style={s.sectionHeader}>
-                                    <Text style={sx(s.sectionTitle, isMobile && s.sectionTitleMobile)} numberOfLines={1}>
-                                        {selectedCityId === NEARBY_ID ? 'Квесты поблизости' : `Квесты: ${selectedCityName}`}
-                                    </Text>
-                                    <Text style={s.sectionMeta}>{questsAll.length} шт.</Text>
-                                </View>
-                            )}
-
-                            {/* Nearby empty state */}
-                            {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 && dataLoaded ? (
-                                <EmptyState
-                                    icon="map-pin"
-                                    title="Рядом ничего не найдено"
-                                    description="Попробуйте увеличить радиус поиска."
-                                    variant="empty"
-                                    iconSize={48}
-                                />
-                            ) : null}
-
-                            {/* No city selected */}
-                            {!selectedCityId && dataLoaded ? (
-                                <EmptyState
-                                    icon="compass"
-                                    title="Выберите локацию"
-                                    description={isMobile
-                                        ? 'Нажмите «Фильтры», чтобы выбрать город.'
-                                        : 'Выберите город в панели слева, чтобы увидеть доступные квесты.'}
-                                    variant="empty"
-                                    iconSize={48}
-                                />
-                            ) : null}
-
-                            {/* Skeleton loading */}
-                            {!dataLoaded ? (
-                                <View style={s.skeletonQuestsRow}>
-                                    {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
-                                        <SkeletonLoader key={i} width="100%" height={isMobile ? 180 : 220} borderRadius={radii.lg} />
-                                    ))}
-                                </View>
-                            ) : (
-                                /* Quest cards grid */
-                                <View style={s.questsContainer}>
-                                    {chunkedQuests.map((row, rowIndex) => (
-                                        <View key={`quest-row-${rowIndex}`} style={sx(s.questsRow, isMobile && s.questsRowMobile)}>
-                                            {row.map((quest) => (
-                                                <QuestCardLink
-                                                    key={quest.id}
-                                                    cityId={selectedCityId === NEARBY_ID ? (quest.cityId as string) : (selectedCityId as string)}
-                                                    quest={quest}
-                                                    nearby={selectedCityId === NEARBY_ID}
-                                                    isSingleInRow={row.length === 1}
-                                                    isMobile={isMobile}
-                                                    s={s}
-                                                    colors={colors}
-                                                />
-                                            ))}
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-                        </ScrollView>
                     </View>
                 </View>
-            </View>
 
-            {/* Mobile filter drawer */}
-            {isMobile && (
-                <QuestsFilterDrawer
-                    visible={filterDrawerOpen}
-                    onClose={() => setFilterDrawerOpen(false)}
-                    {...filterProps}
-                />
-            )}
+                {/* ── Filters Bar (Horizontal) ── */}
+                <View style={s.filtersSection}>
+                    <View style={s.filtersInner}>
+                        <View style={s.filtersRow}>
+                            {/* Search */}
+                            <View style={s.searchWrap}>
+                                <Feather name="search" size={16} color={colors.textMuted} />
+                                <TextInput
+                                    value={citySearchQuery}
+                                    onChangeText={setCitySearchQuery}
+                                    placeholder="Поиск..."
+                                    placeholderTextColor={colors.textMuted}
+                                    style={s.searchInput}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
+                                />
+                            </View>
+
+                            {/* City chips */}
+                            <ScrollView
+                                ref={cityChipsScrollRef}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={s.cityChipsScroll}
+                                contentContainerStyle={s.cityChipsContent}
+                            >
+                                {visibleCities.map((city) => {
+                                    const isActive = selectedCityId === city.id;
+                                    const count = cityQuestCountById[city.id] || 0;
+                                    const isNearby = city.id === NEARBY_ID;
+                                    return (
+                                        <Pressable
+                                            key={city.id}
+                                            onPress={() => handleSelectCity(city.id)}
+                                            style={[s.cityChip, isActive && s.cityChipActive]}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`${isNearby ? 'Рядом' : city.name}, ${count} квестов`}
+                                            accessibilityState={{ selected: isActive }}
+                                        >
+                                            {isNearby && (
+                                                <Feather
+                                                    name="navigation"
+                                                    size={14}
+                                                    color={isActive ? colors.textOnPrimary : colors.textMuted}
+                                                />
+                                            )}
+                                            <Text style={[s.cityChipText, isActive && s.cityChipTextActive]}>
+                                                {isNearby ? 'Рядом' : city.name}
+                                            </Text>
+                                            {count > 0 && (
+                                                <Text style={[s.cityChipCount, isActive && s.cityChipCountActive]}>
+                                                    {count}
+                                                </Text>
+                                            )}
+                                        </Pressable>
+                                    );
+                                })}
+                            </ScrollView>
+                        </View>
+
+                        {/* Radius selector for Nearby */}
+                        {selectedCityId === NEARBY_ID && (
+                            <View style={s.radiusSection}>
+                                <Text style={{ color: colors.textMuted, fontSize: 12, marginRight: spacing.xs }}>Радиус:</Text>
+                                {[5, 10, 15, 20, 30].map((km) => (
+                                    <Pressable
+                                        key={km}
+                                        onPress={() => handleSetRadius(km)}
+                                        style={[s.radiusChip, nearbyRadiusKm === km && s.radiusChipActive]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Радиус ${km} км`}
+                                    >
+                                        <Text style={[s.radiusChipText, nearbyRadiusKm === km && s.radiusChipTextActive]}>
+                                            {km} км
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                </View>
+
+                {/* ── Main Content ── */}
+                <View style={s.contentSection}>
+                    <View style={s.contentInner}>
+                        {/* Section header */}
+                        {selectedCityId && dataLoaded && (
+                            <View style={s.sectionHeader}>
+                                <Text style={s.sectionTitle}>
+                                    {selectedCityId === NEARBY_ID ? 'Квесты поблизости' : selectedCityName}
+                                </Text>
+                                <Text style={s.sectionCount}>{questsAll.length} квестов</Text>
+                            </View>
+                        )}
+
+                        {/* Empty states */}
+                        {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 && dataLoaded && (
+                            <EmptyState
+                                icon="map-pin"
+                                title="Рядом ничего не найдено"
+                                description="Попробуйте увеличить радиус поиска"
+                                variant="empty"
+                                iconSize={48}
+                            />
+                        )}
+
+                        {selectedCityId === NEARBY_ID && !userLoc && dataLoaded && (
+                            <EmptyState
+                                icon="navigation"
+                                title="Геолокация отключена"
+                                description="Разрешите доступ к геолокации для поиска квестов рядом"
+                                variant="empty"
+                                iconSize={48}
+                            />
+                        )}
+
+                        {!selectedCityId && dataLoaded && (
+                            <EmptyState
+                                icon="compass"
+                                title="Выберите город"
+                                description="Выберите город из списка выше, чтобы увидеть доступные квесты"
+                                variant="empty"
+                                iconSize={48}
+                            />
+                        )}
+
+                        {/* Skeleton loading */}
+                        {!dataLoaded && (
+                            <View style={s.skeletonGrid}>
+                                {Array.from({ length: isMobile ? 2 : 6 }).map((_, i) => (
+                                    <View key={i} style={s.skeletonCard}>
+                                        <SkeletonLoader width="100%" height={isMobile ? 200 : 240} borderRadius={radii.lg} />
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+
+                        {/* Quest cards grid */}
+                        {dataLoaded && questsAll.length > 0 && (
+                            <View style={s.questsGrid}>
+                                {questsAll.map((quest) => (
+                                    <QuestCard
+                                        key={quest.id}
+                                        cityId={selectedCityId === NEARBY_ID ? (quest.cityId || '') : (selectedCityId || '')}
+                                        quest={quest}
+                                        nearby={selectedCityId === NEARBY_ID}
+                                        s={s}
+                                        colors={colors}
+                                    />
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </ScrollView>
         </View>
     );
 }
 
-// ───────────── Quest card ─────────────
+// ───────────────── Quest card (Redesigned) ─────────────────
 
-function QuestCardLink({
-    cityId, quest, nearby, isSingleInRow, isMobile, s, colors,
+function QuestCard({
+    cityId, quest, nearby, s, colors,
 }: {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
     nearby?: boolean;
-    isSingleInRow?: boolean;
-    isMobile?: boolean;
     s: QuestStyles;
     colors: ThemedColors;
 }) {
-    const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 часа';
+    const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
     const diffLabel = quest.difficulty ? DIFFICULTY_LABELS[quest.difficulty] : null;
-    const iconColor = quest.cover ? colors.textOnDark : colors.textMuted;
-
-    const metaRow = (
-        <View style={sx(s.questMetaRow, isMobile && s.questMetaRowMobile)}>
-            <View style={s.metaItem}>
-                <Feather name="navigation" size={12} color={iconColor} />
-                <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>
-                    {quest.points} точек
-                </Text>
-            </View>
-            <View style={s.metaItem}>
-                <Feather name="clock" size={12} color={iconColor} />
-                <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>{durationText}</Text>
-            </View>
-            {nearby && typeof quest._distanceKm === 'number' && (
-                <View style={s.metaItem}>
-                    <Feather name="map-pin" size={12} color={iconColor} />
-                    <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>
-                        {quest._distanceKm < 1
-                            ? `${Math.round(quest._distanceKm * 1000)} м`
-                            : `${quest._distanceKm.toFixed(1)} км`}
-                    </Text>
-                </View>
-            )}
-        </View>
-    );
+    const diffBadgeStyle = quest.difficulty === 'easy' ? s.difficultyBadgeEasy
+        : quest.difficulty === 'medium' ? s.difficultyBadgeMedium
+        : quest.difficulty === 'hard' ? s.difficultyBadgeHard
+        : s.difficultyBadgeDefault;
 
     return (
         <Link href={`/quests/${cityId}/${quest.id}`} asChild>
             <Pressable
-                style={({ hovered, pressed }) => sx(
+                style={({ hovered, pressed }: { hovered?: boolean; pressed?: boolean }) => [
                     s.questCard,
-                    !isMobile && isSingleInRow && s.questCardSingleDesktop,
-                    isMobile && s.questCardMobile,
                     hovered && s.questCardHover,
                     pressed && s.questCardPressed,
-                )}
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Квест: ${quest.title}`}
             >
-                <View style={sx(s.coverWrap, isMobile && s.coverWrapMobile)}>
+                {/* Cover */}
+                <View style={s.coverWrap}>
                     {quest.cover ? (
                         <Image
                             source={typeof quest.cover === 'string' ? { uri: quest.cover } : quest.cover}
                             style={s.questCover}
                             resizeMode="cover"
                         />
-                    ) : <View style={s.coverFallback} />}
+                    ) : (
+                        <View style={s.coverFallback}>
+                            <Feather name="compass" size={32} color={colors.border} />
+                        </View>
+                    )}
 
-                    {diffLabel ? (
-                        <View style={s.difficultyBadge}>
+                    {/* Gradient */}
+                    {quest.cover && <View style={s.coverGradient} />}
+
+                    {/* Difficulty badge */}
+                    {diffLabel && (
+                        <View style={[s.difficultyBadge, diffBadgeStyle]}>
                             <Text style={s.difficultyText}>{diffLabel}</Text>
                         </View>
-                    ) : null}
-                    {quest.cover ? (
-                        <View style={sx(s.coverOverlay, isMobile && s.coverOverlayMobile)}>
-                            {metaRow}
-                        </View>
-                    ) : null}
+                    )}
                 </View>
 
-                <View style={sx(s.questBody, isMobile && s.questBodyMobile)}>
-                    <Text style={sx(s.questTitle, isMobile && s.questTitleMobile)} numberOfLines={2}>
+                {/* Card body */}
+                <View style={s.questCardBody}>
+                    <Text style={s.questTitle} numberOfLines={2}>
                         {quest.title}
                     </Text>
-                    {!quest.cover ? metaRow : null}
-                    <View style={s.questFooter}>
-                        <Text style={s.questFooterText}>Открыть квест</Text>
-                        <Feather name="arrow-right" size={14} color={colors.primaryText} />
+                    <View style={s.questMeta}>
+                        <View style={s.questMetaItem}>
+                            <Feather name="navigation" size={12} color={colors.textMuted} />
+                            <Text style={s.questMetaText}>{quest.points} точек</Text>
+                        </View>
+                        <View style={s.questMetaItem}>
+                            <Feather name="clock" size={12} color={colors.textMuted} />
+                            <Text style={s.questMetaText}>{durationText}</Text>
+                        </View>
+                        {nearby && typeof quest._distanceKm === 'number' && (
+                            <View style={s.questMetaItem}>
+                                <Feather name="map-pin" size={12} color={colors.textMuted} />
+                                <Text style={s.questMetaText}>
+                                    {quest._distanceKm < 1
+                                        ? `${Math.round(quest._distanceKm * 1000)} м`
+                                        : `${quest._distanceKm.toFixed(1)} км`}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             </Pressable>

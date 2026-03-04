@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
 import { generatePrintableQuest } from './QuestPrintable';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DESIGN_TOKENS as _DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -714,83 +714,87 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         onScrollBeginDrag={Keyboard.dismiss}
                         contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 }, wideDesktop && styles.contentInner]}
                     >
-                        {/* Шаги/карты — скрываем, если показываем только финал */}
-                        {(!showFinaleOnly) && currentStep && (
-                            <View style={wideDesktop ? styles.desktopRow : undefined}>
-                                <View style={wideDesktop ? styles.desktopMain : undefined}>
-                                    <StepCard
-                                        step={currentStep}
-                                        index={currentIndex}
-                                        attempts={attempts[currentStep.id] || 0}
-                                        hintVisible={hints[currentStep.id] || false}
-                                        savedAnswer={answers[currentStep.id]}
-                                        onSubmit={(a) => handleAnswer(currentStep, a)}
-                                        onWrongAttempt={() => handleWrongAttempt(currentStep)}
-                                        onToggleHint={() => toggleHint(currentStep)}
-                                        onSkip={skipStep}
-                                        showMap={showMap}
-                                        onToggleMap={toggleMap}
-                                    />
-
-                                    {Platform.OS === 'web' && (
-                                        <View style={styles.printSection}>
-                                            <Text style={styles.printHint}>
-                                                Скачайте подарочную печатную версию: маршрут, задания и место для ответов.
-                                            </Text>
-                                            <Pressable
-                                                style={styles.printButton}
-                                                onPress={() => {
-                                                    const questUrl = typeof window !== 'undefined'
-                                                        ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
-                                                        : undefined;
-                                                    generatePrintableQuest({ title, steps, intro, questUrl });
-                                                }}
-                                                hitSlop={6}
-                                            >
-                                                <Text style={styles.printButtonText}>Скачать печатную версию</Text>
-                                            </Pressable>
-                                        </View>
-                                    )}
-                                </View>
-
-                                {!!steps.length && (
-                                    <View style={[styles.fullMapSection, wideDesktop && styles.desktopSide]}>
-                                        <Suspense fallback={<QuestMapSkeleton />}>
-                                            <QuestFullMap
-                                                steps={steps}
-                                                height={wideDesktop ? 520 : 360}
-                                                title={`Карта квеста: ${title}`}
+                        <View style={wideDesktop && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
+                            {/* Левая колонка: шаги + карта + финал */}
+                            <View style={wideDesktop && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
+                                {/* Шаги/карты — скрываем, если показываем только финал */}
+                                {(!showFinaleOnly) && currentStep && (
+                                    <View style={wideDesktop ? styles.desktopRow : undefined}>
+                                        <View style={wideDesktop ? styles.desktopMain : undefined}>
+                                            <StepCard
+                                                step={currentStep}
+                                                index={currentIndex}
+                                                attempts={attempts[currentStep.id] || 0}
+                                                hintVisible={hints[currentStep.id] || false}
+                                                savedAnswer={answers[currentStep.id]}
+                                                onSubmit={(a) => handleAnswer(currentStep, a)}
+                                                onWrongAttempt={() => handleWrongAttempt(currentStep)}
+                                                onToggleHint={() => toggleHint(currentStep)}
+                                                onSkip={skipStep}
+                                                showMap={showMap}
+                                                onToggleMap={toggleMap}
                                             />
-                                        </Suspense>
+
+                                            {Platform.OS === 'web' && (
+                                                <View style={styles.printSection}>
+                                                    <Text style={styles.printHint}>
+                                                        Скачайте подарочную печатную версию: маршрут, задания и место для ответов.
+                                                    </Text>
+                                                    <Pressable
+                                                        style={styles.printButton}
+                                                        onPress={() => {
+                                                            const questUrl = typeof window !== 'undefined'
+                                                                ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
+                                                                : undefined;
+                                                            generatePrintableQuest({ title, steps, intro, questUrl });
+                                                        }}
+                                                        hitSlop={6}
+                                                    >
+                                                        <Text style={styles.printButtonText}>Скачать печатную версию</Text>
+                                                    </Pressable>
+                                                </View>
+                                            )}
+                                        </View>
+
+                                        {!!steps.length && (
+                                            <View style={[styles.fullMapSection, wideDesktop && styles.desktopSide]}>
+                                                <Suspense fallback={<QuestMapSkeleton />}>
+                                                    <QuestFullMap
+                                                        steps={steps}
+                                                        height={wideDesktop ? 520 : 360}
+                                                        title={`Карта квеста: ${title}`}
+                                                    />
+                                                </Suspense>
+                                            </View>
+                                        )}
                                     </View>
                                 )}
-                            </View>
-                        )}
 
-                        {(!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
-                            <View style={styles.excursionsSection}>
-                                <View style={styles.excursionsDivider} />
-                                <View style={styles.excursionsCard}>
-                                    <View style={styles.excursionsHeader}>
-                                        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-                                        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                                {/* Экскурсии рядом — на узких экранах под контентом */}
+                                {!wideDesktop && (!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
+                                    <View style={styles.excursionsSection}>
+                                        <View style={styles.excursionsDivider} />
+                                        <View style={styles.excursionsCard}>
+                                            <View style={styles.excursionsHeader}>
+                                                <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
+                                                <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                                            </View>
+                                            <Suspense fallback={null}>
+                                                <BelkrajWidgetLazy
+                                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
+                                                    countryCode={city.countryCode}
+                                                    collapsedHeight={compactNav ? 520 : 760}
+                                                    expandedHeight={compactNav ? 600 : 900}
+                                                    className="belkraj-slot"
+                                                />
+                                            </Suspense>
+                                        </View>
                                     </View>
-                                    <Suspense fallback={null}>
-                                        <BelkrajWidgetLazy
-                                            points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                            countryCode={city.countryCode}
-                                            collapsedHeight={compactNav ? 520 : 760}
-                                            expandedHeight={compactNav ? 600 : 900}
-                                            className="belkraj-slot"
-                                        />
-                                    </Suspense>
-                                </View>
-                            </View>
-                        )}
+                                )}
 
-                        {/* Финал — доступен всегда; видео — когда всё пройдено */}
-                        {showFinaleOnly && (
-                            <View style={styles.completionScreen}>
+                                {/* Финал — доступен всегда; видео — когда всё пройдено */}
+                                {showFinaleOnly && (
+                                    <View style={styles.completionScreen}>
                                 {allCompleted ? (
                                     <>
                                         <Text style={styles.completionTitle}>Квест завершен!</Text>
@@ -847,8 +851,31 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         Чтобы открыть приз/видео — завершите все шаги ({completedSteps.length} из {steps.length}).
                                     </Text>
                                 )}
+                                    </View>
+                                )}
                             </View>
-                        )}
+
+                            {/* Правая колонка: блок экскурсий — постоянно видим на desktop */}
+                            {wideDesktop && city && Platform.OS === 'web' && (
+                                <View style={styles.excursionsSidebar}>
+                                    <View style={styles.excursionsSidebarInner}>
+                                        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
+                                        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                                        <View style={styles.excursionsSidebarWidget}>
+                                            <Suspense fallback={null}>
+                                                <BelkrajWidgetLazy
+                                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
+                                                    countryCode={city.countryCode}
+                                                    collapsedHeight={560}
+                                                    expandedHeight={900}
+                                                    className="belkraj-slot"
+                                                />
+                                            </Suspense>
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
 
                         <View style={{ height: SPACING.xl }} />
                     </ScrollView>
@@ -864,62 +891,77 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     header: {
         backgroundColor: colors.surface,
-        padding: SPACING.md,
+        paddingHorizontal: SPACING.md,
+        paddingTop: SPACING.md,
+        paddingBottom: SPACING.sm,
         borderBottomWidth: 1,
-        borderBottomColor: colors.border,
+        borderBottomColor: colors.borderLight,
         ...Platform.select({ web: { maxWidth: 1140, width: '100%', alignSelf: 'center' } }),
     },
-    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
-    title: { fontSize: 20, fontWeight: '700', color: colors.text, flex: 1 },
-    resetButton: { padding: SPACING.xs },
-    resetText: { color: colors.danger, fontWeight: '600', fontSize: 14 },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: SPACING.md,
+        gap: SPACING.sm,
+    },
+    title: { fontSize: 22, fontWeight: '800', color: colors.text, flex: 1, letterSpacing: -0.5, lineHeight: 28 },
+    resetButton: {
+        paddingHorizontal: SPACING.sm,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.backgroundSecondary,
+    },
+    resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
     toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
 
     progressContainer: { marginBottom: SPACING.sm },
-    progressBar: { height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden', marginBottom: SPACING.xs },
-    progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
-    progressText: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
+    progressBar: {
+        height: 4,
+        backgroundColor: colors.borderLight,
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginBottom: 6,
+    },
+    progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
+    progressText: { fontSize: 11, color: colors.textMuted, textAlign: 'right', fontWeight: '600' },
 
-    stepsNavigation: { flexDirection: 'row', marginTop: 6 },
-    stepsGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
+    stepsNavigation: { flexDirection: 'row', marginTop: SPACING.sm },
+    stepsGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACING.sm, gap: 6 },
 
     stepPill: {
         flexDirection: 'row', alignItems: 'center', borderRadius: 999,
-        paddingVertical: 6, paddingHorizontal: 10, // ✅ УЛУЧШЕНИЕ: Убрана граница
-        backgroundColor: colors.surface, maxWidth: 260, marginRight: 6, marginBottom: 6,
-        shadowColor: colors.shadows.light.shadowColor,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-        elevation: 1,
+        paddingVertical: 5, paddingHorizontal: 10,
+        backgroundColor: colors.backgroundSecondary,
+        maxWidth: 220, marginRight: 6, marginBottom: 6,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
     },
-    stepPillNarrow: { maxWidth: 140, paddingHorizontal: 8, paddingVertical: 6 },
-    stepPillUnlocked: { backgroundColor: colors.surface },
-    stepPillActive: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
-    stepPillDone: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
-    stepPillLocked: { opacity: 0.5 },
-    stepPillIndex: { fontSize: 12, fontWeight: '700', color: colors.primaryText, marginRight: 6 },
-    stepPillTitle: { fontSize: 12, fontWeight: '600', color: colors.text },
+    stepPillNarrow: { maxWidth: 130, paddingHorizontal: 8 },
+    stepPillUnlocked: { backgroundColor: colors.backgroundSecondary, borderColor: colors.borderLight },
+    stepPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    stepPillDone: { backgroundColor: colors.successSoft, borderColor: colors.successLight },
+    stepPillLocked: { opacity: 0.4 },
+    stepPillIndex: { fontSize: 11, fontWeight: '700', color: colors.primaryText, marginRight: 5 },
+    stepPillTitle: { fontSize: 11, fontWeight: '600', color: colors.text },
 
     stepDotMini: {
-        width: 32, height: 32, borderRadius: 16, marginRight: 6,
+        width: 30, height: 30, borderRadius: 15, marginRight: 5,
         alignItems: 'center', justifyContent: 'center',
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-        backgroundColor: colors.surface,
-        shadowColor: colors.shadows.light.shadowColor,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-        elevation: 1,
+        backgroundColor: colors.backgroundSecondary,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
     },
     stepDotMiniUnlocked: { opacity: 1 },
-    stepDotMiniActive: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
-    stepDotMiniDone: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
-    stepDotMiniLocked: { opacity: 0.45 },
-    stepDotMiniText: { fontSize: 12, fontWeight: '700', color: colors.primaryText },
+    stepDotMiniActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    stepDotMiniDone: { backgroundColor: colors.successSoft, borderColor: colors.successLight },
+    stepDotMiniLocked: { opacity: 0.4 },
+    stepDotMiniText: { fontSize: 11, fontWeight: '700', color: colors.primaryText },
 
-    navActiveTitle: { marginTop: 6, fontSize: 12, fontWeight: '600', color: colors.text, opacity: 0.9 },
-    navHint: { fontSize: 11, color: colors.textSecondary, marginTop: 6 },
+    navActiveTitle: { marginTop: 5, fontSize: 12, fontWeight: '700', color: colors.text },
+    navHint: { fontSize: 11, color: colors.textMuted, marginTop: 5 },
 
     content: { flex: 1, padding: SPACING.md },
     contentInner: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
@@ -928,122 +970,149 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     desktopSide: { width: 420, flexShrink: 0 },
 
     card: {
-        backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.lg, marginBottom: SPACING.md,
-        shadowColor: colors.shadows.medium.shadowColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 1,
-        backfaceVisibility: 'hidden',
-    },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
-    stepNumber: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: colors.warningSoft, alignItems: 'center', justifyContent: 'center',
-        marginRight: SPACING.md
-    },
-    stepNumberCompleted: { backgroundColor: colors.successSoft },
-    stepNumberText: { fontSize: 16, fontWeight: '700', color: colors.primaryText },
-    headerContent: { flex: 1 },
-    stepTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 2 },
-    location: { fontSize: 14, color: colors.primaryText, fontWeight: '500' },
-    completedBadge: { backgroundColor: colors.success, borderRadius: 12, padding: 4, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-    completedText: { color: colors.textOnPrimary, fontWeight: 'bold', fontSize: 12 },
-
-    section: { marginBottom: SPACING.lg },
-    sectionTitle: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: SPACING.sm, textTransform: 'capitalize', letterSpacing: 0.5 },
-    storyText: { fontSize: 14, lineHeight: 20, color: colors.text },
-
-    taskText: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: SPACING.md, lineHeight: 22 },
-    input: { 
-        backgroundColor: colors.surface, 
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-        borderRadius: DESIGN_TOKENS.radii.sm, 
-        padding: SPACING.md, 
-        fontSize: 16, 
-        marginBottom: SPACING.sm,
-        color: colors.text,
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
-        shadowColor: colors.shadows.light.shadowColor,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-        elevation: 1,
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: SPACING.lg,
+        marginBottom: SPACING.md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
         ...Platform.select({
-            web: {
-                transition: 'box-shadow 0.2s ease',
-                boxShadow: '0 1px 3px rgba(31, 31, 31, 0.04)',
+            web: { boxShadow: colors.boxShadows.card } as any,
+            android: { elevation: 2 },
+            ios: {
+                shadowColor: colors.shadows.light.shadowColor,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 8,
             },
         }),
+        backfaceVisibility: 'hidden',
     },
-    inputError: { 
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон и тень
-        backgroundColor: 'rgba(239, 68, 68, 0.05)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон для ошибок
+    cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: SPACING.md, gap: SPACING.sm },
+    stepNumber: {
+        width: 36, height: 36, borderRadius: 10,
+        backgroundColor: colors.primarySoft,
+        alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+    },
+    stepNumberCompleted: { backgroundColor: colors.successSoft },
+    stepNumberText: { fontSize: 15, fontWeight: '800', color: colors.primaryText },
+    headerContent: { flex: 1 },
+    stepTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: 3, letterSpacing: -0.3, lineHeight: 22 },
+    location: {
+        fontSize: 13, color: colors.primaryText, fontWeight: '600',
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
+    },
+    completedBadge: {
+        backgroundColor: colors.successSoft,
+        borderRadius: 8,
+        width: 28, height: 28,
+        alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+    },
+    completedText: { color: colors.success, fontWeight: '800', fontSize: 14 },
+
+    section: { marginBottom: SPACING.md },
+    sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, marginBottom: SPACING.sm, textTransform: 'uppercase', letterSpacing: 0.8 },
+    storyText: { fontSize: 15, lineHeight: 22, color: colors.text },
+
+    taskText: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: SPACING.md, lineHeight: 23, letterSpacing: -0.2 },
+    input: {
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: 12,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: 12,
+        fontSize: 16,
+        marginBottom: SPACING.sm,
+        color: colors.text,
+        minHeight: 48,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
         ...Platform.select({
             web: {
-                boxShadow: '0 0 0 2px rgba(239, 68, 68, 0.3), 0 1px 3px rgba(31, 31, 31, 0.04)',
-            },
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                outlineStyle: 'none',
+            } as any,
+        }),
+    },
+    inputError: {
+        borderColor: colors.danger,
+        backgroundColor: 'rgba(239,68,68,0.04)',
+        ...Platform.select({
+            web: { boxShadow: '0 0 0 3px rgba(239,68,68,0.15)' } as any,
         }),
     },
     errorContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        marginTop: 6,
-        marginBottom: SPACING.md,
-        padding: 8,
-        backgroundColor: 'rgba(239, 68, 68, 0.1)', // ✅ ИСПРАВЛЕНИЕ: Светло-красный фон
-        borderRadius: 6,
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
+        marginTop: 4,
+        marginBottom: SPACING.sm,
+        padding: 10,
+        backgroundColor: 'rgba(239,68,68,0.07)',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(239,68,68,0.15)',
     },
-    errorText: { 
-        color: colors.danger, 
-        fontSize: 13, // ✅ ИСПРАВЛЕНИЕ: Увеличен размер для читаемости
-        fontWeight: '500', // ✅ ИСПРАВЛЕНИЕ: Добавлен font-weight
-        flex: 1,
-    },
+    errorText: { color: colors.danger, fontSize: 13, fontWeight: '600', flex: 1 },
 
-    primaryButton: { 
-        backgroundColor: colors.primary, 
-        paddingHorizontal: SPACING.lg, 
-        paddingVertical: 12, 
-        borderRadius: DESIGN_TOKENS.radii.md, 
-        minHeight: 44,
+    primaryButton: {
+        backgroundColor: colors.primary,
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: 13,
+        borderRadius: 12,
+        minHeight: 48,
         justifyContent: 'center',
         alignItems: 'center',
         ...globalFocusStyles.focusable,
         ...Platform.select({
-            web: {
-                transition: 'all 0.2s ease',
-                cursor: 'pointer',
-            },
+            web: { transition: 'opacity 0.15s ease', cursor: 'pointer' } as any,
         }),
     },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '600', textAlign: 'center', fontSize: 14 },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '700', textAlign: 'center', fontSize: 15 },
 
     inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: SPACING.sm },
     checkButton: {
         backgroundColor: colors.primary,
         width: 48, height: 48,
-        borderRadius: DESIGN_TOKENS.radii.md,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } }),
+        flexShrink: 0,
+        ...Platform.select({ web: { cursor: 'pointer', transition: 'opacity 0.15s ease' } as any }),
     },
-    checkButtonText: { color: colors.textOnPrimary, fontSize: 20, fontWeight: '700' },
+    checkButtonText: { color: colors.textOnPrimary, fontSize: 22, fontWeight: '700' },
 
     inlineActions: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 8, marginTop: 10, marginBottom: 4,
+        gap: 12, marginTop: 10, marginBottom: 4,
     },
     linkText: {
-        color: colors.textSecondary, fontSize: 13, fontWeight: '500',
-        ...Platform.select({ web: { cursor: 'pointer', textDecorationLine: 'underline' } }),
+        color: colors.textMuted, fontSize: 13, fontWeight: '500',
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
-    linkSeparator: { color: colors.textMuted, fontSize: 13 },
+    linkSeparator: { color: colors.borderStrong, fontSize: 13 },
 
-    hintPrompt: { fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.xs },
-    hintContainer: { backgroundColor: colors.successSoft, padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
+    hintPrompt: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: SPACING.xs },
+    hintContainer: {
+        backgroundColor: colors.successSoft,
+        padding: SPACING.md,
+        borderRadius: 12,
+        marginTop: SPACING.sm,
+        borderWidth: 1,
+        borderColor: colors.successLight,
+    },
     hintText: { color: colors.text, fontSize: 14, lineHeight: 20 },
-    answerContainer: { backgroundColor: colors.successSoft, padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
-    answerLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
-    answerValue: { fontSize: 16, fontWeight: '600', color: colors.text },
+    answerContainer: {
+        backgroundColor: colors.successSoft,
+        padding: SPACING.md,
+        borderRadius: 12,
+        marginTop: SPACING.sm,
+        borderWidth: 1,
+        borderColor: colors.successLight,
+    },
+    answerLabel: { fontSize: 11, color: colors.textMuted, marginBottom: 4, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 },
+    answerValue: { fontSize: 15, fontWeight: '700', color: colors.text },
 
     navRow: {
         flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
@@ -1051,69 +1120,123 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     navButton: {
         backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 10,
         borderRadius: 999, minHeight: 40, justifyContent: 'center', alignItems: 'center',
-        ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } }),
+        ...Platform.select({ web: { cursor: 'pointer', transition: 'opacity 0.15s ease' } as any }),
     },
     navButtonText: { color: colors.textOnPrimary, fontSize: 13, fontWeight: '700' },
     navToggle: {
-        backgroundColor: colors.surface, width: 36, height: 36, borderRadius: 999,
+        backgroundColor: colors.backgroundSecondary,
+        width: 36, height: 36, borderRadius: 999,
         justifyContent: 'center', alignItems: 'center',
-        borderWidth: 1, borderColor: colors.border,
-        ...Platform.select({ web: { cursor: 'pointer' } }),
+        borderWidth: 1, borderColor: colors.borderLight,
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
     navToggleText: { fontSize: 10, color: colors.textMuted },
     coordsButton: {
-        backgroundColor: colors.backgroundSecondary, paddingHorizontal: 10, paddingVertical: 8,
+        backgroundColor: colors.backgroundSecondary,
+        paddingHorizontal: 10, paddingVertical: 8,
         borderRadius: 8,
-        ...Platform.select({ web: { cursor: 'pointer' } }),
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
     coordsButtonText: { color: colors.textMuted, fontSize: 11, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined },
     photoToggle: {
         backgroundColor: colors.primarySoft, paddingHorizontal: 12, paddingVertical: 8,
         borderRadius: 999,
-        ...Platform.select({ web: { cursor: 'pointer' } }),
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
     photoToggleText: { color: colors.primaryDark, fontSize: 12, fontWeight: '600' },
     navDropdown: {
         marginTop: 8, backgroundColor: colors.surface, borderRadius: 12,
-        borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+        borderWidth: 1, borderColor: colors.borderLight, overflow: 'hidden',
+        ...Platform.select({ web: { boxShadow: colors.boxShadows.medium } as any }),
     },
     navOption: {
         paddingHorizontal: 16, paddingVertical: 12,
-        borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
-        ...Platform.select({ web: { cursor: 'pointer' } }),
+        borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight,
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
     navOptionText: { color: colors.text, fontSize: 14 },
 
-    photoHint: { fontSize: 12, color: colors.textSecondary, marginBottom: SPACING.xs },
+    photoHint: { fontSize: 12, color: colors.textMuted, marginBottom: SPACING.xs },
 
-    imagePreview: { borderRadius: 8, overflow: 'hidden', position: 'relative', maxWidth: 480 },
+    imagePreview: { borderRadius: 12, overflow: 'hidden', position: 'relative', maxWidth: 480 },
     previewImage: { width: '100%', aspectRatio: 4 / 3, resizeMode: 'contain' },
-    imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.overlay, padding: 6, alignItems: 'center' },
-    overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '500' },
+    imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.overlay, padding: 8, alignItems: 'center' },
+    overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '600' },
 
-    startButton: { backgroundColor: colors.primary, padding: SPACING.lg, borderRadius: 10, alignItems: 'center' },
-    startButtonText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: '700' },
+    startButton: {
+        backgroundColor: colors.primary,
+        padding: SPACING.lg,
+        borderRadius: 14,
+        alignItems: 'center',
+        minHeight: 52,
+        justifyContent: 'center',
+    },
+    startButtonText: { color: colors.textOnPrimary, fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
 
     printSection: {
-        backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: SPACING.md,
+        backgroundColor: colors.backgroundSecondary,
+        borderRadius: 14, padding: SPACING.md,
         marginBottom: SPACING.md, alignItems: 'center',
+        borderWidth: 1, borderColor: colors.borderLight,
     },
-    printHint: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 19, marginBottom: SPACING.sm },
+    printHint: { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19, marginBottom: SPACING.sm },
     printButton: {
-        backgroundColor: colors.surface, paddingHorizontal: 20, paddingVertical: 12,
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        backgroundColor: colors.surface, paddingHorizontal: 20, paddingVertical: 10,
         borderRadius: 999, borderWidth: 1, borderColor: colors.border,
-        ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } }),
+        ...Platform.select({ web: { cursor: 'pointer', transition: 'opacity 0.15s ease' } as any }),
     },
     printButtonText: { color: colors.text, fontSize: 14, fontWeight: '600' },
 
-    fullMapSection: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.md, marginBottom: SPACING.md },
+    fullMapSection: {
+        backgroundColor: colors.surface,
+        borderRadius: 14, padding: SPACING.md, marginBottom: SPACING.md,
+        borderWidth: 1, borderColor: colors.borderLight,
+    },
+
+    pageRow: {
+        flexDirection: 'row',
+        gap: SPACING.lg,
+        alignItems: 'flex-start',
+    },
+    pageMain: {
+        flex: 1,
+        minWidth: 0,
+    },
+    excursionsSidebar: {
+        width: 340,
+        flexShrink: 0,
+        ...Platform.select({
+            web: {
+                position: 'sticky' as any,
+                top: SPACING.md,
+                alignSelf: 'flex-start',
+            },
+        }),
+    },
+    excursionsSidebarInner: {
+        backgroundColor: colors.surface,
+        borderRadius: 14,
+        padding: SPACING.md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        ...Platform.select({
+            web: { boxShadow: colors.boxShadows.light } as any,
+            default: colors.shadows.light,
+        }),
+    },
+    excursionsSidebarWidget: {
+        marginTop: SPACING.sm,
+    },
 
     excursionsSection: {
         marginTop: SPACING.xl,
     },
     excursionsDivider: {
         height: 1,
-        backgroundColor: colors.border,
+        backgroundColor: colors.borderLight,
         marginBottom: SPACING.lg,
     },
     excursionsHeader: {
@@ -1121,37 +1244,47 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     excursionsCard: {
         backgroundColor: colors.surface,
-        borderRadius: 12,
+        borderRadius: 14,
         padding: SPACING.md,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: colors.borderLight,
         ...Platform.select({
-            web: {
-                boxShadow: colors.boxShadows.light,
-            } as any,
+            web: { boxShadow: colors.boxShadows.light } as any,
             default: colors.shadows.light,
         }),
     },
     excursionsTitle: {
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: 16,
+        fontWeight: '800',
         color: colors.text,
-        marginBottom: 4,
+        marginBottom: 2,
+        letterSpacing: -0.3,
     },
     excursionsSubtitle: {
-        fontSize: 13,
-        color: colors.textSecondary,
+        fontSize: 12,
+        color: colors.textMuted,
     },
 
-    completionScreen: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.lg, alignItems: 'center', marginTop: SPACING.md },
-    completionTitle: { fontSize: 20, fontWeight: '700', color: colors.success, marginBottom: SPACING.md, textAlign: 'center' },
-    completionText: { paddingTop: 5, fontSize: 16, color: colors.text, textAlign: 'center', lineHeight: 22, marginBottom: SPACING.lg },
+    completionScreen: {
+        backgroundColor: colors.surface,
+        borderRadius: 16, padding: SPACING.lg,
+        alignItems: 'center', marginTop: SPACING.md,
+        borderWidth: 1, borderColor: colors.borderLight,
+        ...Platform.select({ web: { boxShadow: colors.boxShadows.card } as any }),
+    },
+    completionTitle: {
+        fontSize: 22, fontWeight: '800', color: colors.success,
+        marginBottom: SPACING.sm, textAlign: 'center', letterSpacing: -0.5,
+    },
+    completionText: {
+        paddingTop: 4, fontSize: 16, color: colors.text,
+        textAlign: 'center', lineHeight: 23, marginBottom: SPACING.lg,
+    },
 
-    // Видео рамка (адаптив 16:9)
     videoFrame: {
         alignSelf: 'center',
-        backgroundColor: colors.backgroundTertiary,
-        borderRadius: 8,
+        backgroundColor: '#000',
+        borderRadius: 12,
         overflow: 'hidden',
         marginBottom: SPACING.md,
         position: 'relative',
@@ -1166,36 +1299,39 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     videoFallbackText: {
         color: colors.textOnDark,
-        fontWeight: '500',
+        fontWeight: '600',
         fontSize: 14,
         lineHeight: 20,
         textAlign: 'center',
     },
     videoRetryBtn: {
         paddingVertical: 8,
-        paddingHorizontal: 12,
+        paddingHorizontal: 16,
         backgroundColor: colors.surface,
-        borderRadius: 8,
-        ...Platform.select({ web: { cursor: 'pointer' } }),
+        borderRadius: 10,
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
     videoRetryText: { color: colors.text, fontWeight: '700', fontSize: 14 },
 
-    modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' },
     gestureContainer: { flex: 1, width: '100%' },
     animatedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     zoomedImage: { width: '100%', height: '100%' },
-    closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: colors.overlay, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    closeButtonText: { color: colors.textOnDark, fontSize: 18, fontWeight: 'bold' },
+    closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    closeButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
     zoomHintContainer: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' },
-    zoomHint: { color: colors.textOnDark, fontSize: 14, backgroundColor: colors.overlay, padding: 8, borderRadius: 6 },
+    zoomHint: { color: '#fff', fontSize: 14, backgroundColor: 'rgba(0,0,0,0.55)', padding: 10, borderRadius: 8 },
 
-    // flip badge
     flipBadge: {
-        paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999,
+        paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999,
         backgroundColor: colors.success,
-        shadowColor: colors.shadows.heavy.shadowColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.22, shadowRadius: 16, elevation: 6,
+        ...Platform.select({
+            web: { boxShadow: '0 8px 24px rgba(34,197,94,0.35)' } as any,
+            ios: { shadowColor: '#22c55e', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16 },
+            android: { elevation: 8 },
+        }),
     },
-    flipText: { color: colors.textOnDark, fontWeight: '800', fontSize: 16 },
+    flipText: { color: '#fff', fontWeight: '800', fontSize: 17, letterSpacing: -0.3 },
 });
 
 const QuestMapSkeleton = () => {

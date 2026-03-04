@@ -69,16 +69,16 @@ const getStyles = (colors: ThemedColors) =>
       justifyContent: 'center',
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+            boxShadow: '0 1px 0 rgba(0,0,0,0.04)',
           } as any)
         : null),
     },
     scrollContent: {
-      paddingHorizontal: 10,
-      gap: 8,
+      paddingHorizontal: 14,
+      gap: 6,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? ({ touchAction: 'pan-x' } as any)
@@ -90,33 +90,37 @@ const getStyles = (colors: ThemedColors) =>
       gap: 5,
       paddingHorizontal: 10,
       paddingVertical: 5,
-      borderRadius: 14,
+      borderRadius: 999,
       backgroundColor: colors.primarySoft ?? colors.primaryLight,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.primary,
       ...(Platform.OS === 'web' ? ({
         cursor: 'pointer',
-        transition: 'transform 0.15s ease, opacity 0.15s ease',
+        transition: 'opacity 0.12s ease',
       } as any) : null),
     },
     chipPressed: {
-      opacity: 0.7,
+      opacity: 0.65,
     },
     chipText: {
       fontSize: 11,
       fontWeight: '600',
       color: colors.primaryText,
       maxWidth: 110,
+      letterSpacing: 0.1,
     },
     clearBtn: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.backgroundSecondary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     clearText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontWeight: '500',
       color: colors.textMuted,
     },
   });

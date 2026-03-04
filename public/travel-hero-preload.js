@@ -51,64 +51,10 @@
       ? apiOrigin + '/api/travels/' + encodeURIComponent(slug) + '/'
       : apiOrigin + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
 
-    function supportsAvif() {
-      try {
-        var canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        return canvas.toDataURL('image/avif').indexOf('data:image/avif') === 0;
-      } catch (_e) {
-        return false;
-      }
-    }
-
-    function supportsWebP() {
-      try {
-        var canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-      } catch (_e) {
-        return false;
-      }
-    }
-
-    var _preferredFormat = null;
-    function getPreferredFormat() {
-      if (_preferredFormat) return _preferredFormat;
-      _preferredFormat = supportsAvif() ? 'avif' : (supportsWebP() ? 'webp' : 'jpg');
-      return _preferredFormat;
-    }
-
-    // Must match optimizeImageUrl() in utils/imageOptimization.ts exactly.
-    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, explicitDpr) {
+    // Must match optimizeImageUrl() + buildVersionedImageUrl() behavior.
+    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id) {
       try {
         var resolved = new URL(rawUrl, window.location.origin);
-
-        // If backend returns private-host images, remap to public API origin
-        // to avoid slow/unreachable requests in prod-like environments.
-        var rh = (resolved.hostname || '').toLowerCase();
-        var isPrivateResolvedHost =
-          rh === 'localhost' ||
-          rh === '127.0.0.1' ||
-          /^10\./.test(rh) ||
-          /^192\.168\./.test(rh) ||
-          /^172\.(1[6-9]|2\d|3[0-1])\./.test(rh);
-        if (isPrivateResolvedHost && apiOrigin) {
-          try {
-            var publicApi = new URL(apiOrigin);
-            var ph = (publicApi.hostname || '').toLowerCase();
-            var isPrivatePublicApi =
-              ph === 'localhost' ||
-              ph === '127.0.0.1' ||
-              /^10\./.test(ph) ||
-              /^192\.168\./.test(ph) ||
-              /^172\.(1[6-9]|2\d|3[0-1])\./.test(ph);
-            if (!isPrivatePublicApi) {
-              resolved = new URL(resolved.pathname + resolved.search, publicApi.origin);
-            }
-          } catch (_e0) {}
-        }
 
         // Force HTTPS for non-local hosts (matches optimizeImageUrl)
         if (resolved.protocol === 'http:') {
@@ -126,61 +72,19 @@
           resolved.searchParams.set('v', String(id));
         }
 
-        var rHost = (resolved.hostname || '').toLowerCase();
-        var isWeserv = rHost === 'images.weserv.nl';
-        var isAllowedHost = rHost === 'images.weserv.nl';
-        if (rHost === 'metravel.by' || rHost === 'cdn.metravel.by' || rHost === 'api.metravel.by') {
-          var p = (resolved.pathname || '').toLowerCase();
-          var isImagePath = /^\/(travel-image|gallery|uploads|media)\//i.test(p);
-          isAllowedHost = !isImagePath;
+        // optimizeImageUrl() only transforms URLs from API origin.
+        if (!apiOrigin || resolved.origin !== apiOrigin) {
+          return resolved.toString();
         }
 
-        var preferredFormat = getPreferredFormat();
-        var dpr = typeof explicitDpr === 'number' ? explicitDpr : Math.min(window.devicePixelRatio || 1, 2);
-        var actualWidth = width ? Math.round(width * dpr) : width;
-
-        if (!isAllowedHost) {
-          // Check if host is private/local - don't proxy private IPs through weserv
-          var isPrivateHost =
-            rHost === 'localhost' ||
-            rHost === '127.0.0.1' ||
-            /^10\./.test(rHost) ||
-            /^192\.168\./.test(rHost) ||
-            /^172\.(1[6-9]|2\d|3[0-1])\./.test(rHost);
-          
-          if (isPrivateHost) {
-            // Return direct URL for private hosts (local dev)
-            if (actualWidth) resolved.searchParams.set('w', String(actualWidth));
-            if (quality && quality !== 100) resolved.searchParams.set('q', String(quality));
-            return resolved.toString();
-          }
-          
-          // Proxy through weserv for non-allowed external hosts
-          var OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
-          for (var pIndex = 0; pIndex < OPTIMIZATION_PARAMS.length; pIndex++) {
-            try { resolved.searchParams.delete(OPTIMIZATION_PARAMS[pIndex]); } catch (_e0) {}
-          }
-          var proxy = new URL('https://images.weserv.nl/');
-          var cleanUrl = resolved.toString().replace(/^https?:\/\//i, '');
-          proxy.searchParams.set('url', cleanUrl);
-          if (actualWidth) proxy.searchParams.set('w', String(actualWidth));
-          if (quality) proxy.searchParams.set('q', String(quality));
-          proxy.searchParams.set('output', preferredFormat);
-          proxy.searchParams.set('fit', 'inside');
-          return proxy.toString();
+        var OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
+        for (var pIndex = 0; pIndex < OPTIMIZATION_PARAMS.length; pIndex++) {
+          try { resolved.searchParams.delete(OPTIMIZATION_PARAMS[pIndex]); } catch (_e0) {}
         }
 
-        // For allowed hosts, add params directly (matching optimizeImageUrl exactly)
-        if (actualWidth) resolved.searchParams.set('w', String(actualWidth));
-        if (quality && quality !== 100) resolved.searchParams.set('q', String(quality));
-
-        if (isWeserv) {
-          resolved.searchParams.set('output', preferredFormat);
-        } else {
-          resolved.searchParams.set('f', preferredFormat);
-        }
+        if (width) resolved.searchParams.set('w', String(Math.round(width)));
+        if (quality) resolved.searchParams.set('q', String(Math.round(quality)));
         resolved.searchParams.set('fit', 'contain');
-
         return resolved.toString();
       } catch (_e) {
         return null;
@@ -353,17 +257,16 @@
         // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [480, 720]
         var widths = isMobile ? [320, 400] : [480, 720];
 
-        // Build srcSet entries — dpr must match TravelDetailsHero.tsx buildResponsiveImageProps
-        var srcSetDpr = isMobile ? 1 : 1.5;
+        // Build srcSet entries to match buildResponsiveImageProps()
         var srcSetParts = [];
         for (var i = 0; i < widths.length; i++) {
-          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, srcSetDpr);
+          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id);
           if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
         }
 
-        // The main src uses the widest breakpoint; on mobile use dpr=1 to match buildResponsiveImageProps
+        // The main src uses the widest breakpoint.
         var widest = widths[widths.length - 1];
-        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, isMobile ? 1 : 1.5);
+        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id);
         if (!preloadHref) return;
 
         try {
