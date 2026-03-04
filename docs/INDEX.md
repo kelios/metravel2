@@ -7,6 +7,8 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/RULES.md` — mandatory project rules and policies
 - `docs/DEVELOPMENT.md` — local setup and day-to-day workflow
 - `docs/TESTING.md` — Jest + Playwright (E2E) + CI quality gate
+- `docs/MANUAL_QA_RUNBOOK.md` — full manual QA scenarios (P0/P1/P2), including registration, travel CRUD, map/search, profile, messages, legal/cookies
+- `docs/TRAVEL_CREATE_FULL_QA_CASE.md` — detailed P0.3 test case for travel creation (all fields, modes, fullscreen map, coordinates, gallery, persistence, filtering)
 - `docs/RELEASE.md` — release/deploy flow
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
 

@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
 import * as AuthHookModule from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
@@ -174,6 +174,7 @@ export default function TravelDetailsContainer() {
   const { isMobile, width: responsiveWidth } = useResponsive();
   const screenWidth = responsiveWidth;
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -352,6 +353,7 @@ export default function TravelDetailsContainer() {
   // other critical meta tags directly because react-helmet-async can lose the
   // race on initial page loads with async data.
 	  useEffect(() => {
+      if (!isFocused) return undefined;
 	    if (!readyTitle || readyTitle === 'Metravel') return undefined;
 	    navigation.setOptions({ title: readyTitle });
 	    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
@@ -426,7 +428,7 @@ export default function TravelDetailsContainer() {
       clearTimeout(t3);
       titleObs?.disconnect();
     };
-	  }, [navigation, readyTitle, readyDesc, readyImage, canonicalUrl]);
+	  }, [isFocused, navigation, readyTitle, readyDesc, readyImage, canonicalUrl]);
 
   const forceDeferMount = !!forceOpenKey;
 
@@ -538,7 +540,7 @@ export default function TravelDetailsContainer() {
   // react-helmet-async has a race condition on direct page loads: if a Helmet instance
   // mounts late (after requestAnimationFrame), meta tags are committed as empty.
   // Rendering it here with fallback values ensures the Helmet instance is stable.
-  const seoBlock = (
+  const seoBlock = isFocused ? (
     <InstantSEO
       headKey={headKey}
       title={readyTitle}
@@ -571,7 +573,7 @@ export default function TravelDetailsContainer() {
         </>
       }
     />
-  );
+  ) : null;
 
   // NOTE: Skeleton gate is purely data-driven: show skeleton until `travel` is available.
   // Avoid delaying first paint with RAF, as it can increase CLS in perf audits.

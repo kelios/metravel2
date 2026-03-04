@@ -263,6 +263,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   );
 
   const prefetchedUrisRef = useRef<Record<string, true>>({});
+  const mountedSlidesRef = useRef<Set<number>>(new Set([0]));
 
   const canPrefetchOnWeb = useCallback(() => {
     if (Platform.OS !== 'web') return false;
@@ -285,6 +286,25 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     const candidates = [currentIndex - 1, currentIndex + 1];
     for (const idx of candidates) {
       if (idx < 0 || idx >= images.length) continue;
+      const uri = getUri(idx);
+      if (!uri) continue;
+      if (prefetchedUrisRef.current[uri]) continue;
+      prefetchedUrisRef.current[uri] = true;
+      prefetchImage(uri).catch(() => undefined);
+    }
+  }, [canPrefetchOnWeb, currentIndex, getUri, images.length]);
+
+  useEffect(() => {
+    mountedSlidesRef.current.add(currentIndex);
+  }, [currentIndex]);
+
+  useEffect(() => {
+    if (!canPrefetchOnWeb()) return;
+    if (images.length < 3) return;
+    if (images.length > 24) return;
+
+    for (let idx = 0; idx < images.length; idx++) {
+      if (idx === 0 || idx === currentIndex) continue;
       const uri = getUri(idx);
       if (!uri) continue;
       if (prefetchedUrisRef.current[uri]) continue;
@@ -624,6 +644,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               // Virtualization: only render Slide for slides within the visible window
               const distanceToCurrent = Math.abs(index - currentIndex);
               const inWindow = distanceToCurrent <= VIRTUAL_WINDOW;
+              const alreadyMounted = mountedSlidesRef.current.has(index);
+              const shouldRender = inWindow || alreadyMounted;
               const preloadPriority = distanceToCurrent <= 1;
 
               return (
@@ -631,7 +653,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   key={`${String(item.id)}|${index}`}
                   style={[styles.slide, { width: layoutMeasured ? containerW : '100%', height: containerH }, styles.slideSnap]}
                 >
-                  {inWindow ? (
+                  {shouldRender ? (
                     <Slide
                       item={item}
                       index={index}

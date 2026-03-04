@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from 'react';
+import { memo, useMemo, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
@@ -54,6 +54,7 @@ type Props = {
     priority?: 'low' | 'normal' | 'high';
     loading?: 'lazy' | 'eager';
     prefetch?: boolean;
+    showImmediately?: boolean;
   };
   width?: number;
   imageHeight?: number;
@@ -64,6 +65,8 @@ type Props = {
   webPressableProps?: any;
   visualVariant?: 'default' | 'featured';
 };
+
+const loadedCardImageCache = new Set<string>();
 
 function UnifiedTravelCard({
   title,
@@ -102,9 +105,6 @@ function UnifiedTravelCard({
   const colors = useThemedColors();
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  // CARD-04: Отслеживаем загрузку изображения для показа shimmer
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const handleImageLoad = useCallback(() => setImageLoaded(true), []);
   const isFeatured = visualVariant === 'featured';
   const { isPhone, isLargePhone } = useResponsive();
   const isMobileDevice = isPhone || isLargePhone;
@@ -153,6 +153,26 @@ function UnifiedTravelCard({
       }) ?? imageUrl
     );
   }, [imageUrl, imageHeight, isWeb, mediaFit, width]);
+  const cardImageCacheKey = useMemo(() => {
+    return optimizedImageUrl ? String(optimizedImageUrl).trim() : '';
+  }, [optimizedImageUrl]);
+  // CARD-04: Отслеживаем загрузку изображения для показа shimmer
+  const [imageLoaded, setImageLoaded] = useState(() => {
+    return !!cardImageCacheKey && loadedCardImageCache.has(cardImageCacheKey);
+  });
+  const handleImageLoad = useCallback(() => {
+    if (cardImageCacheKey) {
+      loadedCardImageCache.add(cardImageCacheKey);
+    }
+    setImageLoaded(true);
+  }, [cardImageCacheKey]);
+  useEffect(() => {
+    if (!cardImageCacheKey) {
+      setImageLoaded(false);
+      return;
+    }
+    setImageLoaded(loadedCardImageCache.has(cardImageCacheKey));
+  }, [cardImageCacheKey]);
 
   const styles = useMemo(
     () =>
@@ -464,6 +484,7 @@ function UnifiedTravelCard({
                 loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
                 priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
                 prefetch={mediaProps?.prefetch ?? false}
+                showImmediately={mediaProps?.showImmediately ?? imageLoaded}
                 onLoad={handleImageLoad}
               />
             </>

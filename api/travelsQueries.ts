@@ -247,6 +247,9 @@ const getErrorStatus = (error: unknown): number | null => {
     return Number.isFinite(status) ? status : null;
 };
 
+const shouldUseSlugFallback = (status: number | null): boolean =>
+    status === 404 || (status !== null && status >= 500 && status < 600);
+
 // ---------------------------------------------------------------------------
 // Slug fallback helpers
 // ---------------------------------------------------------------------------
@@ -806,7 +809,8 @@ export const fetchTravelBySlug = async (
     } catch (e: unknown) {
         if (isAbortError(e)) throw e;
 
-        if (getErrorStatus(e) === 404) {
+        const status = getErrorStatus(e);
+        if (shouldUseSlugFallback(status)) {
             const fallbackTravel = await findTravelBySlugFallback(slug, options);
             if (fallbackTravel) {
                 if (__DEV__) {
@@ -898,4 +902,3 @@ export const fetchMyTravels = async (params: {
         return [];
     }
 };
-

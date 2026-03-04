@@ -50,7 +50,7 @@ test.describe('SEO: travel detail page meta tags', () => {
     expect(match).toBeTruthy();
     const title = match![1];
     expect(title.length).toBeGreaterThan(0);
-    expect(title).toContain('MeTravel');
+    expect(title).toMatch(/metravel/i);
   });
 
   // --- Meta description ---

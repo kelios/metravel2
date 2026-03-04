@@ -144,13 +144,31 @@ test.describe('@perf Footer layout invariants (web)', () => {
     }
 
     // Dock must be a single-row compact nav (not a vertical list).
-    const dockInteractive = dock.locator('[role="link"], [role="button"]');
-    const cnt = await dockInteractive.count();
+    // Prefer stable testids, but also allow role-based targets as fallback for RNW variants.
+    const dockCandidates = dock.locator('[data-testid^="footer-item-"], [role="link"], [role="button"]');
+    const visibleBoxes = await dockCandidates.evaluateAll((els) =>
+      els
+        .map((el) => {
+          const rect = el.getBoundingClientRect();
+          const style = window.getComputedStyle(el as Element);
+          return {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            visible:
+              rect.width > 0 &&
+              rect.height > 0 &&
+              style.display !== 'none' &&
+              style.visibility !== 'hidden' &&
+              style.opacity !== '0',
+          };
+        })
+        .filter((item) => item.visible)
+    );
+    const cnt = visibleBoxes.length;
     expect(cnt, 'expected at least 2 interactive items in the dock').toBeGreaterThanOrEqual(2);
-    const [b0, b1] = await Promise.all([
-      dockInteractive.nth(0).boundingBox(),
-      dockInteractive.nth(1).boundingBox(),
-    ]);
+    const [b0, b1] = [visibleBoxes[0], visibleBoxes[1]];
     expect(b0, 'expected first dock item to have a bounding box').not.toBeNull();
     expect(b1, 'expected second dock item to have a bounding box').not.toBeNull();
     if (b0 && b1) {

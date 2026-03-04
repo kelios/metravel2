@@ -685,6 +685,33 @@ describe('src/api/travelsApi.ts', () => {
       expect(urlObj.searchParams.get('query')).toContain('modyn');
     });
 
+    it('fetchTravelBySlug использует fallback-поиск по похожему slug при 502', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const badGatewayError = Object.assign(new Error('bad gateway'), { status: 502 });
+      mockedApiClientGet.mockRejectedValueOnce(badGatewayError);
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        data: [
+          {
+            id: 2677,
+            name: 'Модынь  - одна из самых высоких вершин Бескидов',
+            slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+            url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+            publish: true,
+            moderation: true,
+          },
+        ],
+        total: 1,
+      } as any);
+
+      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vershin-beskidov');
+
+      expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
+      expect(result.id).toBe(2677);
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+
     it('fetchTravelBySlug продолжает fallback-скан, если первые query не дают результатов', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });

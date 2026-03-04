@@ -199,7 +199,13 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
     isApplyingValueRef.current = true
     try {
       const sel = quill.getSelection?.(true) ?? null
-      quill.clipboard?.dangerouslyPasteHTML?.(next, 'silent')
+      // Replace editor contents atomically to avoid duplicating HTML on repeated external syncs.
+      if (typeof quill.setContents === 'function' && quill.clipboard?.convert) {
+        const delta = quill.clipboard.convert({ html: next })
+        quill.setContents(delta, 'silent')
+      } else {
+        quill.clipboard?.dangerouslyPasteHTML?.(0, next, 'silent')
+      }
       if (sel) {
         try {
           quill.setSelection(sel, 'silent')
