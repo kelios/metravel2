@@ -333,7 +333,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   width: 100%;
   max-width: 100%;
   max-height: 55vh;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   border-radius: 16px;
   margin: ${DESIGN_TOKENS.spacing.xxs + 2}px 0 26px;
   border: 1px solid ${colors.borderLight};
