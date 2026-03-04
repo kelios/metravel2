@@ -14,6 +14,17 @@ import { LazyYouTube } from './LazyYouTubeSection'
 import { getDayLabel } from '@/services/pdf-export/utils/pluralize'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
+const WEB_SR_ONLY_HEADING_STYLE = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0,0,0,0)',
+  whiteSpace: 'nowrap',
+  borderWidth: 0,
+} as const
 
 const TravelDescription = withLazy(() => import('@/components/travel/TravelDescription'))
 
@@ -147,6 +158,7 @@ export const TravelDetailsContentSection: React.FC<{
                     {readingTimeLabel}
                   </Text>
                 </View>
+                {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>Содержание маршрута</h2>}
 
                 <TravelDescription title={travel.name} htmlContent={travel.description || ''} noBox />
 

@@ -1,5 +1,5 @@
 // app/travelsby/index.tsx
-import { Suspense, createElement, lazy, useMemo } from 'react';
+import React, { Suspense, createElement, lazy, useMemo } from 'react';
 import { Platform, StyleSheet, View, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';

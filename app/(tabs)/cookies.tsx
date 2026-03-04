@@ -22,7 +22,7 @@ function readConsent(): ConsentState | null {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
     if (!parsed.necessary) return null;
-    const analytics = typeof (parsed as any).analytics === 'boolean' ? (parsed as any).analytics : true;
+    const analytics = typeof (parsed as any).analytics === 'boolean' ? (parsed as any).analytics : false;
     return {
       necessary: !!parsed.necessary,
       analytics: !!analytics,
@@ -60,8 +60,8 @@ export default function CookieSettingsScreen() {
     if (existing) {
       setAnalyticsAllowed(existing.analytics);
     } else {
-      // Opt-out: если ничего не сохранено, по умолчанию аналитика включена
-      setAnalyticsAllowed(true);
+      // Opt-in: если ничего не сохранено, аналитика выключена до явного согласия.
+      setAnalyticsAllowed(false);
     }
   }, []);
 

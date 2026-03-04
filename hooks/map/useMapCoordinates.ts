@@ -24,7 +24,7 @@ function isValidCoordinate(lat: number, lng: number): boolean {
 
 /**
  * Хук для управления координатами пользователя.
- * Запрашивает геолокацию при монтировании.
+ * На web стартует с кеша/дефолта и запрашивает геолокацию только по явному действию.
  */
 export function useMapCoordinates() {
   const readWebCachedCoordinates = useCallback((): Coordinates | null => {
@@ -172,7 +172,13 @@ export function useMapCoordinates() {
 
   useEffect(() => {
     const abortController = new AbortController();
-    requestLocation(abortController.signal);
+    if (Platform.OS === 'web') {
+      // Do not request geolocation automatically on first paint (Lighthouse best-practices).
+      // The map can start from cached/default coordinates; explicit user action can call refreshLocation().
+      setIsLoading(false);
+    } else {
+      requestLocation(abortController.signal);
+    }
 
     return () => {
       abortController.abort();

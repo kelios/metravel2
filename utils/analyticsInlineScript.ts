@@ -31,9 +31,8 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return null;
       if (!data.necessary) return null;
-      // Backward compat: older stored objects might not have the analytics field.
-      // In opt-out model, missing field means "not decided" => allow analytics.
-      var analytics = (typeof data.analytics === 'boolean') ? data.analytics : true;
+      // Opt-in model: missing analytics flag means "not granted".
+      var analytics = (typeof data.analytics === 'boolean') ? data.analytics : false;
       return { necessary: !!data.necessary, analytics: !!analytics };
     } catch (e) {
       return null;
@@ -41,11 +40,11 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   }
 
   function isAnalyticsAllowed(){
-    // Opt-out model:
-    // - if no saved consent yet -> allow analytics (so metrics don't drop to zero)
-    // - if user explicitly disabled analytics -> do not track
+    // Opt-in model:
+    // - no saved consent -> do not load analytics
+    // - analytics=true -> allow tracking
     var c = readConsent();
-    if (!c) return true;
+    if (!c) return false;
     return !!c.analytics;
   }
 

@@ -27,7 +27,7 @@ export function readConsent(): ConsentState | null {
 
     return {
       necessary: true,
-      analytics: typeof candidate.analytics === 'boolean' ? candidate.analytics : true,
+      analytics: typeof candidate.analytics === 'boolean' ? candidate.analytics : false,
       date: typeof candidate.date === 'string' ? candidate.date : new Date().toISOString(),
     };
   } catch {

@@ -88,7 +88,12 @@ export function ProfileCompleteness({ user, profile, travelsCount }: ProfileComp
   const nextStep = steps.find((s) => !s.done);
 
   return (
-    <View style={styles.container} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: percent }}>
+    <View
+      style={styles.container}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Заполненность профиля"
+      accessibilityValue={{ min: 0, max: 100, now: percent }}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>
           Заполненность профиля

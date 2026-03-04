@@ -384,42 +384,46 @@ export const TravelDetailsMapSection: React.FC<{
 
     const fetchReverseName = async (lat: number, lng: number): Promise<string | null> => {
       try {
-        const primary = await fetch(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
+        const nominatim = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru`
         )
-        if (primary.ok) {
-          const data = await primary.json()
-          const locality =
-            data?.city ||
-            data?.locality ||
-            data?.principalSubdivision ||
-            data?.address?.city ||
-            data?.address?.town ||
-            data?.address?.village ||
-            data?.address?.municipality ||
+        if (nominatim.ok) {
+          const data = await nominatim.json()
+          const addr = data?.address ?? {}
+          const locality = (
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.municipality ||
+            addr.suburb ||
+            addr.hamlet ||
+            data?.name ||
+            (typeof data?.display_name === 'string' ? String(data.display_name).split(',')[0]?.trim() : null) ||
             null
+          )
           if (locality) return String(locality)
         }
       } catch {
         // fallback below
       }
 
+      // bigdatacloud.net is intentionally blocked by CSP on web.
+      if (Platform.OS === 'web') return null
+
       try {
-        const nominatim = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru`
+        const primary = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
         )
-        if (!nominatim.ok) return null
-        const data = await nominatim.json()
-        const addr = data?.address ?? {}
+        if (!primary.ok) return null
+        const data = await primary.json()
         return (
-          addr.city ||
-          addr.town ||
-          addr.village ||
-          addr.municipality ||
-          addr.suburb ||
-          addr.hamlet ||
-          data?.name ||
-          (typeof data?.display_name === 'string' ? String(data.display_name).split(',')[0]?.trim() : null) ||
+          data?.city ||
+          data?.locality ||
+          data?.principalSubdivision ||
+          data?.address?.city ||
+          data?.address?.town ||
+          data?.address?.village ||
+          data?.address?.municipality ||
           null
         )
       } catch {

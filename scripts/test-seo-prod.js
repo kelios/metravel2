@@ -335,7 +335,7 @@ async function main() {
   for (const slug of travelSlugs) {
     await testPage(`/travels/${slug}`, {
       titleNotGeneric: true,
-      titleContains: 'MeTravel',
+      titleContains: 'Metravel',
       descNotFallback: true,
       canonicalPath: `/travels/${slug}`,
       ogType: 'article',

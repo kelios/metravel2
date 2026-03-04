@@ -155,7 +155,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           }
           router.push(href as any);
         }}
-        accessibilityRole={Platform.OS === 'web' ? 'link' : 'tab'}
+        accessibilityRole="tab"
         accessibilityLabel={label}
         accessibilityState={{ selected: isActive }}
         hitSlop={6}
