@@ -118,6 +118,9 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
             onError={() => {
               if (!didTryApiPrefix) { const fallback = buildApiPrefixedUrl(srcWithRetry); if (fallback) { setDidTryApiPrefix(true); setOverrideSrc(fallback); return } setDidTryApiPrefix(true) }
               setLoadError(true)
+              // Don't keep hero blocked on a failed cover image:
+              // allow slider handoff immediately (gallery may still be valid).
+              onLoad?.()
             }}
           />
         </div>
