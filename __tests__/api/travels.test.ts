@@ -102,6 +102,31 @@ describe('src/api/travelsApi.ts', () => {
         expect.objectContaining({ id: 1, url: 'https://example.com/pic.jpg', extra: 'x' })
       );
     });
+
+    it('strips invalid /api prefix from media image paths', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        travel_image_thumb_url: '/api/travel-image/123/conversions/main.webp',
+        travel_image_thumb_small_url: 'https://metravel.by/api/travel-image/123/conversions/main_small.webp',
+        gallery: [
+          '/api/gallery/777/conversions/cover.jpg',
+          { id: 2, url: 'https://metravel.by/api/gallery/778/conversions/detail.jpg' },
+        ],
+      } as any);
+
+      expect(String(travel.travel_image_thumb_url)).toMatch(/\/travel-image\/123\/conversions\/main\.webp$/);
+      expect(String(travel.travel_image_thumb_url)).not.toContain('/api/travel-image/');
+      expect(String(travel.travel_image_thumb_small_url)).toMatch(/\/travel-image\/123\/conversions\/main_small\.webp$/);
+      expect(String(travel.travel_image_thumb_small_url)).not.toContain('/api/travel-image/');
+      expect(Array.isArray(travel.gallery)).toBe(true);
+      expect(String((travel.gallery as any[])[0])).toMatch(/\/gallery\/777\/conversions\/cover\.jpg$/);
+      expect(String((travel.gallery as any[])[0])).not.toContain('/api/gallery/');
+      expect((travel.gallery as any[])[1]).toEqual(
+        expect.objectContaining({ id: 2, url: expect.stringMatching(/\/gallery\/778\/conversions\/detail\.jpg$/) })
+      );
+      expect(String((travel.gallery as any[])[1]?.url || '')).not.toContain('/api/gallery/');
+    });
+
   });
 
   describe('fetchTravelsForMap normalization', () => {

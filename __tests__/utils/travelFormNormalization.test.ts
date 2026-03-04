@@ -230,6 +230,18 @@ describe('travelFormNormalization', () => {
       const result = normalizeMarkersForSave(markers);
       expect(result[0].categories).toEqual([1, 2]);
     });
+
+    it('uses fallback image when marker image is missing', () => {
+      const markers = [{ lat: 50, lng: 30, image: '' }];
+      const result = normalizeMarkersForSave(markers, 'https://cdn.com/fallback.jpg');
+      expect(result[0].image).toBe('https://cdn.com/fallback.jpg');
+    });
+
+    it('does not use local-preview fallback image', () => {
+      const markers = [{ lat: 50, lng: 30, image: '' }];
+      const result = normalizeMarkersForSave(markers, 'blob:http://localhost/fallback');
+      expect(result[0].image).toBeUndefined();
+    });
   });
 
   describe('normalizeGalleryForSave', () => {
@@ -238,24 +250,25 @@ describe('travelFormNormalization', () => {
     });
 
     it('filters out empty strings', () => {
-      expect(normalizeGalleryForSave(['', 'img.jpg', '  '])).toEqual(['img.jpg']);
+      expect(normalizeGalleryForSave(['', 'img.jpg', '  '])).toEqual([{ url: 'img.jpg' }]);
     });
 
     it('filters out blob URLs', () => {
       expect(normalizeGalleryForSave(['blob:x', 'https://cdn.com/a.jpg'])).toEqual([
-        'https://cdn.com/a.jpg',
+        { url: 'https://cdn.com/a.jpg' },
       ]);
     });
 
     it('handles object items with url property', () => {
       const gallery = [
-        { url: 'https://cdn.com/a.jpg' },
+        { id: 77, url: 'https://cdn.com/a.jpg' },
         { url: '' },
         { url: 'blob:x' },
       ];
       const result = normalizeGalleryForSave(gallery);
       expect(result).toHaveLength(1);
       expect((result as any)[0].url).toBe('https://cdn.com/a.jpg');
+      expect((result as any)[0].id).toBe(77);
     });
   });
 

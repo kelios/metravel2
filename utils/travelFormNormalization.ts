@@ -247,8 +247,14 @@ export function normalizeNullableStrings(data: TravelFormData): TravelFormData {
  * - image: отправляем только валидный серверный URL
  * - id: не отправляем null/пустой id
  */
-export function normalizeMarkersForSave(markers: any[]): any[] {
+export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: string | null): any[] {
     if (!Array.isArray(markers)) return [];
+    const trimmedFallbackImage = typeof fallbackImageUrl === 'string' ? fallbackImageUrl.trim() : '';
+    const normalizedFallbackImage =
+        trimmedFallbackImage.length > 0 && !isLocalPreviewUrl(trimmedFallbackImage)
+            ? trimmedFallbackImage
+            : '';
+
     return markers.map((m: any) => {
         const { image, id, ...rest } = m ?? {};
         const imageValue = typeof image === 'string' ? image.trim() : '';
@@ -266,10 +272,13 @@ export function normalizeMarkersForSave(markers: any[]): any[] {
             normalized.id = id;
         }
 
-        // Do not send image when empty/local preview.
-        // Sending image:null can trigger 400 on strict backend validators.
+        // Preserve marker image when it is already a valid server URL.
         if (imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)) {
             normalized.image = imageValue;
+        } else if (normalizedFallbackImage) {
+            // Backend requires coordsMeTravel[].image for some serializers.
+            // Use travel-level media as safe fallback to keep draft save working.
+            normalized.image = normalizedFallbackImage;
         }
 
         return normalized;
@@ -281,16 +290,26 @@ export function normalizeMarkersForSave(markers: any[]): any[] {
  */
 export function normalizeGalleryForSave(gallery: any[] | undefined): any[] | undefined {
     if (!Array.isArray(gallery)) return undefined;
-    return gallery.filter((item: any) => {
+    return gallery.flatMap((item: any) => {
         if (typeof item === 'string') {
             const value = item.trim();
-            return value.length > 0 && !isLocalPreviewUrl(value);
+            if (value.length > 0 && !isLocalPreviewUrl(value)) {
+                return [{ url: value }];
+            }
+            return [];
         }
         if (item && typeof item === 'object') {
             const url = typeof item.url === 'string' ? item.url.trim() : '';
-            return url.length > 0 && !isLocalPreviewUrl(url);
+            if (url.length > 0 && !isLocalPreviewUrl(url)) {
+                const normalizedItem: Record<string, unknown> = { url };
+                if (item.id != null && String(item.id).trim() !== '') {
+                    normalizedItem.id = item.id;
+                }
+                return [normalizedItem];
+            }
+            return [];
         }
-        return false;
+        return [];
     });
 }
 

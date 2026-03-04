@@ -48,6 +48,32 @@ const getErrorTextField = (data: unknown, field: 'message' | 'detail'): string |
     return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 };
 
+const getFirstValidationErrorMessage = (data: unknown): string | undefined => {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined;
+    const entries = Object.entries(data as Record<string, unknown>);
+    for (const [field, value] of entries) {
+        if (typeof value === 'string' && value.trim().length > 0) {
+            return `${field}: ${value.trim()}`;
+        }
+        if (Array.isArray(value)) {
+            const firstString = value.find(item => typeof item === 'string' && item.trim().length > 0);
+            if (typeof firstString === 'string') {
+                return `${field}: ${firstString.trim()}`;
+            }
+        }
+    }
+    return undefined;
+};
+
+const getApiErrorMessage = (data: unknown, fallbackStatusText: string): string => {
+    return (
+        getErrorTextField(data, 'message') ||
+        getErrorTextField(data, 'detail') ||
+        getFirstValidationErrorMessage(data) ||
+        `Ошибка запроса: ${fallbackStatusText}`
+    );
+};
+
 /**
  * Единый API клиент
  */
@@ -398,9 +424,7 @@ class ApiClient {
 
                         throw new ApiError(
                             fallbackResponse.status,
-                            errorData?.message ||
-                                errorData?.detail ||
-                                `Ошибка запроса: ${fallbackResponse.statusText}`,
+                            getApiErrorMessage(errorData, fallbackResponse.statusText),
                             errorData
                         );
                     }
@@ -420,7 +444,7 @@ class ApiClient {
 
                 throw new ApiError(
                     response.status,
-                    errorData?.message || errorData?.detail || `Ошибка запроса: ${response.statusText}`,
+                    getApiErrorMessage(errorData, response.statusText),
                     errorData
                 );
             }

@@ -120,8 +120,15 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
       } as TravelFormData);
 
-      const normalizedMarkers = normalizeMarkersForSave((mergedData as unknown).coordsMeTravel);
       const normalizedGallery = normalizeGalleryForSave(mergedData.gallery);
+      const markerFallbackImage =
+        sanitizeCoverUrl(mergedData.travel_image_thumb_url) ??
+        ((normalizedGallery?.[0] as Record<string, unknown> | undefined)?.url as string | undefined) ??
+        null;
+      const normalizedMarkers = normalizeMarkersForSave(
+        (mergedData as unknown).coordsMeTravel,
+        markerFallbackImage,
+      );
 
       const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
       const cleanedData = cleanEmptyFields({

@@ -72,11 +72,20 @@ export function useTravelHeroState(travel: Travel, isMobile: boolean, onFirstIma
     const mapped = gallery.map((item: unknown, index: number) =>
       typeof item === 'string' ? { url: item, id: index } : { ...(item as Record<string, unknown>), id: (item as Record<string, unknown>).id || index }
     );
-    if (mapped.length === 0 && travel.travel_image_thumb_url) {
-      return [{ url: travel.travel_image_thumb_url, id: 0 }];
-    }
-    return mapped;
-  }, [travel.gallery, travel.travel_image_thumb_url]);
+    const coverUrl = typeof travel.travel_image_thumb_url === 'string' ? travel.travel_image_thumb_url.trim() : '';
+
+    if (!coverUrl) return mapped;
+    if (mapped.length === 0) return [{ url: coverUrl, id: 0 }];
+
+    const normalizedCover = coverUrl.replace(/[?#].*$/, '');
+    const hasSameAsCover = mapped.some((item) => {
+      const raw = typeof item?.url === 'string' ? item.url.trim() : '';
+      return raw.replace(/[?#].*$/, '') === normalizedCover;
+    });
+
+    if (hasSameAsCover) return mapped;
+    return [{ url: coverUrl, id: `cover-${travel.id}` }, ...mapped];
+  }, [travel.gallery, travel.travel_image_thumb_url, travel.id]);
 
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : 'Фото путешествия';
 
@@ -166,4 +175,3 @@ export function useTravelHeroState(travel: Travel, isMobile: boolean, onFirstIma
     extrasReady, isAuthenticated,
   };
 }
-

@@ -98,14 +98,15 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
     }
 
     // ✅ FIX: Валидация критичных полей перед отправкой
-    if (data.name) {
-      const trimmedName = data.name.trim();
-      if (trimmedName.length > 0 && trimmedName.length < 3) {
-        throw new Error('Название должно содержать минимум 3 символа');
-      }
-      if (trimmedName.length > 200) {
-        throw new Error('Название слишком длинное (максимум 200 символов)');
-      }
+    const trimmedName = typeof data.name === 'string' ? data.name.trim() : '';
+    if (trimmedName.length === 0) {
+      throw new Error('Название обязательно для заполнения');
+    }
+    if (trimmedName.length < 3) {
+      throw new Error('Название должно содержать минимум 3 символа');
+    }
+    if (trimmedName.length > 200) {
+      throw new Error('Название слишком длинное (максимум 200 символов)');
     }
 
     // ✅ FIX: Валидация массивов (предотвращение отправки невалидных данных)

@@ -460,7 +460,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.primarySoft,
         borderRadius: DESIGN_TOKENS.radii.md,
         borderWidth: 1,
-        borderColor: colors.primary + '20',
+        borderColor: colors.primaryAlpha30,
         gap: DESIGN_TOKENS.spacing.sm,
     },
     tipIconWrapper: {

@@ -267,6 +267,6 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
 
     // Payload should have only the remaining gallery image
-    expect(sentPayload.gallery).toEqual(['https://metravel.by/gallery/1.webp']);
+    expect(sentPayload.gallery).toEqual([{ url: 'https://metravel.by/gallery/1.webp' }]);
   });
 });

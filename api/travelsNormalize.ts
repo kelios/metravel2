@@ -36,6 +36,7 @@ const extractFirstUserId = (raw: unknown): number | null => {
 export const normalizeTravelItem = (input: unknown): Travel => {
     const t = asRecord(input);
     const out: Record<string, unknown> = { ...t };
+    const mediaPathWithApiPrefix = /^\/api\/(travel-image|travel-description-image|address-image|gallery|uploads|media)(\/|$)/i;
 
     const stripDraftPlaceholder = (value: unknown): unknown => {
         if (typeof value !== 'string') return value;
@@ -116,8 +117,24 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     // Нормализация URL изображений (относительные -> абсолютные)
     const normalizeImageUrl = (url: string | undefined): string => {
         if (!url) return '';
-        const trimmed = url.trim();
+        let trimmed = url.trim();
         if (!trimmed) return '';
+
+        // Backend (or stale payloads) may occasionally return media URLs with an invalid `/api` prefix.
+        // Fix known media paths to avoid 404s in slider/gallery.
+        if (mediaPathWithApiPrefix.test(trimmed)) {
+            trimmed = trimmed.replace(/^\/api/i, '');
+        } else if (/^https?:\/\//i.test(trimmed)) {
+            try {
+                const parsed = new URL(trimmed);
+                if (mediaPathWithApiPrefix.test(parsed.pathname)) {
+                    parsed.pathname = parsed.pathname.replace(/^\/api/i, '');
+                    trimmed = parsed.toString();
+                }
+            } catch {
+                // Keep original value when URL parsing fails.
+            }
+        }
 
         if (/^http:\/\//i.test(trimmed)) {
             try {
@@ -227,4 +244,3 @@ export const normalizeTravelItem = (input: unknown): Travel => {
 
     return out as Travel;
 };
-
