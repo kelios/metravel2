@@ -24,6 +24,7 @@ import {
   normalizeNullableStrings,
   normalizeMarkersForSave,
   normalizeGalleryForSave,
+  normalizeGalleryImageIdsForSave,
   sanitizeCoverUrl,
   filterAllowedKeys,
   mergeOverridePreservingUserInput,
@@ -121,6 +122,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       } as TravelFormData);
 
       const normalizedGallery = normalizeGalleryForSave(mergedData.gallery);
+      const normalizedGalleryIds = normalizeGalleryImageIdsForSave(normalizedGallery);
       const markerFallbackImage =
         sanitizeCoverUrl(mergedData.travel_image_thumb_url) ??
         ((normalizedGallery?.[0] as Record<string, unknown> | undefined)?.url as string | undefined) ??
@@ -136,6 +138,12 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         id: resolvedId,
         coordsMeTravel: normalizedMarkers,
         ...(normalizedGallery ? { gallery: normalizedGallery } : {}),
+        // IMPORTANT: use independent array instances for each field.
+        // saveFormData sanitization uses cycle-protection and can drop duplicated object refs.
+        thumbs200ForCollectionArr: [...normalizedGalleryIds],
+        travelImageThumbUrlArr: [...normalizedGalleryIds],
+        // Backend compatibility: some deployments still validate the legacy typo field.
+        travelImageThumbUrArr: [...normalizedGalleryIds],
         travel_image_thumb_url: sanitizeCoverUrl(mergedData.travel_image_thumb_url),
         travel_image_thumb_small_url: sanitizeCoverUrl(mergedData.travel_image_thumb_small_url),
       });

@@ -197,6 +197,7 @@ export function getEmptyFormData(id: string | null): TravelFormData {
     coordsMeTravel: [],
     thumbs200ForCollectionArr: [],
     travelImageThumbUrlArr: [],
+    travelImageThumbUrArr: [],
     travelImageAddress: [],
     gallery: [],
     youtube_link: '',

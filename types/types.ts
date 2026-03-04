@@ -218,6 +218,8 @@ export interface TravelFormData {
     coordsMeTravel: any[];
     thumbs200ForCollectionArr: string[];
     travelImageThumbUrlArr: string[];
+    // Backend compatibility (legacy typo in serializer contract)
+    travelImageThumbUrArr?: string[];
     travelImageAddress: string[];
     categoriesIds: string[];
     transports: string[];

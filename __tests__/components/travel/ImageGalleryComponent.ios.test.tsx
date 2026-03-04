@@ -78,7 +78,7 @@ describe('ImageGalleryComponent.ios', () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith([
-        expect.stringContaining('/uploads/a.jpg'),
+        expect.objectContaining({ id: '101', url: expect.stringContaining('/uploads/a.jpg') }),
       ]);
     });
   });
@@ -101,8 +101,8 @@ describe('ImageGalleryComponent.ios', () => {
     // Wait for initial onChange
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith([
-        expect.stringContaining('/uploads/server.jpg'),
-        expect.stringContaining('/uploads/local.jpg'),
+        expect.objectContaining({ id: '123', url: expect.stringContaining('/uploads/server.jpg') }),
+        expect.objectContaining({ id: 'legacy-0', url: expect.stringContaining('/uploads/local.jpg') }),
       ]);
     });
 
@@ -119,7 +119,7 @@ describe('ImageGalleryComponent.ios', () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenLastCalledWith([
-        expect.stringContaining('/uploads/local.jpg'),
+        expect.objectContaining({ id: 'legacy-0', url: expect.stringContaining('/uploads/local.jpg') }),
       ]);
     });
 

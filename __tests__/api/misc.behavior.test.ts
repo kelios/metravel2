@@ -107,6 +107,28 @@ describe('api/misc', () => {
     expect(mockApiClientRequest).toHaveBeenCalled()
   })
 
+  it('saveFormData keeps duplicated array-reference fields in serialized payload', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 2 })
+
+    const shared = [3796] as any
+    const payload = {
+      ...baseForm,
+      name: 'Valid travel name',
+      thumbs200ForCollectionArr: shared,
+      travelImageThumbUrlArr: shared,
+      travelImageThumbUrArr: shared,
+    } as any
+
+    await saveFormData(payload)
+
+    const requestOptions = mockApiClientRequest.mock.calls[0][1]
+    const body = JSON.parse(requestOptions.body)
+    expect(body.thumbs200ForCollectionArr).toEqual([3796])
+    expect(body.travelImageThumbUrlArr).toEqual([3796])
+    expect(body.travelImageThumbUrArr).toEqual([3796])
+  })
+
   it('uploadImage validates file and requires token', async () => {
     mockGetSecureItem.mockResolvedValue(null)
     await expect(uploadImage(new FormData())).rejects.toThrow('Пользователь не авторизован')

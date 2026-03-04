@@ -8,10 +8,15 @@ export interface GalleryItem {
   hasLoaded?: boolean
 }
 
+export interface GalleryValueItem {
+  id?: string | number
+  url: string
+}
+
 export interface ImageGalleryComponentProps {
   collection: string
   idTravel: string
   initialImages: GalleryItem[]
   maxImages?: number
-  onChange?: (urls: string[]) => void
+  onChange?: (items: GalleryValueItem[]) => void
 }

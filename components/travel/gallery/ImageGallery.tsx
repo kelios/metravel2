@@ -124,15 +124,18 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
   useEffect(() => {
     if (!onChange) return
-    const urls = images
+    const items = images
       .filter((img) => !img.isUploading)
-      .map((img) => img.url)
-      .filter(Boolean)
+      .map((img) => ({
+        id: img.id,
+        url: img.url,
+      }))
+      .filter((img) => typeof img.url === 'string' && img.url.trim().length > 0)
 
-    const signature = urls.join('|')
+    const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}`).join('|')
     if (signature === lastReportedUrlsRef.current) return
     lastReportedUrlsRef.current = signature
-    onChange(urls)
+    onChange(items)
   }, [images, onChange])
 
   const handleUploadImages = useCallback(

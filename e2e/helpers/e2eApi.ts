@@ -395,6 +395,7 @@ export async function createTestTravel(): Promise<any> {
     coordsMeTravel: [],
     thumbs200ForCollectionArr: [],
     travelImageThumbUrlArr: [],
+    travelImageThumbUrArr: [],
     travelImageAddress: [],
     categoriesIds: [],
     transports: [],

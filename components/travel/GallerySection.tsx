@@ -3,11 +3,12 @@ import { View, StyleSheet, Text, ActivityIndicator, Platform } from 'react-nativ
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 import { useThemedColors } from '@/hooks/useTheme';
+import type { GalleryValueItem } from '@/components/travel/gallery/types';
 
 interface GallerySectionProps {
     images: any[] | null | undefined;
     travelId?: string | number | null;
-    onChange?: (urls: string[]) => void;
+    onChange?: (items: GalleryValueItem[]) => void;
     isLoading?: boolean;
 }
 

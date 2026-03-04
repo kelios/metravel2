@@ -92,7 +92,7 @@ export function ensureRequiredDraftFields(payload: TravelFormData): TravelFormDa
     const arrayFields: Array<keyof TravelFormData> = [
         'categories', 'transports', 'month', 'complexity',
         'companions', 'over_nights_stay', 'countries',
-        'thumbs200ForCollectionArr', 'travelImageThumbUrlArr', 'travelImageAddress',
+        'thumbs200ForCollectionArr', 'travelImageThumbUrlArr', 'travelImageThumbUrArr', 'travelImageAddress',
     ];
     const stringFields: Array<keyof TravelFormData> = [
         'minus', 'plus', 'recommendation', 'description', 'youtube_link',
@@ -294,7 +294,12 @@ export function normalizeGalleryForSave(gallery: any[] | undefined): any[] | und
         if (typeof item === 'string') {
             const value = item.trim();
             if (value.length > 0 && !isLocalPreviewUrl(value)) {
-                return [{ url: value }];
+                const normalizedItem: Record<string, unknown> = { url: value };
+                const parsedId = extractImageIdFromUrl(value);
+                if (parsedId != null) {
+                    normalizedItem.id = parsedId;
+                }
+                return [normalizedItem];
             }
             return [];
         }
@@ -304,6 +309,11 @@ export function normalizeGalleryForSave(gallery: any[] | undefined): any[] | und
                 const normalizedItem: Record<string, unknown> = { url };
                 if (item.id != null && String(item.id).trim() !== '') {
                     normalizedItem.id = item.id;
+                } else {
+                    const parsedId = extractImageIdFromUrl(url);
+                    if (parsedId != null) {
+                        normalizedItem.id = parsedId;
+                    }
                 }
                 return [normalizedItem];
             }
@@ -311,6 +321,48 @@ export function normalizeGalleryForSave(gallery: any[] | undefined): any[] | und
         }
         return [];
     });
+}
+
+/**
+ * Извлекает integer id изображения из URL медиа.
+ */
+function extractImageIdFromUrl(url: string): number | null {
+    if (typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+
+    const patterns = [
+        /(?:^|\/)gallery\/(\d+)(?:\/|$)/i,
+        /(?:^|\/)travel-image\/(\d+)(?:\/|$)/i,
+        /(?:^|\/)travel-description-image\/(\d+)(?:\/|$)/i,
+        /(?:^|\/)address-image\/(\d+)(?:\/|$)/i,
+    ];
+
+    for (const pattern of patterns) {
+        const match = trimmed.match(pattern);
+        const value = match?.[1];
+        if (!value) continue;
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Возвращает массив integer id изображений из нормализованной галереи.
+ */
+export function normalizeGalleryImageIdsForSave(gallery: any[] | undefined): number[] {
+    if (!Array.isArray(gallery)) return [];
+    return gallery
+        .map((item: any) => {
+            const rawId = item?.id;
+            const parsed = typeof rawId === 'number' ? rawId : Number(rawId);
+            return Number.isFinite(parsed) ? parsed : null;
+        })
+        .filter((value): value is number => Number.isFinite(value));
 }
 
 /**

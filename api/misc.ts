@@ -163,48 +163,80 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
  * Удаляет из объекта несериализуемые сущности (DOM-узлы, функции, React элементы)
  * и разрывает возможные циклические ссылки перед JSON.stringify.
  */
-function sanitizeForJson(value: unknown, seen = new WeakSet<object>()): unknown {
+type SanitizeState = {
+  memo: WeakMap<object, unknown>;
+  visiting: WeakSet<object>;
+};
+
+function sanitizeForJson(value: unknown, state?: SanitizeState): unknown {
+  const currentState: SanitizeState = state ?? {
+    memo: new WeakMap<object, unknown>(),
+    visiting: new WeakSet<object>(),
+  };
+
   if (value === null || typeof value !== 'object') {
     return value;
   }
 
-  // Пропускаем повторно встреченные объекты, чтобы разорвать циклы
-  if (seen.has(value)) {
+  // Reuse sanitized result for repeated references instead of dropping fields.
+  if (currentState.memo.has(value)) {
+    return currentState.memo.get(value as object);
+  }
+
+  // Break real cycles only for currently traversed branch.
+  if (currentState.visiting.has(value)) {
     return undefined;
   }
-  seen.add(value);
+  currentState.visiting.add(value);
 
   // Фильтруем DOM-узлы и React-элементы
   if (typeof HTMLElement !== 'undefined' && value instanceof HTMLElement) {
+    currentState.visiting.delete(value);
     return undefined;
   }
   if (typeof Node !== 'undefined' && value instanceof Node) {
+    currentState.visiting.delete(value);
     return undefined;
   }
 
   // Фильтруем события/функции/символы/бигинты
   if (typeof value === 'function' || value instanceof Event) {
+    currentState.visiting.delete(value);
     return undefined;
   }
 
   // Даты сериализуем в строку
   if (value instanceof Date) {
+    currentState.visiting.delete(value);
     return value.toISOString();
   }
 
   if (Array.isArray(value)) {
-    return value
-      .map(item => sanitizeForJson(item, seen))
-      .filter(item => item !== undefined);
+    const result: unknown[] = [];
+    currentState.memo.set(value, result);
+
+    value.forEach(item => {
+      const sanitized = sanitizeForJson(item, currentState);
+      if (sanitized !== undefined) {
+        result.push(sanitized);
+      }
+    });
+
+    currentState.visiting.delete(value);
+    return result;
   }
 
   const result: Record<string, unknown> = {};
+  currentState.memo.set(value, result);
+
   Object.entries(value as Record<string, unknown>).forEach(([key, val]) => {
-    const sanitized = sanitizeForJson(val, seen);
+    const sanitized = sanitizeForJson(val, currentState);
     if (sanitized !== undefined) {
       result[key] = sanitized;
     }
   });
+
+  currentState.visiting.delete(value);
   return result;
 }
 

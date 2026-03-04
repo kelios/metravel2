@@ -8,6 +8,7 @@ import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel } from '@/types/types';
+import type { GalleryValueItem } from '@/components/travel/gallery/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
@@ -178,14 +179,41 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     }, [coverSmallUrl, coverFullUrl]);
 
     const handleGalleryChange = useCallback(
-        (urls: string[]) => {
+        (items: GalleryValueItem[]) => {
             // Синхронизируем галерею с формой, чтобы шаг 6 сразу видел фото.
             // Guard: avoid endless update loops when the gallery URLs haven't changed.
             setFormData(prev => {
                 const prevGalleryRaw = (prev as any)?.gallery;
                 const prevGallery = Array.isArray(prevGalleryRaw) ? prevGalleryRaw : [];
-                const nextGallery = Array.isArray(urls) ? urls : [];
-                if (prevGallery.length === nextGallery.length && prevGallery.every((v: any, i: number) => v === nextGallery[i])) {
+                const nextGallery = (Array.isArray(items) ? items : [])
+                    .map((item) => {
+                        if (!item || typeof item !== 'object') return null;
+                        const url = typeof item.url === 'string' ? item.url.trim() : '';
+                        if (!url) return null;
+                        const normalized: { url: string; id?: string | number } = { url };
+                        if (item.id != null && String(item.id).trim().length > 0) {
+                            normalized.id = item.id;
+                        }
+                        return normalized;
+                    })
+                    .filter(Boolean) as Array<{ url: string; id?: string | number }>;
+
+                const prevSignature = prevGallery
+                    .map((item: any) => {
+                        if (typeof item === 'string') return `:${item}`;
+                        if (item && typeof item === 'object') {
+                            const id = item.id != null ? String(item.id) : '';
+                            const url = typeof item.url === 'string' ? item.url : '';
+                            return `${id}:${url}`;
+                        }
+                        return '';
+                    })
+                    .join('|');
+                const nextSignature = nextGallery
+                    .map((item) => `${String(item.id ?? '')}:${item.url}`)
+                    .join('|');
+
+                if (prevSignature === nextSignature) {
                     return prev;
                 }
                 return {

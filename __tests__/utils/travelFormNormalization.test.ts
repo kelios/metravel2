@@ -9,6 +9,7 @@ import {
   normalizeNullableStrings,
   normalizeMarkersForSave,
   normalizeGalleryForSave,
+  normalizeGalleryImageIdsForSave,
   sanitizeCoverUrl,
   filterAllowedKeys,
   mergeOverridePreservingUserInput,
@@ -107,6 +108,7 @@ describe('travelFormNormalization', () => {
       const result = ensureRequiredDraftFields({} as any);
       expect(result.categories).toEqual([]);
       expect(result.transports).toEqual([]);
+      expect(result.travelImageThumbUrArr).toEqual([]);
     });
 
     it('normalizes boolean fields from strings', () => {
@@ -269,6 +271,29 @@ describe('travelFormNormalization', () => {
       expect(result).toHaveLength(1);
       expect((result as any)[0].url).toBe('https://cdn.com/a.jpg');
       expect((result as any)[0].id).toBe(77);
+    });
+
+    it('extracts id from gallery URL when id is missing', () => {
+      const result = normalizeGalleryForSave([
+        'https://metravel.by/gallery/3796/conversions/cover.webp',
+      ]);
+      expect((result as any)[0].id).toBe(3796);
+      expect((result as any)[0].url).toContain('/gallery/3796/');
+    });
+  });
+
+  describe('normalizeGalleryImageIdsForSave', () => {
+    it('returns only numeric ids', () => {
+      const result = normalizeGalleryImageIdsForSave([
+        { id: 1, url: 'a' },
+        { id: '2', url: 'b' },
+        { id: 'bad', url: 'c' },
+      ]);
+      expect(result).toEqual([1, 2]);
+    });
+
+    it('returns empty array for non-array input', () => {
+      expect(normalizeGalleryImageIdsForSave(undefined)).toEqual([]);
     });
   });
 

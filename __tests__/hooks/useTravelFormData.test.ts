@@ -375,6 +375,47 @@ describe('useTravelFormData', () => {
     expect((result.current.formData as any).gallery).toEqual(localGallery);
   });
 
+  it('maps gallery image ids into contract fields for upsert payload', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 999 }));
+
+    const { result } = renderHook(
+      () =>
+      useTravelFormData({
+        travelId: null,
+        isNew: true,
+        userId: '42',
+        isSuperAdmin: false,
+        isAuthenticated: true,
+        authReady: true,
+      }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        name: 'Gallery IDs test',
+        description: 'A'.repeat(60),
+        gallery: ['https://metravel.by/gallery/3796/conversions/cover.webp'],
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
+    expect(sentPayload.gallery).toEqual([
+      { id: 3796, url: 'https://metravel.by/gallery/3796/conversions/cover.webp' },
+    ]);
+    expect(sentPayload.travelImageThumbUrlArr).toEqual([3796]);
+    expect(sentPayload.travelImageThumbUrArr).toEqual([3796]);
+    expect(sentPayload.thumbs200ForCollectionArr).toEqual([3796]);
+  });
+
   it('preserves marker images across save when backend reorders markers (merge by id/latlng, not by index)', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => {
       // Simulate backend reorder + empty images (common on drafts).

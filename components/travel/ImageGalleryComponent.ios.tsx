@@ -18,6 +18,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { compressTravelPhoto } from '@/utils/imageCompressor';
 import { UploadProgressBar } from '@/components/ui/UploadProgressBar';
+import type { GalleryValueItem } from '@/components/travel/gallery/types';
 
 const API_BASE_URL: string =
   process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
@@ -56,7 +57,7 @@ interface ImageGalleryComponentProps {
   idTravel: string;
   initialImages: GalleryItem[];
   maxImages?: number;
-  onChange?: (urls: string[]) => void;
+  onChange?: (items: GalleryValueItem[]) => void;
 }
 
 const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
@@ -96,11 +97,13 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
 
   useEffect(() => {
     if (!onChange) return;
-    const urls = images.map((img) => img.url).filter(Boolean);
-    const signature = urls.join('|');
+    const items = images
+      .map((img) => ({ id: img.id, url: img.url }))
+      .filter((img) => typeof img.url === 'string' && img.url.trim().length > 0);
+    const signature = items.map((img) => `${String(img.id ?? '')}:${img.url}`).join('|');
     if (signature === lastReportedUrlsRef.current) return;
     lastReportedUrlsRef.current = signature;
-    onChange(urls);
+    onChange(items);
   }, [images, onChange]);
 
   const handleUploadImages = useCallback(

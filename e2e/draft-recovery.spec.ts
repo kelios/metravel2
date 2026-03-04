@@ -63,6 +63,7 @@ test.describe('Draft recovery popup', () => {
       coordsMeTravel: [],
       thumbs200ForCollectionArr: [],
       travelImageThumbUrlArr: [],
+      travelImageThumbUrArr: [],
       travelImageAddress: [],
       categoriesIds: [],
       transports: [],

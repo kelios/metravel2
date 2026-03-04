@@ -321,9 +321,9 @@ describe('ImageGalleryComponent.web', () => {
     await waitFor(() => {
       // Should be called with one URL only, even if upload is triggered twice.
       expect(onChange).toHaveBeenCalled();
-      const last = onChange.mock.calls[onChange.mock.calls.length - 1][0] as string[];
+      const last = onChange.mock.calls[onChange.mock.calls.length - 1][0] as Array<{ id?: string; url: string }>;
       expect(last).toHaveLength(1);
-      expect(last[0]).toContain('/same.jpg');
+      expect(last[0]?.url).toContain('/same.jpg');
     });
   });
 

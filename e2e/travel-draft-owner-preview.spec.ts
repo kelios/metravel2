@@ -35,6 +35,7 @@ const basePayload = {
   coordsMeTravel: [],
   thumbs200ForCollectionArr: [],
   travelImageThumbUrlArr: [],
+  travelImageThumbUrArr: [],
   travelImageAddress: [],
   categoriesIds: [],
   transports: [],
