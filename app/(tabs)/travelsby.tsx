@@ -15,7 +15,7 @@ export default function TravelsByScreen() {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const title = 'Путешествия по Беларуси — маршруты и места для поездок | Metravel';
+    const title = 'Маршруты по Беларуси и идеи поездок | Metravel';
     const description =
         'Подборка маршрутов и мест по Беларуси: идеи для выходных и больших поездок. Фото, точки на карте и советы путешественников.';
 
@@ -33,17 +33,19 @@ export default function TravelsByScreen() {
             )}
             <View style={styles.container}>
                 {Platform.OS === 'web' && (
-                    <h1 style={{
-                        position: 'absolute' as const,
-                        width: 1,
-                        height: 1,
-                        padding: 0,
-                        margin: -1,
-                        overflow: 'hidden' as const,
-                        clip: 'rect(0,0,0,0)',
-                        whiteSpace: 'nowrap',
-                        borderWidth: 0,
-                    } as any}>{title}</h1>
+                    React.createElement('h1', {
+                        style: {
+                            position: 'absolute' as const,
+                            width: 1,
+                            height: 1,
+                            padding: 0,
+                            margin: -1,
+                            overflow: 'hidden' as const,
+                            clip: 'rect(0,0,0,0)',
+                            whiteSpace: 'nowrap',
+                            borderWidth: 0,
+                        } as any,
+                    }, title)
                 )}
                 <Suspense
                     fallback={

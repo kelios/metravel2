@@ -86,6 +86,9 @@ function HomeScreen() {
                 />
             )}
             <View style={styles.container}>
+                {Platform.OS === 'web' && (
+                    React.createElement('h1', { style: styles.srOnly as any }, title)
+                )}
                 <ErrorBoundary
                     fallback={
                         <View style={styles.errorContainer}>
@@ -119,6 +122,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
         backgroundColor: colors.background,
     },
+    srOnly: Platform.select({
+        web: {
+            position: 'absolute' as const,
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: 'hidden' as const,
+            clip: 'rect(0,0,0,0)',
+            whiteSpace: 'nowrap',
+            borderWidth: 0,
+        },
+        default: { display: 'none' as const },
+    }) as any,
     errorContainer: {
         flex: 1,
         justifyContent: 'center',

@@ -71,7 +71,7 @@ export function useTravelComments(travelId: number, threadId?: number | null) {
   return useQuery({
     queryKey: commentKeys.travelComments(travelId, threadId),
     queryFn: () => commentsApi.getTravelComments({ travelId, threadId }),
-    enabled: !!travelId && travelId > 0,
+    enabled: !!travelId && travelId > 0 && !!threadId && threadId > 0,
     select: (data) => {
       const prevById = buildPrevById(
         queryClient.getQueryData<TravelComment[]>(

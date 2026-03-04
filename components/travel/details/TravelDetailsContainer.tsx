@@ -128,6 +128,21 @@ const TravelDeferredSections = withLazy(() =>
 
 // Переадресация для обратной совместимости внутри компонента
 const stripToDescription = (html?: string) => stripHtml(html).slice(0, 160);
+const SEO_TITLE_MAX_LENGTH = 60;
+const SEO_TITLE_SUFFIX = ' | Metravel';
+
+const buildSeoTitle = (base: string): string => {
+  const normalized = String(base || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return 'Metravel';
+
+  const maxBaseLength = Math.max(10, SEO_TITLE_MAX_LENGTH - SEO_TITLE_SUFFIX.length);
+  const clippedBase =
+    normalized.length > maxBaseLength
+      ? `${normalized.slice(0, maxBaseLength - 1).trimEnd()}…`
+      : normalized;
+
+  return `${clippedBase}${SEO_TITLE_SUFFIX}`;
+};
 
 /* -------------------- Defer wrapper -------------------- */
 const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, children }) => {
@@ -288,11 +303,11 @@ export default function TravelDetailsContainer() {
             .filter(Boolean)
             .join(' ')
         : '';
-    const title = travel?.name
-      ? `${travel.name} | MeTravel`
-      : slugTitle
-        ? `${slugTitle} | MeTravel`
-        : 'MeTravel';
+    const title = buildSeoTitle(
+      travel?.name
+        ? travel.name
+        : slugTitle || 'Путешествие'
+    );
     const desc =
       stripToDescription(travel?.description) ||
       (slugTitle
@@ -337,7 +352,7 @@ export default function TravelDetailsContainer() {
   // other critical meta tags directly because react-helmet-async can lose the
   // race on initial page loads with async data.
 	  useEffect(() => {
-	    if (!readyTitle || readyTitle === 'MeTravel') return undefined;
+	    if (!readyTitle || readyTitle === 'Metravel') return undefined;
 	    navigation.setOptions({ title: readyTitle });
 	    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 

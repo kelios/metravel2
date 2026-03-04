@@ -81,5 +81,5 @@ build/
 .turbo/
 .parcel-cache/
 /playwright-screenshots/
-/nginx/ssl/
+nginx/ssl/
 /nginx/ssl/fullchain.pem

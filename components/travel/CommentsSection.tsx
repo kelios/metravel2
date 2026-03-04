@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CommentsSkeleton } from '@/components/travel/TravelDetailSkeletons';

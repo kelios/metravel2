@@ -462,7 +462,7 @@ describe('CompactSideBarTravel - Web', () => {
       const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithActive} />);
 
       const activeLink = UNSAFE_getAllByProps({ 'data-active': 'true' })[0];
-      expect(activeLink.props.accessibilityState?.selected).toBe(true);
+      expect(activeLink.props['aria-pressed']).toBe(true);
     });
   });
 });

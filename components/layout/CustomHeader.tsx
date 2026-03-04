@@ -1,7 +1,7 @@
 import React, { Suspense, useMemo, useRef, useState, useCallback, lazy } from 'react';
 import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, ScrollView } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';

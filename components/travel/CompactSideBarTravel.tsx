@@ -570,11 +570,10 @@ function CompactSideBarTravel({
             android_ripple={{ color: themedColors.primarySoft }}
             accessibilityRole="button"
             accessibilityLabel={label}
-            accessibilityState={{ selected: currentActive === key }}
             {...(Platform.OS === 'web' ? {
               'data-sidebar-link': true,
               'data-active': currentActive === key ? 'true' : 'false',
-              'aria-selected': currentActive === key,
+              'aria-pressed': currentActive === key,
               'aria-current': currentActive === key ? 'page' : undefined,
               role: 'button',
               'aria-label': label,

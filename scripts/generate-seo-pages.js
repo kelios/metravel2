@@ -35,6 +35,8 @@ const API_BASE = getArg('api', 'https://metravel.by').replace(/\/+$/, '');
 const SITE_URL = 'https://metravel.by';
 const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
+const SEO_TITLE_MAX_LENGTH = 60;
+const SEO_TITLE_SUFFIX = ' | Metravel';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -91,6 +93,21 @@ function toAbsoluteUrl(input) {
   if (value.startsWith('http://') || value.startsWith('https://')) return value;
   if (value.startsWith('/')) return `${SITE_URL}${value}`;
   return value;
+}
+
+function buildSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
+  const normalized = String(base || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return 'Metravel';
+
+  const maxBaseLength = Math.max(10, maxLength - SEO_TITLE_SUFFIX.length);
+  const clippedBase =
+    normalized.length > maxBaseLength
+      ? `${normalized.slice(0, maxBaseLength - 1).trimEnd()}…`
+      : normalized;
+
+  return `${clippedBase}${SEO_TITLE_SUFFIX}`;
 }
 
 function isBareMediaEndpointUrl(input) {
@@ -395,87 +412,87 @@ function writeFileSafe(filePath, content) {
 const STATIC_PAGES = [
   {
     route: '/',
-    title: 'Твоя книга путешествий | Metravel',
+    title: 'Идеи поездок на выходные и книга путешествий | Metravel',
     description:
       'Планируйте путешествия, публикуйте маршруты, добавляйте фото и заметки, сохраняйте избранное и собирайте красивую книгу поездок в PDF.',
   },
   {
     route: '/about',
-    title: 'О проекте MeTravel | Кто мы и зачем это всё',
+    title: 'О проекте MeTravel — сообщество путешественников | Metravel',
     description:
       'MeTravel объединяет путешественников: публикуйте маршруты, сохраняйте полезные места, читайте истории и собирайте собственную книгу поездок.',
   },
   {
     route: '/search',
-    title: 'Поиск путешествий | MeTravel',
+    title: 'Поиск маршрутов и идей путешествий по Беларуси | Metravel',
     description:
       'Ищите путешествия по странам, городам, категориям и датам, применяйте фильтры и быстро находите маршруты, вдохновение и советы для следующей поездки.',
   },
   {
     route: '/map',
-    title: 'Карта путешествий | MeTravel',
+    title: 'Карта маршрутов и достопримечательностей Беларуси | Metravel',
     description:
       'Изучайте интерактивную карту путешествий: находите маршруты, достопримечательности и точки интереса, включайте фильтры и стройте путь под свои планы.',
   },
   {
     route: '/articles',
-    title: 'Статьи о путешествиях | MeTravel',
+    title: 'Статьи о путешествиях, маршрутах и советах | Metravel',
     description: 'Читай статьи и заметки путешественников. Полезные советы, маршруты и лайфхаки.',
   },
   {
     route: '/roulette',
-    title: 'Рулетка путешествий | MeTravel',
+    title: 'Случайный маршрут и идеи поездок | Metravel',
     description: 'Не знаешь куда поехать? Крути рулетку и получи случайное направление для путешествия!',
   },
   {
     route: '/favorites',
-    title: 'Избранное | MeTravel',
+    title: 'Избранные маршруты и места | Metravel',
     description: 'Твои сохранённые путешествия и маршруты.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/privacy',
-    title: 'Политика конфиденциальности | MeTravel',
+    title: 'Политика конфиденциальности и данных | Metravel',
     description: 'Политика конфиденциальности и обработки персональных данных MeTravel.',
   },
   {
     route: '/cookies',
-    title: 'Настройки cookies | MeTravel',
+    title: 'Настройки cookies и аналитики | Metravel',
     description: 'Управление настройками cookies и аналитики на MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/login',
-    title: 'Вход | MeTravel',
+    title: 'Вход в аккаунт путешественника | Metravel',
     description: 'Войди в свой аккаунт MeTravel.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/registration',
-    title: 'Регистрация | MeTravel',
+    title: 'Регистрация и старт путешествий | Metravel',
     description: 'Создай аккаунт MeTravel и начни делиться путешествиями.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/travelsby',
-    title: 'Путешествия по Беларуси | MeTravel',
+    title: 'Маршруты по Беларуси и идеи поездок | Metravel',
     description:
       'Открывайте Беларусь через маршруты, идеи поездок и заметки путешественников: достопримечательности, природа и готовые планы на выходные.',
   },
   {
     route: '/quests',
-    title: 'Квесты | MeTravel',
+    title: 'Городские квесты и маршруты | Metravel',
     description: 'Проходи квесты по городам и открывай новые места.',
   },
   {
     route: '/history',
-    title: 'История путешествий | MeTravel',
+    title: 'История просмотров маршрутов | Metravel',
     description: 'Хронология твоих путешествий и поездок.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/userpoints',
-    title: 'Мои точки | MeTravel',
+    title: 'Мои точки и сохраненные места | Metravel',
     description: 'Управляй своими точками на карте.',
     robots: 'noindex, nofollow',
   },
@@ -607,7 +624,7 @@ async function main() {
 
       const routeKey = slug || String(id);
       const name = travel.name || '';
-      const title = name ? `${name} | MeTravel` : 'MeTravel';
+      const title = buildSeoTitle(name || 'Путешествие');
 
       // Use detail description when available, otherwise build contextual fallback
       // from list payload fields to avoid generic, duplicate snippets.
@@ -705,7 +722,7 @@ async function main() {
       if (!id) continue;
 
       const name = article.name || '';
-      const title = name ? `${name} | MeTravel` : 'MeTravel';
+      const title = buildSeoTitle(name || 'Статья о путешествии');
       const rawDesc = article.description || '';
       const description = stripHtml(rawDesc, 160) || FALLBACK_DESC;
       const canonical = `${SITE_URL}/article/${id}`;
