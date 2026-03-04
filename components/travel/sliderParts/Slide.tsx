@@ -3,6 +3,8 @@ import { Platform, TouchableOpacity, View } from 'react-native';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import type { SliderImage } from './types';
 
+const loadedSlideUriCache = new Set<string>();
+
 interface SlideProps {
   item: SliderImage;
   index: number;
@@ -43,14 +45,11 @@ const Slide = memo(function Slide({
   fit = 'contain',
 }: SlideProps) {
   const [hasError, setHasError] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(() => loadedSlideUriCache.has(uri));
   const firstLoadReportedRef = useRef(false);
 
   const isFirstSlide = index === 0;
-  const shouldEagerLoad =
-    Platform.OS === 'web'
-      ? isFirstSlide || isActive
-      : isFirstSlide || !!preloadPriority;
+  const shouldEagerLoad = isFirstSlide || isActive || !!preloadPriority;
   const mainPriority =
     Platform.OS === 'web'
       ? shouldEagerLoad
@@ -66,17 +65,18 @@ const Slide = memo(function Slide({
   useEffect(() => {
     firstLoadReportedRef.current = false;
     setHasError(false);
-    setIsLoaded(isFirstSlide && !!firstImagePreloaded);
+    setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(uri));
   }, [uri, index, isFirstSlide, firstImagePreloaded]);
 
   const handleLoad = useCallback(() => {
+    loadedSlideUriCache.add(uri);
     setHasError(false);
     setIsLoaded(true);
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
-  }, [isFirstSlide, onFirstImageLoad]);
+  }, [isFirstSlide, onFirstImageLoad, uri]);
 
   useEffect(() => {
     // If first slide is already preloaded/cached, report readiness once on mount.
@@ -120,7 +120,7 @@ const Slide = memo(function Slide({
             blurBackground={shouldBlur}
             blurRadius={12}
             priority={mainPriority as any}
-            prefetch={false}
+            prefetch={Platform.OS === 'web' ? (isFirstSlide || isActive || !!preloadPriority) : false}
             loading={
               Platform.OS === 'web'
                 ? shouldEagerLoad
@@ -141,7 +141,7 @@ const Slide = memo(function Slide({
             }}
             onLoad={handleLoad}
             onError={handleError}
-            showImmediately={isFirstSlide && !!firstImagePreloaded}
+            showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(uri)}
           />
         </>
       )}

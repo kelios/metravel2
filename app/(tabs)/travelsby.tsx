@@ -15,7 +15,7 @@ export default function TravelsByScreen() {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const title = 'Маршруты по Беларуси и идеи поездок | Metravel';
+    const title = 'Маршруты по Беларуси, идеи поездок и маршрутов | Metravel';
     const description =
         'Подборка маршрутов и мест по Беларуси: идеи для выходных и больших поездок. Фото, точки на карте и советы путешественников.';
 

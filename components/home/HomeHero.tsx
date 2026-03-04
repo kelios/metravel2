@@ -7,7 +7,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer } from '@/components/layout';
 import Button from '@/components/ui/Button';
-import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -103,6 +103,34 @@ const getSlideRemoteUri = (source: { uri?: string } | number | null | undefined)
   return null;
 };
 
+const preloadWebImage = async (uri: string): Promise<boolean> => {
+  if (!uri || Platform.OS !== 'web') return false;
+  if (typeof window === 'undefined' || typeof Image === 'undefined') return false;
+  return new Promise((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const settle = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      image.onload = null;
+      image.onerror = null;
+      resolve(result);
+    };
+
+    image.onload = () => settle(true);
+    image.onerror = () => settle(false);
+    image.decoding = 'async';
+    image.src = uri;
+
+    if (image.complete && image.naturalWidth > 0) {
+      settle(true);
+      return;
+    }
+
+    setTimeout(() => settle(false), 10000);
+  });
+};
+
 const MOOD_CARDS = [
   {
     title: 'У воды',
@@ -193,12 +221,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
         if (!cancelled) markSlideAsLoaded(slideIndex);
         return;
       }
-      try {
-        await prefetchImage(remoteUri);
-      } catch {
-        // ignore preload failures; ImageCardMedia will retry on render
-      }
-      if (!cancelled) {
+      const preloadSucceeded = await preloadWebImage(remoteUri);
+      if (!cancelled && preloadSucceeded) {
         markSlideAsLoaded(slideIndex);
       }
     };
