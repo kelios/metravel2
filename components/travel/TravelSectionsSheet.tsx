@@ -246,7 +246,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
             setOpen(true)
           }}
           accessibilityRole="button"
-          accessibilityLabel="Открыть список секций"
+          accessibilityLabel="Секции, открыть список секций"
           ref={triggerRef}
           style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
         >

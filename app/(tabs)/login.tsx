@@ -156,7 +156,7 @@ export default function Login() {
         onSubmit: handleLogin,
     });
 
-    const title = 'Вход в аккаунт путешественника и управление маршрутами | Metravel';
+    const title = 'Вход в Metravel: аккаунт, маршруты и избранное | Metravel';
     const description =
         'Войдите в аккаунт Metravel, чтобы сохранять маршруты, управлять избранным, публиковать поездки и собирать личную книгу путешествий.';
 

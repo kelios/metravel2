@@ -463,14 +463,14 @@ const STATIC_PAGES = [
   },
   {
     route: '/login',
-    title: 'Вход в аккаунт Metravel и управление маршрутами | Metravel',
+    title: 'Вход в Metravel: аккаунт, маршруты и избранное | Metravel',
     description:
       'Войдите в аккаунт Metravel, чтобы сохранять маршруты, управлять избранным, публиковать поездки и собирать личную книгу путешествий.',
     robots: 'noindex, nofollow',
   },
   {
     route: '/registration',
-    title: 'Регистрация в Metravel и старт ваших путешествий | Metravel',
+    title: 'Регистрация в Metravel: аккаунт и маршруты | Metravel',
     description:
       'Создайте аккаунт Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.',
     robots: 'noindex, nofollow',

@@ -106,7 +106,22 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
     <div style={{ width: '100%', height: fixedHeight, ...(height ? { minHeight: fixedHeight } : null) }}>
       {loadError ? <NeutralHeroPlaceholder height={height} /> : (
         <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: colors.backgroundSecondary }}>
-          <div aria-hidden="true" style={{ position: 'absolute', inset: '-5%', width: '110%', height: '110%', backgroundImage: mainLoaded && mainLoadedSrc ? `url("${mainLoadedSrc}")` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(20px)', zIndex: 0 }} />
+          {!isMobile && (
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: '-5%',
+                width: '110%',
+                height: '110%',
+                backgroundImage: mainLoaded && mainLoadedSrc ? `url("${mainLoadedSrc}")` : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(20px)',
+                zIndex: 0,
+              }}
+            />
+          )}
           <img
             src={srcWithRetry} srcSet={responsive.srcSet} sizes={responsive.sizes}
             alt={alt || 'Фотография маршрута путешествия'}
@@ -149,6 +164,12 @@ function TravelHeroSectionInner({
   } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras)
 
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
+  const favoriteButtonLabel = isFavorite ? 'В избранном' : 'В избранное'
+  const favoriteButtonA11yLabel = isMobile
+    ? favoriteButtonLabel
+    : isFavorite
+      ? 'Удалить из избранного'
+      : 'Добавить в избранное'
 
   // AND-28: Fullscreen gallery state (native only)
   const [fullscreenVisible, setFullscreenVisible] = useState(false)
@@ -210,12 +231,12 @@ function TravelHeroSectionInner({
           <Pressable
             onPress={handleFavoriteToggle}
             style={[styles.heroFavoriteBtn, isFavorite && styles.heroFavoriteBtnActive, isMobile && styles.heroFavoriteBtnMobile]}
-            accessibilityRole="button" accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+            accessibilityRole="button" accessibilityLabel={favoriteButtonA11yLabel}
           >
             <Feather name="heart" size={20} color={isFavorite ? colors.textOnDark : 'rgba(255,255,255,0.9)'} />
             {isMobile && (
               <Text style={[styles.heroFavoriteBtnLabel, isFavorite && styles.heroFavoriteBtnLabelActive]}>
-                {isFavorite ? 'В избранном' : 'В избранное'}
+                {favoriteButtonLabel}
               </Text>
             )}
           </Pressable>

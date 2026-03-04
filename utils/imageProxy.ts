@@ -15,6 +15,7 @@ export interface ImageOptimizationOptions {
 
 const optimizedUrlCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 400;
+const OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'dpr', 'blur'];
 
 const isPrivateOrLocalHost = (host: string): boolean => {
   const h = String(host || '').trim().toLowerCase();
@@ -84,6 +85,14 @@ export function optimizeImageUrl(
       optimizedUrlCache.set(cacheKey, trimmedUrl);
       return trimmedUrl;
     }
+
+    OPTIMIZATION_QUERY_PARAMS.forEach((key) => {
+      try {
+        parsedUrl.searchParams.delete(key);
+      } catch {
+        // noop
+      }
+    });
 
     const format = options.format || 'auto';
     const rawQuality = options.quality != null ? options.quality : (Platform.OS === 'web' ? 80 : 75);
@@ -177,4 +186,3 @@ export function getOptimalImageSize(
 
   return { width: Math.round(baseWidth), height: Math.round(baseWidth * (16 / 9)) };
 }
-

@@ -163,7 +163,6 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   function scheduleAnalyticsBootstrap() {
     var started = false;
     var fallbackTimer = null;
-    var loadTimer = null;
     var events = ['pointerdown', 'keydown', 'touchstart', 'click'];
     var visibilityEvents = ['visibilitychange', 'pagehide', 'beforeunload'];
     var disableAutoBootstrap = !!(window.navigator && window.navigator.webdriver);
@@ -177,9 +176,6 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       }
       if (fallbackTimer) {
         try { clearTimeout(fallbackTimer); } catch (_e3) {}
-      }
-      if (loadTimer) {
-        try { clearTimeout(loadTimer); } catch (_e4) {}
       }
     }
 
@@ -216,16 +212,9 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       return;
     }
 
-    if (document.readyState === 'complete') {
-      trigger();
-      return;
-    }
-    // Safety net for no-interaction sessions and bots.
-    fallbackTimer = setTimeout(trigger, 10000);
-    // Also schedule shortly after full load.
-    window.addEventListener('load', function() {
-      loadTimer = setTimeout(trigger, 1500);
-    }, { once: true });
+    // Safety net for long passive sessions without interaction.
+    // Delayed enough to stay out of initial performance-critical window.
+    fallbackTimer = setTimeout(trigger, 30000);
   }
 
   // Автозагрузка:

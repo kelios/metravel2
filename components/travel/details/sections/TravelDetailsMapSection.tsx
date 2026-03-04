@@ -209,6 +209,8 @@ export const TravelDetailsMapSection: React.FC<{
     let active = true
 
     const loadRouteFiles = async () => {
+      if (!canRenderHeavy) return
+      if (Platform.OS === 'web' && !shouldRender && !isWebAutomation) return
       if (!travel?.id) {
         if (active) {
           setRoutePreviewItems([])
@@ -271,7 +273,7 @@ export const TravelDetailsMapSection: React.FC<{
     return () => {
       active = false
     }
-  }, [routeColorPalette, travel?.id])
+  }, [canRenderHeavy, routeColorPalette, shouldRender, travel?.id])
 
   const notifyDownloadUnavailable = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -432,6 +434,9 @@ export const TravelDetailsMapSection: React.FC<{
     }
 
     const fetchNearestPeakName = async (lat: number, lng: number): Promise<string | null> => {
+      // Overpass intermittently returns 504 on web and logs console errors.
+      // Keep UX stable by using reverse-geocoding fallback there.
+      if (Platform.OS === 'web') return null
       const endpoint = process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter'
       const query = `[out:json][timeout:20];node(around:5000,${lat},${lng})["natural"="peak"]["name"];out body 1;`
       try {

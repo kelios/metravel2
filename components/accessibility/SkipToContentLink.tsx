@@ -21,17 +21,17 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
   const linkStyle = useMemo(
     () => ({
       position: 'absolute',
-      top: '-40px',
-      left: 0,
-      background: '#111111',
-      color: '#ffffff',
+      top: 0,
+      left: '-9999px',
+      background: DESIGN_TOKENS.colors.text,
+      color: DESIGN_TOKENS.colors.textOnDark,
       padding: `${DESIGN_TOKENS.spacing.xs}px ${DESIGN_TOKENS.spacing.sm}px`,
       textDecoration: 'none',
       zIndex: DESIGN_TOKENS.zIndex.fixed,
       borderRadius: `0 0 ${DESIGN_TOKENS.radii.sm}px ${DESIGN_TOKENS.radii.sm}px`,
       fontSize: `${DESIGN_TOKENS.typography.sizes.sm}px`,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold,
-      transition: `top ${DESIGN_TOKENS.animations.duration.normal}ms ${DESIGN_TOKENS.animations.easing.default}`,
+      transition: `left ${DESIGN_TOKENS.animations.duration.normal}ms ${DESIGN_TOKENS.animations.easing.default}`,
     }),
     []
   );
@@ -56,10 +56,10 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
       className="skip-to-content"
       style={linkStyle as React.CSSProperties}
       onFocus={(e) => {
-        (e.target as HTMLAnchorElement).style.top = '0';
+        (e.target as HTMLAnchorElement).style.left = '0';
       }}
       onBlur={(e) => {
-        (e.target as HTMLAnchorElement).style.top = '-40px';
+        (e.target as HTMLAnchorElement).style.left = '-9999px';
       }}
     >
       {label}

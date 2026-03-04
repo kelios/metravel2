@@ -111,6 +111,10 @@ describe('analytics inline script', () => {
     expect(typeof windowMock.metravelLoadAnalytics).toBe('function')
     expect(windowMock.__metravelMetrikaId).toBe(parseInt(TEST_METRIKA_ID, 10))
     expect(windowMock.__metravelGaId).toBe(TEST_GA_ID)
+    expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+
+    windowMock.metravelLoadAnalytics()
+
     expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
     expect(windowMock.ym).toHaveBeenCalledWith(
       parseInt(TEST_METRIKA_ID, 10),
@@ -177,6 +181,8 @@ describe('analytics inline script', () => {
     const { windowMock } = setupDomEnv()
 
     runAnalyticsSnippet()
+    expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+    windowMock.metravelLoadAnalytics()
     jest.runOnlyPendingTimers()
 
     const ymHitCalls = () =>

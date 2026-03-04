@@ -121,7 +121,7 @@ export default function RegisterForm() {
         [values.password],
     );
 
-    const title = 'Регистрация в Metravel: маршруты, заметки и книга путешествий';
+    const title = 'Регистрация в Metravel: аккаунт и маршруты | Metravel';
     const description =
         'Создайте аккаунт в Metravel, чтобы публиковать маршруты, сохранять идеи поездок, подписываться на авторов и вести личную книгу путешествий.';
 

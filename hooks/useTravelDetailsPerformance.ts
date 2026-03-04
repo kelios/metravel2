@@ -56,12 +56,25 @@ export function useTravelDetailsPerformance({
       return
     }
 
-    // Deferred sections (description, map, points, comments) should render as soon
-    // as travel data is available — they don't need to wait for the hero image.
-    // Only the Slider swap (sliderReady) is gated on LCP image load.
-    if (travel) {
+    // On web we gate heavy deferred sections until LCP hero is painted.
+    // This prevents map/comments chunks + route downloads from competing with LCP.
+    if (travel && lcpLoaded) {
       setDeferAllowed(true)
       return
+    }
+
+    // If travel is loaded but LCP callback is delayed (slow image/network),
+    // don't block forever.
+    if (travel && !lcpLoaded) {
+      setDeferAllowed(false)
+      let cancelled = false
+      const t = setTimeout(() => {
+        if (!cancelled) setDeferAllowed(true)
+      }, 2500)
+      return () => {
+        cancelled = true
+        clearTimeout(t)
+      }
     }
 
     if (typeof window === 'undefined') return
@@ -76,7 +89,7 @@ export function useTravelDetailsPerformance({
       cancelled = true
       clearTimeout(t)
     }
-  }, [isLoading, travel])
+  }, [isLoading, lcpLoaded, travel])
 
   useEffect(() => {
     if (Platform.OS === 'web') {
