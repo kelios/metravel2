@@ -64,28 +64,35 @@ export function useQuestsList() {
 
 /** Хук для загрузки городов с квестами */
 export function useQuestCities() {
-    const [cities, setCities] = useState<Array<{ id: string; name: string; lat: number; lng: number }>>([]);
+    const [cities, setCities] = useState<Array<{ id: string; name: string; lat: number; lng: number; countryCode?: string }>>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
-        fetchQuestCities()
-            .then((data) => {
-                if (!cancelled) {
-                    setCities(data.map(c => ({
-                        id: String(c.id),
-                        name: c.name || '',
-                        lat: parseFloat(String(c.lat)),
-                        lng: parseFloat(String(c.lng)),
-                    })));
-                    setLoading(false);
-                }
-            })
-            .catch((err) => {
+        const loadCities = async () => {
+            setLoading(true);
+            try {
+                const data = await fetchQuestCities();
                 if (cancelled) return;
-                console.warn('Failed to load quest cities:', err?.message);
-                setLoading(false);
-            });
+
+                const safeCities = Array.isArray(data) ? data : [];
+                setCities(safeCities.map(c => ({
+                    id: String(c.id),
+                    name: c.name || '',
+                    lat: parseFloat(String(c.lat)),
+                    lng: parseFloat(String(c.lng)),
+                    countryCode: c.country_code || undefined,
+                })));
+            } catch (err: unknown) {
+                if (cancelled) return;
+                const message = err instanceof Error ? err.message : String(err);
+                console.warn('Failed to load quest cities:', message);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        void loadCities();
         return () => { cancelled = true; };
     }, []);
 

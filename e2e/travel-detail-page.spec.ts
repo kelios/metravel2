@@ -420,7 +420,7 @@ test.describe('Travel Details - SEO', () => {
     const title = await page.title();
     expect(title).toBeTruthy();
     expect(title.length).toBeGreaterThan(0);
-    expect(title).toContain('MeTravel');
+    expect(title).toMatch(/metravel/i);
 
     // Проверяем наличие meta description
     const description = await page

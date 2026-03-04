@@ -71,7 +71,6 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       },
       description: {
         minLength: 50,
-        maxLength: 2000,
         content: 'html',
         label: 'Описание',
       },
@@ -168,7 +167,6 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       },
       description: {
         minLength: 50,
-        maxLength: 2000,
         content: 'html',
         label: 'Описание',
       },

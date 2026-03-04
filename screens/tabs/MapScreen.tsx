@@ -392,7 +392,7 @@ export default function MapScreen() {
                                 styles.badgeText,
                                 rightPanelTab === 'travels' && styles.badgeTextActive,
                             ]}>
-                                {travelsData.length > 99 ? '99+' : travelsData.length}
+                                {travelsData.length > 999 ? '999+' : travelsData.length}
                             </Text>
                         </View>
                     )}
@@ -501,7 +501,7 @@ export default function MapScreen() {
                             {travelsData.length > 0 && (
                                 <View style={styles.collapsedBadge}>
                                     <Text style={styles.collapsedBadgeText}>
-                                        {travelsData.length > 99 ? '99+' : travelsData.length}
+                                        {travelsData.length > 999 ? '999+' : travelsData.length}
                                     </Text>
                                 </View>
                             )}

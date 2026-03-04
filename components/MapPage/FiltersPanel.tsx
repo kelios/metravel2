@@ -113,11 +113,6 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           radiusValue={filterValue.radius}
           onClose={safeCloseMenu}
           onModeChange={handleSetMode}
-          routingLoading={routingLoading}
-          routingError={routingError}
-          routeDistance={routeDistance}
-          routeDuration={routeDuration}
-          transportMode={transportMode}
         />
       )}
 

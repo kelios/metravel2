@@ -7,7 +7,6 @@ import { RouteValidator } from '@/utils/routeValidator';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
-import RouteStats from '@/components/MapPage/RouteStats';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -190,8 +189,8 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
         </View>
       </View>
 
-      {/* 3. Статус загрузки / ошибки маршрута */}
-      {shouldShowRouteStats && (Boolean(routingLoading) || Boolean(routingError)) && (
+      {/* 3. Статус маршрута (загрузка / ошибка / результат) */}
+      {shouldShowRouteStats && (
         <View style={styles.routeStatsContainer} testID="route-stats">
           <RoutingStatus
             isLoading={!!routingLoading}
@@ -204,18 +203,6 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
             elevationLoss={routeElevationLoss ?? null}
           />
         </View>
-      )}
-
-      {/* 4. Визуальные карточки статистики маршрута (success) */}
-      {hasTwoPoints && !routingLoading && !routingError && (
-        <RouteStats
-          distance={effectiveDistance > 0 ? effectiveDistance : null}
-          duration={effectiveDuration > 0 ? effectiveDuration : null}
-          transportMode={transportMode}
-          elevationGain={routeElevationGain ?? null}
-          elevationLoss={routeElevationLoss ?? null}
-          isEstimated={isEstimated}
-        />
       )}
 
       {!onAddressSelect && mode === 'route' && routePoints.length > 0 && (

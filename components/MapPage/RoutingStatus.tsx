@@ -15,14 +15,6 @@ interface RoutingStatusProps {
   compact?: boolean;
 }
 
-const getModeLabel = (mode: 'car' | 'bike' | 'foot') => {
-  switch (mode) {
-    case 'bike': return 'Велосипед';
-    case 'foot': return 'Пешком';
-    default: return 'Автомобиль';
-  }
-};
-
 const formatDuration = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds <= 0) return '';
   const totalMinutes = Math.round(seconds / 60);
@@ -166,12 +158,7 @@ function RoutingStatus({
           <View style={styles.miniCard}>
             <Feather name="clock" size={compact ? 12 : 14} color={colors.primary} />
             <Text style={styles.miniCardValue}>{time}</Text>
-            {!compact && <Text style={styles.miniCardLabel}>Время</Text>}
-          </View>
-          <View style={styles.miniCard}>
-            <Feather name={getModeIcon(transportMode)} size={compact ? 12 : 14} color={colors.primary} />
-            <Text style={styles.miniCardValue}>{getModeLabel(transportMode)}</Text>
-            {!compact && <Text style={styles.miniCardLabel}>Способ</Text>}
+            {!compact && <Text style={styles.miniCardLabel}>Время в пути</Text>}
           </View>
           {showElevation && (
             <>

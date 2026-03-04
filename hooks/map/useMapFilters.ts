@@ -20,6 +20,7 @@ const DEFAULT_FILTER_VALUES: MapFilterValues = {
   categories: [],
   radius: String(DEFAULT_RADIUS_KM),
   address: '',
+  searchQuery: '',
 };
 
 function getWebStorage(): StorageLike | null {
@@ -148,6 +149,11 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
 
       if (field === 'address' && typeof value === 'string') {
         handleFilterChange('address', value);
+        return;
+      }
+
+      if (field === 'searchQuery' && typeof value === 'string') {
+        handleFilterChange('searchQuery', value);
       }
     },
     [handleFilterChange]

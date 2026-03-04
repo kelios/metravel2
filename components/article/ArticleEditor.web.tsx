@@ -789,6 +789,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         }
     }, [idTravel, insertImage, isAuthenticated]);
 
+    const openImagePicker = useCallback(() => {
+        if (!win) return;
+        const input = win.document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (file) void uploadAndInsert(file);
+        };
+        input.click();
+    }, [uploadAndInsert]);
+
     useEffect(() => {
         if (!isWeb) return;
 
@@ -1106,17 +1118,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 />
                 <IconButton
                     name="image"
-                    onPress={() => {
-                        if (!win) return;
-                        const input = win.document.createElement('input');
-                        input.type = 'file';
-                        input.accept = 'image/*';
-                        input.onchange = () => {
-                            const file = input.files?.[0];
-                            if (file) uploadAndInsert(file);
-                        };
-                        input.click();
-                    }}
+                    onPress={openImagePicker}
                     label="Вставить изображение"
                 />
 
@@ -1343,10 +1345,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                         setLinkValue(existing);
                         setLinkModalVisible(true);
                     },
+                    image: function () {
+                        openImagePicker();
+                    },
                 },
             },
         } as any;
-    }, [fireChange, variant]);
+    }, [fireChange, openImagePicker, variant]);
 
     if (!QuillEditor) return <Loader />;
 

@@ -24,6 +24,7 @@ export interface FiltersContextValue {
     categories: CategoryOption[];
     radius: string;
     address: string;
+    searchQuery?: string;
   };
   onFilterChange: (field: string, value: any) => void;
   resetFilters: () => void;

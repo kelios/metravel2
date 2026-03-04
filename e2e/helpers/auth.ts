@@ -119,23 +119,12 @@ export async function ensureAuthedStorageFallback(page: Page): Promise<void> {
   const encryptedRefresh = simpleEncrypt('e2e-fake-refresh-token', 'metravel_encryption_key_v1');
   await page.addInitScript((payload: { encrypted: string; encryptedRefresh: string }) => {
     try {
-      const existingToken = window.localStorage.getItem('secure_userToken');
-      if (typeof existingToken === 'string' && existingToken.length > 0) {
-        return;
-      }
-
       window.localStorage.setItem('secure_userToken', payload.encrypted);
       window.localStorage.setItem('secure_refreshToken', payload.encryptedRefresh);
 
-      if (!window.localStorage.getItem('userId')) {
-        window.localStorage.setItem('userId', '1');
-      }
-      if (!window.localStorage.getItem('userName')) {
-        window.localStorage.setItem('userName', 'E2E User');
-      }
-      if (!window.localStorage.getItem('isSuperuser')) {
-        window.localStorage.setItem('isSuperuser', 'false');
-      }
+      window.localStorage.setItem('userId', '1');
+      window.localStorage.setItem('userName', 'E2E User');
+      window.localStorage.setItem('isSuperuser', 'false');
     } catch {
       // ignore
     }

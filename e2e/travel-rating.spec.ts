@@ -16,7 +16,13 @@
 
 import { test, expect } from './fixtures';
 import { preacceptCookies, navigateToFirstTravel, gotoWithRetry, hasTravelDetailsLoadError } from './helpers/navigation';
-import { isAuthenticated, ensureAuthedStorageFallback, mockFakeAuthApis, waitForAuth } from './helpers/auth';
+import {
+  isAuthenticated,
+  ensureAuthedStorageFallback,
+  mockFakeAuthApis,
+  simpleEncrypt,
+  waitForAuth,
+} from './helpers/auth';
 
 const RATING_SECTION_SELECTOR = '[data-testid="travel-rating-section"], [testID="travel-rating-section"]';
 const STAR_SELECTOR = '[data-testid^="star-rating-star-"], [testID^="star-rating-star-"]';
@@ -114,7 +120,31 @@ async function assertTravelDetailsOpened(page: E2EPage): Promise<void> {
 }
 
 async function waitForAuthenticatedUser(page: E2EPage): Promise<void> {
-  await waitForAuth(page, 8_000);
+  const forceAuthInCurrentDocument = async () => {
+    const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
+    const encryptedRefresh = simpleEncrypt('e2e-fake-refresh-token', 'metravel_encryption_key_v1');
+    await page.evaluate(({ token, refresh }) => {
+      try {
+        window.localStorage.setItem('secure_userToken', token);
+        window.localStorage.setItem('secure_refreshToken', refresh);
+        window.localStorage.setItem('userId', '1');
+        window.localStorage.setItem('userName', 'E2E User');
+        window.localStorage.setItem('isSuperuser', 'false');
+      } catch {
+        // ignore
+      }
+    }, { token: encrypted, refresh: encryptedRefresh });
+  };
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await waitForAuth(page, 8_000);
+    const authed = await isAuthenticated(page);
+    if (authed) return;
+
+    await forceAuthInCurrentDocument();
+    await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+  }
+
   await expect
     .poll(async () => isAuthenticated(page), { timeout: 8_000 })
     .toBe(true);

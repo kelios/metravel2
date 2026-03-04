@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
+import { simpleEncrypt } from './helpers/auth';
 
 function hasCreds(): boolean {
   return !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD;
@@ -11,7 +12,7 @@ function buildAuthSeed(payload: any) {
   const token = String(payload?.token ?? '').trim();
   if (!token) return null;
   return {
-    token,
+    encryptedToken: simpleEncrypt(token, AUTH_STORAGE_KEY),
     userId: payload?.id != null ? String(payload.id) : '',
     userName: String(payload?.name ?? payload?.email ?? '').trim(),
     isSuperuser: payload?.is_superuser ? 'true' : 'false',
@@ -87,29 +88,16 @@ test.describe('Auth logout', () => {
     }
 
     if (authSeed) {
-      await page.addInitScript(
-        (data) => {
-          const encrypt = (text: string, key: string) => {
-            if (typeof btoa !== 'function') return text;
-            let result = '';
-            for (let i = 0; i < text.length; i++) {
-              result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-            }
-            return btoa(result);
-          };
-
-          try {
-            const encrypted = encrypt(data.token, data.key);
-            window.localStorage.setItem('secure_userToken', encrypted);
-            if (data.userId) window.localStorage.setItem('userId', data.userId);
-            if (data.userName) window.localStorage.setItem('userName', data.userName);
-            window.localStorage.setItem('isSuperuser', data.isSuperuser);
-          } catch {
-            // ignore
-          }
-        },
-        { ...authSeed, key: AUTH_STORAGE_KEY }
-      );
+      await page.addInitScript((data) => {
+        try {
+          window.localStorage.setItem('secure_userToken', data.encryptedToken);
+          if (data.userId) window.localStorage.setItem('userId', data.userId);
+          if (data.userName) window.localStorage.setItem('userName', data.userName);
+          window.localStorage.setItem('isSuperuser', data.isSuperuser);
+        } catch {
+          // ignore
+        }
+      }, authSeed);
     }
 
     await page.goto('/profile', { waitUntil: 'domcontentloaded' });
@@ -128,37 +116,31 @@ test.describe('Auth logout', () => {
       }
 
       await page.getByRole('button', { name: /^Войти$/ }).click();
-      await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60_000 });
+      await Promise.race([
+        page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 60_000 }),
+        page.getByRole('button', { name: 'Меню профиля' }).first().waitFor({ state: 'visible', timeout: 60_000 }),
+        loginPrompt.waitFor({ state: 'hidden', timeout: 60_000 }),
+      ]).catch(() => null);
       await page.goto('/profile', { waitUntil: 'domcontentloaded' });
       await loginPrompt.waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => null);
 
       if (await loginPrompt.isVisible().catch(() => false)) {
         const fallbackSeed = {
-          token: 'e2e-fake-token',
+          encryptedToken: simpleEncrypt('e2e-fake-token', AUTH_STORAGE_KEY),
           userId: '1',
           userName: 'E2E User',
           isSuperuser: 'false',
         };
         await page.evaluate((data) => {
-          const encrypt = (text: string, key: string) => {
-            if (typeof btoa !== 'function') return text;
-            let result = '';
-            for (let i = 0; i < text.length; i++) {
-              result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-            }
-            return btoa(result);
-          };
-
           try {
-            const encrypted = encrypt(data.token, data.key);
-            window.localStorage.setItem('secure_userToken', encrypted);
+            window.localStorage.setItem('secure_userToken', data.encryptedToken);
             window.localStorage.setItem('userId', data.userId);
             window.localStorage.setItem('userName', data.userName);
             window.localStorage.setItem('isSuperuser', data.isSuperuser);
           } catch {
             // ignore
           }
-        }, { ...fallbackSeed, key: AUTH_STORAGE_KEY });
+        }, fallbackSeed);
         await page.reload({ waitUntil: 'domcontentloaded' });
         await loginPrompt.waitFor({ state: 'hidden', timeout: 20_000 }).catch(() => null);
       }

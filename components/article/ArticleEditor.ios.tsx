@@ -46,6 +46,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const [html, setHtml] = useState(() => sanitizeForEditor(content));
   const [isReady, setIsReady] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [imageUploadRequest, setImageUploadRequest] = useState(0);
   const [anchorModalVisible, setAnchorModalVisible] = useState(false);
   const [anchorValue, setAnchorValue] = useState('');
   const webViewRef = useRef<WebView>(null);
@@ -185,6 +186,18 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       placeholder: INITIAL_PLACEHOLDER,
     });
 
+    try {
+      var toolbar = quill.getModule('toolbar');
+      if (toolbar && typeof toolbar.addHandler === 'function') {
+        toolbar.addHandler('image', function() {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'request-image-upload'
+          }));
+        });
+      }
+    } catch (e) {
+    }
+
     // Установка начального контента через Delta (сохраняет форматирование)
     var tempDiv = document.createElement('div');
     tempDiv.innerHTML = INITIAL_CONTENT;
@@ -323,6 +336,10 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           }, autosaveDelay);
         }
       }
+
+      if (data.type === 'request-image-upload') {
+        setImageUploadRequest(prev => prev + 1);
+      }
     } catch (error) {
       console.error('Error parsing WebView message:', error);
     }
@@ -434,6 +451,11 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       setIsUploading(false);
     }
   }, [isAuthenticated, idTravel]);
+
+  useEffect(() => {
+    if (imageUploadRequest === 0) return;
+    void handleImagePick();
+  }, [imageUploadRequest, handleImagePick]);
 
   // Отмена/повтор
   const handleUndo = () => {

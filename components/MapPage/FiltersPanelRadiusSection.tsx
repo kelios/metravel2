@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import MapIcon from './MapIcon';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
+import MapSearchInput from '@/components/MapPage/MapSearchInput';
 import type { ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
@@ -85,8 +86,9 @@ interface FiltersPanelRadiusSectionProps {
     categories: CategoryOption[];
     radius: string;
     address: string;
+    searchQuery?: string;
   };
-  travelsData: { categoryName?: string }[];
+  travelsData: { categoryName?: string; name?: string; address?: string }[];
   onFilterChange: (field: string, value: any) => void;
 }
 
@@ -106,6 +108,27 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     },
     [onFilterChange]
   );
+
+  const searchQuery = filterValue.searchQuery || '';
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      safeOnFilterChange('searchQuery', value);
+    },
+    [safeOnFilterChange]
+  );
+
+  // Count results matching search query
+  const searchResultsCount = useMemo(() => {
+    if (!searchQuery.trim()) return undefined;
+    const q = searchQuery.toLowerCase().trim();
+    return travelsData.filter((t) => {
+      const name = (t.name || '').toLowerCase();
+      const address = (t.address || '').toLowerCase();
+      const category = (t.categoryName || '').toLowerCase();
+      return name.includes(q) || address.includes(q) || category.includes(q);
+    }).length;
+  }, [searchQuery, travelsData]);
 
   const travelCategoriesCount = useMemo(() => {
     const count: Record<string, number> = {};
@@ -177,6 +200,15 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 
   return (
     <>
+      {/* Search input - always visible at top */}
+      <MapSearchInput
+        value={searchQuery}
+        onChange={handleSearchChange}
+        placeholder="Поиск мест по названию..."
+        resultsCount={searchResultsCount}
+        testID="map-filters-search"
+      />
+
       {categoriesWithCount.length > 0 && (
         <CollapsibleSection
           title="Категории"

@@ -1,5 +1,5 @@
 // app/quests/map.tsx
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import {
     Platform,
@@ -41,19 +41,21 @@ export default function QuestsMapScreen() {
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
 
     const travel = useMemo(() => {
-        const data: Point[] = quests.map((m) => {
-            const coverUri = typeof m.cover === 'string' ? m.cover : '';
+        const data: Point[] = quests
+            .filter(m => Number.isFinite(m.lat) && Number.isFinite(m.lng) && (m.lat !== 0 || m.lng !== 0))
+            .map((m) => {
+                const coverUri = typeof m.cover === 'string' ? m.cover : '';
 
-            return {
-                id: undefined,
-                coord: `${m.lat},${m.lng}`,
-                address: m.title,
-                travelImageThumbUrl: coverUri,
-                categoryName: 'Квест',
-                urlTravel: `/quests/${m.cityId}/${m.id}`,
-                articleUrl: undefined,
-            };
-        });
+                return {
+                    id: undefined,
+                    coord: `${m.lat},${m.lng}`,
+                    address: m.title,
+                    travelImageThumbUrl: coverUri,
+                    categoryName: 'Квест',
+                    urlTravel: `/quests/${m.cityId}/${m.id}`,
+                    articleUrl: undefined,
+                };
+            });
         return { data };
     }, [quests]);
 
@@ -66,8 +68,6 @@ export default function QuestsMapScreen() {
         const lng = valid.reduce((s, q) => s + q.lng, 0) / valid.length;
         return { latitude: lat, longitude: lng };
     }, [quests]);
-
-    const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
 
     const handleBack = () => {
         router.replace('/quests'); // всегда уходим на страницу квестов
@@ -93,6 +93,19 @@ export default function QuestsMapScreen() {
         );
     }
 
+    if (travel.data.length === 0) {
+        return (
+            <View style={styles.fallback}>
+                <Ionicons name="map-outline" size={48} color={colors.textMuted} />
+                <Text style={styles.fallbackText}>Нет квестов с координатами для отображения на карте</Text>
+                <Pressable onPress={handleBack} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={16} color={colors.textOnPrimary} />
+                    <Text style={styles.backBtnTxt}>К списку квестов</Text>
+                </Pressable>
+            </View>
+        );
+    }
+
     return (
         <View style={{ flex: 1 }}>
             {isFocused && (
@@ -112,10 +125,10 @@ export default function QuestsMapScreen() {
                 <LazyMap
                     travel={travel}
                     coordinates={questsCenter}
-                    mode="route"
+                    mode="radius"
+                    radius="50000"
+                    routePoints={[]}
                     transportMode="foot"
-                    routePoints={routePoints}
-                    setRoutePoints={setRoutePoints}
                     onMapClick={() => {}}
                     setRouteDistance={() => {}}
                     setFullRouteCoords={() => {}}

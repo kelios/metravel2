@@ -4,6 +4,7 @@ export interface MapFilterValues {
   address: string;
   transportMode?: 'car' | 'bike' | 'foot';
   lastMode?: 'radius' | 'route';
+  searchQuery?: string;
 }
 
 export interface StorageLike {

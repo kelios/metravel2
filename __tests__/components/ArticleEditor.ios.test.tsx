@@ -1,6 +1,8 @@
 // __tests__/components/ArticleEditor.ios.test.tsx
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadImage } from '@/api/misc';
 
 // Mock WebView
 jest.mock('react-native-webview', () => {
@@ -235,6 +237,22 @@ describe('ArticleEditor.ios Component', () => {
     // Basic test - component renders without crashing
     expect(true).toBe(true);
     unmount();
+  });
+
+  it('should upload image when WebView requests toolbar image upload', async () => {
+    const { getByTestId } = renderComponent();
+    const webView = getByTestId('editor-webview');
+
+    fireEvent(webView, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({ type: 'request-image-upload' }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(ImagePicker.requestMediaLibraryPermissionsAsync as jest.Mock).toHaveBeenCalled();
+      expect(uploadImage as jest.Mock).toHaveBeenCalled();
+    });
   });
 
   it('should show alert when not authenticated', async () => {

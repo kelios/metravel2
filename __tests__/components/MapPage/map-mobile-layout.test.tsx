@@ -59,8 +59,8 @@ describe('Map Mobile Layout Styles', () => {
     it('should have rounded top corners on mobile', () => {
       const styles = getStyles(true, 0, 0, 375, mockThemedColors as any);
       
-      expect(styles.rightPanel.borderTopLeftRadius).toBe(24);
-      expect(styles.rightPanel.borderTopRightRadius).toBe(24);
+      expect(styles.rightPanel.borderTopLeftRadius).toBe(20);
+      expect(styles.rightPanel.borderTopRightRadius).toBe(20);
     });
 
     it('should have left border-radius on desktop for visual integration', () => {
@@ -108,29 +108,29 @@ describe('Map Mobile Layout Styles', () => {
     it('should have compact padding on mobile header', () => {
       const styles = getStyles(true, 0, 0, 375, mockThemedColors as any);
       
-      expect(styles.tabsContainer.paddingTop).toBe(12); // Math.max(12, 0+4)
-      expect(styles.tabsContainer.paddingBottom).toBe(8);
-      expect(styles.tabsContainer.paddingHorizontal).toBe(12);
+      expect(styles.tabsContainer.paddingTop).toBe(14); // Math.max(14, 0+4)
+      expect(styles.tabsContainer.paddingBottom).toBe(10);
+      expect(styles.tabsContainer.paddingHorizontal).toBe(14);
     });
 
     it('should have fixed min height on mobile header', () => {
       const styles = getStyles(true, 0, 0, 375, mockThemedColors as any);
       
-      expect(styles.tabsContainer.minHeight).toBe(52);
+      expect(styles.tabsContainer.minHeight).toBe(54);
     });
 
     it('should have compact column gap on mobile', () => {
       const styles = getStyles(true, 0, 0, 375, mockThemedColors as any);
       
-      expect(styles.tabsContainer.columnGap).toBe(6);
+      expect(styles.tabsContainer.columnGap).toBe(8);
     });
 
     it('should have standard padding on desktop header', () => {
       const styles = getStyles(false, 0, 0, 1024, mockThemedColors as any);
       
-      expect(styles.tabsContainer.paddingTop).toBe(8);
-      expect(styles.tabsContainer.paddingBottom).toBe(8);
-      expect(styles.tabsContainer.paddingHorizontal).toBe(8);
+      expect(styles.tabsContainer.paddingTop).toBe(10);
+      expect(styles.tabsContainer.paddingBottom).toBe(10);
+      expect(styles.tabsContainer.paddingHorizontal).toBe(12);
     });
 
     it('should not have min height on desktop header', () => {
@@ -201,14 +201,14 @@ describe('Map Mobile Layout Styles', () => {
       const styles414 = getStyles(true, 0, 0, 414, mockThemedColors as any);
       
       // All should have same border radius
-      expect(styles320.rightPanel.borderTopLeftRadius).toBe(24);
-      expect(styles375.rightPanel.borderTopLeftRadius).toBe(24);
-      expect(styles414.rightPanel.borderTopLeftRadius).toBe(24);
+      expect(styles320.rightPanel.borderTopLeftRadius).toBe(20);
+      expect(styles375.rightPanel.borderTopLeftRadius).toBe(20);
+      expect(styles414.rightPanel.borderTopLeftRadius).toBe(20);
 
       // All should have same min height
-      expect(styles320.tabsContainer.minHeight).toBe(52);
-      expect(styles375.tabsContainer.minHeight).toBe(52);
-      expect(styles414.tabsContainer.minHeight).toBe(52);
+      expect(styles320.tabsContainer.minHeight).toBe(54);
+      expect(styles375.tabsContainer.minHeight).toBe(54);
+      expect(styles414.tabsContainer.minHeight).toBe(54);
     });
   });
 

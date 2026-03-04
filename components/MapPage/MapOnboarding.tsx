@@ -183,9 +183,15 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
   const hasTarget = targetRect !== null;
 
   return (
-    <View style={[styles.overlay, { pointerEvents: 'box-none' }]}>
-      {/* Semi-transparent backdrop */}
-      <Pressable style={styles.backdrop} onPress={handleSkip} />
+    <View style={[styles.overlay, { pointerEvents: 'auto' }]}>
+      {/* Semi-transparent backdrop - click to dismiss */}
+      <Pressable 
+        style={styles.backdrop} 
+        onPress={handleSkip}
+        accessibilityRole="button"
+        accessibilityLabel="Закрыть подсказку"
+        testID="onboarding-backdrop"
+      />
 
       {/* Spotlight cutout around target element */}
       {hasTarget && Platform.OS === 'web' && (

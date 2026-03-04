@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import MapIcon from './MapIcon';
-import RoutingStatus from '@/components/MapPage/RoutingStatus';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -15,11 +14,6 @@ interface FiltersPanelHeaderProps {
   radiusValue: string;
   onClose: () => void;
   onModeChange: (nextMode: 'radius' | 'route') => void;
-  routingLoading?: boolean;
-  routingError?: string | boolean | null;
-  routeDistance: number | null;
-  routeDuration?: number | null;
-  transportMode: 'car' | 'bike' | 'foot';
 }
 
 const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
@@ -31,11 +25,6 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   radiusValue,
   onClose,
   onModeChange,
-  routingLoading,
-  routingError,
-  routeDistance,
-  routeDuration,
-  transportMode,
 }) => {
   return (
     <View style={styles.stickyTop} testID="filters-panel-header">
@@ -68,18 +57,10 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
         tone={isMobile ? 'subtle' : 'default'}
         accessibilityLabel="Выбор режима поиска"
       />
-
-      {mode === 'route' && (!!routingLoading || !!routingError || (routeDistance != null && routeDistance > 0)) && (
-        <View style={styles.statusCard} testID="routing-status">
-          <RoutingStatus
-            isLoading={!!routingLoading}
-            error={routingError || null}
-            distance={routeDistance}
-            duration={routeDuration ?? null}
-            transportMode={transportMode}
-            compact={!isMobile}
-          />
-        </View>
+      {mode === 'radius' && (
+        <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 4 }}>
+          Попробуйте режим «Маршрут» для построения пути между точками
+        </Text>
       )}
     </View>
   );

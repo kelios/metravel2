@@ -154,7 +154,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('handles API failure gracefully (no fallback)', async () => {
-      mockFetchQuestCities.mockRejectedValueOnce(new Error('fail'));
+      mockFetchQuestCities.mockRejectedValue(new Error('fail'));
 
       const { result } = renderHook(() => useQuestCities());
 

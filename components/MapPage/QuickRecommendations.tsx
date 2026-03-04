@@ -19,7 +19,29 @@ interface Props {
   onPlaceSelect: (place: any) => void;
   maxItems?: number;
   radiusKm?: number;
+  isLoading?: boolean;
 }
+
+const SkeletonCard: React.FC<{ colors: ThemedColors }> = ({ colors }) => (
+  <View style={{
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  }}>
+    <View style={{ width: '100%', height: 100, backgroundColor: colors.backgroundSecondary }} />
+    <View style={{ padding: 14, gap: 10 }}>
+      <View style={{ width: '80%', height: 16, backgroundColor: colors.backgroundSecondary, borderRadius: 4 }} />
+      <View style={{ width: '50%', height: 12, backgroundColor: colors.backgroundSecondary, borderRadius: 4 }} />
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ width: 60, height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 8 }} />
+        <View style={{ width: 60, height: 24, backgroundColor: colors.backgroundSecondary, borderRadius: 8 }} />
+      </View>
+    </View>
+  </View>
+);
 
 export const QuickRecommendations: React.FC<Props> = React.memo(({
   places,
@@ -28,6 +50,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
   onPlaceSelect,
   maxItems = 3,
   radiusKm,
+  isLoading = false,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -79,6 +102,22 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
       })
       .slice(0, maxItems);
   }, [places, userLocation, transportMode, maxItems, radiusKm]);
+
+  // Show skeleton while loading
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <MapIcon name="star" size={20} color={colors.primary} />
+          <Text style={styles.title}>Популярное рядом</Text>
+        </View>
+        <View style={styles.webCards}>
+          <SkeletonCard colors={colors} />
+          <SkeletonCard colors={colors} />
+        </View>
+      </View>
+    );
+  }
 
   if (!topPlaces.length) {
     return null;

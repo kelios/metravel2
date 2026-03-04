@@ -129,6 +129,29 @@ describe('travelWizardValidation', () => {
       expect(result.errors.length).toBe(0);
     });
 
+    it('should allow long description without max-length error on step 1 and step 6', () => {
+      const longDescription = 'A'.repeat(12000);
+
+      const step1Result = validateStep(1, {
+        name: 'Valid Travel Name',
+        description: longDescription,
+      } as TravelFormData);
+
+      expect(step1Result.isValid).toBe(true);
+      expect(step1Result.errors.some(e => e.field === 'description')).toBe(false);
+
+      const step6Result = validateStep(6, {
+        name: 'Valid Travel Name',
+        description: longDescription,
+        coordsMeTravel: [{ lat: 50, lng: 30, country: 1, address: 'Test', categories: [], image: '', id: 1 }],
+        countries: ['1'],
+        categories: ['1'],
+      } as TravelFormData);
+
+      expect(step6Result.isValid).toBe(true);
+      expect(step6Result.errors.some(e => e.field === 'description')).toBe(false);
+    });
+
     it('should validate step 2 (route)', () => {
       const formDataInvalid: Partial<TravelFormData> = {
         coordsMeTravel: [], // Empty

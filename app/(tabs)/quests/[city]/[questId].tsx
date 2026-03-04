@@ -182,6 +182,14 @@ export default function QuestByIdScreen() {
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     page: { flex: 1, backgroundColor: colors.background },
+    authGate: {
+        backgroundColor: colors.surface,
+        borderWidth: 1, borderColor: colors.border,
+        padding: 24, borderRadius: 16, gap: 12, width: '90%', maxWidth: 400,
+        alignItems: 'center',
+    },
+    authGateTitle: { color: colors.text, fontWeight: '900', fontSize: 18, textAlign: 'center' },
+    authGateText: { color: colors.textMuted, textAlign: 'center', lineHeight: 22 },
     notFound: {
         backgroundColor: colors.surface,
         borderWidth: 1, borderColor: colors.border,
@@ -195,17 +203,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
     },
     backBtnTxt: { color: colors.textOnPrimary, fontWeight: '800' },
-    authGate: {
-        backgroundColor: colors.surface,
-        borderWidth: 1, borderColor: colors.border,
-        padding: 24, borderRadius: 16, gap: 12, width: '90%', maxWidth: 420,
-        alignItems: 'center',
-    },
-    authGateTitle: { color: colors.text, fontWeight: '900', fontSize: 18, textAlign: 'center' },
-    authGateText: { color: colors.textMuted, textAlign: 'center', fontSize: 14, lineHeight: 20 },
     secondaryBtn: {
         paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
         borderWidth: 1, borderColor: colors.border,
     },
-    secondaryBtnTxt: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
+    secondaryBtnTxt: { color: colors.text, fontWeight: '600' },
 });

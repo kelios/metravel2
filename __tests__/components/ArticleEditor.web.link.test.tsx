@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { uploadImage } from '@/api/misc';
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true }),
@@ -51,6 +52,14 @@ jest.mock('@/components/article/QuillEditor.web', () => {
         getFormat: jest.fn(() => ({})),
         format: jest.fn(),
         formatText: jest.fn(),
+        insertEmbed: jest.fn((index: number, type: string, value: string) => {
+          const current = String(editorRef.current.root.innerHTML ?? '');
+          const safeIndex = Math.max(0, Math.min(current.length, Number(index) || 0));
+          if (type === 'image') {
+            editorRef.current.root.innerHTML =
+              current.slice(0, safeIndex) + `<img src="${value}" />` + current.slice(safeIndex);
+          }
+        }),
         insertText: jest.fn((index: number, text: string) => {
           const current = String(editorRef.current.root.innerHTML ?? '')
           const safeIndex = Math.max(0, Math.min(current.length, Number(index) || 0))
@@ -170,5 +179,51 @@ describe('ArticleEditor.web link', () => {
       expect(editor.insertText).toHaveBeenCalledWith(3, 'https://example.com', { link: 'https://example.com' }, 'user');
       expect(editor.setSelection).toHaveBeenCalledWith(3 + 'https://example.com'.length, 0, 'silent');
     });
+  });
+
+  it('uploads image from toolbar handler and inserts uploaded URL', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    const onChange = jest.fn();
+
+    const file = new File(['binary-image'], 'photo.png', { type: 'image/png' });
+    const inputMock: any = {
+      type: '',
+      accept: '',
+      files: [file],
+      onchange: null,
+      click: jest.fn(() => {
+        if (typeof inputMock.onchange === 'function') inputMock.onchange();
+      }),
+    };
+
+    const realCreateElement = window.document.createElement.bind(window.document);
+    const createElementSpy = jest
+      .spyOn(window.document, 'createElement')
+      .mockImplementation(((tagName: string) => {
+        if (String(tagName).toLowerCase() === 'input') return inputMock;
+        return realCreateElement(tagName);
+      }) as any);
+
+    const { getByTestId } = render(<ArticleEditor content={'hello'} onChange={onChange} />);
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+      expect((globalThis as any).__quillProps__).toBeTruthy();
+    });
+
+    const quillProps = (globalThis as any).__quillProps__;
+    const editor = (globalThis as any).__quillEditor__;
+    const imageHandler = quillProps?.modules?.toolbar?.handlers?.image;
+
+    expect(typeof imageHandler).toBe('function');
+
+    imageHandler.call({ quill: editor }, true);
+
+    await waitFor(() => {
+      expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
+      expect(editor.insertEmbed).toHaveBeenCalledWith(0, 'image', 'https://example.com/uploaded.jpg');
+    });
+
+    createElementSpy.mockRestore();
   });
 });

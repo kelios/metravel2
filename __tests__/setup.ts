@@ -42,6 +42,12 @@ console.warn = (message, ...args) => {
   if (text.startsWith('Could not load quest progress from server:')) {
     return
   }
+  if (text.startsWith('Rate limit exceeded for endpoint:')) {
+    return
+  }
+  if (text.startsWith('Global rate limit exceeded')) {
+    return
+  }
   if (text.includes('InteractionManager has been deprecated')) {
     return
   }

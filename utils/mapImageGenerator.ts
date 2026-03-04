@@ -184,17 +184,21 @@ export async function generateMapImageFromDOM(
 /**
  * Генерирует снимок маршрута с помощью Leaflet + html2canvas
  * Использует скрытый off-screen контейнер, поэтому не влияет на основную верстку
+ *
+ * @param points - массив точек маршрута с координатами и опциональными метками
+ * @param options.routeLine - опциональная линия маршрута из GPX/KML файла [[lat, lng], ...]
  */
 export async function generateLeafletRouteSnapshot(
   points: { lat: number; lng: number; label?: string }[],
-  options: { width?: number; height?: number; zoom?: number } = {}
+  options: { width?: number; height?: number; zoom?: number; routeLine?: Array<[number, number]> } = {}
 ): Promise<string | null> {
   if (typeof document === 'undefined' || typeof window === 'undefined') return null;
-  if (!points.length) return null;
+  if (!points.length && !options.routeLine?.length) return null;
 
   const width = options.width ?? 800;
   const height = options.height ?? 480;
   const zoom = options.zoom ?? 10;
+  const routeLine = options.routeLine ?? [];
 
   const cacheKey = buildLeafletRouteSnapshotCacheKey(points, { width, height, zoom });
   const cached = leafletRouteSnapshotCache.get(cacheKey);
@@ -453,9 +457,39 @@ export async function generateLeafletRouteSnapshot(
         L.marker(latLng, { icon }).addTo(map);
       });
 
+      // Рисуем линию маршрута из GPX/KML файла, если она есть
+      if (routeLine.length >= 2) {
+        const routeLatLngs = routeLine
+          .filter(([lat, lng]) => 
+            Number.isFinite(lat) && Number.isFinite(lng) &&
+            lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+          )
+          .map(([lat, lng]) => L.latLng(lat, lng));
+
+        if (routeLatLngs.length >= 2) {
+          L.polyline(routeLatLngs, {
+            color: DESIGN_TOKENS.colors.accent,
+            weight: 4,
+            opacity: 0.85,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }).addTo(map);
+        }
+      }
+
       // Подгоняем границы под маршрут (без плавной анимации)
-      if (latLngs.length > 0) {
-        const bounds = L.latLngBounds(latLngs);
+      const allBoundsLatLngs = [...latLngs];
+      if (routeLine.length >= 2) {
+        routeLine.forEach(([lat, lng]) => {
+          if (Number.isFinite(lat) && Number.isFinite(lng) &&
+              lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            allBoundsLatLngs.push(L.latLng(lat, lng));
+          }
+        });
+      }
+
+      if (allBoundsLatLngs.length > 0) {
+        const bounds = L.latLngBounds(allBoundsLatLngs);
         if (bounds.isValid()) {
           map.fitBounds(bounds, { padding: [28, 28], animate: false });
         }

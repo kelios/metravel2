@@ -17,6 +17,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/README.md` — project docs quick start + API reference
 - `docs/MODULE_OWNERS.md` — module ownership matrix
+- `docs/ARCHITECTURE_REMEDIATION_PLAN.md` — prioritized architecture fixes and remediation roadmap
 
 ## Policy and PR templates
 

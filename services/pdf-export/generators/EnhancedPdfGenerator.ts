@@ -1116,8 +1116,58 @@ export class EnhancedPdfGenerator {
       (location) => typeof location.lat === 'number' && typeof location.lng === 'number'
     );
 
+    // Загружаем route files для получения линии маршрута и профиля высот
+    let routePreview: import('@/types/travelRoutes').ParsedRoutePreview | null = null;
+    let routeLineCoords: Array<[number, number]> = [];
+    let routeInfo: string | undefined;
+
+    try {
+      const { listTravelRouteFiles, downloadTravelRouteFileBlob } = await import('@/api/travelRoutes');
+      const { parseRouteFilePreview } = await import('@/utils/routeFileParser');
+
+      const routeFiles = await listTravelRouteFiles(travel.id);
+      const supportedExts = new Set(['gpx', 'kml']);
+      const supportedFile = routeFiles.find((f) => {
+        const ext = String(f.ext ?? f.original_name?.split('.').pop() ?? '').toLowerCase().replace(/^\./, '');
+        return supportedExts.has(ext);
+      });
+
+      if (supportedFile) {
+        const ext = String(supportedFile.ext ?? supportedFile.original_name?.split('.').pop() ?? '')
+          .toLowerCase()
+          .replace(/^\./, '');
+        const downloaded = await downloadTravelRouteFileBlob(travel.id, supportedFile.id);
+        const parsed = parseRouteFilePreview(downloaded.text, ext);
+
+        if (parsed.linePoints.length >= 2) {
+          routePreview = parsed;
+          routeLineCoords = parsed.linePoints
+            .map((p) => {
+              const [latStr, lngStr] = String(p.coord ?? '').replace(/;/g, ',').split(',');
+              const lat = Number(latStr);
+              const lng = Number(lngStr);
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+              return [lat, lng] as [number, number];
+            })
+            .filter((c): c is [number, number] => c !== null);
+
+          // Формируем информацию о маршруте
+          const distanceKm = this.calculateRouteDistanceFromPreview(parsed);
+          if (distanceKm > 0) {
+            routeInfo = `${supportedFile.original_name || 'Загруженный маршрут'} • ${Math.round(distanceKm * 10) / 10} км`;
+          } else {
+            routeInfo = supportedFile.original_name || 'Загруженный маршрут';
+          }
+        }
+      }
+    } catch {
+      // Игнорируем ошибки загрузки route files
+    }
+
     let snapshotDataUrl: string | null = null;
-    if (pointsWithCoords.length) {
+    const hasRouteLineForMap = routeLineCoords.length >= 2;
+
+    if (pointsWithCoords.length || hasRouteLineForMap) {
       try {
         const generateLeafletRouteSnapshot = await this.getLeafletRouteSnapshot();
         snapshotDataUrl = await generateLeafletRouteSnapshot(
@@ -1126,7 +1176,11 @@ export class EnhancedPdfGenerator {
             lng: location.lng as number,
             label: location.address,
           })),
-          { width: 1400, height: 900 }
+          {
+            width: 1400,
+            height: 900,
+            routeLine: hasRouteLineForMap ? routeLineCoords : undefined,
+          }
         );
       } catch {
         snapshotDataUrl = null;
@@ -1143,7 +1197,40 @@ export class EnhancedPdfGenerator {
       locationListHtml,
       locationCount: locations.length,
       pageNumber,
+      routeInfo,
+      routePreview,
     });
+  }
+
+  private calculateRouteDistanceFromPreview(preview: import('@/types/travelRoutes').ParsedRoutePreview): number {
+    const linePoints = Array.isArray(preview?.linePoints) ? preview.linePoints : [];
+    if (linePoints.length < 2) return 0;
+
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371;
+
+    let totalKm = 0;
+    let prevCoord: { lat: number; lng: number } | null = null;
+
+    for (const point of linePoints) {
+      const [latStr, lngStr] = String(point.coord ?? '').replace(/;/g, ',').split(',');
+      const lat = Number(latStr);
+      const lng = Number(lngStr);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      if (prevCoord) {
+        const dLat = toRad(lat - prevCoord.lat);
+        const dLng = toRad(lng - prevCoord.lng);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(toRad(prevCoord.lat)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        totalKm += R * c;
+      }
+      prevCoord = { lat, lng };
+    }
+
+    return totalKm;
   }
 
   /**

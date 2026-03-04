@@ -59,8 +59,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('Оптимальный маршрут недоступен, показана прямая линия')).toBeTruthy();
   });
 
-  it('should display correct transport mode label', () => {
-    const { getByText: getByTextBike } = render(
+  it('should display correct transport mode icon in header', () => {
+    const { getByText, getByTestId } = render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -69,7 +69,9 @@ describe('Map Routing Display Tests', () => {
       />
     );
 
-    expect(getByTextBike('Велосипед')).toBeTruthy();
+    // Transport mode is shown via icon in header, not as separate card
+    expect(getByText('Маршрут построен')).toBeTruthy();
+    expect(getByTestId('feather-activity')).toBeTruthy(); // bike icon
   });
 
   it('should display correct time estimate for car', () => {
