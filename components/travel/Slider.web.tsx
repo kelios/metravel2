@@ -282,7 +282,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     if (!canPrefetchOnWeb()) return;
     if (images.length < 2) return;
 
-    const candidates = [currentIndex - 1, currentIndex + 1, currentIndex + 2];
+    const candidates = [currentIndex - 1, currentIndex + 1];
     for (const idx of candidates) {
       if (idx < 0 || idx >= images.length) continue;
       const uri = getUri(idx);

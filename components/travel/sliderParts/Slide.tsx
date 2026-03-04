@@ -43,11 +43,22 @@ const Slide = memo(function Slide({
   fit = 'contain',
 }: SlideProps) {
   const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const firstLoadReportedRef = useRef(false);
 
   const isFirstSlide = index === 0;
-  const shouldEagerLoad = isFirstSlide || !!preloadPriority;
-  const mainPriority = shouldEagerLoad ? 'high' : 'low';
+  const shouldEagerLoad =
+    Platform.OS === 'web'
+      ? isFirstSlide || isActive
+      : isFirstSlide || !!preloadPriority;
+  const mainPriority =
+    Platform.OS === 'web'
+      ? shouldEagerLoad
+        ? 'high'
+        : 'normal'
+      : shouldEagerLoad
+        ? 'high'
+        : 'low';
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && isActive;
@@ -55,10 +66,12 @@ const Slide = memo(function Slide({
   useEffect(() => {
     firstLoadReportedRef.current = false;
     setHasError(false);
-  }, [uri, index]);
+    setIsLoaded(isFirstSlide && !!firstImagePreloaded);
+  }, [uri, index, isFirstSlide, firstImagePreloaded]);
 
   const handleLoad = useCallback(() => {
     setHasError(false);
+    setIsLoaded(true);
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
@@ -70,6 +83,7 @@ const Slide = memo(function Slide({
     if (!isFirstSlide) return;
     if (!firstImagePreloaded) return;
     if (firstLoadReportedRef.current) return;
+    setIsLoaded(true);
     firstLoadReportedRef.current = true;
     onFirstImageLoad?.();
   }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
@@ -91,34 +105,45 @@ const Slide = memo(function Slide({
           testID={`slider-neutral-placeholder-${index}`}
         />
       ) : (
-        <ImageCardMedia
-          src={uri}
-          fit={mainFit}
-          blurBackground={shouldBlur}
-          blurRadius={12}
-          priority={mainPriority as any}
-          prefetch={Platform.OS === 'web' && shouldEagerLoad}
-          loading={
-            Platform.OS === 'web'
-              ? shouldEagerLoad
-                ? 'eager'
+        <>
+          {!isLoaded && (
+            <View
+              style={[
+                styles.neutralPlaceholder,
+                { position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' } as any,
+              ]}
+            />
+          )}
+          <ImageCardMedia
+            src={uri}
+            fit={mainFit}
+            blurBackground={shouldBlur}
+            blurRadius={12}
+            priority={mainPriority as any}
+            prefetch={false}
+            loading={
+              Platform.OS === 'web'
+                ? shouldEagerLoad
+                  ? 'eager'
+                  : 'lazy'
                 : 'lazy'
-              : 'lazy'
-          }
-          transition={0}
-          style={styles.img}
-          alt={`Фотография путешествия ${index + 1} из ${imagesLength}`}
-          imageProps={{
-            ...(imageProps || {}),
-            contentPosition: 'center',
-            testID: `slider-image-${index}`,
-            accessibilityIgnoresInvertColors: true,
-            accessibilityRole: 'image',
-            accessibilityLabel: `Фотография путешествия ${index + 1} из ${imagesLength}`,
-          }}
-          onLoad={handleLoad}
-          onError={handleError}
-        />
+            }
+            transition={0}
+            style={styles.img}
+            alt={`Фотография путешествия ${index + 1} из ${imagesLength}`}
+            imageProps={{
+              ...(imageProps || {}),
+              contentPosition: 'center',
+              testID: `slider-image-${index}`,
+              accessibilityIgnoresInvertColors: true,
+              accessibilityRole: 'image',
+              accessibilityLabel: `Фотография путешествия ${index + 1} из ${imagesLength}`,
+            }}
+            onLoad={handleLoad}
+            onError={handleError}
+            showImmediately={isFirstSlide && !!firstImagePreloaded}
+          />
+        </>
       )}
     </View>
   );

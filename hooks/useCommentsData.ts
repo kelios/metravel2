@@ -30,7 +30,7 @@ export function useCommentsData(travelId: number) {
     isLoading: isLoadingThread,
     error: threadError,
     refetch: refetchThread,
-  } = useMainThread(travelId);
+  } = useMainThread(travelId, { enabled: isAuthenticated });
 
   const {
     data: comments = [],
@@ -203,4 +203,3 @@ export function useCommentsData(travelId: number) {
     handleLoginPress,
   };
 }
-

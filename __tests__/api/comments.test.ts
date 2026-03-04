@@ -148,11 +148,13 @@ describe('Comments API', () => {
       expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9');
     });
 
-    it('should return empty list when thread_id is missing', async () => {
+    it('should fallback to travel_id lookup when thread_id is missing', async () => {
+      mockedApiClient.get.mockResolvedValueOnce([]);
+
       const result = await commentsApi.getTravelComments({ travelId: 123, threadId: null });
 
       expect(result).toEqual([]);
-      expect(mockedApiClient.get).not.toHaveBeenCalled();
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?travel_id=123');
     });
 
     it('should recursively fetch sub-thread comments', async () => {

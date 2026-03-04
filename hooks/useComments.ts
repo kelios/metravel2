@@ -26,11 +26,12 @@ export const commentKeys = {
   comment: (commentId: number) => [...commentKeys.all, 'detail', commentId] as const,
 };
 
-export function useMainThread(travelId: number) {
+export function useMainThread(travelId: number, options?: { enabled?: boolean }) {
+  const isEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: commentKeys.mainThread(travelId),
     queryFn: () => commentsApi.getMainThread(travelId),
-    enabled: !!travelId && travelId > 0,
+    enabled: isEnabled && !!travelId && travelId > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: false, // Backend may return 404 for missing threads — don't retry

@@ -92,16 +92,18 @@ export const commentsApi = {
     travelId: number;
     threadId?: number | null;
   }): Promise<TravelComment[]> => {
-    const { threadId } = params;
+    const { travelId, threadId } = params;
 
     let rootComments: TravelComment[];
     if (typeof threadId === 'number' && threadId > 0) {
       rootComments = await commentsApi.getComments(threadId);
     } else {
-      // If main thread is missing, treat as "no comments yet".
-      // Some backends reject /travel-comments/?travel_id=... with
-      // 400 "thread_id is required", so avoid that request entirely.
-      return [];
+      // Prefer travel-level read endpoint for anonymous/public pages.
+      // This avoids noisy /main thread lookups on pages that have no thread yet.
+      rootComments = await commentsApi.getCommentsByTravel(travelId);
+      if (!Array.isArray(rootComments) || rootComments.length === 0) {
+        return [];
+      }
     }
 
     // The backend uses a sub-thread model: a comment's `sub_thread` field

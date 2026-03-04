@@ -165,17 +165,22 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     var started = false;
     var fallbackTimer = null;
     var loadTimer = null;
-    var events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    var events = ['pointerdown', 'keydown', 'touchstart', 'click'];
+    var visibilityEvents = ['visibilitychange', 'pagehide', 'beforeunload'];
+    var disableAutoBootstrap = !!(window.navigator && window.navigator.webdriver);
 
     function cleanup() {
       for (var i = 0; i < events.length; i++) {
         try { window.removeEventListener(events[i], trigger, { capture: true }); } catch (_e) {}
       }
+      for (var j = 0; j < visibilityEvents.length; j++) {
+        try { window.removeEventListener(visibilityEvents[j], triggerOnLeave, { capture: true }); } catch (_e2) {}
+      }
       if (fallbackTimer) {
-        try { clearTimeout(fallbackTimer); } catch (_e2) {}
+        try { clearTimeout(fallbackTimer); } catch (_e3) {}
       }
       if (loadTimer) {
-        try { clearTimeout(loadTimer); } catch (_e3) {}
+        try { clearTimeout(loadTimer); } catch (_e4) {}
       }
     }
 
@@ -194,9 +199,24 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       runDeferred();
     }
 
+    function triggerOnLeave(ev) {
+      if (ev && ev.type === 'visibilitychange' && document.visibilityState && document.visibilityState !== 'hidden') {
+        return;
+      }
+      trigger();
+    }
+
     for (var i = 0; i < events.length; i++) {
       try { window.addEventListener(events[i], trigger, { passive: true, capture: true }); } catch (_e4) {}
     }
+    for (var j = 0; j < visibilityEvents.length; j++) {
+      try { window.addEventListener(visibilityEvents[j], triggerOnLeave, { capture: true }); } catch (_e5) {}
+    }
+
+    if (disableAutoBootstrap) {
+      return;
+    }
+
     if (document.readyState === 'complete') {
       trigger();
       return;
@@ -210,7 +230,8 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   }
 
   // Автозагрузка:
-  // - После первого взаимодействия пользователя или по fallback-таймеру.
+  // - После первого взаимодействия пользователя.
+  // - Либо при уходе со страницы (visibility/pagehide) для коротких сессий без кликов.
   // Это снижает влияние аналитики на LCP/TBT в initial render.
   if (isAnalyticsAllowed()) {
     scheduleAnalyticsBootstrap();
