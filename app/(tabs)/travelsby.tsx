@@ -1,5 +1,5 @@
 // app/travelsby/index.tsx
-import { Suspense, lazy, useMemo } from 'react';
+import { Suspense, createElement, lazy, useMemo } from 'react';
 import { Platform, StyleSheet, View, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -33,7 +33,7 @@ export default function TravelsByScreen() {
             )}
             <View style={styles.container}>
                 {Platform.OS === 'web' && (
-                    React.createElement('h1', {
+                    createElement('h1', {
                         style: {
                             position: 'absolute' as const,
                             width: 1,
