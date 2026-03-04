@@ -47,6 +47,7 @@ import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
 import { readConsent } from "@/utils/consent";
+import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
@@ -57,6 +58,7 @@ if (__DEV__) {
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {
   require('./global.css');
+  patchWebShadowStyles();
 }
 
 // useLayoutEffect warning is suppressed by the inline script in +html.tsx
@@ -65,7 +67,6 @@ if (Platform.OS === 'web') {
 LogBox.ignoreLogs([
   'TouchableWithoutFeedback is deprecated. Please use Pressable.',
   'Image: style.tintColor is deprecated. Please use props.tintColor.',
-  '"shadow*" style props are deprecated. Use "boxShadow".',
 ]);
 
 /** ===== Helpers ===== */

@@ -32,6 +32,20 @@ npm run build:web
 
 (Expo export for web)
 
+### Prod deploy script
+
+```bash
+./build-prod.sh prod
+```
+
+- Accepts env argument: `dev`, `preprod`, `prod` (default: `prod`).
+- Pipeline: applies `.env.<env>` -> builds `dist/<env>` -> runs SEO/public post-processing -> deploys to server.
+- Build without deploy:
+
+```bash
+DEPLOY=0 ./build-prod.sh prod
+```
+
 ## Web cache policy (do not revert)
 
 - Service Worker caching for web is disabled by policy.

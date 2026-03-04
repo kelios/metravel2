@@ -42,6 +42,8 @@ npm run android
 - `npm run reset` — Expo reset cache.
 - `npm run check-deps` — dependency checks.
 - `npm run check:image-architecture` — enforces image/card architecture rules (also runs in `npm run test:ci`).
+- `./build-dev.sh` — full dev web build + deploy to dev server (`DEPLOY=0` to skip deploy).
+- `./build-prod.sh [dev|preprod|prod]` — production-mode web export into `dist/<env>`, SEO/public-files post-processing, and deploy to prod server by default (`DEPLOY=0` for build-only, `CLEAN=1` to reinstall deps).
 
 ## Environment variables
 
@@ -104,4 +106,3 @@ export default function MyPage() {
 - Wrap у `isFocused` для уникнення конфліктів
 - Унікальний `headKey` для кожної сторінки
 - `robots="noindex,nofollow"` для auth/приватних сторінок
-
