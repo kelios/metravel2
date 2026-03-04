@@ -191,6 +191,24 @@ export default function Login() {
                     <View style={styles.bg}>
                         <View style={styles.inner}>
                             <View style={styles.card}>
+                                    {Platform.OS === 'web' &&
+                                        React.createElement(
+                                            'h1',
+                                            {
+                                                style: {
+                                                    position: 'absolute' as const,
+                                                    width: 1,
+                                                    height: 1,
+                                                    padding: 0,
+                                                    margin: -1,
+                                                    overflow: 'hidden' as const,
+                                                    clip: 'rect(0,0,0,0)',
+                                                    whiteSpace: 'nowrap',
+                                                    borderWidth: 0,
+                                                } as any,
+                                            },
+                                            title
+                                        )}
                                     {msg.text !== '' && (
                                         <Text
                                             style={[

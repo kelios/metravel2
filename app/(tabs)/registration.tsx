@@ -1,5 +1,5 @@
 // app/register.tsx (или соответствующий путь)
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -152,6 +152,24 @@ export default function RegisterForm() {
                     <View style={styles.bg}>
                                 <View style={styles.center}>
                                     <View style={styles.card}>
+                                            {Platform.OS === 'web' &&
+                                                React.createElement(
+                                                    'h1',
+                                                    {
+                                                        style: {
+                                                            position: 'absolute' as const,
+                                                            width: 1,
+                                                            height: 1,
+                                                            padding: 0,
+                                                            margin: -1,
+                                                            overflow: 'hidden' as const,
+                                                            clip: 'rect(0,0,0,0)',
+                                                            whiteSpace: 'nowrap',
+                                                            borderWidth: 0,
+                                                        } as any,
+                                                    },
+                                                    title
+                                                )}
                                             {generalMsg.text !== '' && (
                                                 <Text
                                                     style={[

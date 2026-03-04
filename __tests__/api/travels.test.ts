@@ -189,6 +189,23 @@ describe('src/api/travelsApi.ts', () => {
         })
       );
     });
+
+    it('retries once for transient 502 errors', async () => {
+      mockedFetchWithTimeout
+        .mockResolvedValueOnce({ ok: false, status: 502, statusText: 'Bad Gateway' } as any)
+        .mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce([{ id: 11, lat: 53.9, lng: 27.56 }] as any);
+
+      const result = await fetchTravelsForMap(0, 10, {
+        lat: '53.9',
+        lng: '27.56',
+        radius: 60,
+      });
+
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+      expect(Array.isArray(result)).toBe(true);
+      expect((result as any)[0]).toEqual(expect.objectContaining({ id: 11 }));
+    });
   });
 
   describe('fetchTravels', () => {

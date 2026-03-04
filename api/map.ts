@@ -248,6 +248,30 @@ const URLAPI = (() => {
 
 const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
+const TRANSIENT_HTTP_STATUSES = new Set([502, 503, 504]);
+const MAP_FETCH_RETRY_DELAY_MS = process.env.NODE_ENV === 'test' ? 0 : 350;
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const fetchWithTransientRetry = async (
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  retries: number = 1
+) => {
+  let attempt = 0;
+  while (true) {
+    const response = await fetchWithTimeout(url, init, timeoutMs);
+    const shouldRetry =
+      attempt < retries && !response.ok && TRANSIENT_HTTP_STATUSES.has(response.status);
+    if (!shouldRetry) return response;
+
+    attempt += 1;
+    if (MAP_FETCH_RETRY_DELAY_MS > 0) {
+      await wait(MAP_FETCH_RETRY_DELAY_MS);
+    }
+  }
+};
 
 // Для запросов с query (?...) оставляем базу без завершающего слеша, для остальных — со слешем.
 const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map/`; // далее добавляется ?...
@@ -396,7 +420,12 @@ export const fetchTravelsForMap = async (
     const params = new URLSearchParams(paramsObj).toString();
 
     const urlTravel = `${SEARCH_TRAVELS_FOR_MAP}?${params}`;
-    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, LONG_TIMEOUT);
+    const res = await fetchWithTransientRetry(
+      urlTravel,
+      { signal: options?.signal },
+      LONG_TIMEOUT,
+      1
+    );
     if (!res.ok) {
       const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       if (options?.throwOnError) throw err;
