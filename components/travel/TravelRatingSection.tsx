@@ -3,7 +3,7 @@
 // 🎨 УЛУЧШЕНО: Анимация изменения рейтинга, улучшенная визуальная иерархия, success feedback
 
 import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
@@ -28,7 +28,7 @@ function TravelRatingSection({
 }: Props) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const shouldUseNativeDriver = Platform.OS !== 'web';
+    const shouldUseNativeDriver = false;
 
     // 🎨 Анимация для изменения рейтинга
     const ratingChangeAnim = useRef(new Animated.Value(1)).current;

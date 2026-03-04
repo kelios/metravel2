@@ -49,7 +49,7 @@ function CollapsibleBlock({
 }: CollapsibleBlockProps) {
   const colors = useThemedColors();
 
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   // ✅ ИСПРАВЛЕНИЕ: Используем контролируемое состояние если передано, иначе внутреннее
   const isControlled = controlledExpanded !== undefined || controlledHidden !== undefined;

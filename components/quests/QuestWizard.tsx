@@ -138,7 +138,7 @@ const resolveUri = (src: any | undefined): string | undefined => {
 const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: boolean; onClose: () => void; }) => {
     const { styles } = useQuestWizardTheme();
     const scale = useRef(new Animated.Value(1)).current;
-    const shouldUseNativeDriver = Platform.OS !== 'web';
+    const shouldUseNativeDriver = false;
     // @ts-ignore -- Animated.event nativeEvent type narrowing requires explicit cast for pinch gesture
     const onPinchEvent = Animated.event([{ nativeEvent: { scale } }], { useNativeDriver: shouldUseNativeDriver });
     const onPinchStateChange = (e: any) => {
@@ -178,7 +178,7 @@ const StepCard = memo((props: StepCardProps) => {
     const [hasOrganic, setHasOrganic] = useState(false); const [hasMapsme, setHasMapsme] = useState(false);
     const [navExpanded, setNavExpanded] = useState(false);
     const shakeAnim = useRef(new Animated.Value(0)).current;
-    const shouldUseNativeDriver = Platform.OS !== 'web';
+    const shouldUseNativeDriver = false;
 
     // flip animation
     const flip = useRef(new Animated.Value(0)).current;

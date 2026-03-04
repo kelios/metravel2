@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Platform } from 'react-native';
+import { Animated, Easing } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import ModernFilters from '@/components/listTravel/ModernFilters';
@@ -249,7 +249,7 @@ export function useRoulette() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<Travel[]>([]);
   const spinAnim = useRef(new Animated.Value(0)).current;
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   const handleSpin = useCallback(async () => {
     setSpinning(true);

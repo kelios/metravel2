@@ -73,7 +73,7 @@ const RouteStats: React.FC<RouteStatsProps> = ({
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 400,
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: false,
       }).start();
     }
   }, [hasDistance, fadeAnim]);

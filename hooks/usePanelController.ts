@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { Animated, Easing, Platform, useWindowDimensions } from 'react-native';
+import { Animated, Easing, useWindowDimensions } from 'react-native';
 
 const PANEL_ANIMATION_DURATION = 250;
 
@@ -12,7 +12,7 @@ export function usePanelController(isMobile: boolean = false) {
     const [isPanelVisible, setPanelVisible] = useState(!isMobile);
     const panelAnimation = useRef(new Animated.Value(isMobile ? 0 : 1)).current;
 
-    const shouldUseNativeDriver = Platform.OS !== 'web';
+    const shouldUseNativeDriver = false;
 
     const openPanel = useCallback(() => {
         setPanelVisible(true);

@@ -168,7 +168,7 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
   const colors = useThemedColors();
   const { title, message, icon, color, timestamp, read } = notification;
   const [fadeAnim] = useState(new Animated.Value(read ? 1 : 0.95));
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   useEffect(() => {
     if (!read) {

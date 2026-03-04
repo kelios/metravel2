@@ -21,7 +21,7 @@ function ScrollToTopButton({
   forceVisible,
 }: ScrollToTopButtonProps) {
   const colors = useThemedColors();
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 	  const styles = useMemo(() => StyleSheet.create({
     container: {
       position: 'absolute',

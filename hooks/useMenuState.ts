@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Platform } from 'react-native';
+import { Animated, Easing } from 'react-native';
 
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -27,7 +27,7 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
   const { width } = useResponsive();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   const stableWidth = useMemo(() => {
     if (width && width > 0) return width;

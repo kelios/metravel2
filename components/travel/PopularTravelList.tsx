@@ -241,7 +241,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       scrollToAnchor?.();
     }, [scrollToAnchor]);
 
-    const shouldUseNativeDriver = Platform.OS !== 'web';
+    const shouldUseNativeDriver = false;
 
     // Оптимизированная анимация - запускаем только когда контент готов
     useEffect(() => {

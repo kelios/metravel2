@@ -189,7 +189,7 @@ export function QuestsFilterDrawer({
     const drawerW = useMemo(getDrawerWidth, []);
     const s = useMemo(() => drawerStyles(colors, drawerW), [colors, drawerW]);
     const slideAnim = React.useRef(new Animated.Value(-1)).current;
-    const shouldUseNativeDriver = Platform.OS !== 'web';
+    const shouldUseNativeDriver = false;
 
     React.useEffect(() => {
         if (visible) {

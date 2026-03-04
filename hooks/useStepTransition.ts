@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Animated, Platform } from 'react-native';
+import { Animated } from 'react-native';
 
 /**
  * ✅ ФАЗА 2: Анимации переходов между шагами
@@ -15,7 +15,7 @@ export interface StepTransitionConfig {
 
 const DEFAULT_CONFIG: StepTransitionConfig = {
   duration: 300,
-  useNativeDriver: Platform.OS !== 'web',
+  useNativeDriver: false,
   fadeIn: true,
   slideIn: true,
 };
@@ -222,7 +222,7 @@ export function useTipAnimation(visible: boolean, delay: number = 0, config: Ste
 export function useButtonHoverAnimation() {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {

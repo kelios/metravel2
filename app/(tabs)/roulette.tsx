@@ -76,7 +76,7 @@ export default function RouletteScreen() {
           toValue: 1,
           duration: 1200,
           easing: Easing.linear,
-          useNativeDriver: Platform.OS !== 'web',
+          useNativeDriver: false,
         }),
       );
       compassSpinRef.current.start();
@@ -103,7 +103,7 @@ export default function RouletteScreen() {
         Animated.timing(a, {
           toValue: 1,
           duration: 350,
-          useNativeDriver: Platform.OS !== 'web',
+          useNativeDriver: false,
         }),
       )).start();
     }

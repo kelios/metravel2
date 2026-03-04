@@ -65,7 +65,7 @@ function StarRating({
 
     const config = SIZE_CONFIG[size];
     const displayRating = rating ?? 0;
-    const shouldUseNativeDriver = Platform.OS !== 'web';
+    const shouldUseNativeDriver = false;
 
     const normalizedUserRating = useMemo(() => {
         if (userRating == null) return null;

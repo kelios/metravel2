@@ -27,7 +27,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
   const isMobile = isSmallPhone || isPhone || isLargePhone;
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   const checkShouldShow = useCallback(async () => {
     try {

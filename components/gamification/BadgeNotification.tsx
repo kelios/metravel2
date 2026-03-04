@@ -25,7 +25,7 @@ const BadgeNotification = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(-100));
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   const handleDismiss = useCallback(() => {
     Animated.parallel([

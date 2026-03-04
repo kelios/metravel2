@@ -248,7 +248,7 @@ const RecommendationsTabs = memo(
       const { x = 0, width = 100 } = tabLayout[tabs[current].id] || {};
       Animated.spring(underlineAnim, {
         toValue: x + width / 2,
-        useNativeDriver: Platform.OS !== 'web',
+        useNativeDriver: false,
         friction: 8,
       }).start();
     }, [activeTab, tabLayout, tabs, underlineAnim]);

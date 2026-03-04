@@ -64,7 +64,7 @@ function TravelStickyActions({
           setVisible(false);
           RNAnimated.spring(translateY, {
             toValue: 80,
-            useNativeDriver: Platform.OS !== 'web',
+            useNativeDriver: false,
             damping: 20,
             stiffness: 200,
           }).start();
@@ -77,7 +77,7 @@ function TravelStickyActions({
         setVisible(true);
         RNAnimated.spring(translateY, {
           toValue: 0,
-          useNativeDriver: Platform.OS !== 'web',
+          useNativeDriver: false,
           damping: 20,
           stiffness: 200,
         }).start();
@@ -85,7 +85,7 @@ function TravelStickyActions({
         isShown.current = false;
         RNAnimated.spring(translateY, {
           toValue: 80,
-          useNativeDriver: Platform.OS !== 'web',
+          useNativeDriver: false,
           damping: 20,
           stiffness: 200,
         }).start(() => setVisible(false));

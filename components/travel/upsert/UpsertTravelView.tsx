@@ -28,7 +28,7 @@ interface UpsertTravelViewProps {
 // Skeleton component for loading state
 const WizardSkeleton = ({ colors }: { colors: UpsertTravelController['colors'] }) => {
   const pulseAnim = useMemo(() => new Animated.Value(0.3), []);
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -71,7 +71,7 @@ const WizardSkeleton = ({ colors }: { colors: UpsertTravelController['colors'] }
 // Offline indicator banner
 const OfflineBanner = ({ colors, isVisible }: { colors: UpsertTravelController['colors']; isVisible: boolean }) => {
   const [opacity] = useState(new Animated.Value(0));
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const shouldUseNativeDriver = false;
 
   useEffect(() => {
     Animated.timing(opacity, {
