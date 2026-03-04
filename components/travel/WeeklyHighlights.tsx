@@ -128,7 +128,9 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
         const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
         if (maxScrollLeft <= 0) return;
 
-        e.preventDefault?.();
+        if (e?.cancelable && typeof e?.preventDefault === 'function') {
+            e.preventDefault();
+        }
         (el as any).scrollLeft += deltaY;
     }, []);
 

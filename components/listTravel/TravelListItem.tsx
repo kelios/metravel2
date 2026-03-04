@@ -20,7 +20,6 @@ import { formatViewCount } from "@/components/travel/utils/travelHelpers";
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants';
 import TravelListItemCountriesList from './TravelListItemCountriesList';
 import { createTravelListItemStyles } from './travelListItemStyles';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -697,15 +696,16 @@ return (
       ? selectable
         ? card
         : (
-            <View
+            <a
               testID="travel-card-link"
               ref={anchorRef}
-              style={EMPTY_STYLE}
+              href={isNavigable ? navigationUrl : undefined}
+              style={EMPTY_STYLE as any}
               {...(isWeb
                 ? ({
                     'data-testid': 'travel-card-link',
-                    role: isNavigable ? 'link' : 'group',
-                    tabIndex: isNavigable ? 0 : -1,
+                    role: isNavigable ? undefined : 'group',
+                    tabIndex: isNavigable ? undefined : -1,
                     'aria-disabled': !isNavigable,
                     // P5.1: Hover-prefetch при наведении мыши
                     onPointerEnter: handlePointerEnter,
@@ -713,19 +713,15 @@ return (
                       if (!isNavigable) return;
                       e.stopPropagation();
 
-                      const hasModifier =
+                      // Let browser keep native anchor behavior for new tab/window actions.
+                      const shouldUseBrowserDefault =
+                        e.button !== 0 ||
                         e.metaKey ||
                         e.ctrlKey ||
                         e.shiftKey ||
-                        e.altKey ||
-                        e.button === 1;
+                        e.altKey;
 
-                      if (hasModifier) {
-                        e.preventDefault();
-                        void openExternalUrlInNewTab(navigationUrl, {
-                          allowRelative: true,
-                          baseUrl: typeof window !== 'undefined' ? window.location.origin : '',
-                        });
+                      if (shouldUseBrowserDefault) {
                         return;
                       }
 
@@ -743,7 +739,7 @@ return (
                 : {})}
             >
               {card}
-            </View>
+            </a>
           )
       : card}
   </View>
