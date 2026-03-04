@@ -8,10 +8,12 @@ import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
+type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
+
 interface Suggestion {
   text: string;
   type: 'city' | 'travel' | 'category' | 'country';
-  icon?: string;
+  icon?: FeatherIconName;
 }
 
 interface SearchAutocompleteProps {
@@ -81,6 +83,7 @@ function SearchAutocomplete({
   const colors = useThemedColors();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [hoveredIndex, setHoveredIndex] = useState(-1);
   const selectedIndexRef = useRef(-1);
   const listRef = useRef<any>(null);
 
@@ -137,6 +140,9 @@ function SearchAutocomplete({
       borderBottomColor: colors.border,
     },
     suggestionItemSelected: {
+      backgroundColor: colors.primarySoft,
+    },
+    suggestionItemHovered: {
       backgroundColor: colors.primarySoft,
     },
     suggestionText: {
@@ -206,7 +212,8 @@ function SearchAutocomplete({
 
   const renderItem = ({ item, index }: { item: Suggestion; index: number }) => {
     const isSelected = index === selectedIndex;
-    const iconName = item.icon || 
+    const isHovered = index === hoveredIndex;
+    const iconName: FeatherIconName = item.icon || 
       (item.type === 'city' ? 'map-pin' :
        item.type === 'country' ? 'globe' :
        item.type === 'category' ? 'tag' : 'search');
@@ -216,21 +223,20 @@ function SearchAutocomplete({
         style={[
           styles.suggestionItem,
           isSelected && styles.suggestionItemSelected,
+          !isSelected && isHovered && styles.suggestionItemHovered,
         ]}
         onPress={() => handleSelect(item.text)}
+        onHoverIn={Platform.OS === 'web' ? () => setHoveredIndex(index) : undefined}
+        onHoverOut={Platform.OS === 'web' ? () => setHoveredIndex(-1) : undefined}
         {...(Platform.OS === 'web' ? ({ onKeyDown: handleKeyPress } as any) : null)}
         {...Platform.select({
           web: {
             cursor: 'pointer',
-            // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-            ':hover': {
-              backgroundColor: colors.primarySoft,
-            },
           },
         })}
       >
         <Feather 
-          name={iconName as any} 
+          name={iconName} 
           size={16} 
           color={isSelected ? colors.primary : colors.textMuted}
         />

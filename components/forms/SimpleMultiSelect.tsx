@@ -173,7 +173,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               renderItem={renderSelectedChip}
               keyExtractor={(item) => String(item[valueField])}
               horizontal
-              {...({ estimatedItemSize: 36 } as any)}
+              estimatedItemSize={36}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsContainer}
               drawDistance={600}
@@ -204,9 +204,9 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
           />
 
           <View style={styles.modalContentWrap}>
-            <View style={[styles.modalContent, { backgroundColor: colors.surface, flex: 1 }]} > 
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+            <View style={styles.modalContent}> 
+            <View style={styles.modalHeader}> 
+              <Text style={styles.modalTitle}>
                 Выбрано: {selectedItems.length}
               </Text>
               <Pressable onPress={handleClose} hitSlop={8}>
@@ -215,10 +215,10 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
             </View>
 
             {search && (
-              <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+              <View style={styles.searchContainer}>
                 <Feather name="search" size={18} color={colors.textMuted} />
                 <TextInput
-                  style={[styles.searchInput, { color: colors.text }]}
+                  style={styles.searchInput}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   placeholder={searchPlaceholder}
@@ -237,22 +237,22 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               data={filteredData}
               renderItem={renderItem}
               keyExtractor={(item) => String(item[valueField])}
-              {...({ estimatedItemSize: 44 } as any)}
-              style={StyleSheet.flatten([styles.list, { flex: 1 }]) as any}
+              estimatedItemSize={44}
+              style={styles.list}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={true}
               ListEmptyComponent={
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>Ничего не найдено</Text>
+                <Text style={styles.emptyText}>Ничего не найдено</Text>
               }
               drawDistance={Platform.OS === 'web' ? 900 : 600}
             />
 
-            <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
+            <View style={styles.modalFooter}>
               <Pressable
-                style={[styles.doneButton, { backgroundColor: colors.primary }]}
+                style={styles.doneButton}
                 onPress={handleClose}
               >
-                <Text style={[styles.doneButtonText, { color: colors.textOnPrimary }]}>Готово</Text>
+                <Text style={styles.doneButtonText}>Готово</Text>
               </Pressable>
             </View>
             </View>
@@ -345,7 +345,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     ...(Platform.OS === 'web' ? ({ height: '80vh' } as any) : ({} as any)),
     ...(Platform.OS === 'web'
       ? ({ boxShadow: colors.boxShadows.modal } as any)
-      : ((colors.shadows?.heavy ?? {}) as any)),
+      : (colors.shadows.heavy as any)),
   },
   modalHeader: {
     flexDirection: 'row',
@@ -393,12 +393,6 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 2,
     gap: DESIGN_TOKENS.spacing.md,
-  },
-  listItemPressed: {
-    backgroundColor: colors.mutedBackground,
-  },
-  listItemSelected: {
-    backgroundColor: colors.primarySoft,
   },
   checkbox: {
     width: 20,

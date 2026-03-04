@@ -47,7 +47,6 @@ const GOOGLE_GSI_SCRIPT_ID = 'google-gsi-client-script';
 export default function GoogleSignInButton({ onSuccess, onError, disabled }: GoogleSignInButtonProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
     const [isGoogleButtonRendered, setIsGoogleButtonRendered] = useState(false);
     const buttonContainerRef = useRef<HTMLDivElement | null>(null);
@@ -106,7 +105,6 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
                 itp_support: true,
                 use_fedcm_for_prompt: true,
                 callback: (response) => {
-                    setIsLoading(false);
                     if (response.credential) {
                         onSuccess(response.credential);
                     } else {
@@ -150,7 +148,7 @@ export default function GoogleSignInButton({ onSuccess, onError, disabled }: Goo
         <View
             style={[
                 styles.button,
-                (disabled || isLoading || !isGoogleLoaded || !hasClientId) && styles.buttonDisabled,
+                (disabled || !isGoogleLoaded || !hasClientId) && styles.buttonDisabled,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Войти через Google"
@@ -182,7 +180,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         minHeight: 44,
         alignItems: 'center',
         justifyContent: 'center',
-        width: '100%' as any,
+        width: '100%',
     },
     buttonDisabled: {
         opacity: 0.5,
@@ -200,4 +198,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.text,
     },
 });
-

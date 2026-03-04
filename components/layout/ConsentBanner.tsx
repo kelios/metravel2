@@ -6,44 +6,9 @@ import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
-
-const CONSENT_KEY = 'metravel_consent_v1';
-
-interface ConsentState {
-  necessary: boolean;
-  analytics: boolean;
-  date: string;
-}
+import { readConsent, writeConsent, ConsentState } from '@/utils/consent';
 
 const isWeb = Platform.OS === 'web';
-
-function readConsent(): ConsentState | null {
-  if (!isWeb || typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(CONSENT_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    if (!parsed.necessary) return null;
-    const analytics = typeof (parsed as any).analytics === 'boolean' ? (parsed as any).analytics : true;
-    return {
-      necessary: !!parsed.necessary,
-      analytics: !!analytics,
-      date: parsed.date || new Date().toISOString(),
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeConsent(consent: ConsentState) {
-  if (!isWeb || typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
-  } catch {
-    // ignore
-  }
-}
 
 function ConsentBanner() {
   const colors = useThemedColors();

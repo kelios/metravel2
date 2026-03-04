@@ -26,6 +26,7 @@ function FormFieldWithValidation({
   showError = true,
 }: FormFieldWithValidationProps) {
   const [showHint, setShowHint] = useState(false);
+  const [isHintHovered, setIsHintHovered] = useState(false);
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
 
   const styles = useMemo(() => StyleSheet.create({
@@ -55,6 +56,9 @@ function FormFieldWithValidation({
       minHeight: DESIGN_TOKENS.touchTarget.minHeight,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    hintButtonHovered: {
+      opacity: 0.7,
     },
     hintTooltip: {
       position: 'absolute',
@@ -133,16 +137,14 @@ function FormFieldWithValidation({
           <View style={styles.hintContainer}>
             <Pressable
               onPress={() => setShowHint(!showHint)}
-              style={styles.hintButton}
+              style={[styles.hintButton, isHintHovered && styles.hintButtonHovered]}
+              onHoverIn={Platform.OS === 'web' ? () => setIsHintHovered(true) : undefined}
+              onHoverOut={Platform.OS === 'web' ? () => setIsHintHovered(false) : undefined}
               accessibilityLabel="Показать подсказку"
               accessibilityRole="button"
               {...Platform.select({
                 web: {
                   cursor: 'pointer',
-                  // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
-                  ':hover': {
-                    opacity: 0.7,
-                  },
                 },
               })}
             >

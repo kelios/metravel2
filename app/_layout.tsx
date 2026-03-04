@@ -34,9 +34,11 @@ const SyncIndicatorLazy = safeLazy(
   }),
   'SyncIndicator'
 );
-const ReactQueryDevtoolsLazy: any = React.lazy(() =>
-  import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
-);
+const ReactQueryDevtoolsLazy: any = __DEV__
+  ? React.lazy(() =>
+      import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
+    )
+  : null;
 const ConsentBannerLazy = safeLazy(() => import('@/components/layout/ConsentBanner'), 'ConsentBanner');
 const ToastLazy = safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost');
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
@@ -44,6 +46,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
+import { readConsent } from "@/utils/consent";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
@@ -167,8 +170,12 @@ export default function RootLayout() {
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
-        // Відкладаємо ConsentBanner на 4 секунди для покращення FCP/LCP
-        consentTimer = setTimeout(() => setShowConsentBanner(true), 4000);
+        // Defer ConsentBanner for LCP, but skip entirely if consent is already saved.
+        if (isWeb && typeof window !== 'undefined') {
+          if (!readConsent()) {
+            consentTimer = setTimeout(() => setShowConsentBanner(true), 4000);
+          }
+        }
 
         if (isWeb && typeof document !== 'undefined') {
           rafId = requestAnimationFrame(() => {
@@ -315,14 +322,6 @@ export default function RootLayout() {
       const originalReplace = window.history.replaceState.bind(window.history);
       const originalPush = window.history.pushState.bind(window.history);
 
-      window.history.pushState = function patchedPushState(
-        data: any,
-        unused: string,
-        url?: string | URL | null,
-      ) {
-        return originalPush(data, unused, url);
-      };
-
       window.history.replaceState = function patchedReplaceState(
         data: any,
         unused: string,
@@ -339,7 +338,7 @@ export default function RootLayout() {
           }
           if (newPath !== currentPath) {
             // Path changed — push instead of replace so browser back button works
-            return window.history.pushState(data, unused, url);
+            return originalPush(data, unused, url);
           }
         }
         return originalReplace(data, unused, url);
@@ -347,7 +346,6 @@ export default function RootLayout() {
 
       return () => {
         window.history.replaceState = originalReplace;
-        window.history.pushState = originalPush;
       };
     }, []);
 
@@ -498,7 +496,7 @@ function ThemedContent({
                                   {bottomGutter}
                               </View>
 
-                              {Platform.OS === 'web' && __DEV__ ? (
+                              {Platform.OS === 'web' && __DEV__ && ReactQueryDevtoolsLazy ? (
                                 <React.Suspense fallback={null}>
                                   <ReactQueryDevtoolsLazy initialIsOpen={false} />
                                 </React.Suspense>

@@ -257,7 +257,23 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
 
       // Use stable testIDs from CustomHeader mobile menu.
       const burger = page.locator('[data-testid="mobile-menu-open"]:visible').first();
-      await expect(burger).toBeVisible({ timeout: 30_000 });
+      const hasMobileBurger = await burger.isVisible().catch(() => false);
+
+      // Tablet can render desktop header variant depending on responsive breakpoints.
+      // In that case validate menu behavior via the desktop account menu trigger.
+      if (!hasMobileBurger) {
+        const accountMenu = page.locator('[data-testid="account-menu-anchor"]:visible').first();
+        await expect(accountMenu).toBeVisible({ timeout: 30_000 });
+        await accountMenu.click();
+
+        const webPanel = page.getByTestId('web-menu-panel');
+        await expect(webPanel).toBeVisible({ timeout: 10_000 });
+        await expectNoHorizontalScroll(page);
+
+        await page.mouse.click(10, 10);
+        await expectNoHorizontalScroll(page);
+        return;
+      }
 
       await burger.click();
 

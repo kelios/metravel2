@@ -59,12 +59,6 @@ const MultiSelectField = forwardRef<unknown, MultiSelectFieldProps<Record<string
                 color: colors.text,
                 marginBottom: DESIGN_TOKENS.spacing.xs,
             },
-            dropdown: {
-                // Styles are now handled by SimpleMultiSelect
-            },
-            dropdownCompact: {
-                // Compact styles handled by SimpleMultiSelect
-            },
         }), [colors]);
 
         const extractValue = (item: unknown): MultiSelectValue => {
@@ -107,7 +101,7 @@ const MultiSelectField = forwardRef<unknown, MultiSelectFieldProps<Record<string
                     placeholder={placeholder}
                     searchPlaceholder={searchPlaceholder}
                     search={search}
-                    style={[styles.dropdown, compact && styles.dropdownCompact, style]}
+                    style={style}
                     disabled={disabled}
                 />
             </View>

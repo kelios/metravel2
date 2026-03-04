@@ -38,13 +38,12 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     await expect(page.getByTestId('bottom-gutter')).toBeVisible({ timeout: 30_000 });
 
     // "Ещё" must exist in the dock.
-    const moreInDock = dock.getByRole('link', { name: 'Ещё' }).first();
-    await expect(moreInDock).toBeVisible();
-    await moreInDock.scrollIntoViewIfNeeded();
+    const getMoreInDock = () => dock.getByRole('link', { name: 'Ещё' }).first();
+    await expect(getMoreInDock()).toBeVisible();
 
     // Layout invariant: "Ещё" should stay near the visual center in minimal state.
     // Allow proportional tolerance for responsive spacing changes across mobile widths.
-    const [bb, dockBb] = await Promise.all([moreInDock.boundingBox(), dock.boundingBox()]);
+    const [bb, dockBb] = await Promise.all([getMoreInDock().boundingBox(), dock.boundingBox()]);
     if (!bb || !dockBb) {
       test.info().annotations.push({
         type: 'note',
@@ -61,7 +60,7 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     }
 
     // Open More modal.
-    await moreInDock.click();
+    await getMoreInDock().click();
 
     await expect(page.getByTestId('footer-more-sheet')).toBeVisible();
     await expect(page.getByTestId('footer-more-list')).toBeVisible();

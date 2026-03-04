@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -27,10 +27,11 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                                                                    hint,
                                                                    required = false,
                                                                    multiline = false,
-                                                                   numberOfLines = 1,
-                                                                   disabled = false, // ✅ ИСПРАВЛЕНИЕ
-                                                               }) => {
+                                                               numberOfLines = 1,
+                                                               disabled = false, // ✅ ИСПРАВЛЕНИЕ
+                                                           }) => {
     const colors = useThemedColors();
+    const [isFocused, setIsFocused] = useState(false);
 
     const styles = useMemo(() => StyleSheet.create({
         container: { marginBottom: 16 },
@@ -59,9 +60,13 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                 web: {
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     boxShadow: DESIGN_TOKENS.shadows.light,
-                    ':focus': {
-                        boxShadow: `0 0 0 3px ${colors.focus}, ${DESIGN_TOKENS.shadows.medium}`,
-                    },
+                },
+            }),
+        },
+        inputFocused: {
+            ...Platform.select({
+                web: {
+                    boxShadow: `0 0 0 3px ${colors.focus}, ${DESIGN_TOKENS.shadows.medium}`,
                 },
             }),
         },
@@ -123,6 +128,7 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
             <TextInput
                 style={[
                     styles.input,
+                    isFocused && !error && styles.inputFocused,
                     error && styles.inputError,
                     disabled && styles.inputDisabled, // ✅ ИСПРАВЛЕНИЕ: Добавлен disabled стиль
                     multiline && styles.inputMultiline,
@@ -134,18 +140,12 @@ const TextInputComponent: React.FC<TextInputComponentProps> = ({
                 secureTextEntry={secureTextEntry}
                 multiline={multiline}
                 numberOfLines={numberOfLines}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
                 editable={!disabled} // ✅ ИСПРАВЛЕНИЕ
                 {...Platform.select({
                     web: {
                         outlineWidth: 0,
-                        // @ts-ignore -- CSS pseudo-selector :focus is web-only, not in RN style types
-                        ':focus': {
-                            borderColor: error ? colors.danger : colors.primary,
-                            outlineWidth: 2,
-                            outlineColor: error ? colors.danger : colors.primary,
-                            outlineStyle: 'solid',
-                            outlineOffset: 2,
-                        },
                     },
                 })}
             />
