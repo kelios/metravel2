@@ -171,21 +171,54 @@ test.describe('@perf Travel Details - Rendering Quality', () => {
     // Wait for rendering to stabilize
     await page.waitForLoadState('networkidle').catch(() => null);
 
-    // Проверяем, что нет элементов с нулевыми размерами (потенциальные ошибки layout)
+    // Проверяем только потенциально "видимые" zero-size элементы с визуальным содержимым.
+    // Технические узлы (meta/script/svg defs и т.п.) не считаем артефактами layout.
     const elementsWithZeroSize = await page.evaluate(() => {
-      const elements = document.querySelectorAll('*');
+      const ignoredTags = new Set([
+        'SCRIPT',
+        'STYLE',
+        'LINK',
+        'META',
+        'TITLE',
+        'HEAD',
+        'NOSCRIPT',
+        'SOURCE',
+        'TRACK',
+        'TEMPLATE',
+        'DEFS',
+        'CLIPPATH',
+        'MASK',
+        'SYMBOL',
+      ]);
+
+      const isTransparent = (color: string): boolean => {
+        if (!color) return true;
+        if (color === 'transparent') return true;
+        return color.includes('rgba(') && color.endsWith(', 0)');
+      };
+
       let count = 0;
 
-      elements.forEach((el) => {
+      Array.from(document.querySelectorAll('body *')).forEach((el) => {
+        if (ignoredTags.has(el.tagName)) return;
+        if (el.getAttribute('aria-hidden') === 'true') return;
+        if (el.children.length > 0) return;
+
+        const style = getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return;
+
         const rect = el.getBoundingClientRect();
-        // Проверяем только видимые элементы
-        if (
-          getComputedStyle(el).display !== 'none' &&
-          getComputedStyle(el).visibility !== 'hidden' &&
-          rect.width === 0 &&
-          rect.height === 0 &&
-          el.children.length === 0 // Пропускаем контейнеры
-        ) {
+        if (rect.width > 0 || rect.height > 0) return;
+
+        const text = (el.textContent || '').trim();
+        const hasVisualText = text.length > 0;
+        const hasVisualDecor =
+          style.backgroundImage !== 'none' ||
+          !isTransparent(style.backgroundColor) ||
+          style.borderStyle !== 'none' ||
+          style.outlineStyle !== 'none';
+
+        if (hasVisualText || hasVisualDecor) {
           count++;
         }
       });
@@ -198,7 +231,7 @@ test.describe('@perf Travel Details - Rendering Quality', () => {
       description: `Elements with zero size: ${elementsWithZeroSize}`,
     });
 
-    // Небольшое количество элементов с нулевым размером допустимо
+    // Небольшое количество потенциально проблемных zero-size элементов допустимо.
     expect(elementsWithZeroSize).toBeLessThanOrEqual(20);
   });
 
