@@ -65,6 +65,7 @@ if (Platform.OS === 'web') {
 LogBox.ignoreLogs([
   'TouchableWithoutFeedback is deprecated. Please use Pressable.',
   'Image: style.tintColor is deprecated. Please use props.tintColor.',
+  '"shadow*" style props are deprecated. Use "boxShadow".',
 ]);
 
 /** ===== Helpers ===== */
