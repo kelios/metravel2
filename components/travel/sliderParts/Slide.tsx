@@ -153,6 +153,7 @@ const Slide = memo(function Slide({
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={handlePress}
+        style={{ width: '100%', height: '100%' }}
         accessibilityRole="button"
         accessibilityLabel={`Открыть фото ${index + 1} на весь экран`}
       >
