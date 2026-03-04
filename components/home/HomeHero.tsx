@@ -7,7 +7,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer } from '@/components/layout';
 import Button from '@/components/ui/Button';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -94,6 +94,15 @@ const BOOK_IMAGES = [
 
 export const BOOK_IMAGES_FOR_TEST = BOOK_IMAGES;
 
+const getSlideRemoteUri = (source: { uri?: string } | number | null | undefined): string | null => {
+  if (!source || typeof source === 'number') return null;
+  if (typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
+    const trimmedUri = source.uri.trim();
+    return trimmedUri.length > 0 ? trimmedUri : null;
+  }
+  return null;
+};
+
 const MOOD_CARDS = [
   {
     title: 'У воды',
@@ -156,7 +165,58 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
   // Slider state
   const [activeSlide, setActiveSlide] = useState(0);
+  const [visibleSlide, setVisibleSlide] = useState(0);
+  const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
   const totalSlides = BOOK_IMAGES.length;
+
+  const markSlideAsLoaded = useCallback((slideIndex: number) => {
+    setLoadedSlides((prev) => {
+      if (prev.has(slideIndex)) return prev;
+      const next = new Set(prev);
+      next.add(slideIndex);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      setVisibleSlide(activeSlide);
+      markSlideAsLoaded(activeSlide);
+      return;
+    }
+
+    let cancelled = false;
+    const preloadSlide = async (slideIndex: number) => {
+      if (loadedSlides.has(slideIndex)) return;
+      const remoteUri = getSlideRemoteUri(BOOK_IMAGES[slideIndex]?.source);
+      if (!remoteUri) {
+        if (!cancelled) markSlideAsLoaded(slideIndex);
+        return;
+      }
+      try {
+        await prefetchImage(remoteUri);
+      } catch {
+        // ignore preload failures; ImageCardMedia will retry on render
+      }
+      if (!cancelled) {
+        markSlideAsLoaded(slideIndex);
+      }
+    };
+
+    const nextSlide = (activeSlide + 1) % totalSlides;
+    void preloadSlide(activeSlide);
+    void preloadSlide(nextSlide);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSlide, loadedSlides, markSlideAsLoaded, totalSlides]);
+
+  useEffect(() => {
+    if (loadedSlides.has(activeSlide)) {
+      setVisibleSlide(activeSlide);
+    }
+  }, [activeSlide, loadedSlides]);
 
   // Auto-advance slider
   useEffect(() => {
@@ -227,7 +287,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
     isLandscape,
   }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight, isLandscape]);
 
-  const currentSlide = BOOK_IMAGES[activeSlide];
+  const currentSlide = BOOK_IMAGES[visibleSlide];
+  const isVisibleSlideLoaded = loadedSlides.has(visibleSlide);
 
   return (
     <View testID="home-hero" style={styles.container}>
@@ -323,9 +384,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 accessibilityLabel={`Маршрут: ${currentSlide.title}`}
                 accessibilityHint="Открыть маршрут"
               >
-                {/* Render only active slide to avoid eager loading hidden images on first paint */}
+                {/* Keep the currently visible slide mounted; switch after preload to avoid blank frame */}
                 <View
-                  key={currentSlide.title}
                   style={[
                     styles.slideWrapper,
                     Platform.OS === 'web' ? ({ transition: 'opacity 0.5s ease' } as any) : null,
@@ -340,8 +400,10 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                     blurBackground
                     quality={90}
                     alt={currentSlide.alt}
-                    loading={activeSlide === 0 ? 'eager' : 'lazy'}
+                    loading={isVisibleSlideLoaded ? 'eager' : 'lazy'}
+                    showImmediately={isVisibleSlideLoaded}
                     style={styles.slideImage}
+                    onLoad={() => markSlideAsLoaded(visibleSlide)}
                   />
                 </View>
 
@@ -355,7 +417,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
                 {/* Slide counter */}
                 <View style={styles.slideCounter}>
-                  <Text style={styles.slideCounterText}>{activeSlide + 1} / {totalSlides}</Text>
+                  <Text style={styles.slideCounterText}>{visibleSlide + 1} / {totalSlides}</Text>
                 </View>
               </Pressable>
 
