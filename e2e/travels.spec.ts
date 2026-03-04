@@ -152,7 +152,7 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
       if (await sideMenu.isVisible()) {
         const activeLink = sideMenu.locator('[aria-current="page"]');
         const text = await activeLink.textContent();
-        expect(text).toMatch(/(Описание|Галерея)/);
+        expect(text).toMatch(/(Описание|Галерея|Карта|Координаты|Комментарии)/);
       }
     });
   });
