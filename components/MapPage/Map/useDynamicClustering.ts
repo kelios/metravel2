@@ -5,7 +5,6 @@
  */
 
 import { useMemo } from 'react';
-import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { Point } from './types';
 
 interface ClusterItem {
@@ -50,6 +49,24 @@ function getGridSizeForZoom(zoom: number): number {
   if (zoom >= 10) return 0.06;   // ~6km
   if (zoom >= 9) return 0.1;     // ~10km
   return 0.2;                     // ~20km
+}
+
+function parsePointCoord(coord: Point['coord']): [number, number] | null {
+  const coordStr = typeof coord === 'string' ? coord.trim() : String(coord || '').trim();
+  if (!coordStr) return null;
+
+  const separatorIndex = coordStr.includes(';') ? coordStr.indexOf(';') : coordStr.indexOf(',');
+  if (separatorIndex <= 0 || separatorIndex >= coordStr.length - 1) {
+    return null;
+  }
+
+  const lat = Number.parseFloat(coordStr.slice(0, separatorIndex));
+  const lng = Number.parseFloat(coordStr.slice(separatorIndex + 1));
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+
+  return [lat, lng];
 }
 
 /**
@@ -159,29 +176,11 @@ export function useDynamicClustering(
     const parsedPoints: Array<{ point: Point; lat: number; lng: number }> = [];
 
     for (const point of points) {
-      // Try to parse coordinates
-      let lat: number;
-      let lng: number;
+      const parsed = parsePointCoord(point.coord);
+      if (!parsed) continue;
 
-      try {
-        const coordStr = String(point.coord || '').trim();
-        if (!coordStr) continue;
-
-        const cleaned = coordStr.replace(/;/g, ',').replace(/\s+/g, '');
-        const parts = cleaned.split(',');
-
-        if (parts.length !== 2) continue;
-
-        lat = parseFloat(parts[0]);
-        lng = parseFloat(parts[1]);
-
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-        if (!CoordinateConverter.isValid({ lat, lng })) continue;
-
-        parsedPoints.push({ point, lat, lng });
-      } catch {
-        continue;
-      }
+      const [lat, lng] = parsed;
+      parsedPoints.push({ point, lat, lng });
     }
 
     // Cluster using grid algorithm

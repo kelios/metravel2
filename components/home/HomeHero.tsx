@@ -199,7 +199,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
     return Math.min(aspectH, vh - 130);
   }, [bookWrapperWidth]);
   const isCompactBookLayout = showSideSlider && bookHeight > 0 && bookHeight <= 760;
-  const useInlineBookmarkRail = showSideSlider && !isNarrowLayout && !isCompactBookLayout && width >= 1180;
+  const useInlineBookmarkRail = showSideSlider && !isNarrowLayout && !isCompactBookLayout && width >= 1280;
   const useStackedCtas = isNarrowLayout || isCompactBookLayout || (showSideSlider && width < 1180);
 
   // Slider state
@@ -382,7 +382,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                 )}
 
                 {/* Inner mini-book feature highlights widget */}
-                {!useInlineBookmarkRail && !isMobile && (
+                {!showSideSlider && !useInlineBookmarkRail && !isMobile && (
                   <View style={styles.openBookContainer}>
                     <View style={styles.openBook}>
                       {isWeb && <View style={styles.bookCover} />}
