@@ -50,7 +50,7 @@ test.describe('Quest Video Loading', () => {
 
         if (!questExists) {
             console.log('No quests found on the page');
-            test.skip(true, 'No quest cards available on /quests in current environment');
+            await expect(page.getByText(QUEST_FALLBACK_RE).first()).toBeVisible({ timeout: 10000 });
             return;
         }
 

@@ -107,7 +107,9 @@ test.describe('@smoke Filters and Sorting UX', () => {
 
   test('sort dropdown trigger shows hover state on desktop', async ({ page, isMobile }) => {
     if (isMobile) {
-      test.skip();
+      const sortDropdown = page.getByRole('button', { name: /Сортировка:/i });
+      await expect(sortDropdown).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
+      return;
     }
 
     const sortDropdown = page.getByRole('button', { name: /Сортировка:/i });
@@ -198,7 +200,9 @@ test.describe('@smoke Filters and Sorting UX', () => {
 
   test('filter options have hover state on desktop', async ({ page, isMobile }) => {
     if (isMobile) {
-      test.skip();
+      const groupHeader = page.getByRole('button', { name: /^Развернуть\s+/i }).first();
+      await expect(groupHeader).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
+      return;
     }
 
     // Expand a group

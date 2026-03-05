@@ -128,17 +128,8 @@ describe('TravelListItem - Action Buttons', () => {
     render(<TravelListItem {...mockProps} />);
     
     // Click on the card container (not an action button)
-    const card = screen.getByTestId('travel-card-link');
-    const mockEvent = {
-      stopPropagation: jest.fn(),
-      preventDefault: jest.fn(),
-      metaKey: false,
-      ctrlKey: false,
-      shiftKey: false,
-      altKey: false,
-      button: 0,
-    };
-    fireEvent(card, 'click', mockEvent);
+    const card = screen.getByTestId('travel-card-test-travel');
+    fireEvent.press(card);
     
     // Should navigate to travel detail
     expect(router.push).toHaveBeenCalledWith('/test-travel');
@@ -177,18 +168,8 @@ describe('TravelListItem - Action Buttons', () => {
       />
     );
 
-    const card = screen.getByTestId('travel-card-link');
-    const mockEvent = {
-      stopPropagation: jest.fn(),
-      preventDefault: jest.fn(),
-      metaKey: false,
-      ctrlKey: false,
-      shiftKey: false,
-      altKey: false,
-      button: 0,
-    };
-
-    fireEvent(card, 'click', mockEvent);
+    const card = screen.getByTestId('travel-card-test-travel');
+    fireEvent.press(card);
 
     expect(router.push).toHaveBeenCalledWith('/test-travel?returnTo=%2Fmetravel');
     expect(router.push).not.toHaveBeenCalledWith('/travel/1');

@@ -65,7 +65,7 @@ describe('Card Layout Visual Tests', () => {
           </QueryClientProvider>
         );
 
-      const card = getByTestId('travel-card-link');
+      const card = getByTestId('travel-card-test-travel');
       const flattened = StyleSheet.flatten(card.props.style);
       expect(flattened.marginBottom).toBeUndefined();
 
