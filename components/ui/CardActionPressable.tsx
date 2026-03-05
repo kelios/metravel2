@@ -66,7 +66,10 @@ const CardActionPressable = ({
     const ariaPressed = !canUseAriaSelected && accessibilityRole === 'button' && ariaSelected !== undefined ? ariaSelected : undefined;
     return (
       <View
-        style={resolvedStyle}
+        style={[
+          resolvedStyle as any,
+          { cursor: disabled ? 'not-allowed' : 'pointer' } as any,
+        ]}
         accessibilityRole={accessibilityRole}
         {...(accessibilityLabel ? { accessibilityLabel } : {})}
         accessibilityHint={accessibilityHint}

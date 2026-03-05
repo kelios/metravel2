@@ -43,6 +43,7 @@ function BelkrajWidget({
 
     // Текущая целевая высота iframe
     const targetHeight = expanded ? expandedHeight : collapsedHeight;
+    const scrollFrameHeight = allowScroll ? Math.max(targetHeight, expandedHeight, 1600) : targetHeight;
 
     const isProd =
         typeof process !== 'undefined' &&
@@ -81,24 +82,34 @@ function BelkrajWidget({
             className={className ?? 'belkraj-slot'}
             style={{
                 borderRadius: 12,
-                overflow: 'hidden',
+                overflow: allowScroll ? 'auto' : 'hidden',
+                overflowX: 'hidden',
+                overflowY: allowScroll ? 'auto' : 'hidden',
                 border: '1px solid var(--color-border, #e8e4df)',
                 background: 'var(--color-surface, #ffffff)',
                 boxShadow: 'var(--shadow-light, 0 1px 4px rgba(0,0,0,0.06))',
+                ...(allowScroll ? {
+                    height: targetHeight,
+                    maxHeight: targetHeight,
+                    WebkitOverflowScrolling: 'touch',
+                    touchAction: 'pan-y',
+                } : null),
             }}
         >
             <iframe
                 src={iframeSrc}
                 title="Belkraj partner offers"
                 width="100%"
-                height={targetHeight}
+                height={scrollFrameHeight}
                 scrolling={allowScroll ? 'yes' : 'no'}
                 frameBorder={0}
                 style={{
                     width: '100%',
-                    height: `${targetHeight}px`,
+                    height: `${scrollFrameHeight}px`,
                     display: 'block',
                     border: 'none',
+                    pointerEvents: 'auto',
+                    ...(allowScroll ? { touchAction: 'pan-y' as const } : null),
                 }}
             />
         </div>

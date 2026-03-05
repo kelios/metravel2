@@ -15,6 +15,7 @@ import {
     Animated, KeyboardAvoidingView, SafeAreaView, Vibration,
     Modal, Image, Keyboard
 } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
@@ -678,7 +679,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                             <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
                                                        style={[styles.stepDotMini, isUnlocked && styles.stepDotMiniUnlocked, isActive && styles.stepDotMiniActive, isDone && styles.stepDotMiniDone, !isUnlocked && styles.stepDotMiniLocked]}
                                                        hitSlop={6}>
-                                                <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '0' : i}</Text>
+                                                {s.id === 'intro' ? (
+                                                    <Feather
+                                                        name="play"
+                                                        size={12}
+                                                        color={(isActive || isDone) ? colors.textOnPrimary : colors.primaryText}
+                                                    />
+                                                ) : (
+                                                    <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{i}</Text>
+                                                )}
                                             </Pressable>
                                         );
                                     }

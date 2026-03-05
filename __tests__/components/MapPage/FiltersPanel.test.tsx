@@ -237,14 +237,14 @@ describe('FiltersPanel', () => {
     expect(queryAllByTextStartFinish(/добавьте старт и финиш/i)).toHaveLength(0);
   });
 
-  it('disables transport selection until both points are chosen', () => {
+  it('keeps transport selection enabled before and after choosing points', () => {
     const propsRouteMode = {
       ...defaultProps,
       mode: 'route' as const,
     };
     const { getByTestId } = renderWithTheme(<FiltersPanel />, propsRouteMode);
     const carTabPressable: any = getByTestId('segmented-car');
-    expect(carTabPressable?.props.accessibilityState?.disabled).toBe(true);
+    expect(carTabPressable?.props.accessibilityState?.disabled).toBe(false);
 
     const { getByTestId: getByTestIdEnabled } = renderWithTheme(
       <FiltersPanel />,

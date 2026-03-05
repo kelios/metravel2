@@ -106,7 +106,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           <Text style={styles.blockHint}>
             {mode === 'radius'
               ? 'Категории, радиус и быстрый поиск.'
-              : 'Транспорт, точки и итог.'}
+              : 'Транспорт, точки и расчёт.'}
           </Text>
         </View>
 

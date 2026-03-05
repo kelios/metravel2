@@ -106,7 +106,6 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
     []
   );
 
-  const isTransportDisabled = !(routeStepState.startSelected && routeStepState.endSelected);
   const hasTwoPoints = mode === 'route' && routePoints.length >= 2;
   const selectedTransportLabel =
     TRANSPORT_MODES.find((transport) => transport.key === transportMode)?.label || 'Транспорт выбран';
@@ -144,28 +143,26 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
       effectiveDuration > 0);
 
   return (
-    <View style={styles.section}>
-      <View style={styles.stepBlock}>
+    <View style={[styles.section, styles.routeSectionCompact]}>
+      <View style={[styles.stepBlock, styles.routeTransportStep]}>
         <View style={styles.stepHeaderRow}>
           <Text style={styles.stepBlockTitle}>1. Транспорт</Text>
-          <Text style={isTransportDisabled ? styles.stepInlineHintMuted : styles.stepInlineHint}>
-            {isTransportDisabled ? 'После выбора точек' : selectedTransportLabel}
-          </Text>
+          <Text style={styles.stepInlineHint}>{selectedTransportLabel}</Text>
         </View>
-        <Text style={styles.sectionHint}>
-          Выберите способ перемещения.
+        <Text style={[styles.sectionHint, styles.routeTransportHint]}>
+          Способ перемещения
         </Text>
-        <View style={[styles.transportTabs, isTransportDisabled && styles.transportTabsDisabled]}>
+        <View style={[styles.transportTabs, styles.transportTabsCompact]}>
           <SegmentedControl
             options={transportOptions}
             value={transportMode}
             onChange={(key) => {
-              if (isTransportDisabled) return;
               setTransportMode(key as 'car' | 'bike' | 'foot');
             }}
             accessibilityLabel="Транспорт"
             compact
-            disabled={isTransportDisabled}
+            dense
+            noOuterMargins
             role="button"
             iconOnly
           />
@@ -202,7 +199,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
       </View>
 
       {shouldShowRouteStats && (
-        <View style={styles.stepBlock} testID="route-stats-block">
+        <View style={[styles.stepBlock, styles.stepBlockCompact, styles.routeResultStep]} testID="route-stats-block">
           <View style={styles.stepHeaderRow}>
             <Text style={styles.stepBlockTitle}>3. Итог маршрута</Text>
             {isEstimated && !routingLoading && !routingError ? (
@@ -219,6 +216,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
               isEstimated={isEstimated}
               elevationGain={routeElevationGain ?? null}
               elevationLoss={routeElevationLoss ?? null}
+              compact
             />
           </View>
         </View>

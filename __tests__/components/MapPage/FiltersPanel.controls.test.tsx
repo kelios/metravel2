@@ -222,7 +222,7 @@ describe('FiltersPanel Controls', () => {
       expect(setTransportMode).toHaveBeenCalledWith('bike');
     });
 
-    it('should NOT call setTransportMode when no route points', () => {
+    it('should call setTransportMode when no route points', () => {
       const setTransportMode = jest.fn();
       const context = makeFiltersContext({
         filters: mockFilters,
@@ -237,11 +237,11 @@ describe('FiltersPanel Controls', () => {
         </FiltersProvider>
       );
 
-      const carTabText: any = getByText('Авто');
-      const carPressable = carTabText.parent;
-      fireEvent.press(carPressable);
+      const bikeTabText: any = getByText('Велосипед');
+      const bikePressable = bikeTabText.parent;
+      fireEvent.press(bikePressable);
 
-      expect(setTransportMode).not.toHaveBeenCalled();
+      expect(setTransportMode).toHaveBeenCalledWith('bike');
     });
   });
 

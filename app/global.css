@@ -282,6 +282,32 @@ body:has([data-testid="map-mobile-layout"][data-active="true"]) {
   box-sizing: border-box !important;
 }
 
+/* Unified web cursor for interactive controls */
+:where(
+  button,
+  a[href],
+  [role="button"],
+  [role="link"],
+  [role="radio"],
+  [role="switch"],
+  [role="tab"],
+  [data-card-action="true"]
+):not([disabled]):not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+:where(
+  button[disabled],
+  [role="button"][aria-disabled="true"],
+  [role="link"][aria-disabled="true"],
+  [role="radio"][aria-disabled="true"],
+  [role="switch"][aria-disabled="true"],
+  [role="tab"][aria-disabled="true"],
+  [data-card-action="true"][aria-disabled="true"]
+) {
+  cursor: not-allowed;
+}
+
 /* Убираем дефолтный outline у полей ввода, но сохраняем focus-visible для a11y */
 input,
 textarea,
@@ -408,4 +434,3 @@ html[data-theme="dark"] .modal-select option {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-

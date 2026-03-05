@@ -25,6 +25,16 @@ const formatDuration = (seconds: number) => {
   return `${h} ч ${m} мин`;
 };
 
+const formatDurationCompact = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes}м`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (m === 0) return `${h}ч`;
+  return `${h}ч ${m}м`;
+};
+
 const getModeIcon = (mode: 'car' | 'bike' | 'foot') => {
   switch (mode) {
     case 'bike': return 'activity';
@@ -38,16 +48,16 @@ const formatDistance = (meters: number) => {
   return `${(meters / 1000).toFixed(1)} км`;
 };
 
-const estimateTime = (meters: number, mode: 'car' | 'bike' | 'foot') => {
+const estimateTime = (meters: number, mode: 'car' | 'bike' | 'foot', compact = false) => {
   const speeds = { car: 60, bike: 20, foot: 5 };
   const speed = speeds[mode];
   const hours = (meters / 1000) / speed;
-  
-  if (hours < 1) return `${Math.round(hours * 60)} мин`;
+
+  if (hours < 1) return compact ? `${Math.round(hours * 60)}м` : `${Math.round(hours * 60)} мин`;
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
-  if (m === 0) return `${h} ч`;
-  return `${h} ч ${m} мин`;
+  if (m === 0) return compact ? `${h}ч` : `${h} ч`;
+  return compact ? `${h}ч ${m}м` : `${h} ч ${m} мин`;
 };
 
 function RoutingStatus({
@@ -138,39 +148,63 @@ function RoutingStatus({
   }
 
   if (distance !== null && distance > 0) {
-    const time = duration != null && duration > 0 ? formatDuration(duration) : estimateTime(distance, transportMode);
+    const time = duration != null && duration > 0
+      ? (compact ? formatDurationCompact(duration) : formatDuration(duration))
+      : estimateTime(distance, transportMode, compact);
     const showElevation =
       (transportMode === 'bike' || transportMode === 'foot') &&
       Number.isFinite(elevationGain as any) &&
       Number.isFinite(elevationLoss as any);
+    const compactCardStyle = compact
+      ? (showElevation ? styles.miniCardCompactTwoCol : styles.miniCardCompactHalf)
+      : null;
+
     return (
-      <View style={[styles.container, styles.successContainer]}>
-        <View style={styles.successHeader}>
+      <View style={[styles.container, styles.successContainer, compact && styles.successContainerCompact]}>
+        <View style={[styles.successHeader, compact && styles.successHeaderCompact]}>
           <Feather name={getModeIcon(transportMode)} size={compact ? 14 : 16} color={colors.success} />
-          <Text style={styles.successTitle}>{isEstimated ? 'Оценка маршрута' : 'Маршрут построен'}</Text>
+          <Text style={styles.successTitle}>
+            {isEstimated ? (compact ? 'Оценка' : 'Оценка маршрута') : (compact ? 'Маршрут готов' : 'Маршрут построен')}
+          </Text>
         </View>
         <View style={styles.miniCardGrid}>
-          <View style={styles.miniCard}>
+          <View style={[styles.miniCard, compact && styles.miniCardCompact, compactCardStyle]}>
             <Feather name="map" size={compact ? 12 : 14} color={colors.primary} />
-            <Text style={styles.miniCardValue}>{formatDistance(distance)}</Text>
-            {!compact && <Text style={styles.miniCardLabel}>Расстояние</Text>}
+            <Text style={[styles.miniCardValue, compact && styles.miniCardValueCompact]}>
+              {formatDistance(distance)}
+            </Text>
+            <Text style={[styles.miniCardLabel, compact && styles.miniCardLabelCompact]}>
+              {compact ? 'Дистанция' : 'Расстояние'}
+            </Text>
           </View>
-          <View style={styles.miniCard}>
+          <View style={[styles.miniCard, compact && styles.miniCardCompact, compactCardStyle]}>
             <Feather name="clock" size={compact ? 12 : 14} color={colors.primary} />
-            <Text style={styles.miniCardValue}>{time}</Text>
-            {!compact && <Text style={styles.miniCardLabel}>Время в пути</Text>}
+            <Text style={[styles.miniCardValue, compact && styles.miniCardValueCompact]}>
+              {time}
+            </Text>
+            <Text style={[styles.miniCardLabel, compact && styles.miniCardLabelCompact]}>
+              {compact ? 'Время' : 'Время в пути'}
+            </Text>
           </View>
           {showElevation && (
             <>
-              <View style={styles.miniCard}>
+              <View style={[styles.miniCard, compact && styles.miniCardCompact, compactCardStyle]}>
                 <Feather name="trending-up" size={compact ? 12 : 14} color={colors.success} />
-                <Text style={styles.miniCardValue}>{Math.round(Number(elevationGain))} м</Text>
-                {!compact && <Text style={styles.miniCardLabel}>Набор</Text>}
+                <Text style={[styles.miniCardValue, compact && styles.miniCardValueCompact]}>
+                  {Math.round(Number(elevationGain))} м
+                </Text>
+                <Text style={[styles.miniCardLabel, compact && styles.miniCardLabelCompact]}>
+                  Набор
+                </Text>
               </View>
-              <View style={styles.miniCard}>
+              <View style={[styles.miniCard, compact && styles.miniCardCompact, compactCardStyle]}>
                 <Feather name="trending-down" size={compact ? 12 : 14} color={colors.danger} />
-                <Text style={styles.miniCardValue}>{Math.round(Number(elevationLoss))} м</Text>
-                {!compact && <Text style={styles.miniCardLabel}>Спуск</Text>}
+                <Text style={[styles.miniCardValue, compact && styles.miniCardValueCompact]}>
+                  {Math.round(Number(elevationLoss))} м
+                </Text>
+                <Text style={[styles.miniCardLabel, compact && styles.miniCardLabelCompact]}>
+                  Спуск
+                </Text>
               </View>
             </>
           )}
@@ -262,6 +296,13 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     borderColor: colors.success,
     backgroundColor: colors.successLight,
   },
+  successContainerCompact: {
+    padding: 8,
+    borderRadius: 12,
+    marginBottom: 0,
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.borderAccent ?? colors.success,
+  },
   successHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -271,15 +312,20 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     borderBottomWidth: 1,
     borderBottomColor: colors.successLight,
   },
+  successHeaderCompact: {
+    marginBottom: 6,
+    paddingBottom: 0,
+    borderBottomWidth: 0,
+  },
   successTitle: {
-    fontSize: compact ? 12 : 13,
-    fontWeight: '600',
+    fontSize: compact ? 11 : 13,
+    fontWeight: compact ? '700' : '600',
     color: colors.success,
   },
   miniCardGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: compact ? 4 : 8,
+    gap: compact ? 6 : 8,
   },
   miniCard: {
     flex: 1,
@@ -290,11 +336,34 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     borderRadius: 8,
     backgroundColor: colors.surface,
   },
+  miniCardCompact: {
+    minHeight: 66,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    gap: 3,
+  },
+  miniCardCompactHalf: {
+    flexBasis: '48%',
+    maxWidth: '48%',
+    flexGrow: 0,
+  },
+  miniCardCompactTwoCol: {
+    flexBasis: '48%',
+    maxWidth: '48%',
+    flexGrow: 0,
+  },
   miniCardValue: {
     fontSize: compact ? 11 : 13,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
+  },
+  miniCardValueCompact: {
+    fontSize: 14,
+    lineHeight: 18,
   },
   miniCardLabel: {
     fontSize: 10,
@@ -302,22 +371,9 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     color: colors.textMuted,
     textAlign: 'center',
   },
-  successStats: {
-    gap: 8,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  statValue: {
-    fontSize: 13,
+  miniCardLabelCompact: {
+    fontSize: 9,
     fontWeight: '600',
-    color: colors.text,
+    letterSpacing: 0.2,
   },
 });

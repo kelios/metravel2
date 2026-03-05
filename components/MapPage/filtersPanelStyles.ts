@@ -166,6 +166,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     section: {
       marginBottom: 8,
     },
+    routeSectionCompact: {
+      marginBottom: 4,
+      gap: 6,
+    },
     sectionCard: {
       backgroundColor: colors.surface,
       borderRadius: 14,
@@ -203,6 +207,20 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     transportSection: {
       gap: 8,
+    },
+    routeTransportStep: {
+      paddingVertical: 8,
+      paddingHorizontal: 8,
+      gap: 4,
+      marginBottom: 6,
+      borderRadius: 11,
+      backgroundColor: colors.surfaceMuted ?? colors.backgroundSecondary,
+    },
+    routeTransportHint: {
+      marginBottom: 2,
+      fontSize: 10,
+      lineHeight: 13,
+      letterSpacing: 0.15,
     },
     routePointsList: {
       marginTop: 6,
@@ -356,6 +374,12 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
     },
+    transportTabsCompact: {
+      borderRadius: 11,
+      padding: 1,
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+    },
     transportTabsDisabled: {
       opacity: 0.45,
     },
@@ -489,7 +513,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginBottom: 12,
     },
     routeStatsContainer: {
-      marginTop: 2,
+      marginTop: 0,
       marginBottom: 0,
     },
     stepper: {
@@ -601,6 +625,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       padding: 8,
       gap: 5,
       marginBottom: 8,
+    },
+    routeResultStep: {
+      paddingVertical: 8,
+      gap: 4,
+      marginBottom: 6,
     },
     stepHeaderRow: {
       flexDirection: 'row',
