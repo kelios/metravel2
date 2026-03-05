@@ -56,7 +56,10 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             backgroundImage:
               `linear-gradient(90deg, ${colors.surfaceLight} 0%, ${colors.backgroundTertiary} 50%, ${colors.surfaceLight} 100%)`,
             backgroundSize: '200% 100%',
-            animation: 'slider-shimmer 1.8s ease-in-out infinite',
+            animationKeyframes: 'slider-shimmer',
+            animationDuration: '1.8s',
+            animationTimingFunction: 'ease-in-out',
+            animationIterationCount: 'infinite',
           },
         ]}
       />

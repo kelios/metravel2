@@ -48,8 +48,14 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
               // @ts-ignore -- backgroundImage is a web-only CSS property not in RN style types
               backgroundImage:
                 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 20%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.08) 80%, transparent 100%)',
-              // @ts-ignore -- animation is a web-only CSS property not in RN style types
-              animation: 'slider-shimmer 1.8s ease-in-out infinite',
+              // @ts-ignore -- web-only animation fields in RN style types
+              animationKeyframes: 'slider-shimmer',
+              // @ts-ignore -- web-only animation fields in RN style types
+              animationDuration: '1.8s',
+              // @ts-ignore -- web-only animation fields in RN style types
+              animationTimingFunction: 'ease-in-out',
+              // @ts-ignore -- web-only animation fields in RN style types
+              animationIterationCount: 'infinite',
               // @ts-ignore -- willChange is a web-only CSS property not in RN style types
               willChange: 'transform',
             }}

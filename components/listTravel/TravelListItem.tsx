@@ -697,7 +697,6 @@ return (
         ? card
         : (
             <a
-              testID="travel-card-link"
               ref={anchorRef}
               href={isNavigable ? navigationUrl : undefined}
               style={EMPTY_STYLE as any}

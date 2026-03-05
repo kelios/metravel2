@@ -123,7 +123,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             borderBottomColor: colors.borderLight,
             ...Platform.select({
                 web: {
-                    background: `linear-gradient(180deg, ${colors.surface} 0%, rgba(255,255,255,0.98) 100%)`,
+                    backgroundImage: `linear-gradient(180deg, ${colors.surface} 0%, rgba(255,255,255,0.98) 100%)`,
                 } as any,
             }),
         },
@@ -425,7 +425,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                         ? '1fr' 
                         : isTablet 
                             ? 'repeat(2, 1fr)' 
-                            : 'repeat(auto-fill, minmax(360px, 1fr))',
+                            : 'repeat(auto-fill, minmax(720px, 1fr))',
                     gap: spacing.xl,
                 } as any,
             }),
@@ -478,7 +478,9 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                     backdropFilter: 'blur(4px)',
                     WebkitBackdropFilter: 'blur(4px)',
                     zIndex: 999,
-                    animation: 'fadeIn 0.2s ease',
+                    animationKeyframes: 'fadeIn',
+                    animationDuration: '0.2s',
+                    animationTimingFunction: 'ease',
                 } as any,
             }),
         },
@@ -493,7 +495,9 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                     maxWidth: '88vw',
                     zIndex: 1000,
                     boxShadow: '4px 0 24px rgba(0,0,0,0.12)',
-                    animation: 'slideInLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    animationKeyframes: 'slideInLeft',
+                    animationDuration: '0.25s',
+                    animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
                 } as any,
             }),
         },
@@ -535,7 +539,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             height: '85%',
             ...Platform.select({
                 web: {
-                    background: 'linear-gradient(to top, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.85) 25%, rgba(10,10,15,0.5) 50%, rgba(10,10,15,0.15) 70%, transparent 100%)',
+                    backgroundImage: 'linear-gradient(to top, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.85) 25%, rgba(10,10,15,0.5) 50%, rgba(10,10,15,0.15) 70%, transparent 100%)',
                 } as any,
             }),
         },
@@ -547,7 +551,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             height: 120,
             ...Platform.select({
                 web: {
-                    background: 'radial-gradient(ellipse at center bottom, rgba(255, 146, 43, 0.15) 0%, transparent 70%)',
+                    backgroundImage: 'radial-gradient(ellipse at center bottom, rgba(255, 146, 43, 0.15) 0%, transparent 70%)',
                     pointerEvents: 'none',
                 } as any,
             }),
@@ -1368,7 +1372,7 @@ function QuestCard({
         router.push(`/quests/${cityId}/${quest.id}`);
     }, [cityId, quest.id]);
 
-    const cardHeight = isPhone ? 200 : 240;
+    const cardHeight = isPhone ? 400 : 480;
 
     return (
         <View
