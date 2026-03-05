@@ -289,6 +289,67 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
 const MemoizedTravelItem = memo(RenderTravelItem);
 
+const removeTravelFromInfiniteTravelsCache = (queryClient: ReturnType<typeof useQueryClient>, travelId: number) => {
+  queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: any) => {
+    if (!oldData?.pages || !Array.isArray(oldData.pages)) {
+      return oldData;
+    }
+
+    let removed = false;
+    const pages = oldData.pages.map((page: any) => {
+      if (!page || typeof page !== 'object') {
+        return page;
+      }
+
+      const nextPage = { ...page };
+      const previousDataLength = Array.isArray(nextPage.data) ? nextPage.data.length : null;
+      const previousItemsLength = Array.isArray(nextPage.items) ? nextPage.items.length : null;
+
+      if (Array.isArray(nextPage.data)) {
+        nextPage.data = nextPage.data.filter((item: any) => Number(item?.id) !== travelId);
+      }
+
+      if (Array.isArray(nextPage.items)) {
+        nextPage.items = nextPage.items.filter((item: any) => Number(item?.id) !== travelId);
+      }
+
+      const dataRemoved = previousDataLength !== null && nextPage.data.length !== previousDataLength;
+      const itemsRemoved = previousItemsLength !== null && nextPage.items.length !== previousItemsLength;
+
+      if (!dataRemoved && !itemsRemoved) {
+        return page;
+      }
+
+      removed = true;
+
+      if (typeof nextPage.total === 'number') {
+        nextPage.total = Math.max(0, nextPage.total - 1);
+      } else if (typeof nextPage.total !== 'undefined') {
+        const parsedTotal = Number(nextPage.total);
+        nextPage.total = Number.isFinite(parsedTotal) ? Math.max(0, parsedTotal - 1) : nextPage.total;
+      }
+
+      if (typeof nextPage.count === 'number') {
+        nextPage.count = Math.max(0, nextPage.count - 1);
+      } else if (typeof nextPage.count !== 'undefined') {
+        const parsedCount = Number(nextPage.count);
+        nextPage.count = Number.isFinite(parsedCount) ? Math.max(0, parsedCount - 1) : nextPage.count;
+      }
+
+      return nextPage;
+    });
+
+    if (!removed) {
+      return oldData;
+    }
+
+    return {
+      ...oldData,
+      pages,
+    };
+  });
+};
+
 interface ListTravelProps {
     onTogglePersonalization?: () => void;
     onToggleWeeklyHighlights?: () => void;
@@ -380,7 +441,7 @@ function ListTravelBase({
       params.category__travel__address,
     ]);
 
-    const isMeTravel = (route as any).name === "metravel";
+    const isMeTravel = (route as any).name === "metravel" || pathname?.includes('/metravel');
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
@@ -720,9 +781,10 @@ function ListTravelBase({
         deleteInFlightRef.current = targetId;
         try {
           await deleteTravel(String(targetId));
+          removeTravelFromInfiniteTravelsCache(queryClient, targetId);
           setDelete(null);
           deleteInFlightRef.current = null;
-          queryClient.invalidateQueries({ queryKey: ["travels"] });
+          await queryClient.invalidateQueries({ queryKey: ["travels"] });
           // ✅ УЛУЧШЕНИЕ: Показываем успешное сообщение
           if (Platform.OS === 'web') {
             // Можно добавить Toast здесь, если нужно

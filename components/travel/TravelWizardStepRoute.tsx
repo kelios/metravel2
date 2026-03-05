@@ -129,16 +129,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         if (!onManualSave) return;
 
         try {
-            const saved = await onManualSave();
-            const resolvedId = (saved as any)?.id ?? null;
-            if (!resolvedId) {
-                void showToastMessage({
-                    type: 'error',
-                    text1: 'Не удалось сохранить',
-                    text2: 'Проверьте интернет-соединение и попробуйте ещё раз',
-                });
-                return;
-            }
+            await onManualSave();
             void showToastMessage({
                 type: 'success',
                 text1: 'Черновик сохранен',

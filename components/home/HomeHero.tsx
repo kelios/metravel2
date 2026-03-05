@@ -318,9 +318,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
   }, [isAuthenticated, travelsCount]);
 
   const styles = useMemo(() => createHomeHeroStyles({
-    colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight,
+    colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, viewportWidth: width, showSideSlider, sliderHeight,
     isLandscape, bookHeight,
-  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight, isLandscape, bookHeight]);
+  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, width, showSideSlider, sliderHeight, isLandscape, bookHeight]);
 
   const currentSlide = BOOK_IMAGES[visibleSlide];
   const isVisibleSlideLoaded = loadedSlides.has(visibleSlide);
@@ -329,6 +329,19 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
   const heroSubtitle = isMobile || (showSideSlider && bookHeight > 0 && bookHeight < 760)
     ? 'Готовые маршруты, заметки и личная книга путешествий.'
     : 'Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.';
+  const heroMetaItems = useMemo(() => {
+    const countLabel = travelsCountLoading
+      ? 'Маршруты загружаются'
+      : travelsCount > 0
+        ? `${travelsCount}+ поездок в книге`
+        : 'Начните с первой поездки';
+
+    return [
+      { icon: 'compass', label: countLabel },
+      { icon: 'map', label: 'Идеи для Беларуси и Европы' },
+      { icon: 'download', label: 'Экспорт в PDF' },
+    ];
+  }, [travelsCount, travelsCountLoading]);
 
   return (
     <View testID="home-hero" style={styles.container}>
@@ -354,8 +367,27 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 {/* Page curl effect */}
                 {isWeb && showSideSlider && <View style={styles.heroPageCurlLeft} />}
 
+                {showSideSlider && (
+                  <View style={styles.heroMetaRow}>
+                    {heroMetaItems.map((item) => (
+                      <View key={item.label} style={styles.heroMetaBadge}>
+                        <Feather name={item.icon as any} size={12} color={colors.primary} />
+                        <Text style={styles.heroMetaBadgeText} numberOfLines={1}>
+                          {item.label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
                 {/* Title */}
                 <View>
+                  {showSideSlider && !isNarrowLayout && (
+                    <View style={styles.chapterHeader}>
+                      <Text style={styles.chapterLabel}>Глава 01</Text>
+                      <View style={styles.chapterDivider} />
+                    </View>
+                  )}
                   <Text style={styles.title}>
                     Куда поехать{isNarrowLayout ? ' ' : '\n'}
                   </Text>
@@ -369,6 +401,13 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
                 {/* Mood filter chips as inline vertical list (desktop) */}
                 {showInlineBookmarkRail && (
+                  <View style={styles.sectionLabelRow}>
+                    <Text style={styles.sectionLabel}>Быстрый выбор</Text>
+                    <Text style={styles.sectionLabelHint}>5 сценариев на выходные</Text>
+                  </View>
+                )}
+
+                {showInlineBookmarkRail && (
                   <View testID="home-hero-bookmark-rail" style={styles.bookmarkRail}>
                     {MOOD_CARDS.map((card) => (
                       <Pressable
@@ -381,6 +420,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                         accessibilityRole="button"
                         accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
                       >
+                        <View style={styles.bookmarkChipAccent} />
                         <View style={styles.bookmarkChipIcon}>
                           <Feather name={card.icon as any} size={14} color={colors.primary} />
                         </View>
@@ -540,6 +580,10 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
                 {/* Overlay with title */}
                 <View style={styles.slideOverlay}>
+                  <View style={styles.slideEyebrow}>
+                    <Feather name="map-pin" size={11} color="#FFFFFF" />
+                    <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+                  </View>
                   <View style={styles.slideCaption}>
                     <Text style={styles.slideTitle}>{currentSlide.title}</Text>
                     <Text style={styles.slideSubtitle}>{currentSlide.subtitle}</Text>

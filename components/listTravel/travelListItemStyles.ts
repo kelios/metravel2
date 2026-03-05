@@ -108,8 +108,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         ? {
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            opacity: 0,
-            transition: 'opacity 0.2s ease',
+            opacity: 1,
           }
         : {}),
     },

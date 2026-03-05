@@ -72,6 +72,32 @@ describe('TravelListItem permissions', () => {
     expect(getByLabelText('Удалить')).toBeTruthy();
   });
 
+  it('shows edit/delete buttons when userIds is comma-separated and contains current user', () => {
+    const travel: Travel = { ...baseTravel, userIds: '7, 42, 100' } as any;
+    const { getByLabelText } = renderItem({
+      travel,
+      currentUserId: '42',
+      isSuperuser: false,
+      isMetravel: false,
+    });
+
+    expect(getByLabelText('Редактировать')).toBeTruthy();
+    expect(getByLabelText('Удалить')).toBeTruthy();
+  });
+
+  it('shows edit/delete buttons on metravel page even when owner fields are missing', () => {
+    const travel: Travel = { ...baseTravel, userIds: '' } as any;
+    const { getByLabelText } = renderItem({
+      travel,
+      currentUserId: '42',
+      isSuperuser: false,
+      isMetravel: true,
+    });
+
+    expect(getByLabelText('Редактировать')).toBeTruthy();
+    expect(getByLabelText('Удалить')).toBeTruthy();
+  });
+
   it('shows edit/delete buttons for superuser regardless of owner', () => {
     const travel: Travel = { ...baseTravel, userIds: '100' } as any;
     const { getByLabelText } = renderItem({

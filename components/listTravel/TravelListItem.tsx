@@ -44,6 +44,28 @@ const isLikelyWatermarked = (url: string | null | undefined): boolean => {
   return WATERMARK_DOMAINS.some((domain) => lower.includes(domain));
 };
 
+const normalizeOwnerIds = (raw: unknown): string[] => {
+  if (raw == null) return [];
+
+  if (Array.isArray(raw)) {
+    return raw
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean);
+  }
+
+  const normalized = String(raw).trim();
+  if (!normalized) return [];
+
+  if (!normalized.includes(',')) {
+    return [normalized];
+  }
+
+  return normalized
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+};
+
 type Props = {
     travel: Travel;
     currentUserId?: string | null;
@@ -245,16 +267,23 @@ function TravelListItem({
     const canEdit = React.useMemo(() => {
         if (isSuperuser) return true;
         if (!currentUserId) return false;
+        // На странице "Мои путешествия" backend уже ограничивает список текущим пользователем.
+        if (_isMetravel) return true;
 
-        const ownerId = String(
+        const ownerIds = normalizeOwnerIds(
             (travel as any).userIds ??
             (travel as any).userId ??
+            (travel as any).user_id ??
+            (travel as any).ownerId ??
+            (travel as any).owner_id ??
             (travel as any).user?.id ??
             ''
         );
+        if (!ownerIds.length) return false;
 
-        return !!ownerId && String(currentUserId) === ownerId;
-    }, [isSuperuser, currentUserId, travel]);
+        const normalizedCurrentUserId = String(currentUserId).trim();
+        return ownerIds.includes(normalizedCurrentUserId);
+    }, [isSuperuser, currentUserId, _isMetravel, travel]);
     const queryClient = useQueryClient();
     const anchorRef = useRef<any>(null);
     const hasPrefetchedRef = useRef(false);
@@ -262,13 +291,16 @@ function TravelListItem({
     const hasHoverPrefetchedRef = useRef(false);
 
     const authorUserId = useMemo(() => {
-        const ownerId =
+        const ownerRaw =
             (travel as any).userIds ??
             (travel as any).userId ??
+            (travel as any).user_id ??
+            (travel as any).ownerId ??
+            (travel as any).owner_id ??
             (travel as any).user?.id ??
             null;
-        if (ownerId == null) return null;
-        const v = String(ownerId).trim();
+        if (ownerRaw == null) return null;
+        const v = normalizeOwnerIds(ownerRaw)[0] ?? '';
         return v ? v : null;
     }, [travel]);
 
