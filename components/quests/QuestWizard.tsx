@@ -437,7 +437,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const suppressSave = useRef(false);
 
     const compactNav = screenW < 600;
-    const wideDesktop = screenW >= 900;
+    const wideDesktop = screenW >= 1100;
 
     // Загрузка прогресса: приоритет — initialProgress (бэкенд), fallback — AsyncStorage
     useEffect(() => {
@@ -928,18 +928,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
     progressText: { fontSize: 11, color: colors.textMuted, textAlign: 'right', fontWeight: '600' },
 
-    stepsNavigation: { flexDirection: 'row', marginTop: SPACING.sm },
+    stepsNavigation: { 
+        flexDirection: 'row', 
+        marginTop: SPACING.sm,
+        ...Platform.select({
+            web: {
+                maskImage: 'linear-gradient(to right, transparent 0, black 8px, black calc(100% - 24px), transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 8px, black calc(100% - 24px), transparent 100%)',
+            } as any,
+        }),
+    },
     stepsGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACING.sm, gap: 6 },
 
     stepPill: {
         flexDirection: 'row', alignItems: 'center', borderRadius: 999,
-        paddingVertical: 5, paddingHorizontal: 10,
+        paddingVertical: 6, paddingHorizontal: 12,
         backgroundColor: colors.backgroundSecondary,
-        maxWidth: 220, marginRight: 6, marginBottom: 6,
+        maxWidth: 200, marginRight: 6, marginBottom: 6,
         borderWidth: 1,
         borderColor: colors.borderLight,
+        minHeight: 32,
     },
-    stepPillNarrow: { maxWidth: 130, paddingHorizontal: 8 },
+    stepPillNarrow: { maxWidth: 140, paddingHorizontal: 10 },
     stepPillUnlocked: { backgroundColor: colors.backgroundSecondary, borderColor: colors.borderLight },
     stepPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     stepPillDone: { backgroundColor: colors.successSoft, borderColor: colors.successLight },
@@ -967,7 +977,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     contentInner: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
     desktopRow: { flexDirection: 'row', gap: SPACING.md },
     desktopMain: { flex: 1, minWidth: 0 },
-    desktopSide: { width: 420, flexShrink: 0 },
+    desktopSide: { width: 380, flexShrink: 0 },
 
     card: {
         backgroundColor: colors.surface,
@@ -1206,7 +1216,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         minWidth: 0,
     },
     excursionsSidebar: {
-        width: 340,
+        width: 300,
         flexShrink: 0,
         ...Platform.select({
             web: {

@@ -66,7 +66,8 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 
 function getStyles(colors: ThemedColors, screenWidth: number) {
     const isMobileW = screenWidth < 768;
-    const SIDEBAR_WIDTH = 320;
+    const isTablet = screenWidth >= 768 && screenWidth < 1024;
+    const SIDEBAR_WIDTH = isTablet ? 260 : 300;
     
     return StyleSheet.create({
         /* ---- Root Layout (Two-column) ---- */
@@ -240,12 +241,15 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             marginRight: spacing.xs,
         },
         radiusChip: {
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs,
-            borderRadius: radii.sm,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderRadius: radii.md,
             backgroundColor: colors.backgroundSecondary,
             borderWidth: 1,
             borderColor: colors.borderLight,
+            minWidth: 48,
+            alignItems: 'center',
+            justifyContent: 'center',
             ...Platform.select({
                 web: { cursor: 'pointer' } as any,
             }),
@@ -256,7 +260,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         radiusChipText: {
             color: colors.textMuted,
-            fontSize: typography.sizes.xs,
+            fontSize: typography.sizes.sm,
             fontWeight: '600',
         },
         radiusChipTextActive: {
@@ -299,7 +303,17 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         questsGrid: {
             flexDirection: 'row',
             flexWrap: 'wrap',
-            gap: spacing.lg,
+            gap: spacing.md,
+            ...Platform.select({
+                web: {
+                    display: 'grid',
+                    gridTemplateColumns: isMobileW 
+                        ? '1fr' 
+                        : isTablet 
+                            ? 'repeat(2, 1fr)' 
+                            : 'repeat(auto-fill, minmax(320px, 1fr))',
+                } as any,
+            }),
         },
 
         /* ---- Skeleton ---- */

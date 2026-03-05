@@ -168,8 +168,12 @@ const normalizeImgTags = (html: string): string => {
     const finalH = h || 450;
     out = out.replace(/>$/, ` width="${finalW}" height="${finalH}">`);
     out = out.replace(/\bdecoding="[^"]*"/i, "").replace(/\bfetchpriority="[^"]*"/i, "").replace(/\bloading="[^"]*"/i, "");
-    if (!/\balt\s*=/i.test(out)) {
-      out = out.replace(/>$/, ` alt="">`);
+    const fallbackAlt = `Изображение маршрута ${imgIdx + 1}`;
+    const altMatch = out.match(/\balt="([^"]*)"/i);
+    if (!altMatch) {
+      out = out.replace(/>$/, ` alt="${fallbackAlt}">`);
+    } else if (!altMatch[1].trim()) {
+      out = out.replace(/\balt="[^"]*"/i, `alt="${fallbackAlt}"`);
     }
     const isLcp = imgIdx === 0;
     out = out.replace(

@@ -3,7 +3,6 @@ import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleShee
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import AppProviders from "@/components/layout/AppProviders";
-import Footer from '@/components/layout/Footer';
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 // Defensive lazy imports: fallback to empty component if module resolution fails
 const EmptyFallback = () => null;
@@ -39,6 +38,7 @@ const ReactQueryDevtoolsLazy: any = __DEV__
       import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
     )
   : null;
+const FooterLazy = safeLazy(() => import('@/components/layout/Footer'), 'Footer');
 const ConsentBannerLazy = safeLazy(() => import('@/components/layout/ConsentBanner'), 'ConsentBanner');
 const ToastLazy = safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost');
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
@@ -513,10 +513,18 @@ function ThemedContent({
 
                               {showFooter && (!isWeb || isMounted) && (
                                 <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
-                                  <Footer
-                                    /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
-                                    onDockHeight={(h) => setDockHeight(h)}
-                                  />
+                                  <React.Suspense
+                                    fallback={
+                                      isWeb && isMobile ? (
+                                        <View style={{ height: WEB_FOOTER_RESERVE_HEIGHT, width: '100%' }} />
+                                      ) : null
+                                    }
+                                  >
+                                    <FooterLazy
+                                      /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
+                                      onDockHeight={(h) => setDockHeight(h)}
+                                    />
+                                  </React.Suspense>
                                 </View>
                               )}
                         </View>

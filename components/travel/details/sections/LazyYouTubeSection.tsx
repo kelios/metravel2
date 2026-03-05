@@ -75,6 +75,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
       >
         <ImageCardMedia
           src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
+          alt="Превью видео YouTube"
           fit="contain"
           blurBackground
           cachePolicy="memory-disk"

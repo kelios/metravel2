@@ -353,9 +353,10 @@ export default function TravelDetailsContainer() {
   // other critical meta tags directly because react-helmet-async can lose the
   // race on initial page loads with async data.
 	  useEffect(() => {
-      if (!isFocused) return undefined;
 	    if (!readyTitle || readyTitle === 'Metravel') return undefined;
-	    navigation.setOptions({ title: readyTitle });
+      if (isFocused) {
+        navigation.setOptions({ title: readyTitle });
+      }
 	    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
 
 	    const patchMeta = (sel: string, attr: string, val: string) => {
@@ -540,7 +541,7 @@ export default function TravelDetailsContainer() {
   // react-helmet-async has a race condition on direct page loads: if a Helmet instance
   // mounts late (after requestAnimationFrame), meta tags are committed as empty.
   // Rendering it here with fallback values ensures the Helmet instance is stable.
-  const seoBlock = isFocused ? (
+  const seoBlock = (
     <InstantSEO
       headKey={headKey}
       title={readyTitle}
@@ -573,7 +574,7 @@ export default function TravelDetailsContainer() {
         </>
       }
     />
-  ) : null;
+  );
 
   // NOTE: Skeleton gate is purely data-driven: show skeleton until `travel` is available.
   // Avoid delaying first paint with RAF, as it can increase CLS in perf audits.
