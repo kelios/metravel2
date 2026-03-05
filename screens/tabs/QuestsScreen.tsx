@@ -1,12 +1,12 @@
 // src/screens/tabs/QuestsScreen.tsx
 // Redesigned: Two-column layout like search page
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useMemo, useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, Pressable, Platform,
-    ScrollView,
+    ScrollView, ActivityIndicator,
     ViewStyle, TextStyle,
 } from 'react-native';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -56,10 +56,16 @@ const NEARBY_ID = '__nearby__';
 
 const { spacing, radii, typography } = DESIGN_TOKENS;
 
-const DIFFICULTY_LABELS: Record<string, string> = {
-    easy: 'Лёгкий',
-    medium: 'Средний',
-    hard: 'Сложный',
+const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
+
+type MapPoint = {
+    id?: string | number;
+    coord: string;
+    address: string;
+    travelImageThumbUrl: string;
+    categoryName: string;
+    articleUrl?: string;
+    urlTravel?: string;
 };
 
 // ───────────── Styles (Two-column layout) ─────────────
@@ -298,6 +304,28 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         contentBody: {
             padding: spacing.lg,
         },
+        mapSection: {
+            width: '100%',
+        },
+        mapContainer: {
+            width: '100%',
+            height: isMobileW ? 420 : 620,
+            borderRadius: radii.lg,
+            overflow: 'hidden',
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            backgroundColor: colors.backgroundSecondary,
+        },
+        mapLoading: {
+            width: '100%',
+            height: isMobileW ? 420 : 620,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            backgroundColor: colors.surface,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
 
         /* ---- Quests Grid ---- */
         questsGrid: {
@@ -385,6 +413,7 @@ export default function QuestsScreen() {
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
     // API data
     const { quests: ALL_QUESTS, cityQuestsIndex: CITY_QUESTS, loading: questsLoading } = useQuestsList();
@@ -520,7 +549,7 @@ export default function QuestsScreen() {
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            if (selectedCityId !== NEARBY_ID) return;
+            if (selectedCityId !== NEARBY_ID && viewMode !== 'map') return;
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted' || cancelled) return;
@@ -531,7 +560,7 @@ export default function QuestsScreen() {
             } catch (error) { console.warn('Error requesting nearby location', error); }
         })();
         return () => { cancelled = true; };
-    }, [selectedCityId]);
+    }, [selectedCityId, viewMode]);
 
     // ── Derived data ──
     const citiesWithNearby: (City | NearbyCity)[] = useMemo(
@@ -599,6 +628,75 @@ export default function QuestsScreen() {
         return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
     }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded]);
 
+    const mapPoints = useMemo<MapPoint[]>(() => {
+        if (!dataLoaded || !selectedCityId) return [];
+        const source = selectedCityId === NEARBY_ID
+            ? (userLoc ? questsAll : ALL_QUESTS)
+            : questsAll;
+
+        return source
+            .filter((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng))
+            .map((q) => {
+                const citySegmentRaw = selectedCityId === NEARBY_ID ? (q.cityId || '') : selectedCityId;
+                const citySegment = encodeURIComponent(String(citySegmentRaw || 'city'));
+                const questSegment = encodeURIComponent(String(q.id));
+                const questUrl = buildCanonicalUrl(`/quests/${citySegment}/${questSegment}`);
+
+                return {
+                    id: q.id,
+                    coord: `${q.lat},${q.lng}`,
+                    address: q.title,
+                    travelImageThumbUrl: typeof q.cover === 'string' ? q.cover : '',
+                    categoryName: 'Квест',
+                    articleUrl: questUrl,
+                    urlTravel: questUrl,
+                };
+            });
+    }, [dataLoaded, selectedCityId, userLoc, questsAll, ALL_QUESTS]);
+
+    const mapCenter = useMemo(() => {
+        if (userLoc && Number.isFinite(userLoc.lat) && Number.isFinite(userLoc.lng)) {
+            return { latitude: userLoc.lat, longitude: userLoc.lng };
+        }
+
+        const selectedCity = CITIES.find((c) => c.id === selectedCityId);
+        if (selectedCity && Number.isFinite(selectedCity.lat) && Number.isFinite(selectedCity.lng)) {
+            return { latitude: Number(selectedCity.lat), longitude: Number(selectedCity.lng) };
+        }
+
+        if (mapPoints.length > 0) {
+            const sum = mapPoints.reduce(
+                (acc, p) => {
+                    const [latStr, lngStr] = p.coord.split(',').map((v) => v.trim());
+                    const lat = Number(latStr);
+                    const lng = Number(lngStr);
+                    return {
+                        lat: acc.lat + (Number.isFinite(lat) ? lat : 0),
+                        lng: acc.lng + (Number.isFinite(lng) ? lng : 0),
+                    };
+                },
+                { lat: 0, lng: 0 },
+            );
+            return {
+                latitude: sum.lat / mapPoints.length,
+                longitude: sum.lng / mapPoints.length,
+            };
+        }
+
+        return { latitude: 53.9, longitude: 27.56 };
+    }, [CITIES, mapPoints, selectedCityId, userLoc]);
+
+    const handleMapUserLocationChange = useCallback((loc: { latitude: number; longitude: number } | null) => {
+        if (!loc) return;
+        if (!Number.isFinite(loc.latitude) || !Number.isFinite(loc.longitude)) return;
+        setUserLoc((prev) => {
+            if (prev && Math.abs(prev.lat - loc.latitude) < 0.00001 && Math.abs(prev.lng - loc.longitude) < 0.00001) {
+                return prev;
+            }
+            return { lat: loc.latitude, lng: loc.longitude };
+        });
+    }, []);
+
     // ── SEO ──
     const selectedCityName =
         selectedCityId === NEARBY_ID ? 'Рядом' : CITIES.find((c) => c.id === selectedCityId)?.name ?? null;
@@ -630,12 +728,20 @@ export default function QuestsScreen() {
                     Исследуй города через загадки и приключения
                 </Text>
                 <View style={s.sidebarActions as ViewStyle}>
-                    <Link href="/quests/map" asChild>
-                        <Pressable style={s.actionBtn as ViewStyle} accessibilityRole="button">
-                            <Feather name="map" size={16} color={colors.textOnPrimary} />
-                            <Text style={s.actionBtnText as TextStyle}>На карте</Text>
-                        </Pressable>
-                    </Link>
+                    <Pressable
+                        style={[
+                            s.actionBtn as ViewStyle,
+                            viewMode === 'map' && (s.actionBtnSecondary as ViewStyle),
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={viewMode === 'map' ? 'Показать квесты списком' : 'Показать квесты на карте'}
+                        onPress={() => setViewMode((prev) => (prev === 'map' ? 'list' : 'map'))}
+                    >
+                        <Feather name={viewMode === 'map' ? 'list' : 'map'} size={16} color={viewMode === 'map' ? colors.text : colors.textOnPrimary} />
+                        <Text style={[s.actionBtnText as TextStyle, viewMode === 'map' && (s.actionBtnTextSecondary as TextStyle)]}>
+                            {viewMode === 'map' ? 'Списком' : 'На карте'}
+                        </Text>
+                    </Pressable>
                 </View>
             </View>
 
@@ -780,61 +886,112 @@ export default function QuestsScreen() {
 
                 {/* Content body */}
                 <View style={s.contentBody as ViewStyle}>
-                    {/* Empty states */}
-                    {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 && dataLoaded && (
-                        <EmptyState
-                            icon="map-pin"
-                            title="Рядом ничего не найдено"
-                            description="Попробуйте увеличить радиус поиска"
-                            variant="empty"
-                            iconSize={48}
-                        />
-                    )}
-
-                    {selectedCityId === NEARBY_ID && !userLoc && dataLoaded && (
-                        <EmptyState
-                            icon="navigation"
-                            title="Геолокация отключена"
-                            description="Разрешите доступ к геолокации в настройках браузера"
-                            variant="empty"
-                            iconSize={48}
-                        />
-                    )}
-
-                    {!selectedCityId && dataLoaded && (
-                        <EmptyState
-                            icon="compass"
-                            title="Выберите город"
-                            description={isMobile ? 'Нажмите «Город» чтобы выбрать' : 'Выберите город из списка слева'}
-                            variant="empty"
-                            iconSize={48}
-                        />
-                    )}
-
-                    {/* Skeleton loading */}
-                    {!dataLoaded && (
-                        <View style={s.skeletonGrid as ViewStyle}>
-                            {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
-                                <View key={i} style={s.skeletonCard as ViewStyle}>
-                                    <SkeletonLoader width="100%" height={180} borderRadius={radii.lg} />
+                    {viewMode === 'map' ? (
+                        <View style={s.mapSection as ViewStyle}>
+                            {!dataLoaded && (
+                                <View style={s.mapLoading as ViewStyle}>
+                                    <ActivityIndicator color={colors.primary} />
                                 </View>
-                            ))}
-                        </View>
-                    )}
+                            )}
 
-                    {/* Quest cards grid */}
-                    {dataLoaded && questsAll.length > 0 && (
-                        <View style={s.questsGrid as ViewStyle}>
-                            {questsAll.map((quest) => (
-                                <QuestCard
-                                    key={quest.id}
-                                    cityId={selectedCityId === NEARBY_ID ? (quest.cityId || '') : (selectedCityId || '')}
-                                    quest={quest}
-                                    nearby={selectedCityId === NEARBY_ID}
-                                    cardWidth={questCardWidth}
+                            {dataLoaded && Platform.OS !== 'web' && (
+                                <EmptyState
+                                    icon="map"
+                                    title="Карта доступна в веб-версии"
+                                    description="Откройте страницу квестов в браузере, чтобы увидеть карту"
+                                    variant="empty"
+                                    iconSize={48}
                                 />
-                            ))}
+                            )}
+
+                            {dataLoaded && Platform.OS === 'web' && mapPoints.length === 0 && (
+                                <EmptyState
+                                    icon="map-pin"
+                                    title="Нет квестов для отображения на карте"
+                                    description="Измените город или радиус, чтобы увидеть точки на карте"
+                                    variant="empty"
+                                    iconSize={48}
+                                />
+                            )}
+
+                            {dataLoaded && Platform.OS === 'web' && mapPoints.length > 0 && (
+                                <View style={s.mapContainer as ViewStyle}>
+                                    <Suspense fallback={<View style={s.mapLoading as ViewStyle}><ActivityIndicator color={colors.primary} /></View>}>
+                                        <LazyQuestMap
+                                            travel={{ data: mapPoints as any }}
+                                            coordinates={mapCenter}
+                                            mode="radius"
+                                            radius={selectedCityId === NEARBY_ID ? String(Math.max(nearbyRadiusKm, 5)) : '50000'}
+                                            routePoints={[]}
+                                            transportMode="foot"
+                                            onMapClick={() => {}}
+                                            setRouteDistance={() => {}}
+                                            setFullRouteCoords={() => {}}
+                                            onUserLocationChange={handleMapUserLocationChange}
+                                        />
+                                    </Suspense>
+                                </View>
+                            )}
                         </View>
+                    ) : (
+                        <>
+                            {/* Empty states */}
+                            {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 && dataLoaded && (
+                                <EmptyState
+                                    icon="map-pin"
+                                    title="Рядом ничего не найдено"
+                                    description="Попробуйте увеличить радиус поиска"
+                                    variant="empty"
+                                    iconSize={48}
+                                />
+                            )}
+
+                            {selectedCityId === NEARBY_ID && !userLoc && dataLoaded && (
+                                <EmptyState
+                                    icon="navigation"
+                                    title="Геолокация отключена"
+                                    description="Разрешите доступ к геолокации в настройках браузера"
+                                    variant="empty"
+                                    iconSize={48}
+                                />
+                            )}
+
+                            {!selectedCityId && dataLoaded && (
+                                <EmptyState
+                                    icon="compass"
+                                    title="Выберите город"
+                                    description={isMobile ? 'Нажмите «Город» чтобы выбрать' : 'Выберите город из списка слева'}
+                                    variant="empty"
+                                    iconSize={48}
+                                />
+                            )}
+
+                            {/* Skeleton loading */}
+                            {!dataLoaded && (
+                                <View style={s.skeletonGrid as ViewStyle}>
+                                    {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
+                                        <View key={i} style={s.skeletonCard as ViewStyle}>
+                                            <SkeletonLoader width="100%" height={180} borderRadius={radii.lg} />
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+
+                            {/* Quest cards grid */}
+                            {dataLoaded && questsAll.length > 0 && (
+                                <View style={s.questsGrid as ViewStyle}>
+                                    {questsAll.map((quest) => (
+                                        <QuestCard
+                                            key={quest.id}
+                                            cityId={selectedCityId === NEARBY_ID ? (quest.cityId || '') : (selectedCityId || '')}
+                                            quest={quest}
+                                            nearby={selectedCityId === NEARBY_ID}
+                                            cardWidth={questCardWidth}
+                                        />
+                                    ))}
+                                </View>
+                            )}
+                        </>
                     )}
                 </View>
             </ScrollView>
@@ -853,7 +1010,6 @@ function QuestCard({
     cardWidth: number;
 }) {
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
-    const diffLabel = quest.difficulty ? DIFFICULTY_LABELS[quest.difficulty] : null;
     
     // Формируем метатекст
     const metaParts: string[] = [`${quest.points} точек`, durationText];
@@ -865,16 +1021,6 @@ function QuestCard({
         );
     }
     const metaText = metaParts.join(' • ');
-
-    // Badge для сложности
-    const badge = diffLabel ? {
-        icon: 'flag' as const,
-        backgroundColor: quest.difficulty === 'easy' ? 'rgba(34,197,94,0.9)'
-            : quest.difficulty === 'medium' ? 'rgba(245,158,11,0.9)'
-            : quest.difficulty === 'hard' ? 'rgba(239,68,68,0.9)'
-            : 'rgba(0,0,0,0.5)',
-        iconColor: '#fff',
-    } : undefined;
 
     const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
 
@@ -888,7 +1034,6 @@ function QuestCard({
             imageUrl={imageUrl}
             metaText={metaText}
             onPress={handlePress}
-            badge={badge}
             width={cardWidth}
             imageHeight={220}
             testID={`quest-card-${quest.id}`}

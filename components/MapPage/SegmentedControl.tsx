@@ -1,6 +1,7 @@
 // components/MapPage/SegmentedControl.tsx
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Platform, View, Text, StyleSheet } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
@@ -10,6 +11,7 @@ interface SegmentedControlOption {
   key: string;
   label: string;
   icon?: string;
+  iconSource?: 'map' | 'material';
   badge?: number; // Количество для отображения в badge
 }
 
@@ -25,6 +27,7 @@ interface SegmentedControlProps {
   disabledKeys?: string[];
   role?: 'radio' | 'button';
   tone?: 'default' | 'subtle';
+  iconOnly?: boolean;
 }
 
 const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -39,7 +42,9 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   disabledKeys = [],
   role = 'radio',
   tone = 'default',
+  iconOnly = false,
 }) => {
+  const [hoveredKey, setHoveredKey] = React.useState<string | null>(null);
   const colors = useThemedColors();
   const styles = useMemo(
     () => getStyles(colors, compact, tone, dense, noOuterMargins),
@@ -83,13 +88,14 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
           },
         ]}
       />
-      {options.map(({ key, label, icon, badge }) => {
+      {options.map(({ key, label, icon, iconSource = 'map', badge }) => {
         const active = value === key;
         const isDisabled = disabled || disabledKeys.includes(key);
+        const isHovered = hoveredKey === key && !active && !isDisabled;
 
         const iconColor = tone === 'subtle'
-          ? (active ? colors.primaryText : colors.textMuted)
-          : (active ? colors.textOnPrimary : colors.text);
+          ? (active ? colors.primaryText : isHovered ? colors.primaryText : colors.textMuted)
+          : (active ? colors.textOnPrimary : isHovered ? colors.primary : colors.text);
 
         return (
           <CardActionPressable
@@ -98,6 +104,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             style={({ pressed }) => [
               styles.segment,
               pressed && styles.segmentPressed,
+              isHovered && styles.segmentHovered,
               isDisabled && styles.segmentDisabled,
               globalFocusStyles.focusable,
             ]}
@@ -105,6 +112,8 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
               if (isDisabled) return;
               onChange(key);
             }}
+            onHoverIn={() => setHoveredKey(key)}
+            onHoverOut={() => setHoveredKey((current) => (current === key ? null : current))}
             disabled={isDisabled}
             accessibilityState={
               role === 'radio'
@@ -116,18 +125,29 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             accessibilityRole={role}
           >
             {icon && (
-              <MapIcon
-                name={icon}
-                size={compact && dense ? 14 : 16}
-                color={iconColor}
-              />
+              iconSource === 'material' ? (
+                <MaterialIcons
+                  name={icon as any}
+                  size={iconOnly ? (compact ? 20 : 18) : (compact && dense ? 14 : 16)}
+                  color={iconColor}
+                />
+              ) : (
+                <MapIcon
+                  name={icon}
+                  size={iconOnly ? (compact ? 20 : 18) : (compact && dense ? 14 : 16)}
+                  color={iconColor}
+                />
+              )
             )}
-            <Text style={[
-              styles.segmentText,
-              active && styles.segmentTextActive,
-            ]} numberOfLines={1} ellipsizeMode="tail">
-              {label}
-            </Text>
+            {!iconOnly && (
+              <Text style={[
+                styles.segmentText,
+                active && styles.segmentTextActive,
+                isHovered && styles.segmentTextHover,
+              ]} numberOfLines={1} ellipsizeMode="tail">
+                {label}
+              </Text>
+            )}
             {typeof badge === 'number' && badge > 0 && (
               <View style={[
                 styles.badge,
@@ -199,6 +219,9 @@ const getStyles = (
   segmentPressed: {
     opacity: 0.6,
   },
+  segmentHovered: {
+    backgroundColor: colors.primarySoft,
+  },
   segmentDisabled: {
     opacity: 0.5,
   },
@@ -211,6 +234,9 @@ const getStyles = (
   segmentTextActive: {
     color: tone === 'subtle' ? colors.primaryText : colors.textOnPrimary,
     fontWeight: '700',
+  },
+  segmentTextHover: {
+    color: colors.primary,
   },
   badge: {
     backgroundColor: tone === 'subtle' ? colors.surface : colors.surfaceLight,

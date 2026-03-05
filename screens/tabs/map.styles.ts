@@ -37,11 +37,11 @@ export const getStyles = (
       ...(Platform.OS === 'web'
         ? ({
             display: 'flex',
-            // row-reverse: панель слева, карта справа
-            flexDirection: isMobile ? 'column' : 'row-reverse',
+            // Desktop: панель слева, карта справа.
+            flexDirection: isMobile ? 'column' : 'row',
             columnGap: isMobile ? 0 : PANEL_GAP,
-            paddingLeft: isMobile ? 0 : METRICS.spacing.l,
-            paddingRight: 0,
+            paddingLeft: 0,
+            paddingRight: isMobile ? 0 : METRICS.spacing.l,
             paddingTop: 0,
             paddingBottom: 0,
             height: '100%',
@@ -134,10 +134,10 @@ export const getStyles = (
           ? ({
               boxShadow: isMobile
                 ? themedColors.boxShadows.heavy
-                : '-1px 0 0 rgba(0,0,0,0.05), -4px 0 16px rgba(0,0,0,0.04)',
+                : '1px 0 0 rgba(0,0,0,0.05), 4px 0 16px rgba(0,0,0,0.04)',
               borderTopLeftRadius: isMobile ? 20 : 0,
               borderTopRightRadius: isMobile ? 20 : 0,
-              borderLeftWidth: 0,
+              borderRightWidth: 0,
             } as any)
           : Platform.OS === 'ios'
           ? shadowHeavy
@@ -171,7 +171,7 @@ export const getStyles = (
         maxWidth: 0,
         opacity: 0,
         pointerEvents: 'none',
-        transform: [{ translateX: 16 }],
+        transform: [{ translateX: -16 }],
       },
       overlay: {
         position: 'absolute',
@@ -210,14 +210,14 @@ export const getStyles = (
       tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: isMobile ? Math.max(14, insetTop + 4) : 10,
-        paddingBottom: isMobile ? 10 : 10,
-        paddingHorizontal: isMobile ? 14 : 12,
+        paddingTop: isMobile ? Math.max(10, insetTop + 2) : 7,
+        paddingBottom: isMobile ? 7 : 7,
+        paddingHorizontal: isMobile ? 10 : 10,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.borderLight,
         columnGap: 8,
-        minHeight: isMobile ? 54 : undefined,
+        minHeight: isMobile ? 46 : undefined,
         ...(Platform.OS === 'web'
           ? ({ boxShadow: '0 1px 0 rgba(0,0,0,0.05)' } as any)
           : null),
@@ -225,8 +225,8 @@ export const getStyles = (
       tabsSegment: {
         flexDirection: 'row',
         backgroundColor: themedColors.backgroundSecondary,
-        borderRadius: 10,
-        padding: 3,
+        borderRadius: 12,
+        padding: 2,
         columnGap: 2,
         alignSelf: isMobile ? 'flex-start' : 'stretch',
         flex: isMobile ? 0 : 1,
@@ -238,12 +238,12 @@ export const getStyles = (
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 7,
-        paddingHorizontal: isMobile ? 14 : 12,
-        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: isMobile ? 12 : 10,
+        borderRadius: 10,
         gap: isMobile ? 0 : 6,
         minWidth: isMobile ? 48 : undefined,
-        minHeight: isMobile ? 36 : undefined,
+        minHeight: isMobile ? 34 : undefined,
       },
       tabActive: {
         backgroundColor: themedColors.primary,
@@ -266,7 +266,7 @@ export const getStyles = (
         backgroundColor: themedColors.primaryLight,
       },
       tabText: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '600',
         color: themedColors.textMuted,
         letterSpacing: 0.1,
@@ -282,9 +282,9 @@ export const getStyles = (
         backgroundColor: themedColors.surface,
       },
       resetButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 9,
+        width: 30,
+        height: 30,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.backgroundSecondary,
@@ -301,9 +301,9 @@ export const getStyles = (
         color: themedColors.textMuted,
       },
       closePanelButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 9,
+        width: 30,
+        height: 30,
+        borderRadius: 8,
         backgroundColor: themedColors.backgroundSecondary,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
@@ -403,13 +403,13 @@ export const getStyles = (
       },
       badge: {
         backgroundColor: themedColors.backgroundSecondary,
-        borderRadius: 10,
-        minWidth: 20,
-        height: 18,
-        paddingHorizontal: 5,
+        borderRadius: 9,
+        minWidth: 18,
+        height: 16,
+        paddingHorizontal: 4,
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 4,
+        marginLeft: 3,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
       },
@@ -418,7 +418,7 @@ export const getStyles = (
         borderColor: 'transparent',
       },
       badgeText: {
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: '700',
         color: themedColors.textMuted,
       },
@@ -432,10 +432,10 @@ export const getStyles = (
         paddingTop: 12,
         gap: 10,
         backgroundColor: themedColors.surface,
-        borderLeftWidth: StyleSheet.hairlineWidth,
-        borderLeftColor: themedColors.borderLight,
+        borderRightWidth: StyleSheet.hairlineWidth,
+        borderRightColor: themedColors.borderLight,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: '-1px 0 0 rgba(0,0,0,0.05)' } as any)
+          ? ({ boxShadow: '1px 0 0 rgba(0,0,0,0.05)' } as any)
           : null),
       },
       collapseToggle: {
@@ -454,7 +454,7 @@ export const getStyles = (
       collapseToggleInPanel: {
         position: 'absolute',
         top: 12,
-        left: -14,
+        right: -14,
         width: 28,
         height: 28,
         borderRadius: 8,
@@ -501,7 +501,7 @@ export const getStyles = (
       },
       resizeHandle: {
         position: 'absolute',
-        left: -4,
+        right: -4,
         top: 0,
         bottom: 0,
         width: 8,

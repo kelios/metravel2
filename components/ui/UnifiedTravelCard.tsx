@@ -575,7 +575,7 @@ function UnifiedTravelCard({
           {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
           {bottomRightSlot ? <View style={styles.bottomRightSlot}>{bottomRightSlot}</View> : null}
         </View>,
-        contentSlot !== null ? (
+        contentSlot != null ? (
           <View key="content" style={[styles.content, contentContainerStyle]}>
             {contentSlot}
           </View>

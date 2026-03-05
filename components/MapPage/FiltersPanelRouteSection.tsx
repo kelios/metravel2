@@ -35,9 +35,9 @@ const estimateDurationSeconds = (meters: number, mode: 'car' | 'bike' | 'foot') 
 };
 
 const TRANSPORT_MODES = [
-  { key: 'car' as const, icon: 'directions-car', label: 'Авто' },
-  { key: 'foot' as const, icon: 'directions-walk', label: 'Пешком' },
-  { key: 'bike' as const, icon: 'directions-bike', label: 'Велосипед' },
+  { key: 'car' as const, icon: 'directions-car', label: 'Авто', iconSource: 'material' as const },
+  { key: 'foot' as const, icon: 'hiking', label: 'Пешком', iconSource: 'material' as const },
+  { key: 'bike' as const, icon: 'directions-bike', label: 'Велосипед', iconSource: 'material' as const },
 ];
 
 interface FiltersPanelRouteSectionProps {
@@ -97,16 +97,19 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
 
   const transportOptions = useMemo(
     () =>
-      TRANSPORT_MODES.map(({ key, label, icon }) => ({
+      TRANSPORT_MODES.map(({ key, label, icon, iconSource }) => ({
         key,
         label,
         icon,
+        iconSource,
       })),
     []
   );
 
   const isTransportDisabled = !(routeStepState.startSelected && routeStepState.endSelected);
   const hasTwoPoints = mode === 'route' && routePoints.length >= 2;
+  const selectedTransportLabel =
+    TRANSPORT_MODES.find((transport) => transport.key === transportMode)?.label || 'Транспорт выбран';
 
   const fallbackDistanceMeters = useMemo(() => {
     if (!hasTwoPoints) return 0;
@@ -142,37 +145,16 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionLabel}>Маршрут</Text>
-      <Text style={styles.sectionHint}>
-        Выберите старт и финиш на карте или через поиск, затем укажите транспорт.
-      </Text>
-
-      {/* 1. Адреса (старт / финиш) — первый шаг */}
-      {onAddressSelect && (
-        <RouteBuilder
-          startAddress={startAddress}
-          endAddress={endAddress}
-          onAddressSelect={onAddressSelect}
-          onAddressClear={onAddressClear}
-          onSwap={swapStartEnd}
-          onClear={onClearRoute}
-          compact
-        />
-      )}
-
-      {/* 2. Выбор транспорта — доступен после указания обоих адресов */}
-      <View
-        style={[
-          styles.section,
-          styles.sectionTight,
-          styles.transportSection,
-          !(routeStepState.startSelected && routeStepState.endSelected) && styles.sectionDisabled,
-        ]}
-      >
-        <Text style={styles.sectionLabel}>Транспорт</Text>
-        {!routeStepState.startSelected || !routeStepState.endSelected ? (
-          <Text style={styles.sectionHint}>Доступно после выбора старта и финиша</Text>
-        ) : null}
+      <View style={styles.stepBlock}>
+        <View style={styles.stepHeaderRow}>
+          <Text style={styles.stepBlockTitle}>1. Транспорт</Text>
+          <Text style={isTransportDisabled ? styles.stepInlineHintMuted : styles.stepInlineHint}>
+            {isTransportDisabled ? 'После выбора точек' : selectedTransportLabel}
+          </Text>
+        </View>
+        <Text style={styles.sectionHint}>
+          Выберите способ перемещения.
+        </Text>
         <View style={[styles.transportTabs, isTransportDisabled && styles.transportTabsDisabled]}>
           <SegmentedControl
             options={transportOptions}
@@ -185,53 +167,95 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
             compact
             disabled={isTransportDisabled}
             role="button"
+            iconOnly
           />
         </View>
       </View>
 
-      {/* 3. Статус маршрута (загрузка / ошибка / результат) */}
-      {shouldShowRouteStats && (
-        <View style={styles.routeStatsContainer} testID="route-stats">
-          <RoutingStatus
-            isLoading={!!routingLoading}
-            error={routingError || null}
-            distance={effectiveDistance > 0 ? effectiveDistance : null}
-            duration={effectiveDuration > 0 ? effectiveDuration : null}
-            transportMode={transportMode}
-            isEstimated={isEstimated}
-            elevationGain={routeElevationGain ?? null}
-            elevationLoss={routeElevationLoss ?? null}
+      <View
+        style={[
+          styles.stepBlock,
+          styles.stepBlockCompact,
+          styles.transportSection,
+        ]}
+      >
+        <View style={styles.stepHeaderRow}>
+          <Text style={styles.stepBlockTitle}>2. Точки маршрута</Text>
+          <Text style={routeStepState.startSelected && routeStepState.endSelected ? styles.stepInlineHint : styles.stepInlineHintMuted}>
+            {routeStepState.startSelected && routeStepState.endSelected ? 'Готово' : 'Выберите старт и финиш'}
+          </Text>
+        </View>
+        <Text style={styles.sectionHint}>
+          Старт и финиш на карте или через поиск.
+        </Text>
+        {onAddressSelect && (
+          <RouteBuilder
+            startAddress={startAddress}
+            endAddress={endAddress}
+            onAddressSelect={onAddressSelect}
+            onAddressClear={onAddressClear}
+            onSwap={swapStartEnd}
+            onClear={onClearRoute}
+            compact
           />
+        )}
+      </View>
+
+      {shouldShowRouteStats && (
+        <View style={styles.stepBlock} testID="route-stats-block">
+          <View style={styles.stepHeaderRow}>
+            <Text style={styles.stepBlockTitle}>3. Итог маршрута</Text>
+            {isEstimated && !routingLoading && !routingError ? (
+              <Text style={styles.stepInlineHintMuted}>Оценка</Text>
+            ) : null}
+          </View>
+          <View style={styles.routeStatsContainer} testID="route-stats">
+            <RoutingStatus
+              isLoading={!!routingLoading}
+              error={routingError || null}
+              distance={effectiveDistance > 0 ? effectiveDistance : null}
+              duration={effectiveDuration > 0 ? effectiveDuration : null}
+              transportMode={transportMode}
+              isEstimated={isEstimated}
+              elevationGain={routeElevationGain ?? null}
+              elevationLoss={routeElevationLoss ?? null}
+            />
+          </View>
         </View>
       )}
 
       {!onAddressSelect && mode === 'route' && routePoints.length > 0 && (
-        <View style={styles.routePointsList} testID="route-points-list">
-          {routePoints.map((p, index) => {
-            const label = String(p?.address || '').trim() || `Точка ${index + 1}`;
-            const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id);
-            return (
-              <View key={String(p?.id ?? index)} style={styles.routePointRow}>
-                <View style={styles.routePointPill} testID={`route-point-pill-${String(p?.id ?? index)}`}>
-                  <Text style={styles.routePointPillText} numberOfLines={1}>
-                    {label}
-                  </Text>
+        <View style={styles.stepBlock}>
+          <View style={styles.stepHeaderRow}>
+            <Text style={styles.stepBlockTitle}>Точки маршрута</Text>
+          </View>
+          <View style={styles.routePointsList} testID="route-points-list">
+            {routePoints.map((p, index) => {
+              const label = String(p?.address || '').trim() || `Точка ${index + 1}`;
+              const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id);
+              return (
+                <View key={String(p?.id ?? index)} style={styles.routePointRow}>
+                  <View style={styles.routePointPill} testID={`route-point-pill-${String(p?.id ?? index)}`}>
+                    <Text style={styles.routePointPillText} numberOfLines={1}>
+                      {label}
+                    </Text>
+                  </View>
+                  <IconButton
+                    icon={<MapIcon name="close" size={18} color={colors.textOnDark} />}
+                    label={`Удалить точку: ${label}`}
+                    size="sm"
+                    disabled={!canRemove}
+                    onPress={() => {
+                      if (!canRemove) return;
+                      onRemoveRoutePoint?.(String(p.id));
+                    }}
+                    style={[styles.routePointRemoveBtn, !canRemove && styles.routePointRemoveBtnDisabled]}
+                    testID={`route-point-remove-${String(p?.id ?? index)}`}
+                  />
                 </View>
-                <IconButton
-                  icon={<MapIcon name="close" size={18} color={colors.textOnDark} />}
-                  label={`Удалить точку: ${label}`}
-                  size="sm"
-                  disabled={!canRemove}
-                  onPress={() => {
-                    if (!canRemove) return;
-                    onRemoveRoutePoint?.(String(p.id));
-                  }}
-                  style={[styles.routePointRemoveBtn, !canRemove && styles.routePointRemoveBtnDisabled]}
-                  testID={`route-point-remove-${String(p?.id ?? index)}`}
-                />
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       )}
 

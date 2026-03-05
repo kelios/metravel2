@@ -86,8 +86,8 @@ export default function MapScreen() {
         const startX = e.clientX;
         const startW = desktopPanelWidth;
         const onMove = (ev: MouseEvent) => {
-            // Panel is on the right, dragging left = wider
-            const delta = startX - ev.clientX;
+            // Panel is on the left, dragging right = wider
+            const delta = ev.clientX - startX;
             onResizePanelWidth(startW + delta);
         };
         const onUp = () => {
@@ -282,7 +282,7 @@ export default function MapScreen() {
         ]
     );
 
-    // Use mobile layout on small screens (including web), desktop keeps right panel
+    // Use mobile layout on small screens (including web), desktop keeps side panel
     const useMobileLayout = isMobile;
 
     if (!hydrated && Platform.OS === 'web') {
@@ -481,7 +481,7 @@ export default function MapScreen() {
                             accessibilityRole="button"
                             accessibilityLabel="Развернуть панель"
                         >
-                            <Feather name="chevron-left" size={18} color={themedColors.text} />
+                            <Feather name="chevron-right" size={18} color={themedColors.text} />
                         </Pressable>
                         <Pressable
                             style={({ pressed }) => [styles.collapsedIconBtn, pressed && { opacity: 0.7 }]}
@@ -530,7 +530,7 @@ export default function MapScreen() {
                         accessibilityRole="button"
                         accessibilityLabel="Свернуть панель"
                     >
-                        <Feather name="chevron-right" size={16} color={themedColors.textMuted} />
+                        <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
                     </Pressable>
                 )}
                 {panelHeader}

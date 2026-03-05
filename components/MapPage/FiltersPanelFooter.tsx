@@ -31,7 +31,7 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   hideFooterReset,
   onReset,
   onBuildRoute,
-  totalPoints,
+  totalPoints: _totalPoints,
   onOpenList: _onOpenList,
 }) => {
   const colors = useThemedColors();
@@ -41,11 +41,6 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
 
   return (
     <View style={styles.stickyFooter} testID="filters-panel-footer">
-      {typeof totalPoints === 'number' && totalPoints > 0 && (
-        <Text style={styles.footerPreview} testID="footer-results-preview">
-          Найдено {totalPoints} мест
-        </Text>
-      )}
       {!canBuildRoute && mode === 'route' && (
         <Text style={styles.helperText}>
           Добавьте старт и финиш — кнопка «Построить маршрут» станет активной
@@ -87,4 +82,3 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
 };
 
 export default React.memo(FiltersPanelFooter);
-

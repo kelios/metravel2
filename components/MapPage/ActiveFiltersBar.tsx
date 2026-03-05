@@ -65,7 +65,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      height: 40,
+      height: 32,
       justifyContent: 'center',
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,
@@ -77,8 +77,8 @@ const getStyles = (colors: ThemedColors) =>
         : null),
     },
     scrollContent: {
-      paddingHorizontal: 14,
-      gap: 6,
+      paddingHorizontal: 8,
+      gap: 4,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? ({ touchAction: 'pan-x' } as any)
@@ -87,10 +87,10 @@ const getStyles = (colors: ThemedColors) =>
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999,
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
       backgroundColor: colors.primarySoft ?? colors.primaryLight,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.primary,
@@ -103,23 +103,23 @@ const getStyles = (colors: ThemedColors) =>
       opacity: 0.65,
     },
     chipText: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '600',
       color: colors.primaryText,
-      maxWidth: 110,
+      maxWidth: 88,
       letterSpacing: 0.1,
     },
     clearBtn: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
       backgroundColor: colors.backgroundSecondary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     clearText: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '500',
       color: colors.textMuted,
     },

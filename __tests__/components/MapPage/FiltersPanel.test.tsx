@@ -242,15 +242,11 @@ describe('FiltersPanel', () => {
       ...defaultProps,
       mode: 'route' as const,
     };
-    const { getByText } = renderWithTheme(<FiltersPanel />, propsRouteMode);
-    const carTab = getByText('Авто') as any;
-    let carTabPressable: any = carTab;
-    while (carTabPressable && carTabPressable.props?.accessibilityRole !== 'button') {
-      carTabPressable = carTabPressable.parent;
-    }
+    const { getByTestId } = renderWithTheme(<FiltersPanel />, propsRouteMode);
+    const carTabPressable: any = getByTestId('segmented-car');
     expect(carTabPressable?.props.accessibilityState?.disabled).toBe(true);
 
-    const { getAllByText: getAllByTextEnabled } = renderWithTheme(
+    const { getByTestId: getByTestIdEnabled } = renderWithTheme(
       <FiltersPanel />,
       {
         ...propsRouteMode,
@@ -260,11 +256,7 @@ describe('FiltersPanel', () => {
         ],
       }
     );
-    const carTabEnabled = getAllByTextEnabled('Авто')[0];
-    let carTabEnabledPressable: any = carTabEnabled as any;
-    while (carTabEnabledPressable && carTabEnabledPressable.props?.accessibilityRole !== 'button') {
-      carTabEnabledPressable = carTabEnabledPressable.parent;
-    }
+    const carTabEnabledPressable: any = getByTestIdEnabled('segmented-car');
     expect(carTabEnabledPressable?.props.accessibilityState?.disabled).toBe(false);
   });
 

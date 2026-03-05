@@ -14,6 +14,8 @@ type CardActionPressableProps = {
   title?: string;
   onPress?: () => void;
   onLongPress?: () => void;
+  onHoverIn?: () => void;
+  onHoverOut?: () => void;
   disabled?: boolean;
   accessibilityRole?: 'button' | 'radio' | 'checkbox';
   accessibilityState?: { checked?: boolean; selected?: boolean; disabled?: boolean; expanded?: boolean; busy?: boolean };
@@ -28,6 +30,8 @@ const CardActionPressable = ({
   title,
   onPress,
   onLongPress,
+  onHoverIn,
+  onHoverOut,
   disabled = false,
   accessibilityRole = 'button',
   accessibilityState,
@@ -85,6 +89,8 @@ const CardActionPressable = ({
           if (e?.key !== 'Enter' && e?.key !== ' ') return;
           activate(e);
         }}
+        onMouseEnter={() => onHoverIn?.()}
+        onMouseLeave={() => onHoverOut?.()}
         testID={testID}
       >
         {safeChildren}
@@ -102,6 +108,8 @@ const CardActionPressable = ({
       disabled={disabled}
       onPress={activate}
       onLongPress={onLongPress}
+      onHoverIn={onHoverIn}
+      onHoverOut={onHoverOut}
       testID={testID}
       {...({ 'data-card-action': 'true' } as any)}
     >

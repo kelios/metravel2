@@ -25,6 +25,7 @@ interface AddressSearchProps {
   label?: string;
   enableCoordinateInput?: boolean;
   onClear?: () => void;
+  dense?: boolean;
 }
 
 interface SearchResult {
@@ -41,13 +42,14 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   label,
   enableCoordinateInput = false,
   onClear,
+  dense = false,
 }) => {
   const [query, setQuery] = useState(value);
   const [showResults, setShowResults] = useState(false);
   const [searchEnabled, setSearchEnabled] = useState(false);
   const debouncedQuery = useDebouncedValue(query, 500);
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(colors, dense), [colors, dense]);
 
   const { data: results = [], isFetching: loading } = useQuery<SearchResult[]>({
     queryKey: queryKeys.addressSearch(debouncedQuery),
@@ -229,7 +231,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   );
 };
 
-const getStyles = (colors: ThemedColors) => StyleSheet.create({
+const getStyles = (colors: ThemedColors, dense: boolean) => StyleSheet.create({
   container: {
     width: '100%',
     position: 'relative',
@@ -245,31 +247,31 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: dense ? 10 : 12,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
-    height: 44,
+    paddingHorizontal: dense ? 10 : 12,
+    height: dense ? 40 : 44,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: dense ? 6 : 8,
   },
   input: {
     flex: 1,
-    fontSize: 14,
+    fontSize: dense ? 13 : 14,
     color: colors.text,
     paddingVertical: 0,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } as any : {}),
   },
   loader: {
-    marginLeft: 8,
+    marginLeft: dense ? 6 : 8,
   },
   clearButton: {
-    marginLeft: 8,
+    marginLeft: dense ? 6 : 8,
     padding: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: dense ? 24 : 28,
+    height: dense ? 24 : 28,
+    borderRadius: dense ? 12 : 14,
     backgroundColor: 'transparent',
     shadowColor: 'transparent',
     shadowOpacity: 0,

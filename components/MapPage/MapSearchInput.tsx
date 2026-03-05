@@ -82,7 +82,7 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      marginBottom: 12,
+      marginBottom: 8,
     },
     inputWrapper: {
       flexDirection: 'row',
@@ -91,8 +91,8 @@ const getStyles = (colors: ThemedColors) =>
       borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      paddingHorizontal: 10,
-      height: 40,
+      paddingHorizontal: 9,
+      height: 36,
       ...(Platform.OS === 'web'
         ? ({ transition: 'border-color 0.15s ease, box-shadow 0.15s ease' } as any)
         : null),
@@ -104,25 +104,25 @@ const getStyles = (colors: ThemedColors) =>
         : null),
     },
     searchIcon: {
-      marginRight: 8,
+      marginRight: 6,
     },
     input: {
       flex: 1,
-      fontSize: 14,
+      fontSize: 13,
       color: colors.text,
-      paddingVertical: 8,
+      paddingVertical: 6,
       ...(Platform.OS === 'web'
         ? ({ outline: 'none' } as any)
         : null),
     },
     clearButton: {
-      padding: 4,
-      marginLeft: 4,
+      padding: 3,
+      marginLeft: 3,
     },
     resultsHint: {
-      fontSize: 12,
+      fontSize: 11,
       color: colors.textMuted,
-      marginTop: 4,
+      marginTop: 3,
       marginLeft: 2,
     },
   });

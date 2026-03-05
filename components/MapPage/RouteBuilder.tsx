@@ -60,16 +60,28 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           <MapIcon name="alt-route" size={18} color={colors.text} />
           <Text style={styles.progressText}>Маршрут {progress}</Text>
         </SafeView>
-        {onClear && hasAnyAddress && (
-          <IconButton
-            testID="route-clear"
-            icon={<MapIcon name="refresh" size={18} color={colors.text} />}
-            label="Очистить маршрут"
-            size={compact ? 'sm' : 'md'}
-            onPress={onClear}
-            style={styles.iconButton}
-          />
-        )}
+        <SafeView style={styles.progressActions}>
+          {onSwap && hasRoute && (
+            <IconButton
+              testID="route-swap"
+              icon={<MapIcon name="swap-vert" size={compact ? 16 : 18} color={colors.primary} />}
+              label="Поменять старт и финиш местами"
+              size={compact ? 'sm' : 'md'}
+              onPress={onSwap}
+              style={styles.swapActionButton}
+            />
+          )}
+          {onClear && hasAnyAddress && (
+            <IconButton
+              testID="route-clear"
+              icon={<MapIcon name="refresh" size={compact ? 16 : 18} color={colors.text} />}
+              label="Очистить маршрут"
+              size={compact ? 'sm' : 'md'}
+              onPress={onClear}
+              style={styles.iconButton}
+            />
+          )}
+        </SafeView>
       </SafeView>
 
       {/* Address inputs */}
@@ -77,7 +89,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
         {/* Start address */}
         <SafeView style={styles.addressRow}>
           <SafeView style={styles.addressIcon}>
-            <MapIcon name="trip-origin" size={20} color={colors.success} />
+            <MapIcon name="trip-origin" size={compact ? 16 : 20} color={colors.success} />
           </SafeView>
           <SafeView style={styles.addressInputWrapper}>
             <AddressSearch
@@ -86,6 +98,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, true)}
               enableCoordinateInput
               onClear={() => onAddressClear?.(true)}
+              dense={compact}
             />
           </SafeView>
         </SafeView>
@@ -93,25 +106,12 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
         {/* Visual connector line between start and end */}
         <SafeView style={styles.connectorContainer}>
           <SafeView style={styles.connectorLine} />
-          {/* Swap button overlaid on connector */}
-          {onSwap && hasRoute && (
-            <SafeView style={styles.swapContainer}>
-              <IconButton
-                testID="route-swap"
-                icon={<MapIcon name="swap-vert" size={20} color={colors.primary} />}
-                label="Поменять старт и финиш местами"
-                size={compact ? 'sm' : 'md'}
-                onPress={onSwap}
-                style={styles.swapButton}
-              />
-            </SafeView>
-          )}
         </SafeView>
 
         {/* End address */}
         <SafeView style={styles.addressRow}>
           <SafeView style={styles.addressIcon}>
-            <MapIcon name="location-on" size={20} color={colors.danger} />
+            <MapIcon name="location-on" size={compact ? 16 : 20} color={colors.danger} />
           </SafeView>
           <SafeView style={styles.addressInputWrapper}>
             <AddressSearch
@@ -120,6 +120,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, false)}
               enableCoordinateInput
               onClear={() => onAddressClear?.(false)}
+              dense={compact}
             />
           </SafeView>
         </SafeView>
@@ -142,32 +143,37 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
 
 const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create({
   routeBuilder: {
-    gap: compact ? 8 : 12,
+    gap: compact ? 4 : 12,
   },
   progressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: compact ? 6 : 8,
+    paddingBottom: compact ? 4 : 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
   },
   progressInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: compact ? 6 : 8,
+    gap: compact ? 4 : 8,
+  },
+  progressActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: compact ? 4 : 6,
   },
   progressText: {
-    fontSize: 14,
+    fontSize: compact ? 13 : 14,
     fontWeight: '600',
     color: colors.text,
   },
   iconButton: {
-    width: compact ? 28 : 32,
-    height: compact ? 28 : 32,
+    width: compact ? 24 : 32,
+    height: compact ? 24 : 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: compact ? 14 : 16,
+    borderRadius: compact ? 12 : 16,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -184,14 +190,14 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: compact ? 10 : 12,
+    gap: compact ? 8 : 12,
   },
   addressIcon: {
-    width: compact ? 28 : 32,
-    height: compact ? 28 : 32,
+    width: compact ? 24 : 32,
+    height: compact ? 24 : 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: compact ? 14 : 16,
+    borderRadius: compact ? 12 : 16,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -203,12 +209,12 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   connectorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: compact ? 20 : 24,
-    marginLeft: compact ? 13 : 15,
+    height: compact ? 16 : 24,
+    marginLeft: compact ? 11 : 15,
     position: 'relative',
   },
   connectorLine: {
-    width: 2,
+    width: 1,
     height: '100%',
     backgroundColor: colors.border,
     borderRadius: 1,
@@ -216,22 +222,14 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     left: 0,
     top: 0,
   },
-  swapContainer: {
-    position: 'absolute',
-    left: compact ? -10 : -12,
-    alignItems: 'center',
-    zIndex: 3,
-  },
-  swapButton: {
-    width: compact ? 32 : 36,
-    height: compact ? 32 : 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: compact ? 16 : 18,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.primary,
+  swapActionButton: {
+    width: compact ? 24 : 32,
+    height: compact ? 24 : 32,
+    borderRadius: compact ? 12 : 16,
     marginHorizontal: 0,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primary,
     shadowColor: 'transparent',
     shadowOpacity: 0,
     shadowRadius: 0,
@@ -239,9 +237,9 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   hint: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
-    fontStyle: 'italic',
+    fontStyle: 'normal',
     paddingHorizontal: compact ? 4 : 8,
   },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import MapIcon from './MapIcon';
+import Feather from '@expo/vector-icons/Feather';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -20,30 +20,28 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   colors,
   styles,
   isMobile,
-  totalPoints,
+  totalPoints: _totalPoints,
   mode,
-  radiusValue,
+  radiusValue: _radiusValue,
   onClose,
   onModeChange,
 }) => {
+  const summary = mode === 'radius' ? 'Радиусный режим' : 'Режим маршрута';
+
   return (
     <View style={styles.stickyTop} testID="filters-panel-header">
-      {totalPoints > 0 && (
-        <View style={styles.compactHeader}>
-          <View style={styles.compactTitleRow}>
-            <MapIcon name="map" size={18} color={colors.primary} />
-            <Text style={styles.compactTitle}>
-              {totalPoints} {mode === 'radius' ? `мест • ${radiusValue || '60'} км` : 'мест'}
-            </Text>
-          </View>
-          {isMobile && (
-            <IconButton
-              icon={<MapIcon name="close" size={20} color={colors.textMuted} />}
-              label="Закрыть"
-              onPress={onClose}
-              size="sm"
-            />
-          )}
+      {isMobile && (
+        <View style={styles.compactMetaRow}>
+          <Text style={styles.compactMetaText} numberOfLines={1}>
+            {summary}
+          </Text>
+          <IconButton
+            icon={<Feather name="x" size={16} color={colors.textMuted} />}
+            label="Закрыть"
+            onPress={onClose}
+            size="sm"
+            style={styles.compactMetaCloseButton}
+          />
         </View>
       )}
       <SegmentedControl
@@ -54,14 +52,11 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
         value={mode}
         onChange={(key) => onModeChange(key as 'radius' | 'route')}
         compact={isMobile}
+        dense
+        noOuterMargins
         tone={isMobile ? 'subtle' : 'default'}
         accessibilityLabel="Выбор режима поиска"
       />
-      {mode === 'radius' && (
-        <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 4 }}>
-          Попробуйте режим «Маршрут» для построения пути между точками
-        </Text>
-      )}
     </View>
   );
 };
