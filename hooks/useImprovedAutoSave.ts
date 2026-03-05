@@ -48,6 +48,9 @@ const isRetryableSaveError = (error: Error): boolean => {
   return true;
 };
 
+const isAbortedSaveError = (error: Error): boolean =>
+  error.message === 'Request aborted' || error.name === 'AbortError';
+
 export function useImprovedAutoSave<T>(
   data: T,
   originalData: T,
@@ -194,6 +197,18 @@ export function useImprovedAutoSave<T>(
       }
 
       const saveError = error instanceof Error ? error : new Error('Save failed');
+
+      if (isAbortedSaveError(saveError)) {
+        if (mountedRef.current) {
+          setState(prev => ({
+            ...prev,
+            status: 'idle',
+            error: null,
+            retryCount: 0,
+          }));
+        }
+        throw saveError;
+      }
       
       // Retry logic (сохранён, но используется только при необходимости,
       // чтобы не усложнять основную логику автосейва)

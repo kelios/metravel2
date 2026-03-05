@@ -175,13 +175,7 @@ const normalizeImgTags = (html: string): string => {
     } else if (!altMatch[1].trim()) {
       out = out.replace(/\balt="[^"]*"/i, `alt="${fallbackAlt}"`);
     }
-    const isLcp = imgIdx === 0;
-    out = out.replace(
-      />$/,
-      isLcp
-        ? ` fetchpriority="high" decoding="async">`
-        : ` loading="lazy" decoding="async" fetchpriority="low">`
-    );
+    out = out.replace(/>$/, ` loading="lazy" decoding="async" fetchpriority="low">`);
     imgIdx += 1;
     return out;
   });

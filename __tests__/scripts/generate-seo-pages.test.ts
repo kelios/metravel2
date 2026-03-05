@@ -418,7 +418,7 @@ describe('travel hero preload helpers', () => {
     expect(url).toContain('v=1735689600000');
   });
 
-  it('buildTravelHeroPreloadData creates preload payload with srcset for travel cover', () => {
+  it('buildTravelHeroPreloadData creates viewport-specific preload payload for travel cover', () => {
     const preload = buildTravelHeroPreloadData(
       {
         id: 77,
@@ -429,31 +429,29 @@ describe('travel hero preload helpers', () => {
     );
 
     expect(preload).toBeTruthy();
-    expect(preload.href).toContain('w=720');
-    expect(preload.href).toContain('q=45');
-    expect(preload.srcSet).toContain('w=320');
-    expect(preload.srcSet).toContain('w=720');
-    expect(preload.sizes).toContain('(max-width: 767px)');
+    expect(preload.mobileHref).toContain('w=400');
+    expect(preload.mobileHref).toContain('q=35');
+    expect(preload.desktopHref).toContain('w=720');
+    expect(preload.desktopHref).toContain('q=45');
   });
 
-  it('injectTravelHeroPreload inserts and deduplicates travel preload tag', () => {
+  it('injectTravelHeroPreload inserts and replaces viewport-specific travel preload tags', () => {
     const preload = {
-      href: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=720&q=45&fit=contain',
-      srcSet:
-        'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=320&q=35&fit=contain 320w, https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=720&q=45&fit=contain 720w',
-      sizes: '(max-width: 767px) 100vw, (max-width: 1024px) 92vw, 720px',
+      mobileHref: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=400&q=35&fit=contain',
+      desktopHref: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=720&q=45&fit=contain',
     };
 
     const first = injectTravelHeroPreload(MINIMAL_BASE, preload);
     const second = injectTravelHeroPreload(first, {
       ...preload,
-      href: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=720&q=40&fit=contain',
+      desktopHref: 'https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg?w=720&q=40&fit=contain',
     });
 
     const preloadTagCount = (second.match(/data-travel-hero-preload="true"/g) || []).length;
-    expect(preloadTagCount).toBe(1);
+    expect(preloadTagCount).toBe(2);
     expect(second).toContain('rel="preload" as="image"');
-    expect(second).toContain('imagesrcset="');
+    expect(second).toContain('data-hero-variant="mobile"');
+    expect(second).toContain('data-hero-variant="desktop"');
     expect(second).toContain('q=40');
   });
 });

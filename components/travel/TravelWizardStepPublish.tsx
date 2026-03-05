@@ -35,6 +35,9 @@ async function showToastMessage(payload: any) {
     await showToast(payload);
 }
 
+const hasToastBeenShown = (error: unknown): boolean =>
+    error instanceof Error && (error as Error & { toastShown?: boolean }).toastShown === true;
+
 interface TravelWizardStepPublishProps {
     currentStep: number;
     totalSteps: number;
@@ -192,6 +195,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const handleSaveDraft = async () => {
         // ✅ FIX: Предотвращаем одновременные операции
         if (!startAction()) return;
+        const previousForm = formData;
 
         try {
             const nextForm = {
@@ -230,13 +234,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             // в раздел "Мои путешествия", где он увидит черновик.
             router.replace('/metravel');
         } catch (error) {
+            setFormData(previousForm);
             hapticNotification('error');
-            // ✅ FIX: Обработка ошибок сохранения
-            void showToastMessage({
-                type: 'error',
-                text1: 'Ошибка сохранения',
-                text2: error instanceof Error ? error.message : 'Попробуйте ещё раз',
-            });
+            if (!hasToastBeenShown(error)) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Ошибка сохранения',
+                    text2: error instanceof Error ? error.message : 'Попробуйте ещё раз',
+                });
+            }
         } finally {
             finishAction();
         }
@@ -272,6 +278,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         }
 
         setMissingForModeration([]);
+        const previousForm = formData;
         const nextForm = {
             ...formData,
             moderation: false,
@@ -309,6 +316,16 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             // Навигация без повторного сохранения (чтобы не перезаписать publish=false старым стейтом)
             // Используем replace, чтобы мастер точно размонтировался и не продолжал автосохранение.
             router.replace('/metravel');
+        } catch (error) {
+            setFormData(previousForm);
+            hapticNotification('error');
+            if (!hasToastBeenShown(error)) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось отправить',
+                    text2: error instanceof Error ? error.message : 'Проверьте интернет и попробуйте ещё раз.',
+                });
+            }
         } finally {
             finishAction();
         }
@@ -316,6 +333,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
     const handleApproveModeration = async () => {
         if (!startAction()) return;
+        const previousForm = formData;
         const nextForm = {
             ...formData,
             moderation: true,
@@ -346,6 +364,16 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             });
 
             router.replace('/metravel');
+        } catch (error) {
+            setFormData(previousForm);
+            hapticNotification('error');
+            if (!hasToastBeenShown(error)) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось сохранить',
+                    text2: error instanceof Error ? error.message : 'Проверьте интернет-соединение и попробуйте ещё раз',
+                });
+            }
         } finally {
             finishAction();
         }
@@ -353,6 +381,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
     const handleRejectModeration = async () => {
         if (!startAction()) return;
+        const previousForm = formData;
         const nextForm = {
             ...formData,
             moderation: false,
@@ -407,6 +436,16 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
             setRejectionComment('');
             router.replace('/metravel');
+        } catch (error) {
+            setFormData(previousForm);
+            hapticNotification('error');
+            if (!hasToastBeenShown(error)) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось сохранить',
+                    text2: error instanceof Error ? error.message : 'Проверьте интернет-соединение и попробуйте ещё раз',
+                });
+            }
         } finally {
             finishAction();
         }

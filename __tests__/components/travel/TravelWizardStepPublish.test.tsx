@@ -14,6 +14,11 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({}));
+jest.mock('@/utils/toast', () => ({
+  showToast: jest.fn(),
+}));
+
+import { showToast } from '@/utils/toast';
 
 const baseFormData: TravelFormData = {
   id: '640',
@@ -346,5 +351,51 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     expect(onFinish).not.toHaveBeenCalled();
+  });
+
+  it('restores previous status and shows error when moderation save fails', async () => {
+    const onManualSave = jest.fn().mockRejectedValue(new Error('Network error'));
+    const setFormData = jest.fn();
+
+    const { getByText, getByTestId } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={setFormData}
+        isSuperAdmin={false}
+        onManualSave={onManualSave}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    const moderationLabel = getByText('Отправить на модерацию');
+    const moderationRow = moderationLabel.parent?.parent;
+    if (!moderationRow) {
+      throw new Error('Moderation option row not found');
+    }
+
+    await act(async () => {
+      fireEvent.press(moderationRow);
+    });
+
+    await act(async () => {
+      fireEvent.press(getByTestId('primary-button'));
+    });
+
+    expect(setFormData).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        publish: true,
+        moderation: false,
+      })
+    );
+    expect(setFormData).toHaveBeenLastCalledWith(baseFormData);
+    expect(showToast).toHaveBeenCalledWith({
+      type: 'error',
+      text1: 'Не удалось отправить',
+      text2: 'Network error',
+    });
   });
 });

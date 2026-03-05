@@ -55,8 +55,6 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
 /* ---- OptimizedLCPHeroInner ---- */
 const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () => void; height?: number; isMobile?: boolean }> = ({ img, alt, onLoad, height, isMobile }) => {
   const [loadError, setLoadError] = useState(false)
-  const [mainLoaded, setMainLoaded] = useState(false)
-  const [mainLoadedSrc, setMainLoadedSrc] = useState<string | null>(null)
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null)
   const [didTryApiPrefix, setDidTryApiPrefix] = useState(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
@@ -84,8 +82,6 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
 
-  useEffect(() => { setMainLoaded(false); setMainLoadedSrc(null) }, [srcWithRetry])
-
   if (!srcWithRetry) return <NeutralHeroPlaceholder height={height} />
 
   if (Platform.OS !== 'web') {
@@ -106,22 +102,6 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
     <div style={{ width: '100%', height: fixedHeight, ...(height ? { minHeight: fixedHeight } : null) }}>
       {loadError ? <NeutralHeroPlaceholder height={height} /> : (
         <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: colors.backgroundSecondary }}>
-          {!isMobile && (
-            <div
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                inset: '-5%',
-                width: '110%',
-                height: '110%',
-                backgroundImage: mainLoaded && mainLoadedSrc ? `url("${mainLoadedSrc}")` : 'none',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(20px)',
-                zIndex: 0,
-              }}
-            />
-          )}
           <img
             src={srcWithRetry} srcSet={responsive.srcSet} sizes={responsive.sizes}
             alt={alt || 'Фотография маршрута путешествия'}
@@ -129,7 +109,7 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
             style={{ position: 'absolute', inset: 0, zIndex: 1, width: '100%', height: '100%', display: 'block', objectFit: 'contain', objectPosition: 'center' }}
             loading="eager" decoding="sync" fetchPriority="high"
             ref={imgRef as any} referrerPolicy="no-referrer-when-downgrade" data-lcp
-            onLoad={(event) => { setMainLoadedSrc((event.currentTarget as HTMLImageElement)?.currentSrc || srcWithRetry); setMainLoaded(true); onLoad?.() }}
+            onLoad={() => { onLoad?.() }}
             onError={() => {
               if (!didTryApiPrefix) { const fallback = buildApiPrefixedUrl(srcWithRetry); if (fallback) { setDidTryApiPrefix(true); setOverrideSrc(fallback); return } setDidTryApiPrefix(true) }
               setLoadError(true)

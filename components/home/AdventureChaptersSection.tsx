@@ -3,7 +3,6 @@ import { View, Text, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
-import { Image } from 'expo-image';
 
 import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -12,6 +11,7 @@ import { fetchTravelsPopular } from '@/api/map';
 import OptimizedFavoriteButton from '@/components/travel/OptimizedFavoriteButton';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import Button from '@/components/ui/Button';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
@@ -75,7 +75,7 @@ function ChapterCard({ item, index, isMobile, styles, colors }: ChapterCardProps
       optimizeImageUrl(rawImageUrl, {
         width: isMobile ? 480 : 640,
         height: isMobile ? 260 : 320,
-        fit: 'cover',
+        fit: 'contain',
       }) ?? rawImageUrl
     );
   }, [rawImageUrl, isWeb, isMobile]);
@@ -126,23 +126,16 @@ function ChapterCard({ item, index, isMobile, styles, colors }: ChapterCardProps
     >
       {/* ── Cover photo ── */}
       <View style={styles.coverContainer}>
-        {imageUrl ? (
-          <Image
-            source={{ uri: imageUrl }}
-            style={[
-              styles.coverImage,
-              isHovered && isWeb && styles.coverImageHovered,
-            ]}
-            contentFit="cover"
-            placeholder={PLACEHOLDER_BLURHASH}
-            transition={300}
-            accessibilityLabel={title}
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Feather name="image" size={36} color={colors.borderStrong} />
-          </View>
-        )}
+        <ImageCardMedia
+          src={imageUrl}
+          alt={title}
+          fit="contain"
+          blurBackground
+          blurRadius={20}
+          placeholderBlurhash={PLACEHOLDER_BLURHASH}
+          transition={300}
+          style={styles.coverImage}
+        />
 
         {/* Gradient overlay */}
         {isWeb ? (

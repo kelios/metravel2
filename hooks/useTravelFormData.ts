@@ -34,6 +34,8 @@ async function showToastMessage(payload: unknown) {
   await showToast(payload);
 }
 
+type ToastAwareError = Error & { toastShown?: boolean };
+
 interface UseTravelFormDataOptions {
   travelId: string | null;
   isNew: boolean;
@@ -369,7 +371,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         return savedData;
       } catch (error) {
         if ((error as Error)?.message === 'Request aborted') {
-          return;
+          throw error;
         }
         const errAny: unknown = error;
         const details =
@@ -383,7 +385,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           text2: details && details !== 'Save failed' ? details : 'Попробуйте ещё раз',
         });
         console.error('Manual save error:', error);
-        return;
+        if (error instanceof Error) {
+          (error as ToastAwareError).toastShown = true;
+        }
+        throw error;
       } finally {
         manualSavePromiseRef.current = null;
         manualSaveInFlightRef.current = false;

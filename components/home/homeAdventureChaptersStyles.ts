@@ -229,22 +229,8 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
       backgroundColor: colors.backgroundSecondary,
       overflow: 'hidden',
     },
-    coverContainerHovered: {
-      // Photo zoom handled by coverImage transform inside
-    },
     coverImage: {
       ...StyleSheet.absoluteFillObject,
-      ...Platform.select({
-        web: {
-          transition: 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-          objectFit: 'cover',
-        } as any,
-      }),
-    },
-    coverImageHovered: {
-      ...Platform.select({
-        web: { transform: 'scale(1.05)' } as any,
-      }),
     },
 
     // Gradient overlay for text legibility
@@ -424,14 +410,6 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
       backgroundColor: colors.borderLight,
       marginVertical: 2,
       opacity: 0.7,
-    },
-
-    // Placeholder image (no image)
-    imagePlaceholder: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: colors.backgroundSecondary,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
 
     // Shimmer

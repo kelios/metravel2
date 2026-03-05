@@ -267,41 +267,24 @@ function buildTravelHeroPreloadData(travel, detail) {
   const source = pickTravelHeroImageSource(travel, detail);
   if (!source?.url) return null;
 
-  const candidates = [
-    { width: 320, quality: 35 },
-    { width: 400, quality: 35 },
-    { width: 480, quality: 45 },
-    { width: 720, quality: 45 },
-  ];
-
-  const srcSetParts = [];
-  const seen = new Set();
-  for (const candidate of candidates) {
-    const optimized = buildOptimizedTravelImageUrl(source.url, {
-      width: candidate.width,
-      quality: candidate.quality,
-      updatedAt: source.updatedAt,
-      id: source.id,
-    });
-    if (!optimized || seen.has(optimized)) continue;
-    seen.add(optimized);
-    srcSetParts.push(`${optimized} ${candidate.width}w`);
-  }
-
-  if (srcSetParts.length === 0) return null;
-
-  const href = buildOptimizedTravelImageUrl(source.url, {
+  const mobileHref = buildOptimizedTravelImageUrl(source.url, {
+    width: 400,
+    quality: 35,
+    updatedAt: source.updatedAt,
+    id: source.id,
+  });
+  const desktopHref = buildOptimizedTravelImageUrl(source.url, {
     width: 720,
     quality: 45,
     updatedAt: source.updatedAt,
     id: source.id,
   });
-  if (!href) return null;
+
+  if (!mobileHref && !desktopHref) return null;
 
   return {
-    href,
-    srcSet: srcSetParts.join(', '),
-    sizes: '(max-width: 767px) 100vw, (max-width: 1024px) 92vw, 720px',
+    mobileHref,
+    desktopHref,
   };
 }
 
@@ -535,13 +518,21 @@ function injectBreadcrumbJsonLd(baseHtml, breadcrumb) {
 }
 
 function injectTravelHeroPreload(baseHtml, preloadData) {
-  if (!preloadData?.href) return baseHtml;
+  if (!preloadData?.mobileHref && !preloadData?.desktopHref) return baseHtml;
 
-  const preloadTag = `<link data-travel-hero-preload="true" rel="preload" as="image" href="${escapeAttr(preloadData.href)}" imagesrcset="${escapeAttr(preloadData.srcSet || '')}" imagesizes="${escapeAttr(preloadData.sizes || '')}" fetchpriority="high" crossorigin="anonymous"/>`;
+  const preloadTags = [
+    preloadData.mobileHref
+      ? `<link data-travel-hero-preload="true" data-hero-variant="mobile" rel="preload" as="image" href="${escapeAttr(preloadData.mobileHref)}" media="(max-width: 767px)" fetchpriority="high" crossorigin="anonymous"/>`
+      : '',
+    preloadData.desktopHref
+      ? `<link data-travel-hero-preload="true" data-hero-variant="desktop" rel="preload" as="image" href="${escapeAttr(preloadData.desktopHref)}" media="(min-width: 768px)" fetchpriority="high" crossorigin="anonymous"/>`
+      : '',
+  ].filter(Boolean).join('\n');
+
   return replaceOrInsert(
     baseHtml,
-    /<link[^>]*data-travel-hero-preload="true"[^>]*\/?>/i,
-    preloadTag
+    /<link[^>]*data-travel-hero-preload="true"[^>]*\/?>\n?<link[^>]*data-travel-hero-preload="true"[^>]*\/?>|<link[^>]*data-travel-hero-preload="true"[^>]*\/?>/i,
+    preloadTags
   );
 }
 

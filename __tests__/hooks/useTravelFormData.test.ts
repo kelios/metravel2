@@ -818,4 +818,35 @@ describe('useTravelFormData', () => {
       expect(saveFormData).toHaveBeenCalled();
     });
   });
+
+  describe('Manual save errors', () => {
+    it('rethrows manual save errors after showing toast', async () => {
+      const saveError = new Error('Network error');
+      (saveFormData as jest.Mock).mockRejectedValue(saveError);
+
+      const { result } = renderHook(
+        () =>
+          useTravelFormData({
+            travelId: null,
+            isNew: true,
+            userId: '42',
+            isSuperAdmin: false,
+            isAuthenticated: true,
+            authReady: true,
+          }),
+        { concurrentRoot: false }
+      );
+
+      await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+      act(() => {
+        result.current.setFormData({
+          ...(result.current.formData as any),
+          name: 'Failed save',
+        });
+      });
+
+      await expect(result.current.handleManualSave()).rejects.toThrow('Network error');
+    });
+  });
 });
