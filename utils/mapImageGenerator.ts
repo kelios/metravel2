@@ -4,22 +4,32 @@
 import type { MapPoint } from '@/types/article-pdf';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
- const leafletRouteSnapshotCache = new Map<string, Promise<string | null>>();
+const leafletRouteSnapshotCache = new Map<string, Promise<string | null>>();
 
- function buildLeafletRouteSnapshotCacheKey(
-   points: { lat: number; lng: number; label?: string }[],
-   options: { width: number; height: number; zoom: number }
- ): string {
-   const normalizedPoints = points
-     .map((p) => {
-       const lat = Number.isFinite(p.lat) ? Number(p.lat).toFixed(6) : 'NaN';
-       const lng = Number.isFinite(p.lng) ? Number(p.lng).toFixed(6) : 'NaN';
-       const label = typeof p.label === 'string' ? p.label.trim() : '';
-       return `${lat},${lng},${label}`;
-     })
-     .join('|');
-   return `${options.width}x${options.height}@${options.zoom}:${normalizedPoints}`;
- }
+function normalizeCoordPair(lat: number, lng: number): string {
+  const safeLat = Number.isFinite(lat) ? Number(lat).toFixed(6) : 'NaN';
+  const safeLng = Number.isFinite(lng) ? Number(lng).toFixed(6) : 'NaN';
+  return `${safeLat},${safeLng}`;
+}
+
+function buildLeafletRouteSnapshotCacheKey(
+  points: { lat: number; lng: number; label?: string }[],
+  routeLine: Array<[number, number]>,
+  options: { width: number; height: number; zoom: number }
+): string {
+  const normalizedPoints = points
+    .map((p) => {
+      const label = typeof p.label === 'string' ? p.label.trim() : '';
+      return `${normalizeCoordPair(p.lat, p.lng)},${label}`;
+    })
+    .join('|');
+
+  const normalizedRouteLine = routeLine
+    .map(([lat, lng]) => normalizeCoordPair(lat, lng))
+    .join('|');
+
+  return `${options.width}x${options.height}@${options.zoom}:p=${normalizedPoints}:r=${normalizedRouteLine}`;
+}
 
 /**
  * Генерирует URL для статичной карты через Google Static Maps API
@@ -200,7 +210,7 @@ export async function generateLeafletRouteSnapshot(
   const zoom = options.zoom ?? 10;
   const routeLine = options.routeLine ?? [];
 
-  const cacheKey = buildLeafletRouteSnapshotCacheKey(points, { width, height, zoom });
+  const cacheKey = buildLeafletRouteSnapshotCacheKey(points, routeLine, { width, height, zoom });
   const cached = leafletRouteSnapshotCache.get(cacheKey);
   if (cached) return cached;
 

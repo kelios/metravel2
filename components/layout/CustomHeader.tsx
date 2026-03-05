@@ -343,7 +343,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             }),
         },
         navItemActive: {
-            backgroundColor: colors.primaryLight,
+            backgroundColor: colors.brandLight,
             ...Platform.select({
                 web: {
                     boxShadow: DESIGN_TOKENS.shadows.light as any,
@@ -357,7 +357,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             letterSpacing: -0.1,
         },
         navLabelActive: {
-            color: colors.primaryText,
+            color: colors.brandText,
             fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
             letterSpacing: -0.2,
         },
@@ -371,7 +371,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         createButton: {
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: colors.primary,
+            backgroundColor: colors.brand,
             paddingHorizontal: 16,
             paddingVertical: 10,
             borderRadius: 999,
@@ -382,7 +382,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                 web: {
                     transition: 'transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease' as any,
                     cursor: 'pointer' as any,
-                    boxShadow: DESIGN_TOKENS.shadows.medium as any,
+                    boxShadow: `0 4px 14px ${colors.brand}40` as any,
                 },
             }),
         },

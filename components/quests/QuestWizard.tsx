@@ -755,7 +755,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                             const questUrl = typeof window !== 'undefined'
                                                                 ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
                                                                 : undefined;
-                                                            generatePrintableQuest({ title, steps, intro, questUrl });
+                                                            void generatePrintableQuest({ title, steps, intro, questUrl });
                                                         }}
                                                         hitSlop={6}
                                                     >
@@ -1191,12 +1191,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '600' },
 
     startButton: {
-        backgroundColor: colors.primary,
+        backgroundColor: colors.brand,
         padding: SPACING.lg,
         borderRadius: 14,
         alignItems: 'center',
         minHeight: 52,
         justifyContent: 'center',
+        ...Platform.select({ web: { boxShadow: `0 4px 14px ${colors.brand}40` } as any }),
     },
     startButtonText: { color: colors.textOnPrimary, fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
 

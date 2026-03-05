@@ -83,7 +83,7 @@ export const createHomeHeroStyles = ({
     width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
     ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.2s ease' } }),
   },
-  sliderDotActive: { backgroundColor: colors.textOnPrimary, borderColor: colors.textOnPrimary },
+  sliderDotActive: { backgroundColor: colors.brand, borderColor: colors.brand },
   slideCounter: {
     position: 'absolute' as const, bottom: 14, right: 14, zIndex: 4, paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: 'rgba(9, 20, 33, 0.52)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
@@ -103,7 +103,7 @@ export const createHomeHeroStyles = ({
   },
   titleAccent: {
     fontSize: isSmallPhone ? 26 : isMobile ? 30 : isTablet ? 40 : (isDesktop ? 52 : 46),
-    fontWeight: '900', color: colors.primary, letterSpacing: -1.5,
+    fontWeight: '900', color: colors.brand, letterSpacing: -1.5,
     lineHeight: isSmallPhone ? 32 : isMobile ? 36 : isTablet ? 48 : (isDesktop ? 60 : 54), textAlign: 'left',
   },
   subtitle: { fontSize: isMobile ? 15 : 18, fontWeight: '400', color: colors.textMuted, lineHeight: isMobile ? 22 : 28, textAlign: 'left', maxWidth: 520, alignSelf: 'flex-start' },
@@ -123,9 +123,10 @@ export const createHomeHeroStyles = ({
   primaryButton: {
     paddingHorizontal: isMobile ? 24 : 40, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 46 : 54,
     borderRadius: DESIGN_TOKENS.radii.pill, width: isMobile ? '100%' : undefined,
-    ...Platform.select({ web: { transition: 'all 0.2s ease', boxShadow: DESIGN_TOKENS.shadows.medium } }),
+    backgroundColor: colors.brand,
+    ...Platform.select({ web: { transition: 'all 0.2s ease', boxShadow: `0 4px 14px ${colors.brand}40` } }),
   },
-  primaryButtonHover: { backgroundColor: colors.primaryDark, ...Platform.select({ web: { transform: 'translateY(-2px)', boxShadow: DESIGN_TOKENS.shadows.heavy } }) },
+  primaryButtonHover: { backgroundColor: colors.brandDark, ...Platform.select({ web: { transform: 'translateY(-2px)', boxShadow: `0 6px 20px ${colors.brand}50` } }) },
   primaryButtonText: { fontSize: isMobile ? 15 : 16, fontWeight: '700', color: colors.textOnPrimary },
   secondaryButton: {
     paddingHorizontal: isMobile ? 18 : 24, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 46 : 54,

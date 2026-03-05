@@ -14,6 +14,7 @@ interface IconButtonProps {
   testID?: string;
   style?: StyleProp<ViewStyle>;
   showLabel?: boolean;
+  showTooltip?: boolean;
 }
 
 const spacing = DESIGN_TOKENS.spacing;
@@ -34,6 +35,7 @@ function IconButton({
   testID,
   style,
   showLabel = false,
+  showTooltip = true,
 }: IconButtonProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -109,7 +111,7 @@ function IconButton({
       ]}
     >
       <View style={styles.icon}>{icon}</View>
-      {Platform.OS === 'web' && hovered && !disabled ? (
+      {Platform.OS === 'web' && showTooltip && hovered && !disabled ? (
         <View style={[styles.tooltip, { backgroundColor: colors.text }]}>
           <Text style={[styles.tooltipText, { color: colors.surface }]}>{label}</Text>
         </View>
@@ -182,25 +184,28 @@ const getStyles = (colors: ThemedColors) => {
   },
   tooltip: {
     position: 'absolute',
-    top: -36,
-    left: '50%',
-    transform: [{ translateX: -0.5 } as any],
+    top: -44,
+    right: 0,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.sm,
-    maxWidth: 240,
+    minWidth: 120,
+    maxWidth: 180,
     zIndex: 9999,
     pointerEvents: 'none',
     ...Platform.select({
       web: {
-        whiteSpace: 'nowrap',
+        whiteSpace: 'normal',
+        wordBreak: 'break-word',
+        boxShadow: boxShadows.heavy,
       },
     }),
   },
   tooltipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    lineHeight: DESIGN_TOKENS.typography.sizes.xs + 2,
+    lineHeight: DESIGN_TOKENS.typography.sizes.xs + 4,
     fontWeight: '500' as any,
+    textAlign: 'left',
   },
   disabled: {
     opacity: 0.5,

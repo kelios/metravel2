@@ -25,6 +25,7 @@ const mockLeaflet = {
   latLngBounds: jest.fn((coords: any[]) => ({ coords, isValid: jest.fn(() => true) })),
   divIcon: jest.fn((icon: any) => icon),
   marker: jest.fn(() => ({ addTo: jest.fn() })),
+  polyline: jest.fn(() => ({ addTo: jest.fn() })),
 }
 
 jest.mock('leaflet', () => ({
@@ -134,5 +135,50 @@ describe('generateLeafletRouteSnapshot', () => {
     expect(mockLeaflet.map).toHaveBeenCalled()
     expect(mockMapRemove).toHaveBeenCalled()
     expect(document.getElementById('metravel-map-snapshot')).toBeNull()
+  })
+
+  it('does not reuse cache when routeLine changes for same points', async () => {
+    jest.useFakeTimers()
+    ;(window as any).L = mockLeaflet
+
+    let imageSeq = 0
+    ;(window as any).html2canvas = jest.fn(() =>
+      Promise.resolve({
+        toDataURL: () => `data:image/png;base64,leaflet-${++imageSeq}`,
+      })
+    )
+
+    const points = [
+      { lat: 10, lng: 20, label: 'A' },
+      { lat: 11, lng: 22, label: 'B' },
+    ]
+
+    const firstPromise = generateLeafletRouteSnapshot(points, {
+      width: 320,
+      height: 180,
+      zoom: 9,
+      routeLine: [
+        [10, 20],
+        [11, 22],
+      ],
+    })
+    jest.runAllTimers()
+    const first = await firstPromise
+
+    const secondPromise = generateLeafletRouteSnapshot(points, {
+      width: 320,
+      height: 180,
+      zoom: 9,
+      routeLine: [
+        [10, 20],
+        [12, 23],
+      ],
+    })
+    jest.runAllTimers()
+    const second = await secondPromise
+
+    expect(first).toBe('data:image/png;base64,leaflet-1')
+    expect(second).toBe('data:image/png;base64,leaflet-2')
+    expect((window as any).html2canvas).toHaveBeenCalledTimes(2)
   })
 })

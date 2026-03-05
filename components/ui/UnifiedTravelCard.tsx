@@ -64,6 +64,7 @@ type Props = {
   webAsView?: boolean;
   webPressableProps?: any;
   visualVariant?: 'default' | 'featured';
+  webHoverScale?: boolean;
 };
 
 const loadedCardImageCache = new Set<string>();
@@ -96,6 +97,7 @@ function UnifiedTravelCard({
   webPressableProps,
   webAsView = false,
   visualVariant = 'default',
+  webHoverScale = true,
 }: Props) {
   const isWeb =
     Platform.OS === 'web' ||
@@ -197,8 +199,8 @@ function UnifiedTravelCard({
         containerHovered: {
           ...Platform.select({
             web: {
-              // ANIM-02: scale + translateY для плавного hover-эффекта
-              transform: 'translateY(-2px) scale(1.015)',
+              // ANIM-02: optional scale + translateY hover effect for dense grids
+              ...(webHoverScale ? { transform: 'translateY(-2px) scale(1.015)' } : null),
               borderColor: colors.primaryAlpha30,
               boxShadow: DESIGN_TOKENS.shadows.medium,
             } as any,
@@ -227,7 +229,7 @@ function UnifiedTravelCard({
         containerFeaturedHovered: {
           ...Platform.select({
             web: {
-              transform: 'translateY(-4px) scale(1.01)',
+              ...(webHoverScale ? { transform: 'translateY(-4px) scale(1.01)' } : null),
               borderColor: colors.primaryAlpha40,
               boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 12px 28px ${colors.primaryAlpha30}`,
             } as any,
@@ -365,7 +367,7 @@ function UnifiedTravelCard({
           flex: 1,
         },
       }),
-    [colors, isWeb],
+    [colors, isWeb, webHoverScale],
   );
 
   // On web we avoid rendering <button> because cards often contain interactive children

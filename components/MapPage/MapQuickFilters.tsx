@@ -132,11 +132,11 @@ const getStyles = (colors: ThemedColors) =>
         : colors.shadows.light),
     },
     chipActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
+      backgroundColor: colors.brand,
+      borderColor: colors.brand,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: `0 2px 12px ${colors.primary}45`,
+            boxShadow: `0 2px 12px ${colors.brand}45`,
           } as any)
         : null),
     },

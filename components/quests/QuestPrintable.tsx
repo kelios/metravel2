@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import type { QuestStep } from './QuestWizard';
-import { openBookPreviewWindow } from '@/utils/openBookPreviewWindow';
+import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow';
+import { generateLeafletRouteSnapshot, generateStaticMapUrl } from '@/utils/mapImageGenerator';
 
 type PrintableProps = {
     title: string;
@@ -13,6 +14,9 @@ const QR_NAV = 80;
 const QR_SITE = 120;
 const MAP_VIEWBOX_WIDTH = 960;
 const MAP_VIEWBOX_HEIGHT = 380;
+const MAP_IMAGE_WIDTH = 1200;
+const MAP_IMAGE_HEIGHT = 520;
+const MAP_IMAGE_ZOOM = 13;
 
 type PrintableMapPoint = {
     lat: number;
@@ -35,8 +39,8 @@ function organicMapsUrl(lat: number, lng: number): string {
     return `https://omaps.app/?ll=${lat},${lng}&z=16`;
 }
 
-function buildPrintableMapSvg(steps: QuestStep[]): string {
-    const points: PrintableMapPoint[] = steps
+function buildPrintableMapPoints(steps: QuestStep[]): PrintableMapPoint[] {
+    return steps
         .filter((step) => Number.isFinite(step.lat) && Number.isFinite(step.lng) && (step.lat !== 0 || step.lng !== 0))
         .map((step, index) => ({
             lat: step.lat,
@@ -44,6 +48,57 @@ function buildPrintableMapSvg(steps: QuestStep[]): string {
             num: index + 1,
             location: step.location || `Точка ${index + 1}`,
         }));
+}
+
+function buildPrintableStaticMapUrl(points: PrintableMapPoint[]): string {
+    if (!points.length) return '';
+
+    return generateStaticMapUrl(
+        points.map((point) => ({
+            name: point.location,
+            lat: point.lat,
+            lng: point.lng,
+        })),
+        {
+            width: MAP_IMAGE_WIDTH,
+            height: MAP_IMAGE_HEIGHT,
+            zoom: MAP_IMAGE_ZOOM,
+        },
+    );
+}
+
+async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[]): Promise<string> {
+    if (!points.length) return '';
+
+    try {
+        const snapshot = await generateLeafletRouteSnapshot(
+            points.map((point) => ({
+                lat: point.lat,
+                lng: point.lng,
+                label: `${point.num}. ${point.location}`,
+            })),
+            {
+                width: MAP_IMAGE_WIDTH,
+                height: MAP_IMAGE_HEIGHT,
+                zoom: MAP_IMAGE_ZOOM,
+                routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
+            },
+        );
+        return snapshot || '';
+    } catch {
+        return '';
+    }
+}
+
+function buildPrintableMapLegend(points: PrintableMapPoint[]): string {
+    if (!points.length) return '';
+
+    return points.map((point) => {
+        return `<span class="map-chip"><b>${point.num}.</b> ${escInline(point.location)}</span>`;
+    }).join('');
+}
+
+function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
 
     if (!points.length) return '';
 
@@ -91,30 +146,23 @@ function buildPrintableMapSvg(steps: QuestStep[]): string {
         `;
     }).join('');
 
-    const legend = points.map((point) => {
-        return `<span class="map-chip"><b>${point.num}.</b> ${escInline(point.location)}</span>`;
-    }).join('');
-
     return `
-        <div class="map-card">
-            <svg class="map-svg" viewBox="0 0 ${MAP_VIEWBOX_WIDTH} ${MAP_VIEWBOX_HEIGHT}" role="img" aria-label="Схема маршрута квеста">
-                <defs>
-                    <linearGradient id="mapBgGradient" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stop-color="#eef7fb"></stop>
-                        <stop offset="100%" stop-color="#f7fbff"></stop>
-                    </linearGradient>
-                    <pattern id="mapGrid" width="42" height="42" patternUnits="userSpaceOnUse">
-                        <path d="M 42 0 L 0 0 0 42" fill="none" stroke="#dce9f2" stroke-width="1"></path>
-                    </pattern>
-                </defs>
-                <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapBgGradient)"></rect>
-                <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapGrid)" opacity="0.9"></rect>
-                <polyline points="${routePath}" fill="none" stroke="#1f6f8b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"></polyline>
-                <polyline points="${routePath}" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.72"></polyline>
-                ${markers}
-            </svg>
-        </div>
-        <div class="map-legend">${legend}</div>
+        <svg class="map-svg" viewBox="0 0 ${MAP_VIEWBOX_WIDTH} ${MAP_VIEWBOX_HEIGHT}" role="img" aria-label="Схема маршрута квеста">
+            <defs>
+                <linearGradient id="mapBgGradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#eef7fb"></stop>
+                    <stop offset="100%" stop-color="#f7fbff"></stop>
+                </linearGradient>
+                <pattern id="mapGrid" width="42" height="42" patternUnits="userSpaceOnUse">
+                    <path d="M 42 0 L 0 0 0 42" fill="none" stroke="#dce9f2" stroke-width="1"></path>
+                </pattern>
+            </defs>
+            <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapBgGradient)"></rect>
+            <rect x="0" y="0" width="${MAP_VIEWBOX_WIDTH}" height="${MAP_VIEWBOX_HEIGHT}" fill="url(#mapGrid)" opacity="0.9"></rect>
+            <polyline points="${routePath}" fill="none" stroke="#1f6f8b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"></polyline>
+            <polyline points="${routePath}" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.72"></polyline>
+            ${markers}
+        </svg>
     `;
 }
 
@@ -122,12 +170,34 @@ function buildPrintableMapSvg(steps: QuestStep[]): string {
  * Генерирует подарочную HTML-версию квеста для печати.
  * Включает: обложку, карту, шаги с QR-кодами навигации, QR на сайт.
  */
-export function generatePrintableQuest({ title, steps, intro, questUrl }: PrintableProps) {
+export async function generatePrintableQuest({ title, steps, intro, questUrl }: PrintableProps): Promise<void> {
     if (Platform.OS !== 'web') return;
 
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
+    const mapPoints = buildPrintableMapPoints(validSteps);
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
-    const mapSvg = buildPrintableMapSvg(validSteps);
+    const previewWindow = openPendingBookPreviewWindow();
+    const mapLeafletDataUrl = await buildPrintableLeafletMapDataUrl(mapPoints);
+    const mapStaticUrl = mapLeafletDataUrl || buildPrintableStaticMapUrl(mapPoints);
+    const mapSvg = buildPrintableMapSvg(mapPoints);
+    const mapLegend = buildPrintableMapLegend(mapPoints);
+    const mapHtml = mapStaticUrl ? `
+        <div class="map-card">
+            <img
+                class="map-image"
+                src="${escInline(mapStaticUrl)}"
+                alt="Карта маршрута квеста"
+                loading="eager"
+                referrerpolicy="no-referrer"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='block';"
+            />
+            <div class="map-fallback">${mapSvg}</div>
+        </div>
+    ` : `
+        <div class="map-card">
+            ${mapSvg}
+        </div>
+    `;
 
     const stepsHtml = steps.map((step, i) => {
         const hasCoords = Number.isFinite(step.lat) && Number.isFinite(step.lng) && (step.lat !== 0 || step.lng !== 0);
@@ -257,7 +327,22 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
         background: #fff;
         box-shadow: inset 0 0 0 1px #f7f9fc;
     }
+    .map-image {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 220px;
+        object-fit: cover;
+        background: #eef3f8;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .map-fallback { display: none; }
     .map-svg { display: block; width: 100%; height: auto; min-height: 220px; }
+    .map-svg {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
     .map-legend {
         display: flex;
         flex-wrap: wrap;
@@ -383,7 +468,8 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
     ${validSteps.length > 0 ? `
     <div class="map-section">
         <h2>Карта маршрута</h2>
-        ${mapSvg}
+        ${mapHtml}
+        <div class="map-legend">${mapLegend}</div>
         <table class="coords-table">
             <thead><tr><th>#</th><th>Локация</th><th>Координаты</th></tr></thead>
             <tbody>
@@ -402,7 +488,7 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
 </body>
 </html>`;
 
-    openBookPreviewWindow(html);
+    openBookPreviewWindow(html, previewWindow);
 }
 
 function escInline(str: string): string {

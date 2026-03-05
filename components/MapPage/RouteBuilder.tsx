@@ -68,6 +68,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               label="Поменять старт и финиш местами"
               size={compact ? 'sm' : 'md'}
               onPress={onSwap}
+              showTooltip={false}
               style={styles.swapActionButton}
             />
           )}
@@ -78,6 +79,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               label="Очистить маршрут"
               size={compact ? 'sm' : 'md'}
               onPress={onClear}
+              showTooltip={false}
               style={styles.iconButton}
             />
           )}

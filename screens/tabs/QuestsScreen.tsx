@@ -126,7 +126,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         actionBtn: {
             flexDirection: 'row',
             gap: spacing.xs,
-            backgroundColor: colors.primary,
+            backgroundColor: colors.brand,
             paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             borderRadius: radii.md,
@@ -201,7 +201,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             justifyContent: 'center',
         },
         cityItemIconActive: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.brand,
         },
         cityItemText: {
             color: colors.text,
@@ -209,7 +209,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             fontWeight: '500',
         },
         cityItemTextActive: {
-            color: colors.primary,
+            color: colors.brandText,
             fontWeight: '600',
         },
         cityItemCount: {
@@ -221,7 +221,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             alignItems: 'center',
         },
         cityItemCountActive: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.brand,
         },
         cityItemCountText: {
             color: colors.textMuted,
@@ -261,8 +261,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             }),
         },
         radiusChipActive: {
-            backgroundColor: colors.primarySoft,
-            borderColor: colors.primary,
+            backgroundColor: colors.brandSoft,
+            borderColor: colors.brand,
         },
         radiusChipText: {
             color: colors.textMuted,
@@ -270,7 +270,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             fontWeight: '600',
         },
         radiusChipTextActive: {
-            color: colors.primaryText,
+            color: colors.brandText,
         },
 
         /* ---- Right Content ---- */
@@ -1036,6 +1036,7 @@ function QuestCard({
             onPress={handlePress}
             width={cardWidth}
             imageHeight={220}
+            webHoverScale={false}
             testID={`quest-card-${quest.id}`}
         />
     );

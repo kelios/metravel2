@@ -120,12 +120,12 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
       borderRadius: radii.pill,
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.brandSoft,
     },
     clearButtonText: {
       fontSize: typography.sizes.xs,
       fontWeight: typography.weights.medium as any,
-      color: colors.primaryText,
+      color: colors.brandText,
     },
     clearAllMobileButton: {
       flexDirection: 'row',
@@ -264,8 +264,8 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       minHeight: 40,
     },
     sortOptionSelected: {
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.primaryAlpha30,
+      backgroundColor: colors.brandSoft,
+      borderColor: colors.brandAlpha30,
     },
     sortOptionHover: Platform.select({
       web: {
@@ -281,7 +281,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       justifyContent: 'center',
     },
     sortIconContainerSelected: {
-      backgroundColor: colors.primaryAlpha30,
+      backgroundColor: colors.brandAlpha30,
     },
     sortCheckIcon: {
       width: 20,
@@ -290,7 +290,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       justifyContent: 'center',
     },
     sortOptionTextSelected: {
-      color: colors.primaryDark,
+      color: colors.brandDark,
       fontWeight: typography.weights.semibold as any,
     },
     extraFilters: {

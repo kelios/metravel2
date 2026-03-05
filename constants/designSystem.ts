@@ -132,6 +132,15 @@ export const DESIGN_TOKENS = {
     accentLight: colorVar('accentLight', MODERN_MATTE_PALETTE.accentLight),
     accentSoft: colorVar('accentSoft', MODERN_MATTE_PALETTE.accentSoft),
     
+    // Брендовые оранжевые цвета (птичка логотипа)
+    brand: colorVar('brand', MODERN_MATTE_PALETTE.brand),
+    brandDark: colorVar('brandDark', MODERN_MATTE_PALETTE.brandDark),
+    brandText: colorVar('brandText', MODERN_MATTE_PALETTE.brandText),
+    brandLight: colorVar('brandLight', MODERN_MATTE_PALETTE.brandLight),
+    brandSoft: colorVar('brandSoft', MODERN_MATTE_PALETTE.brandSoft),
+    brandAlpha30: colorVarAlphaHex('brand', MODERN_MATTE_PALETTE.brand, '30'),
+    brandAlpha40: colorVarAlphaHex('brand', MODERN_MATTE_PALETTE.brand, '40'),
+    
     // Функциональные цвета (мягкие, не агрессивные)
     success: colorVar('success', MODERN_MATTE_PALETTE.success),
     successDark: colorVar('successDark', MODERN_MATTE_PALETTE.successDark),
@@ -301,6 +310,15 @@ export function getThemedColors(isDark: boolean) {
     accentDark: themedColor('accentDark', MODERN_MATTE_PALETTE.accentDark, MODERN_MATTE_PALETTE_DARK.accentDark, isDark),
     accentLight: themedColor('accentLight', MODERN_MATTE_PALETTE.accentLight, MODERN_MATTE_PALETTE_DARK.accentLight, isDark),
     accentSoft: themedColor('accentSoft', MODERN_MATTE_PALETTE.accentSoft, MODERN_MATTE_PALETTE_DARK.accentSoft, isDark),
+
+    // Брендовые оранжевые цвета (птичка логотипа)
+    brand: themedColor('brand', MODERN_MATTE_PALETTE.brand, MODERN_MATTE_PALETTE_DARK.brand, isDark),
+    brandDark: themedColor('brandDark', MODERN_MATTE_PALETTE.brandDark, MODERN_MATTE_PALETTE_DARK.brandDark, isDark),
+    brandText: themedColor('brandText', MODERN_MATTE_PALETTE.brandText, MODERN_MATTE_PALETTE_DARK.brandText, isDark),
+    brandLight: themedColor('brandLight', MODERN_MATTE_PALETTE.brandLight, MODERN_MATTE_PALETTE_DARK.brandLight, isDark),
+    brandSoft: themedColor('brandSoft', MODERN_MATTE_PALETTE.brandSoft, MODERN_MATTE_PALETTE_DARK.brandSoft, isDark),
+    brandAlpha30: themedColorAlphaHex('brand', MODERN_MATTE_PALETTE.brand, MODERN_MATTE_PALETTE_DARK.brand, '30', isDark),
+    brandAlpha40: themedColorAlphaHex('brand', MODERN_MATTE_PALETTE.brand, MODERN_MATTE_PALETTE_DARK.brand, '40', isDark),
 
     // Text
     text: themedColor('text', MODERN_MATTE_PALETTE.text, MODERN_MATTE_PALETTE_DARK.text, isDark),
