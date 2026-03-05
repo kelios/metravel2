@@ -138,7 +138,7 @@ describe('Android Configuration Tests', () => {
     it('should reference adaptive icon', () => {
       const appConfig = readAppConfig();
       const adaptiveIcon = appConfig.expo.android.adaptiveIcon.foregroundImage;
-      expect(adaptiveIcon).toContain('assets/images/adaptive-icon.png');
+      expect(adaptiveIcon).toContain('assets/images/favicon.ico');
     });
 
     it('should have icon reference', () => {
@@ -150,7 +150,7 @@ describe('Android Configuration Tests', () => {
     it('should have splash screen reference', () => {
       const appConfig = readAppConfig();
       expect(appConfig.expo.splash).toBeDefined();
-      expect(appConfig.expo.splash.image).toContain('assets/images/splash.png');
+      expect(appConfig.expo.splash.image).toContain('assets/images/favicon.ico');
     });
   });
 
