@@ -257,6 +257,23 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     }
   }, [coordsText, hasCoords, point?.name]);
 
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const webHoverProps = Platform.OS === 'web' ? {
+    onMouseEnter: () => setIsHovered(true),
+    onMouseLeave: () => setIsHovered(false),
+  } : {};
+
+  const hoverStyle = Platform.OS === 'web' && isHovered ? {
+    transform: [{ translateY: -2 }],
+    // @ts-expect-error boxShadow is web-only CSS property not in RN types
+    boxShadow: '0 8px 24px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04)',
+  } : {};
+
+  const actionsHoverStyle = Platform.OS === 'web' && isHovered ? {
+    opacity: 1,
+  } : {};
+
   return (
     <TouchableOpacity
       testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
@@ -265,6 +282,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         layout === 'grid' ? styles.containerGrid : null,
         compact ? styles.containerCompact : null,
         active ? styles.containerActive : null,
+        hoverStyle,
       ]}
       onPress={() => {
         if (selectionMode) {
@@ -273,23 +291,37 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         }
         onPress?.(point);
       }}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
+      {...webHoverProps}
     >
-      <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
-
-      {photoUrl ? (
-        <View style={[styles.photoWrap, layout === 'grid' ? styles.photoWrapGrid : null]}>
+      {/* Image section - always on top in new vertical layout */}
+      <View style={[styles.photoWrap, layout === 'grid' ? styles.photoWrapGrid : null]}>
+        {photoUrl ? (
           <ImageCardMedia
             src={photoUrl}
-            height={layout === 'grid' ? 120 : 84}
-            width={layout === 'grid' ? '100%' : 84}
-            borderRadius={DESIGN_TOKENS.radii.md}
-            fit="contain"
+            height={layout === 'grid' ? 160 : 140}
+            width="100%"
+            borderRadius={0}
+            fit="cover"
             blurBackground
-            blurRadius={12}
+            blurRadius={16}
           />
-        </View>
-      ) : null}
+        ) : (
+          <View style={{ flex: 1, backgroundColor: colors.backgroundTertiary }} />
+        )}
+        
+        {/* Color indicator dot on image */}
+        <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
+        
+        {/* Category badge overlay on image */}
+        {categoryLabel ? (
+          <View style={styles.imageOverlay}>
+            <View style={styles.imageBadge}>
+              <Text style={styles.imageBadgeText}>{categoryLabel}</Text>
+            </View>
+          </View>
+        ) : null}
+      </View>
 
       <View
         style={[
@@ -315,7 +347,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
           </View>
 
           {showActions ? (
-            <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null]}>
+            <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null, actionsHoverStyle]}>
               {typeof onEdit === 'function' ? (
                 Platform.OS === 'web' ? (
                   <ActionButton label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
@@ -344,31 +376,23 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
             </View>
           ) : null}
         </View>
+
+        {/* Subtitle: address or country */}
+        {showAddress ? (
+          <Text style={styles.address} numberOfLines={1}>
+            {point.address}
+          </Text>
+        ) : !isSitePoint && countryLabel ? (
+          <Text style={styles.address} numberOfLines={1}>
+            {countryLabel}
+          </Text>
+        ) : null}
         
         {point.description && (
           <Text style={styles.description} numberOfLines={2}>
             {point.description}
           </Text>
         )}
-
-        <View style={styles.metadata}>
-          {hasCoords && categoryLabel ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{categoryLabel}</Text>
-            </View>
-          ) : null}
-          {!isSitePoint && countryLabel ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{countryLabel}</Text>
-            </View>
-          ) : null}
-        </View>
-        
-        {showAddress ? (
-          <Text style={styles.address} numberOfLines={1}>
-            {point.address}
-          </Text>
-        ) : null}
 
         {hasCoords ? (
           Platform.OS === 'web' ? (
@@ -439,15 +463,19 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    marginHorizontal: DESIGN_TOKENS.spacing.lg,
-    marginBottom: DESIGN_TOKENS.spacing.lg,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    marginHorizontal: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.border,
-    ...(Platform.OS === 'web' ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any) : null),
+    borderColor: colors.borderLight,
+    ...(Platform.OS === 'web' ? ({
+      boxShadow: '0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03)',
+      transition: 'transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease',
+      cursor: 'pointer',
+    } as any) : null),
   },
   containerCompact: {
     marginHorizontal: 0,
@@ -455,8 +483,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   containerActive: {
     borderColor: colors.primary,
     borderWidth: 2,
-    backgroundColor: `${colors.primary}08`,
-    ...(Platform.OS === 'web' ? ({ boxShadow: `0 0 0 4px ${colors.primary}15, ${DESIGN_TOKENS.shadows.card}` } as any) : null),
+    backgroundColor: colors.primarySoft,
+    ...(Platform.OS === 'web' ? ({ boxShadow: `0 0 0 3px ${colors.primary}20, 0 4px 12px rgba(0,0,0,0.08)` } as any) : null),
   },
   containerGrid: {
     marginHorizontal: 0,
@@ -465,19 +493,30 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignSelf: 'stretch',
   },
   colorIndicator: {
-    width: 6,
+    position: 'absolute',
+    top: DESIGN_TOKENS.spacing.sm,
+    left: DESIGN_TOKENS.spacing.sm,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    zIndex: 2,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.9)',
+    ...(Platform.OS === 'web' ? ({ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' } as any) : null),
   },
   photoWrap: {
-    width: 84,
-    padding: DESIGN_TOKENS.spacing.sm,
+    width: '100%',
+    height: 140,
+    position: 'relative',
   },
   photoWrapGrid: {
-    width: 140,
-    padding: DESIGN_TOKENS.spacing.sm,
+    width: '100%',
+    height: 160,
   },
   content: {
     flex: 1,
     padding: DESIGN_TOKENS.spacing.md,
+    paddingTop: DESIGN_TOKENS.spacing.sm,
   },
   contentSelectionMode: {
     paddingRight: DESIGN_TOKENS.spacing.md + 40,
@@ -486,13 +525,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
+    gap: 8,
+    marginBottom: 4,
   },
   headerRowNarrow: {
     flexDirection: 'column',
     alignItems: 'stretch',
-    gap: 6,
+    gap: 4,
   },
   headerMain: {
     flex: 1,
@@ -503,24 +542,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 6,
-    marginTop: 2,
+    gap: 4,
     flexShrink: 0,
+    ...(Platform.OS === 'web' ? ({
+      opacity: 0,
+      transition: 'opacity 150ms ease',
+    } as any) : null),
   },
   headerActionsNarrow: {
     width: '100%',
     justifyContent: 'flex-end',
   },
   webActionButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    backgroundColor: colors.backgroundSecondary,
+    ...(Platform.OS === 'web' ? ({
+      cursor: 'pointer',
+      transition: 'background-color 150ms ease, transform 100ms ease',
+    } as any) : null),
   },
   selectionBadge: {
     position: 'absolute',
@@ -542,48 +585,57 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.surface,
   },
   name: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: '700' as any,
+    fontSize: 17,
+    fontWeight: '600' as any,
     color: colors.text,
-    lineHeight: 24,
+    lineHeight: 22,
+    letterSpacing: -0.2,
   },
   description: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-    lineHeight: 20,
+    marginBottom: 6,
+    lineHeight: 18,
   },
   metadata: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: DESIGN_TOKENS.spacing.xs,
+    gap: 6,
+    marginTop: 8,
   },
   badge: {
     backgroundColor: colors.backgroundTertiary,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    marginRight: DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.pill,
   },
   badgeText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontSize: 11,
+    fontWeight: '500' as any,
     color: colors.textMuted,
+    letterSpacing: 0.2,
   },
   address: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontSize: 13,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 4,
+    lineHeight: 18,
   },
   coordsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: DESIGN_TOKENS.spacing.xs,
-    gap: 6,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    gap: 8,
   },
   coordsBlock: {
-    marginTop: DESIGN_TOKENS.spacing.xs,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
     gap: 6,
   },
   coordsActionsRow: {
@@ -598,24 +650,61 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     justifyContent: 'flex-end',
   },
   coordsText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontSize: 12,
+    fontFamily: Platform.OS === 'web' ? 'monospace' : undefined,
     color: colors.textMuted,
     flex: 1,
     minWidth: 0,
+    opacity: 0.8,
   },
   rating: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
   },
   driveInfoRow: {
-    marginTop: DESIGN_TOKENS.spacing.sm,
-    paddingTop: DESIGN_TOKENS.spacing.sm,
+    marginTop: 10,
+    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    marginHorizontal: -DESIGN_TOKENS.spacing.md,
+    marginBottom: -DESIGN_TOKENS.spacing.md,
+    backgroundColor: colors.primarySoft,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    opacity: 0.95,
+    borderTopColor: colors.primaryAlpha30,
   },
   driveInfoText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '500' as any,
+    color: colors.primaryDark,
+  },
+  // Image overlay for category badge
+  imageOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 8,
+    ...(Platform.OS === 'web' ? ({
+      background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
+    } as any) : {
+      backgroundColor: 'rgba(0,0,0,0.3)',
+    }),
+  },
+  imageBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    ...(Platform.OS === 'web' ? ({
+      backdropFilter: 'blur(8px)',
+    } as any) : null),
+  },
+  imageBadgeText: {
+    fontSize: 11,
+    fontWeight: '600' as any,
+    color: '#1a1a1a',
+    letterSpacing: 0.3,
   },
 });

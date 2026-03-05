@@ -235,6 +235,28 @@ console.info = (...args) => {
   return originalInfo(...args);
 };
 
+// Suppress known noisy RN Web warnings from third-party dependencies.
+// Keep this filter narrow so other warnings are preserved.
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  const warningText = args
+    .map((arg) => (typeof arg === 'string' ? arg : arg && typeof arg.message === 'string' ? arg.message : ''))
+    .join(' ');
+
+  const isMissingNativeAnimatedWarn = warningText.includes(
+    'Animated: `useNativeDriver` is not supported because the native animated module is missing'
+  );
+  const isPointerEventsDeprecationWarn = warningText.includes(
+    'props.pointerEvents is deprecated. Use style.pointerEvents'
+  );
+
+  if (isMissingNativeAnimatedWarn || isPointerEventsDeprecationWarn) {
+    return;
+  }
+
+  return originalWarn(...args);
+};
+
 // Suppress FontFaceObserver timeout errors that often surface as
 // `Uncaught (in promise) Error: 6000ms timeout exceeded` on web.
 // We only prevent default for this specific known case.

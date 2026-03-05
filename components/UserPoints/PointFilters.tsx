@@ -151,7 +151,8 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
-    marginVertical: DESIGN_TOKENS.spacing.md,
+    marginVertical: DESIGN_TOKENS.spacing.sm,
+    gap: 4,
   },
   chipScroll: {
     flexGrow: 0,
@@ -159,6 +160,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       ? ({
           overflowX: 'auto',
           overflowY: 'hidden',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         } as any)
       : null),
   },
@@ -166,23 +169,34 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     paddingRight: DESIGN_TOKENS.spacing.md,
+    gap: 8,
   },
   chipWrapRow: {
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
+    gap: 8,
   },
   chipItem: {
-    marginRight: DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
+    // gap handles spacing now
   },
   colorChip: {
     borderWidth: 2,
-    marginRight: DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
+    borderRadius: 10,
+    width: 28,
+    height: 28,
+    ...(Platform.OS === 'web' ? ({
+      transition: 'transform 100ms ease, box-shadow 150ms ease',
+      cursor: 'pointer',
+    } as any) : null),
   },
   colorChipSelected: {
-    backgroundColor: colors.backgroundTertiary,
+    ...(Platform.OS === 'web' ? ({
+      boxShadow: `0 0 0 3px ${colors.primary}30`,
+      transform: [{ scale: 1.1 }],
+    } as any) : {
+      borderColor: colors.primary,
+    }),
   },
 });

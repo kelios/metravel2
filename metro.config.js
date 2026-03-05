@@ -210,8 +210,11 @@ config.resolver.resolveRequest = ((orig) => {
           req.url = url
         }
 
-        // CORS proxy for API requests
-        if (pathname.startsWith('/api/')) {
+	        // CORS proxy for API requests.
+	        // Important: do not proxy Metro async chunks like /api/*.bundle,
+	        // otherwise dynamic imports from "@/api/*" break with 404.
+	        const isMetroModuleAsset = /\.bundle$|\.map$/i.test(pathname)
+	        if (pathname.startsWith('/api/') && !isMetroModuleAsset) {
           const apiHost = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.36';
           const targetUrl = `${apiHost}${url}`;
 

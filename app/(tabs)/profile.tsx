@@ -1,5 +1,5 @@
 // Страница профиля пользователя
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,8 @@ import {
   RefreshControl,
   type ViewStyle,
   type DimensionValue,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -25,7 +27,7 @@ import Button from '@/components/ui/Button';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
-import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
+import { BREAKPOINTS, PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -120,6 +122,7 @@ const normalizeToTravel = (item: Record<string, unknown>): Travel => {
 };
 
 const keyExtractor = (item: Travel, index: number) => `${item.id}-${index}`;
+const PROFILE_TRAVELS_PER_PAGE = PER_PAGE;
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -195,27 +198,114 @@ export default function ProfileScreen() {
     viewsCount: 0,
   });
   const [travelsLoading, setTravelsLoading] = useState(true);
+  const [travelsLoadingMore, setTravelsLoadingMore] = useState(false);
+  const [travelsPage, setTravelsPage] = useState(1);
+  const [travelsHasMore, setTravelsHasMore] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
   const [myTravels, setMyTravels] = useState<Travel[]>([]);
+  const lastEndReachedAtRef = useRef(0);
 
   const loadTravels = useCallback(async () => {
     const uid = userId;
-    if (!uid) { setTravelsLoading(false); return; }
+    if (!uid) {
+      setTravelsLoading(false);
+      setTravelsLoadingMore(false);
+      setTravelsPage(1);
+      setTravelsHasMore(false);
+      setMyTravels([]);
+      return;
+    }
     setTravelsLoading(true);
+    setTravelsLoadingMore(false);
+    lastEndReachedAtRef.current = 0;
     try {
-      const payload = await fetchMyTravels({ user_id: uid });
+      const payload = await fetchMyTravels({
+        user_id: uid,
+        page: 1,
+        perPage: PROFILE_TRAVELS_PER_PAGE,
+      });
       const { items, total } = unwrapMyTravelsPayload(payload);
-      setMyTravels(items.map(normalizeToTravel));
+      const normalized = items.map(normalizeToTravel);
+      const effectiveTotal = total || normalized.length;
+
+      setMyTravels(normalized);
+      setTravelsPage(1);
+      setTravelsHasMore(normalized.length < effectiveTotal && items.length > 0);
       setStats((prev) => ({
         ...prev,
-        travelsCount: total || items.length,
+        travelsCount: effectiveTotal,
       }));
     } catch {
+      setMyTravels([]);
+      setTravelsPage(1);
+      setTravelsHasMore(false);
       setStats((prev) => ({ ...prev, travelsCount: 0 }));
     } finally {
       setTravelsLoading(false);
     }
   }, [userId]);
+
+  const loadMoreTravels = useCallback(async () => {
+    const uid = userId;
+    if (!uid) return;
+    if (activeTab !== 'travels') return;
+    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
+    if (myTravels.length === 0) return;
+
+    const nextPage = travelsPage + 1;
+    setTravelsLoadingMore(true);
+
+    try {
+      const payload = await fetchMyTravels({
+        user_id: uid,
+        page: nextPage,
+        perPage: PROFILE_TRAVELS_PER_PAGE,
+      });
+      const { items, total } = unwrapMyTravelsPayload(payload);
+      const normalized = items.map(normalizeToTravel);
+
+      const existingIds = new Set(myTravels.map((travel) => String(travel.id)));
+      const uniqueNext = normalized.filter((travel) => !existingIds.has(String(travel.id)));
+      const mergedTravels = uniqueNext.length > 0 ? [...myTravels, ...uniqueNext] : myTravels;
+      const effectiveTotal = total || mergedTravels.length;
+
+      setMyTravels(mergedTravels);
+      setTravelsPage(nextPage);
+      setTravelsHasMore(mergedTravels.length < effectiveTotal && items.length > 0);
+      setStats((prev) => ({
+        ...prev,
+        travelsCount: effectiveTotal,
+      }));
+    } catch {
+      setTravelsHasMore(false);
+    } finally {
+      setTravelsLoadingMore(false);
+    }
+  }, [activeTab, myTravels, travelsHasMore, travelsLoading, travelsLoadingMore, travelsPage, userId]);
+
+  const handleListEndReached = useCallback(() => {
+    if (activeTab !== 'travels') return;
+    if (travelsLoading || travelsLoadingMore || !travelsHasMore) return;
+    if (myTravels.length === 0) return;
+
+    const now = Date.now();
+    if (now - lastEndReachedAtRef.current < 800) return;
+
+    lastEndReachedAtRef.current = now;
+    void loadMoreTravels();
+  }, [activeTab, loadMoreTravels, myTravels.length, travelsHasMore, travelsLoading, travelsLoadingMore]);
+
+  const handleWebScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (activeTab !== 'travels') return;
+
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    const threshold = layoutMeasurement.height * 0.5;
+
+    if (distanceFromEnd < threshold) {
+      handleListEndReached();
+    }
+  }, [activeTab, handleListEndReached]);
 
   const loadUserInfo = useCallback(async () => {
     try {
@@ -475,6 +565,11 @@ export default function ProfileScreen() {
       flexDirection: 'row',
       justifyContent: 'flex-end',
     },
+    footerLoader: {
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   }), [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth]);
 
   const tabCounts = useMemo(() => ({
@@ -647,6 +742,8 @@ export default function ProfileScreen() {
         <ScrollView
           style={scrollViewStyle}
           contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
+          onScroll={handleWebScroll}
+          scrollEventThrottle={32}
           refreshControl={
             Platform.OS !== 'web' ? (
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -725,6 +822,11 @@ export default function ProfileScreen() {
               })
             )
           )}
+          {activeTab === 'travels' && travelsLoadingMore ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : null}
         </ScrollView>
       ) : (
         <FlashList
@@ -746,6 +848,15 @@ export default function ProfileScreen() {
               </View>
             )
           }
+          ListFooterComponent={
+            activeTab === 'travels' && travelsLoadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : null
+          }
+          onEndReached={activeTab === 'travels' ? handleListEndReached : undefined}
+          onEndReachedThreshold={0.5}
         />
       )}
     </SafeAreaView>

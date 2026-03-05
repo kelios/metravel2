@@ -56,10 +56,11 @@ describe('PointCard', () => {
     expect(screen.getByText('Ресторан')).toBeTruthy();
   });
 
-  it('should not render category when coordinates are missing', () => {
+  it('should render category even when coordinates are missing (shown on image overlay)', () => {
     const pointWithoutCoords = { ...mockPoint, latitude: Number.NaN, longitude: Number.NaN };
     render(<PointCard point={pointWithoutCoords} />);
-    expect(screen.queryByText('Ресторан')).toBeNull();
+    // In the new vertical card design, category is shown on image overlay regardless of coords
+    expect(screen.getByText('Ресторан')).toBeTruthy();
   });
 
   it('should not render coordinates when coordinates are missing', () => {

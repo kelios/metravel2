@@ -100,7 +100,7 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
         <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
 
         {/* Quick filter chips skeleton */}
-        <View style={styles.chipsRow} pointerEvents="none">
+        <View style={[styles.chipsRow, { pointerEvents: 'none' }]}>
           {[52, 68, 58].map((w, i) => (
             <SkeletonLoader key={i} width={w} height={28} borderRadius={14} />
           ))}

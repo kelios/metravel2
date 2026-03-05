@@ -53,8 +53,8 @@ const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
       style={[
         styles.container,
         { bottom: bottomOffset },
+        { pointerEvents: 'box-none' },
       ]}
-      pointerEvents="box-none"
     >
       <Pressable
         style={({ pressed }) => [
@@ -103,4 +103,3 @@ const styles = StyleSheet.create({
 });
 
 export default memo(FloatingActionButton);
-

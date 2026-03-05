@@ -1,3 +1,4 @@
+import { LONG_TIMEOUT } from '@/api/apiConfig';
 import { apiClient } from '@/api/client';
 
 export type CardViewTravelDto = {
@@ -53,7 +54,7 @@ export const normalizeAvatar = (raw: unknown): string | null => {
 
 // NOTE: apiClient.baseURL already includes `/api`, so endpoints here must be without it
 export const fetchUserProfile = async (userId: string | number): Promise<UserProfileDto> => {
-    return apiClient.get<UserProfileDto>(`/user/${userId}/profile/`);
+    return apiClient.get<UserProfileDto>(`/user/${userId}/profile/`, LONG_TIMEOUT);
 };
 
 export const updateUserProfile = async (

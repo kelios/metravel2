@@ -543,7 +543,7 @@ function UnifiedTravelCard({
 
           {/* CARD-03: Визуальный индикатор, что фото кликабельно отдельно от карточки */}
           {onMediaPress && !showHeroTitle ? (
-            <View style={styles.mediaActionHint} pointerEvents="none">
+            <View style={[styles.mediaActionHint, { pointerEvents: 'none' }]}>
               <Feather name="maximize-2" size={14} color="#fff" />
             </View>
           ) : null}

@@ -214,24 +214,32 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   )
 }
 
-const createLocalStyles = (_colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   activeFiltersBlock: {
-    marginBottom: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    padding: DESIGN_TOKENS.spacing.sm,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: DESIGN_TOKENS.radii.md,
   },
   activeFiltersHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   activeFiltersLabel: {
-    marginBottom: DESIGN_TOKENS.spacing.xs,
+    fontSize: 13,
+    fontWeight: '500' as any,
+    color: colors.textMuted,
+    marginBottom: 0,
   },
   activeFiltersChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
   },
   activeFiltersChipItem: {
-    marginRight: DESIGN_TOKENS.spacing.sm,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
+    // gap handles spacing now
   },
 })

@@ -413,7 +413,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             justifyContent: 'center',
         },
 
-        /* ---- Quests Grid (Generous spacing) ---- */
+        /* ---- Quests Grid (Modern responsive grid) ---- */
         questsGrid: {
             flexDirection: 'row',
             flexWrap: 'wrap',
@@ -425,7 +425,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                         ? '1fr' 
                         : isTablet 
                             ? 'repeat(2, 1fr)' 
-                            : 'repeat(auto-fill, minmax(720px, 1fr))',
+                            : 'repeat(3, 1fr)',
                     gap: spacing.xl,
                 } as any,
             }),
@@ -502,16 +502,16 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             }),
         },
 
-        /* ---- Quest Card Styles (Cinematic, Immersive) ---- */
+        /* ---- Quest Card Styles (Modern, Atmospheric) ---- */
         questCard: {
-            borderRadius: radii.xl + 4,
+            borderRadius: radii.xl,
             overflow: 'hidden',
             backgroundColor: colors.surface,
             position: 'relative',
             ...Platform.select({
                 web: {
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
-                    transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+                    transition: 'all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                     cursor: 'pointer',
                     willChange: 'transform, box-shadow',
                 } as any,
@@ -520,14 +520,14 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         questCardHover: {
             ...Platform.select({
                 web: {
-                    transform: 'translateY(-12px) scale(1.015)',
-                    boxShadow: '0 24px 56px rgba(255, 146, 43, 0.18), 0 12px 28px rgba(0,0,0,0.12)',
+                    transform: 'translateY(-6px)',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.12), 0 8px 20px rgba(255, 146, 43, 0.08)',
                 } as any,
             }),
         },
         questCardImage: {
             width: '100%',
-            height: isMobileW ? 260 : 320,
+            height: isMobileW ? 220 : 260,
             position: 'relative',
             overflow: 'hidden',
         },
@@ -536,10 +536,10 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             left: 0,
             right: 0,
             bottom: 0,
-            height: '85%',
+            height: '70%',
             ...Platform.select({
                 web: {
-                    backgroundImage: 'linear-gradient(to top, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.85) 25%, rgba(10,10,15,0.5) 50%, rgba(10,10,15,0.15) 70%, transparent 100%)',
+                    backgroundImage: 'linear-gradient(to top, rgba(15,15,20,0.95) 0%, rgba(15,15,20,0.7) 35%, rgba(15,15,20,0.3) 60%, transparent 100%)',
                 } as any,
             }),
         },
@@ -551,7 +551,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             height: 120,
             ...Platform.select({
                 web: {
-                    backgroundImage: 'radial-gradient(ellipse at center bottom, rgba(255, 146, 43, 0.15) 0%, transparent 70%)',
+                    backgroundImage: 'radial-gradient(ellipse at center bottom, rgba(255, 146, 43, 0.12) 0%, transparent 60%)',
                     pointerEvents: 'none',
                 } as any,
             }),
@@ -564,7 +564,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             bottom: 0,
             ...Platform.select({
                 web: {
-                    boxShadow: 'inset 0 0 60px rgba(0,0,0,0.3)',
+                    boxShadow: 'inset 0 0 40px rgba(0,0,0,0.15)',
                     pointerEvents: 'none',
                 } as any,
             }),
@@ -578,127 +578,124 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             paddingBottom: spacing.xl + spacing.xs,
         },
         questCardCategory: {
-            color: 'rgba(255, 190, 110, 0.95)',
+            color: 'rgba(255, 200, 140, 0.9)',
             fontSize: 10,
-            fontWeight: '700',
+            fontWeight: '600',
             textTransform: 'uppercase',
-            letterSpacing: 2,
-            marginBottom: spacing.sm,
+            letterSpacing: 1.5,
+            marginBottom: spacing.xs,
             ...Platform.select({
                 web: {
-                    textShadow: '0 1px 6px rgba(0,0,0,0.6)',
+                    textShadow: '0 1px 4px rgba(0,0,0,0.5)',
                 } as any,
             }),
         },
         questCardTitle: {
             color: '#ffffff',
-            fontSize: isMobileW ? 22 : 28,
-            fontWeight: '800',
-            letterSpacing: -0.6,
-            lineHeight: isMobileW ? 28 : 36,
-            marginBottom: spacing.lg,
+            fontSize: isMobileW ? 18 : 20,
+            fontWeight: '700',
+            letterSpacing: -0.3,
+            lineHeight: isMobileW ? 24 : 28,
+            marginBottom: spacing.md,
             ...Platform.select({
                 web: {
-                    textShadow: '0 2px 16px rgba(0,0,0,0.6), 0 6px 32px rgba(0,0,0,0.4)',
+                    textShadow: '0 2px 8px rgba(0,0,0,0.4)',
                 } as any,
             }),
         },
         questCardMeta: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.md,
+            gap: spacing.sm,
             flexWrap: 'wrap',
         },
         questCardMetaItem: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.xs,
-            backgroundColor: 'rgba(255,255,255,0.15)',
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.xs,
+            gap: 4,
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            paddingHorizontal: spacing.sm,
+            paddingVertical: 4,
             borderRadius: radii.full,
             ...Platform.select({
                 web: {
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
                 } as any,
             }),
         },
         questCardMetaText: {
-            color: 'rgba(255,255,255,0.98)',
-            fontSize: typography.sizes.sm,
-            fontWeight: '600',
-            letterSpacing: -0.1,
+            color: 'rgba(255,255,255,0.95)',
+            fontSize: 12,
+            fontWeight: '500',
         },
         questCardMetaDivider: {
-            width: 4,
-            height: 4,
-            borderRadius: 2,
-            backgroundColor: 'rgba(255,255,255,0.4)',
+            width: 3,
+            height: 3,
+            borderRadius: 1.5,
+            backgroundColor: 'rgba(255,255,255,0.35)',
         },
         questCardBadge: {
             position: 'absolute',
-            top: spacing.md,
-            left: spacing.md,
-            backgroundColor: 'rgba(255, 146, 43, 0.95)',
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.xs,
+            top: spacing.sm,
+            left: spacing.sm,
+            backgroundColor: 'rgba(255, 146, 43, 0.92)',
+            paddingHorizontal: spacing.sm,
+            paddingVertical: 4,
             borderRadius: radii.full,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.xs,
+            gap: 4,
             ...Platform.select({
                 web: {
-                    backdropFilter: 'blur(8px)',
-                    boxShadow: '0 4px 16px rgba(255, 146, 43, 0.4)',
+                    backdropFilter: 'blur(6px)',
+                    boxShadow: '0 2px 8px rgba(255, 146, 43, 0.35)',
                 } as any,
             }),
         },
         questCardBadgeText: {
             color: '#ffffff',
-            fontSize: 12,
-            fontWeight: '700',
-            letterSpacing: 0.3,
+            fontSize: 11,
+            fontWeight: '600',
         },
         questCardDifficultyBadge: {
             position: 'absolute',
-            top: spacing.md,
-            right: spacing.md,
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            top: spacing.sm,
+            right: spacing.sm,
+            backgroundColor: 'rgba(0,0,0,0.45)',
             paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs + 2,
+            paddingVertical: 4,
             borderRadius: radii.full,
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xxs,
             ...Platform.select({
                 web: {
-                    backdropFilter: 'blur(8px)',
+                    backdropFilter: 'blur(6px)',
                 } as any,
             }),
         },
         questCardDifficultyText: {
-            color: 'rgba(255,255,255,0.9)',
+            color: 'rgba(255,255,255,0.88)',
             fontSize: 11,
-            fontWeight: '600',
+            fontWeight: '500',
         },
         questCardPlayIcon: {
             position: 'absolute',
-            top: '45%',
+            top: '42%',
             left: '50%',
-            width: 72,
-            height: 72,
-            borderRadius: 36,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
             backgroundColor: 'rgba(255, 146, 43, 0.95)',
             alignItems: 'center',
             justifyContent: 'center',
             ...Platform.select({
                 web: {
-                    transform: 'translate(-50%, -50%) scale(0.8)',
-                    boxShadow: '0 12px 40px rgba(255, 146, 43, 0.5), 0 0 0 8px rgba(255, 146, 43, 0.15)',
+                    transform: 'translate(-50%, -50%) scale(0.85)',
+                    boxShadow: '0 8px 24px rgba(255, 146, 43, 0.45), 0 0 0 6px rgba(255, 146, 43, 0.12)',
                     opacity: 0,
-                    transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    transition: 'all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                 } as any,
             }),
         },
@@ -1372,7 +1369,7 @@ function QuestCard({
         router.push(`/quests/${cityId}/${quest.id}`);
     }, [cityId, quest.id]);
 
-    const cardHeight = isPhone ? 400 : 480;
+    const cardHeight = isPhone ? 220 : 260;
 
     return (
         <View
@@ -1438,10 +1435,13 @@ function QuestCard({
                 <View style={s.questCardVignette as ViewStyle} />
                 
                 {/* Gradient overlay for text readability */}
-                <View style={s.questCardGradient as ViewStyle} pointerEvents="none" />
+                <View style={[s.questCardGradient as ViewStyle, { pointerEvents: 'none' }]} />
                 
-                {/* Magical glow at bottom */}
-                <View style={s.questCardMagicGlow as ViewStyle} />
+                {/* Magical glow at bottom (visible on hover) */}
+                <View style={[
+                    s.questCardMagicGlow as ViewStyle,
+                    isHovered && (s.questCardMagicGlowVisible as ViewStyle),
+                ]} />
                 
                 {/* Distance badge (for nearby mode) */}
                 {distanceText && (
@@ -1462,14 +1462,14 @@ function QuestCard({
                     style={[
                         s.questCardPlayIcon as ViewStyle, 
                         isHovered && (s.questCardPlayIconVisible as ViewStyle),
+                        { pointerEvents: 'none' },
                     ]} 
-                    pointerEvents="none"
                 >
-                    <Feather name="play" size={22} color="#ffffff" style={{ marginLeft: 3 } as any} />
+                    <Feather name="play" size={18} color="#ffffff" style={{ marginLeft: 2 } as any} />
                 </View>
                 
                 {/* Content overlay */}
-                <View style={s.questCardContent as ViewStyle} pointerEvents="none">
+                <View style={[s.questCardContent as ViewStyle, { pointerEvents: 'none' }]}>
                     {/* Adventure category */}
                     <Text style={s.questCardCategory as TextStyle}>{categoryLabel}</Text>
                     
