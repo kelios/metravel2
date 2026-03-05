@@ -17,8 +17,11 @@ export type SubscriptionTab = 'subscriptions' | 'subscribers';
 export type AuthorWithTravels = {
   profile: UserProfileDto;
   travels: TravelPreview[];
+  travelsTotal: number;
   isLoadingTravels: boolean;
 };
+
+const SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT = 10;
 
 export function useSubscriptionsData() {
   const { isAuthenticated, authReady } = useAuth();
@@ -52,7 +55,9 @@ export function useSubscriptionsData() {
   const subscribers = useMemo(() => subscribersQuery.data ?? [], [subscribersQuery.data]);
 
   // Author travels loading
-  const [authorTravels, setAuthorTravels] = useState<Record<number, { travels: TravelPreview[]; loading: boolean }>>({});
+  const [authorTravels, setAuthorTravels] = useState<
+    Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>
+  >({});
 
   useEffect(() => {
     if (!subscriptions.length) return;
@@ -63,17 +68,34 @@ export function useSubscriptionsData() {
       setAuthorTravels((prev) => {
         if (prev[userId] && !prev[userId].loading) return prev;
         if (prev[userId]?.loading) return prev;
-        return { ...prev, [userId]: { travels: prev[userId]?.travels ?? [], loading: true } };
+        return {
+          ...prev,
+          [userId]: {
+            travels: prev[userId]?.travels ?? [],
+            total: prev[userId]?.total ?? 0,
+            loading: true,
+          },
+        };
       });
 
-      fetchMyTravels({ user_id: userId })
+      fetchMyTravels({ user_id: userId, perPage: SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT })
         .then((result) => {
-          const { items: list } = unwrapMyTravelsPayload(result);
+          const { items: list, total } = unwrapMyTravelsPayload(result);
           const normalizedTravels = list.map(normalizeTravelPreview);
-          setAuthorTravels((prev) => ({ ...prev, [userId]: { travels: normalizedTravels, loading: false } }));
+          setAuthorTravels((prev) => ({
+            ...prev,
+            [userId]: {
+              travels: normalizedTravels,
+              total: total || normalizedTravels.length,
+              loading: false,
+            },
+          }));
         })
         .catch(() => {
-          setAuthorTravels((prev) => ({ ...prev, [userId]: { travels: [], loading: false } }));
+          setAuthorTravels((prev) => ({
+            ...prev,
+            [userId]: { travels: [], total: 0, loading: false },
+          }));
         });
     });
   }, [subscriptions]);
@@ -83,7 +105,12 @@ export function useSubscriptionsData() {
       subscriptions.map((profile) => {
         const userId = profile.user ?? profile.id;
         const entry = authorTravels[userId];
-        return { profile, travels: entry?.travels ?? [], isLoadingTravels: entry?.loading ?? true };
+        return {
+          profile,
+          travels: entry?.travels ?? [],
+          travelsTotal: entry?.total ?? 0,
+          isLoadingTravels: entry?.loading ?? true,
+        };
       }),
     [subscriptions, authorTravels]
   );
@@ -126,4 +153,3 @@ export function useSubscriptionsData() {
     handleUnsubscribe,
   };
 }
-

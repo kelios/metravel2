@@ -45,6 +45,7 @@ export default function ExportScreen() {
             fetchMyTravels({
                 user_id: userId as any,
                 includeDrafts: true,
+                perPage: 1,
                 throwOnError: true,
             }),
         enabled: isCountQueryEnabled,

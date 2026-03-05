@@ -28,7 +28,7 @@ interface AuthorCardProps {
 function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProfile }: AuthorCardProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { profile, travels, isLoadingTravels } = author;
+  const { profile, travels, travelsTotal, isLoadingTravels } = author;
   const [avatarError, setAvatarError] = useState(false);
 
   const fullName = useMemo(() => {
@@ -48,11 +48,13 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
   const authorUserId = profile.user ?? profile.id;
 
   const travelCountText = useMemo(() => {
-    const n = travels.length;
+    const n = travelsTotal;
     if (n === 1) return '1 путешествие';
     if (n >= 2 && n < 5) return `${n} путешествия`;
     return `${n} путешествий`;
-  }, [travels.length]);
+  }, [travelsTotal]);
+
+  const hiddenTravelsCount = Math.max(travelsTotal - travels.length, 0);
 
   return (
     <View style={styles.section}>
@@ -139,7 +141,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
               </View>
             );
           })}
-          {travels.length > 10 && (
+          {hiddenTravelsCount > 0 && (
             <Pressable
               style={[styles.showMoreCard, globalFocusStyles.focusable]}
               onPress={() => onOpenProfile(authorUserId)}
@@ -148,7 +150,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
               <Feather name="arrow-right" size={24} color={colors.primary} />
-              <Text style={styles.showMoreText}>Ещё {travels.length - 10}</Text>
+              <Text style={styles.showMoreText}>Ещё {hiddenTravelsCount}</Text>
             </Pressable>
           )}
         </ScrollView>
@@ -202,4 +204,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   });
 
 export default React.memo(AuthorCard);
-

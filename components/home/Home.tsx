@@ -74,7 +74,7 @@ function Home() {
       // Никогда не возвращаем undefined — TanStack Query требует валидные данные
       if (!userId) return { items: [], total: 0 };
       try {
-        const payload = await fetchMyTravels({ user_id: userId });
+        const payload = await fetchMyTravels({ user_id: userId, perPage: 1 });
         return unwrapMyTravelsPayload(payload);
       } catch {
         return { items: [], total: 0 };

@@ -513,6 +513,8 @@ describe('src/api/travelsApi.ts', () => {
       const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
       const urlObj = new URL(url);
       const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+      expect(urlObj.searchParams.get('page')).toBe('1');
+      expect(urlObj.searchParams.get('perPage')).toBe('9999');
 
       expect(where).toEqual(
         expect.objectContaining({
@@ -551,6 +553,24 @@ describe('src/api/travelsApi.ts', () => {
       );
       expect(where.publish).toBeUndefined();
       expect(where.moderation).toBeUndefined();
+    });
+
+    it('использует кастомные page/perPage и нормализует невалидные значения', async () => {
+      const { fetchMyTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValue({ data: [] } as any);
+
+      await fetchMyTravels({ user_id: 7, page: 3, perPage: 25 });
+      let url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      let urlObj = new URL(url);
+      expect(urlObj.searchParams.get('page')).toBe('3');
+      expect(urlObj.searchParams.get('perPage')).toBe('25');
+
+      await fetchMyTravels({ user_id: 8, page: 0, perPage: -10 });
+      url = mockedFetchWithTimeout.mock.calls[1][0] as string;
+      urlObj = new URL(url);
+      expect(urlObj.searchParams.get('page')).toBe('1');
+      expect(urlObj.searchParams.get('perPage')).toBe('9999');
     });
 
     it('unwrapMyTravelsPayload нормализует total/count и списки', () => {

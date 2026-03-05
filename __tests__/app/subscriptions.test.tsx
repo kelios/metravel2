@@ -103,6 +103,10 @@ describe('SubscriptionsScreen', () => {
 
         const authorName = await findByText('Иван Петров');
         expect(authorName).toBeTruthy();
+        expect(mockedFetchMyTravels).toHaveBeenCalledWith({
+            user_id: 42,
+            perPage: 10,
+        });
     });
 
     it('shows header with author count', async () => {

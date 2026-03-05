@@ -131,7 +131,7 @@ describe('Home Component', () => {
 
       const { getByTestId } = renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
-      expect(mockFetchMyTravels).toHaveBeenCalledWith({ user_id: '123' });
+      expect(mockFetchMyTravels).toHaveBeenCalledWith({ user_id: '123', perPage: 1 });
     });
   });
 

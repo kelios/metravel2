@@ -112,6 +112,7 @@ describe('ExportScreen', () => {
     expect(mockFetchMyTravels).toHaveBeenCalledWith({
       user_id: '123',
       includeDrafts: true,
+      perPage: 1,
       throwOnError: true,
     });
   });

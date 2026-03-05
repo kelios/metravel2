@@ -838,6 +838,8 @@ export const fetchMyTravels = async (params: {
     includeDrafts?: boolean;
     publish?: number;
     moderation?: number;
+    page?: number;
+    perPage?: number;
     throwOnError?: boolean;
 }): Promise<MyTravelsPayload> => {
     type MyTravelsYearRange = {
@@ -852,6 +854,13 @@ export const fetchMyTravels = async (params: {
         countries?: string[];
         year?: MyTravelsYearRange;
         hasGallery?: true;
+    };
+
+    const normalizePositiveInt = (value: unknown, fallback: number): number => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return fallback;
+        const normalized = Math.trunc(parsed);
+        return normalized > 0 ? normalized : fallback;
     };
 
     try {
@@ -879,9 +888,12 @@ export const fetchMyTravels = async (params: {
         }
         if (params.onlyWithGallery) whereObject.hasGallery = true;
 
+        const page = normalizePositiveInt(params.page, 1);
+        const perPage = normalizePositiveInt(params.perPage, 9999);
+
         const query = new URLSearchParams({
-            page: '1',
-            perPage: '9999',
+            page: String(page),
+            perPage: String(perPage),
             where: JSON.stringify(whereObject),
         }).toString();
 
