@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
+import Head from 'expo-router/head';
 import * as AuthHookModule from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -27,7 +28,7 @@ import { resolveExportedFunction } from '@/utils/moduleInterop';
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from "@/utils/seo";
-import { createSafeJsonLd, createBreadcrumbJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
+import { createSafeJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { TravelDetailPageSkeleton } from '@/components/travel/TravelDetailPageSkeleton';
@@ -294,7 +295,6 @@ export default function TravelDetailsContainer() {
     canonicalUrl,
     readyImage,
     jsonLd,
-    breadcrumbLd,
   } = useMemo(() => {
     const slugTitle =
       slug.trim().length > 0
@@ -335,7 +335,6 @@ export default function TravelDetailsContainer() {
         : buildOgImageUrl(firstUrl)
       : buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
     const structuredData = createSafeJsonLd(travel);
-    const breadcrumb = createBreadcrumbJsonLd(travel);
 
     return {
       readyTitle: title,
@@ -343,7 +342,6 @@ export default function TravelDetailsContainer() {
       canonicalUrl: canonical,
       readyImage: absImage,
       jsonLd: structuredData,
-      breadcrumbLd: breadcrumb,
     };
   }, [travel, slug]);
   // ✅ FIX: Синхронизируем title экрана с navigation options.
@@ -542,38 +540,36 @@ export default function TravelDetailsContainer() {
   // mounts late (after requestAnimationFrame), meta tags are committed as empty.
   // Rendering it here with fallback values ensures the Helmet instance is stable.
   const seoBlock = (
-    <InstantSEO
-      headKey={headKey}
-      title={readyTitle}
-      description={readyDesc}
-      canonical={canonicalUrl}
-      image={readyImage}
-      imageWidth={readyImage ? 1200 : undefined}
-      imageHeight={readyImage ? 630 : undefined}
-      ogType="article"
-      additionalTags={
-        <>
-          {/* preconnect for image origin removed — already covered by static hints in +html.tsx */}
-          <meta name="theme-color" content={themedColors.background} />
-          {jsonLd && (
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify(jsonLd),
-              }}
-            />
-          )}
-          {breadcrumbLd && (
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{
-                __html: JSON.stringify(breadcrumbLd),
-              }}
-            />
-          )}
-        </>
-      }
-    />
+    <>
+      <InstantSEO
+        headKey={headKey}
+        title={readyTitle}
+        description={readyDesc}
+        canonical={canonicalUrl}
+        image={readyImage}
+        imageWidth={readyImage ? 1200 : undefined}
+        imageHeight={readyImage ? 630 : undefined}
+        ogType="article"
+        additionalTags={
+          <>
+            {/* preconnect for image origin removed — already covered by static hints in +html.tsx */}
+            <meta name="theme-color" content={themedColors.background} />
+          </>
+        }
+      />
+      {jsonLd && (
+        <Head key={`${headKey}-article-jsonld`}>
+          <script
+            key="travel-article-jsonld"
+            id="travel-article-jsonld"
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(jsonLd),
+            }}
+          />
+        </Head>
+      )}
+    </>
   );
 
   // NOTE: Skeleton gate is purely data-driven: show skeleton until `travel` is available.

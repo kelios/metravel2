@@ -2,7 +2,7 @@
  * SEO utilities for canonical URLs and site base URL normalization
  */
 
-export const DEFAULT_OG_IMAGE_PATH = '/assets/icons/logo_yellow_512x512.png';
+export const DEFAULT_OG_IMAGE_PATH = '/og-default.png';
 
 /**
  * Returns normalized site base URL without trailing slash.

@@ -115,12 +115,18 @@ export function createSafeJsonLd(
     }
   }
 
-  // Validate and add images (only first valid image)
-  if (Array.isArray(travel.gallery) && travel.gallery.length > 0) {
-    const imageUrl = getFirstValidGalleryUrl(travel.gallery);
-    if (imageUrl) {
-      safeData.image = [imageUrl]; // Always array format per schema.org
-    }
+  // Validate and add images (prefer gallery; fallback to travel thumbnail URL)
+  const imageFromGallery =
+    Array.isArray(travel.gallery) && travel.gallery.length > 0
+      ? getFirstValidGalleryUrl(travel.gallery)
+      : null;
+  const imageFallback =
+    typeof travel.travel_image_thumb_url === 'string' && isValidImageUrl(travel.travel_image_thumb_url)
+      ? travel.travel_image_thumb_url
+      : null;
+  const imageUrl = imageFromGallery || imageFallback;
+  if (imageUrl) {
+    safeData.image = [imageUrl]; // Always array format per schema.org
   }
 
   // Validate and add URL (slugified)
