@@ -51,6 +51,7 @@ async function suppressDynamicMapLayers(page: any) {
       .leaflet-marker-pane,
       .leaflet-tooltip-pane,
       .leaflet-popup-pane { opacity: 0 !important; visibility: hidden !important; }
+      [data-card-action="true"] { opacity: 0 !important; visibility: hidden !important; }
     `,
   });
 }
@@ -69,7 +70,7 @@ test.describe('Map Route Line - Visual Regression', () => {
 
     // Normalize viewport to keep locator screenshot dimensions stable across environments.
     // Snapshot baselines were captured with a slightly narrower effective content width.
-    await page.setViewportSize({ width: 1265, height: 720 });
+    await page.setViewportSize({ width: 1366, height: 720 });
 
     await installTileMock(page);
 
@@ -242,7 +243,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     });
 
     // Normalize viewport to keep locator screenshot dimensions stable across environments.
-    await page.setViewportSize({ width: 1265, height: 720 });
+    await page.setViewportSize({ width: 1366, height: 720 });
 
     await installTileMock(page);
 
