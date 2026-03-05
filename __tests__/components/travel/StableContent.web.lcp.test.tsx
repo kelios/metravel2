@@ -20,7 +20,7 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }));
 
-describe('StableContent (web) LCP image priority', () => {
+describe('StableContent (web) inline image priority', () => {
   const setPlatformOs = (os: string) => {
     Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
   };
@@ -44,7 +44,7 @@ describe('StableContent (web) LCP image priority', () => {
     }
   });
 
-  it('sets fetchpriority="high" on the first image and fetchpriority="low" on subsequent images', async () => {
+  it('keeps inline rich-text images lazy and low priority', async () => {
     const StableContent = (await import('@/components/travel/StableContent')).default;
 
     const html = [
@@ -69,19 +69,10 @@ describe('StableContent (web) LCP image priority', () => {
       const imgTags = rendered.match(/<img\b[^>]*>/gi) ?? [];
       expect(imgTags.length).toBeGreaterThanOrEqual(2);
 
-      // First image: fetchpriority="high", no loading="lazy"
-      expect(imgTags[0]).toContain('fetchpriority="high"');
-      expect(imgTags[0]).not.toContain('loading="lazy"');
-
-      // Second image: fetchpriority="low", loading="lazy"
-      expect(imgTags[1]).toContain('fetchpriority="low"');
-      expect(imgTags[1]).toContain('loading="lazy"');
-
-      // Third image (if present): also fetchpriority="low"
-      if (imgTags.length >= 3) {
-        expect(imgTags[2]).toContain('fetchpriority="low"');
-        expect(imgTags[2]).toContain('loading="lazy"');
-      }
+      imgTags.forEach((tag) => {
+        expect(tag).toContain('fetchpriority="low"');
+        expect(tag).toContain('loading="lazy"');
+      });
     });
   });
 });
