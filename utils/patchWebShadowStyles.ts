@@ -39,31 +39,59 @@ const toRgba = (color: unknown, opacity: number): string => {
 const sanitizeStyleObject = (style: AnyStyle): AnyStyle => {
   if (!style || typeof style !== 'object' || Array.isArray(style)) return style;
 
-  const hasDeprecatedShadow =
+  const hasDeprecatedBoxShadow =
     'shadowColor' in style ||
     'shadowOffset' in style ||
     'shadowOpacity' in style ||
     'shadowRadius' in style ||
     'elevation' in style;
+  const hasDeprecatedTextShadow =
+    'textShadowColor' in style ||
+    'textShadowOffset' in style ||
+    'textShadowRadius' in style;
 
-  if (!hasDeprecatedShadow) return style;
+  if (!hasDeprecatedBoxShadow && !hasDeprecatedTextShadow) return style;
 
   const next: AnyStyle = { ...style };
-  const offset = style.shadowOffset ?? {};
-  const offsetX = Number(offset.width ?? 0);
-  const offsetY = Number(offset.height ?? 0);
-  const blur = Number(style.shadowRadius ?? (style.elevation ? style.elevation * 1.5 : 0));
-  const opacity = Number(style.shadowOpacity ?? (style.elevation ? 0.18 : 0));
 
-  if (!next.boxShadow && (blur > 0 || offsetX !== 0 || offsetY !== 0 || opacity > 0)) {
-    next.boxShadow = `${offsetX}px ${offsetY}px ${Math.max(0, blur)}px ${toRgba(style.shadowColor, opacity)}`;
+  if (hasDeprecatedBoxShadow) {
+    const offset = style.shadowOffset ?? {};
+    const offsetX = Number(offset.width ?? 0);
+    const offsetY = Number(offset.height ?? 0);
+    const blur = Number(style.shadowRadius ?? (style.elevation ? style.elevation * 1.5 : 0));
+    const opacity = Number(style.shadowOpacity ?? (style.elevation ? 0.18 : 0));
+
+    if (!next.boxShadow && (blur > 0 || offsetX !== 0 || offsetY !== 0 || opacity > 0)) {
+      next.boxShadow = `${offsetX}px ${offsetY}px ${Math.max(0, blur)}px ${toRgba(style.shadowColor, opacity)}`;
+    }
+
+    delete next.shadowColor;
+    delete next.shadowOffset;
+    delete next.shadowOpacity;
+    delete next.shadowRadius;
+    delete next.elevation;
   }
 
-  delete next.shadowColor;
-  delete next.shadowOffset;
-  delete next.shadowOpacity;
-  delete next.shadowRadius;
-  delete next.elevation;
+  if (hasDeprecatedTextShadow) {
+    const textOffset = style.textShadowOffset ?? {};
+    const textOffsetX = Number(textOffset.width ?? 0);
+    const textOffsetY = Number(textOffset.height ?? 0);
+    const textBlur = Math.max(0, Number(style.textShadowRadius ?? 0));
+    const textColor = String(style.textShadowColor ?? 'rgba(0, 0, 0, 0.35)');
+    const hasVisibleTextShadow =
+      textBlur > 0 ||
+      textOffsetX !== 0 ||
+      textOffsetY !== 0 ||
+      textColor !== 'transparent';
+
+    if (!next.textShadow && hasVisibleTextShadow) {
+      next.textShadow = `${textOffsetX}px ${textOffsetY}px ${textBlur}px ${textColor}`;
+    }
+
+    delete next.textShadowColor;
+    delete next.textShadowOffset;
+    delete next.textShadowRadius;
+  }
 
   return next;
 };
@@ -97,4 +125,3 @@ export const patchWebShadowStyles = () => {
 
   globalScope[PATCH_FLAG] = true;
 };
-

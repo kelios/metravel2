@@ -826,7 +826,16 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
                                         {/* Видео: web = DOM <video>, native = expo-av */}
                                         {finale.video && (
-                                            <View style={[styles.videoFrame, { width: frameW, height: frameH }]}> 
+                                            <View
+                                                style={[
+                                                    styles.videoFrame,
+                                                    {
+                                                        width: '100%',
+                                                        maxWidth: frameW,
+                                                        aspectRatio: 16 / 9,
+                                                    },
+                                                ]}
+                                            >
                                                 {Platform.OS === 'web' ? (
                                                     youtubeEmbedUri ? (
                                                         <iframe
@@ -982,7 +991,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: 2,
         ...Platform.select({
             web: {
-                background: QUEST_DESIGN.stepActiveGradient,
+                backgroundImage: QUEST_DESIGN.stepActiveGradient,
                 transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             } as any,
             default: { backgroundColor: colors.brand },
@@ -1050,7 +1059,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.brand,
         ...Platform.select({
             web: {
-                background: QUEST_DESIGN.stepActiveGradient,
+                backgroundImage: QUEST_DESIGN.stepActiveGradient,
                 boxShadow: '0 4px 14px rgba(245, 132, 44, 0.35)',
                 transform: 'scale(1.02)',
             } as any,
@@ -1060,7 +1069,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.successSoft,
         ...Platform.select({
             web: {
-                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.12) 0%, rgba(66, 109, 86, 0.08) 100%)',
+                backgroundImage: 'linear-gradient(135deg, rgba(82, 125, 102, 0.12) 0%, rgba(66, 109, 86, 0.08) 100%)',
             } as any,
         }),
     },
@@ -1102,7 +1111,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.brand,
         ...Platform.select({
             web: {
-                background: QUEST_DESIGN.stepActiveGradient,
+                backgroundImage: QUEST_DESIGN.stepActiveGradient,
                 boxShadow: '0 4px 12px rgba(245, 132, 44, 0.4)',
                 transform: 'scale(1.1)',
             } as any,
@@ -1112,7 +1121,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.successSoft,
         ...Platform.select({
             web: {
-                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
+                backgroundImage: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
             } as any,
         }),
     },
@@ -1175,7 +1184,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexShrink: 0,
         ...Platform.select({
             web: {
-                background: 'linear-gradient(135deg, rgba(245, 132, 44, 0.12) 0%, rgba(224, 112, 32, 0.08) 100%)',
+                backgroundImage: 'linear-gradient(135deg, rgba(245, 132, 44, 0.12) 0%, rgba(224, 112, 32, 0.08) 100%)',
             } as any,
             default: { backgroundColor: colors.brandSoft },
         }),
@@ -1183,7 +1192,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     stepNumberCompleted: { 
         ...Platform.select({
             web: {
-                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
+                backgroundImage: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
             } as any,
             default: { backgroundColor: colors.successSoft },
         }),
@@ -1218,7 +1227,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexShrink: 0,
         ...Platform.select({
             web: {
-                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.2) 0%, rgba(66, 109, 86, 0.15) 100%)',
+                backgroundImage: 'linear-gradient(135deg, rgba(82, 125, 102, 0.2) 0%, rgba(66, 109, 86, 0.15) 100%)',
             } as any,
             default: { backgroundColor: colors.successSoft },
         }),
@@ -1301,7 +1310,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...globalFocusStyles.focusable,
         ...Platform.select({
             web: { 
-                background: QUEST_DESIGN.stepActiveGradient,
+                backgroundImage: QUEST_DESIGN.stepActiveGradient,
                 cursor: 'pointer',
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 boxShadow: '0 4px 14px rgba(245, 132, 44, 0.3)',
@@ -1321,7 +1330,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexShrink: 0,
         ...Platform.select({ 
             web: { 
-                background: QUEST_DESIGN.stepActiveGradient,
+                backgroundImage: QUEST_DESIGN.stepActiveGradient,
                 cursor: 'pointer', 
                 transition: 'all 0.2s ease',
                 boxShadow: '0 4px 12px rgba(245, 132, 44, 0.3)',
@@ -1421,7 +1430,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         justifyContent: 'center',
         ...Platform.select({ 
             web: { 
-                background: QUEST_DESIGN.stepActiveGradient,
+                backgroundImage: QUEST_DESIGN.stepActiveGradient,
                 boxShadow: '0 8px 24px rgba(245, 132, 44, 0.35)',
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
@@ -1615,7 +1624,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: 999,
         ...Platform.select({
             web: { 
-                background: QUEST_DESIGN.stepDoneGradient,
+                backgroundImage: QUEST_DESIGN.stepDoneGradient,
                 boxShadow: '0 12px 32px rgba(82, 125, 102, 0.4)',
             } as any,
             ios: { 

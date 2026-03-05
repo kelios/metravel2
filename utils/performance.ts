@@ -4,9 +4,25 @@
 
 const pendingScriptLoads = new Map<string, Promise<void>>()
 const pendingStyleLoads = new Map<string, Promise<void>>()
+let performanceMonitoringInitialized = false
 
 const getScriptKey = (src: string, id?: string) => id ?? src
 const getStylesheetKey = (href: string, id?: string) => id ?? href
+const LCP_WARNING_THRESHOLD_MS = 4000
+const LONG_TASK_WARNING_THRESHOLD_MS = 200
+const MIN_LCP_TRACK_WINDOW_MS = 10_000
+const EXTRA_LCP_TRACK_WINDOW_MS = 10_000
+
+const getLcpTrackingWindowMs = (): number => {
+  if (typeof performance === 'undefined' || !performance.getEntriesByType) {
+    return MIN_LCP_TRACK_WINDOW_MS
+  }
+
+  const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+  const loadEventEnd = Number(navigationEntry?.loadEventEnd ?? 0)
+
+  return Math.max(MIN_LCP_TRACK_WINDOW_MS, loadEventEnd + EXTRA_LCP_TRACK_WINDOW_MS)
+}
 
 /**
  * Отложенная загрузка скрипта
@@ -211,14 +227,25 @@ export function initPerformanceMonitoring(): void {
   if (typeof window === 'undefined' || typeof PerformanceObserver === 'undefined') {
     return
   }
+  if (performanceMonitoringInitialized) return
+  performanceMonitoringInitialized = true
 
   try {
+    let lcpWarned = false
+
     // Observe Largest Contentful Paint
     const lcpObserver = new PerformanceObserver((list) => {
       const entries = list.getEntries()
       const last = entries[entries.length - 1]
-      if (last && last.startTime > 4000) {
+      if (!last) return
+
+      // LCP is meaningful only for initial page load.
+      // Ignore entries far beyond load window to reduce SPA soft-nav noise.
+      if (last.startTime > getLcpTrackingWindowMs()) return
+
+      if (!lcpWarned && last.startTime > LCP_WARNING_THRESHOLD_MS) {
         console.warn(`[Performance] LCP: ${last.startTime.toFixed(0)}ms (target < 2500ms)`)
+        lcpWarned = true
       }
     })
     lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true })
@@ -226,7 +253,7 @@ export function initPerformanceMonitoring(): void {
     // Observe Long Tasks (> 50ms)
     const longTaskObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        if (entry.duration > 200) {
+        if (entry.duration > LONG_TASK_WARNING_THRESHOLD_MS) {
           console.warn(`[Performance] Long Task: ${entry.duration.toFixed(0)}ms`)
         }
       }
@@ -270,7 +297,6 @@ export function measurePerformance(name: string, fn: () => void): void {
     }
   }
 }
-
 
 
 

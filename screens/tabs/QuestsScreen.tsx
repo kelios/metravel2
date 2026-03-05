@@ -421,11 +421,10 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             ...Platform.select({
                 web: {
                     display: 'grid',
-                    gridTemplateColumns: isMobileW 
-                        ? '1fr' 
-                        : isTablet 
-                            ? 'repeat(2, 1fr)' 
-                            : 'repeat(3, 1fr)',
+                    gridTemplateColumns: isMobileW
+                        ? '1fr'
+                        : 'repeat(auto-fit, minmax(min(100%, 760px), 1fr))',
+                    justifyItems: 'start',
                     gap: spacing.xl,
                 } as any,
             }),
@@ -736,7 +735,8 @@ export default function QuestsScreen() {
         if (isMobile) {
             return Math.max(280, width - spacing.lg * 2);
         }
-        return 380;
+        const estimatedContentWidth = Math.max(320, width - 340 - spacing.xl * 2);
+        return Math.min(760, estimatedContentWidth);
     }, [isMobile, width]);
 
     // ── Persistent city selection ──
@@ -1327,7 +1327,7 @@ const getDifficultyInfo = (difficulty?: 'easy' | 'medium' | 'hard') => {
 };
 
 function QuestCard({
-    cityId, quest, nearby,
+    cityId, quest, nearby, cardWidth,
 }: {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
@@ -1369,12 +1369,13 @@ function QuestCard({
         router.push(`/quests/${cityId}/${quest.id}`);
     }, [cityId, quest.id]);
 
-    const cardHeight = isPhone ? 220 : 260;
+    const cardHeight = isPhone ? 220 : Math.round((cardWidth / 380) * 260);
 
     return (
         <View
             style={[
                 s.questCard as ViewStyle,
+                { width: cardWidth, maxWidth: '100%' },
                 isHovered && (s.questCardHover as ViewStyle),
             ]}
             {...Platform.select({
