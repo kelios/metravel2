@@ -34,14 +34,10 @@ async function getRenderedHtml(page: import('@playwright/test').Page, path: stri
 test.describe('SEO: travel detail page meta tags', () => {
   const TRAVEL_SLUG = 'tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
+  let html = '';
 
-  let html: string;
-
-  test.beforeAll(async ({ browser }) => {
-    const ctx = await browser.newContext();
-    const page = await ctx.newPage();
+  test.beforeEach(async ({ page }) => {
     html = await getRenderedHtml(page, TRAVEL_PATH);
-    await ctx.close();
   });
 
   // --- Title ---
