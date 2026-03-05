@@ -133,6 +133,45 @@ describe('useListTravelData with infinite query', () => {
     queryClient.clear();
   });
 
+  it('retries the same page when a middle page resolves empty with zero total', async () => {
+    (fetchTravels as jest.Mock)
+      .mockResolvedValueOnce({
+        total: 60,
+        data: createTravels('page-0', 20),
+      })
+      .mockResolvedValueOnce({
+        total: 0,
+        data: [],
+      })
+      .mockResolvedValueOnce({
+        total: 60,
+        data: createTravels('page-1-retry', 20),
+      });
+
+    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+
+    await waitFor(() => expect(ref.current?.data).toHaveLength(20));
+
+    act(() => {
+      ref.current?.handleEndReached();
+    });
+
+    await waitFor(() => expect(fetchTravels).toHaveBeenCalledTimes(2));
+    expect(ref.current?.data).toHaveLength(20);
+
+    act(() => {
+      ref.current?.handleEndReached();
+    });
+
+    await waitFor(() => expect(ref.current?.data).toHaveLength(40));
+    expect(fetchTravels).toHaveBeenCalledTimes(3);
+    expect((fetchTravels as jest.Mock).mock.calls[1][0]).toBe(1);
+    expect((fetchTravels as jest.Mock).mock.calls[2][0]).toBe(1);
+
+    unmount();
+    queryClient.clear();
+  });
+
   it('refetches when query params change', async () => {
     (fetchTravels as jest.Mock)
       .mockResolvedValueOnce({

@@ -49,6 +49,42 @@ const countLoadedItems = (pages: Array<{ data?: Travel[] }>): number => {
   }, 0);
 };
 
+const getPageItemsLength = (page: unknown): number => {
+  if (!page || typeof page !== 'object') {
+    return 0;
+  }
+  const source = page as { data?: unknown; items?: unknown };
+  if (Array.isArray(source.data)) {
+    return source.data.length;
+  }
+  if (Array.isArray(source.items)) {
+    return source.items.length;
+  }
+  return 0;
+};
+
+const resolveStableTotal = (pages: unknown[]): number => {
+  if (!Array.isArray(pages)) {
+    return 0;
+  }
+
+  for (let index = pages.length - 1; index >= 0; index -= 1) {
+    const page = pages[index];
+    const rawTotal = page && typeof page === 'object' ? (page as { total?: unknown }).total : undefined;
+    const total = typeof rawTotal === 'number' ? rawTotal : Number(rawTotal);
+    if (Number.isFinite(total) && total > 0) {
+      return total;
+    }
+  }
+
+  return 0;
+};
+
+const getNextPageFromLoadedItems = (allPages: unknown[]): number => {
+  const loaded = countLoadedItems(allPages as Array<{ data?: Travel[] }>);
+  return Math.floor(loaded / PER_PAGE);
+};
+
 export function useListTravelData({
   queryParams,
   search,
@@ -100,7 +136,7 @@ export function useListTravelData({
     enabled: isQueryEnabled,
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
-      const total = typeof lastPage?.total === 'number' ? lastPage.total : 0;
+      const total = resolveStableTotal(allPages as unknown[]);
       if (!total) {
         return undefined;
       }
@@ -108,6 +144,13 @@ export function useListTravelData({
       if (loaded >= total) {
         return undefined;
       }
+
+      // If the latest page is empty (e.g. transient 50x response mapped to empty payload),
+      // retry the same page index instead of freezing pagination.
+      if (getPageItemsLength(lastPage) === 0) {
+        return getNextPageFromLoadedItems(allPages as unknown[]);
+      }
+
       return allPages.length;
     },
     staleTime: STALE_TIME.TRAVELS,
@@ -228,7 +271,7 @@ export function useRandomTravelData({
     enabled: isQueryEnabled,
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
-      const total = typeof lastPage?.total === 'number' ? lastPage.total : 0;
+      const total = resolveStableTotal(allPages as unknown[]);
       if (!total) {
         return undefined;
       }
@@ -236,6 +279,11 @@ export function useRandomTravelData({
       if (loaded >= total) {
         return undefined;
       }
+
+      if (getPageItemsLength(lastPage) === 0) {
+        return getNextPageFromLoadedItems(allPages as unknown[]);
+      }
+
       return allPages.length;
     },
     staleTime: STALE_TIME.TRAVELS,
