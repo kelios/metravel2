@@ -109,7 +109,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                     maxHeight: isMobileW ? 'auto' : '100vh',
                     position: isMobileW ? 'relative' : 'sticky',
                     top: 0,
-                    boxShadow: '2px 0 24px rgba(0,0,0,0.04)',
+                    boxShadow: '1px 0 0 0 rgba(0,0,0,0.04)',
                     scrollbarWidth: 'thin',
                     scrollbarColor: `${colors.borderLight} transparent`,
                 } as any,
@@ -117,42 +117,43 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         sidebarHeader: {
             padding: spacing.xl,
-            paddingTop: spacing.xxl + spacing.md,
-            paddingBottom: spacing.xxl,
+            paddingTop: spacing.xxl,
+            paddingBottom: spacing.xl,
             borderBottomWidth: 0,
+            borderBottomColor: colors.borderLight,
             ...Platform.select({
                 web: {
-                    background: `linear-gradient(165deg, rgba(255, 146, 43, 0.06) 0%, rgba(255, 146, 43, 0.02) 40%, ${colors.surface} 100%)`,
+                    background: `linear-gradient(180deg, ${colors.surface} 0%, rgba(255,255,255,0.98) 100%)`,
                 } as any,
             }),
         },
         sidebarTitle: {
             color: colors.text,
-            fontSize: isMobileW ? 32 : 38,
+            fontSize: 32,
             fontWeight: '800',
-            marginBottom: spacing.md,
-            letterSpacing: -1.2,
-            lineHeight: isMobileW ? 38 : 46,
+            marginBottom: spacing.sm,
+            letterSpacing: -0.8,
+            lineHeight: 38,
         },
         sidebarSubtitle: {
             color: colors.textMuted,
             fontSize: typography.sizes.md,
-            lineHeight: 26,
-            letterSpacing: -0.2,
+            lineHeight: 24,
+            letterSpacing: -0.1,
             maxWidth: 280,
             fontWeight: '400',
         },
         sidebarActions: {
             flexDirection: 'row',
             gap: spacing.sm,
-            marginTop: spacing.xl,
+            marginTop: spacing.lg,
         },
         actionBtn: {
             flexDirection: 'row',
             gap: spacing.sm,
             backgroundColor: colors.brand,
-            paddingHorizontal: spacing.xl,
-            paddingVertical: spacing.md + 2,
+            paddingHorizontal: spacing.lg,
+            paddingVertical: spacing.md,
             borderRadius: radii.full,
             alignItems: 'center',
             justifyContent: 'center',
@@ -161,15 +162,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                 web: { 
                     cursor: 'pointer', 
                     transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    boxShadow: '0 4px 16px rgba(255, 146, 43, 0.3), 0 2px 4px rgba(255, 146, 43, 0.15)',
-                } as any,
-            }),
-        },
-        actionBtnHover: {
-            ...Platform.select({
-                web: {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 24px rgba(255, 146, 43, 0.35), 0 4px 8px rgba(255, 146, 43, 0.2)',
+                    boxShadow: '0 4px 16px rgba(255, 146, 43, 0.3)',
                 } as any,
             }),
         },
@@ -177,14 +170,13 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             backgroundColor: colors.backgroundSecondary,
             borderWidth: 0,
             ...Platform.select({
-                web: { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } as any,
+                web: { boxShadow: 'none' } as any,
             }),
         },
         actionBtnText: {
             color: colors.textOnPrimary,
-            fontWeight: '700',
+            fontWeight: '600',
             fontSize: typography.sizes.md,
-            letterSpacing: -0.2,
         },
         actionBtnTextSecondary: {
             color: colors.text,
@@ -197,13 +189,13 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         cityListLabel: {
             color: colors.textMuted,
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: '700',
             textTransform: 'uppercase',
-            letterSpacing: 1.5,
+            letterSpacing: 1.2,
             marginBottom: spacing.md,
             paddingHorizontal: spacing.xs,
-            opacity: 0.7,
+            opacity: 0.8,
         },
         countryLabel: {
             color: colors.text,
@@ -212,27 +204,20 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             marginBottom: spacing.sm,
             marginTop: spacing.lg,
             paddingHorizontal: spacing.xs,
-            letterSpacing: -0.3,
+            letterSpacing: -0.2,
         },
         cityItem: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingVertical: spacing.md,
+            paddingVertical: spacing.sm + 2,
             paddingHorizontal: spacing.md,
-            borderRadius: radii.xl,
-            marginBottom: spacing.xs,
+            borderRadius: radii.lg,
+            marginBottom: spacing.xxs,
             ...Platform.select({
                 web: { 
                     cursor: 'pointer', 
-                    transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                } as any,
-            }),
-        },
-        cityItemHover: {
-            ...Platform.select({
-                web: {
-                    backgroundColor: 'rgba(255, 146, 43, 0.04)',
+                    transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 } as any,
             }),
         },
@@ -240,8 +225,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             backgroundColor: colors.brandSoft,
             ...Platform.select({
                 web: {
-                    boxShadow: `0 6px 20px ${colors.brandAlpha30}`,
-                    transform: 'translateX(6px)',
+                    boxShadow: `0 4px 16px ${colors.brandAlpha30}`,
+                    transform: 'translateX(4px)',
                 } as any,
             }),
         },
@@ -252,22 +237,21 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             flex: 1,
         },
         cityItemIcon: {
-            width: 44,
-            height: 44,
-            borderRadius: radii.lg,
+            width: 40,
+            height: 40,
+            borderRadius: radii.md,
             backgroundColor: colors.backgroundSecondary,
             alignItems: 'center',
             justifyContent: 'center',
             ...Platform.select({
-                web: { transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' } as any,
+                web: { transition: 'all 0.2s ease' } as any,
             }),
         },
         cityItemIconActive: {
             backgroundColor: colors.brand,
             ...Platform.select({
                 web: {
-                    boxShadow: '0 4px 12px rgba(255, 146, 43, 0.35)',
-                    transform: 'scale(1.05)',
+                    boxShadow: '0 2px 8px rgba(255, 146, 43, 0.3)',
                 } as any,
             }),
         },
@@ -275,25 +259,25 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             color: colors.text,
             fontSize: typography.sizes.md,
             fontWeight: '500',
-            letterSpacing: -0.3,
+            letterSpacing: -0.2,
         },
         cityItemTextActive: {
             color: colors.brandDark,
-            fontWeight: '700',
+            fontWeight: '600',
         },
         cityItemCount: {
             backgroundColor: colors.backgroundTertiary,
-            paddingHorizontal: spacing.sm + 2,
-            paddingVertical: spacing.xxs + 2,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xxs,
             borderRadius: radii.full,
-            minWidth: 32,
+            minWidth: 28,
             alignItems: 'center',
         },
         cityItemCountActive: {
             backgroundColor: colors.brand,
             ...Platform.select({
                 web: {
-                    boxShadow: '0 2px 8px rgba(255, 146, 43, 0.35)',
+                    boxShadow: '0 1px 4px rgba(255, 146, 43, 0.3)',
                 } as any,
             }),
         },
@@ -313,46 +297,38 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             flexWrap: 'wrap',
             gap: spacing.sm,
             paddingHorizontal: spacing.lg,
-            paddingBottom: spacing.xl,
-            paddingTop: spacing.md,
-            backgroundColor: 'rgba(255, 146, 43, 0.03)',
-            marginHorizontal: spacing.md,
-            borderRadius: radii.xl,
-            marginBottom: spacing.md,
+            paddingBottom: spacing.lg,
+            paddingTop: spacing.sm,
         },
         radiusLabel: {
             color: colors.textMuted,
             fontSize: typography.sizes.sm,
-            fontWeight: '600',
+            fontWeight: '500',
             marginRight: spacing.xs,
-            width: '100%',
-            marginBottom: spacing.xs,
         },
         radiusChip: {
-            paddingHorizontal: spacing.md + 2,
+            paddingHorizontal: spacing.md,
             paddingVertical: spacing.sm,
             borderRadius: radii.full,
-            backgroundColor: colors.surface,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
-            minWidth: 60,
-            minHeight: 38,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 0,
+            minWidth: 56,
+            minHeight: 36,
             alignItems: 'center',
             justifyContent: 'center',
             ...Platform.select({
                 web: { 
                     cursor: 'pointer', 
-                    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 } as any,
             }),
         },
         radiusChipActive: {
             backgroundColor: colors.brand,
-            borderColor: colors.brand,
             ...Platform.select({
                 web: {
-                    boxShadow: '0 4px 12px rgba(255, 146, 43, 0.35)',
-                    transform: 'scale(1.05)',
+                    boxShadow: '0 2px 8px rgba(255, 146, 43, 0.3)',
+                    transform: 'scale(1.02)',
                 } as any,
             }),
         },
@@ -380,38 +356,38 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            paddingHorizontal: isMobileW ? spacing.lg : spacing.xxl,
-            paddingTop: spacing.xxl + spacing.md,
-            paddingBottom: spacing.xl,
+            paddingHorizontal: spacing.xl,
+            paddingTop: spacing.xxl,
+            paddingBottom: spacing.lg,
             borderBottomWidth: 0,
+            borderBottomColor: colors.borderLight,
             backgroundColor: colors.background,
             ...Platform.select({
                 web: { 
                     position: 'sticky', 
                     top: 0, 
                     zIndex: 10,
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    backgroundColor: 'rgba(253, 252, 251, 0.88)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    backgroundColor: 'rgba(253, 252, 251, 0.92)',
                 } as any,
             }),
         },
         contentTitle: {
             color: colors.text,
-            fontSize: isMobileW ? 30 : 40,
+            fontSize: isMobileW ? 28 : 36,
             fontWeight: '800',
-            letterSpacing: -1.2,
-            lineHeight: isMobileW ? 36 : 48,
+            letterSpacing: -0.8,
+            lineHeight: isMobileW ? 34 : 44,
         },
         contentCount: {
             color: colors.textMuted,
             fontSize: typography.sizes.md,
-            marginTop: spacing.sm,
+            marginTop: spacing.xs,
             fontWeight: '500',
-            letterSpacing: -0.2,
         },
         contentBody: {
-            padding: isMobileW ? spacing.lg : spacing.xxl,
+            padding: spacing.xl,
             paddingTop: spacing.lg,
         },
         mapSection: {
@@ -449,8 +425,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                         ? '1fr' 
                         : isTablet 
                             ? 'repeat(2, 1fr)' 
-                            : 'repeat(auto-fill, minmax(380px, 1fr))',
-                    gap: spacing.xxl,
+                            : 'repeat(auto-fill, minmax(360px, 1fr))',
+                    gap: spacing.xl,
                 } as any,
             }),
         },
@@ -524,13 +500,13 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
 
         /* ---- Quest Card Styles (Cinematic, Immersive) ---- */
         questCard: {
-            borderRadius: radii.xl + 8,
+            borderRadius: radii.xl + 4,
             overflow: 'hidden',
             backgroundColor: colors.surface,
             position: 'relative',
             ...Platform.select({
                 web: {
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
                     transition: 'all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
                     cursor: 'pointer',
                     willChange: 'transform, box-shadow',
@@ -540,14 +516,14 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         questCardHover: {
             ...Platform.select({
                 web: {
-                    transform: 'translateY(-16px) scale(1.02)',
-                    boxShadow: '0 32px 64px rgba(255, 146, 43, 0.2), 0 16px 32px rgba(0,0,0,0.15)',
+                    transform: 'translateY(-12px) scale(1.015)',
+                    boxShadow: '0 24px 56px rgba(255, 146, 43, 0.18), 0 12px 28px rgba(0,0,0,0.12)',
                 } as any,
             }),
         },
         questCardImage: {
             width: '100%',
-            height: isMobileW ? 280 : 360,
+            height: isMobileW ? 260 : 320,
             position: 'relative',
             overflow: 'hidden',
         },
@@ -556,22 +532,22 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             left: 0,
             right: 0,
             bottom: 0,
-            height: '90%',
+            height: '85%',
             ...Platform.select({
                 web: {
-                    background: 'linear-gradient(to top, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.9) 20%, rgba(10,10,15,0.6) 45%, rgba(10,10,15,0.2) 70%, transparent 100%)',
+                    background: 'linear-gradient(to top, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.85) 25%, rgba(10,10,15,0.5) 50%, rgba(10,10,15,0.15) 70%, transparent 100%)',
                 } as any,
             }),
         },
         questCardMagicGlow: {
             position: 'absolute',
-            left: -80,
-            right: -80,
-            bottom: -30,
-            height: 160,
+            left: -50,
+            right: -50,
+            bottom: -20,
+            height: 120,
             ...Platform.select({
                 web: {
-                    background: 'radial-gradient(ellipse at center bottom, rgba(255, 146, 43, 0.2) 0%, rgba(255, 146, 43, 0.08) 40%, transparent 70%)',
+                    background: 'radial-gradient(ellipse at center bottom, rgba(255, 146, 43, 0.15) 0%, transparent 70%)',
                     pointerEvents: 'none',
                 } as any,
             }),
@@ -584,7 +560,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             bottom: 0,
             ...Platform.select({
                 web: {
-                    boxShadow: 'inset 0 0 80px rgba(0,0,0,0.35)',
+                    boxShadow: 'inset 0 0 60px rgba(0,0,0,0.3)',
                     pointerEvents: 'none',
                 } as any,
             }),
@@ -594,54 +570,54 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             left: 0,
             right: 0,
             bottom: 0,
-            padding: spacing.xl + spacing.xs,
-            paddingBottom: spacing.xxl,
+            padding: spacing.xl,
+            paddingBottom: spacing.xl + spacing.xs,
         },
         questCardCategory: {
-            color: 'rgba(255, 200, 130, 0.95)',
-            fontSize: 11,
+            color: 'rgba(255, 190, 110, 0.95)',
+            fontSize: 10,
             fontWeight: '700',
             textTransform: 'uppercase',
-            letterSpacing: 2.5,
-            marginBottom: spacing.md,
+            letterSpacing: 2,
+            marginBottom: spacing.sm,
             ...Platform.select({
                 web: {
-                    textShadow: '0 2px 8px rgba(0,0,0,0.7)',
+                    textShadow: '0 1px 6px rgba(0,0,0,0.6)',
                 } as any,
             }),
         },
         questCardTitle: {
             color: '#ffffff',
-            fontSize: isMobileW ? 24 : 32,
+            fontSize: isMobileW ? 22 : 28,
             fontWeight: '800',
-            letterSpacing: -0.8,
-            lineHeight: isMobileW ? 30 : 40,
-            marginBottom: spacing.lg + spacing.xs,
+            letterSpacing: -0.6,
+            lineHeight: isMobileW ? 28 : 36,
+            marginBottom: spacing.lg,
             ...Platform.select({
                 web: {
-                    textShadow: '0 4px 20px rgba(0,0,0,0.7), 0 8px 40px rgba(0,0,0,0.5)',
+                    textShadow: '0 2px 16px rgba(0,0,0,0.6), 0 6px 32px rgba(0,0,0,0.4)',
                 } as any,
             }),
         },
         questCardMeta: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.sm,
+            gap: spacing.md,
             flexWrap: 'wrap',
         },
         questCardMetaItem: {
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
-            backgroundColor: 'rgba(255,255,255,0.12)',
-            paddingHorizontal: spacing.md + 2,
-            paddingVertical: spacing.xs + 2,
+            backgroundColor: 'rgba(255,255,255,0.15)',
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs,
             borderRadius: radii.full,
             ...Platform.select({
                 web: {
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255,255,255,0.15)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                 } as any,
             }),
         },
@@ -649,7 +625,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             color: 'rgba(255,255,255,0.98)',
             fontSize: typography.sizes.sm,
             fontWeight: '600',
-            letterSpacing: -0.2,
+            letterSpacing: -0.1,
         },
         questCardMetaDivider: {
             width: 4,
@@ -659,66 +635,66 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         questCardBadge: {
             position: 'absolute',
-            top: spacing.lg,
-            left: spacing.lg,
+            top: spacing.md,
+            left: spacing.md,
             backgroundColor: 'rgba(255, 146, 43, 0.95)',
-            paddingHorizontal: spacing.md + 2,
-            paddingVertical: spacing.xs + 2,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs,
             borderRadius: radii.full,
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
             ...Platform.select({
                 web: {
-                    backdropFilter: 'blur(12px)',
-                    boxShadow: '0 6px 20px rgba(255, 146, 43, 0.45)',
+                    backdropFilter: 'blur(8px)',
+                    boxShadow: '0 4px 16px rgba(255, 146, 43, 0.4)',
                 } as any,
             }),
         },
         questCardBadgeText: {
             color: '#ffffff',
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: '700',
-            letterSpacing: 0.2,
+            letterSpacing: 0.3,
         },
         questCardDifficultyBadge: {
             position: 'absolute',
-            top: spacing.lg,
-            right: spacing.lg,
-            backgroundColor: 'rgba(0,0,0,0.55)',
-            paddingHorizontal: spacing.sm + 2,
-            paddingVertical: spacing.xxs + 3,
+            top: spacing.md,
+            right: spacing.md,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xxs + 2,
             borderRadius: radii.full,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.xxs + 1,
+            gap: spacing.xxs,
             ...Platform.select({
                 web: {
-                    backdropFilter: 'blur(12px)',
+                    backdropFilter: 'blur(8px)',
                 } as any,
             }),
         },
         questCardDifficultyText: {
-            color: 'rgba(255,255,255,0.95)',
-            fontSize: 12,
+            color: 'rgba(255,255,255,0.9)',
+            fontSize: 11,
             fontWeight: '600',
         },
         questCardPlayIcon: {
             position: 'absolute',
-            top: '42%',
+            top: '45%',
             left: '50%',
-            width: 80,
-            height: 80,
-            borderRadius: 40,
+            width: 72,
+            height: 72,
+            borderRadius: 36,
             backgroundColor: 'rgba(255, 146, 43, 0.95)',
             alignItems: 'center',
             justifyContent: 'center',
             ...Platform.select({
                 web: {
-                    transform: 'translate(-50%, -50%) scale(0.7)',
-                    boxShadow: '0 16px 48px rgba(255, 146, 43, 0.55), 0 0 0 10px rgba(255, 146, 43, 0.18)',
+                    transform: 'translate(-50%, -50%) scale(0.8)',
+                    boxShadow: '0 12px 40px rgba(255, 146, 43, 0.5), 0 0 0 8px rgba(255, 146, 43, 0.15)',
                     opacity: 0,
-                    transition: 'all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 } as any,
             }),
         },
@@ -1392,7 +1368,7 @@ function QuestCard({
         router.push(`/quests/${cityId}/${quest.id}`);
     }, [cityId, quest.id]);
 
-    const cardHeight = isPhone ? 280 : 360;
+    const cardHeight = isPhone ? 200 : 240;
 
     return (
         <View
@@ -1450,7 +1426,7 @@ function QuestCard({
                     />
                 ) : (
                     <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
-                        <Feather name="compass" size={56} color="rgba(255, 146, 43, 0.4)" />
+                        <Feather name="compass" size={40} color="rgba(255, 146, 43, 0.3)" />
                     </View>
                 )}
                 
@@ -1485,7 +1461,7 @@ function QuestCard({
                     ]} 
                     pointerEvents="none"
                 >
-                    <Feather name="play" size={28} color="#ffffff" style={{ marginLeft: 4 } as any} />
+                    <Feather name="play" size={22} color="#ffffff" style={{ marginLeft: 3 } as any} />
                 </View>
                 
                 {/* Content overlay */}

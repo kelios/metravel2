@@ -278,7 +278,7 @@ describe('FiltersPanel', () => {
     );
 
     // Open section if needed (defaultOpen may not work in tests)
-    const collapsible = getByTestId('collapsible-Настройки карты');
+    const collapsible = getByTestId('collapsible-Инструменты карты');
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible);
     }
@@ -309,7 +309,7 @@ describe('FiltersPanel', () => {
     );
 
     // Open section if needed (defaultOpen may not work in tests)
-    const collapsible = getByTestId('collapsible-Настройки карты');
+    const collapsible = getByTestId('collapsible-Инструменты карты');
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible);
     }
@@ -340,7 +340,7 @@ describe('FiltersPanel', () => {
     );
 
     // Open section if needed (defaultOpen may not work in tests)
-    const collapsible = getByTestId('collapsible-Настройки карты');
+    const collapsible = getByTestId('collapsible-Инструменты карты');
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible);
     }
@@ -373,7 +373,7 @@ describe('FiltersPanel', () => {
     );
 
     // Open section if needed (defaultOpen may not work in tests)
-    const collapsible = getByTestId('collapsible-Настройки карты');
+    const collapsible = getByTestId('collapsible-Инструменты карты');
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible);
     }
