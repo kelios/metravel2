@@ -512,9 +512,9 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     toolbarTitle: {
         fontWeight: '700',
         color: colors.text,
-        fontSize: 15,
+        fontSize: 14,
         flex: 1,
-        marginRight: 12,
+        marginRight: 8,
     },
     webButtons: {
         flexDirection: 'row',

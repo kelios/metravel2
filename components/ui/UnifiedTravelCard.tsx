@@ -247,6 +247,8 @@ function UnifiedTravelCard({
           justifyContent: 'center',
           alignItems: 'center',
           backgroundColor: colors.backgroundSecondary,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.borderLight,
         },
         // CARD-03: Иконка-подсказка «фото кликабельно»
         mediaActionHint: {
@@ -361,9 +363,9 @@ function UnifiedTravelCard({
           minHeight: 18,
         },
         metaText: {
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: '600',
-          color: colors.textMuted,
+          color: colors.textSecondary,
           flex: 1,
         },
       }),
@@ -500,7 +502,9 @@ function UnifiedTravelCard({
               {...(process.env.NODE_ENV === 'test'
                 ? {}
                 : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
-            />
+            >
+              <Feather name="image" size={32} color={colors.borderStrong} />
+            </View>
           )}
 
           {onMediaPress ? (

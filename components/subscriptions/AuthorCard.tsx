@@ -37,6 +37,14 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
     return `${first} ${last}`.trim() || 'Пользователь';
   }, [profile.first_name, profile.last_name]);
 
+  const initials = useMemo(() => {
+    const first = String(profile.first_name ?? '').trim();
+    const last = String(profile.last_name ?? '').trim();
+    const firstInitial = first[0] || '';
+    const lastInitial = last[0] || '';
+    return (firstInitial + lastInitial).toUpperCase() || null;
+  }, [profile.first_name, profile.last_name]);
+
   const authorUserId = profile.user ?? profile.id;
 
   const travelCountText = useMemo(() => {
@@ -63,6 +71,8 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />
+            ) : initials ? (
+              <Text style={styles.avatarInitials}>{initials}</Text>
             ) : (
               <Feather name="user" size={20} color={colors.primary} />
             )}
@@ -157,22 +167,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     authorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, gap: 12 },
     authorInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
     avatar: {
-      width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft,
+      width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primaryLight,
       justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.primary, overflow: 'hidden',
     },
     avatarImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+    avatarInitials: {
+      fontSize: 16, fontWeight: '700' as const, color: colors.primary, letterSpacing: 0.5,
+    },
     authorTextBlock: { flex: 1, minWidth: 0 },
     authorName: { fontSize: 16, fontWeight: '700', color: colors.text },
     authorSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
     authorActions: { flexDirection: 'row', gap: 8 },
     actionButton: {
-      width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primarySoft,
-      alignItems: 'center', justifyContent: 'center',
+      width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight,
+      alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.primaryAlpha30,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
     actionButtonDanger: {
-      width: 36, height: 36, borderRadius: 18, backgroundColor: colors.dangerSoft,
-      alignItems: 'center', justifyContent: 'center',
+      width: 40, height: 40, borderRadius: 20, backgroundColor: colors.dangerLight,
+      alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
     travelsLoading: { paddingHorizontal: 14, paddingBottom: 14 },

@@ -439,6 +439,11 @@ html[data-theme="dark"] .modal-select option {
 
 /* Leaflet overrides moved to utils/ensureLeafletCss.ts — injected only on map page */
 
+/* CARD-ADMIN: Показываем кнопки редактирования/удаления только при hover на карточку */
+[data-testid^="travel-card"]:hover [data-testid="admin-actions"] {
+  opacity: 1 !important;
+}
+
 /* Slider shimmer skeleton (web) */
 @keyframes slider-shimmer {
   0% { transform: translateX(-100%); }

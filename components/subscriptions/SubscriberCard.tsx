@@ -31,6 +31,14 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
     return `${first} ${last}`.trim() || 'Пользователь';
   }, [profile.first_name, profile.last_name]);
 
+  const initials = useMemo(() => {
+    const first = String(profile.first_name ?? '').trim();
+    const last = String(profile.last_name ?? '').trim();
+    const firstInitial = first[0] || '';
+    const lastInitial = last[0] || '';
+    return (firstInitial + lastInitial).toUpperCase() || null;
+  }, [profile.first_name, profile.last_name]);
+
   const userId = profile.user ?? profile.id;
 
   return (
@@ -50,6 +58,8 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />
+            ) : initials ? (
+              <Text style={styles.avatarInitials}>{initials}</Text>
             ) : (
               <Feather name="user" size={20} color={colors.primary} />
             )}
@@ -100,10 +110,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       minWidth: 0,
     },
     avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.primarySoft,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.primaryLight,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 2,
@@ -114,6 +124,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       width: '100%',
       height: '100%',
       resizeMode: 'cover',
+    },
+    avatarInitials: {
+      fontSize: 14,
+      fontWeight: '700' as const,
+      color: colors.primary,
+      letterSpacing: 0.5,
     },
     name: {
       fontSize: 15,
@@ -127,12 +143,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: 8,
     },
     actionButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.primarySoft,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
   });

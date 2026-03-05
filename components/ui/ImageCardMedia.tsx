@@ -425,6 +425,8 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   placeholder: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
 });
 

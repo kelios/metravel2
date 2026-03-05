@@ -506,7 +506,7 @@ const rightTopSlot = (
 );
 
 const leftTopSlot = canEdit ? (
-  <View style={styles.adminActionsContainer}>
+  <View style={styles.adminActionsContainer} testID="admin-actions">
     <CardActionPressable
       accessibilityLabel="Редактировать"
       title="Редактировать"

@@ -73,7 +73,11 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
             }}
             disabled={!canBuildRoute || routingLoading}
             accessibilityLabel="Построить маршрут"
-            style={[styles.ctaButton, styles.ctaPrimary]}
+            style={[
+              styles.ctaButton,
+              styles.ctaPrimary,
+              (!canBuildRoute || routingLoading) && styles.ctaPrimaryDisabled,
+            ]}
           />
         )}
       </View>

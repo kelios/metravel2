@@ -99,17 +99,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       nestedScrollEnabled={true}
     >
       <View style={styles.sectionCard} testID="filters-block-main">
-        <View style={styles.blockHeader}>
-          <Text style={styles.blockTitle}>
-            {mode === 'radius' ? 'Поиск' : 'Маршрут'}
-          </Text>
-          <Text style={styles.blockHint}>
-            {mode === 'radius'
-              ? 'Категории, радиус и быстрый поиск.'
-              : 'Транспорт, точки и расчёт.'}
-          </Text>
-        </View>
-
         {mode === 'radius' ? (
           <FiltersPanelRadiusSection
             colors={colors}

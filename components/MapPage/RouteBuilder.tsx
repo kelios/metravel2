@@ -42,41 +42,30 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors, compact), [colors, compact]);
 
-  const progress = useMemo(() => {
-    let step = 0;
-    if (startAddress) step++;
-    if (endAddress) step++;
-    return `${step}/2`;
-  }, [startAddress, endAddress]);
-
   const hasRoute = Boolean(startAddress && endAddress);
   const hasAnyAddress = Boolean(startAddress || endAddress);
 
   return (
     <SafeView style={styles.routeBuilder} testID="route-builder">
-      {/* Progress header */}
-      <SafeView style={styles.progressHeader}>
-        <SafeView style={styles.progressInfo}>
-          <MapIcon name="alt-route" size={18} color={colors.text} />
-          <Text style={styles.progressText}>Маршрут {progress}</Text>
-        </SafeView>
-        <SafeView style={styles.progressActions}>
+      {/* Action buttons - только когда есть адреса */}
+      {hasAnyAddress && (
+        <SafeView style={styles.actionsRow}>
           {onSwap && hasRoute && (
             <IconButton
               testID="route-swap"
               icon={<MapIcon name="swap-vert" size={compact ? 16 : 18} color={colors.primary} />}
-              label="Поменять старт и финиш местами"
+              label="Поменять местами"
               size={compact ? 'sm' : 'md'}
               onPress={onSwap}
               showTooltip={false}
               style={styles.swapActionButton}
             />
           )}
-          {onClear && hasAnyAddress && (
+          {onClear && (
             <IconButton
               testID="route-clear"
-              icon={<MapIcon name="refresh" size={compact ? 16 : 18} color={colors.text} />}
-              label="Очистить маршрут"
+              icon={<MapIcon name="refresh" size={compact ? 16 : 18} color={colors.textMuted} />}
+              label="Очистить"
               size={compact ? 'sm' : 'md'}
               onPress={onClear}
               showTooltip={false}
@@ -84,14 +73,14 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
             />
           )}
         </SafeView>
-      </SafeView>
+      )}
 
       {/* Address inputs */}
       <SafeView style={styles.addressContainer}>
         {/* Start address */}
         <SafeView style={styles.addressRow}>
-          <SafeView style={styles.addressIcon}>
-            <MapIcon name="trip-origin" size={compact ? 16 : 20} color={colors.success} />
+          <SafeView style={[styles.addressIcon, styles.startIcon]}>
+            <MapIcon name="trip-origin" size={compact ? 14 : 16} color="#fff" />
           </SafeView>
           <SafeView style={styles.addressInputWrapper}>
             <AddressSearch
@@ -112,8 +101,8 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
 
         {/* End address */}
         <SafeView style={styles.addressRow}>
-          <SafeView style={styles.addressIcon}>
-            <MapIcon name="location-on" size={compact ? 16 : 20} color={colors.danger} />
+          <SafeView style={[styles.addressIcon, styles.endIcon]}>
+            <MapIcon name="location-on" size={compact ? 14 : 16} color="#fff" />
           </SafeView>
           <SafeView style={styles.addressInputWrapper}>
             <AddressSearch
@@ -145,40 +134,17 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
 
 const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create({
   routeBuilder: {
-    gap: compact ? 4 : 12,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: compact ? 4 : 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  progressInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: compact ? 4 : 8,
-  },
-  progressActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: compact ? 4 : 6,
-  },
-  progressText: {
-    fontSize: compact ? 13 : 14,
-    fontWeight: '600',
-    color: colors.text,
+    gap: compact ? 6 : 12,
   },
   iconButton: {
-    width: compact ? 24 : 32,
-    height: compact ? 24 : 32,
+    width: compact ? 28 : 32,
+    height: compact ? 28 : 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: compact ? 12 : 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: compact ? 14 : 16,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 0,
+    borderColor: 'transparent',
     marginHorizontal: 0,
     shadowColor: 'transparent',
     shadowOpacity: 0,
@@ -192,18 +158,27 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: compact ? 8 : 12,
+    gap: compact ? 10 : 12,
   },
   addressIcon: {
-    width: compact ? 24 : 32,
-    height: compact ? 24 : 32,
+    width: compact ? 24 : 28,
+    height: compact ? 24 : 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: compact ? 12 : 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: compact ? 12 : 14,
     zIndex: 2,
+  },
+  startIcon: {
+    backgroundColor: colors.success,
+  },
+  endIcon: {
+    backgroundColor: colors.danger,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: compact ? 6 : 8,
+    marginBottom: compact ? 4 : 8,
   },
   addressInputWrapper: {
     flex: 1,
@@ -211,27 +186,27 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   connectorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: compact ? 16 : 24,
-    marginLeft: compact ? 11 : 15,
+    height: compact ? 10 : 16,
+    marginLeft: compact ? 11 : 13,
     position: 'relative',
   },
   connectorLine: {
-    width: 1,
+    width: 2,
     height: '100%',
-    backgroundColor: colors.border,
+    backgroundColor: colors.borderLight,
     borderRadius: 1,
     position: 'absolute',
     left: 0,
     top: 0,
   },
   swapActionButton: {
-    width: compact ? 24 : 32,
-    height: compact ? 24 : 32,
-    borderRadius: compact ? 12 : 16,
+    width: compact ? 28 : 32,
+    height: compact ? 28 : 32,
+    borderRadius: compact ? 14 : 16,
     marginHorizontal: 0,
     backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.primary,
+    borderWidth: 0,
+    borderColor: 'transparent',
     shadowColor: 'transparent',
     shadowOpacity: 0,
     shadowRadius: 0,
@@ -239,10 +214,11 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   hint: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textMuted,
     fontStyle: 'normal',
-    paddingHorizontal: compact ? 4 : 8,
+    paddingHorizontal: compact ? 0 : 8,
+    paddingTop: compact ? 4 : 0,
   },
 });
 

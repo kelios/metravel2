@@ -11,8 +11,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
   return StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
-      borderRadius: isMobile ? 0 : 16,
-      padding: isMobile ? 0 : 10,
+      borderRadius: isMobile ? 0 : 20,
+      padding: isMobile ? 0 : 16,
       width: panelWidth,
       maxWidth: '100%',
       height: '100%',
@@ -23,12 +23,17 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
         ? {}
         : {
             shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.07,
-            shadowRadius: 12,
-            elevation: 6,
+            shadowOffset: { width: 0, height: 12 },
+            shadowOpacity: 0.1,
+            shadowRadius: 24,
+            elevation: 8,
           }),
       alignSelf: isMobile ? 'stretch' : 'flex-start',
+      ...(Platform.OS === 'web' && !isMobile
+        ? ({
+            boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)',
+          } as any)
+        : null),
     },
     headerContainer: {
       marginBottom: 12,
@@ -107,9 +112,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginBottom: 8,
     },
     title: {
-      fontSize: 16,
-      fontWeight: '700',
+      fontSize: 20,
+      fontWeight: '800',
       color: colors.text,
+      letterSpacing: -0.5,
     },
     counterRow: {
       flexDirection: 'row',
@@ -172,14 +178,16 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     sectionCard: {
       backgroundColor: colors.surface,
-      borderRadius: 14,
-      padding: 10,
-      marginBottom: 8,
-      gap: 8,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 12,
+      gap: 12,
+      borderWidth: 0,
       ...(Platform.OS === 'web'
-        ? ({ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' } as any)
+        ? ({
+            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            transition: 'box-shadow 0.2s ease',
+          } as any)
         : DESIGN_TOKENS.shadowsNative.light),
     },
     blockHeader: {
@@ -187,9 +195,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginBottom: 0,
     },
     blockTitle: {
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 15,
+      fontWeight: '800',
       color: colors.text,
+      letterSpacing: -0.3,
     },
     blockHint: {
       fontSize: 11,
@@ -266,11 +275,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginBottom: 8,
     },
     sectionLabel: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '700',
       color: colors.textMuted,
-      marginBottom: 6,
-      letterSpacing: 0.4,
+      marginBottom: 10,
+      letterSpacing: 1.2,
       textTransform: 'uppercase' as const,
     },
     sectionHint: {
@@ -297,19 +306,40 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     categoryChip: {
       flexDirection: 'row',
       alignItems: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      maxWidth: 140,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web'
+        ? ({
+            transition: 'all 0.2s ease',
+            cursor: 'pointer',
+          } as any)
+        : null),
+    },
+    categoryChipSelected: {
       backgroundColor: colors.primarySoft,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
-      maxWidth: 112,
-      marginRight: 4,
+      borderColor: colors.primary,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 2px 8px rgba(255, 146, 43, 0.2)',
+          } as any)
+        : null),
     },
     categoryChipText: {
-      fontSize: 11,
+      fontSize: 13,
       fontWeight: '600',
-      color: colors.primaryText,
+      color: colors.text,
       flexShrink: 1,
-      marginRight: 4,
+      marginRight: 6,
+    },
+    categoryChipTextSelected: {
+      color: colors.primaryText,
+      fontWeight: '700',
     },
     categoryChipIconButton: {
       width: 24,
@@ -337,42 +367,55 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     radiusQuickOptions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 5,
-      marginTop: 4,
+      gap: 10,
+      marginTop: 8,
     },
     radiusOptionButton: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      minHeight: 30,
-      borderRadius: 16,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      minHeight: 44,
+      minWidth: 56,
+      borderRadius: 22,
+      borderWidth: 0,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
       ...(Platform.OS === 'web'
-        ? ({ transition: 'background-color 0.12s ease, border-color 0.12s ease' } as any)
+        ? ({
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            cursor: 'pointer',
+          } as any)
         : null),
     },
     radiusOptionButtonSelected: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.primary,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 4px 16px rgba(255, 146, 43, 0.35)',
+            transform: 'scale(1.05)',
+          } as any)
+        : null),
     },
     radiusOptionText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text,
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textMuted,
     },
     radiusOptionTextSelected: {
-      color: colors.primaryText,
+      color: colors.textOnPrimary,
     },
     transportTabs: {
       flexDirection: 'row',
       backgroundColor: colors.backgroundSecondary,
-      borderRadius: 9,
-      padding: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      borderRadius: 14,
+      padding: 4,
+      borderWidth: 0,
+      gap: 4,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
+          } as any)
+        : null),
     },
     transportTabsCompact: {
       borderRadius: 11,
@@ -842,23 +885,44 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flex: Platform.OS === 'web' ? undefined : 1,
     },
     ctaPrimary: {
-      minHeight: isMobile ? 40 : 48,
-      paddingVertical: isMobile ? 10 : 14,
-      paddingHorizontal: isMobile ? 16 : 20,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      minHeight: isMobile ? 48 : 56,
+      paddingVertical: isMobile ? 12 : 16,
+      paddingHorizontal: isMobile ? 20 : 24,
+      borderRadius: 16,
       flex: 1,
-      gap: 8,
+      gap: 10,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: `0 2px 8px ${colors.primary}33`,
-            transition: 'box-shadow 0.2s ease, transform 0.15s ease',
+            boxShadow: '0 4px 20px rgba(255, 146, 43, 0.35)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           } as any)
         : {
             shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+            elevation: 6,
+          }),
+    },
+    ctaPrimaryHover: {
+      ...(Platform.OS === 'web'
+        ? ({
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 28px rgba(255, 146, 43, 0.45)',
+          } as any)
+        : null),
+    },
+    ctaPrimaryDisabled: {
+      backgroundColor: colors.backgroundSecondary,
+      borderColor: colors.borderLight,
+      borderWidth: 1,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: 'none',
+          } as any)
+        : {
+            shadowOpacity: 0,
+            elevation: 0,
           }),
     },
     footerPreview: {
@@ -872,6 +936,122 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontSize: 12,
       color: colors.textMuted,
       marginBottom: 6,
+    },
+    // ═══════════════════════════════════════════════════════════════
+    // LIGHT ROUTE PANEL — современный светлый легкий дизайн
+    // ═══════════════════════════════════════════════════════════════
+    lightStepBlock: {
+      paddingVertical: 10,
+      paddingHorizontal: 0,
+      gap: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    lightStepHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 2,
+    },
+    lightStepNumber: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: colors.primary,
+      color: colors.textOnPrimary,
+      fontSize: 12,
+      fontWeight: '700',
+      textAlign: 'center',
+      lineHeight: 22,
+      overflow: 'hidden',
+    },
+    lightStepTitle: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    lightStepBadge: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.primary,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 10,
+    },
+    lightStepHint: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+    lightCheckBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.successLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+    },
+    lightCheckText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.success,
+    },
+    lightSectionLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginBottom: 6,
+    },
+    lightPointsList: {
+      gap: 6,
+    },
+    lightPointRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 6,
+      paddingHorizontal: 4,
+      borderRadius: 8,
+      backgroundColor: colors.backgroundSecondary,
+    },
+    lightPointDot: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    lightPointDotText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.textOnPrimary,
+    },
+    lightPointLabel: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    lightPointRemove: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginHorizontal: 0,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
+    },
+    lightPointRemoveDisabled: {
+      opacity: 0.3,
     },
   });
 };

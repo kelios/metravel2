@@ -627,7 +627,7 @@ export const TravelDetailsMapSection: React.FC<{
           ) : (
             <View style={{ marginTop: DESIGN_TOKENS.spacing.sm }}>
               <Suspense fallback={<View style={WEATHER_PLACEHOLDER_STYLE} />}>
-                <WeatherWidget points={travel.travelAddress as any} />
+                <WeatherWidget points={travel.travelAddress as any} countryName={travel.countryName} />
               </Suspense>
             </View>
           )}

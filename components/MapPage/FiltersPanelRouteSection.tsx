@@ -144,47 +144,43 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
 
   return (
     <View style={[styles.section, styles.routeSectionCompact]}>
-      <View style={[styles.stepBlock, styles.routeTransportStep]}>
-        <View style={styles.stepHeaderRow}>
-          <Text style={styles.stepBlockTitle}>1. Транспорт</Text>
-          <Text style={styles.stepInlineHint}>{selectedTransportLabel}</Text>
+      {/* Транспорт — минималистичный блок */}
+      <View style={styles.lightStepBlock}>
+        <View style={styles.lightStepHeader}>
+          <Text style={styles.lightStepNumber}>1</Text>
+          <Text style={styles.lightStepTitle}>Транспорт</Text>
+          <Text style={styles.lightStepBadge}>{selectedTransportLabel}</Text>
         </View>
-        <Text style={[styles.sectionHint, styles.routeTransportHint]}>
-          Способ перемещения
-        </Text>
-        <View style={[styles.transportTabs, styles.transportTabsCompact]}>
-          <SegmentedControl
-            options={transportOptions}
-            value={transportMode}
-            onChange={(key) => {
-              setTransportMode(key as 'car' | 'bike' | 'foot');
-            }}
-            accessibilityLabel="Транспорт"
-            compact
-            dense
-            noOuterMargins
-            role="button"
-            iconOnly
-          />
-        </View>
+        <SegmentedControl
+          options={transportOptions}
+          value={transportMode}
+          onChange={(key) => {
+            setTransportMode(key as 'car' | 'bike' | 'foot');
+          }}
+          accessibilityLabel="Транспорт"
+          compact
+          dense
+          noOuterMargins
+          role="button"
+          tone="subtle"
+          iconOnly
+        />
       </View>
 
-      <View
-        style={[
-          styles.stepBlock,
-          styles.stepBlockCompact,
-          styles.transportSection,
-        ]}
-      >
-        <View style={styles.stepHeaderRow}>
-          <Text style={styles.stepBlockTitle}>2. Точки маршрута</Text>
-          <Text style={routeStepState.startSelected && routeStepState.endSelected ? styles.stepInlineHint : styles.stepInlineHintMuted}>
-            {routeStepState.startSelected && routeStepState.endSelected ? 'Готово' : 'Выберите старт и финиш'}
-          </Text>
+      {/* Точки маршрута — чистый блок */}
+      <View style={styles.lightStepBlock}>
+        <View style={styles.lightStepHeader}>
+          <Text style={styles.lightStepNumber}>2</Text>
+          <Text style={styles.lightStepTitle}>Точки маршрута</Text>
+          {routeStepState.startSelected && routeStepState.endSelected ? (
+            <View style={styles.lightCheckBadge}>
+              <MapIcon name="check" size={12} color={colors.success} />
+              <Text style={styles.lightCheckText}>Готово</Text>
+            </View>
+          ) : (
+            <Text style={styles.lightStepHint}>Выберите точки</Text>
+          )}
         </View>
-        <Text style={styles.sectionHint}>
-          Старт и финиш на карте или через поиск.
-        </Text>
         {onAddressSelect && (
           <RouteBuilder
             startAddress={startAddress}
@@ -198,15 +194,17 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
         )}
       </View>
 
+      {/* Итог маршрута — легкий блок */}
       {shouldShowRouteStats && (
-        <View style={[styles.stepBlock, styles.stepBlockCompact, styles.routeResultStep]} testID="route-stats-block">
-          <View style={styles.stepHeaderRow}>
-            <Text style={styles.stepBlockTitle}>3. Итог маршрута</Text>
+        <View style={styles.lightStepBlock} testID="route-stats-block">
+          <View style={styles.lightStepHeader}>
+            <Text style={styles.lightStepNumber}>3</Text>
+            <Text style={styles.lightStepTitle}>Итог маршрута</Text>
             {isEstimated && !routingLoading && !routingError ? (
-              <Text style={styles.stepInlineHintMuted}>Оценка</Text>
+              <Text style={styles.lightStepHint}>оценка</Text>
             ) : null}
           </View>
-          <View style={styles.routeStatsContainer} testID="route-stats">
+          <View testID="route-stats">
             <RoutingStatus
               isLoading={!!routingLoading}
               error={routingError || null}
@@ -222,24 +220,24 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
         </View>
       )}
 
+      {/* Список точек — минималистичный */}
       {!onAddressSelect && mode === 'route' && routePoints.length > 0 && (
-        <View style={styles.stepBlock}>
-          <View style={styles.stepHeaderRow}>
-            <Text style={styles.stepBlockTitle}>Точки маршрута</Text>
-          </View>
-          <View style={styles.routePointsList} testID="route-points-list">
+        <View style={styles.lightStepBlock}>
+          <Text style={styles.lightSectionLabel}>Точки маршрута</Text>
+          <View style={styles.lightPointsList} testID="route-points-list">
             {routePoints.map((p, index) => {
               const label = String(p?.address || '').trim() || `Точка ${index + 1}`;
               const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id);
               return (
-                <View key={String(p?.id ?? index)} style={styles.routePointRow}>
-                  <View style={styles.routePointPill} testID={`route-point-pill-${String(p?.id ?? index)}`}>
-                    <Text style={styles.routePointPillText} numberOfLines={1}>
-                      {label}
-                    </Text>
+                <View key={String(p?.id ?? index)} style={styles.lightPointRow}>
+                  <View style={styles.lightPointDot}>
+                    <Text style={styles.lightPointDotText}>{index + 1}</Text>
                   </View>
+                  <Text style={styles.lightPointLabel} numberOfLines={1} testID={`route-point-pill-${String(p?.id ?? index)}`}>
+                    {label}
+                  </Text>
                   <IconButton
-                    icon={<MapIcon name="close" size={18} color={colors.textOnDark} />}
+                    icon={<MapIcon name="close" size={14} color={colors.textMuted} />}
                     label={`Удалить точку: ${label}`}
                     size="sm"
                     disabled={!canRemove}
@@ -247,7 +245,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
                       if (!canRemove) return;
                       onRemoveRoutePoint?.(String(p.id));
                     }}
-                    style={[styles.routePointRemoveBtn, !canRemove && styles.routePointRemoveBtnDisabled]}
+                    style={[styles.lightPointRemove, !canRemove && styles.lightPointRemoveDisabled]}
                     testID={`route-point-remove-${String(p?.id ?? index)}`}
                   />
                 </View>

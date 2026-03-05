@@ -238,11 +238,12 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       left: 12,
     },
     counterContainer: {
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 10,
-      borderWidth: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
       ...Platform.select({
         web: {
           backdropFilter: 'blur(20px) saturate(1.8)',
@@ -251,10 +252,13 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       }),
     },
     counterText: {
-      color: 'rgba(255,255,255,0.9)',
-      fontSize: 12,
-      fontWeight: '600' as any,
+      color: '#fff',
+      fontSize: 13,
+      fontWeight: '700' as any,
       fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,
-      letterSpacing: 0.3,
+      letterSpacing: 0.5,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
     },
   });

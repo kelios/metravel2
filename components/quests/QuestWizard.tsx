@@ -110,7 +110,22 @@ export type QuestWizardProps = {
 };
 
 // ===================== ТЕМА =====================
-const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
+const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
+
+// Modern design constants
+const QUEST_DESIGN = {
+    // Cinematic gradients
+    headerGradient: 'linear-gradient(135deg, #1a2f23 0%, #2d4a3e 50%, #1a2f23 100%)',
+    cardGlow: '0 8px 32px rgba(245, 132, 44, 0.08), 0 2px 8px rgba(0,0,0,0.04)',
+    cardHoverGlow: '0 16px 48px rgba(245, 132, 44, 0.15), 0 4px 12px rgba(0,0,0,0.08)',
+    // Step pill colors
+    stepActiveGradient: 'linear-gradient(135deg, #f5842c 0%, #e07020 100%)',
+    stepDoneGradient: 'linear-gradient(135deg, #527d66 0%, #426d56 100%)',
+    // Typography
+    titleSize: 28,
+    sectionTitleSize: 11,
+    bodySize: 15,
+};
 
 const useQuestWizardTheme = () => {
     const colors = useThemedColors();
@@ -771,7 +786,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                     <QuestFullMap
                                                         steps={steps}
                                                         height={wideDesktop ? 520 : 360}
-                                                        title={`Карта квеста: ${title}`}
+                                                        title="Карта квеста"
                                                     />
                                                 </Suspense>
                                             </View>
@@ -898,165 +913,360 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
 // ===================== СТИЛИ =====================
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { 
+        flex: 1, 
+        backgroundColor: colors.background,
+    },
 
     header: {
         backgroundColor: colors.surface,
-        paddingHorizontal: SPACING.md,
-        paddingTop: SPACING.md,
-        paddingBottom: SPACING.sm,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.borderLight,
-        ...Platform.select({ web: { maxWidth: 1140, width: '100%', alignSelf: 'center' } }),
+        paddingHorizontal: SPACING.lg,
+        paddingTop: SPACING.lg,
+        paddingBottom: SPACING.md,
+        borderBottomWidth: 0,
+        ...Platform.select({ 
+            web: { 
+                maxWidth: 1200, 
+                width: '100%', 
+                alignSelf: 'center',
+                borderRadius: 0,
+                boxShadow: '0 1px 0 0 rgba(0,0,0,0.03)',
+            } as any,
+        }),
     },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: SPACING.md,
-        gap: SPACING.sm,
+        alignItems: 'center',
+        marginBottom: SPACING.lg,
+        gap: SPACING.md,
     },
     headerRowMobile: {
         justifyContent: 'flex-end',
-        marginBottom: SPACING.sm,
+        marginBottom: SPACING.md,
     },
-    title: { fontSize: 22, fontWeight: '800', color: colors.text, flex: 1, letterSpacing: -0.5, lineHeight: 28 },
+    title: { 
+        fontSize: QUEST_DESIGN.titleSize, 
+        fontWeight: '800', 
+        color: colors.text, 
+        flex: 1, 
+        letterSpacing: -0.8, 
+        lineHeight: 34,
+    },
     resetButton: {
-        paddingHorizontal: SPACING.sm,
-        paddingVertical: 6,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: 8,
         borderRadius: 999,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        borderWidth: 0,
         backgroundColor: colors.backgroundSecondary,
-    },
-    resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 12 },
-    toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
-
-    progressContainer: { marginBottom: SPACING.sm },
-    progressBar: {
-        height: 4,
-        backgroundColor: colors.borderLight,
-        borderRadius: 2,
-        overflow: 'hidden',
-        marginBottom: 6,
-    },
-    progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 2 },
-    progressText: { fontSize: 11, color: colors.textMuted, textAlign: 'right', fontWeight: '600' },
-
-    stepsNavigation: { 
-        flexDirection: 'row', 
-        marginTop: SPACING.sm,
         ...Platform.select({
             web: {
-                maskImage: 'linear-gradient(to right, transparent 0, black 8px, black calc(100% - 24px), transparent 100%)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 8px, black calc(100% - 24px), transparent 100%)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
             } as any,
         }),
     },
-    stepsGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACING.sm, gap: 6 },
+    resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
+    toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
+
+    progressContainer: { marginBottom: SPACING.md },
+    progressBar: {
+        height: 4,
+        backgroundColor: colors.backgroundTertiary,
+        borderRadius: 2,
+        overflow: 'hidden',
+        marginBottom: 10,
+    },
+    progressFill: { 
+        height: '100%', 
+        borderRadius: 2,
+        ...Platform.select({
+            web: {
+                background: QUEST_DESIGN.stepActiveGradient,
+                transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            } as any,
+            default: { backgroundColor: colors.brand },
+        }),
+    },
+    progressText: { 
+        fontSize: 13, 
+        color: colors.textMuted, 
+        textAlign: 'right', 
+        fontWeight: '600',
+        letterSpacing: -0.2,
+    },
+
+    stepsNavigation: { 
+        flexDirection: 'row', 
+        marginTop: SPACING.md,
+        marginBottom: SPACING.xs,
+        ...Platform.select({
+            web: {
+                maskImage: 'linear-gradient(to right, transparent 0, black 12px, black calc(100% - 32px), transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 12px, black calc(100% - 32px), transparent 100%)',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+            } as any,
+        }),
+    },
+    stepsGrid: { 
+        flexDirection: 'row', 
+        flexWrap: 'wrap', 
+        marginTop: SPACING.md, 
+        gap: 8,
+        marginBottom: SPACING.xs,
+    },
 
     stepPill: {
-        flexDirection: 'row', alignItems: 'center', borderRadius: 999,
-        paddingVertical: 6, paddingHorizontal: 12,
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        borderRadius: 999,
+        paddingVertical: 10, 
+        paddingHorizontal: 16,
         backgroundColor: colors.backgroundSecondary,
-        maxWidth: 200, marginRight: 6, marginBottom: 6,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
-        minHeight: 32,
+        maxWidth: 200, 
+        marginRight: 8, 
+        marginBottom: 0,
+        borderWidth: 0,
+        minHeight: 40,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            } as any,
+        }),
     },
-    stepPillNarrow: { maxWidth: 140, paddingHorizontal: 10 },
-    stepPillUnlocked: { backgroundColor: colors.backgroundSecondary, borderColor: colors.borderLight },
-    stepPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    stepPillDone: { backgroundColor: colors.successSoft, borderColor: colors.successLight },
-    stepPillLocked: { opacity: 0.4 },
-    stepPillIndex: { fontSize: 11, fontWeight: '700', color: colors.primaryText, marginRight: 5 },
-    stepPillTitle: { fontSize: 11, fontWeight: '600', color: colors.text },
+    stepPillNarrow: { maxWidth: 160, paddingHorizontal: 14 },
+    stepPillUnlocked: { 
+        backgroundColor: colors.backgroundSecondary,
+        ...Platform.select({
+            web: {
+                ':hover': { transform: 'translateY(-1px)' },
+            } as any,
+        }),
+    },
+    stepPillActive: { 
+        backgroundColor: colors.brand,
+        ...Platform.select({
+            web: {
+                background: QUEST_DESIGN.stepActiveGradient,
+                boxShadow: '0 4px 14px rgba(245, 132, 44, 0.35)',
+                transform: 'scale(1.02)',
+            } as any,
+        }),
+    },
+    stepPillDone: { 
+        backgroundColor: colors.successSoft,
+        ...Platform.select({
+            web: {
+                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.12) 0%, rgba(66, 109, 86, 0.08) 100%)',
+            } as any,
+        }),
+    },
+    stepPillLocked: { opacity: 0.35 },
+    stepPillIndex: { 
+        fontSize: 13, 
+        fontWeight: '800', 
+        color: colors.brandText, 
+        marginRight: 8, 
+        minWidth: 16,
+    },
+    stepPillTitle: { 
+        fontSize: 13, 
+        fontWeight: '600', 
+        color: colors.text, 
+        flexShrink: 1,
+        letterSpacing: -0.2,
+    },
 
     stepDotMini: {
-        width: 30, height: 30, borderRadius: 15, marginRight: 5,
-        alignItems: 'center', justifyContent: 'center',
+        width: 36, 
+        height: 36, 
+        borderRadius: 18, 
+        marginRight: 6,
+        alignItems: 'center', 
+        justifyContent: 'center',
         backgroundColor: colors.backgroundSecondary,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        borderWidth: 0,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            } as any,
+        }),
     },
     stepDotMiniUnlocked: { opacity: 1 },
-    stepDotMiniActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    stepDotMiniDone: { backgroundColor: colors.successSoft, borderColor: colors.successLight },
-    stepDotMiniLocked: { opacity: 0.4 },
-    stepDotMiniText: { fontSize: 11, fontWeight: '700', color: colors.primaryText },
+    stepDotMiniActive: { 
+        backgroundColor: colors.brand,
+        ...Platform.select({
+            web: {
+                background: QUEST_DESIGN.stepActiveGradient,
+                boxShadow: '0 4px 12px rgba(245, 132, 44, 0.4)',
+                transform: 'scale(1.1)',
+            } as any,
+        }),
+    },
+    stepDotMiniDone: { 
+        backgroundColor: colors.successSoft,
+        ...Platform.select({
+            web: {
+                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
+            } as any,
+        }),
+    },
+    stepDotMiniLocked: { opacity: 0.35 },
+    stepDotMiniText: { fontSize: 12, fontWeight: '700', color: colors.brandText },
 
-    navActiveTitle: { marginTop: 5, fontSize: 12, fontWeight: '700', color: colors.text },
-    navHint: { fontSize: 11, color: colors.textMuted, marginTop: 5 },
+    navActiveTitle: { 
+        marginTop: 8, 
+        fontSize: 14, 
+        fontWeight: '700', 
+        color: colors.text,
+        letterSpacing: -0.3,
+    },
+    navHint: { 
+        fontSize: 12, 
+        color: colors.textMuted, 
+        marginTop: 6,
+        letterSpacing: -0.1,
+    },
 
-    content: { flex: 1, padding: SPACING.md },
-    contentInner: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
-    desktopRow: { flexDirection: 'row', gap: SPACING.md },
+    content: { flex: 1, padding: SPACING.lg },
+    contentInner: { maxWidth: 1160, alignSelf: 'center', width: '100%' },
+    desktopRow: { flexDirection: 'row', gap: SPACING.lg },
     desktopMain: { flex: 1, minWidth: 0 },
-    desktopSide: { width: 380, flexShrink: 0 },
+    desktopSide: { width: 400, flexShrink: 0 },
 
     card: {
         backgroundColor: colors.surface,
-        borderRadius: 16,
-        padding: SPACING.lg,
-        marginBottom: SPACING.md,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        borderRadius: 20,
+        padding: SPACING.xl,
+        marginBottom: SPACING.lg,
+        borderWidth: 0,
         ...Platform.select({
-            web: { boxShadow: colors.boxShadows.card } as any,
-            android: { elevation: 2 },
+            web: { 
+                boxShadow: QUEST_DESIGN.cardGlow,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            } as any,
+            android: { elevation: 3 },
             ios: {
-                shadowColor: colors.shadows.light.shadowColor,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.06,
-                shadowRadius: 8,
+                shadowColor: '#f5842c',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.08,
+                shadowRadius: 16,
             },
         }),
         backfaceVisibility: 'hidden',
     },
-    cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: SPACING.md, gap: SPACING.sm },
-    stepNumber: {
-        width: 36, height: 36, borderRadius: 10,
-        backgroundColor: colors.primarySoft,
-        alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
+    cardHeader: { 
+        flexDirection: 'row', 
+        alignItems: 'flex-start', 
+        marginBottom: SPACING.lg, 
+        gap: SPACING.md,
     },
-    stepNumberCompleted: { backgroundColor: colors.successSoft },
-    stepNumberText: { fontSize: 15, fontWeight: '800', color: colors.primaryText },
+    stepNumber: {
+        width: 44, 
+        height: 44, 
+        borderRadius: 14,
+        alignItems: 'center', 
+        justifyContent: 'center',
+        flexShrink: 0,
+        ...Platform.select({
+            web: {
+                background: 'linear-gradient(135deg, rgba(245, 132, 44, 0.12) 0%, rgba(224, 112, 32, 0.08) 100%)',
+            } as any,
+            default: { backgroundColor: colors.brandSoft },
+        }),
+    },
+    stepNumberCompleted: { 
+        ...Platform.select({
+            web: {
+                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.15) 0%, rgba(66, 109, 86, 0.1) 100%)',
+            } as any,
+            default: { backgroundColor: colors.successSoft },
+        }),
+    },
+    stepNumberText: { fontSize: 17, fontWeight: '800', color: colors.brandText },
     headerContent: { flex: 1 },
-    stepTitle: { fontSize: 17, fontWeight: '800', color: colors.text, marginBottom: 3, letterSpacing: -0.3, lineHeight: 22 },
+    stepTitle: { 
+        fontSize: 20, 
+        fontWeight: '800', 
+        color: colors.text, 
+        marginBottom: 4, 
+        letterSpacing: -0.4, 
+        lineHeight: 26,
+    },
     location: {
-        fontSize: 13, color: colors.primaryText, fontWeight: '600',
-        ...Platform.select({ web: { cursor: 'pointer' } as any }),
+        fontSize: 14, 
+        color: colors.brandText, 
+        fontWeight: '600',
+        ...Platform.select({ 
+            web: { 
+                cursor: 'pointer',
+                transition: 'color 0.2s ease',
+            } as any,
+        }),
     },
     completedBadge: {
-        backgroundColor: colors.successSoft,
-        borderRadius: 8,
-        width: 28, height: 28,
-        alignItems: 'center', justifyContent: 'center',
+        borderRadius: 12,
+        width: 36, 
+        height: 36,
+        alignItems: 'center', 
+        justifyContent: 'center',
         flexShrink: 0,
+        ...Platform.select({
+            web: {
+                background: 'linear-gradient(135deg, rgba(82, 125, 102, 0.2) 0%, rgba(66, 109, 86, 0.15) 100%)',
+            } as any,
+            default: { backgroundColor: colors.successSoft },
+        }),
     },
-    completedText: { color: colors.success, fontWeight: '800', fontSize: 14 },
+    completedText: { color: colors.success, fontWeight: '800', fontSize: 16 },
 
-    section: { marginBottom: SPACING.md },
-    sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, marginBottom: SPACING.sm, textTransform: 'uppercase', letterSpacing: 0.8 },
-    storyText: { fontSize: 15, lineHeight: 22, color: colors.text },
+    section: { marginBottom: SPACING.lg },
+    sectionTitle: { 
+        fontSize: QUEST_DESIGN.sectionTitleSize, 
+        fontWeight: '700', 
+        color: colors.textMuted, 
+        marginBottom: SPACING.sm, 
+        textTransform: 'uppercase', 
+        letterSpacing: 1.2,
+    },
+    storyText: { 
+        fontSize: QUEST_DESIGN.bodySize, 
+        lineHeight: 24, 
+        color: colors.text,
+        letterSpacing: -0.1,
+    },
 
-    taskText: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: SPACING.md, lineHeight: 23, letterSpacing: -0.2 },
+    taskText: { 
+        fontSize: 17, 
+        fontWeight: '700', 
+        color: colors.text, 
+        marginBottom: SPACING.lg, 
+        lineHeight: 25, 
+        letterSpacing: -0.3,
+    },
     input: {
         backgroundColor: colors.backgroundSecondary,
-        borderRadius: 12,
-        paddingHorizontal: SPACING.md,
-        paddingVertical: 12,
+        borderRadius: 14,
+        paddingHorizontal: SPACING.lg,
+        paddingVertical: 14,
         fontSize: 16,
         marginBottom: SPACING.sm,
         color: colors.text,
-        minHeight: 48,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        minHeight: 52,
+        borderWidth: 0,
         ...Platform.select({
             web: {
-                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                 outlineStyle: 'none',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.04)',
+                ':focus': {
+                    boxShadow: '0 0 0 3px rgba(245, 132, 44, 0.15), inset 0 1px 3px rgba(0,0,0,0.04)',
+                },
             } as any,
         }),
     },
@@ -1082,31 +1292,44 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     errorText: { color: colors.danger, fontSize: 13, fontWeight: '600', flex: 1 },
 
     primaryButton: {
-        backgroundColor: colors.primary,
-        paddingHorizontal: SPACING.lg,
-        paddingVertical: 13,
-        borderRadius: 12,
-        minHeight: 48,
+        paddingHorizontal: SPACING.xl,
+        paddingVertical: 14,
+        borderRadius: 14,
+        minHeight: 52,
         justifyContent: 'center',
         alignItems: 'center',
         ...globalFocusStyles.focusable,
         ...Platform.select({
-            web: { transition: 'opacity 0.15s ease', cursor: 'pointer' } as any,
+            web: { 
+                background: QUEST_DESIGN.stepActiveGradient,
+                cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 4px 14px rgba(245, 132, 44, 0.3)',
+            } as any,
+            default: { backgroundColor: colors.brand },
         }),
     },
-    buttonText: { color: colors.textOnPrimary, fontWeight: '700', textAlign: 'center', fontSize: 15 },
+    buttonText: { color: colors.textOnPrimary, fontWeight: '700', textAlign: 'center', fontSize: 16 },
 
-    inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: SPACING.sm },
+    inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SPACING.md },
     checkButton: {
-        backgroundColor: colors.primary,
-        width: 48, height: 48,
-        borderRadius: 12,
+        width: 52, 
+        height: 52,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
         flexShrink: 0,
-        ...Platform.select({ web: { cursor: 'pointer', transition: 'opacity 0.15s ease' } as any }),
+        ...Platform.select({ 
+            web: { 
+                background: QUEST_DESIGN.stepActiveGradient,
+                cursor: 'pointer', 
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 12px rgba(245, 132, 44, 0.3)',
+            } as any,
+            default: { backgroundColor: colors.brand },
+        }),
     },
-    checkButtonText: { color: colors.textOnPrimary, fontSize: 22, fontWeight: '700' },
+    checkButtonText: { color: colors.textOnPrimary, fontSize: 24, fontWeight: '700' },
 
     inlineActions: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -1191,15 +1414,27 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '600' },
 
     startButton: {
-        backgroundColor: colors.brand,
         padding: SPACING.lg,
-        borderRadius: 14,
+        borderRadius: 16,
         alignItems: 'center',
-        minHeight: 52,
+        minHeight: 56,
         justifyContent: 'center',
-        ...Platform.select({ web: { boxShadow: `0 4px 14px ${colors.brand}40` } as any }),
+        ...Platform.select({ 
+            web: { 
+                background: QUEST_DESIGN.stepActiveGradient,
+                boxShadow: '0 8px 24px rgba(245, 132, 44, 0.35)',
+                cursor: 'pointer',
+                transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            } as any,
+            default: { backgroundColor: colors.brand },
+        }),
     },
-    startButtonText: { color: colors.textOnPrimary, fontSize: 17, fontWeight: '800', letterSpacing: -0.2 },
+    startButtonText: { 
+        color: colors.textOnPrimary, 
+        fontSize: 18, 
+        fontWeight: '800', 
+        letterSpacing: -0.3,
+    },
 
     printSection: {
         backgroundColor: colors.backgroundSecondary,
@@ -1218,8 +1453,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     fullMapSection: {
         backgroundColor: colors.surface,
-        borderRadius: 14, padding: SPACING.md, marginBottom: SPACING.md,
-        borderWidth: 1, borderColor: colors.borderLight,
+        borderRadius: 20, 
+        padding: SPACING.md, 
+        marginBottom: SPACING.lg,
+        borderWidth: 0,
+        overflow: 'hidden',
+        ...Platform.select({
+            web: {
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03)',
+            } as any,
+        }),
     },
 
     pageRow: {
@@ -1244,12 +1487,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     excursionsSidebarInner: {
         backgroundColor: colors.surface,
-        borderRadius: 14,
-        padding: SPACING.md,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        borderRadius: 20,
+        padding: SPACING.lg,
+        borderWidth: 0,
         ...Platform.select({
-            web: { boxShadow: colors.boxShadows.light } as any,
+            web: { 
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03)',
+            } as any,
             default: colors.shadows.light,
         }),
     },
@@ -1270,41 +1514,58 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     excursionsCard: {
         backgroundColor: colors.surface,
-        borderRadius: 14,
-        padding: SPACING.md,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        borderRadius: 20,
+        padding: SPACING.lg,
+        borderWidth: 0,
         ...Platform.select({
-            web: { boxShadow: colors.boxShadows.light } as any,
+            web: { 
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03)',
+            } as any,
             default: colors.shadows.light,
         }),
     },
     excursionsTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '800',
         color: colors.text,
-        marginBottom: 2,
-        letterSpacing: -0.3,
+        marginBottom: 4,
+        letterSpacing: -0.4,
     },
     excursionsSubtitle: {
-        fontSize: 12,
+        fontSize: 13,
         color: colors.textMuted,
+        letterSpacing: -0.1,
     },
 
     completionScreen: {
         backgroundColor: colors.surface,
-        borderRadius: 16, padding: SPACING.lg,
-        alignItems: 'center', marginTop: SPACING.md,
-        borderWidth: 1, borderColor: colors.borderLight,
-        ...Platform.select({ web: { boxShadow: colors.boxShadows.card } as any }),
+        borderRadius: 24, 
+        padding: SPACING.xl,
+        alignItems: 'center', 
+        marginTop: SPACING.lg,
+        borderWidth: 0,
+        ...Platform.select({ 
+            web: { 
+                boxShadow: '0 8px 40px rgba(82, 125, 102, 0.12), 0 2px 8px rgba(0,0,0,0.04)',
+            } as any,
+        }),
     },
     completionTitle: {
-        fontSize: 22, fontWeight: '800', color: colors.success,
-        marginBottom: SPACING.sm, textAlign: 'center', letterSpacing: -0.5,
+        fontSize: 28, 
+        fontWeight: '800', 
+        color: colors.success,
+        marginBottom: SPACING.md, 
+        textAlign: 'center', 
+        letterSpacing: -0.6,
     },
     completionText: {
-        paddingTop: 4, fontSize: 16, color: colors.text,
-        textAlign: 'center', lineHeight: 23, marginBottom: SPACING.lg,
+        paddingTop: 4, 
+        fontSize: 17, 
+        color: colors.text,
+        textAlign: 'center', 
+        lineHeight: 26, 
+        marginBottom: SPACING.xl,
+        maxWidth: 480,
     },
 
     videoFrame: {
@@ -1349,15 +1610,33 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     zoomHint: { color: '#fff', fontSize: 14, backgroundColor: 'rgba(0,0,0,0.55)', padding: 10, borderRadius: 8 },
 
     flipBadge: {
-        paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999,
-        backgroundColor: colors.success,
+        paddingHorizontal: 28, 
+        paddingVertical: 14, 
+        borderRadius: 999,
         ...Platform.select({
-            web: { boxShadow: '0 8px 24px rgba(34,197,94,0.35)' } as any,
-            ios: { shadowColor: '#22c55e', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16 },
-            android: { elevation: 8 },
+            web: { 
+                background: QUEST_DESIGN.stepDoneGradient,
+                boxShadow: '0 12px 32px rgba(82, 125, 102, 0.4)',
+            } as any,
+            ios: { 
+                backgroundColor: colors.success,
+                shadowColor: '#527d66', 
+                shadowOffset: { width: 0, height: 8 }, 
+                shadowOpacity: 0.35, 
+                shadowRadius: 20,
+            },
+            android: { 
+                backgroundColor: colors.success,
+                elevation: 10,
+            },
         }),
     },
-    flipText: { color: '#fff', fontWeight: '800', fontSize: 17, letterSpacing: -0.3 },
+    flipText: { 
+        color: '#fff', 
+        fontWeight: '800', 
+        fontSize: 18, 
+        letterSpacing: -0.3,
+    },
 });
 
 const QuestMapSkeleton = () => {

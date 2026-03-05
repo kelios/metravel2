@@ -96,17 +96,17 @@ const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
       position: 'absolute',
-      top: 14,
-      left: 14,
-      right: 14,
+      top: 16,
+      left: 16,
+      right: 16,
       zIndex: 5,
     },
     scroll: {
       flexGrow: 0,
     },
     scrollContent: {
-      gap: 6,
-      paddingRight: 6,
+      gap: 10,
+      paddingRight: 10,
       ...(Platform.OS === 'web'
         ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' } as any)
         : null),
@@ -114,40 +114,44 @@ const getStyles = (colors: ThemedColors) =>
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 13,
-      paddingVertical: 7,
-      borderRadius: 20,
-      backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 24,
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderWidth: 0,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.05)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)',
             cursor: 'pointer',
-            transition: 'background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           } as any)
         : colors.shadows.light),
     },
     chipActive: {
       backgroundColor: colors.brand,
-      borderColor: colors.brand,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: `0 2px 12px ${colors.brand}45`,
+            boxShadow: '0 6px 24px rgba(255, 146, 43, 0.4), 0 2px 8px rgba(255, 146, 43, 0.2)',
+            transform: 'scale(1.05)',
           } as any)
         : null),
     },
     chipPressed: {
-      opacity: 0.75,
+      opacity: 0.85,
+      ...(Platform.OS === 'web'
+        ? ({
+            transform: 'scale(0.98)',
+          } as any)
+        : null),
     },
     chipText: {
-      fontSize: 12,
-      fontWeight: '600',
+      fontSize: 13,
+      fontWeight: '700',
       color: colors.text,
-      letterSpacing: 0.15,
+      letterSpacing: 0.1,
     },
     chipTextActive: {
       color: colors.textOnPrimary,

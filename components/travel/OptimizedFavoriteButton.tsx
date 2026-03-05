@@ -117,7 +117,9 @@ const getStyles = (_colors: ThemedColors) => StyleSheet.create({
     favoriteButton: {
         padding: 8,
         borderRadius: 999,
-        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
         ...(Platform.OS === 'web'
             ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any
             : {}),

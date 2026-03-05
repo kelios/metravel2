@@ -50,30 +50,32 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
     },
     tabText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
       color: colors.textMuted,
     },
     activeTabText: {
-      color: colors.primary,
+      color: colors.text,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
     },
     badge: {
-      paddingHorizontal: 6,
-      paddingVertical: 2,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.backgroundSecondary,
-      minWidth: 20,
+      minWidth: 24,
       alignItems: 'center',
     },
     activeBadge: {
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.primary,
     },
     badgeText: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.textMuted,
     },
     activeBadgeText: {
-      color: colors.primary,
+      color: colors.textOnPrimary,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
     },
   }), [colors]);
 

@@ -90,7 +90,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       letterSpacing: -0.2,
     },
 
-    // Упрощенные кнопки управления
+    // Упрощенные кнопки управления — скрыты по умолчанию, видны при hover
     adminActionsContainer: {
       position: 'absolute',
       top: DESIGN_TOKENS.spacing.sm,
@@ -108,6 +108,8 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         ? {
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
+            opacity: 0,
+            transition: 'opacity 0.2s ease',
           }
         : {}),
     },
@@ -266,19 +268,19 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     },
 
     metaTxt: {
-      fontSize: Platform.OS === 'web' ? 12.5 : 12,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
-      lineHeight: Platform.OS === 'web' ? 16 : 16,
+      fontSize: Platform.OS === 'web' ? 13 : 12,
+      color: colors.textSecondary,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+      lineHeight: Platform.OS === 'web' ? 18 : 16,
       minWidth: 0,
     },
 
     // Текст просмотров
     metaTxtViews: {
-      fontSize: Platform.OS === 'web' ? 12.5 : 12,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
-      lineHeight: Platform.OS === 'web' ? 16 : 16,
+      fontSize: Platform.OS === 'web' ? 13 : 12,
+      color: colors.textSecondary,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+      lineHeight: Platform.OS === 'web' ? 18 : 16,
     },
 
     // Компактные статус-бейджи (иконки)
@@ -328,10 +330,10 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     },
 
     tagTxt: {
-      fontSize: Platform.OS === 'web' ? 12.5 : 12,
-      color: colors.textMuted,
-      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
-      lineHeight: Platform.OS === 'web' ? 16 : 16,
+      fontSize: Platform.OS === 'web' ? 13 : 12,
+      color: colors.textSecondary,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+      lineHeight: Platform.OS === 'web' ? 18 : 16,
     },
 
     // Упрощенные чекбоксы
