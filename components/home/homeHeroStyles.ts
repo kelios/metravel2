@@ -22,41 +22,54 @@ interface HeroStyleParams {
   isLandscape?: boolean;
   /** Measured height of book wrapper (width * 765/1040), 0 before first layout */
   bookHeight?: number;
+  stackHeroButtons?: boolean;
 }
 
 export const createHomeHeroStyles = ({
   colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, viewportWidth = 0, showSideSlider, sliderHeight,
-  isLandscape = false, bookHeight = 0,
+  isLandscape = false, bookHeight = 0, stackHeroButtons = false,
 }: HeroStyleParams) => {
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
   // Width of one page = half of book width; book width = bookHeight * 1040/765
   const pageWidth = bookHeight > 0 ? Math.round(bookHeight * 1040 / 765 / 2) : 0;
   const hasBookLayout = showSideSlider && bookHeight > 0;
   const isOver1200Desktop = showSideSlider && viewportWidth >= 1200;
+  const isLargeDesktopBook = showSideSlider && viewportWidth >= 1920;
+  const isUltraWideBook = showSideSlider && viewportWidth >= 2560;
   const isCompactBookLayout = hasBookLayout && bookHeight <= 760;
   const leftPageWidth = showSideSlider ? (isOver1200Desktop ? '54%' : isDesktop ? '64%' : isTablet ? '58%' : '54%') : '100%';
   const rightPageWidth = showSideSlider ? (isDesktop ? '36%' : isTablet ? '42%' : '46%') : 320;
   const bookScale = hasBookLayout ? bookHeight / 864 : 1;
+  const titleScaleMax = isUltraWideBook ? 64 : isLargeDesktopBook ? 56 : 42;
+  const titleLineHeightMax = isUltraWideBook ? 72 : isLargeDesktopBook ? 62 : 50;
+  const subtitleScaleMax = isUltraWideBook ? 18 : isLargeDesktopBook ? 16 : 14;
+  const subtitleLineHeightMax = isUltraWideBook ? 28 : isLargeDesktopBook ? 24 : 22;
+  const subtitleWidthMax = isUltraWideBook ? 440 : isLargeDesktopBook ? 380 : 330;
+  const leftPagePaddingLeftMax = isUltraWideBook ? 250 : isLargeDesktopBook ? 220 : 190;
+  const leftPagePaddingRightMax = isUltraWideBook ? 210 : isLargeDesktopBook ? 190 : 120;
+  const leftPagePaddingTopMax = isUltraWideBook ? 120 : isLargeDesktopBook ? 108 : 98;
+  const leftPagePaddingBottomMax = isUltraWideBook ? 148 : isLargeDesktopBook ? 132 : 121;
+  const leftPageRowGapMax = isUltraWideBook ? 14 : isLargeDesktopBook ? 12 : 10;
   // Baseline tuned from validated desktop layout (bookHeight ~= 864)
-  const leftPagePaddingLeft = isOver1200Desktop ? 180 : hasBookLayout ? clamp(Math.round(190 * bookScale), 84, 190) : 100;
-  const leftPagePaddingRight = isOver1200Desktop ? 170 : hasBookLayout ? clamp(Math.round(120 * bookScale), 28, 120) : 16;
-  const leftPagePaddingTop = isOver1200Desktop ? 98 : hasBookLayout ? clamp(Math.round(98 * bookScale), 40, 98) : 48;
-  const leftPagePaddingBottom = isOver1200Desktop ? 121 : hasBookLayout ? clamp(Math.round(121 * bookScale), 72, 121) : 110;
-  const leftPageRowGap = isOver1200Desktop ? 10 : hasBookLayout ? clamp(Math.round(10 * bookScale), 6, 10) : 8;
+  const leftPagePaddingLeft = hasBookLayout ? clamp(Math.round(190 * bookScale), 84, leftPagePaddingLeftMax) : 100;
+  const leftPagePaddingRight = hasBookLayout ? clamp(Math.round(120 * bookScale), 28, leftPagePaddingRightMax) : 16;
+  const leftPagePaddingTop = hasBookLayout ? clamp(Math.round(98 * bookScale), 40, leftPagePaddingTopMax) : 48;
+  const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round(121 * bookScale), 72, leftPagePaddingBottomMax) : 110;
+  const leftPageRowGap = hasBookLayout ? clamp(Math.round(10 * bookScale), 6, leftPageRowGapMax) : 8;
   const desktopBookTitleSize = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056)), 24, 38)
+    ? clamp(Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056)), 24, titleScaleMax)
     : 54;
   const desktopBookTitleLineHeight = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.088), Math.round(bookHeight * 0.068)), 30, 46)
+    ? clamp(Math.min(Math.round(pageWidth * 0.088), Math.round(bookHeight * 0.068)), 30, titleLineHeightMax)
     : 64;
   const desktopBookSubtitleSize = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.027), Math.round(bookHeight * 0.024)), 12, 14)
+    ? clamp(Math.min(Math.round(pageWidth * 0.027), Math.round(bookHeight * 0.024)), 12, subtitleScaleMax)
     : 17;
   const desktopBookSubtitleLineHeight = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.042), Math.round(bookHeight * 0.034)), 18, 22)
+    ? clamp(Math.min(Math.round(pageWidth * 0.042), Math.round(bookHeight * 0.034)), 18, subtitleLineHeightMax)
     : 28;
   const desktopBookSubtitleMaxWidth = hasBookLayout
-    ? clamp(Math.round(pageWidth * 0.76), 240, 330)
+    ? clamp(Math.round(pageWidth * 0.76), 240, subtitleWidthMax)
     : 480;
   const warmBg = DESIGN_TOKENS.colors.background;
   const warmBgSoft = DESIGN_TOKENS.colors.backgroundSecondary;
@@ -151,8 +164,8 @@ export const createHomeHeroStyles = ({
       justifyContent: 'flex-start',
       alignSelf: 'stretch',
       ...(bookHeight > 0 ? {
-        height: isOver1200Desktop ? 864 : bookHeight,
-        maxHeight: isOver1200Desktop ? 864 : bookHeight,
+        height: bookHeight,
+        maxHeight: bookHeight,
       } : {}),
     } as any : {
       backgroundColor: 'rgba(255,255,255,0.85)',
@@ -558,15 +571,15 @@ export const createHomeHeroStyles = ({
 
   // -- CTA Buttons --
   buttonsContainer: {
-    flexDirection: isNarrowLayout ? 'column' : 'row', justifyContent: 'flex-start', alignItems: 'center',
-    gap: isMobile ? 10 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 14),
+    flexDirection: stackHeroButtons ? 'column' : 'row', justifyContent: 'flex-start', alignItems: stackHeroButtons ? 'stretch' : 'center',
+    gap: isMobile ? 10 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 10),
     width: '100%',
-    flexWrap: isNarrowLayout ? 'nowrap' : 'wrap',
+    flexWrap: 'nowrap',
     marginTop: isMobile ? 8 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 12),
   },
   primaryButton: {
-    paddingHorizontal: isMobile ? 28 : (showSideSlider ? (isCompactBookLayout ? 24 : 28) : 40), paddingVertical: isMobile ? 14 : (showSideSlider ? (isCompactBookLayout ? 10 : 12) : 17), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 56),
-    borderRadius: DESIGN_TOKENS.radii.pill, width: isMobile ? '100%' : undefined,
+    paddingHorizontal: isMobile ? 28 : (showSideSlider ? (isCompactBookLayout ? 24 : 28) : 28), paddingVertical: isMobile ? 14 : (showSideSlider ? (isCompactBookLayout ? 10 : 12) : 13), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 46),
+    borderRadius: DESIGN_TOKENS.radii.pill, width: stackHeroButtons ? '100%' : undefined,
     backgroundColor: colors.brand,
     ...Platform.select({ web: {
       transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -581,13 +594,13 @@ export const createHomeHeroStyles = ({
     } }),
   },
   primaryButtonText: {
-    fontSize: isMobile ? 15 : (isCompactBookLayout ? 15 : 16), fontWeight: '600', color: colors.textOnPrimary, letterSpacing: 0.1,
+    fontSize: isMobile ? 15 : (isCompactBookLayout ? 15 : 15), fontWeight: '600', color: colors.textOnPrimary, letterSpacing: 0.05,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   secondaryButton: {
-    paddingHorizontal: isMobile ? 20 : (showSideSlider ? (isCompactBookLayout ? 16 : 20) : 28), paddingVertical: isMobile ? 13 : (showSideSlider ? (isCompactBookLayout ? 9 : 11) : 17), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 56),
+    paddingHorizontal: isMobile ? 20 : (showSideSlider ? (isCompactBookLayout ? 16 : 20) : 22), paddingVertical: isMobile ? 13 : (showSideSlider ? (isCompactBookLayout ? 9 : 11) : 13), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 46),
     borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: cardSurface, borderWidth: 1.5, borderColor: warmBorder,
-    width: isMobile ? '100%' : undefined,
+    width: stackHeroButtons ? '100%' : undefined,
     ...Platform.select({ web: {
       transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
       boxShadow: DESIGN_TOKENS.shadows.light,
@@ -604,23 +617,31 @@ export const createHomeHeroStyles = ({
     fontSize: isCompactBookLayout ? 14 : 15, fontWeight: '600', color: inkStrong,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
+  singleCtaButton: {
+    width: stackHeroButtons ? '100%' : undefined,
+    alignSelf: stackHeroButtons ? 'stretch' : 'flex-start',
+  },
 
   // -- Bookmark rail (desktop left page inline mood cards) --
   bookmarkRail: {
-    width: '100%', gap: showSideSlider ? (isCompactBookLayout ? 6 : 8) : 2, alignItems: 'stretch',
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: showSideSlider ? (isCompactBookLayout ? 6 : 8) : 2,
+    alignItems: 'stretch',
     ...Platform.select({ web: {
-      borderLeftWidth: 1.5,
-      borderLeftColor: warmBorder,
-      paddingLeft: isCompactBookLayout ? 12 : 18,
-      marginLeft: 2,
+      marginTop: 2,
     } as any }),
   },
   bookmarkChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: isCompactBookLayout ? 12 : 14, paddingVertical: showSideSlider ? (isCompactBookLayout ? 8 : 10) : 6,
-    borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: isCompactBookLayout ? 10 : 12, paddingVertical: showSideSlider ? (isCompactBookLayout ? 6 : 8) : 6,
+    borderRadius: 10,
     borderWidth: 1.5, borderColor: warmBorder,
     backgroundColor: cardSurface,
+    flexBasis: isCompactBookLayout ? '45%' : '45%',
+    maxWidth: isCompactBookLayout ? '45%' : '45%',
+    minWidth: 0,
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'all 0.18s ease',
@@ -630,10 +651,10 @@ export const createHomeHeroStyles = ({
   bookmarkChipAccent: {
     width: 3,
     alignSelf: 'stretch',
-    marginVertical: -10,
-    marginLeft: -14,
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+    marginVertical: -8,
+    marginLeft: -12,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
     backgroundColor: colors.brand,
     opacity: 0.78,
   },
@@ -645,7 +666,7 @@ export const createHomeHeroStyles = ({
     } }),
   },
   bookmarkChipIcon: {
-    width: isCompactBookLayout ? 28 : 32, height: isCompactBookLayout ? 28 : 32, borderRadius: 10, backgroundColor: brandSoft,
+    width: isCompactBookLayout ? 24 : 28, height: isCompactBookLayout ? 24 : 28, borderRadius: 9, backgroundColor: brandSoft,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: warmBorder,
   },
 
@@ -700,11 +721,11 @@ export const createHomeHeroStyles = ({
   },
   moodChipText: { gap: showSideSlider ? 2 : 1, flex: showSideSlider ? 1 : undefined },
   moodChipTitle: {
-    fontSize: showSideSlider ? (isCompactBookLayout ? 13 : 14) : 13, fontWeight: '600', color: inkStrong, letterSpacing: showSideSlider ? -0.2 : -0.1,
+    fontSize: showSideSlider ? (isCompactBookLayout ? 12 : 13) : 13, fontWeight: '600', color: inkStrong, letterSpacing: showSideSlider ? -0.15 : -0.1,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   moodChipMeta: {
-    fontSize: showSideSlider ? (isCompactBookLayout ? 10 : 11) : 10, fontWeight: '400', color: inkMuted, letterSpacing: 0.1,
+    fontSize: showSideSlider ? 10 : 10, fontWeight: '400', color: inkMuted, letterSpacing: 0.05,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 

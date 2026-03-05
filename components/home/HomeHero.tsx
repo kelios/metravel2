@@ -1,21 +1,19 @@
 import { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, Pressable, Platform, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
-import { useAuth } from '@/context/AuthContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer } from '@/components/layout';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { buildLoginHref } from '@/utils/authNavigation';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { createHomeHeroStyles } from './homeHeroStyles';
 
 interface HomeHeroProps {
   travelsCount?: number;
-  /** HERO-06: показывать skeleton для кнопки пока загружается travelsCount */
+  /** HERO-06: legacy prop, retained for compatibility */
   travelsCountLoading?: boolean;
 }
 
@@ -177,9 +175,8 @@ const HERO_HIGHLIGHTS = [
 
 export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
 
-const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading = false }: HomeHeroProps) {
+const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, travelsCountLoading: _travelsCountLoading = false }: HomeHeroProps) {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
   const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop, width, isPortrait } = useResponsive();
 
@@ -201,6 +198,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
       : Dimensions.get('window').height;
     return Math.min(aspectH, vh - 130);
   }, [bookWrapperWidth]);
+  const isCompactBookLayout = showSideSlider && bookHeight > 0 && bookHeight <= 760;
+  const useInlineBookmarkRail = showSideSlider && !isNarrowLayout && !isCompactBookLayout && width >= 1180;
+  const useStackedCtas = isNarrowLayout || isCompactBookLayout || (showSideSlider && width < 1180);
 
   // Slider state
   const [activeSlide, setActiveSlide] = useState(0);
@@ -275,17 +275,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
     setActiveSlide((prev) => (prev + 1) % totalSlides);
   }, [totalSlides]);
 
-  const handleCreateBook = useCallback(() => {
-    queueAnalyticsEvent('HomeClick_CreateBook');
-    if (!isAuthenticated) {
-      router.push(buildLoginHref({ redirect: '/', intent: 'create-book' }) as any);
-    } else if (travelsCount === 0) {
-      router.push('/travel/new' as any);
-    } else {
-      router.push('/export' as any);
-    }
-  }, [isAuthenticated, travelsCount, router]);
-
   const handleOpenSearch = useCallback(() => {
     queueAnalyticsEvent('HomeClick_OpenSearch');
     router.push('/search' as any);
@@ -311,28 +300,20 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
     }
   }, [router]);
 
-  const primaryButtonLabel = useMemo(() => {
-    if (!isAuthenticated) return 'Добавить первую поездку';
-    if (travelsCount === 0) return 'Добавить первую поездку';
-    return 'Открыть мою книгу';
-  }, [isAuthenticated, travelsCount]);
-
   const styles = useMemo(() => createHomeHeroStyles({
     colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, viewportWidth: width, showSideSlider, sliderHeight,
-    isLandscape, bookHeight,
-  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, width, showSideSlider, sliderHeight, isLandscape, bookHeight]);
+    isLandscape, bookHeight, stackHeroButtons: useStackedCtas,
+  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, width, showSideSlider, sliderHeight, isLandscape, bookHeight, useStackedCtas]);
 
   const currentSlide = BOOK_IMAGES[visibleSlide];
   const isVisibleSlideLoaded = loadedSlides.has(visibleSlide);
-  const showBookmarkRail = showSideSlider && !isNarrowLayout;
-  const showInlineBookmarkRail = showBookmarkRail;
   const heroSubtitle = isMobile || (showSideSlider && bookHeight > 0 && bookHeight < 760)
     ? 'Готовые маршруты, заметки и личная книга путешествий.'
     : 'Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.';
 
   return (
     <View testID="home-hero" style={styles.container}>
-      <ResponsiveContainer maxWidth="xl" padding>
+      <ResponsiveContainer maxWidth={1920} padding>
         <View style={styles.heroShell}>
           {/* Book wrapper for 3D effect */}
           <View
@@ -373,7 +354,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 {/* Subtitle */}
                 <Text style={styles.subtitle}>{heroSubtitle}</Text>
 
-                {showInlineBookmarkRail && (
+                {useInlineBookmarkRail && (
                   <View testID="home-hero-bookmark-rail" style={styles.bookmarkRail}>
                     {MOOD_CARDS.map((card) => (
                       <Pressable
@@ -392,8 +373,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                           <Feather name={card.icon as any} size={14} color={colors.primary} />
                         </View>
                         <View style={styles.moodChipText}>
-                          <Text style={styles.moodChipTitle} numberOfLines={1}>{card.title}</Text>
-                          <Text style={styles.moodChipMeta} numberOfLines={1}>{card.meta}</Text>
+                          <Text style={styles.moodChipTitle} numberOfLines={2}>{card.title}</Text>
+                          <Text style={styles.moodChipMeta} numberOfLines={2}>{card.meta}</Text>
                         </View>
                       </Pressable>
                     ))}
@@ -401,7 +382,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 )}
 
                 {/* Inner mini-book feature highlights widget */}
-                {!showInlineBookmarkRail && !isMobile && (
+                {!useInlineBookmarkRail && !isMobile && (
                   <View style={styles.openBookContainer}>
                     <View style={styles.openBook}>
                       {isWeb && <View style={styles.bookCover} />}
@@ -461,40 +442,14 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
                 {/* CTA Buttons */}
                 <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
-                  {travelsCountLoading ? (
-                    <View style={[styles.primaryButton, {
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      opacity: 0.6,
-                      flexDirection: 'row',
-                      gap: 8,
-                    }]}>
-                      <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                    </View>
-                  ) : (
-                    <Button
-                      onPress={handleCreateBook}
-                      label={primaryButtonLabel}
-                      variant="primary"
-                      size="md"
-                      fullWidth={isNarrowLayout}
-                      icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
-                      iconPosition="right"
-                      style={styles.primaryButton}
-                      labelStyle={styles.primaryButtonText}
-                      hoverStyle={styles.primaryButtonHover}
-                      pressedStyle={styles.primaryButtonHover}
-                      accessibilityLabel={primaryButtonLabel}
-                    />
-                  )}
                   <Button
                     onPress={handleOpenSearch}
                     label="Смотреть маршруты"
                     variant="secondary"
                     size="md"
-                    fullWidth={isNarrowLayout}
+                    fullWidth={useStackedCtas}
                     icon={<Feather name="compass" size={16} color={colors.text} />}
-                    style={styles.secondaryButton}
+                    style={[styles.secondaryButton, styles.singleCtaButton]}
                     labelStyle={styles.secondaryButtonText}
                     hoverStyle={styles.secondaryButtonHover}
                     pressedStyle={styles.secondaryButtonHover}
@@ -592,7 +547,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
             )}
             </View>
           </View>
-          {!showBookmarkRail && (
+          {!useInlineBookmarkRail && (
             <View style={styles.moodChipsContainer}>
               <View
                 style={isWeb ? ({

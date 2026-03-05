@@ -447,6 +447,25 @@ function ListTravel({
             // Можно добавить Toast здесь, если нужно
           }
         } catch (error) {
+          const errorStatus =
+            error && typeof error === 'object' && 'status' in error
+              ? Number((error as { status?: unknown }).status)
+              : null;
+          const errorMessageText = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase();
+          const isAlreadyDeleted =
+            errorStatus === 404 ||
+            errorMessageText.includes('404') ||
+            errorMessageText.includes('not found') ||
+            errorMessageText.includes('не найден');
+
+          if (isAlreadyDeleted) {
+            removeTravelFromInfiniteTravelsCache(queryClient, targetId);
+            setDelete(null);
+            deleteInFlightRef.current = null;
+            await queryClient.invalidateQueries({ queryKey: ["travels"] });
+            return;
+          }
+
           deleteInFlightRef.current = null;
           // ✅ BUG-002: Обработка ошибок при удалении
           // ✅ UX-001: Улучшенные сообщения об ошибках

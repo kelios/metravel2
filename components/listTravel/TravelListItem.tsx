@@ -264,11 +264,11 @@ function TravelListItem({
     // Право редактирования:
     //  - суперпользователь может управлять всеми путешествиями
     //  - обычный пользователь — только своими (по userIds / user.id)
+    // Не доверяем одному лишь факту, что карточка показана на /metravel:
+    // backend/кэш могут вернуть чужие записи, и тогда delete/edit приводит к 404.
     const canEdit = React.useMemo(() => {
         if (isSuperuser) return true;
         if (!currentUserId) return false;
-        // На странице "Мои путешествия" backend уже ограничивает список текущим пользователем.
-        if (_isMetravel) return true;
 
         const ownerIds = normalizeOwnerIds(
             (travel as any).userIds ??
@@ -283,7 +283,7 @@ function TravelListItem({
 
         const normalizedCurrentUserId = String(currentUserId).trim();
         return ownerIds.includes(normalizedCurrentUserId);
-    }, [isSuperuser, currentUserId, _isMetravel, travel]);
+    }, [isSuperuser, currentUserId, travel]);
     const queryClient = useQueryClient();
     const anchorRef = useRef<any>(null);
     const hasPrefetchedRef = useRef(false);

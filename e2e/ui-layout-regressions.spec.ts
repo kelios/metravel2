@@ -75,10 +75,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
     await expect(hero).toBeVisible({ timeout: 30_000 });
     await expectNoHorizontalScroll(page);
 
-    const primaryCta = page
-      .getByRole('button', { name: /Создать книгу путешествий|Добавить первую поездку|Открыть мою книгу/i })
-      .locator(':visible')
-      .first();
+    const primaryCta = page.getByRole('button', { name: /Смотреть маршруты/i }).locator(':visible').first();
     await expect(primaryCta).toBeVisible({ timeout: 30_000 });
 
     // Chips are rendered on mobile web as pressables with aria-label "Идея поездки ...".
@@ -94,6 +91,27 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
         `mood chips must start below CTAs (chipTop=${chipBox.y}, ctaBottom=${ctaBox.y + ctaBox.height})`
       ).toBeGreaterThanOrEqual(ctaBox.y + ctaBox.height - 1);
     }
+
+    guard.assertNoErrorsContaining('6000ms timeout exceeded');
+  });
+
+  test('Home hero: compact web layout stacks CTAs without overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await preacceptCookiesAndStabilize(page);
+
+    const guard = installNoConsoleErrorsGuard(page);
+    await gotoWithRetry(page, '/');
+
+    const hero = page.getByTestId('home-hero');
+    await expect(hero).toBeVisible({ timeout: 30_000 });
+    await expectNoHorizontalScroll(page);
+
+    const cta = page.getByRole('button', { name: /Смотреть маршруты/i }).locator(':visible').first();
+    await expect(cta).toBeVisible({ timeout: 30_000 });
+
+    const ctaBox = await cta.boundingBox();
+
+    expect(ctaBox, 'hero CTA must have a bounding box').not.toBeNull();
 
     guard.assertNoErrorsContaining('6000ms timeout exceeded');
   });

@@ -85,17 +85,17 @@ describe('TravelListItem permissions', () => {
     expect(getByLabelText('Удалить')).toBeTruthy();
   });
 
-  it('shows edit/delete buttons on metravel page even when owner fields are missing', () => {
+  it('does not show edit/delete buttons on metravel page when owner fields are missing', () => {
     const travel: Travel = { ...baseTravel, userIds: '' } as any;
-    const { getByLabelText } = renderItem({
+    const { queryByLabelText } = renderItem({
       travel,
       currentUserId: '42',
       isSuperuser: false,
       isMetravel: true,
     });
 
-    expect(getByLabelText('Редактировать')).toBeTruthy();
-    expect(getByLabelText('Удалить')).toBeTruthy();
+    expect(queryByLabelText('Редактировать')).toBeNull();
+    expect(queryByLabelText('Удалить')).toBeNull();
   });
 
   it('shows edit/delete buttons for superuser regardless of owner', () => {

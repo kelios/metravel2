@@ -2,13 +2,11 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import HomeHero from '@/components/home/HomeHero';
-import { useAuth } from '@/context/AuthContext';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
-jest.mock('@/context/AuthContext');
 jest.mock('@/utils/analytics');
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({
@@ -27,7 +25,6 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
-const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockQueueAnalyticsEvent = queueAnalyticsEvent as jest.MockedFunction<typeof queueAnalyticsEvent>;
 
 describe('HomeHero Component', () => {
@@ -35,14 +32,6 @@ describe('HomeHero Component', () => {
 
   beforeEach(() => {
     (mockUseRouter as jest.Mock).mockReturnValue({ push: mockPush } as any);
-    mockUseAuth.mockReturnValue({
-      isAuthenticated: false,
-      userId: null,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setUserAvatar: jest.fn(),
-      triggerProfileRefresh: jest.fn(),
-    } as any);
   });
 
   afterEach(() => {
@@ -73,87 +62,15 @@ describe('HomeHero Component', () => {
   });
 
   describe('Button Labels', () => {
-    it('should show "Добавить первую поездку" for unauthenticated users', () => {
-      const { getByText } = render(<HomeHero />);
-      expect(getByText('Добавить первую поездку')).toBeTruthy();
-    });
-
-    it('should show "Добавить первую поездку" for authenticated users with no travels', () => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '123',
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      const { getByText } = render(<HomeHero travelsCount={0} />);
-      expect(getByText('Добавить первую поездку')).toBeTruthy();
-    });
-
-    it('should show "Открыть мою книгу" for authenticated users with travels', () => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '123',
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      const { getByText } = render(<HomeHero travelsCount={5} />);
-      expect(getByText('Открыть мою книгу')).toBeTruthy();
+    it('should render only "Смотреть маршруты" CTA', () => {
+      const { getByText, queryByText } = render(<HomeHero travelsCount={5} />);
+      expect(getByText('Смотреть маршруты')).toBeTruthy();
+      expect(queryByText('Добавить первую поездку')).toBeNull();
+      expect(queryByText('Открыть мою книгу')).toBeNull();
     });
   });
 
   describe('Navigation', () => {
-    it('should navigate to login for unauthenticated users', () => {
-      const { getByText } = render(<HomeHero />);
-      const button = getByText('Добавить первую поездку');
-      
-      fireEvent.press(button);
-      
-      expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2F&intent=create-book');
-      expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith('HomeClick_CreateBook');
-    });
-
-    it('should navigate to new travel for authenticated users with no travels', () => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '123',
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      const { getByText } = render(<HomeHero travelsCount={0} />);
-      const button = getByText('Добавить первую поездку');
-      
-      fireEvent.press(button);
-      
-      expect(mockPush).toHaveBeenCalledWith('/travel/new');
-    });
-
-    it('should navigate to export for authenticated users with travels', () => {
-      mockUseAuth.mockReturnValue({
-        isAuthenticated: true,
-        userId: '123',
-        login: jest.fn(),
-        logout: jest.fn(),
-        setUserAvatar: jest.fn(),
-        triggerProfileRefresh: jest.fn(),
-      } as any);
-
-      const { getByText } = render(<HomeHero travelsCount={5} />);
-      const button = getByText('Открыть мою книгу');
-      
-      fireEvent.press(button);
-      
-      expect(mockPush).toHaveBeenCalledWith('/export');
-    });
-
     it('should navigate to search when clicking "Смотреть маршруты"', () => {
       const { getByText } = render(<HomeHero />);
       const button = getByText('Смотреть маршруты');

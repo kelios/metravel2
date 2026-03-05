@@ -278,6 +278,44 @@ describe('ListTravel', () => {
     (global as any).alert = originalAlert;
   });
 
+  it('treats 404 on delete as already removed and does not show alert on web', async () => {
+    const travelsApi: any = require('@/api/travelsApi');
+    travelsApi.fetchTravels.mockResolvedValueOnce({
+      data: [{ id: 2977, title: 'Already deleted' }],
+      total: 1,
+      hasMore: false,
+    });
+
+    const notFoundError = new Error('Not found.');
+    (notFoundError as any).status = 404;
+    travelsApi.deleteTravel.mockRejectedValueOnce(notFoundError);
+
+    const originalOS = Platform.OS;
+    (Platform as any).OS = 'web';
+
+    const originalAlert = (global as any).alert;
+    const alertSpy = jest.fn();
+    (global as any).alert = alertSpy;
+
+    renderComponent();
+
+    const confirmSpy = (globalThis as any).confirm as jest.Mock;
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(travelsApi.deleteTravel).toHaveBeenCalledWith('2977');
+    });
+
+    await waitFor(() => {
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    (Platform as any).OS = originalOS;
+    (global as any).alert = originalAlert;
+  });
+
   it('calls DELETE endpoint after confirming deletion on web', async () => {
     const travelsApi: any = require('@/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
