@@ -425,7 +425,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
-    const { width: screenW, height: screenH } = useResponsive();
+    const { width: screenW, height: screenH, isMobile } = useResponsive();
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [unlockedIndex, setUnlockedIndex] = useState(0);
@@ -633,8 +633,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                     {/* Шапка */}
                     <View style={styles.header}>
-                        <View style={styles.headerRow}>
-                            <Text style={styles.title}>{title}</Text>
+                        <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
+                            {!isMobile && <Text style={styles.title}>{title}</Text>}
                             <Pressable onPress={resetQuest} style={styles.resetButton} hitSlop={6}>
                                 <Text style={styles.resetText}>Сбросить</Text>
                             </Pressable>
@@ -786,6 +786,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                     collapsedHeight={compactNav ? 520 : 760}
                                                     expandedHeight={compactNav ? 600 : 900}
                                                     className="belkraj-slot"
+                                                    allowScroll
                                                 />
                                             </Suspense>
                                         </View>
@@ -869,6 +870,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                     collapsedHeight={560}
                                                     expandedHeight={900}
                                                     className="belkraj-slot"
+                                                    allowScroll
                                                 />
                                             </Suspense>
                                         </View>
@@ -904,6 +906,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'flex-start',
         marginBottom: SPACING.md,
         gap: SPACING.sm,
+    },
+    headerRowMobile: {
+        justifyContent: 'flex-end',
+        marginBottom: SPACING.sm,
     },
     title: { fontSize: 22, fontWeight: '800', color: colors.text, flex: 1, letterSpacing: -0.5, lineHeight: 28 },
     resetButton: {

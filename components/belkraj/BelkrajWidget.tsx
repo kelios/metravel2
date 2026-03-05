@@ -16,6 +16,7 @@ type Props = {
     collapsedHeight?: number; // высота по умолчанию
     expandedHeight?: number;  // высота при развороте
     className?: string;
+    allowScroll?: boolean;
 };
 
 function BelkrajWidget({
@@ -24,6 +25,7 @@ function BelkrajWidget({
                                           collapsedHeight = 520,
                                           expandedHeight = 1200,
                                           className,
+                                          allowScroll = false,
                                       }: Props) {
     const expanded = false;
 
@@ -90,7 +92,7 @@ function BelkrajWidget({
                 title="Belkraj partner offers"
                 width="100%"
                 height={targetHeight}
-                scrolling="no"
+                scrolling={allowScroll ? 'yes' : 'no'}
                 frameBorder={0}
                 style={{
                     width: '100%',
