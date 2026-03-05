@@ -342,12 +342,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 {isWeb && showSideSlider && <View style={styles.heroPageCurlLeft} />}
 
                 {/* Badge */}
-                <View style={styles.badge}>
-                  <View style={styles.badgeDot} />
-                  <Feather name="zap" size={12} color={colors.primaryText} />
-                  <Text style={styles.badgeText}>Бесплатно • Без регистрации</Text>
-                </View>
-
                 {/* Title */}
                 <View>
                   <Text style={styles.title}>
@@ -606,8 +600,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                     accessibilityRole="button"
                     accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
                   >
+                    <View style={styles.moodChipAccent} />
                     <View style={styles.moodChipIcon}>
-                      <Feather name={card.icon as any} size={14} color={colors.primary} />
+                      <Feather name={card.icon as any} size={16} color={colors.primary} />
                     </View>
                     <View style={styles.moodChipText}>
                       <Text style={styles.moodChipTitle}>{card.title}</Text>

@@ -175,11 +175,6 @@ export function HomeInspirationSection({
     router.push('/search' as any);
   }, [title, router]);
 
-  const sectionBadge = useMemo(() => {
-    if (queryKey === 'home-travels-of-month') return { icon: 'zap', label: 'Идеи сезона', color: 'warning' };
-    if (queryKey === 'home-popular-travels') return { icon: 'trending-up', label: 'Выбор сообщества', color: 'primary' };
-    return { icon: 'shuffle', label: 'Маршрут-сюрприз', color: 'success' };
-  }, [queryKey]);
 
   const viewMoreLabel = isMobile ? 'Все маршруты' : 'Смотреть все маршруты';
   const emptyState = EMPTY_STATE_TEXT[queryKey] ?? {
@@ -230,16 +225,7 @@ export function HomeInspirationSection({
     <View style={[styles.section, isMobile && styles.sectionMobile]}>
       <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
         <View style={styles.heroHeader}>
-          <View style={styles.showcaseBadge}>
-            <Feather
-              name={isWeekendShowcase ? 'calendar' : (sectionBadge.icon as any)}
-              size={11}
-              color={colors.primaryText}
-            />
-            <Text style={styles.showcaseBadgeText}>
-              {isWeekendShowcase ? 'Ближайшие выходные' : sectionBadge.label}
-            </Text>
-          </View>
+
           <Text style={styles.heroTitle}>{title}</Text>
           {titleAccent && <Text style={styles.heroTitleAccent}>{titleAccent}</Text>}
           {subtitle && <Text style={styles.heroSubtitle}>{subtitle}</Text>}
@@ -510,10 +496,7 @@ function HomeInspirationSections() {
             {/* Header */}
             <View style={styles.quickFiltersHeader}>
               <View style={styles.quickFiltersHeaderLeft}>
-                <View style={styles.quickFiltersBadge}>
-                  <Feather name="compass" size={11} color={colors.primary} />
-                  <Text style={styles.quickFiltersBadgeText}>Быстрый старт</Text>
-                </View>
+
                 <Text style={styles.quickFiltersTitle}>Подберите поездку под свой ритм</Text>
                 <Text style={styles.quickFiltersSubtitle}>
                   Комбинируйте формат, сезон и расстояние, чтобы найти идеальный маршрут

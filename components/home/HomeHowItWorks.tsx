@@ -68,25 +68,6 @@ function HomeHowItWorks() {
       gap: isMobile ? 10 : 14,
       marginBottom: isMobile ? 24 : 52,
     },
-    eyebrow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 7,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
-      backgroundColor: colors.primarySoft,
-      paddingHorizontal: 14,
-      paddingVertical: 6,
-    },
-    eyebrowText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.primaryText,
-      letterSpacing: 0.8,
-      // TYPO-04: capitalize вместо uppercase — лучше читаемость на кириллице
-      textTransform: 'capitalize',
-    },
     title: {
       fontSize: isMobile ? 22 : 40,
       fontWeight: '800',
@@ -242,10 +223,7 @@ function HomeHowItWorks() {
     <View testID="home-how-it-works" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
-          <View style={styles.eyebrow}>
-            <Feather name="layers" size={12} color={colors.primaryText} />
-            <Text style={styles.eyebrowText}>Как это работает</Text>
-          </View>
+
           <Text style={styles.title}>Три шага до вашей книги</Text>
           <Text style={styles.subtitle}>
             Просто выберите маршрут, сохраните поездку и получите красивый PDF

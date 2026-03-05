@@ -220,10 +220,7 @@ function HomeFAQSection() {
     <View style={styles.band} testID="home-faq">
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
-          <View style={styles.eyebrow}>
-            <Feather name="help-circle" size={12} color={colors.primaryText} />
-            <Text style={styles.eyebrowText}>Частые вопросы</Text>
-          </View>
+
           <Text style={styles.title}>Всё, что нужно знать</Text>
           <Text style={styles.subtitle}>Ответы на самые частые вопросы о сервисе</Text>
         </View>
