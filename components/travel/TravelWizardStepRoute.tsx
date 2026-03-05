@@ -24,6 +24,9 @@ async function showToastMessage(payload: any) {
     await showToast(payload);
 }
 
+const hasToastBeenShown = (error: unknown): boolean =>
+    error instanceof Error && (error as Error & { toastShown?: boolean }).toastShown === true;
+
 const WebMapComponent = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/WebMapComponent'))
     : null;
@@ -139,12 +142,14 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
             setTimeout(() => {
                 router.push('/metravel');
             }, 250);
-        } catch {
-            void showToastMessage({
-                type: 'error',
-                text1: 'Ошибка сохранения',
-                text2: 'Попробуйте еще раз',
-            });
+        } catch (error) {
+            if (!hasToastBeenShown(error)) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Ошибка сохранения',
+                    text2: 'Попробуйте еще раз',
+                });
+            }
         }
     }, [onManualSave, router]);
 

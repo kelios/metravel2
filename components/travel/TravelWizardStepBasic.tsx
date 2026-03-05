@@ -21,6 +21,9 @@ async function showToastMessage(payload: any) {
     await showToast(payload);
 }
 
+const hasToastBeenShown = (error: unknown): boolean =>
+    error instanceof Error && (error as Error & { toastShown?: boolean }).toastShown === true;
+
 interface TravelWizardStepBasicProps {
     currentStep: number;
     totalSteps: number;
@@ -149,12 +152,14 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
             setTimeout(() => {
                 router.push('/metravel');
             }, redirectDelayMs);
-        } catch (_error) {
-            void showToastMessage({
-                type: 'error',
-                text1: 'Ошибка сохранения',
-                text2: 'Попробуйте еще раз',
-            });
+        } catch (error) {
+            if (!hasToastBeenShown(error)) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Ошибка сохранения',
+                    text2: 'Попробуйте еще раз',
+                });
+            }
         }
     }, [formData, onManualSave, redirectDelayMs, router]);
 
