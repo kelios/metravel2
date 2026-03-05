@@ -38,8 +38,8 @@ export const createHomeHeroStyles = ({
   return StyleSheet.create({
   container: {
     width: '100%',
-    paddingTop: isMobile ? (isLandscape ? 8 : 16) : 40,
-    paddingBottom: isMobile ? (isLandscape ? 12 : 28) : 64,
+    paddingTop: isMobile ? (isLandscape ? 8 : 16) : 24,
+    paddingBottom: isMobile ? (isLandscape ? 12 : 28) : 28,
     backgroundColor: warmBg,
     ...Platform.select({ web: {
       backgroundImage: `linear-gradient(180deg, ${warmBg} 0%, #F0EBE0 100%)`,
@@ -54,84 +54,79 @@ export const createHomeHeroStyles = ({
   },
   bookWrapper: {
     width: '100%', position: 'relative' as const,
+    ...Platform.select({ web: {
+      backgroundImage: 'url(/assets/images/open-book-bg.jpg)',
+      backgroundSize: '100% 100%',
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: 'center center',
+      paddingLeft: isMobile ? '5%' : '8%',
+      paddingRight: isMobile ? '5%' : '8%',
+      paddingTop: isMobile ? '4%' : '5%',
+      paddingBottom: isMobile ? '8%' : '10%',
+    } as any }),
   },
   bookCoverOuter: {
-    position: 'absolute' as const, left: -6, right: -6, top: -6, bottom: -6,
-    borderRadius: isMobile ? 20 : 28, zIndex: -1,
-    ...Platform.select({ web: {
-      backgroundImage: `linear-gradient(135deg, #3E2C1A 0%, #2A1D0F 100%)`,
-      boxShadow: '0 24px 64px rgba(40,25,10,0.28), 0 8px 20px rgba(40,25,10,0.15)',
-    } as any }),
+    position: 'absolute' as const, left: 0, right: 0, top: 0, bottom: 0, zIndex: -1,
   },
-  heroBookmarkRibbon: {
-    position: 'absolute' as const, top: -14, right: isMobile ? 44 : 90,
-    width: isMobile ? 22 : 28, height: isMobile ? 60 : 78, zIndex: 15,
-    ...Platform.select({ web: {
-      backgroundImage: `linear-gradient(180deg, ${colors.brand} 0%, ${colors.brandDark || colors.brand} 85%, rgba(0,0,0,0.2) 100%)`,
-      clipPath: 'polygon(0 0, 100% 0, 100% 88%, 50% 100%, 0 88%)',
-      boxShadow: '2px 4px 12px rgba(0,0,0,0.2)',
-    } as any }),
-  },
-  heroBookmarkRibbon2: {
-    position: 'absolute' as const, top: -10, right: isMobile ? 72 : 130,
-    width: isMobile ? 16 : 20, height: isMobile ? 44 : 56, zIndex: 14,
-    ...Platform.select({ web: {
-      backgroundImage: 'linear-gradient(180deg, #5B8A72 0%, #3D6B54 85%, rgba(0,0,0,0.2) 100%)',
-      clipPath: 'polygon(0 0, 100% 0, 100% 88%, 50% 100%, 0 88%)',
-      boxShadow: '1px 3px 8px rgba(0,0,0,0.15)',
-      opacity: 0.9,
-    } as any }),
-  },
-
   // -- Two-page layout --
   heroRow: {
     flexDirection: showSideSlider ? 'row' : 'column', alignItems: 'stretch',
     justifyContent: 'flex-start', gap: 0, width: '100%',
     position: 'relative' as const,
     ...Platform.select({ web: showSideSlider ? {
-      borderRadius: isMobile ? 16 : 24,
+      borderRadius: isMobile ? 8 : 10,
       overflow: 'hidden',
+      minHeight: sliderHeight + (isMobile ? 40 : 80),
+      border: '2px solid rgba(30,24,18,0.85)',
+      boxShadow: 'inset 0 0 0 6px rgba(255,255,255,0.92), inset 0 0 0 7px rgba(30,24,18,0.12)',
     } as any : {} }),
   },
   heroBookSpine: {
     position: 'absolute' as const, left: '50%', top: 0, bottom: 0,
-    width: isMobile ? 3 : 4, zIndex: 10,
+    width: isMobile ? 12 : 20, zIndex: 10,
     ...Platform.select({ web: {
-      marginLeft: isMobile ? -1.5 : -2,
+      marginLeft: isMobile ? -6 : -10,
       backgroundImage: `linear-gradient(90deg,
-        rgba(0,0,0,0.06) 0%,
-        rgba(140,100,50,0.18) 40%,
-        rgba(140,100,50,0.18) 60%,
-        rgba(0,0,0,0.06) 100%)`,
+        rgba(20,16,12,0.18) 0%,
+        rgba(20,16,12,0.28) 20%,
+        rgba(255,255,255,0.12) 35%,
+        rgba(255,255,255,0.18) 50%,
+        rgba(255,255,255,0.12) 65%,
+        rgba(20,16,12,0.28) 80%,
+        rgba(20,16,12,0.18) 100%)`,
+      boxShadow: '2px 0 8px rgba(20,16,12,0.15), -2px 0 8px rgba(20,16,12,0.15)',
     } as any }),
   },
 
   // -- Left page (text content) --
   heroSection: {
-    alignItems: isMobile ? 'stretch' : 'flex-start', gap: isMobile ? 16 : 24,
+    alignItems: isMobile ? 'stretch' : 'flex-start', gap: isMobile ? 16 : 18,
     width: showSideSlider ? '50%' : '100%', maxWidth: showSideSlider ? undefined : (isMobile ? '100%' : 720),
     flexShrink: 0,
     paddingHorizontal: isMobile ? 20 : 48,
-    paddingVertical: isMobile ? 32 : 56,
+    paddingVertical: isMobile ? 28 : 32,
     paddingRight: showSideSlider ? (isMobile ? 28 : 56) : undefined,
     position: 'relative' as const,
     ...Platform.select({ web: showSideSlider ? {
-      backgroundImage: `linear-gradient(160deg, ${cardSurface} 0%, ${warmBg} 100%)`,
-      borderTopLeftRadius: isMobile ? 16 : 24,
-      borderBottomLeftRadius: isMobile ? 16 : 24,
+      backgroundColor: '#FDFCF9',
+      borderTopLeftRadius: isMobile ? 6 : 8,
+      borderBottomLeftRadius: isMobile ? 6 : 8,
       borderTopRightRadius: 0,
       borderBottomRightRadius: 0,
     } as any : {
-      backgroundColor: cardSurface,
-      borderRadius: isMobile ? 20 : 28,
-      boxShadow: `0 2px 24px ${warmShadow}, 0 1px 4px rgba(0,0,0,0.03)`,
+      backgroundColor: '#FDFCF9',
+      borderRadius: isMobile ? 8 : 10,
+      border: '2px solid rgba(30,24,18,0.85)',
+      boxShadow: 'inset 0 0 0 6px rgba(255,255,255,0.9), inset 0 0 0 7px rgba(30,24,18,0.10)',
     } as any }),
   },
   heroPageGoldLine: {
-    position: 'absolute' as const, top: isMobile ? 18 : 24, left: isMobile ? 24 : 48, right: isMobile ? 32 : 56,
-    height: 1, zIndex: 5,
+    position: 'absolute' as const, top: isMobile ? 14 : 18, left: isMobile ? 16 : 24, right: isMobile ? 16 : 24,
+    bottom: isMobile ? 14 : 18, zIndex: 5, borderWidth: 0,
     ...Platform.select({ web: {
-      backgroundImage: `linear-gradient(90deg, transparent 0%, ${warmGold} 15%, ${warmGold} 85%, transparent 100%)`,
+      border: '1px solid rgba(30,24,18,0.20)',
+      borderRadius: 2,
+      pointerEvents: 'none',
     } as any }),
   },
   heroPageCurlLeft: {
@@ -142,23 +137,27 @@ export const createHomeHeroStyles = ({
   // -- Right page (slider / photo) --
   sliderSection: {
     flex: 1, minWidth: 0, width: showSideSlider ? '50%' : 320, maxWidth: showSideSlider ? undefined : 600,
-    position: 'relative' as const, justifyContent: 'stretch', alignSelf: 'stretch',
+    position: 'relative' as const, alignSelf: 'stretch',
+    minHeight: sliderHeight + (isMobile ? 40 : 64),
     ...Platform.select({ web: showSideSlider ? {
-      backgroundImage: `linear-gradient(200deg, ${cardSurface} 0%, ${warmBg} 100%)`,
-      borderTopRightRadius: isMobile ? 16 : 24,
-      borderBottomRightRadius: isMobile ? 16 : 24,
+      backgroundColor: '#F8F5EE',
+      borderTopRightRadius: isMobile ? 6 : 8,
+      borderBottomRightRadius: isMobile ? 6 : 8,
       borderTopLeftRadius: 0,
       borderBottomLeftRadius: 0,
       padding: isMobile ? 20 : 32,
       display: 'flex',
       flexDirection: 'column',
+      boxSizing: 'border-box',
     } as any : {} }),
   },
   sliderPageGoldLine: {
-    position: 'absolute' as const, top: isMobile ? 18 : 24, left: isMobile ? 32 : 48, right: isMobile ? 24 : 48,
-    height: 1, zIndex: 5,
+    position: 'absolute' as const, top: isMobile ? 14 : 18, left: isMobile ? 16 : 24, right: isMobile ? 16 : 24,
+    bottom: isMobile ? 14 : 18, zIndex: 5, borderWidth: 0,
     ...Platform.select({ web: {
-      backgroundImage: `linear-gradient(90deg, transparent 0%, ${warmGold} 15%, ${warmGold} 85%, transparent 100%)`,
+      border: '1px solid rgba(30,24,18,0.18)',
+      borderRadius: 2,
+      pointerEvents: 'none',
     } as any }),
   },
   heroPageCurlRight: {
@@ -177,10 +176,14 @@ export const createHomeHeroStyles = ({
 
   // -- Slider / immersive photo --
   sliderContainer: {
-    width: '100%', flex: 1, minHeight: sliderHeight, borderRadius: isMobile ? 16 : 20, overflow: 'hidden',
+    width: '100%', flex: 1, minHeight: sliderHeight, borderRadius: isMobile ? 4 : 6, overflow: 'hidden',
     backgroundColor: '#1A1A1A', borderWidth: 0,
     ...Platform.select({ web: {
-      boxShadow: '0 8px 40px rgba(30,20,10,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+      boxShadow: '0 2px 12px rgba(10,8,6,0.25)',
+      border: '1px solid rgba(30,24,18,0.30)',
+      minHeight: sliderHeight,
+      flexGrow: 1,
+      flexShrink: 0,
     } as any }),
   },
   slideWrapper: {
@@ -253,20 +256,6 @@ export const createHomeHeroStyles = ({
   },
   slideCounterText: {
     fontSize: 11, fontWeight: '500', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.4,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
-  },
-
-  // -- Badge --
-  badge: {
-    flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: 'rgba(190,160,90,0.08)',
-    borderWidth: 1, borderColor: 'rgba(190,160,90,0.18)',
-  },
-  badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#6B9F78' },
-  badgeText: {
-    fontSize: 10, fontWeight: '600', color: 'rgba(120,90,40,0.8)', letterSpacing: 1.2, textTransform: 'uppercase',
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 
@@ -485,24 +474,24 @@ export const createHomeHeroStyles = ({
 
   // -- Bookmark rail (desktop left page inline mood cards) --
   bookmarkRail: {
-    width: '100%', gap: 4, alignItems: 'stretch',
+    width: '100%', gap: 2, alignItems: 'stretch',
     ...Platform.select({ web: {
-      borderLeftWidth: 2,
-      borderLeftColor: 'rgba(190,160,90,0.2)',
+      borderLeftWidth: 1.5,
+      borderLeftColor: 'rgba(100,90,75,0.22)',
       paddingLeft: 16,
       marginLeft: 2,
     } as any }),
   },
   bookmarkChip: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1, borderColor: warmBorder,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1.5, borderColor: 'rgba(100,90,75,0.20)',
     backgroundColor: cardSurface,
     ...Platform.select({ web: {
       cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      boxShadow: `0 1px 4px ${warmShadow}`,
+      transition: 'all 0.18s ease',
+      boxShadow: '1px 2px 0px rgba(100,90,75,0.08)',
     } }),
   },
   bookmarkChipHover: {
@@ -513,8 +502,8 @@ export const createHomeHeroStyles = ({
     } }),
   },
   bookmarkChipIcon: {
-    width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(190,160,90,0.1)',
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(190,160,90,0.15)',
+    width: 30, height: 30, borderRadius: 6, backgroundColor: 'transparent',
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(100,90,75,0.22)',
   },
 
   // -- Mood chips (mobile horizontal scroll) --

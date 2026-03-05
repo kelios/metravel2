@@ -188,7 +188,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
   const isWeb = Platform.OS === 'web';
   const isNarrowLayout = isMobile || (isWeb && width <= 860);
   const showSideSlider = isWeb && (isDesktop || isLargeTablet || isTablet);
-  const sliderHeight = isDesktop ? 500 : 430;
+  const sliderHeight = isDesktop ? 420 : 360;
   const sliderMediaWidth = isDesktop ? 500 : 380;
 
   // Slider state
@@ -325,10 +325,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
             {/* Book cover shadow/glow */}
             {isWeb && showSideSlider && <View style={styles.bookCoverOuter} />}
             
-            {/* Decorative bookmark ribbons */}
-            {isWeb && showSideSlider && <View style={styles.heroBookmarkRibbon} />}
-            {isWeb && showSideSlider && <View style={styles.heroBookmarkRibbon2} />}
-
             {/* Hero Row: Left page (text) + Right page (slider) */}
             <View style={styles.heroRow}>
               {/* Central book spine */}
@@ -340,12 +336,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 {isWeb && showSideSlider && <View style={styles.heroPageGoldLine} />}
                 {/* Page curl effect */}
                 {isWeb && showSideSlider && <View style={styles.heroPageCurlLeft} />}
-
-                {/* Badge */}
-                <View style={styles.badge}>
-                  <View style={styles.badgeDot} />
-                  <Text style={styles.badgeText}>Бесплатно • Без регистрации</Text>
-                </View>
 
                 {/* Title */}
                 <View>
