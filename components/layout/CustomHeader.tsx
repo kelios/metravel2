@@ -544,7 +544,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                           <Feather
                                               name={item.icon as any}
                                               size={18}
-                                              color={isActive ? colors.primary : colors.textMuted}
+                                              color={isActive ? colors.brandText : colors.textMuted}
                                           />
                                       </View>
                                       <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
