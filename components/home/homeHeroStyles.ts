@@ -40,36 +40,51 @@ export const createHomeHeroStyles = ({
   const leftPageWidth = showSideSlider ? (isOver1200Desktop ? '54%' : isDesktop ? '64%' : isTablet ? '58%' : '54%') : '100%';
   const rightPageWidth = showSideSlider ? (isDesktop ? '36%' : isTablet ? '42%' : '46%') : 320;
   const bookScale = hasBookLayout ? bookHeight / 864 : 1;
-  const titleScaleMax = isUltraWideBook ? 64 : isLargeDesktopBook ? 56 : 42;
-  const titleLineHeightMax = isUltraWideBook ? 72 : isLargeDesktopBook ? 62 : 50;
-  const subtitleScaleMax = isUltraWideBook ? 18 : isLargeDesktopBook ? 16 : 14;
-  const subtitleLineHeightMax = isUltraWideBook ? 28 : isLargeDesktopBook ? 24 : 22;
+  const desktopTypographyScale = !hasBookLayout ? 1 : isUltraWideBook ? 1.08 : isLargeDesktopBook ? 1.04 : isOver1200Desktop ? 1.08 : 1;
+  const desktopSubtitleWidthScale = !hasBookLayout ? 1 : isUltraWideBook ? 1.18 : isLargeDesktopBook ? 1.1 : isOver1200Desktop ? 1.08 : 1;
+  const leftPageSafeInset = !hasBookLayout ? 0 : isUltraWideBook ? 56 : isLargeDesktopBook ? 46 : isOver1200Desktop ? 42 : 18;
+  const titleScaleMax = isUltraWideBook ? 58 : isLargeDesktopBook ? 50 : 42;
+  const titleLineHeightMax = isUltraWideBook ? 66 : isLargeDesktopBook ? 56 : 50;
+  const subtitleScaleMax = isUltraWideBook ? 17 : isLargeDesktopBook ? 15 : 14;
+  const subtitleLineHeightMax = isUltraWideBook ? 26 : isLargeDesktopBook ? 22 : 22;
   const subtitleWidthMax = isUltraWideBook ? 440 : isLargeDesktopBook ? 380 : 330;
-  const leftPagePaddingLeftMax = isUltraWideBook ? 250 : isLargeDesktopBook ? 220 : 190;
-  const leftPagePaddingRightMax = isUltraWideBook ? 210 : isLargeDesktopBook ? 190 : 120;
-  const leftPagePaddingTopMax = isUltraWideBook ? 120 : isLargeDesktopBook ? 108 : 98;
+  const leftPagePaddingLeftMax = isUltraWideBook ? 280 : isLargeDesktopBook ? 240 : 190;
+  const leftPagePaddingRightMax = isUltraWideBook ? 220 : isLargeDesktopBook ? 200 : 120;
+  const leftPagePaddingTopMax = isUltraWideBook ? 128 : isLargeDesktopBook ? 116 : 98;
   const leftPagePaddingBottomMax = isUltraWideBook ? 148 : isLargeDesktopBook ? 132 : 121;
   const leftPageRowGapMax = isUltraWideBook ? 14 : isLargeDesktopBook ? 12 : 10;
   // Baseline tuned from validated desktop layout (bookHeight ~= 864)
-  const leftPagePaddingLeft = hasBookLayout ? clamp(Math.round(190 * bookScale), 84, leftPagePaddingLeftMax) : 100;
+  const leftPagePaddingLeft = hasBookLayout ? clamp(Math.round(190 * bookScale) + leftPageSafeInset, 96, leftPagePaddingLeftMax + leftPageSafeInset) : 100;
   const leftPagePaddingRight = hasBookLayout ? clamp(Math.round(120 * bookScale), 28, leftPagePaddingRightMax) : 16;
   const leftPagePaddingTop = hasBookLayout ? clamp(Math.round(98 * bookScale), 40, leftPagePaddingTopMax) : 48;
   const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round(121 * bookScale), 72, leftPagePaddingBottomMax) : 110;
   const leftPageRowGap = hasBookLayout ? clamp(Math.round(10 * bookScale), 6, leftPageRowGapMax) : 8;
+  const baseDesktopBookTitleSize = hasBookLayout
+    ? Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056))
+    : 54;
+  const baseDesktopBookTitleLineHeight = hasBookLayout
+    ? Math.min(Math.round(pageWidth * 0.088), Math.round(bookHeight * 0.068))
+    : 64;
+  const baseDesktopBookSubtitleSize = hasBookLayout
+    ? Math.min(Math.round(pageWidth * 0.027), Math.round(bookHeight * 0.024))
+    : 17;
+  const baseDesktopBookSubtitleLineHeight = hasBookLayout
+    ? Math.min(Math.round(pageWidth * 0.042), Math.round(bookHeight * 0.034))
+    : 28;
   const desktopBookTitleSize = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056)), 24, titleScaleMax)
+    ? clamp(Math.round(baseDesktopBookTitleSize * desktopTypographyScale), 24, titleScaleMax)
     : 54;
   const desktopBookTitleLineHeight = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.088), Math.round(bookHeight * 0.068)), 30, titleLineHeightMax)
+    ? clamp(Math.round(baseDesktopBookTitleLineHeight * desktopTypographyScale), 30, titleLineHeightMax)
     : 64;
   const desktopBookSubtitleSize = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.027), Math.round(bookHeight * 0.024)), 12, subtitleScaleMax)
+    ? clamp(Math.round(baseDesktopBookSubtitleSize * desktopTypographyScale), 12, subtitleScaleMax)
     : 17;
   const desktopBookSubtitleLineHeight = hasBookLayout
-    ? clamp(Math.min(Math.round(pageWidth * 0.042), Math.round(bookHeight * 0.034)), 18, subtitleLineHeightMax)
+    ? clamp(Math.round(baseDesktopBookSubtitleLineHeight * desktopTypographyScale), 18, subtitleLineHeightMax)
     : 28;
   const desktopBookSubtitleMaxWidth = hasBookLayout
-    ? clamp(Math.round(pageWidth * 0.76), 240, subtitleWidthMax)
+    ? clamp(Math.round(pageWidth * 0.76 * desktopSubtitleWidthScale), 240, subtitleWidthMax)
     : 480;
   const warmBg = DESIGN_TOKENS.colors.background;
   const warmBgSoft = DESIGN_TOKENS.colors.backgroundSecondary;
