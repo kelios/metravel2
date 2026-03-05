@@ -61,25 +61,26 @@ function HomeFAQSection() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingTop: isMobile ? 28 : 56,
-      paddingBottom: isMobile ? 24 : 48,
+      paddingTop: isMobile ? 36 : 64,
+      paddingBottom: isMobile ? 32 : 56,
       backgroundColor: colors.backgroundSecondary,
       ...Platform.select({
         web: {
           borderTopWidth: 1,
           borderBottomWidth: 1,
           borderColor: colors.borderLight,
+          backgroundImage: `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 30%)`,
         },
       }),
     },
     inner: {
-      maxWidth: 720,
+      maxWidth: 680,
       alignSelf: 'center',
       width: '100%',
     },
     header: {
       alignItems: 'center',
-      marginBottom: isMobile ? 20 : 36,
+      marginBottom: isMobile ? 24 : 40,
       gap: 10,
     },
     eyebrow: {
@@ -92,30 +93,35 @@ function HomeFAQSection() {
       borderColor: colors.primaryAlpha30,
       paddingHorizontal: 14,
       paddingVertical: 6,
+      ...Platform.select({
+        web: { boxShadow: `0 1px 6px ${colors.primary}14` },
+      }),
     },
     eyebrowText: {
       fontSize: 11,
       fontWeight: '700',
       color: colors.primaryText,
-      letterSpacing: 0.8,
+      letterSpacing: 0.7,
       textTransform: 'uppercase',
     },
     title: {
-      fontSize: isMobile ? 22 : 36,
+      fontSize: isMobile ? 24 : 38,
       fontWeight: '800',
       color: colors.text,
-      letterSpacing: isMobile ? -0.4 : -0.8,
+      letterSpacing: isMobile ? -0.6 : -1.0,
       textAlign: 'center',
+      lineHeight: isMobile ? 30 : 48,
     },
     subtitle: {
       fontSize: isMobile ? 14 : 16,
-      lineHeight: isMobile ? 20 : 24,
+      lineHeight: isMobile ? 21 : 25,
       color: colors.textMuted,
       textAlign: 'center',
-      maxWidth: 480,
+      maxWidth: 440,
+      letterSpacing: 0.1,
     },
     list: {
-      gap: isMobile ? 10 : 12,
+      gap: isMobile ? 8 : 10,
     },
     item: {
       width: '100%',
@@ -126,7 +132,8 @@ function HomeFAQSection() {
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
+          transition: 'border-color 0.22s ease, box-shadow 0.22s ease',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
         },
       }),
     },
@@ -134,7 +141,7 @@ function HomeFAQSection() {
       borderColor: colors.primaryAlpha40,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.07), 0 1px 6px rgba(0,0,0,0.04)',
         },
       }),
     },
@@ -143,12 +150,12 @@ function HomeFAQSection() {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingVertical: isMobile ? 16 : 22,
-      paddingHorizontal: isMobile ? 16 : 28,
-      minHeight: 64,
+      paddingHorizontal: isMobile ? 18 : 28,
+      minHeight: 62,
       gap: 16,
       ...Platform.select({
         web: {
-          transition: 'background-color 0.2s ease',
+          transition: 'background-color 0.18s ease',
           cursor: 'pointer',
           touchAction: 'pan-y',
         } as any,
@@ -165,29 +172,32 @@ function HomeFAQSection() {
       fontSize: isMobile ? 15 : 17,
       fontWeight: '700',
       color: colors.text,
-      lineHeight: isMobile ? 21 : 25,
-      letterSpacing: -0.2,
+      lineHeight: isMobile ? 22 : 26,
+      letterSpacing: -0.3,
     },
     questionOpen: {
       color: colors.primary,
     },
     toggleWrap: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       backgroundColor: colors.backgroundSecondary,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.borderLight,
       flexShrink: 0,
+      ...Platform.select({
+        web: { transition: 'background-color 0.18s ease, border-color 0.18s ease' },
+      }),
     },
     toggleWrapOpen: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
     answerWrap: {
-      paddingHorizontal: isMobile ? 16 : 28,
+      paddingHorizontal: isMobile ? 18 : 28,
       paddingBottom: isMobile ? 18 : 24,
       paddingTop: 2,
       ...Platform.select({
@@ -210,9 +220,10 @@ function HomeFAQSection() {
       }),
     },
     answer: {
-      fontSize: isMobile ? 14 : 16,
-      lineHeight: isMobile ? 21 : 26,
+      fontSize: isMobile ? 14 : 15,
+      lineHeight: isMobile ? 22 : 26,
       color: colors.textMuted,
+      letterSpacing: 0.1,
     },
   }), [colors, isMobile]);
 

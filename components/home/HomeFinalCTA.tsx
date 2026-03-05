@@ -53,16 +53,16 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
-      paddingTop: isMobile ? 20 : 48,
-      paddingBottom: isMobile ? 40 : 80,
+      paddingTop: isMobile ? 24 : 56,
+      paddingBottom: isMobile ? 44 : 88,
       // SEC-04: fallback backgroundColor для браузеров без поддержки radial-gradient
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       ...Platform.select({
         web: {
           backgroundImage: [
-            `radial-gradient(ellipse 60% 50% at 20% 50%, ${colors.primaryAlpha30} 0%, transparent 65%)`,
-            `radial-gradient(ellipse 60% 50% at 80% 50%, ${colors.primaryAlpha30} 0%, transparent 65%)`,
+            `radial-gradient(ellipse 55% 45% at 15% 50%, ${colors.primaryAlpha30} 0%, transparent 60%)`,
+            `radial-gradient(ellipse 55% 45% at 85% 50%, ${colors.brandAlpha30 ?? colors.primaryAlpha30} 0%, transparent 60%)`,
             `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.background} 100%)`,
           ].join(', '),
         },
@@ -72,18 +72,18 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       width: '100%',
       alignSelf: 'center',
       alignItems: 'center',
-      gap: isMobile ? 16 : 28,
-      maxWidth: 720,
+      gap: isMobile ? 18 : 32,
+      maxWidth: 680,
       borderRadius: DESIGN_TOKENS.radii.xl,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       backgroundColor: colors.surface,
-      paddingHorizontal: isMobile ? 16 : 48,
-      paddingVertical: isMobile ? 24 : 48,
+      paddingHorizontal: isMobile ? 20 : 56,
+      paddingVertical: isMobile ? 28 : 56,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
-          backgroundImage: `linear-gradient(165deg, ${colors.surface} 0%, ${colors.primarySoft} 100%)`,
+          boxShadow: '0 8px 48px rgba(0,0,0,0.08), 0 2px 12px rgba(0,0,0,0.05)',
+          backgroundImage: `linear-gradient(160deg, ${colors.surface} 0%, ${colors.primarySoft}88 55%, ${colors.backgroundSecondary} 100%)`,
         },
       }),
     },
@@ -95,59 +95,63 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       backgroundColor: colors.primarySoft,
-      paddingHorizontal: 14,
+      paddingHorizontal: 16,
       paddingVertical: 7,
       alignSelf: 'center',
+      ...Platform.select({
+        web: { boxShadow: `0 1px 8px ${colors.primary}14` },
+      }),
     },
     eyebrowText: {
       fontSize: 11,
-      fontWeight: '800',
+      fontWeight: '700',
       color: colors.primaryText,
-      letterSpacing: 1,
+      letterSpacing: 0.8,
       // TYPO-04: capitalize вместо uppercase — лучше читаемость на кириллице
       textTransform: 'capitalize',
     },
     iconWrap: {
-      width: isMobile ? 60 : 72,
-      height: isMobile ? 60 : 72,
-      borderRadius: isMobile ? 30 : 36,
+      width: isMobile ? 64 : 76,
+      height: isMobile ? 64 : 76,
+      borderRadius: isMobile ? 32 : 38,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 4,
       ...Platform.select({
         web: {
-          boxShadow: `0 8px 24px ${colors.primaryAlpha30}`,
+          boxShadow: `0 8px 28px ${colors.primaryAlpha30}, 0 2px 8px ${colors.primaryAlpha30}`,
         },
       }),
     },
     titleRow: {
       alignItems: 'center',
-      gap: 4,
+      gap: 2,
     },
     title: {
-      fontSize: isMobile ? 26 : 48,
-      fontWeight: '900',
+      fontSize: isMobile ? 28 : 48,
+      fontWeight: '800',
       color: colors.text,
       textAlign: 'center',
-      letterSpacing: -1.2,
-      lineHeight: isMobile ? 32 : 56,
+      letterSpacing: -1.4,
+      lineHeight: isMobile ? 34 : 58,
     },
     titleAccent: {
-      fontSize: isMobile ? 26 : 48,
-      fontWeight: '900',
+      fontSize: isMobile ? 28 : 48,
+      fontWeight: '800',
       color: colors.primary,
       textAlign: 'center',
-      letterSpacing: -1.2,
-      lineHeight: isMobile ? 32 : 56,
+      letterSpacing: -1.4,
+      lineHeight: isMobile ? 34 : 58,
     },
     subtitle: {
-      fontSize: isMobile ? 14 : 18,
+      fontSize: isMobile ? 14 : 17,
       color: colors.textMuted,
       textAlign: 'center',
-      lineHeight: isMobile ? 21 : 28,
-      maxWidth: 480,
+      lineHeight: isMobile ? 22 : 27,
+      maxWidth: 460,
       fontWeight: '400',
+      letterSpacing: 0.1,
     },
     buttonsContainer: {
       flexDirection: isMobile ? 'column' : 'row',
@@ -158,16 +162,16 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     primaryButton: {
       // HERO-03: primary CTA шире secondary для визуальной иерархии
-      paddingHorizontal: isMobile ? 24 : 52,
-      paddingVertical: isMobile ? 15 : 20,
-      minHeight: isMobile ? 50 : 62,
+      paddingHorizontal: isMobile ? 28 : 56,
+      paddingVertical: isMobile ? 16 : 20,
+      minHeight: isMobile ? 52 : 62,
       borderRadius: DESIGN_TOKENS.radii.pill,
       width: isMobile ? '100%' : undefined,
       flex: isMobile ? undefined : 1.4,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
-          transition: 'all 0.25s ease',
+          boxShadow: `0 4px 20px ${colors.primaryAlpha30}, 0 1px 4px ${colors.primaryAlpha30}`,
+          transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
@@ -176,19 +180,20 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       ...Platform.select({
         web: {
           transform: 'translateY(-3px)',
-          boxShadow: `0 12px 32px ${colors.primaryAlpha30}`,
+          boxShadow: `0 12px 36px ${colors.primaryAlpha30}, 0 2px 8px ${colors.primaryAlpha30}`,
         },
       }),
     },
     primaryButtonText: {
-      fontSize: 17,
+      fontSize: 16,
       fontWeight: '700',
       color: colors.textOnPrimary,
+      letterSpacing: 0.1,
     },
     secondaryButton: {
-      paddingHorizontal: isMobile ? 20 : 36,
-      paddingVertical: isMobile ? 14 : 19,
-      minHeight: isMobile ? 48 : 60,
+      paddingHorizontal: isMobile ? 22 : 36,
+      paddingVertical: isMobile ? 15 : 19,
+      minHeight: isMobile ? 50 : 60,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.surface,
       borderWidth: 1.5,
@@ -198,7 +203,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       flex: isMobile ? undefined : 1,
       ...Platform.select({
         web: {
-          transition: 'all 0.25s ease',
+          transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
@@ -208,11 +213,12 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       ...Platform.select({
         web: {
           transform: 'translateY(-2px)',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.07)',
         },
       }),
     },
     secondaryButtonText: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
     },
@@ -220,19 +226,20 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: isMobile ? 12 : 20,
+      gap: isMobile ? 16 : 24,
       marginTop: 4,
       flexWrap: 'wrap',
     },
     trustBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
+      gap: 6,
     },
     trustBadgeText: {
       fontSize: 12,
       fontWeight: '500',
       color: colors.textMuted,
+      letterSpacing: 0.1,
     },
   }), [colors, isMobile]);
 

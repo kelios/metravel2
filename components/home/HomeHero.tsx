@@ -342,6 +342,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 {isWeb && showSideSlider && <View style={styles.heroPageCurlLeft} />}
 
                 {/* Badge */}
+                <View style={styles.badge}>
+                  <View style={styles.badgeDot} />
+                  <Text style={styles.badgeText}>Бесплатно • Без регистрации</Text>
+                </View>
+
                 {/* Title */}
                 <View>
                   <Text style={styles.title}>
@@ -354,7 +359,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
                 {/* Subtitle */}
                 <Text style={styles.subtitle}>
-                  Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.
+                  {isMobile
+                    ? 'Готовые маршруты, заметки и личная книга путешествий.'
+                    : 'Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.'}
                 </Text>
 
                 {/* Mood filter chips as inline vertical list (desktop) */}
@@ -384,7 +391,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 )}
 
                 {/* Inner mini-book feature highlights widget */}
-                {!showInlineBookmarkRail && (
+                {!showInlineBookmarkRail && !isMobile && (
                   <View style={styles.openBookContainer}>
                     <View style={styles.openBook}>
                       {isWeb && <View style={styles.bookCover} />}
