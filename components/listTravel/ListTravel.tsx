@@ -484,6 +484,7 @@ function ListTravel({
           index={index}
           isMobile={isMobileDevice}
           isSuperuser={isSuper}
+          currentUserId={userId != null ? String(userId) : null}
           isMetravel={isMeTravel}
           onDeletePress={handleDeletePress}
           isFirst={index === 0}
@@ -501,6 +502,7 @@ function ListTravel({
         isSelected,
         isSuper,
         toggleSelect,
+        userId,
         width,
       ]
     );

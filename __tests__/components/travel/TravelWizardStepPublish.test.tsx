@@ -276,6 +276,35 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
   });
 
+  it('shows inline save error when draft save is not confirmed by backend', async () => {
+    const onManualSave = jest.fn().mockResolvedValue(undefined);
+    const setFormData = jest.fn();
+    const newTravelData: TravelFormData = {
+      ...baseFormData,
+      id: null,
+    };
+
+    const { getByTestId, getByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={newTravelData}
+        setFormData={setFormData}
+        isSuperAdmin={false}
+        onManualSave={onManualSave}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('primary-button'));
+    });
+
+    expect(getByTestId('publish-save-error-banner')).toBeTruthy();
+    expect(getByText('Ошибка сохранения')).toBeTruthy();
+  });
+
   it('reject click is guarded to one call when already pending', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const onFinish = jest.fn();

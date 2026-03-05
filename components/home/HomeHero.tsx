@@ -1,5 +1,5 @@
 import { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, Pressable, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
@@ -191,6 +191,17 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
   const sliderHeight = isDesktop ? 420 : 360;
   const sliderMediaWidth = isDesktop ? 500 : 380;
 
+  // Book wrapper measured height for adaptive aspect-ratio
+  const [bookWrapperWidth, setBookWrapperWidth] = useState(0);
+  const bookHeight = useMemo(() => {
+    if (bookWrapperWidth <= 0) return 0;
+    const aspectH = Math.round(bookWrapperWidth * 765 / 1040);
+    const vh = Platform.OS === 'web'
+      ? (typeof window !== 'undefined' ? window.innerHeight : Dimensions.get('window').height)
+      : Dimensions.get('window').height;
+    return Math.min(aspectH, vh - 130);
+  }, [bookWrapperWidth]);
+
   // Slider state
   const [activeSlide, setActiveSlide] = useState(0);
   const [visibleSlide, setVisibleSlide] = useState(0);
@@ -308,20 +319,26 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
   const styles = useMemo(() => createHomeHeroStyles({
     colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight,
-    isLandscape,
-  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight, isLandscape]);
+    isLandscape, bookHeight,
+  }), [colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight, isLandscape, bookHeight]);
 
   const currentSlide = BOOK_IMAGES[visibleSlide];
   const isVisibleSlideLoaded = loadedSlides.has(visibleSlide);
   const showBookmarkRail = showSideSlider && !isNarrowLayout;
   const showInlineBookmarkRail = showBookmarkRail;
+  const heroSubtitle = isMobile || (showSideSlider && bookHeight > 0 && bookHeight < 760)
+    ? 'Готовые маршруты, заметки и личная книга путешествий.'
+    : 'Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.';
 
   return (
     <View testID="home-hero" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.heroShell}>
           {/* Book wrapper for 3D effect */}
-          <View style={styles.bookWrapper}>
+          <View
+            style={styles.bookWrapper}
+            onLayout={showSideSlider ? (e) => setBookWrapperWidth(e.nativeEvent.layout.width) : undefined}
+          >
             {/* Book cover shadow/glow */}
             {isWeb && showSideSlider && <View style={styles.bookCoverOuter} />}
             
@@ -331,7 +348,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
               {isWeb && showSideSlider && <View style={styles.heroBookSpine} />}
 
               {/* Left Page - Text Content */}
-              <View style={styles.heroSection}>
+              <View testID="home-hero-left-page" style={styles.heroSection}>
                 {/* Golden decorative line at top */}
                 {isWeb && showSideSlider && <View style={styles.heroPageGoldLine} />}
                 {/* Page curl effect */}
@@ -348,15 +365,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 </View>
 
                 {/* Subtitle */}
-                <Text style={styles.subtitle}>
-                  {isMobile
-                    ? 'Готовые маршруты, заметки и личная книга путешествий.'
-                    : 'Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.'}
-                </Text>
+                <Text style={styles.subtitle}>{heroSubtitle}</Text>
 
                 {/* Mood filter chips as inline vertical list (desktop) */}
                 {showInlineBookmarkRail && (
-                  <View style={styles.bookmarkRail}>
+                  <View testID="home-hero-bookmark-rail" style={styles.bookmarkRail}>
                     {MOOD_CARDS.map((card) => (
                       <Pressable
                         key={`inline-${card.title}`}
@@ -372,8 +385,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                           <Feather name={card.icon as any} size={14} color={colors.primary} />
                         </View>
                         <View style={styles.moodChipText}>
-                          <Text style={styles.moodChipTitle}>{card.title}</Text>
-                          <Text style={styles.moodChipMeta}>{card.meta}</Text>
+                          <Text style={styles.moodChipTitle} numberOfLines={1}>{card.title}</Text>
+                          <Text style={styles.moodChipMeta} numberOfLines={1}>{card.meta}</Text>
                         </View>
                       </Pressable>
                     ))}
@@ -440,7 +453,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 )}
 
                 {/* CTA Buttons */}
-                <View style={styles.buttonsContainer}>
+                <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
                   {travelsCountLoading ? (
                     <View style={[styles.primaryButton, {
                       justifyContent: 'center',
@@ -537,12 +550,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 <View style={styles.slideCounter}>
                   <Text style={styles.slideCounterText}>{visibleSlide + 1} / {totalSlides}</Text>
                 </View>
-              </Pressable>
 
-              {/* Navigation dots - outside Pressable to avoid nested buttons */}
-              {null}
-
-                {/* Navigation arrows */}
+                {/* Navigation arrows — inside sliderContainer to stay within book page bounds */}
                 <View style={styles.sliderNav}>
                   <Pressable
                     onPress={handlePrevSlide}
@@ -553,20 +562,21 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                     accessibilityRole="button"
                     accessibilityLabel="Предыдущий слайд"
                   >
-                    <Feather name="chevron-left" size={20} color="#fff" />
-                </Pressable>
-                <Pressable
-                  onPress={handleNextSlide}
-                  style={({ hovered }) => [
-                    styles.sliderNavBtn,
-                    hovered && styles.sliderNavBtnHover,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Следующий слайд"
-                >
-                  <Feather name="chevron-right" size={20} color="#fff" />
-                </Pressable>
+                    <Feather name="chevron-left" size={18} color="#fff" />
+                  </Pressable>
+                  <Pressable
+                    onPress={handleNextSlide}
+                    style={({ hovered }) => [
+                      styles.sliderNavBtn,
+                      hovered && styles.sliderNavBtnHover,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Следующий слайд"
+                  >
+                    <Feather name="chevron-right" size={18} color="#fff" />
+                  </Pressable>
                 </View>
+              </Pressable>
               </View>
             )}
             </View>

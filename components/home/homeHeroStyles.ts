@@ -19,12 +19,39 @@ interface HeroStyleParams {
   sliderHeight: number;
   /** RESP-05: landscape orientation on mobile */
   isLandscape?: boolean;
+  /** Measured height of book wrapper (width * 765/1040), 0 before first layout */
+  bookHeight?: number;
 }
 
 export const createHomeHeroStyles = ({
-  colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, showSideSlider, sliderHeight,
-  isLandscape = false,
+  colors, isMobile, isSmallPhone, isNarrowLayout, isTablet: _isTablet, isDesktop: _isDesktop, showSideSlider, sliderHeight,
+  isLandscape = false, bookHeight = 0,
 }: HeroStyleParams) => {
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+  // Width of one page = half of book width; book width = bookHeight * 1040/765
+  const pageWidth = bookHeight > 0 ? Math.round(bookHeight * 1040 / 765 / 2) : 0;
+  const hasBookLayout = showSideSlider && bookHeight > 0;
+  const isCompactBookLayout = hasBookLayout && bookHeight <= 760;
+  const leftPagePaddingLeft = hasBookLayout ? clamp(Math.round(pageWidth * 0.22), 58, 112) : 100;
+  const leftPagePaddingRight = hasBookLayout ? clamp(Math.round(pageWidth * 0.05), 14, 30) : 16;
+  const leftPagePaddingTop = hasBookLayout ? clamp(Math.round(bookHeight * 0.08), 34, 68) : 48;
+  const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round(bookHeight * 0.14), 64, 124) : 110;
+  const leftPageRowGap = hasBookLayout ? clamp(Math.round(bookHeight * 0.012), 6, 12) : 8;
+  const desktopBookTitleSize = hasBookLayout
+    ? clamp(Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056)), 24, 38)
+    : 54;
+  const desktopBookTitleLineHeight = hasBookLayout
+    ? clamp(Math.min(Math.round(pageWidth * 0.088), Math.round(bookHeight * 0.068)), 30, 46)
+    : 64;
+  const desktopBookSubtitleSize = hasBookLayout
+    ? clamp(Math.min(Math.round(pageWidth * 0.027), Math.round(bookHeight * 0.024)), 12, 14)
+    : 17;
+  const desktopBookSubtitleLineHeight = hasBookLayout
+    ? clamp(Math.min(Math.round(pageWidth * 0.042), Math.round(bookHeight * 0.034)), 18, 22)
+    : 28;
+  const desktopBookSubtitleMaxWidth = hasBookLayout
+    ? clamp(Math.round(pageWidth * 0.76), 240, 330)
+    : 480;
   // Premium warm palette — earthy, natural tones
   const warmBg = '#FAF7F2';
   const warmBgSoft = '#F5F0E8';
@@ -38,11 +65,12 @@ export const createHomeHeroStyles = ({
   return StyleSheet.create({
   container: {
     width: '100%',
-    paddingTop: isMobile ? (isLandscape ? 8 : 16) : 24,
-    paddingBottom: isMobile ? (isLandscape ? 12 : 28) : 28,
-    backgroundColor: warmBg,
+    paddingTop: isMobile ? (isLandscape ? 0 : 8) : (showSideSlider ? 16 : 0),
+    paddingBottom: isMobile ? (isLandscape ? 8 : 16) : (showSideSlider ? 16 : 0),
+    backgroundColor: '#FFFFFF',
     ...Platform.select({ web: {
-      backgroundImage: `linear-gradient(180deg, ${warmBg} 0%, #F0EBE0 100%)`,
+      backgroundImage: 'none',
+      backgroundColor: '#FFFFFF',
     } }),
   },
 
@@ -54,15 +82,19 @@ export const createHomeHeroStyles = ({
   },
   bookWrapper: {
     width: '100%', position: 'relative' as const,
-    ...Platform.select({ web: {
-      backgroundImage: 'url(/assets/images/open-book-bg.jpg)',
+    ...(showSideSlider && bookHeight > 0 ? { height: bookHeight } : {}),
+    ...Platform.select({ web: showSideSlider ? {
+      backgroundImage: 'url(/assets/images/open-book-bg.png)',
       backgroundSize: '100% 100%',
       backgroundRepeat: 'no-repeat',
-      backgroundPosition: 'center center',
-      paddingLeft: isMobile ? '5%' : '8%',
-      paddingRight: isMobile ? '5%' : '8%',
-      paddingTop: isMobile ? '4%' : '5%',
-      paddingBottom: isMobile ? '8%' : '10%',
+      aspectRatio: '1040 / 765',
+      maxHeight: 'calc(100vh - 130px)',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      visibility: bookHeight > 0 ? 'visible' : 'hidden',
+    } as any : {
+      backgroundImage: 'none',
     } as any }),
   },
   bookCoverOuter: {
@@ -73,60 +105,56 @@ export const createHomeHeroStyles = ({
     flexDirection: showSideSlider ? 'row' : 'column', alignItems: 'stretch',
     justifyContent: 'flex-start', gap: 0, width: '100%',
     position: 'relative' as const,
+    ...(showSideSlider && bookHeight > 0 ? { height: bookHeight } : {}),
     ...Platform.select({ web: showSideSlider ? {
-      borderRadius: isMobile ? 8 : 10,
-      overflow: 'hidden',
-      minHeight: sliderHeight + (isMobile ? 40 : 80),
-      border: '2px solid rgba(30,24,18,0.85)',
-      boxShadow: 'inset 0 0 0 6px rgba(255,255,255,0.92), inset 0 0 0 7px rgba(30,24,18,0.12)',
+      borderRadius: 0,
+      overflow: bookHeight > 0 ? 'hidden' : 'visible',
+      flex: 1,
     } as any : {} }),
   },
   heroBookSpine: {
     position: 'absolute' as const, left: '50%', top: 0, bottom: 0,
-    width: isMobile ? 12 : 20, zIndex: 10,
-    ...Platform.select({ web: {
-      marginLeft: isMobile ? -6 : -10,
-      backgroundImage: `linear-gradient(90deg,
-        rgba(20,16,12,0.18) 0%,
-        rgba(20,16,12,0.28) 20%,
-        rgba(255,255,255,0.12) 35%,
-        rgba(255,255,255,0.18) 50%,
-        rgba(255,255,255,0.12) 65%,
-        rgba(20,16,12,0.28) 80%,
-        rgba(20,16,12,0.18) 100%)`,
-      boxShadow: '2px 0 8px rgba(20,16,12,0.15), -2px 0 8px rgba(20,16,12,0.15)',
-    } as any }),
+    width: 0, zIndex: 10,
   },
 
   // -- Left page (text content) --
   heroSection: {
-    alignItems: isMobile ? 'stretch' : 'flex-start', gap: isMobile ? 16 : 18,
+    alignItems: isMobile ? 'stretch' : 'flex-start', gap: showSideSlider ? 0 : (isMobile ? 16 : 18),
     width: showSideSlider ? '50%' : '100%', maxWidth: showSideSlider ? undefined : (isMobile ? '100%' : 720),
     flexShrink: 0,
-    paddingHorizontal: isMobile ? 20 : 48,
-    paddingVertical: isMobile ? 28 : 32,
-    paddingRight: showSideSlider ? (isMobile ? 28 : 56) : undefined,
+    paddingLeft: isMobile ? 20 : 48,
+    paddingRight: isMobile ? 20 : 48,
+    paddingTop: isMobile ? 28 : 32,
+    paddingBottom: isMobile ? 28 : 32,
     position: 'relative' as const,
     ...Platform.select({ web: showSideSlider ? {
-      backgroundColor: '#FDFCF9',
-      borderTopLeftRadius: isMobile ? 6 : 8,
-      borderBottomLeftRadius: isMobile ? 6 : 8,
-      borderTopRightRadius: 0,
-      borderBottomRightRadius: 0,
+      backgroundColor: 'transparent',
+      borderRadius: 0,
+      paddingLeft: leftPagePaddingLeft,
+      paddingRight: leftPagePaddingRight,
+      paddingTop: leftPagePaddingTop,
+      paddingBottom: leftPagePaddingBottom,
+      rowGap: leftPageRowGap,
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-start',
+      alignSelf: 'stretch',
+      ...(bookHeight > 0 ? {
+        height: bookHeight,
+        maxHeight: bookHeight,
+      } : {}),
     } as any : {
-      backgroundColor: '#FDFCF9',
+      backgroundColor: 'rgba(255,255,255,0.85)',
       borderRadius: isMobile ? 8 : 10,
-      border: '2px solid rgba(30,24,18,0.85)',
-      boxShadow: 'inset 0 0 0 6px rgba(255,255,255,0.9), inset 0 0 0 7px rgba(30,24,18,0.10)',
     } as any }),
   },
   heroPageGoldLine: {
-    position: 'absolute' as const, top: isMobile ? 14 : 18, left: isMobile ? 16 : 24, right: isMobile ? 16 : 24,
-    bottom: isMobile ? 14 : 18, zIndex: 5, borderWidth: 0,
+    position: 'absolute' as const, top: 0, left: 0, right: 0,
+    bottom: 0, zIndex: 5, borderWidth: 0,
     ...Platform.select({ web: {
-      border: '1px solid rgba(30,24,18,0.20)',
-      borderRadius: 2,
-      pointerEvents: 'none',
+      display: 'none',
     } as any }),
   },
   heroPageCurlLeft: {
@@ -138,26 +166,26 @@ export const createHomeHeroStyles = ({
   sliderSection: {
     flex: 1, minWidth: 0, width: showSideSlider ? '50%' : 320, maxWidth: showSideSlider ? undefined : 600,
     position: 'relative' as const, alignSelf: 'stretch',
-    minHeight: sliderHeight + (isMobile ? 40 : 64),
+    minHeight: showSideSlider ? 0 : sliderHeight + (isMobile ? 40 : 64),
     ...Platform.select({ web: showSideSlider ? {
-      backgroundColor: '#F8F5EE',
-      borderTopRightRadius: isMobile ? 6 : 8,
-      borderBottomRightRadius: isMobile ? 6 : 8,
-      borderTopLeftRadius: 0,
-      borderBottomLeftRadius: 0,
-      padding: isMobile ? 20 : 32,
+      backgroundColor: 'transparent',
+      borderRadius: 0,
+      paddingTop: '7%',
+      paddingBottom: '7%',
+      paddingLeft: '1.5%',
+      paddingRight: '8.5%',
       display: 'flex',
       flexDirection: 'column',
       boxSizing: 'border-box',
+      flex: 1,
+      overflow: 'hidden',
     } as any : {} }),
   },
   sliderPageGoldLine: {
-    position: 'absolute' as const, top: isMobile ? 14 : 18, left: isMobile ? 16 : 24, right: isMobile ? 16 : 24,
-    bottom: isMobile ? 14 : 18, zIndex: 5, borderWidth: 0,
+    position: 'absolute' as const, top: 0, left: 0, right: 0,
+    bottom: 0, zIndex: 5, borderWidth: 0,
     ...Platform.select({ web: {
-      border: '1px solid rgba(30,24,18,0.18)',
-      borderRadius: 2,
-      pointerEvents: 'none',
+      display: 'none',
     } as any }),
   },
   heroPageCurlRight: {
@@ -222,11 +250,11 @@ export const createHomeHeroStyles = ({
   // -- Slider navigation --
   sliderNav: {
     position: 'absolute' as const, top: '50%', left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16,
-    ...Platform.select({ web: { transform: 'translateY(-50%)' } }),
+    flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 10,
+    ...Platform.select({ web: { transform: 'translateY(-50%)', pointerEvents: 'none' } }),
   },
   sliderNavBtn: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
     ...Platform.select({ web: {
@@ -234,6 +262,7 @@ export const createHomeHeroStyles = ({
       transition: 'all 0.2s ease',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
+      pointerEvents: 'auto',
     } }),
   },
   sliderNavBtnHover: {
@@ -261,20 +290,20 @@ export const createHomeHeroStyles = ({
 
   // -- Typography --
   title: {
-    fontSize: isSmallPhone ? 28 : isMobile ? 34 : isTablet ? 46 : (isDesktop ? 54 : 50),
+    fontSize: isSmallPhone ? 28 : isMobile ? 34 : desktopBookTitleSize,
     fontWeight: '700', color: '#2A1F14', letterSpacing: -1.2,
-    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : isTablet ? 54 : (isDesktop ? 64 : 60), textAlign: 'left',
+    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : desktopBookTitleLineHeight, textAlign: 'left',
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   titleAccent: {
-    fontSize: isSmallPhone ? 28 : isMobile ? 34 : isTablet ? 46 : (isDesktop ? 54 : 50),
+    fontSize: isSmallPhone ? 28 : isMobile ? 34 : desktopBookTitleSize,
     fontWeight: '700', color: colors.brand, letterSpacing: -1.2,
-    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : isTablet ? 54 : (isDesktop ? 64 : 60), textAlign: 'left',
+    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : desktopBookTitleLineHeight, textAlign: 'left',
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   subtitle: {
-    fontSize: isMobile ? 15 : 17, fontWeight: '400', color: '#6B5D4F',
-    lineHeight: isMobile ? 24 : 28, textAlign: 'left', maxWidth: 480, alignSelf: 'flex-start',
+    fontSize: showSideSlider ? desktopBookSubtitleSize : (isMobile ? 15 : 17), fontWeight: '400', color: '#6B5D4F',
+    lineHeight: showSideSlider ? desktopBookSubtitleLineHeight : (isMobile ? 24 : 28), textAlign: 'left', maxWidth: showSideSlider ? desktopBookSubtitleMaxWidth : 480, alignSelf: 'flex-start',
     letterSpacing: 0.1,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
@@ -427,13 +456,13 @@ export const createHomeHeroStyles = ({
   // -- CTA Buttons --
   buttonsContainer: {
     flexDirection: isNarrowLayout ? 'column' : 'row', justifyContent: 'flex-start', alignItems: 'center',
-    gap: isMobile ? 10 : 14,
+    gap: isMobile ? 10 : (showSideSlider ? (isCompactBookLayout ? 6 : 8) : 14),
     width: '100%',
     flexWrap: isNarrowLayout ? 'nowrap' : 'wrap',
-    marginTop: isMobile ? 8 : 12,
+    marginTop: isMobile ? 8 : (showSideSlider ? (isCompactBookLayout ? 2 : 0) : 12),
   },
   primaryButton: {
-    paddingHorizontal: isMobile ? 28 : 40, paddingVertical: isMobile ? 14 : 17, minHeight: isMobile ? 50 : 56,
+    paddingHorizontal: isMobile ? 28 : (showSideSlider ? (isCompactBookLayout ? 24 : 28) : 40), paddingVertical: isMobile ? 14 : (showSideSlider ? (isCompactBookLayout ? 10 : 12) : 17), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 56),
     borderRadius: DESIGN_TOKENS.radii.pill, width: isMobile ? '100%' : undefined,
     backgroundColor: colors.brand,
     ...Platform.select({ web: {
@@ -449,11 +478,11 @@ export const createHomeHeroStyles = ({
     } }),
   },
   primaryButtonText: {
-    fontSize: isMobile ? 15 : 16, fontWeight: '600', color: colors.textOnPrimary, letterSpacing: 0.1,
+    fontSize: isMobile ? 15 : (isCompactBookLayout ? 15 : 16), fontWeight: '600', color: colors.textOnPrimary, letterSpacing: 0.1,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   secondaryButton: {
-    paddingHorizontal: isMobile ? 20 : 28, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 50 : 56,
+    paddingHorizontal: isMobile ? 20 : (showSideSlider ? (isCompactBookLayout ? 16 : 20) : 28), paddingVertical: isMobile ? 13 : (showSideSlider ? (isCompactBookLayout ? 9 : 11) : 17), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 56),
     borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: cardSurface, borderWidth: 1.5, borderColor: warmBorder,
     width: isMobile ? '100%' : undefined,
     ...Platform.select({ web: {
@@ -468,24 +497,24 @@ export const createHomeHeroStyles = ({
     } }),
   },
   secondaryButtonText: {
-    fontSize: 15, fontWeight: '600', color: '#2A1F14',
+    fontSize: isCompactBookLayout ? 14 : 15, fontWeight: '600', color: '#2A1F14',
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 
   // -- Bookmark rail (desktop left page inline mood cards) --
   bookmarkRail: {
-    width: '100%', gap: 2, alignItems: 'stretch',
+    width: '100%', gap: showSideSlider ? (isCompactBookLayout ? 0 : 1) : 2, alignItems: 'stretch',
     ...Platform.select({ web: {
       borderLeftWidth: 1.5,
       borderLeftColor: 'rgba(100,90,75,0.22)',
-      paddingLeft: 16,
+      paddingLeft: isCompactBookLayout ? 12 : 16,
       marginLeft: 2,
     } as any }),
   },
   bookmarkChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: isCompactBookLayout ? 10 : 12, paddingVertical: showSideSlider ? (isCompactBookLayout ? 3 : 4) : 6,
+    borderRadius: 7,
     borderWidth: 1.5, borderColor: 'rgba(100,90,75,0.20)',
     backgroundColor: cardSurface,
     ...Platform.select({ web: {
@@ -502,7 +531,7 @@ export const createHomeHeroStyles = ({
     } }),
   },
   bookmarkChipIcon: {
-    width: 30, height: 30, borderRadius: 6, backgroundColor: 'transparent',
+    width: isCompactBookLayout ? 22 : 24, height: isCompactBookLayout ? 22 : 24, borderRadius: 5, backgroundColor: 'transparent',
     justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(100,90,75,0.22)',
   },
 
@@ -557,11 +586,11 @@ export const createHomeHeroStyles = ({
   },
   moodChipText: { gap: showSideSlider ? 2 : 1, flex: showSideSlider ? 1 : undefined },
   moodChipTitle: {
-    fontSize: showSideSlider ? 14 : 13, fontWeight: '600', color: '#2A1F14', letterSpacing: showSideSlider ? -0.2 : -0.1,
+    fontSize: showSideSlider ? (isCompactBookLayout ? 13 : 14) : 13, fontWeight: '600', color: '#2A1F14', letterSpacing: showSideSlider ? -0.2 : -0.1,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   moodChipMeta: {
-    fontSize: showSideSlider ? 11 : 10, fontWeight: '400', color: '#8B7D6B', letterSpacing: 0.1,
+    fontSize: showSideSlider ? (isCompactBookLayout ? 10 : 11) : 10, fontWeight: '400', color: '#8B7D6B', letterSpacing: 0.1,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 

@@ -127,6 +127,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const [rejectionComment, setRejectionComment] = useState('');
+    const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
     const isNew = !formData.id;
 
     const scrollRef = useRef<ScrollView | null>(null);
@@ -192,6 +193,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const handleSaveDraft = async () => {
         // ✅ FIX: Предотвращаем одновременные операции
         if (!startAction()) return;
+        setSaveErrorMessage(null);
 
         try {
             const nextForm = {
@@ -204,6 +206,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             const saved = await onManualSave(nextForm);
             const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
             if (!resolvedId) {
+                setSaveErrorMessage('Черновик не сохранен. Проверьте обязательные поля и попробуйте еще раз.');
                 void showToastMessage({
                     type: 'error',
                     text1: 'Не удалось сохранить',
@@ -238,6 +241,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             // в раздел "Мои путешествия", где он увидит черновик.
             router.replace('/metravel');
         } catch (error) {
+            setSaveErrorMessage(error instanceof Error ? error.message : 'Не удалось сохранить черновик');
             hapticNotification('error');
             // ✅ FIX: Обработка ошибок сохранения
             void showToastMessage({
@@ -469,6 +473,12 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
+                    {saveErrorMessage ? (
+                        <View style={[styles.card, styles.saveErrorCard]} testID="publish-save-error-banner">
+                            <Text style={styles.saveErrorTitle}>Ошибка сохранения</Text>
+                            <Text style={styles.saveErrorText}>{saveErrorMessage}</Text>
+                        </View>
+                    ) : null}
                     <View style={[styles.card, styles.statusChipCard]}>
                         <Text style={styles.cardTitle}>Текущий статус</Text>
                         <View style={styles.statusChipRow}>
@@ -951,6 +961,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: colors.dangerDark,
         marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    saveErrorCard: {
+        backgroundColor: colors.dangerSoft,
+        borderColor: colors.dangerLight,
+    },
+    saveErrorTitle: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '700',
+        color: colors.dangerDark,
+        marginBottom: 4,
+    },
+    saveErrorText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.dangerDark,
+        lineHeight: 20,
     },
     adminCard: {
         backgroundColor: colors.backgroundSecondary,

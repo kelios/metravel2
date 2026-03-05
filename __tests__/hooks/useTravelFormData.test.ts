@@ -144,6 +144,52 @@ describe('useTravelFormData', () => {
     expect(sentPayload.description).not.toBe('__draft_placeholder__');
   });
 
+  it('manual save keeps moderation override flags for backend notification trigger', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 817 }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: null,
+          isNew: true,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 817,
+        name: 'Travel moderation check',
+        description: 'Long enough description to pass validation for moderation submit in tests.',
+        countries: [1],
+        categories: [1],
+        coordsMeTravel: [{ lat: 53.9, lng: 27.56, categories: [1] }],
+        publish: false,
+        moderation: false,
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave({
+        ...(result.current.formData as any),
+        publish: true,
+        moderation: false,
+      } as any);
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
+    expect(sentPayload.publish).toBe(true);
+    expect(sentPayload.moderation).toBe(false);
+  });
+
   it('manual save keeps local description if backend responds with description=null (no placeholder on next save)', async () => {
     const html = '<p>еуые</p>';
     (saveFormData as jest.Mock)
