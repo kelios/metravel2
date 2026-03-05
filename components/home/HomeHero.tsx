@@ -313,94 +313,197 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
 
   const currentSlide = BOOK_IMAGES[visibleSlide];
   const isVisibleSlideLoaded = loadedSlides.has(visibleSlide);
+  const showBookmarkRail = showSideSlider && !isNarrowLayout;
+  const showInlineBookmarkRail = showBookmarkRail;
 
   return (
     <View testID="home-hero" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.heroShell}>
-          {/* Hero Row: Text left, Slider right on desktop */}
-          <View style={styles.heroRow}>
-          {/* Hero Section - Text */}
-          <View style={styles.heroSection}>
-            <View style={styles.badge}>
-              <View style={styles.badgeDot} />
-              <Feather name="zap" size={12} color={colors.primaryText} />
-              <Text style={styles.badgeText}>Бесплатно • Без регистрации</Text>
-            </View>
+          {/* Book wrapper for 3D effect */}
+          <View style={styles.bookWrapper}>
+            {/* Book cover shadow/glow */}
+            {isWeb && showSideSlider && <View style={styles.bookCoverOuter} />}
+            
+            {/* Decorative bookmark ribbons */}
+            {isWeb && showSideSlider && <View style={styles.heroBookmarkRibbon} />}
+            {isWeb && showSideSlider && <View style={styles.heroBookmarkRibbon2} />}
 
-            <View>
-              <Text style={styles.title}>
-                Куда поехать{isNarrowLayout ? ' ' : '\n'}
-              </Text>
-              <Text style={styles.titleAccent}>
-                в эти выходные?
-              </Text>
-            </View>
+            {/* Hero Row: Left page (text) + Right page (slider) */}
+            <View style={styles.heroRow}>
+              {/* Central book spine */}
+              {isWeb && showSideSlider && <View style={styles.heroBookSpine} />}
 
-            <Text style={styles.subtitle}>
-              Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.
-            </Text>
+              {/* Left Page - Text Content */}
+              <View style={styles.heroSection}>
+                {/* Golden decorative line at top */}
+                {isWeb && showSideSlider && <View style={styles.heroPageGoldLine} />}
+                {/* Page curl effect */}
+                {isWeb && showSideSlider && <View style={styles.heroPageCurlLeft} />}
 
-            <View style={styles.highlightsGrid}>
-              {HERO_HIGHLIGHTS.map((item) => (
-                <View key={item.title} style={styles.highlightCard}>
-                  <View style={styles.highlightIconWrap}>
-                    <Feather name={item.icon as any} size={16} color={colors.textOnPrimary} />
+                {/* Badge */}
+                <View style={styles.badge}>
+                  <View style={styles.badgeDot} />
+                  <Feather name="zap" size={12} color={colors.primaryText} />
+                  <Text style={styles.badgeText}>Бесплатно • Без регистрации</Text>
+                </View>
+
+                {/* Title */}
+                <View>
+                  <Text style={styles.title}>
+                    Куда поехать{isNarrowLayout ? ' ' : '\n'}
+                  </Text>
+                  <Text style={styles.titleAccent}>
+                    в эти выходные?
+                  </Text>
+                </View>
+
+                {/* Subtitle */}
+                <Text style={styles.subtitle}>
+                  Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.
+                </Text>
+
+                {/* Mood filter chips as inline vertical list (desktop) */}
+                {showInlineBookmarkRail && (
+                  <View style={styles.bookmarkRail}>
+                    {MOOD_CARDS.map((card) => (
+                      <Pressable
+                        key={`inline-${card.title}`}
+                        onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams, card.route)}
+                        style={({ pressed, hovered }) => [
+                          styles.bookmarkChip,
+                          (pressed || hovered) && styles.bookmarkChipHover,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
+                      >
+                        <View style={styles.bookmarkChipIcon}>
+                          <Feather name={card.icon as any} size={14} color={colors.primary} />
+                        </View>
+                        <View style={styles.moodChipText}>
+                          <Text style={styles.moodChipTitle}>{card.title}</Text>
+                          <Text style={styles.moodChipMeta}>{card.meta}</Text>
+                        </View>
+                      </Pressable>
+                    ))}
                   </View>
-                  <Text style={styles.highlightTitle}>{item.title}</Text>
-                  <Text style={styles.highlightSubtitle}>{item.subtitle}</Text>
+                )}
+
+                {/* Inner mini-book feature highlights widget */}
+                {!showInlineBookmarkRail && (
+                  <View style={styles.openBookContainer}>
+                    <View style={styles.openBook}>
+                      {isWeb && <View style={styles.bookCover} />}
+                      {/* Left Page */}
+                      <View style={[styles.bookPage, styles.bookPageLeft]}>
+                        {isWeb && <View style={styles.bookPageGoldLine} />}
+                        <View style={styles.bookSpineShadowLeft} />
+                        {HERO_HIGHLIGHTS.slice(0, 2).map((item) => (
+                          <Pressable
+                            key={item.title}
+                            style={({ hovered }) => [
+                              styles.bookHighlightItem,
+                              hovered && styles.bookHighlightItemHover,
+                            ]}
+                          >
+                            <View style={styles.bookHighlightIconWrap}>
+                              <Feather name={item.icon as any} size={isMobile ? 13 : 15} color={colors.textOnPrimary} />
+                            </View>
+                            <View style={styles.bookHighlightTextWrap}>
+                              <Text style={styles.bookHighlightTitle}>{item.title}</Text>
+                              <Text style={styles.bookHighlightSubtitle}>{item.subtitle}</Text>
+                            </View>
+                          </Pressable>
+                        ))}
+                        <View style={[styles.bookPageCurl, styles.bookPageCurlLeft]} />
+                        <Text style={[styles.bookPageNumber, styles.bookPageNumberLeft]}>1</Text>
+                      </View>
+                      {/* Center Spine */}
+                      <View style={styles.bookSpine} />
+                      {/* Right Page */}
+                      <View style={[styles.bookPage, styles.bookPageRight]}>
+                        {isWeb && <View style={styles.bookPageGoldLine} />}
+                        <View style={styles.bookSpineShadowRight} />
+                        {HERO_HIGHLIGHTS.slice(2).map((item) => (
+                          <Pressable
+                            key={item.title}
+                            style={({ hovered }) => [
+                              styles.bookHighlightItem,
+                              hovered && styles.bookHighlightItemHover,
+                            ]}
+                          >
+                            <View style={styles.bookHighlightIconWrap}>
+                              <Feather name={item.icon as any} size={isMobile ? 13 : 15} color={colors.textOnPrimary} />
+                            </View>
+                            <View style={styles.bookHighlightTextWrap}>
+                              <Text style={styles.bookHighlightTitle}>{item.title}</Text>
+                              <Text style={styles.bookHighlightSubtitle}>{item.subtitle}</Text>
+                            </View>
+                          </Pressable>
+                        ))}
+                        <View style={[styles.bookPageCurl, styles.bookPageCurlRight]} />
+                        <Text style={[styles.bookPageNumber, styles.bookPageNumberRight]}>2</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* CTA Buttons */}
+                <View style={styles.buttonsContainer}>
+                  {travelsCountLoading ? (
+                    <View style={[styles.primaryButton, {
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      opacity: 0.6,
+                      flexDirection: 'row',
+                      gap: 8,
+                    }]}>
+                      <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                    </View>
+                  ) : (
+                    <Button
+                      onPress={handleCreateBook}
+                      label={primaryButtonLabel}
+                      variant="primary"
+                      size="md"
+                      fullWidth={isNarrowLayout}
+                      icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
+                      iconPosition="right"
+                      style={styles.primaryButton}
+                      labelStyle={styles.primaryButtonText}
+                      hoverStyle={styles.primaryButtonHover}
+                      pressedStyle={styles.primaryButtonHover}
+                      accessibilityLabel={primaryButtonLabel}
+                    />
+                  )}
+                  <Button
+                    onPress={handleOpenSearch}
+                    label="Смотреть маршруты"
+                    variant="secondary"
+                    size="md"
+                    fullWidth={isNarrowLayout}
+                    icon={<Feather name="compass" size={16} color={colors.text} />}
+                    style={styles.secondaryButton}
+                    labelStyle={styles.secondaryButtonText}
+                    hoverStyle={styles.secondaryButtonHover}
+                    pressedStyle={styles.secondaryButtonHover}
+                    accessibilityLabel="Смотреть маршруты"
+                  />
                 </View>
-              ))}
-            </View>
 
-            <View style={styles.buttonsContainer}>
-              {travelsCountLoading ? (
-                /* HERO-06: skeleton кнопки пока грузится travelsCount */
-                <View style={[styles.primaryButton, {
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  opacity: 0.6,
-                  flexDirection: 'row',
-                  gap: 8,
-                }]}>
-                  <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                </View>
-              ) : (
-                <Button
-                  onPress={handleCreateBook}
-                  label={primaryButtonLabel}
-                  variant="primary"
-                  size="md"
-                  fullWidth={isNarrowLayout}
-                  icon={<Feather name="arrow-right" size={16} color={colors.textOnPrimary} />}
-                  iconPosition="right"
-                  style={styles.primaryButton}
-                  labelStyle={styles.primaryButtonText}
-                  hoverStyle={styles.primaryButtonHover}
-                  pressedStyle={styles.primaryButtonHover}
-                  accessibilityLabel={primaryButtonLabel}
-                />
-              )}
-              <Button
-                onPress={handleOpenSearch}
-                label="Смотреть маршруты"
-                variant="secondary"
-                size="md"
-                fullWidth={isNarrowLayout}
-                icon={<Feather name="compass" size={16} color={colors.text} />}
-                style={styles.secondaryButton}
-                labelStyle={styles.secondaryButtonText}
-                hoverStyle={styles.secondaryButtonHover}
-                pressedStyle={styles.secondaryButtonHover}
-                accessibilityLabel="Смотреть маршруты"
-              />
-            </View>
+                {/* Page number on left page */}
+                {showSideSlider && <Text style={[styles.bookPageNumber, styles.bookPageNumberLeft]}>1</Text>}
+              </View>
 
-          </View>
-
-          {/* Slider Section - Right side on desktop */}
-          {showSideSlider && (
-            <View style={styles.sliderSection}>
+              {/* Right Page - Slider Section */}
+              {showSideSlider && (
+                <View style={styles.sliderSection}>
+                  {/* Golden decorative line at top */}
+                  {isWeb && <View style={styles.sliderPageGoldLine} />}
+                  {/* Page curl effect */}
+                  {isWeb && <View style={styles.heroPageCurlRight} />}
+                  {/* Page number */}
+                  <Text style={styles.sliderPageNumber}>2</Text>
               <Pressable
                 onPress={() => handleOpenArticles(currentSlide.href)}
                 style={styles.sliderContainer}
@@ -448,18 +551,18 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
               {/* Navigation dots - outside Pressable to avoid nested buttons */}
               {null}
 
-              {/* Navigation arrows */}
-              <View style={styles.sliderNav}>
-                <Pressable
-                  onPress={handlePrevSlide}
-                  style={({ hovered }) => [
-                    styles.sliderNavBtn,
-                    hovered && styles.sliderNavBtnHover,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Предыдущий слайд"
-                >
-                  <Feather name="chevron-left" size={20} color="#fff" />
+                {/* Navigation arrows */}
+                <View style={styles.sliderNav}>
+                  <Pressable
+                    onPress={handlePrevSlide}
+                    style={({ hovered }) => [
+                      styles.sliderNavBtn,
+                      hovered && styles.sliderNavBtnHover,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Предыдущий слайд"
+                  >
+                    <Feather name="chevron-left" size={20} color="#fff" />
                 </Pressable>
                 <Pressable
                   onPress={handleNextSlide}
@@ -472,47 +575,50 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0, travelsCountLoading 
                 >
                   <Feather name="chevron-right" size={20} color="#fff" />
                 </Pressable>
+                </View>
+              </View>
+            )}
+            </View>
+          </View>
+          {!showBookmarkRail && (
+            <View style={styles.moodChipsContainer}>
+              <View
+                style={isWeb ? ({
+                  WebkitMaskImage: 'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                  maskImage: 'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                  overflow: 'hidden',
+                } as any) : undefined}
+              >
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
+                contentContainerStyle={styles.moodChipsScrollContent}
+              >
+                {MOOD_CARDS.map((card) => (
+                  <Pressable
+                    key={card.title}
+                    onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams, card.route)}
+                    style={({ pressed, hovered }) => [
+                      styles.moodChip,
+                      (pressed || hovered) && styles.moodChipHover,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
+                  >
+                    <View style={styles.moodChipIcon}>
+                      <Feather name={card.icon as any} size={14} color={colors.primary} />
+                    </View>
+                    <View style={styles.moodChipText}>
+                      <Text style={styles.moodChipTitle}>{card.title}</Text>
+                      <Text style={styles.moodChipMeta}>{card.meta}</Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
               </View>
             </View>
           )}
-          </View>
-          <View style={styles.moodChipsContainer}>
-            <View
-              style={isWeb ? ({
-                WebkitMaskImage: 'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-                maskImage: 'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-                overflow: 'hidden',
-              } as any) : undefined}
-            >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={isWeb ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch', overflowX: 'auto', overflowY: 'hidden' } as any) : undefined}
-              contentContainerStyle={styles.moodChipsScrollContent}
-            >
-              {MOOD_CARDS.map((card) => (
-                <Pressable
-                  key={card.title}
-                  onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams, card.route)}
-                  style={({ pressed, hovered }) => [
-                    styles.moodChip,
-                    (pressed || hovered) && styles.moodChipHover,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
-                >
-                  <View style={styles.moodChipIcon}>
-                    <Feather name={card.icon as any} size={14} color={colors.primary} />
-                  </View>
-                  <View style={styles.moodChipText}>
-                    <Text style={styles.moodChipTitle}>{card.title}</Text>
-                    <Text style={styles.moodChipMeta}>{card.meta}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
-            </View>
-          </View>
         </View>
 
         {/* Popular Routes Section - only on mobile */}

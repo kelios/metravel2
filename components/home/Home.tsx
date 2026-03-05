@@ -12,19 +12,16 @@ import FadeInSection from '@/components/ui/FadeInSection';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { hapticImpact } from '@/utils/haptics';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
+import { HomeInspirationSection } from './HomeInspirationSection';
+import { fetchTravelsRandom, fetchTravelsOfMonth } from '@/api/map';
 
 const isWeb = Platform.OS === 'web';
-const TRUST_PLACEHOLDER_STYLE = { minHeight: 220 } as const;
 const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 420 } as const;
 const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const;
-const FINAL_CTA_PLACEHOLDER_STYLE = { minHeight: 300 } as const;
 
-const HomeTrustBlock = lazy(() => import('./HomeTrustBlock'));
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
 const HomeFAQSection = lazy(() => import('./HomeFAQSection'));
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
-const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
-const OnboardingBanner = lazy(() => import('./OnboardingBanner'));
 
 const SectionSkeleton = memo(({ hydrated }: { hydrated: boolean }) => {
   const { isSmallPhone, isPhone } = useResponsive();
@@ -157,7 +154,6 @@ function Home() {
 
   // Responsive skeleton padding — reduce on mobile to match tighter layout
   const skeletonPadH = isMobile ? 8 : 24;
-  const skeletonPadV = isMobile ? 24 : 40;
   const skeletonPadVLarge = isMobile ? 36 : 64;
 
   return (
@@ -183,49 +179,23 @@ function Home() {
     >
         <HomeHero travelsCount={travelsCount} travelsCountLoading={isAuthenticated && travelsCountLoading} />
 
-      {/* AUTH-04: OnboardingBanner доступен и гостям — сам компонент управляет видимостью */}
-      <Suspense fallback={null}>
-        <OnboardingBanner userId={isAuthenticated && userId ? userId : undefined} />
-      </Suspense>
 
       {showHeavyContent ? (
-        <FadeInSection>
-          <Suspense fallback={
-            <View style={TRUST_PLACEHOLDER_STYLE}>
-              <View style={{ paddingHorizontal: skeletonPadH, paddingVertical: skeletonPadV, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
-                <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: isMobile ? 12 : 16, flexDirection: isMobile ? 'column' as const : 'row' as const, gap: isMobile ? 12 : 16 }}>
-                  {[0,1,2].map(i => (
-                    <View key={i} style={{ flex: isMobile ? undefined : 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 }}>
-                      <SkeletonLoader width={34} height={34} borderRadius={10} />
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <SkeletonLoader width="60%" height={14} borderRadius={4} />
-                        <SkeletonLoader width="80%" height={12} borderRadius={4} />
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            </View>
-          }>
-            <HomeTrustBlock />
-          </Suspense>
+        <FadeInSection delay={80}>
+          <ResponsiveContainer maxWidth="xl" padding>
+            <HomeInspirationSection
+              title="Не хотите"
+              titleAccent="выбирать долго?"
+              subtitle="Откройте случайный маршрут для спонтанного выезда"
+              queryKey="home-random-travels"
+              fetchFn={fetchTravelsRandom}
+              fixedCount={3}
+              hideAuthor
+            />
+          </ResponsiveContainer>
         </FadeInSection>
       ) : (
-        <View style={TRUST_PLACEHOLDER_STYLE}>
-          <View style={{ paddingHorizontal: skeletonPadH, paddingVertical: skeletonPadV, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: isMobile ? 12 : 16, flexDirection: isMobile ? 'column' as const : 'row' as const, gap: isMobile ? 12 : 16 }}>
-              {[0,1,2].map(i => (
-                <View key={i} style={{ flex: isMobile ? undefined : 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 }}>
-                  <SkeletonLoader width={34} height={34} borderRadius={10} />
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <SkeletonLoader width="60%" height={14} borderRadius={4} />
-                    <SkeletonLoader width="80%" height={12} borderRadius={4} />
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
+        <View style={{ minHeight: 380 }} />
       )}
 
       {showHeavyContent ? (
@@ -273,6 +243,22 @@ function Home() {
       )}
 
       {showHeavyContent ? (
+        <FadeInSection delay={150}>
+          <ResponsiveContainer maxWidth="xl" padding>
+            <HomeInspirationSection
+              title="Маршруты на"
+              titleAccent="ближайшие выходные"
+              subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
+              queryKey="home-travels-of-month"
+              fetchFn={fetchTravelsOfMonth}
+            />
+          </ResponsiveContainer>
+        </FadeInSection>
+      ) : (
+        <View style={{ minHeight: 480 }} />
+      )}
+
+      {showHeavyContent ? (
         <FadeInSection delay={200}>
           <Suspense fallback={<SectionSkeleton hydrated />}>
             <HomeInspirationSections />
@@ -299,25 +285,6 @@ function Home() {
         <HomeFAQSection />
       </Suspense>
 
-      {showHeavyContent ? (
-        <FadeInSection delay={100}>
-          <Suspense fallback={
-            <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: isMobile ? 40 : 72 }]}>
-              <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />
-              <SkeletonLoader width={isMobile ? 200 : 340} height={20} borderRadius={6} style={{ marginTop: 16 }} />
-              <SkeletonLoader width={isMobile ? 200 : 300} height={60} borderRadius={12} style={{ marginTop: isMobile ? 20 : 32 }} />
-            </View>
-          }>
-            <HomeFinalCTA />
-          </Suspense>
-        </FadeInSection>
-      ) : (
-        <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: isMobile ? 40 : 72 }]}>
-          <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />
-          <SkeletonLoader width={isMobile ? 200 : 340} height={20} borderRadius={6} style={{ marginTop: 16 }} />
-          <SkeletonLoader width={isMobile ? 200 : 300} height={60} borderRadius={12} style={{ marginTop: isMobile ? 20 : 32 }} />
-        </View>
-      )}
     </ScrollView>
   );
 }

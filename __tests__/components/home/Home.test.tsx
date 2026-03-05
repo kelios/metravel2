@@ -17,8 +17,16 @@ jest.mock('@/utils/analytics', () => ({
 
 // Mock lazy loaded components
 jest.mock('@/components/home/HomeInspirationSection', () => {
-  return function MockHomeInspirationSections() {
+  function MockHomeInspirationSections() {
     return null;
+  }
+  function MockHomeInspirationSection() {
+    return null;
+  }
+  return {
+    __esModule: true,
+    default: MockHomeInspirationSections,
+    HomeInspirationSection: MockHomeInspirationSection,
   };
 });
 
@@ -86,11 +94,6 @@ describe('Home Component', () => {
     it('should render HomeHowItWorks component', () => {
       const { getByTestId } = renderHome();
       expect(getByTestId('home-how-it-works')).toBeTruthy();
-    });
-
-    it('should render HomeTrustBlock', () => {
-      const { getByTestId } = renderHome();
-      expect(getByTestId('home-trust-block')).toBeTruthy();
     });
 
     it('should render HomeFAQSection', () => {

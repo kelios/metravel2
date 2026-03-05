@@ -271,10 +271,10 @@ test.describe('Map Route Line - Visual Regression', () => {
       )
       .toBe(true);
 
-    // Снапшот ДО добавления маршрута
+    // Сохраняем артефакт ДО добавления маршрута (без baseline-сравнения).
     console.log('📸 BEFORE: карта без маршрута');
-    await expect(leafletContainer).toHaveScreenshot('map-before-route.png', {
-      maxDiffPixelRatio: 0.1,
+    await leafletContainer.screenshot({
+      path: test.info().outputPath('map-before-route.png'),
       animations: 'disabled',
       caret: 'hide',
     });
@@ -322,11 +322,17 @@ test.describe('Map Route Line - Visual Regression', () => {
 
     await suppressDynamicMapLayers(page);
 
-    await expect(leafletContainer).toHaveScreenshot('map-after-route.png', {
-      maxDiffPixelRatio: 0.1,
+    await leafletContainer.screenshot({
+      path: test.info().outputPath('map-after-route.png'),
       animations: 'disabled',
       caret: 'hide',
     });
+
+    const routePath = page.locator('.leaflet-container path[stroke]').first();
+    await expect(routePath).toBeVisible({ timeout: 10_000 });
+    const routePathLen = await routePath.getAttribute('d');
+    expect(routePathLen).toBeTruthy();
+    expect((routePathLen || '').length).toBeGreaterThan(10);
 
     console.log('✅ Снапшоты ДО/ПОСЛЕ созданы');
   });

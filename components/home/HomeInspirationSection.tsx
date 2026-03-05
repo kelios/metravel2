@@ -1,26 +1,27 @@
-import React, { useMemo, memo, useCallback } from 'react';
+import React, { useMemo, memo, useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
-import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { sendAnalyticsEvent } from '@/utils/analytics';
-import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/api/map';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
 import Button from '@/components/ui/Button';
 import { queryConfigs } from '@/utils/reactQueryConfig';
+import AdventureChaptersSection from './AdventureChaptersSection';
 import { createSectionStyles, createSectionsStyles } from './homeInspirationStyles';
 
 interface HomeSectionProps {
   title: string;
+  titleAccent?: string;
   subtitle?: string;
   queryKey: string;
   fetchFn: (options?: { signal?: AbortSignal }) => Promise<any>;
   hideAuthor?: boolean;
-  centerRowsOnWebDesktop?: boolean;
+  fixedCount?: number;
 }
 
 type QuickFilterValue = string | number | Array<string | number>;
@@ -125,28 +126,21 @@ const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
   },
 };
 
-function HomeInspirationSection({
+export function HomeInspirationSection({
   title,
+  titleAccent,
   subtitle,
   queryKey,
   fetchFn,
   hideAuthor = false,
-  centerRowsOnWebDesktop = false,
+  fixedCount,
 }: HomeSectionProps) {
   const router = useRouter();
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width: viewportWidth } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
-  const isWebDesktop = Platform.OS === 'web' && !isMobile;
-
-  const numColumns = useResponsiveColumns({
-    tablet: 2,
-    largeTablet: 3,
-    desktop: 3,
-    largeDesktop: 4,
-    default: 1,
-  });
+  const isWeekendShowcase = queryKey === 'home-travels-of-month';
 
   const { data: travelData = {}, isLoading } = useQuery({
     queryKey: [queryKey],
@@ -169,8 +163,12 @@ function HomeInspirationSection({
       arr = Object.values(travelData).filter(item => item && typeof item === 'object');
     }
     
-    return arr.slice(0, isMobile ? 4 : numColumns <= 3 ? 6 : 8);
-  }, [travelData, isMobile, numColumns]);
+    const maxItems = fixedCount ?? (isWeekendShowcase
+      ? (isMobile ? 2 : 4)
+      : (isMobile ? 4 : 6));
+
+    return arr.slice(0, maxItems);
+  }, [travelData, isMobile, isWeekendShowcase, fixedCount]);
 
   const handleViewMore = useCallback(() => {
     sendAnalyticsEvent('HomeClick_ViewMore', { section: title });
@@ -194,24 +192,34 @@ function HomeInspirationSection({
   if (isLoading) {
     return (
       <View style={[styles.section, isMobile && styles.sectionMobile]}>
-        <View style={styles.sectionFrame}>
-          <View style={styles.sectionGlow} />
-          <View style={styles.sectionAccent} />
-          <View style={styles.header}>
+        <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
+          <View style={[styles.showcaseHeader]}>
             <View style={styles.titleContainer}>
-              <SkeletonLoader width={isMobile ? 200 : 300} height={isMobile ? 24 : 36} borderRadius={8} style={{ marginBottom: 8 }} />
-              <SkeletonLoader width={isMobile ? 150 : 250} height={isMobile ? 14 : 16} borderRadius={4} />
+              <SkeletonLoader width={isMobile ? 80 : 110} height={28} borderRadius={14} style={{ marginBottom: 4 }} />
+              <SkeletonLoader width={isMobile ? 200 : 320} height={isMobile ? 28 : 40} borderRadius={8} style={{ marginBottom: 6 }} />
+              <SkeletonLoader width={isMobile ? 160 : 260} height={isMobile ? 14 : 16} borderRadius={4} />
             </View>
-            <SkeletonLoader width={isMobile ? 140 : 180} height={44} borderRadius={8} />
           </View>
-          <View style={styles.grid}>
-            <View style={styles.row}>
-              {Array.from({ length: isMobile ? 1 : 3 }).map((_, index) => (
-                <View key={index} style={[styles.cardWrapper, isMobile && styles.cardWrapperMobile]}>
-                  <SkeletonLoader width="100%" height={isMobile ? 320 : 360} borderRadius={12} />
-                </View>
-              ))}
-            </View>
+          <View style={styles.bentoGrid}>
+            {isMobile ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <SkeletonLoader key={i} width="100%" height={260} borderRadius={12} />
+              ))
+            ) : (
+              [0, 1].map((rowIdx) => {
+                const wideFirst = rowIdx % 2 === 0;
+                return (
+                  <View key={rowIdx} style={styles.bentoRow}>
+                    <View style={wideFirst ? styles.bentoCardWide : styles.bentoCardNarrow}>
+                      <SkeletonLoader width="100%" height={340} borderRadius={12} />
+                    </View>
+                    <View style={wideFirst ? styles.bentoCardNarrow : styles.bentoCardWide}>
+                      <SkeletonLoader width="100%" height={340} borderRadius={12} />
+                    </View>
+                  </View>
+                );
+              })
+            )}
           </View>
         </View>
       </View>
@@ -220,36 +228,21 @@ function HomeInspirationSection({
 
   return (
     <View style={[styles.section, isMobile && styles.sectionMobile]}>
-      <View style={styles.sectionFrame}>
-        <View style={styles.sectionGlow} />
-        <View style={styles.sectionAccent} />
-        <View style={[styles.header, isMobile && styles.headerMobile]}>
-          <View style={styles.titleContainer}>
-            <View style={[
-              styles.sectionBadge,
-              sectionBadge.color === 'warning' && { backgroundColor: colors.warningSoft ?? colors.primarySoft, borderColor: colors.warningAlpha40 ?? colors.primaryAlpha30 },
-              sectionBadge.color === 'success' && { backgroundColor: colors.successSoft, borderColor: colors.primaryAlpha30 },
-            ]}>
-              <Feather name={sectionBadge.icon as any} size={12} color={colors.primary} />
-              <Text style={styles.sectionBadgeText}>{sectionBadge.label}</Text>
-            </View>
-            <Text style={[styles.title, isMobile && styles.titleMobile]}>{title}</Text>
-            {subtitle && <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>{subtitle}</Text>}
-          </View>
-          <View style={styles.headerActions}>
-            <Button
-              label={viewMoreLabel}
-              onPress={handleViewMore}
-              accessibilityLabel={`Открыть каталог маршрутов для секции «${title}»`}
-              icon={<Feather name="arrow-right" size={16} color={colors.text} />}
-              iconPosition="right"
-              variant="secondary"
-              style={[styles.viewMoreButton, isMobile && styles.viewMoreButtonMobile]}
-              labelStyle={styles.viewMoreText}
-              hoverStyle={styles.viewMoreButtonHover}
-              pressedStyle={styles.viewMoreButtonHover}
+      <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
+        <View style={styles.heroHeader}>
+          <View style={styles.showcaseBadge}>
+            <Feather
+              name={isWeekendShowcase ? 'calendar' : (sectionBadge.icon as any)}
+              size={11}
+              color={colors.primaryText}
             />
+            <Text style={styles.showcaseBadgeText}>
+              {isWeekendShowcase ? 'Ближайшие выходные' : sectionBadge.label}
+            </Text>
           </View>
+          <Text style={styles.heroTitle}>{title}</Text>
+          {titleAccent && <Text style={styles.heroTitleAccent}>{titleAccent}</Text>}
+          {subtitle && <Text style={styles.heroSubtitle}>{subtitle}</Text>}
         </View>
 
         {travelsList.length === 0 ? (
@@ -271,86 +264,133 @@ function HomeInspirationSection({
               pressedStyle={styles.viewMoreButtonHover}
             />
           </View>
+        ) : isMobile ? (
+          <View style={styles.bentoGrid}>
+            {travelsList.map((item: any, index: number) => {
+              const key = item?.id != null && String(item.id).length > 0
+                ? String(item.id)
+                : item?.url ? String(item.url) : `${queryKey}-${index}`;
+              return (
+                <React.Fragment key={key}>
+                  {index > 0 && <Separator />}
+                  <View style={styles.bentoCardWide}>
+                    <RenderTravelItem
+                      item={item}
+                      index={index}
+                      isMobile={isMobile}
+                      hideAuthor={hideAuthor}
+                      viewportWidth={viewportWidth}
+                      visualVariant="home-featured"
+                    />
+                  </View>
+                </React.Fragment>
+              );
+            })}
+          </View>
+        ) : travelsList.length === 3 ? (
+          <View style={styles.trioGrid}>
+            <View style={styles.trioCardTop}>
+              <RenderTravelItem
+                item={travelsList[0]}
+                index={0}
+                isMobile={isMobile}
+                hideAuthor={hideAuthor}
+                viewportWidth={viewportWidth}
+                visualVariant="home-featured"
+              />
+            </View>
+            <View style={styles.trioBottomRow}>
+              <View style={styles.trioCardBottom}>
+                <RenderTravelItem
+                  item={travelsList[1]}
+                  index={1}
+                  isMobile={isMobile}
+                  hideAuthor={hideAuthor}
+                  viewportWidth={viewportWidth}
+                  visualVariant="home-featured"
+                />
+              </View>
+              <View style={styles.trioCardBottom}>
+                <RenderTravelItem
+                  item={travelsList[2]}
+                  index={2}
+                  isMobile={isMobile}
+                  hideAuthor={hideAuthor}
+                  viewportWidth={viewportWidth}
+                  visualVariant="home-featured"
+                />
+              </View>
+            </View>
+          </View>
         ) : (
-          <View style={styles.grid}>
-            {numColumns === 1
-              ? travelsList.map((item: any, index: number) => {
-                  const key = item?.id != null && String(item.id).length > 0
-                    ? String(item.id)
-                    : item?.url ? String(item.url) : `${queryKey}-${index}`;
-                  return (
-                    <React.Fragment key={key}>
-                      {index > 0 && <Separator />}
-                      <View
-                        style={[
-                          styles.cardWrapper,
-                          isMobile && styles.cardWrapperMobile,
-                          styles.cardWrapperSingleColumn,
-                        ]}
-                      >
-                        <RenderTravelItem
-                          item={item}
-                          index={index}
-                          isMobile={isMobile}
-                          hideAuthor={hideAuthor}
-                          viewportWidth={viewportWidth}
-                          visualVariant="home-featured"
-                        />
-                      </View>
-                    </React.Fragment>
-                  );
-                })
-              : chunkArray(travelsList, numColumns).map((row: any[], rowIdx: number) => {
-                  const paddedRow = row.concat(Array.from({ length: Math.max(0, numColumns - row.length) }, () => null));
+          <View style={styles.bentoGrid}>
+            {chunkArray(travelsList, 2).map((pair: any[], rowIdx: number) => {
+              const wideFirst = rowIdx % 2 === 0;
+              const left = pair[0] ?? null;
+              const right = pair[1] ?? null;
+              const leftKey = left?.id != null ? String(left.id) : left?.url ? String(left.url) : `${queryKey}-${rowIdx}-0`;
+              const rightKey = right?.id != null ? String(right.id) : right?.url ? String(right.url) : `${queryKey}-${rowIdx}-1`;
 
-                  return (
-                    <View
-                      key={`row-${rowIdx}`}
-                      style={[
-                        styles.row,
-                        isWebDesktop && centerRowsOnWebDesktop ? styles.rowWebCentered : null,
-                      ]}
-                    >
-                      {paddedRow.map((item: any, colIdx: number) => {
-                      const index = rowIdx * numColumns + colIdx;
-                      const key = item?.id != null && String(item.id).length > 0
-                        ? String(item.id)
-                        : item?.url ? String(item.url) : `${queryKey}-${index}`;
-
-                      if (!item) {
-                        return (
-                          <View
-                            key={`placeholder-${rowIdx}-${colIdx}`}
-                            style={[styles.cardWrapper, styles.cardWrapperPlaceholder]}
-                            aria-hidden={Platform.OS === 'web' ? true : undefined}
-                            importantForAccessibility="no-hide-descendants"
-                          />
-                        );
-                      }
-
-                      return (
-                        <View
-                          key={key}
-                          style={[
-                            styles.cardWrapper,
-                            isMobile && styles.cardWrapperMobile,
-                          ]}
-                        >
-                          <RenderTravelItem
-                            item={item}
-                            index={index}
-                            isMobile={isMobile}
-                            hideAuthor={hideAuthor}
-                            viewportWidth={viewportWidth}
-                            visualVariant="home-featured"
-                          />
-                        </View>
-                      );
-                      })}
+              return (
+                <View key={`bento-row-${rowIdx}`} style={styles.bentoRow}>
+                  {left ? (
+                    <View style={wideFirst ? styles.bentoCardWide : styles.bentoCardNarrow}>
+                      <RenderTravelItem
+                        item={left}
+                        index={rowIdx * 2}
+                        isMobile={isMobile}
+                        hideAuthor={hideAuthor}
+                        viewportWidth={viewportWidth}
+                        visualVariant="home-featured"
+                      />
                     </View>
-                  );
-                })
-            }
+                  ) : (
+                    <View
+                      key={`ph-${leftKey}`}
+                      style={[wideFirst ? styles.bentoCardWide : styles.bentoCardNarrow, styles.cardWrapperPlaceholder]}
+                      aria-hidden={Platform.OS === 'web' ? true : undefined}
+                      importantForAccessibility="no-hide-descendants"
+                    />
+                  )}
+                  {right ? (
+                    <View style={wideFirst ? styles.bentoCardNarrow : styles.bentoCardWide}>
+                      <RenderTravelItem
+                        item={right}
+                        index={rowIdx * 2 + 1}
+                        isMobile={isMobile}
+                        hideAuthor={hideAuthor}
+                        viewportWidth={viewportWidth}
+                        visualVariant="home-featured"
+                      />
+                    </View>
+                  ) : (
+                    <View
+                      key={`ph-${rightKey}`}
+                      style={[wideFirst ? styles.bentoCardNarrow : styles.bentoCardWide, styles.cardWrapperPlaceholder]}
+                      aria-hidden={Platform.OS === 'web' ? true : undefined}
+                      importantForAccessibility="no-hide-descendants"
+                    />
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {!isWeekendShowcase && travelsList.length > 0 && (
+          <View style={[styles.headerActions, { marginTop: isMobile ? 14 : 20 }]}>
+            <Button
+              label={viewMoreLabel}
+              onPress={handleViewMore}
+              accessibilityLabel={`Открыть каталог маршрутов для секции «${title}»`}
+              icon={<Feather name="arrow-right" size={16} color={colors.text} />}
+              iconPosition="right"
+              variant="secondary"
+              style={[styles.viewMoreButton, isMobile && styles.viewMoreButtonMobile]}
+              labelStyle={styles.viewMoreText}
+              hoverStyle={styles.viewMoreButtonHover}
+              pressedStyle={styles.viewMoreButtonHover}
+            />
           </View>
         )}
       </View>
@@ -374,15 +414,76 @@ function Separator() {
   return <View style={separatorStyles.separator} />;
 }
 
+function FilterGroupCard({
+  group,
+  selectedChip,
+  onChipPress,
+  styles,
+  colors,
+}: {
+  group: typeof FILTER_GROUPS[number];
+  selectedChip: string | null;
+  onChipPress: (label: string, filters?: QuickFilterParams, route?: string) => void;
+  styles: ReturnType<typeof createSectionsStyles>;
+  colors: ReturnType<typeof useThemedColors>;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isWeb = Platform.OS === 'web';
+
+  return (
+    <View
+      style={[styles.filterGroupCard, hovered && styles.filterGroupCardHover]}
+      {...(isWeb ? {
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+      } as any : {})}
+    >
+      <View style={styles.filterGroupCardHeader}>
+        <View style={styles.filterGroupIconWrap}>
+          <Feather name={group.icon as any} size={14} color={colors.primary} />
+        </View>
+        <Text style={styles.filterGroupTitleText}>{group.title}</Text>
+      </View>
+      <View style={styles.chipsWrap}>
+        {group.chips.map((chip) => {
+          const isSelected = selectedChip === chip.label;
+          return (
+            <Pressable
+              key={chip.label}
+              onPress={() => onChipPress(chip.label, (chip as any).filters, (chip as any).route)}
+              style={({ pressed, hovered: chipHovered }) => [
+                styles.chip,
+                isSelected && styles.chipSelected,
+                !isSelected && (pressed || chipHovered) && styles.chipHover,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={`Фильтр ${chip.label}`}
+              accessibilityState={{ selected: isSelected }}
+            >
+              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                {chip.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function HomeInspirationSections() {
   const router = useRouter();
   const { isPhone, isLargePhone } = useResponsive();
   const colors = useThemedColors();
   const isMobile = isPhone || isLargePhone;
+  const [selectedChip, setSelectedChip] = useState<string | null>(null);
+  const [btnHovered, setBtnHovered] = useState(false);
+  const isWeb = Platform.OS === 'web';
 
   const handleFilterPress = useCallback(
     (label: string, filters?: QuickFilterParams, route?: string) => {
       sendAnalyticsEvent('HomeClick_QuickFilter', { label });
+      setSelectedChip(label);
       const base = route ?? '/search';
       const path = buildFilterPath(base, filters);
       router.push(path as any);
@@ -402,84 +503,57 @@ function HomeInspirationSections() {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={[styles.container, isMobile && styles.containerMobile]}>
           <View style={styles.quickFiltersSection}>
+            {/* Decorative blobs */}
+            <View style={styles.quickFiltersAccentBlob1} pointerEvents="none" />
+            <View style={styles.quickFiltersAccentBlob2} pointerEvents="none" />
+
+            {/* Header */}
             <View style={styles.quickFiltersHeader}>
-              <View style={styles.quickFiltersBadge}>
-                <Feather name="filter" size={12} color={colors.primary} />
-                <Text style={styles.quickFiltersBadgeText}>Быстрый старт</Text>
-              </View>
-              <Text style={styles.quickFiltersTitle}>Подберите поездку под свой ритм</Text>
-              <Text style={styles.quickFiltersSubtitle}>
-                Комбинируйте расстояние, формат, длительность и сезон и сразу получайте подходящие маршруты.
-              </Text>
-              <View style={styles.quickFiltersLinks}>
-                <Text style={styles.quickFiltersHint}>
-                  Хотите посмотреть, как это выглядит на практике? Откройте каталог с готовыми маршрутами.
+              <View style={styles.quickFiltersHeaderLeft}>
+                <View style={styles.quickFiltersBadge}>
+                  <Feather name="compass" size={11} color={colors.primary} />
+                  <Text style={styles.quickFiltersBadgeText}>Быстрый старт</Text>
+                </View>
+                <Text style={styles.quickFiltersTitle}>Подберите поездку под свой ритм</Text>
+                <Text style={styles.quickFiltersSubtitle}>
+                  Комбинируйте формат, сезон и расстояние, чтобы найти идеальный маршрут
                 </Text>
-                <Button
-                  label="Смотреть маршруты"
-                  onPress={handleOpenArticles}
-                  variant="secondary"
-                  icon={<Feather name="compass" size={15} color={colors.primaryText} />}
-                  style={styles.quickFiltersArticlesButton}
-                  labelStyle={styles.quickFiltersArticlesText}
-                  hoverStyle={styles.quickFiltersArticlesButtonHover}
-                  pressedStyle={styles.quickFiltersArticlesButtonHover}
-                />
               </View>
+              <Button
+                label="Смотреть маршруты →"
+                onPress={handleOpenArticles}
+                variant="secondary"
+                style={[
+                  styles.quickFiltersArticlesButton,
+                  btnHovered && styles.quickFiltersArticlesButtonHover,
+                ]}
+                labelStyle={styles.quickFiltersArticlesText}
+                hoverStyle={styles.quickFiltersArticlesButtonHover}
+                pressedStyle={styles.quickFiltersArticlesButtonHover}
+                {...(isWeb ? {
+                  onMouseEnter: () => setBtnHovered(true),
+                  onMouseLeave: () => setBtnHovered(false),
+                } as any : {})}
+              />
             </View>
 
-            <View style={styles.quickFiltersGroups}>
+            {/* Filter cards grid */}
+            <View style={styles.quickFiltersGrid}>
               {FILTER_GROUPS.map((group) => (
-                <View key={group.title} style={styles.filterGroupRow}>
-                  <View style={styles.filterGroupTitle}>
-                    <View style={styles.filterGroupIconWrap}>
-                      <Feather name={group.icon as any} size={14} color={colors.primary} />
-                    </View>
-                    <Text style={styles.filterGroupTitleText}>{group.title}</Text>
-                  </View>
-                  <View style={styles.chipsWrap}>
-                    {group.chips.map((chip) => (
-                      <Pressable
-                        key={chip.label}
-                        onPress={() => handleFilterPress(chip.label, (chip as any).filters, (chip as any).route)}
-                        style={({ pressed, hovered }) => [
-                          styles.chip,
-                          (pressed || hovered) && styles.chipHover,
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Фильтр ${chip.label}`}
-                      >
-                        <Text style={styles.chipText}>{chip.label}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
+                <FilterGroupCard
+                  key={group.title}
+                  group={group}
+                  selectedChip={selectedChip}
+                  onChipPress={handleFilterPress}
+                  styles={styles}
+                  colors={colors}
+                />
               ))}
             </View>
           </View>
 
-          <HomeInspirationSection
-            title="Маршруты на ближайшие выходные"
-            subtitle="Реальные поездки, которые можно успеть за 1-2 дня"
-            queryKey="home-travels-of-month"
-            fetchFn={fetchTravelsOfMonth}
-          />
+          <AdventureChaptersSection />
 
-          <HomeInspirationSection
-            title="Что сейчас выбирают чаще всего"
-            subtitle="Маршруты, которые пользователи чаще сохраняют в свои книги"
-            queryKey="home-popular-travels"
-            fetchFn={fetchTravelsPopular}
-            hideAuthor
-          />
-
-          <HomeInspirationSection
-            title="Не хотите выбирать долго?"
-            subtitle="Откройте случайный маршрут для спонтанного выезда"
-            queryKey="home-random-travels"
-            fetchFn={fetchTravelsRandom}
-            hideAuthor
-          />
         </View>
       </ResponsiveContainer>
     </View>
