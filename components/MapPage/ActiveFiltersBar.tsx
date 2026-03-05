@@ -91,9 +91,9 @@ const getStyles = (colors: ThemedColors) =>
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 12,
-      backgroundColor: colors.primarySoft ?? colors.primaryLight,
+      backgroundColor: colors.brandSoft ?? colors.brandLight,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.primary,
+      borderColor: colors.brand,
       ...(Platform.OS === 'web' ? ({
         cursor: 'pointer',
         transition: 'opacity 0.12s ease',
@@ -105,7 +105,7 @@ const getStyles = (colors: ThemedColors) =>
     chipText: {
       fontSize: 10,
       fontWeight: '600',
-      color: colors.primaryText,
+      color: colors.brandText,
       maxWidth: 88,
       letterSpacing: 0.1,
     },
