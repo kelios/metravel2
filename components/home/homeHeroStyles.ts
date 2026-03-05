@@ -559,10 +559,10 @@ export const createHomeHeroStyles = ({
   // -- CTA Buttons --
   buttonsContainer: {
     flexDirection: isNarrowLayout ? 'column' : 'row', justifyContent: 'flex-start', alignItems: 'center',
-    gap: isMobile ? 10 : (showSideSlider ? (isCompactBookLayout ? 6 : 8) : 14),
+    gap: isMobile ? 10 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 14),
     width: '100%',
     flexWrap: isNarrowLayout ? 'nowrap' : 'wrap',
-    marginTop: isMobile ? 8 : (showSideSlider ? (isCompactBookLayout ? 2 : 0) : 12),
+    marginTop: isMobile ? 8 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 12),
   },
   primaryButton: {
     paddingHorizontal: isMobile ? 28 : (showSideSlider ? (isCompactBookLayout ? 24 : 28) : 40), paddingVertical: isMobile ? 14 : (showSideSlider ? (isCompactBookLayout ? 10 : 12) : 17), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 56),
@@ -590,52 +590,63 @@ export const createHomeHeroStyles = ({
     width: isMobile ? '100%' : undefined,
     ...Platform.select({ web: {
       transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: DESIGN_TOKENS.shadows.light,
     } }),
   },
   secondaryButtonHover: {
-    backgroundColor: warmBg, borderColor: 'rgba(180,160,130,0.3)',
+    backgroundColor: warmBg, borderColor: colors.brandAlpha30,
     ...Platform.select({ web: {
       transform: 'translateY(-2px)',
-      boxShadow: `0 4px 16px ${warmShadow}`,
+      boxShadow: DESIGN_TOKENS.shadows.hover,
     } }),
   },
   secondaryButtonText: {
-    fontSize: isCompactBookLayout ? 14 : 15, fontWeight: '600', color: '#2A1F14',
+    fontSize: isCompactBookLayout ? 14 : 15, fontWeight: '600', color: inkStrong,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 
   // -- Bookmark rail (desktop left page inline mood cards) --
   bookmarkRail: {
-    width: '100%', gap: showSideSlider ? (isCompactBookLayout ? 0 : 1) : 2, alignItems: 'stretch',
+    width: '100%', gap: showSideSlider ? (isCompactBookLayout ? 6 : 8) : 2, alignItems: 'stretch',
     ...Platform.select({ web: {
       borderLeftWidth: 1.5,
-      borderLeftColor: 'rgba(100,90,75,0.22)',
-      paddingLeft: isCompactBookLayout ? 12 : 16,
+      borderLeftColor: warmBorder,
+      paddingLeft: isCompactBookLayout ? 12 : 18,
       marginLeft: 2,
     } as any }),
   },
   bookmarkChip: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: isCompactBookLayout ? 10 : 12, paddingVertical: showSideSlider ? (isCompactBookLayout ? 3 : 4) : 6,
-    borderRadius: 7,
-    borderWidth: 1.5, borderColor: 'rgba(100,90,75,0.20)',
+    paddingHorizontal: isCompactBookLayout ? 12 : 14, paddingVertical: showSideSlider ? (isCompactBookLayout ? 8 : 10) : 6,
+    borderRadius: 12,
+    borderWidth: 1.5, borderColor: warmBorder,
     backgroundColor: cardSurface,
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'all 0.18s ease',
-      boxShadow: '1px 2px 0px rgba(100,90,75,0.08)',
+      boxShadow: DESIGN_TOKENS.shadows.light,
     } }),
   },
+  bookmarkChipAccent: {
+    width: 3,
+    alignSelf: 'stretch',
+    marginVertical: -10,
+    marginLeft: -14,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    backgroundColor: colors.brand,
+    opacity: 0.78,
+  },
   bookmarkChipHover: {
-    backgroundColor: warmBgSoft, borderColor: 'rgba(180,160,130,0.28)',
+    backgroundColor: warmBgSoft, borderColor: colors.brandAlpha30,
     ...Platform.select({ web: {
       transform: 'translateX(4px)',
-      boxShadow: `0 3px 12px ${warmShadow}`,
+      boxShadow: DESIGN_TOKENS.shadows.hover,
     } }),
   },
   bookmarkChipIcon: {
-    width: isCompactBookLayout ? 22 : 24, height: isCompactBookLayout ? 22 : 24, borderRadius: 5, backgroundColor: 'transparent',
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(100,90,75,0.22)',
+    width: isCompactBookLayout ? 28 : 32, height: isCompactBookLayout ? 28 : 32, borderRadius: 10, backgroundColor: brandSoft,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: warmBorder,
   },
 
   // -- Mood chips (mobile horizontal scroll) --
@@ -689,11 +700,11 @@ export const createHomeHeroStyles = ({
   },
   moodChipText: { gap: showSideSlider ? 2 : 1, flex: showSideSlider ? 1 : undefined },
   moodChipTitle: {
-    fontSize: showSideSlider ? (isCompactBookLayout ? 13 : 14) : 13, fontWeight: '600', color: '#2A1F14', letterSpacing: showSideSlider ? -0.2 : -0.1,
+    fontSize: showSideSlider ? (isCompactBookLayout ? 13 : 14) : 13, fontWeight: '600', color: inkStrong, letterSpacing: showSideSlider ? -0.2 : -0.1,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   moodChipMeta: {
-    fontSize: showSideSlider ? (isCompactBookLayout ? 10 : 11) : 10, fontWeight: '400', color: '#8B7D6B', letterSpacing: 0.1,
+    fontSize: showSideSlider ? (isCompactBookLayout ? 10 : 11) : 10, fontWeight: '400', color: inkMuted, letterSpacing: 0.1,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 
