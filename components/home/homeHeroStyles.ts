@@ -35,6 +35,7 @@ export const createHomeHeroStyles = ({
   heroShell: {
     width: '100%', borderRadius: DESIGN_TOKENS.radii.xl, borderWidth: 1, borderColor: colors.primaryAlpha30,
     backgroundColor: colors.surface, paddingHorizontal: isMobile ? 10 : 32, paddingVertical: isMobile ? 14 : 32,
+    position: 'relative' as const, overflow: 'visible' as const,
     ...Platform.select({ web: { boxShadow: DESIGN_TOKENS.shadows.heavy, backgroundImage: `linear-gradient(155deg, ${colors.surface} 0%, ${colors.primarySoft} 60%, ${colors.backgroundSecondary} 100%)` } }),
   },
   heroRow: {
@@ -118,7 +119,10 @@ export const createHomeHeroStyles = ({
   highlightSubtitle: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
   buttonsContainer: {
     flexDirection: isNarrowLayout ? 'column' : 'row', justifyContent: 'flex-start', alignItems: 'center',
-    gap: isMobile ? 8 : 12, width: isNarrowLayout ? '100%' : undefined, marginTop: 4,
+    gap: isMobile ? 8 : 12,
+    width: '100%',
+    flexWrap: isNarrowLayout ? 'nowrap' : 'wrap',
+    marginTop: 4,
   },
   primaryButton: {
     paddingHorizontal: isMobile ? 24 : 40, paddingVertical: isMobile ? 13 : 17, minHeight: isMobile ? 46 : 54,
@@ -136,6 +140,26 @@ export const createHomeHeroStyles = ({
   },
   secondaryButtonHover: { backgroundColor: colors.primarySoft, borderColor: colors.primaryAlpha30, ...Platform.select({ web: { transform: 'translateY(-2px)' } }) },
   secondaryButtonText: { fontSize: 15, fontWeight: '600', color: colors.text },
+  bookmarkRail: {
+    position: 'absolute' as const, top: isDesktop ? 86 : 74, right: isDesktop ? -14 : -8,
+    gap: 10, zIndex: 8, alignItems: 'flex-end',
+  },
+  bookmarkChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, minWidth: isDesktop ? 220 : 198,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderTopLeftRadius: DESIGN_TOKENS.radii.lg, borderBottomLeftRadius: DESIGN_TOKENS.radii.lg,
+    borderTopRightRadius: DESIGN_TOKENS.radii.sm, borderBottomRightRadius: DESIGN_TOKENS.radii.sm,
+    borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.surface,
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.2s ease-out', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' } }),
+  },
+  bookmarkChipHover: {
+    backgroundColor: colors.primarySoft, borderColor: colors.primary,
+    ...Platform.select({ web: { transform: 'translateX(-6px)', boxShadow: `0 8px 18px ${colors.primary}22` } }),
+  },
+  bookmarkChipIcon: {
+    width: 34, height: 34, borderRadius: 10, backgroundColor: colors.primarySoft,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.primaryAlpha30,
+  },
   moodChipsContainer: { marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: colors.borderLight, width: '100%' },
   moodChipsScrollContent: {
     flexDirection: 'row', gap: 10, paddingHorizontal: 0,
@@ -184,4 +208,3 @@ export const createHomeHeroStyles = ({
   imageCardTitle: { fontSize: 15, fontWeight: '600', color: colors.text, lineHeight: 20, letterSpacing: -0.2 },
   imageCardSubtitle: { fontSize: 12, fontWeight: '400', color: colors.textMuted, lineHeight: 17 },
 });
-
