@@ -344,7 +344,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                 {isWeb && showSideSlider && <View style={styles.heroPageGoldLine} />}
                 {/* Page curl effect */}
                 {isWeb && showSideSlider && <View style={styles.heroPageCurlLeft} />}
-                <View style={styles.leftPageFrame}>
+                <View testID="home-hero-left-frame" style={styles.leftPageFrame}>
                   {showSideSlider && !isNarrowLayout && (
                     <View style={styles.chapterHeader}>
                       <Text style={styles.chapterLabel}>Глава 01</Text>
@@ -481,9 +481,10 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                   {isWeb && <View style={styles.heroPageCurlRight} />}
                   {/* Page number */}
                   <Text style={styles.sliderPageNumber}>2</Text>
-                  <View style={styles.sliderFrame}>
+                  <View testID="home-hero-slider-frame" style={styles.sliderFrame}>
                     <Pressable
                       onPress={() => handleOpenArticles(currentSlide.href)}
+                      testID="home-hero-slider-container"
                       style={styles.sliderContainer}
                       accessibilityRole="link"
                       accessibilityLabel={`Маршрут: ${currentSlide.title}`}
