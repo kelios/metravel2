@@ -344,28 +344,38 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                 {isWeb && showSideSlider && <View style={styles.heroPageGoldLine} />}
                 {/* Page curl effect */}
                 {isWeb && showSideSlider && <View style={styles.heroPageCurlLeft} />}
-                <View testID="home-hero-left-frame" style={styles.leftPageFrame}>
-                  {showSideSlider && !isNarrowLayout && (
-                    <View style={styles.chapterHeader}>
-                      <Text style={styles.chapterLabel}>Глава 01</Text>
-                      <View style={styles.chapterDivider} />
-                    </View>
-                  )}
-                  {/* Title */}
+                <View
+                  testID="home-hero-left-frame"
+                  style={styles.leftPageFrame}
+                >
+                  {/* Grid row 1: top content (auto height) */}
                   <View>
-                    <Text style={styles.title}>
-                      Куда поехать{isNarrowLayout ? ' ' : '\n'}
-                    </Text>
-                    <Text style={styles.titleAccent}>
-                      в эти выходные?
-                    </Text>
+                    {showSideSlider && !isNarrowLayout && (
+                      <View style={styles.chapterHeader}>
+                        <Text style={styles.chapterLabel}>Глава 01</Text>
+                        <View style={styles.chapterDivider} />
+                      </View>
+                    )}
+                    {/* Title */}
+                    <View>
+                      <Text style={styles.title}>
+                        Куда поехать{isNarrowLayout ? ' ' : '\n'}
+                      </Text>
+                      <Text style={styles.titleAccent}>
+                        в эти выходные?
+                      </Text>
+                    </View>
+
+                    {/* Subtitle */}
+                    <Text style={styles.subtitle}>{heroSubtitle}</Text>
                   </View>
 
-                  {/* Subtitle */}
-                  <Text style={styles.subtitle}>{heroSubtitle}</Text>
-
+                  {/* Grid row 2: chips (1fr — fills available space, clips gracefully) */}
                   {useInlineBookmarkRail && (
-                    <View testID="home-hero-bookmark-rail" style={styles.bookmarkRail}>
+                    <View
+                      testID="home-hero-bookmark-rail"
+                      style={styles.bookmarkRail}
+                    >
                       {MOOD_CARDS.map((card) => (
                         <Pressable
                           key={`inline-${card.title}`}
@@ -450,8 +460,11 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                     </View>
                   )}
 
-                  {/* CTA Buttons */}
-                  <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
+                  {/* Grid row 3: CTA (auto height, pinned to bottom by grid) */}
+                  <View
+                    testID="home-hero-cta-row"
+                    style={styles.buttonsContainer}
+                  >
                     <Button
                       onPress={handleOpenSearch}
                       label="Смотреть маршруты"

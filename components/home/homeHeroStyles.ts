@@ -1,6 +1,6 @@
 // components/home/homeHeroStyles.ts
 // Premium "My Travel Book" — digital scrapbook aesthetic
-// Visual inspiration: Apple Photos + Notion + modern travel apps
+// Modern CSS 2026: clamp() fluid typography, CSS grid for page layout, minimal JS math
 
 import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -26,113 +26,58 @@ interface HeroStyleParams {
 }
 
 export const createHomeHeroStyles = ({
-  colors, isMobile, isSmallPhone, isNarrowLayout, isTablet, isDesktop, viewportWidth = 0, showSideSlider, sliderHeight,
+  colors, isMobile, isSmallPhone, isNarrowLayout, isTablet: _isTablet, isDesktop: _isDesktop, viewportWidth = 0, showSideSlider, sliderHeight,
   isLandscape = false, bookHeight = 0, stackHeroButtons = false,
 }: HeroStyleParams) => {
-  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-  // Width of one page = half of book width; book width = bookHeight * 1040/765
-  const pageWidth = bookHeight > 0 ? Math.round(bookHeight * 1040 / 765 / 2) : 0;
   const hasBookLayout = showSideSlider && bookHeight > 0;
-  const isOver1200Desktop = showSideSlider && viewportWidth >= 1200;
-  const isNarrowDesktopBook = showSideSlider && viewportWidth >= 1280 && viewportWidth < 1480;
-  const isLargeDesktopBook = showSideSlider && viewportWidth >= 1920;
   const isUltraWideBook = showSideSlider && viewportWidth >= 2560;
-  const isCompactBookLayout = hasBookLayout && bookHeight <= 760;
-  const leftPageWidth = showSideSlider ? (isOver1200Desktop ? '54%' : isDesktop ? '64%' : isTablet ? '58%' : '54%') : '100%';
-  const rightPageWidth = showSideSlider ? (isDesktop ? '36%' : isTablet ? '42%' : '46%') : 320;
-  const bookScale = hasBookLayout ? bookHeight / 864 : 1;
-  const desktopTypographyScale = !hasBookLayout
-    ? 1
-    : isNarrowDesktopBook
-      ? 0.82
-      : isUltraWideBook
-        ? 1.08
-        : isLargeDesktopBook
-          ? 1.04
-          : isOver1200Desktop
-            ? 1.08
-            : 1;
-  const desktopSubtitleWidthScale = !hasBookLayout
-    ? 1
-    : isNarrowDesktopBook
-      ? 0.9
-      : isUltraWideBook
-        ? 1.18
-        : isLargeDesktopBook
-          ? 1.1
-          : isOver1200Desktop
-            ? 1.08
-            : 1;
-  const leftPageSafeInset = !hasBookLayout ? 0 : isUltraWideBook ? 48 : isLargeDesktopBook ? 38 : isOver1200Desktop ? 26 : 14;
-  const titleScaleMax = isNarrowDesktopBook ? 36 : isUltraWideBook ? 74 : isLargeDesktopBook ? 62 : isOver1200Desktop ? 50 : 42;
-  const titleLineHeightMax = isNarrowDesktopBook ? 40 : isUltraWideBook ? 82 : isLargeDesktopBook ? 68 : isOver1200Desktop ? 56 : 50;
-  const subtitleScaleMax = isNarrowDesktopBook ? 13 : isUltraWideBook ? 22 : isLargeDesktopBook ? 18 : isOver1200Desktop ? 15 : 14;
-  const subtitleLineHeightMax = isUltraWideBook ? 32 : isLargeDesktopBook ? 27 : 22;
-  const subtitleWidthMax = isNarrowDesktopBook ? 290 : isUltraWideBook ? 560 : isLargeDesktopBook ? 460 : isOver1200Desktop ? 360 : 330;
-  const leftPagePaddingLeftMax = isUltraWideBook ? 280 : isLargeDesktopBook ? 240 : 190;
-  const leftPagePaddingRightMax = isUltraWideBook ? 192 : isLargeDesktopBook ? 168 : 104;
-  const leftPagePaddingTopMax = isUltraWideBook ? 120 : isLargeDesktopBook ? 108 : 90;
-  const leftPagePaddingBottomMax = isUltraWideBook ? 134 : isLargeDesktopBook ? 120 : 104;
-  const leftPageRowGapMax = isUltraWideBook ? 14 : isLargeDesktopBook ? 12 : 10;
-  const rightPagePaddingTop: number | string = !hasBookLayout
-    ? 0
-    : isUltraWideBook
-      ? '6%'
-      : isLargeDesktopBook
-        ? '6.5%'
-        : '7%';
-  const rightPagePaddingBottom: number | string = !hasBookLayout
-    ? 0
-    : isUltraWideBook
-      ? '9%'
-      : isLargeDesktopBook
-        ? '10%'
-        : '11%';
-  const rightPagePaddingRight: number | string = !hasBookLayout
-    ? 0
-    : isUltraWideBook
-      ? '5%'
-      : '6%';
-  const rightPagePaddingLeft: number | string = !hasBookLayout
-    ? 0
-    : isUltraWideBook
-      ? '3%'
-      : '4%';
-  // Baseline tuned from validated desktop layout (bookHeight ~= 864)
-  const leftPagePaddingLeft = hasBookLayout
-    ? clamp(Math.round((isNarrowDesktopBook ? 124 : 144) * bookScale) + leftPageSafeInset, isNarrowDesktopBook ? 56 : 74, leftPagePaddingLeftMax + leftPageSafeInset)
-    : 100;
-  const leftPagePaddingRight = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 64 : 88) * bookScale), 16, leftPagePaddingRightMax) : 16;
-  const leftPagePaddingTop = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 66 : 80) * bookScale), 26, leftPagePaddingTopMax) : 48;
-  const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 78 : 90) * bookScale), 44, leftPagePaddingBottomMax) : 110;
-  const leftPageRowGap = hasBookLayout ? clamp(Math.round(10 * bookScale), 6, leftPageRowGapMax) : 8;
-  const baseDesktopBookTitleSize = hasBookLayout
-    ? Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056))
-    : 54;
-  const baseDesktopBookTitleLineHeight = hasBookLayout
-    ? Math.min(Math.round(pageWidth * 0.088), Math.round(bookHeight * 0.068))
-    : 64;
-  const baseDesktopBookSubtitleSize = hasBookLayout
-    ? Math.min(Math.round(pageWidth * 0.027), Math.round(bookHeight * 0.024))
-    : 17;
-  const baseDesktopBookSubtitleLineHeight = hasBookLayout
-    ? Math.min(Math.round(pageWidth * 0.042), Math.round(bookHeight * 0.034))
-    : 28;
+  const isLargeDesktopBook = showSideSlider && viewportWidth >= 1920;
+  const isNarrowDesktopBook = showSideSlider && viewportWidth >= 1280 && viewportWidth < 1480;
+
+  // Modern CSS 2026: fluid values via clamp() — no JS scaling math
+  // All vw-based values reference the viewport, matching how the book fills screen
+  // Book occupies ~90vw capped at 1400px. Left page ≈ 54% of that ≈ 27vw.
+  // Title: fluid 24px → 42px across 1280–2560px viewport range
   const desktopBookTitleSize = hasBookLayout
-    ? clamp(Math.round(baseDesktopBookTitleSize * desktopTypographyScale), 24, titleScaleMax)
-    : 54;
+    ? `clamp(24px, ${isNarrowDesktopBook ? '2.1vw' : isUltraWideBook ? '2.8vw' : isLargeDesktopBook ? '2.5vw' : '2.3vw'}, ${isNarrowDesktopBook ? 36 : isUltraWideBook ? 74 : isLargeDesktopBook ? 62 : 42}px)`
+    : '54px';
   const desktopBookTitleLineHeight = hasBookLayout
-    ? clamp(Math.round(baseDesktopBookTitleLineHeight * desktopTypographyScale), 30, titleLineHeightMax)
-    : 64;
+    ? `clamp(30px, ${isNarrowDesktopBook ? '2.6vw' : isUltraWideBook ? '3.4vw' : isLargeDesktopBook ? '3.1vw' : '2.9vw'}, ${isNarrowDesktopBook ? 40 : isUltraWideBook ? 82 : isLargeDesktopBook ? 68 : 50}px)`
+    : '64px';
   const desktopBookSubtitleSize = hasBookLayout
-    ? clamp(Math.round(baseDesktopBookSubtitleSize * desktopTypographyScale), 12, subtitleScaleMax)
-    : 17;
+    ? `clamp(12px, ${isNarrowDesktopBook ? '0.85vw' : isUltraWideBook ? '1.1vw' : isLargeDesktopBook ? '0.95vw' : '0.9vw'}, ${isNarrowDesktopBook ? 13 : isUltraWideBook ? 22 : isLargeDesktopBook ? 18 : 14}px)`
+    : '17px';
   const desktopBookSubtitleLineHeight = hasBookLayout
-    ? clamp(Math.round(baseDesktopBookSubtitleLineHeight * desktopTypographyScale), 18, subtitleLineHeightMax)
-    : 28;
-  const desktopBookSubtitleMaxWidth = hasBookLayout
-    ? clamp(Math.round(pageWidth * 0.76 * desktopSubtitleWidthScale), 240, subtitleWidthMax)
-    : 480;
+    ? `clamp(18px, ${isNarrowDesktopBook ? '1.4vw' : '1.6vw'}, ${isUltraWideBook ? 32 : isLargeDesktopBook ? 27 : 22}px)`
+    : '28px';
+
+  // Left page padding: percentage-based relative to heroSection width so it scales naturally.
+  // The book image has spine/binding ~14% from left, ~6% from right, ~7% top, ~11% bottom.
+  // Percentages here are of the heroSection element (left page column = 54% of book width).
+  // 14% of left-page-width ≈ 10% of full book width — so we use ~19% to reach past spine.
+  const leftPagePaddingLeft = hasBookLayout
+    ? (isUltraWideBook ? '17%' : isLargeDesktopBook ? '18%' : isNarrowDesktopBook ? '16%' : '17%')
+    : 100;
+  const leftPagePaddingRight = hasBookLayout
+    ? (isUltraWideBook ? '8%' : '9%')
+    : 16;
+  const leftPagePaddingTop = hasBookLayout
+    ? (isUltraWideBook ? '8%' : isLargeDesktopBook ? '8.5%' : '9%')
+    : 48;
+  const leftPageWidth = showSideSlider ? '54%' : '100%';
+  const rightPageWidth = showSideSlider ? '46%' : 320;
+  const isCompactBookLayout = hasBookLayout && bookHeight <= 760;
+  const isVeryCompactBookLayout = hasBookLayout && bookHeight <= 640;
+
+  const leftPagePaddingBottom = hasBookLayout
+    ? (isUltraWideBook ? '10%' : isLargeDesktopBook ? '11%' : isCompactBookLayout ? '10%' : '12%')
+    : 110;
+
+  // Adaptive chip sizing based on available book height
+  const chipPaddingV = isVeryCompactBookLayout ? 4 : isCompactBookLayout ? 5 : 6;
+  const chipGap = isVeryCompactBookLayout ? 4 : isCompactBookLayout ? 5 : 6;
+  const chipIconSize = isVeryCompactBookLayout ? 22 : isCompactBookLayout ? 24 : 28;
+
   const warmBg = DESIGN_TOKENS.colors.background;
   const warmBgSoft = DESIGN_TOKENS.colors.backgroundSecondary;
   const cardSurface = DESIGN_TOKENS.colors.surface;
@@ -205,9 +150,13 @@ export const createHomeHeroStyles = ({
   },
 
   // -- Left page (text content) --
+  // Modern CSS 2026: percentage padding mirrors right page proportions exactly.
+  // No double-padding: heroSection owns all padding, leftPageFrame is zero-overhead.
   heroSection: {
-    alignItems: isMobile ? 'stretch' : 'flex-start', gap: showSideSlider ? 0 : (isMobile ? 16 : 18),
-    width: leftPageWidth, maxWidth: showSideSlider ? undefined : (isMobile ? '100%' : 720),
+    alignItems: isMobile ? 'stretch' : 'flex-start',
+    gap: showSideSlider ? 0 : (isMobile ? 16 : 18),
+    width: leftPageWidth,
+    maxWidth: showSideSlider ? undefined : (isMobile ? '100%' : 720),
     flexShrink: 0,
     paddingLeft: isMobile ? 20 : 48,
     paddingRight: isMobile ? 20 : 48,
@@ -221,40 +170,29 @@ export const createHomeHeroStyles = ({
       paddingRight: leftPagePaddingRight,
       paddingTop: leftPagePaddingTop,
       paddingBottom: leftPagePaddingBottom,
-      rowGap: isCompactBookLayout ? Math.max(leftPageRowGap, 8) : leftPageRowGap + 4,
       boxSizing: 'border-box',
       overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'flex-start',
+      // CSS grid: top-group auto, flexible space, cta auto pinned to bottom
+      // Works with or without chips row — CTA always lands at bottom via align-self
+      display: 'grid',
+      gridTemplateRows: 'auto 1fr auto',
       alignSelf: 'stretch',
-      ...(bookHeight > 0 ? {
-        height: bookHeight,
-        maxHeight: bookHeight,
-      } : {}),
+      height: '100%',
+      maxHeight: '100%',
     } as any : {
       backgroundColor: 'rgba(255,255,255,0.85)',
       borderRadius: isMobile ? 8 : 10,
     } as any }),
   },
   leftPageFrame: {
+    // Kept for testID and structure — zero extra padding, grid already on heroSection
     width: '100%',
     flex: 1,
     minHeight: 0,
     position: 'relative' as const,
     overflow: 'hidden',
     ...Platform.select({ web: showSideSlider ? {
-      alignSelf: 'stretch',
-      maxWidth: isNarrowDesktopBook ? '92%' : '90%',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'flex-start',
-      rowGap: isCompactBookLayout ? Math.max(leftPageRowGap, 8) : leftPageRowGap + 4,
-      paddingLeft: isNarrowDesktopBook ? '1%' : '2%',
-      paddingRight: isNarrowDesktopBook ? '4%' : '5%',
-      paddingTop: isNarrowDesktopBook ? '3%' : '4%',
-      paddingBottom: isNarrowDesktopBook ? '4%' : '5%',
-      boxSizing: 'border-box',
+      display: 'contents', // grid passthrough — children participate in heroSection's grid
     } as any : {} }),
   },
   heroPageGoldLine: {
@@ -277,10 +215,10 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: showSideSlider ? {
       backgroundColor: 'transparent',
       borderRadius: 0,
-      paddingTop: rightPagePaddingTop,
-      paddingBottom: rightPagePaddingBottom,
-      paddingLeft: rightPagePaddingLeft,
-      paddingRight: rightPagePaddingRight,
+      paddingTop: isUltraWideBook ? '6%' : isLargeDesktopBook ? '6.5%' : '7%',
+      paddingBottom: isUltraWideBook ? '9%' : isLargeDesktopBook ? '10%' : '11%',
+      paddingLeft: isUltraWideBook ? '3%' : '4%',
+      paddingRight: isUltraWideBook ? '5%' : '6%',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'stretch',
@@ -290,14 +228,14 @@ export const createHomeHeroStyles = ({
     } as any : {} }),
   },
   sliderFrame: {
-    width: isNarrowDesktopBook ? '94%' : '92%',
+    width: '100%',
     flex: 1,
     minHeight: 0,
     position: 'relative' as const,
     overflow: 'hidden',
     borderRadius: isNarrowDesktopBook ? 14 : 12,
     ...Platform.select({ web: {
-      alignSelf: 'center',
+      alignSelf: 'stretch',
       clipPath: `inset(0 round ${isNarrowDesktopBook ? 14 : 12}px)`,
       boxSizing: 'border-box',
     } as any }),
@@ -325,15 +263,13 @@ export const createHomeHeroStyles = ({
 
   // -- Slider / immersive photo --
   sliderContainer: {
-    width: '100%', flex: 1, minHeight: sliderHeight, borderRadius: isMobile ? 4 : 6, overflow: 'hidden',
+    width: '100%', flex: 1, minHeight: hasBookLayout ? 0 : sliderHeight, borderRadius: isMobile ? 4 : 6, overflow: 'hidden',
     backgroundColor: '#1A1A1A', borderWidth: 0,
     ...Platform.select({ web: {
-      boxShadow: isNarrowDesktopBook
-        ? '0 0 0 1px rgba(245,240,232,0.16), 0 0 14px 3px rgba(244,239,232,0.26), 0 10px 22px rgba(10,8,6,0.08)'
-        : '0 0 0 1px rgba(245,240,232,0.14), 0 0 12px 2px rgba(244,239,232,0.22), 0 6px 14px rgba(10,8,6,0.10)',
-      minHeight: sliderHeight,
+      boxShadow: '0 0 0 1px rgba(245,240,232,0.14), 0 0 12px 2px rgba(244,239,232,0.22), 0 6px 14px rgba(10,8,6,0.10)',
+      minHeight: hasBookLayout ? 0 : sliderHeight,
       flexGrow: 1,
-      flexShrink: 0,
+      flexShrink: 1,
       transform: showSideSlider ? (isNarrowDesktopBook ? 'rotate(-0.7deg)' : 'rotate(-0.4deg)') : 'none',
       transformOrigin: 'center center',
     } as any }),
@@ -439,7 +375,7 @@ export const createHomeHeroStyles = ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 12,
+    marginBottom: showSideSlider ? 8 : 12,
   },
   chapterLabel: {
     fontSize: 11,
@@ -484,22 +420,36 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   title: {
-    fontSize: isSmallPhone ? 28 : isMobile ? 34 : desktopBookTitleSize,
+    fontSize: isSmallPhone ? 28 : isMobile ? 34 : 32,
     fontWeight: '700', color: inkStrong, letterSpacing: -0.6,
-    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : desktopBookTitleLineHeight, textAlign: 'left',
-    ...Platform.select({ web: showSideSlider ? { fontFamily: serif } as any : { fontFamily: sansSerif } as any }),
+    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : 40, textAlign: 'left',
+    ...Platform.select({ web: showSideSlider ? {
+      fontFamily: serif,
+      // CSS clamp() for fluid sizing — scales with viewport, no JS needed
+      fontSize: desktopBookTitleSize,
+      lineHeight: desktopBookTitleLineHeight,
+    } as any : { fontFamily: sansSerif } as any }),
   },
   titleAccent: {
-    fontSize: isSmallPhone ? 28 : isMobile ? 34 : desktopBookTitleSize,
+    fontSize: isSmallPhone ? 28 : isMobile ? 34 : 32,
     fontWeight: '700', color: colors.brand, letterSpacing: -0.5,
-    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : desktopBookTitleLineHeight, textAlign: 'left',
-    ...Platform.select({ web: showSideSlider ? { fontFamily: serif } as any : { fontFamily: sansSerif } as any }),
+    lineHeight: isSmallPhone ? 34 : isMobile ? 42 : 40, textAlign: 'left',
+    ...Platform.select({ web: showSideSlider ? {
+      fontFamily: serif,
+      fontSize: desktopBookTitleSize,
+      lineHeight: desktopBookTitleLineHeight,
+    } as any : { fontFamily: sansSerif } as any }),
   },
   subtitle: {
-    fontSize: showSideSlider ? desktopBookSubtitleSize : (isMobile ? 15 : 17), fontWeight: '400', color: inkMuted,
-    lineHeight: showSideSlider ? desktopBookSubtitleLineHeight : (isMobile ? 24 : 28), textAlign: 'left', maxWidth: showSideSlider ? desktopBookSubtitleMaxWidth : 480, alignSelf: 'flex-start',
+    fontSize: isMobile ? 15 : 17, fontWeight: '400', color: inkMuted,
+    lineHeight: isMobile ? 24 : 28, textAlign: 'left', maxWidth: 480, alignSelf: 'flex-start',
     letterSpacing: 0.2,
-    ...Platform.select({ web: showSideSlider ? { fontFamily: serif } as any : { fontFamily: sansSerif } as any }),
+    ...Platform.select({ web: showSideSlider ? {
+      fontFamily: serif,
+      fontSize: desktopBookSubtitleSize,
+      lineHeight: desktopBookSubtitleLineHeight,
+      maxWidth: '85%',
+    } as any : { fontFamily: sansSerif } as any }),
   },
   sectionLabelRow: {
     width: '100%',
@@ -672,12 +622,18 @@ export const createHomeHeroStyles = ({
   bookPageNumberRight: { right: isMobile ? 14 : 20 },
 
   // -- CTA Buttons --
+  // In CSS grid: alignSelf:'end' pins it to the bottom of whichever row it occupies.
+  // With chips: sits in row 3 (auto). Without chips: sits in row 3 but 1fr gap pushes it down.
   buttonsContainer: {
     flexDirection: stackHeroButtons ? 'column' : 'row', justifyContent: 'flex-start', alignItems: stackHeroButtons ? 'stretch' : 'center',
-    gap: isMobile ? 10 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 10),
+    gap: isMobile ? 10 : 10,
     width: '100%',
     flexWrap: 'nowrap',
-    marginTop: isMobile ? 8 : (showSideSlider ? (isCompactBookLayout ? 4 : 6) : 12),
+    flexShrink: 0,
+    marginTop: isMobile ? 8 : (showSideSlider ? 0 : 12),
+    ...Platform.select({ web: showSideSlider ? {
+      alignSelf: 'end',
+    } as any : {} }),
   },
   primaryButton: {
     paddingHorizontal: isMobile ? 28 : (showSideSlider ? (isCompactBookLayout ? 24 : 28) : 28), paddingVertical: isMobile ? 14 : (showSideSlider ? (isCompactBookLayout ? 10 : 12) : 13), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 46),
@@ -725,24 +681,25 @@ export const createHomeHeroStyles = ({
   },
 
   // -- Bookmark rail (desktop left page inline mood cards) --
+  // In CSS grid this occupies the middle '1fr' row — fills available space
   bookmarkRail: {
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: showSideSlider ? 6 : 2,
-    alignItems: 'stretch',
-    ...Platform.select({ web: {
-      marginTop: 2,
-    } as any }),
+    gap: showSideSlider ? chipGap : 2,
+    alignItems: 'flex-start',
+    alignContent: 'flex-start',
+    overflow: 'hidden',
   },
   bookmarkChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: isCompactBookLayout ? 10 : 12, paddingVertical: showSideSlider ? (isCompactBookLayout ? 6 : 7) : 6,
+    flexDirection: 'row', alignItems: 'center', gap: isVeryCompactBookLayout ? 6 : 8,
+    paddingHorizontal: isVeryCompactBookLayout ? 8 : 10, paddingVertical: chipPaddingV,
     borderRadius: 8,
     borderWidth: 1.5, borderColor: warmBorder,
     backgroundColor: warmBgSoft,
-    flexBasis: isCompactBookLayout ? '45%' : '45%',
-    maxWidth: isCompactBookLayout ? '45%' : '45%',
+    flexBasis: '46%',
+    maxWidth: '46%',
+    flexShrink: 1,
     minWidth: 0,
     ...Platform.select({ web: {
       cursor: 'pointer',
@@ -768,7 +725,7 @@ export const createHomeHeroStyles = ({
     } }),
   },
   bookmarkChipIcon: {
-    width: isCompactBookLayout ? 24 : 28, height: isCompactBookLayout ? 24 : 28, borderRadius: 8, backgroundColor: brandSoft,
+    width: chipIconSize, height: chipIconSize, borderRadius: isVeryCompactBookLayout ? 6 : 8, backgroundColor: brandSoft,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: warmBorder,
   },
 
@@ -823,11 +780,13 @@ export const createHomeHeroStyles = ({
   },
   moodChipText: { gap: showSideSlider ? 2 : 1, flex: showSideSlider ? 1 : undefined },
   moodChipTitle: {
-    fontSize: showSideSlider ? (isCompactBookLayout ? 12 : 13) : 13, fontWeight: '600', color: inkStrong, letterSpacing: showSideSlider ? -0.15 : -0.1,
+    fontSize: showSideSlider ? (isVeryCompactBookLayout ? 11 : isCompactBookLayout ? 12 : 13) : 13, fontWeight: '600', color: inkStrong, letterSpacing: showSideSlider ? -0.15 : -0.1,
+    lineHeight: showSideSlider ? (isVeryCompactBookLayout ? 14 : isCompactBookLayout ? 15 : 17) : 17,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   moodChipMeta: {
-    fontSize: showSideSlider ? 10 : 10, fontWeight: '400', color: inkMuted, letterSpacing: 0.05,
+    fontSize: showSideSlider ? (isVeryCompactBookLayout ? 9 : 10) : 10, fontWeight: '400', color: inkMuted, letterSpacing: 0.05,
+    lineHeight: showSideSlider ? (isVeryCompactBookLayout ? 12 : 14) : 14,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 
