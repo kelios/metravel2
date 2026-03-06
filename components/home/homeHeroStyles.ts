@@ -89,6 +89,8 @@ export const createHomeHeroStyles = ({
   const inkSubtle = DESIGN_TOKENS.colors.textSubtle;
   const serif = 'Georgia, "Times New Roman", serif';
   const sansSerif = '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif';
+  const editorialSerif = 'Baskerville, Georgia, "Times New Roman", serif';
+  const editorialCaps = '"Cormorant Garamond", Baskerville, Georgia, "Times New Roman", serif';
 
   return StyleSheet.create({
   container: {
@@ -285,7 +287,13 @@ export const createHomeHeroStyles = ({
       boxShadow: `
         0 0 0 1.5px rgba(255,252,245,0.5),
         0 8px 40px rgba(20,15,10,0.32),
-        0 2px 8px rgba(20,15,10,0.18)
+        0 2px 8px rgba(20,15,10,0.18),
+        inset 0 0 0 1px rgba(255,250,242,0.38),
+        inset 0 0 18px rgba(255,248,238,0.14),
+        inset 18px 0 26px rgba(255,247,235,0.18),
+        inset -18px 0 26px rgba(255,247,235,0.18),
+        inset 0 18px 24px rgba(255,247,235,0.12),
+        inset 0 -18px 30px rgba(12,10,8,0.16)
       `,
       minHeight: 0,
       flexGrow: 1,
@@ -294,6 +302,7 @@ export const createHomeHeroStyles = ({
       transformOrigin: 'center center',
       borderRadius: 10,
       border: '2px solid rgba(255,252,245,0.7)',
+      isolation: 'isolate',
     } as any : {
       boxShadow: '0 4px 24px rgba(10,8,6,0.16), 0 1px 4px rgba(10,8,6,0.08)',
       minHeight: hasBookLayout ? 0 : sliderHeight,
@@ -315,10 +324,50 @@ export const createHomeHeroStyles = ({
     position: 'absolute' as const, bottom: 0, left: 0, right: 0, zIndex: 2,
     paddingHorizontal: 20, paddingTop: 80, paddingBottom: 22, pointerEvents: 'none' as const,
     ...Platform.select({ web: showSideSlider ? {
-      backgroundImage: 'linear-gradient(to top, rgba(12,10,8,0.88) 0%, rgba(12,10,8,0.55) 35%, rgba(12,10,8,0.15) 65%, transparent 100%)',
+      backgroundImage: 'linear-gradient(to top, rgba(12,10,8,0.92) 0%, rgba(12,10,8,0.62) 34%, rgba(12,10,8,0.2) 64%, transparent 100%)',
     } : {
       backgroundImage: 'linear-gradient(to top, rgba(8,6,4,0.92) 0%, rgba(8,6,4,0.5) 50%, transparent 100%)',
     } }),
+  },
+  sliderEdgeBlur: {
+    position: 'absolute' as const,
+    top: 0,
+    bottom: 0,
+    width: 62,
+    zIndex: 1,
+    pointerEvents: 'none' as const,
+    opacity: 0,
+    ...Platform.select({ web: {
+      backdropFilter: 'blur(0px)',
+      WebkitBackdropFilter: 'blur(0px)',
+    } as any }),
+  },
+  sliderEdgeBlurLeft: {
+    left: 0,
+    ...Platform.select({ web: {
+      backgroundImage: 'none',
+    } as any }),
+  },
+  sliderEdgeBlurRight: {
+    right: 0,
+    ...Platform.select({ web: {
+      backgroundImage: 'none',
+    } as any }),
+  },
+  sliderTopBlur: {
+    position: 'absolute' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 88,
+    zIndex: 1,
+    pointerEvents: 'none' as const,
+    opacity: 0,
+    ...Platform.select({ web: {
+      backdropFilter: 'blur(0px)',
+      WebkitBackdropFilter: 'blur(0px)',
+      backgroundImage: 'none',
+    } as any }),
   },
   slideEyebrow: {
     flexDirection: 'row',
@@ -341,7 +390,7 @@ export const createHomeHeroStyles = ({
     letterSpacing: 0.8,
     color: 'rgba(255,255,255,0.92)',
     textTransform: 'uppercase' as const,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    ...Platform.select({ web: { fontFamily: editorialCaps } as any }),
   },
   slideCaption: {
     borderRadius: 0,
@@ -357,9 +406,10 @@ export const createHomeHeroStyles = ({
     marginBottom: 5,
     letterSpacing: -0.5,
     ...Platform.select({ web: showSideSlider ? {
-      fontFamily: serif,
+      fontFamily: editorialSerif,
       textShadow: '0 2px 12px rgba(0,0,0,0.5)',
       lineHeight: '1.25',
+      letterSpacing: '-0.02em',
     } : {
       fontFamily: sansSerif,
       textShadow: '0 2px 10px rgba(0,0,0,0.55)',
@@ -367,7 +417,7 @@ export const createHomeHeroStyles = ({
   },
   slideSubtitle: {
     fontSize: 11, fontWeight: '400', color: 'rgba(255,255,255,0.72)', letterSpacing: 0.3,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
   },
 
   // -- Slider navigation --
@@ -501,7 +551,7 @@ export const createHomeHeroStyles = ({
     color: inkSubtle,
     textTransform: 'uppercase',
     letterSpacing: 2.2,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    ...Platform.select({ web: { fontFamily: editorialCaps } as any }),
   },
   chapterDivider: {
     height: 1,
@@ -544,9 +594,10 @@ export const createHomeHeroStyles = ({
     fontWeight: '700', color: inkStrong, letterSpacing: -0.8,
     lineHeight: isSmallPhone ? 34 : isMobile ? 40 : 40, textAlign: 'left',
     ...Platform.select({ web: showSideSlider ? {
-      fontFamily: serif,
+      fontFamily: editorialSerif,
       fontSize: desktopBookTitleSize,
       lineHeight: desktopBookTitleLineHeight,
+      letterSpacing: '-0.03em',
     } as any : { fontFamily: sansSerif } as any }),
   },
   titleAccent: {
@@ -554,9 +605,10 @@ export const createHomeHeroStyles = ({
     fontWeight: '800', color: colors.brand, letterSpacing: -0.8,
     lineHeight: isSmallPhone ? 34 : isMobile ? 40 : 40, textAlign: 'left',
     ...Platform.select({ web: showSideSlider ? {
-      fontFamily: serif,
+      fontFamily: editorialSerif,
       fontSize: desktopBookTitleSize,
       lineHeight: desktopBookTitleLineHeight,
+      letterSpacing: '-0.02em',
     } as any : { fontFamily: sansSerif } as any }),
   },
   subtitle: {
@@ -564,10 +616,11 @@ export const createHomeHeroStyles = ({
     lineHeight: isMobile ? 22 : 24, textAlign: 'left', maxWidth: 460, alignSelf: 'flex-start',
     letterSpacing: 0.1,
     ...Platform.select({ web: showSideSlider ? {
-      fontFamily: serif,
+      fontFamily: editorialSerif,
       fontSize: desktopBookSubtitleSize,
       lineHeight: desktopBookSubtitleLineHeight,
       maxWidth: '88%',
+      letterSpacing: '0.01em',
     } as any : { fontFamily: sansSerif } as any }),
   },
   sectionLabelRow: {
@@ -776,6 +829,7 @@ export const createHomeHeroStyles = ({
     width: stackHeroButtons ? '100%' : undefined,
     ...Platform.select({ web: {
       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)',
     } }),
   },
   secondaryButtonHover: {
@@ -787,7 +841,7 @@ export const createHomeHeroStyles = ({
   },
   secondaryButtonText: {
     fontSize: isCompactBookLayout ? 14 : 15, fontWeight: '600', color: colors.brand,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    ...Platform.select({ web: { fontFamily: editorialSerif, letterSpacing: '0.01em' } as any }),
   },
   singleCtaButton: {
     width: stackHeroButtons ? '100%' : undefined,
@@ -819,6 +873,7 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'background-color 0.15s ease, border-color 0.15s ease',
+      boxShadow: '0 1px 0 rgba(120,96,62,0.08)',
     } }),
   },
   bookmarkChipAccent: {
@@ -847,6 +902,7 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'border-color 0.15s ease, background-color 0.15s ease',
+      boxShadow: '0 1px 0 rgba(120,96,62,0.08)',
     } }) as any,
   },
   moodChipHover: {
@@ -861,7 +917,7 @@ export const createHomeHeroStyles = ({
   moodChipTitle: {
     fontSize: 13, fontWeight: '500', color: inkStrong, letterSpacing: -0.1,
     lineHeight: 17,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
   },
   moodChipMeta: {
     fontSize: 10, fontWeight: '400', color: inkMuted, letterSpacing: 0.05,

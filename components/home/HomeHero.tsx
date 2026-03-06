@@ -134,25 +134,25 @@ const preloadWebImage = async (uri: string): Promise<boolean> => {
 const MOOD_CARDS = [
   {
     title: 'У воды',
-    icon: 'droplet',
+    icon: 'wind',
     filters: { categoryTravelAddress: [84, 110, 113, 193] },
     route: '/search',
   },
   {
     title: 'Замки',
-    icon: 'home',
+    icon: 'bookmark',
     filters: { categoryTravelAddress: [33, 43] },
     route: '/search',
   },
   {
     title: 'Руины',
-    icon: 'columns',
+    icon: 'file-text',
     filters: { categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] },
     route: '/search',
   },
   {
     title: 'Хайкинг',
-    icon: 'trending-up',
+    icon: 'feather',
     filters: { categories: [21, 22, 2] },
     route: '/search',
   },
@@ -166,9 +166,9 @@ const MOOD_CARDS = [
 ] as const;
 
 const HERO_HIGHLIGHTS = [
-  { icon: 'clock', title: 'За 2 минуты', subtitle: 'подборка под ваш ритм' },
+  { icon: 'pen-tool', title: 'За 2 минуты', subtitle: 'подборка под ваш ритм' },
   { icon: 'book-open', title: 'Личная книга', subtitle: 'фото, заметки и PDF' },
-  { icon: 'map-pin', title: 'Маршруты рядом', subtitle: 'фильтры по дистанции и формату' },
+  { icon: 'compass', title: 'Маршруты рядом', subtitle: 'фильтры по дистанции и формату' },
 ] as const;
 
 export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
@@ -383,7 +383,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                           accessibilityRole="button"
                           accessibilityLabel={`${card.title}. Идея поездки`}
                         >
-                          <Feather name={card.icon as any} size={13} color={colors.primary} />
+                          <Feather name={card.icon as any} size={13} color={colors.textMuted} />
                           <Text style={styles.moodChipTitle}>{card.title}</Text>
                         </Pressable>
                       ))}
@@ -515,6 +515,13 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                           onLoad={() => markSlideAsLoaded(visibleSlide)}
                         />
                       </View>
+                      {isWeb && (
+                        <>
+                          <View style={styles.sliderTopBlur} />
+                          <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurLeft]} />
+                          <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurRight]} />
+                        </>
+                      )}
                       {/* Overlay with title */}
                       <View style={styles.slideOverlay}>
                         <View style={styles.slideEyebrow}>
@@ -584,7 +591,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                     accessibilityRole="button"
                     accessibilityLabel={`${card.title}. Идея поездки`}
                   >
-                    <Feather name={card.icon as any} size={14} color={colors.primary} />
+                    <Feather name={card.icon as any} size={14} color={colors.textMuted} />
                     <Text style={styles.moodChipTitle}>{card.title}</Text>
                   </Pressable>
                 ))}

@@ -71,7 +71,7 @@ if (typeof document !== 'undefined') {
 }
 
 /* ---------- Virtualization window size (current ± WINDOW) ---------- */
-const VIRTUAL_WINDOW = 1;
+const VIRTUAL_WINDOW = 2;
 
 /* ---------- Memoized sub-components ---------- */
 
@@ -538,12 +538,15 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               // Virtualization: only render Slide for slides within the visible window
               const distanceToCurrent = Math.abs(index - currentIndex);
               const inWindow = distanceToCurrent <= VIRTUAL_WINDOW;
-              const shouldRender = inWindow;
+              const keepPreviousEdge = currentIndex >= VIRTUAL_WINDOW && index < currentIndex && index >= currentIndex - (VIRTUAL_WINDOW + 1);
+              const shouldRender = inWindow || keepPreviousEdge;
               const preloadPriority = distanceToCurrent <= 1;
 
               return (
                 <View
                   key={`${String(item.id)}|${index}`}
+                  testID={`slider-slide-${index}`}
+                  {...({ dataSet: { testid: `slider-slide-${index}` } } as any)}
                   style={[styles.slide, { width: layoutMeasured ? containerW : '100%', height: containerH }, styles.slideSnap]}
                 >
                   {shouldRender ? (

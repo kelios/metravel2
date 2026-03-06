@@ -7,6 +7,11 @@ import { Platform } from 'react-native'
 
 import SliderWeb from '@/components/travel/Slider.web'
 
+const images = Array.from({ length: 6 }, (_, index) => ({
+  id: `img-${index + 1}`,
+  url: `https://example.com/img-${index + 1}.jpg`,
+}))
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
 }))
@@ -70,5 +75,34 @@ describe('Slider (web) blur background', () => {
     // Verify slider renders correctly
     expect(tree.root.findByProps({ testID: 'slider-stack' })).toBeTruthy()
     expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+  })
+
+  it('keeps slide 0 rendered after navigating to index 2 on web', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+        />,
+      )
+    })
+
+    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+    expect(tree.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
   })
 })

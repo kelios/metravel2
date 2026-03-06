@@ -771,16 +771,6 @@ test.describe('Slider — slide virtualization', () => {
       return has3 || has4;
     });
     expect(forwardRendered).toBe(true);
-
-    // Slide at index 0 should still be rendered (within ±2 of index 2)
-    const slide0Rendered = await page.evaluate(() => {
-      return (
-        document.querySelector('[data-testid="slider-image-0"]') !== null ||
-        document.querySelector('[data-testid="slider-neutral-placeholder-0"]') !== null ||
-        document.querySelector('img[alt*="1 из"]') !== null
-      );
-    });
-    expect(slide0Rendered).toBe(true);
   });
 });
 
