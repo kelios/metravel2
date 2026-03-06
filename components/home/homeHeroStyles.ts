@@ -70,7 +70,7 @@ export const createHomeHeroStyles = ({
   const isVeryCompactBookLayout = hasBookLayout && bookHeight <= 640;
 
   const leftPagePaddingBottom = hasBookLayout
-    ? (isUltraWideBook ? '10%' : isLargeDesktopBook ? '11%' : isCompactBookLayout ? '10%' : '12%')
+    ? (isUltraWideBook ? '14%' : isLargeDesktopBook ? '15%' : isCompactBookLayout ? '17%' : '18%')
     : 110;
 
   // Adaptive chip sizing based on available book height
@@ -156,8 +156,9 @@ export const createHomeHeroStyles = ({
     alignItems: isMobile ? 'stretch' : 'flex-start',
     gap: showSideSlider ? 0 : (isMobile ? 16 : 18),
     width: leftPageWidth,
-    maxWidth: showSideSlider ? undefined : (isMobile ? '100%' : 720),
+    maxWidth: showSideSlider ? leftPageWidth : (isMobile ? '100%' : 720),
     flexShrink: 0,
+    flexGrow: 0,
     paddingLeft: isMobile ? 20 : 48,
     paddingRight: isMobile ? 20 : 48,
     paddingTop: isMobile ? 28 : 32,
@@ -179,6 +180,8 @@ export const createHomeHeroStyles = ({
       alignSelf: 'stretch',
       height: '100%',
       maxHeight: '100%',
+      // Строго ограничиваем ширину левой страницы
+      minWidth: 0,
     } as any : {
       backgroundColor: 'rgba(255,255,255,0.85)',
       borderRadius: isMobile ? 8 : 10,
@@ -216,9 +219,9 @@ export const createHomeHeroStyles = ({
       backgroundColor: 'transparent',
       borderRadius: 0,
       paddingTop: isUltraWideBook ? '6%' : isLargeDesktopBook ? '6.5%' : '7%',
-      paddingBottom: isUltraWideBook ? '9%' : isLargeDesktopBook ? '10%' : '11%',
-      paddingLeft: isUltraWideBook ? '3%' : '4%',
-      paddingRight: isUltraWideBook ? '5%' : '6%',
+      paddingBottom: isUltraWideBook ? '14%' : isLargeDesktopBook ? '15%' : '17%',
+      paddingLeft: isUltraWideBook ? '1%' : '2%',
+      paddingRight: isUltraWideBook ? '8%' : isLargeDesktopBook ? '10%' : '12%',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'stretch',
@@ -262,15 +265,36 @@ export const createHomeHeroStyles = ({
   },
 
   // -- Slider / immersive photo --
+  // Эффект "фото вклеенное в книгу": наклон + размытые края + тень
   sliderContainer: {
-    width: '100%', flex: 1, minHeight: hasBookLayout ? 0 : sliderHeight, borderRadius: isMobile ? 4 : 6, overflow: 'hidden',
+    width: '100%', flex: 1, minHeight: hasBookLayout ? 0 : sliderHeight, borderRadius: isMobile ? 4 : 8, overflow: 'hidden',
     backgroundColor: '#1A1A1A', borderWidth: 0,
-    ...Platform.select({ web: {
+    ...Platform.select({ web: showSideSlider ? {
+      // Размытые края как у старого фото в книге — усиленный эффект
+      boxShadow: `
+        0 0 0 2px rgba(255,252,245,0.6),
+        0 0 0 4px rgba(220,210,190,0.3),
+        0 4px 12px rgba(60,50,40,0.25),
+        0 12px 32px rgba(40,30,20,0.28),
+        inset 0 0 30px 12px rgba(245,240,232,0.15)
+      `,
+      minHeight: 0,
+      flexGrow: 1,
+      flexShrink: 1,
+      // Наклон как у фото приклеенного к странице
+      transform: isNarrowDesktopBook ? 'rotate(-1.5deg)' : 'rotate(-1deg)',
+      transformOrigin: 'center center',
+      // Мягкие края с размытием
+      borderRadius: 12,
+      border: '4px solid rgba(255,252,245,0.85)',
+      // Дополнительное размытие краёв через filter
+      filter: 'drop-shadow(0 0 3px rgba(245,240,232,0.5))',
+    } as any : {
       boxShadow: '0 0 0 1px rgba(245,240,232,0.14), 0 0 12px 2px rgba(244,239,232,0.22), 0 6px 14px rgba(10,8,6,0.10)',
       minHeight: hasBookLayout ? 0 : sliderHeight,
       flexGrow: 1,
       flexShrink: 1,
-      transform: showSideSlider ? (isNarrowDesktopBook ? 'rotate(-0.7deg)' : 'rotate(-0.4deg)') : 'none',
+      transform: 'none',
       transformOrigin: 'center center',
     } as any }),
   },
@@ -284,49 +308,69 @@ export const createHomeHeroStyles = ({
   },
   slideOverlay: {
     position: 'absolute' as const, bottom: 0, left: 0, right: 0, zIndex: 2,
-    paddingHorizontal: 24, paddingTop: 72, paddingBottom: 24, pointerEvents: 'none' as const,
-    ...Platform.select({ web: {
+    paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20, pointerEvents: 'none' as const,
+    ...Platform.select({ web: showSideSlider ? {
+      // Более мягкий градиент для книжного стиля
+      backgroundImage: 'linear-gradient(to top, rgba(25,22,18,0.75) 0%, rgba(25,22,18,0.35) 50%, transparent 100%)',
+    } : {
       backgroundImage: 'linear-gradient(to top, rgba(15,12,8,0.85) 0%, rgba(15,12,8,0.4) 55%, transparent 100%)',
     } }),
   },
   slideEyebrow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     alignSelf: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 8,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: 'rgba(20,18,14,0.42)',
+    backgroundColor: showSideSlider ? 'rgba(40,35,28,0.5)' : 'rgba(20,18,14,0.42)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    ...Platform.select({ web: { backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' } }),
+    borderColor: showSideSlider ? 'rgba(220,210,190,0.25)' : 'rgba(255,255,255,0.16)',
+    ...Platform.select({ web: { backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } }),
   },
   slideEyebrowText: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    color: '#FFFFFF',
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    color: showSideSlider ? 'rgba(255,252,245,0.9)' : '#FFFFFF',
+    ...Platform.select({ web: showSideSlider ? {
+      fontFamily: serif,
+      fontStyle: 'italic',
+    } : { fontFamily: sansSerif } as any }),
   },
   slideCaption: {
-    borderRadius: 18, backgroundColor: 'rgba(20,18,14,0.56)', borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 18, paddingVertical: 16,
-    maxWidth: '82%', alignSelf: 'flex-start',
-    ...Platform.select({ web: { backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' } }),
+    borderRadius: 14, 
+    backgroundColor: showSideSlider ? 'rgba(35,30,25,0.65)' : 'rgba(20,18,14,0.56)', 
+    borderWidth: 1,
+    borderColor: showSideSlider ? 'rgba(220,210,190,0.2)' : 'rgba(255,255,255,0.12)', 
+    paddingHorizontal: 16, paddingVertical: 14,
+    maxWidth: '88%', alignSelf: 'flex-start',
+    ...Platform.select({ web: { 
+      backdropFilter: 'blur(16px)', 
+      WebkitBackdropFilter: 'blur(16px)',
+      boxShadow: showSideSlider ? '0 2px 12px rgba(0,0,0,0.15)' : 'none',
+    } }),
   },
   slideTitle: {
-    fontSize: isMobile ? 18 : 24, fontWeight: '600', color: '#FFFFFF', marginBottom: 4, letterSpacing: -0.3,
-    ...Platform.select({ web: {
+    fontSize: isMobile ? 18 : (showSideSlider ? 20 : 24), 
+    fontWeight: '600', 
+    color: showSideSlider ? 'rgba(255,252,245,0.95)' : '#FFFFFF', 
+    marginBottom: 3, 
+    letterSpacing: -0.2,
+    ...Platform.select({ web: showSideSlider ? {
+      fontFamily: serif,
+      textShadow: '0 1px 4px rgba(0,0,0,0.3)',
+    } : {
       fontFamily: sansSerif,
       textShadow: '0 1px 6px rgba(0,0,0,0.4)',
     } as any }),
   },
   slideSubtitle: {
-    fontSize: 12, fontWeight: '400', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.3,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    fontSize: 11, fontWeight: '400', color: showSideSlider ? 'rgba(255,252,245,0.7)' : 'rgba(255,255,255,0.75)', letterSpacing: 0.2,
+    ...Platform.select({ web: showSideSlider ? { fontFamily: serif, fontStyle: 'italic' } : { fontFamily: sansSerif } as any }),
   },
 
   // -- Slider navigation --
@@ -336,20 +380,22 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: { transform: 'translateY(-50%)', pointerEvents: 'none' } }),
   },
   sliderNavBtn: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: 'rgba(32,30,24,0.34)', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)',
+    width: showSideSlider ? 36 : 42, height: showSideSlider ? 36 : 42, borderRadius: showSideSlider ? 18 : 21,
+    backgroundColor: showSideSlider ? 'rgba(50,45,38,0.45)' : 'rgba(32,30,24,0.34)', 
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: showSideSlider ? 'rgba(220,210,190,0.3)' : 'rgba(255,255,255,0.16)',
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'all 0.2s ease',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
       pointerEvents: 'auto',
     } }),
   },
   sliderNavBtnHover: {
-    backgroundColor: 'rgba(32,30,24,0.54)', borderColor: 'rgba(255,255,255,0.28)',
-    ...Platform.select({ web: { transform: 'scale(1.06)' } }),
+    backgroundColor: showSideSlider ? 'rgba(60,55,45,0.6)' : 'rgba(32,30,24,0.54)', 
+    borderColor: showSideSlider ? 'rgba(220,210,190,0.5)' : 'rgba(255,255,255,0.28)',
+    ...Platform.select({ web: { transform: 'scale(1.05)' } }),
   },
   sliderDots: {
     position: 'absolute' as const, bottom: 14, left: 0, right: 0,
