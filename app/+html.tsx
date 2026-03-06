@@ -236,11 +236,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
         }}
       />
 
-      {/* Resource hints - only the 2 most critical origins (dns-prefetch removed: preconnect implies it).
+      {/* Resource hints - only the origins used in the initial render.
           images.weserv.nl preconnect deferred to when content images actually load. */}
       <link rel="preconnect" href="https://metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 

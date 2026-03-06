@@ -187,6 +187,11 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
   const showSideSlider = isWeb && (isDesktop || isLargeTablet || isTablet);
   const sliderHeight = isDesktop ? 420 : 360;
   const sliderMediaWidth = isDesktop ? 500 : 380;
+  const featuredCardWidth = useMemo(() => {
+    if (!isWeb) return undefined;
+    const horizontalPadding = isMobile ? 32 : 48;
+    return Math.max(280, Math.min(width - horizontalPadding, 720));
+  }, [isMobile, isWeb, width]);
 
   // Book wrapper measured height for adaptive aspect-ratio
   const [bookWrapperWidth, setBookWrapperWidth] = useState(0);
@@ -604,12 +609,12 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
             >
               <ImageCardMedia
                 source={BOOK_IMAGES[0].source}
-                width={undefined}
+                width={featuredCardWidth}
                 height={isMobile ? 200 : 260}
                 borderRadius={0}
                 fit="contain"
                 blurBackground
-                quality={85}
+                quality={72}
                 alt={BOOK_IMAGES[0].alt}
                 loading="eager"
                 style={styles.featuredCardImage}

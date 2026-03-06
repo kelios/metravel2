@@ -241,9 +241,18 @@ function ImageCardMedia({
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
-    const numW = typeof width === 'number' ? width : 320;
-    return `(min-width: 1024px) ${numW}px, (min-width: 768px) 33vw, 50vw`;
+    if (typeof width === 'number' && Number.isFinite(width) && width > 0) {
+      return `${Math.round(width)}px`;
+    }
+    return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
   }, [width]);
+
+  const shouldRenderWebBlurBackground = useMemo(() => {
+    if (Platform.OS !== 'web') return false;
+    if (!blurBackground || !webMainSrc) return false;
+    // Avoid promoting the oversized blur backdrop to LCP on eager/critical images.
+    return !(loading === 'eager' || priority === 'high');
+  }, [blurBackground, loading, priority, webMainSrc]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -326,8 +335,7 @@ function ImageCardMedia({
       {resolvedSource && !shouldDisableNetwork ? (
         <>
           {Platform.OS === 'web' &&
-            blurBackground &&
-            webMainSrc && (
+            shouldRenderWebBlurBackground && (
               <div
                 aria-hidden="true"
                 style={{
@@ -363,7 +371,7 @@ function ImageCardMedia({
               borderRadius={resolvedBorderRadius}
               loading={loading}
               priority={priority}
-              hasBlurBehind={blurBackground}
+              hasBlurBehind={shouldRenderWebBlurBackground}
               loaded={webLoaded}
               onLoad={handleWebLoad}
               onError={onError}
@@ -389,7 +397,7 @@ function ImageCardMedia({
               cachePolicy={cachePolicy}
               imageProps={{ ...(imageProps || {}), ...(webImageProps || {}) }}
               style={
-                Platform.OS === 'web' && blurBackground
+                Platform.OS === 'web' && shouldRenderWebBlurBackground
                   ? ({ backgroundColor: 'transparent', position: 'relative', zIndex: 1 } as any)
                   : undefined
               }
