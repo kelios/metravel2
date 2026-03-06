@@ -1,5 +1,5 @@
 import { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, Pressable, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView, Dimensions, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -44,11 +44,11 @@ const buildFilterPath = (base: string, params?: QuickFilterParams) => {
   return query.length > 0 ? `${base}?${query}` : base;
 };
 
+const PDF_COVER_IMAGE = require('../../assets/images/pdf.webp');
+
 const BOOK_IMAGES = [
   {
-    source: Platform.OS === 'web'
-      ? { uri: '/assets/images/pdf.webp' }
-      : require('../../assets/images/pdf.webp'),
+    source: PDF_COVER_IMAGE,
     alt: 'Тропа ведьм — Германия',
     title: 'Тропа ведьм',
     subtitle: 'Хайкинг • Горный маршрут • Германия',
@@ -95,7 +95,14 @@ const BOOK_IMAGES = [
 export const BOOK_IMAGES_FOR_TEST = BOOK_IMAGES;
 
 const getSlideRemoteUri = (source: { uri?: string } | number | null | undefined): string | null => {
-  if (!source || typeof source === 'number') return null;
+  if (!source) return null;
+  if (typeof source === 'number') {
+    // @ts-ignore -- Image.resolveAssetSource is available at runtime on web/native.
+    const resolvedUri = Image.resolveAssetSource?.(source)?.uri;
+    return typeof resolvedUri === 'string' && resolvedUri.trim().length > 0
+      ? resolvedUri.trim()
+      : null;
+  }
   if (typeof source === 'object' && 'uri' in source && typeof source.uri === 'string') {
     const trimmedUri = source.uri.trim();
     return trimmedUri.length > 0 ? trimmedUri : null;
