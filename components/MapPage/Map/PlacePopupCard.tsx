@@ -74,10 +74,27 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
           boxSizing: 'border-box',
         }}
       >
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: '-5%',
+            width: '110%',
+            height: '110%',
+            backgroundImage: hiResUrl ? `url("${hiResUrl}")` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(24px)',
+            transform: 'scale(1.04)',
+            opacity: 0.9,
+            pointerEvents: 'none',
+          }}
+        />
         <img
           src={hiResUrl ?? undefined}
           alt={alt}
           style={{
+            position: 'relative',
             maxWidth: maxW,
             maxHeight: maxH,
             width: 'auto',
@@ -132,7 +149,8 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
           <ImageCardMedia
             src={hiResUrl}
             fit="contain"
-            blurBackground={false}
+            blurBackground
+            blurRadius={20}
             priority="high"
             loading="eager"
             transition={0}

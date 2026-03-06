@@ -16,9 +16,9 @@ import {
   View,
   ViewToken,
 } from 'react-native';
-import { Image } from 'expo-image';
 import Feather from '@expo/vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface FullscreenGalleryProps {
@@ -90,13 +90,16 @@ export default function FullscreenGallery({
   const renderItem = useCallback(
     ({ item }: { item: { url: string; thumbUrl?: string } }) => (
       <View style={styles.slideContainer}>
-        <Image
-          source={{ uri: item.url }}
-          placeholder={item.thumbUrl ? { uri: item.thumbUrl } : undefined}
+        <ImageCardMedia
+          src={item.url}
           style={styles.image}
-          contentFit="contain"
+          fit="contain"
+          blurBackground
+          blurRadius={18}
+          loading="eager"
+          priority="high"
           transition={200}
-          accessibilityLabel="Фото маршрута"
+          alt="Фото маршрута"
         />
       </View>
     ),

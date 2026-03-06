@@ -102,6 +102,21 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
     <div style={{ width: '100%', height: fixedHeight, ...(height ? { minHeight: fixedHeight } : null) }}>
       {loadError ? <NeutralHeroPlaceholder height={height} /> : (
         <div style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden', position: 'relative', backgroundColor: colors.backgroundSecondary }}>
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: '-5%',
+              width: '110%',
+              height: '110%',
+              backgroundImage: `url("${srcWithRetry}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(22px)',
+              transform: 'scale(1.04)',
+              opacity: 0.9,
+            }}
+          />
           <img
             src={srcWithRetry} srcSet={responsive.srcSet} sizes={responsive.sizes}
             alt={alt || 'Фотография маршрута путешествия'}
