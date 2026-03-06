@@ -90,7 +90,7 @@ const WebMainImage = memo(function WebMainImage({
         contain: 'layout',
       }}
       loading={loading}
-      decoding="async"
+      decoding={priority === 'high' ? 'sync' : 'async'}
       // @ts-ignore -- fetchPriority is a valid HTML attribute not yet in React types
       fetchPriority={priority === 'high' ? 'high' : 'auto'}
       onLoad={handleLoad}
@@ -268,6 +268,11 @@ function ImageCardMedia({
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
   }, [width]);
 
+  const shouldShowWebImageImmediately = useMemo(() => {
+    if (Platform.OS !== 'web') return showImmediately;
+    return showImmediately || loading === 'eager' || priority === 'high';
+  }, [showImmediately, loading, priority]);
+
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
     if (!blurBackground || !webMainSrc) return false;
@@ -394,7 +399,7 @@ function ImageCardMedia({
               loaded={webLoaded}
               onLoad={handleWebLoad}
               onError={onError}
-              showImmediately={showImmediately}
+              showImmediately={shouldShowWebImageImmediately}
             />
           ) : !blurOnly && (
             <OptimizedImage
