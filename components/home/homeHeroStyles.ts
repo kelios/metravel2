@@ -77,27 +77,27 @@ export const createHomeHeroStyles = ({
   const rightPagePaddingTop: number | string = !hasBookLayout
     ? 0
     : isUltraWideBook
-      ? '8%'
+      ? '7%'
       : isLargeDesktopBook
-        ? '8%'
-        : '9%';
+        ? '7%'
+        : '8%';
   const rightPagePaddingBottom: number | string = !hasBookLayout
     ? 0
     : isUltraWideBook
-      ? '13%'
+      ? '11%'
       : isLargeDesktopBook
-        ? '16%'
-        : '19%';
+        ? '13%'
+        : '15%';
   const rightPagePaddingRight: number | string = !hasBookLayout
     ? 0
     : isUltraWideBook
-      ? '12%'
-      : '18%';
+      ? '9%'
+      : '12%';
   const rightPagePaddingLeft: number | string = !hasBookLayout
     ? 0
     : isUltraWideBook
-      ? '3%'
-      : '4%';
+      ? '2%'
+      : '3%';
   // Baseline tuned from validated desktop layout (bookHeight ~= 864)
   const leftPagePaddingLeft = hasBookLayout
     ? clamp(Math.round((isNarrowDesktopBook ? 148 : 190) * bookScale) + leftPageSafeInset, isNarrowDesktopBook ? 72 : 96, leftPagePaddingLeftMax + leftPageSafeInset)
@@ -245,14 +245,15 @@ export const createHomeHeroStyles = ({
     overflow: 'hidden',
     ...Platform.select({ web: showSideSlider ? {
       alignSelf: 'stretch',
+      maxWidth: isNarrowDesktopBook ? '82%' : '80%',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'flex-start',
       rowGap: isCompactBookLayout ? Math.max(leftPageRowGap, 8) : leftPageRowGap + 4,
-      paddingLeft: '2%',
-      paddingRight: '4%',
-      paddingTop: '5%',
-      paddingBottom: '8%',
+      paddingLeft: isNarrowDesktopBook ? '3%' : '4%',
+      paddingRight: isNarrowDesktopBook ? '7%' : '8%',
+      paddingTop: isNarrowDesktopBook ? '5%' : '6%',
+      paddingBottom: isNarrowDesktopBook ? '6%' : '7%',
       boxSizing: 'border-box',
     } as any : {} }),
   },
@@ -289,7 +290,7 @@ export const createHomeHeroStyles = ({
     } as any : {} }),
   },
   sliderFrame: {
-    width: '100%',
+    width: isNarrowDesktopBook ? '98%' : '96%',
     flex: 1,
     minHeight: 0,
     position: 'relative' as const,
@@ -676,7 +677,7 @@ export const createHomeHeroStyles = ({
     gap: isMobile ? 10 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 10),
     width: '100%',
     flexWrap: 'nowrap',
-    marginTop: isMobile ? 8 : (showSideSlider ? (isCompactBookLayout ? 8 : 10) : 12),
+    marginTop: isMobile ? 8 : (showSideSlider ? (isCompactBookLayout ? 4 : 6) : 12),
   },
   primaryButton: {
     paddingHorizontal: isMobile ? 28 : (showSideSlider ? (isCompactBookLayout ? 24 : 28) : 28), paddingVertical: isMobile ? 14 : (showSideSlider ? (isCompactBookLayout ? 10 : 12) : 13), minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 40 : 44) : 46),
