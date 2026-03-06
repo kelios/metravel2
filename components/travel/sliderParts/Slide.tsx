@@ -62,10 +62,26 @@ const Slide = memo(function Slide({
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && isActive;
 
+  // Track base URI (without query params) to avoid resetting loaded state
+  // when only optimization params change but the source image is the same
+  const baseUriRef = useRef<string | null>(null);
   useEffect(() => {
-    firstLoadReportedRef.current = false;
-    setHasError(false);
-    setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(uri));
+    // Extract base URI without query params for comparison
+    let currentBaseUri: string | null = null;
+    try {
+      const url = new URL(uri, 'https://metravel.by');
+      currentBaseUri = url.origin + url.pathname;
+    } catch {
+      currentBaseUri = uri.split('?')[0];
+    }
+    
+    // Only reset state if the actual image source changed
+    if (currentBaseUri !== baseUriRef.current) {
+      baseUriRef.current = currentBaseUri;
+      firstLoadReportedRef.current = false;
+      setHasError(false);
+      setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(uri));
+    }
   }, [uri, index, isFirstSlide, firstImagePreloaded]);
 
   const handleLoad = useCallback(() => {

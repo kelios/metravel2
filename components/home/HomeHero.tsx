@@ -1,4 +1,4 @@
-import { useMemo, memo, useCallback, useState, useEffect } from 'react';
+import { useMemo, memo, useCallback, useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, Platform, ScrollView, Dimensions, Image as RNImage } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -184,7 +184,17 @@ const HOME_HERO_BOOK_LAYOUT_MIN_WIDTH = 1280;
 const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, travelsCountLoading: _travelsCountLoading = false }: HomeHeroProps) {
   const router = useRouter();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone, isLargePhone, isTablet, isDesktop, width, isPortrait } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isDesktop, width: rawWidth, isPortrait } = useResponsive();
+
+  // Stabilize width to prevent re-renders on minor viewport changes (e.g., mobile address bar)
+  const stableWidthRef = useRef(rawWidth);
+  const width = useMemo(() => {
+    // Only update if change is significant (>50px) to avoid scroll-triggered re-renders
+    if (Math.abs(rawWidth - stableWidthRef.current) > 50) {
+      stableWidthRef.current = rawWidth;
+    }
+    return stableWidthRef.current;
+  }, [rawWidth]);
 
   const isMobile = isSmallPhone || isPhone || isLargePhone;
   const isLandscape = !isPortrait && isMobile; // RESP-05
@@ -202,7 +212,17 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
   }, [isMobile, isWeb, width]);
 
   // Book wrapper measured height for adaptive aspect-ratio
+  // Use ref to track and stabilize to prevent layout thrashing
+  const bookWrapperWidthRef = useRef(0);
   const [bookWrapperWidth, setBookWrapperWidth] = useState(0);
+  const handleBookWrapperLayout = useCallback((e: { nativeEvent: { layout: { width: number } } }) => {
+    const newWidth = e.nativeEvent.layout.width;
+    // Only update if change is significant (>20px)
+    if (Math.abs(newWidth - bookWrapperWidthRef.current) > 20) {
+      bookWrapperWidthRef.current = newWidth;
+      setBookWrapperWidth(newWidth);
+    }
+  }, []);
   const bookHeight = useMemo(() => {
     if (bookWrapperWidth <= 0) return 0;
     const aspectH = Math.round(bookWrapperWidth * 765 / 1040);
@@ -331,7 +351,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
           {/* Book wrapper for 3D effect */}
           <View
             style={styles.bookWrapper}
-            onLayout={showSideSlider ? (e) => setBookWrapperWidth(e.nativeEvent.layout.width) : undefined}
+            onLayout={showSideSlider ? handleBookWrapperLayout : undefined}
           >
             {/* Book cover shadow/glow */}
             {isWeb && showSideSlider && <View style={styles.bookCoverOuter} />}

@@ -375,7 +375,18 @@ function ListTravelBase({
         onToggleWeeklyHighlights,
     });
 
-    const { width, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
+    const { width: rawWidth, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
+
+    // ✅ ОПТИМИЗАЦИЯ: Стабилизируем width чтобы избежать ре-рендеров при скролле
+    // (мобильная адресная строка может менять viewport height/width)
+    const stableWidthRef = useRef(rawWidth);
+    const width = useMemo(() => {
+      // Обновляем только при значительном изменении (>50px)
+      if (Math.abs(rawWidth - stableWidthRef.current) > 50) {
+        stableWidthRef.current = rawWidth;
+      }
+      return stableWidthRef.current;
+    }, [rawWidth]);
     const route = useRoute();
     const pathname = usePathname();
 
