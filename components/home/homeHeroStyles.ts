@@ -64,8 +64,8 @@ export const createHomeHeroStyles = ({
   const leftPagePaddingTop = hasBookLayout
     ? (isUltraWideBook ? '8%' : isLargeDesktopBook ? '8.5%' : '9%')
     : 48;
-  const leftPageWidth = showSideSlider ? '54%' : '100%';
-  const rightPageWidth = showSideSlider ? '46%' : 320;
+  const leftPageWidth = showSideSlider ? '51%' : '100%';
+  const rightPageWidth = showSideSlider ? '49%' : 320;
   const isCompactBookLayout = hasBookLayout && bookHeight <= 760;
   const isVeryCompactBookLayout = hasBookLayout && bookHeight <= 640;
 
@@ -230,7 +230,7 @@ export const createHomeHeroStyles = ({
       paddingTop: isUltraWideBook ? '6%' : isLargeDesktopBook ? '6.5%' : '7%',
       paddingBottom: isUltraWideBook ? '14%' : isLargeDesktopBook ? '15%' : '17%',
       paddingLeft: isUltraWideBook ? '1%' : '2%',
-      paddingRight: isUltraWideBook ? '8%' : isLargeDesktopBook ? '10%' : '12%',
+      paddingRight: '15%',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'stretch',
