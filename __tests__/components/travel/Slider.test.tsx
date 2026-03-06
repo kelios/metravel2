@@ -90,6 +90,32 @@ describe('Slider', () => {
     expect(queryByText('Фото не загрузилось')).toBeNull()
   })
 
+  it('tries one fallback media URL on first error before showing placeholder', async () => {
+    const brokenGalleryImage: SliderImage = {
+      id: 'broken-gallery',
+      url: 'https://metravel.by/api/gallery/532/gallery/63fc9788ca2d4300ac8d7fceb319a9fa.JPG',
+      width: 1600,
+      height: 900,
+    }
+
+    const { getByTestId, queryByTestId } = await renderSlider([brokenGalleryImage])
+
+    const firstAttempt = getByTestId('slider-image-0')
+    act(() => {
+      firstAttempt.props.onError?.()
+    })
+
+    // First error should switch to fallback URL (no neutral placeholder yet).
+    expect(queryByTestId('slider-neutral-placeholder-0')).toBeNull()
+
+    const secondAttempt = getByTestId('slider-image-0')
+    act(() => {
+      secondAttempt.props.onError?.()
+    })
+
+    expect(getByTestId('slider-neutral-placeholder-0')).toBeTruthy()
+  })
+
   it('renders arrows on desktop when enabled and hides them on mobile when hideArrowsOnMobile is true', async () => {
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 900 })
 

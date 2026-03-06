@@ -4,6 +4,52 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import type { SliderImage } from './types';
 
 const loadedSlideUriCache = new Set<string>();
+const MEDIA_PATH_WITH_API_PREFIX = /^\/api\/(gallery|travel-image|travel-description-image|address-image)(\/|$)/i;
+
+const isPrivateOrLocalHost = (host: string): boolean => {
+  const normalized = String(host || '').trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized === 'localhost' || normalized === '127.0.0.1') return true;
+  if (/^10\./.test(normalized)) return true;
+  if (/^192\.168\./.test(normalized)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(normalized)) return true;
+  return false;
+};
+
+const buildFallbackMediaUrl = (value: string): string | null => {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  // Fix malformed backend shape: https://hosthttps://real-url
+  const duplicatedProtocol = raw.match(/^https?:\/\/[^/]+(https?:\/\/.+)$/i);
+  if (duplicatedProtocol?.[1]) {
+    return duplicatedProtocol[1];
+  }
+
+  try {
+    const parsed = new URL(raw, 'https://metravel.by');
+    let changed = false;
+
+    if (MEDIA_PATH_WITH_API_PREFIX.test(parsed.pathname)) {
+      parsed.pathname = parsed.pathname.replace(/^\/api/i, '');
+      changed = true;
+    }
+
+    if (/^\/gallery\/\d+\/gallery\//i.test(parsed.pathname) && !/^\/media\//i.test(parsed.pathname)) {
+      parsed.pathname = `/media${parsed.pathname}`;
+      changed = true;
+    }
+
+    if (parsed.protocol === 'http:' && !isPrivateOrLocalHost(parsed.hostname)) {
+      parsed.protocol = 'https:';
+      changed = true;
+    }
+
+    return changed ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+};
 
 interface SlideProps {
   item: SliderImage;
@@ -44,9 +90,11 @@ const Slide = memo(function Slide({
   preloadPriority,
   fit = 'contain',
 }: SlideProps) {
+  const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(() => loadedSlideUriCache.has(uri));
   const firstLoadReportedRef = useRef(false);
+  const fallbackTriedRef = useRef(false);
 
   const isFirstSlide = index === 0;
   const shouldEagerLoad = isFirstSlide || isActive || !!preloadPriority;
@@ -62,6 +110,11 @@ const Slide = memo(function Slide({
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && isActive;
 
+  useEffect(() => {
+    setResolvedUri(uri);
+    fallbackTriedRef.current = false;
+  }, [uri]);
+
   // Track base URI (without query params) to avoid resetting loaded state
   // when only optimization params change but the source image is the same
   const baseUriRef = useRef<string | null>(null);
@@ -69,10 +122,10 @@ const Slide = memo(function Slide({
     // Extract base URI without query params for comparison
     let currentBaseUri: string | null = null;
     try {
-      const url = new URL(uri, 'https://metravel.by');
+      const url = new URL(resolvedUri, 'https://metravel.by');
       currentBaseUri = url.origin + url.pathname;
     } catch {
-      currentBaseUri = uri.split('?')[0];
+      currentBaseUri = resolvedUri.split('?')[0];
     }
     
     // Only reset state if the actual image source changed
@@ -80,19 +133,19 @@ const Slide = memo(function Slide({
       baseUriRef.current = currentBaseUri;
       firstLoadReportedRef.current = false;
       setHasError(false);
-      setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(uri));
+      setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri));
     }
-  }, [uri, index, isFirstSlide, firstImagePreloaded]);
+  }, [resolvedUri, index, isFirstSlide, firstImagePreloaded]);
 
   const handleLoad = useCallback(() => {
-    loadedSlideUriCache.add(uri);
+    loadedSlideUriCache.add(resolvedUri);
     setHasError(false);
     setIsLoaded(true);
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
-  }, [isFirstSlide, onFirstImageLoad, uri]);
+  }, [isFirstSlide, onFirstImageLoad, resolvedUri]);
 
   useEffect(() => {
     // If first slide is already preloaded/cached, report readiness once on mount.
@@ -105,8 +158,19 @@ const Slide = memo(function Slide({
   }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
 
   const handleError = useCallback(() => {
+    if (!fallbackTriedRef.current) {
+      const fallback = buildFallbackMediaUrl(resolvedUri);
+      if (fallback && fallback !== resolvedUri) {
+        fallbackTriedRef.current = true;
+        setResolvedUri(fallback);
+        setHasError(false);
+        setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(fallback));
+        return;
+      }
+      fallbackTriedRef.current = true;
+    }
     setHasError(true);
-  }, []);
+  }, [firstImagePreloaded, isFirstSlide, resolvedUri]);
 
   const handlePress = useCallback(() => {
     onImagePress?.(index);
@@ -131,7 +195,7 @@ const Slide = memo(function Slide({
             />
           )}
           <ImageCardMedia
-            src={uri}
+            src={resolvedUri}
             fit={mainFit}
             blurBackground={shouldBlur}
             blurRadius={12}
@@ -157,7 +221,7 @@ const Slide = memo(function Slide({
             }}
             onLoad={handleLoad}
             onError={handleError}
-            showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(uri)}
+            showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={shouldBlur}
           />
         </>
