@@ -1,12 +1,12 @@
 // E11: Refactored — state/logic extracted to useTravelHeroState hook
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LayoutChangeEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { LayoutChangeEvent, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 
 import Feather from '@expo/vector-icons/Feather'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
 import { createSafeImageUrl } from '@/utils/travelDetailsSecure'
-import { buildResponsiveImageProps, buildVersionedImageUrl } from '@/utils/imageOptimization'
+import { buildResponsiveImageProps, buildVersionedImageUrl, optimizeImageUrl } from '@/utils/imageOptimization'
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { AnchorsMap } from './TravelDetailsTypes'
@@ -80,6 +80,20 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
   }, [])
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
+  const blurBackdropSrc = useMemo(() => {
+    return buildVersionedImageUrl(
+      optimizeImageUrl(srcWithRetry, {
+        width: isMobile ? 140 : 180,
+        height: isMobile ? 140 : 180,
+        quality: 20,
+        format: 'jpg',
+        fit: 'cover',
+        blur: 12,
+      }) ?? srcWithRetry,
+      img.updated_at ?? null,
+      img.id,
+    )
+  }, [img.id, img.updated_at, isMobile, srcWithRetry])
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
 
   if (!srcWithRetry) return <NeutralHeroPlaceholder height={height} />
@@ -89,9 +103,20 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
       <View style={{ width: '100%', height: '100%' }}>
         {loadError ? <NeutralHeroPlaceholder height={height} /> : (
           <View style={{ width: '100%', height: '100%', borderRadius: 12, overflow: 'hidden' }}>
-            <ImageCardMedia src={srcWithRetry} fit="cover" blurBackground blurOnly blurRadius={12} cachePolicy="memory-disk" priority="low" style={StyleSheet.absoluteFill} borderRadius={12} />
-            <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: colors.surfaceMuted }} />
-            <ImageCardMedia src={srcWithRetry} fit="contain" blurBackground={false} cachePolicy="memory-disk" priority="high" borderRadius={12} imageProps={{ contentPosition: 'center' }} onLoad={() => { setLoadError(false); onLoad?.() }} onError={() => setLoadError(true)} style={{ width: '100%', height: '100%' }} />
+            <ImageCardMedia
+              src={srcWithRetry}
+              fit="contain"
+              blurBackground
+              blurRadius={12}
+              cachePolicy="memory-disk"
+              priority="high"
+              borderRadius={12}
+              overlayColor={colors.surfaceMuted}
+              imageProps={{ contentPosition: 'center' }}
+              onLoad={() => { setLoadError(false); onLoad?.() }}
+              onError={() => setLoadError(true)}
+              style={{ width: '100%', height: '100%' }}
+            />
           </View>
         )}
       </View>
@@ -109,7 +134,7 @@ const OptimizedLCPHeroInner: React.FC<{ img: ImgLike; alt?: string; onLoad?: () 
               inset: '-5%',
               width: '110%',
               height: '110%',
-              backgroundImage: `url("${srcWithRetry}")`,
+              backgroundImage: `url("${blurBackdropSrc}")`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               filter: 'blur(22px)',

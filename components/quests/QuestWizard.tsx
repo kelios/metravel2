@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
 import { generatePrintableQuest } from './QuestPrintable';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS as _DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -406,7 +407,14 @@ const StepCard = memo((props: StepCardProps) => {
                         <>
                             <Text style={styles.photoHint}>Это статичное фото-подсказка, не интерактивная карта.</Text>
                             <Pressable style={styles.imagePreview} onPress={() => setImageModalVisible(true)}>
-                                <Image source={typeof step.image === 'string' ? { uri: step.image } : step.image} style={styles.previewImage} />
+                                <ImageCardMedia
+                                    source={typeof step.image === 'string' ? { uri: step.image } : step.image}
+                                    fit="contain"
+                                    blurBackground
+                                    blurRadius={16}
+                                    alt={step.title ? `Фото-подсказка для шага ${step.title}` : 'Фото-подсказка'}
+                                    style={styles.previewImage}
+                                />
                                 <View style={styles.imageOverlay}><Text style={styles.overlayText}>Нажмите для увеличения</Text></View>
                             </Pressable>
                         </>
@@ -852,7 +860,16 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                         <WebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
                                                     ) : (
                                                         <>
-                                                            {posterUri ? <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" /> : null}
+                                                            {posterUri ? (
+                                                                <ImageCardMedia
+                                                                    src={posterUri}
+                                                                    fit="cover"
+                                                                    blurBackground
+                                                                    blurRadius={18}
+                                                                    style={StyleSheet.absoluteFillObject as any}
+                                                                    alt="Постер видео квеста"
+                                                                />
+                                                            ) : null}
                                                             <View style={styles.videoFallbackOverlay}>
                                                                 <Text style={styles.videoFallbackText}>Не удалось воспроизвести видео. Попробуйте ещё раз.</Text>
                                                                 <Pressable onPress={handleVideoRetry} style={styles.videoRetryBtn} hitSlop={8}>

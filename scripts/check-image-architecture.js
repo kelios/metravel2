@@ -12,6 +12,8 @@ const ALLOW_OPTIMIZED_IMAGE_IMPORT_FILES = new Set([
   path.join(ROOT, 'components', 'ui', 'ImageCardMedia.tsx'),
 ]);
 
+const ALLOW_BLUR_DISABLED_FILES = new Set([]);
+
 const TEXT_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx']);
 
 function walk(dir) {
@@ -48,6 +50,7 @@ function reportError(errors) {
   console.error('\nRules:');
   console.error('- No direct imports of "expo-image" inside components/** except ui/OptimizedImage.tsx and ui/ImageCardMedia.tsx');
   console.error('- No direct imports of ui/OptimizedImage from feature components; use ui/ImageCardMedia instead');
+  console.error('- Do not disable blurred same-image backdrops with blurBackground={false}; use the shared image primitives');
   process.exit(1);
 }
 
@@ -79,6 +82,11 @@ function main() {
       if (!ALLOW_OPTIMIZED_IMAGE_IMPORT_FILES.has(file)) {
         errors.push(`${path.relative(ROOT, file)} imports ui/OptimizedImage directly (use ImageCardMedia)`);
       }
+    }
+
+    // 3) forbid disabling the shared blur backdrop in feature components
+    if (content.includes('blurBackground={false}') && !ALLOW_BLUR_DISABLED_FILES.has(file)) {
+      errors.push(`${path.relative(ROOT, file)} disables blurBackground explicitly`);
     }
   }
 

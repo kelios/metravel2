@@ -161,7 +161,6 @@ function ImageCardMedia({
   const styles = useMemo(() => getStyles(colors), [colors]);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
   const [webLoaded, setWebLoaded] = useState(false);
-  const [webLoadedSrc, setWebLoadedSrc] = useState<string | null>(null);
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -216,6 +215,28 @@ function ImageCardMedia({
     return uri || null;
   }, [resolvedSource, shouldDisableNetwork, webOptimizedSource]);
 
+  const webBlurSrc = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    if (typeof resolvedSource === 'string') return resolvedSource;
+    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
+    if (!uri) return null;
+
+    const numericWidth = typeof width === 'number' && Number.isFinite(width) ? width : 160;
+    const numericHeight = typeof height === 'number' && Number.isFinite(height) ? height : 160;
+    const blurWidth = Math.max(64, Math.min(192, Math.round(numericWidth / 2)));
+    const blurHeight = Math.max(64, Math.min(192, Math.round(numericHeight / 2)));
+
+    return optimizeImageUrl(uri, {
+      width: blurWidth,
+      height: blurHeight,
+      quality: 24,
+      format: 'jpg',
+      fit: 'cover',
+      blur: Math.max(4, Math.round(blurRadius / 2)),
+    }) ?? uri;
+  }, [resolvedSource, width, height, blurRadius]);
+
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
@@ -262,12 +283,10 @@ function ImageCardMedia({
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     setWebLoaded(false);
-    setWebLoadedSrc(null);
   }, [webMainSrc]);
 
-  const handleWebLoad = useCallback((resolvedSrc: string) => {
+  const handleWebLoad = useCallback((_resolvedSrc: string) => {
     setWebLoaded(true);
-    setWebLoadedSrc(resolvedSrc);
     onLoad?.();
   }, [onLoad]);
 
@@ -344,15 +363,15 @@ function ImageCardMedia({
                   width: '110%',
                   height: '110%',
                   backgroundImage:
-                    webLoaded && webLoadedSrc
-                      ? `url("${webLoadedSrc}")`
+                    webBlurSrc
+                      ? `url("${webBlurSrc}")`
                       : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   filter: 'blur(16px)',
                   zIndex: 0,
                   borderRadius: resolvedBorderRadius,
-                  opacity: webLoaded ? 1 : 0,
+                  opacity: webLoaded || !!webBlurSrc ? 1 : 0,
                   contain: 'strict',
                   willChange: 'opacity',
                   backfaceVisibility: 'hidden',

@@ -56,6 +56,18 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
     }) ?? imageUrl;
   }, [imageUrl, maxW, maxH]);
 
+  const blurBackdropUrl = useMemo(() => {
+    if (!imageUrl) return imageUrl;
+    return optimizeImageUrl(imageUrl, {
+      width: 180,
+      height: 180,
+      quality: 20,
+      format: 'jpg',
+      fit: 'cover',
+      blur: 12,
+    }) ?? imageUrl;
+  }, [imageUrl]);
+
   if (Platform.OS === 'web') {
     if (!visible) return null;
 
@@ -81,7 +93,7 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
             inset: '-5%',
             width: '110%',
             height: '110%',
-            backgroundImage: hiResUrl ? `url("${hiResUrl}")` : 'none',
+            backgroundImage: blurBackdropUrl ? `url("${blurBackdropUrl}")` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(24px)',

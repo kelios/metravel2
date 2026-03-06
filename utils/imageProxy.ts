@@ -63,7 +63,7 @@ export function optimizeImageUrl(
 
   if (/^data:/i.test(trimmedUrl) || /^blob:/i.test(trimmedUrl)) return originalUrl;
 
-  const cacheKey = `${trimmedUrl}|${options.width ?? ''}|${options.height ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.dpr ?? ''}|${options.fit ?? ''}`;
+  const cacheKey = `${trimmedUrl}|${options.width ?? ''}|${options.height ?? ''}|${options.quality ?? ''}|${options.format ?? ''}|${options.dpr ?? ''}|${options.fit ?? ''}|${options.blur ?? ''}`;
   const cached = optimizedUrlCache.get(cacheKey);
   if (cached) return cached;
 
