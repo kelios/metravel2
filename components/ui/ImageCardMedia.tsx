@@ -187,6 +187,35 @@ function ImageCardMedia({
     if (!uri) return false;
     return !/^(data:|blob:)/i.test(uri);
   }, [disableRemoteImages, resolvedSource]);
+  // Stabilize width/height for image optimization to prevent URL changes on scroll
+  // Only update when change is significant (>50px) to avoid re-fetching images
+  const stableWidthRef = useRef<number | undefined>(typeof width === 'number' ? width : undefined);
+  const stableHeightRef = useRef<number | undefined>(typeof height === 'number' ? height : undefined);
+  
+  const stableWidth = useMemo(() => {
+    const numericWidth = typeof width === 'number' ? width : undefined;
+    if (numericWidth !== undefined && stableWidthRef.current !== undefined) {
+      if (Math.abs(numericWidth - stableWidthRef.current) > 50) {
+        stableWidthRef.current = numericWidth;
+      }
+    } else if (numericWidth !== undefined) {
+      stableWidthRef.current = numericWidth;
+    }
+    return stableWidthRef.current;
+  }, [width]);
+  
+  const stableHeight = useMemo(() => {
+    const numericHeight = typeof height === 'number' ? height : undefined;
+    if (numericHeight !== undefined && stableHeightRef.current !== undefined) {
+      if (Math.abs(numericHeight - stableHeightRef.current) > 50) {
+        stableHeightRef.current = numericHeight;
+      }
+    } else if (numericHeight !== undefined) {
+      stableHeightRef.current = numericHeight;
+    }
+    return stableHeightRef.current;
+  }, [height]);
+
   const webOptimizedSource = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
@@ -195,19 +224,17 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
     if (isRootRelativeUrl(uri)) return uri;
-    const numericWidth = typeof width === 'number' ? width : undefined;
-    const numericHeight = typeof height === 'number' ? height : undefined;
-    if (!numericWidth && !numericHeight) return null;
+    if (!stableWidth && !stableHeight) return null;
     return (
       optimizeImageUrl(uri, {
-        width: numericWidth,
-        height: numericHeight,
+        width: stableWidth,
+        height: stableHeight,
         quality,
         fit: contentFit === 'contain' ? 'contain' : 'cover',
         format: 'auto',
       }) ?? uri
     );
-  }, [resolvedSource, width, height, contentFit, quality]);
+  }, [resolvedSource, stableWidth, stableHeight, contentFit, quality]);
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     // For require() sources (numbers), return null to use OptimizedImage/ExpoImage
@@ -229,8 +256,9 @@ function ImageCardMedia({
     if (!uri) return null;
     if (isRootRelativeUrl(uri)) return uri;
 
-    const numericWidth = typeof width === 'number' && Number.isFinite(width) ? width : 160;
-    const numericHeight = typeof height === 'number' && Number.isFinite(height) ? height : 160;
+    // Use stable dimensions to prevent URL changes on scroll
+    const numericWidth = stableWidth ?? 160;
+    const numericHeight = stableHeight ?? 160;
     const blurWidth = Math.max(64, Math.min(192, Math.round(numericWidth / 2)));
     const blurHeight = Math.max(64, Math.min(192, Math.round(numericHeight / 2)));
 
@@ -242,7 +270,7 @@ function ImageCardMedia({
       fit: 'cover',
       blur: Math.max(4, Math.round(blurRadius / 2)),
     }) ?? uri;
-  }, [resolvedSource, width, height, blurRadius]);
+  }, [resolvedSource, stableWidth, stableHeight, blurRadius]);
 
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -252,7 +280,8 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
     if (isRootRelativeUrl(uri)) return undefined;
-    const baseWidth = typeof width === 'number' ? width : 320;
+    // Use stable width to prevent srcset changes on scroll
+    const baseWidth = stableWidth ?? 320;
     const srcSetWidths = [
       Math.max(160, Math.round(baseWidth * 0.5)),
       Math.max(320, Math.round(baseWidth)),
@@ -266,7 +295,7 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [resolvedSource, contentFit, quality, width]);
+  }, [resolvedSource, contentFit, quality, stableWidth]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;

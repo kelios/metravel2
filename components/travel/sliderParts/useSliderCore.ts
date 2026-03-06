@@ -165,8 +165,22 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
     };
   }, []);
 
+  // Track if we've received the first real measurement from onLayout
+  const hasInitialMeasurement = useRef(false);
+  
+  // Stabilize containerW to prevent URI cache invalidation on minor width changes
+  // (e.g., mobile address bar appearing/disappearing during scroll)
+  // Allow first measurement unconditionally, then apply 50px threshold
   const setContainerWidth = useCallback((w: number) => {
-    if (Math.abs(w - containerWRef.current) > 2) {
+    // Always accept first real measurement from onLayout
+    if (!hasInitialMeasurement.current) {
+      hasInitialMeasurement.current = true;
+      containerWRef.current = w;
+      setContainerWState(w);
+      return;
+    }
+    // After first measurement, only update on significant changes (>50px)
+    if (Math.abs(w - containerWRef.current) > 50) {
       containerWRef.current = w;
       setContainerWState(w);
     }
