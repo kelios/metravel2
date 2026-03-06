@@ -60,7 +60,7 @@ describe('HomeHero Component', () => {
 
     it('should render subtitle correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Открывайте готовые маршруты/)).toBeTruthy();
+      expect(getByText(/Готовые маршруты/)).toBeTruthy();
     });
 
     it('should render mood cards correctly', () => {

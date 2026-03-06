@@ -134,29 +134,25 @@ const preloadWebImage = async (uri: string): Promise<boolean> => {
 const MOOD_CARDS = [
   {
     title: 'У воды',
-    meta: 'Природа',
-    icon: 'sun',
+    icon: 'droplet',
     filters: { categoryTravelAddress: [84, 110, 113, 193] },
     route: '/search',
   },
   {
-    title: 'Дворцы и замки',
-    meta: 'Город • 1 день',
-    icon: 'coffee',
+    title: 'Замки',
+    icon: 'home',
     filters: { categoryTravelAddress: [33, 43] },
     route: '/search',
   },
   {
     title: 'Руины',
-    meta: 'История',
     icon: 'columns',
     filters: { categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] },
     route: '/search',
   },
   {
-    title: 'Активный выезд',
-    meta: 'Треккинг • Хайкинг',
-    icon: 'activity',
+    title: 'Хайкинг',
+    icon: 'trending-up',
     filters: { categories: [21, 22, 2] },
     route: '/search',
   },
@@ -273,7 +269,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
     }
     const interval = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % totalSlides);
-    }, 5000);
+    }, 8000);
     return () => clearInterval(interval);
   }, [showSideSlider, totalSlides]);
 
@@ -318,8 +314,8 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
   const currentSlide = BOOK_IMAGES[visibleSlide];
   const isVisibleSlideLoaded = loadedSlides.has(visibleSlide);
   const heroSubtitle = isMobile || (showSideSlider && bookHeight > 0 && bookHeight < 760)
-    ? 'Готовые маршруты, заметки и личная книга путешествий.'
-    : 'Открывайте готовые маршруты, собирайте заметки и превращайте каждую поездку в красивую личную книгу путешествий.';
+    ? 'Готовые маршруты с фото и GPS-треками.'
+    : 'Готовые маршруты, заметки и личная книга путешествий.';
 
   return (
     <View testID="home-hero" style={styles.container}>
@@ -382,20 +378,13 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                           onPress={() => handleQuickFilterPress(card.title, card.filters as unknown as QuickFilterParams, card.route)}
                           style={({ pressed, hovered }) => [
                             styles.bookmarkChip,
-                            styles.bookmarkChip,
                             (pressed || hovered) && styles.bookmarkChipHover,
                           ]}
                           accessibilityRole="button"
-                          accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
+                          accessibilityLabel={`${card.title}. Идея поездки`}
                         >
-                          <View style={styles.bookmarkChipAccent} />
-                          <View style={styles.bookmarkChipIcon}>
-                            <Feather name={card.icon as any} size={14} color={colors.primary} />
-                          </View>
-                          <View style={styles.moodChipText}>
-                            <Text style={styles.moodChipTitle} numberOfLines={2}>{card.title}</Text>
-                            <Text style={styles.moodChipMeta} numberOfLines={2}>{card.meta}</Text>
-                          </View>
+                          <Feather name={card.icon as any} size={13} color={colors.primary} />
+                          <Text style={styles.moodChipTitle}>{card.title}</Text>
                         </Pressable>
                       ))}
                     </View>
@@ -538,11 +527,6 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                         </View>
                       </View>
 
-                      {/* Slide counter */}
-                      <View style={styles.slideCounter}>
-                        <Text style={styles.slideCounterText}>{visibleSlide + 1} / {totalSlides}</Text>
-                      </View>
-
                       {/* Navigation arrows — inside sliderContainer to stay within book page bounds */}
                       <View style={styles.sliderNav}>
                         <Pressable
@@ -598,16 +582,10 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                       (pressed || hovered) && styles.moodChipHover,
                     ]}
                     accessibilityRole="button"
-                    accessibilityLabel={`${card.title} ${card.meta}. Идея поездки`}
+                    accessibilityLabel={`${card.title}. Идея поездки`}
                   >
-                    <View style={styles.moodChipAccent} />
-                    <View style={styles.moodChipIcon}>
-                      <Feather name={card.icon as any} size={16} color={colors.primary} />
-                    </View>
-                    <View style={styles.moodChipText}>
-                      <Text style={styles.moodChipTitle}>{card.title}</Text>
-                      <Text style={styles.moodChipMeta}>{card.meta}</Text>
-                    </View>
+                    <Feather name={card.icon as any} size={14} color={colors.primary} />
+                    <Text style={styles.moodChipTitle}>{card.title}</Text>
                   </Pressable>
                 ))}
               </ScrollView>
