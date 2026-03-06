@@ -142,6 +142,7 @@ const Slide = memo(function Slide({
             onLoad={handleLoad}
             onError={handleError}
             showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(uri)}
+            allowCriticalWebBlur={shouldBlur}
           />
         </>
       )}

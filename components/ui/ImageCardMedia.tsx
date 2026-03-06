@@ -125,6 +125,8 @@ type Props = {
   onError?: () => void;
   /** Show image immediately without waiting for load (for cached images). */
   showImmediately?: boolean;
+  /** Allow blurred web backdrop even for eager/high-priority images. */
+  allowCriticalWebBlur?: boolean;
 };
 
 function ImageCardMedia({
@@ -152,6 +154,7 @@ function ImageCardMedia({
   onLoad,
   onError,
   showImmediately = false,
+  allowCriticalWebBlur = false,
 }: Props) {
   const isJest =
     typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
@@ -276,9 +279,11 @@ function ImageCardMedia({
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
     if (!blurBackground || !webMainSrc) return false;
-    // Avoid promoting the oversized blur backdrop to LCP on eager/critical images.
+    if (allowCriticalWebBlur) return true;
+    // Avoid promoting the oversized blur backdrop to LCP on eager/critical images
+    // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
-  }, [blurBackground, loading, priority, webMainSrc]);
+  }, [allowCriticalWebBlur, blurBackground, loading, priority, webMainSrc]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -326,8 +331,10 @@ function ImageCardMedia({
     if (!canUseResourceHint) return;
     if (typeof document === 'undefined') return;
 
-    const shouldPreload = loading === 'eager' && document.readyState !== 'complete';
-    const rel = shouldPreload ? 'preload' : 'prefetch';
+    // The actual <img> already uses eager loading + fetchPriority when needed.
+    // Additional <link rel="preload"> hints here produce noisy browser warnings
+    // when the resource is not consumed immediately after window load.
+    const rel = 'prefetch';
     const id = `img-hint-${encodeURIComponent(prefetchHref)}`;
     if (document.getElementById(id)) return;
 
@@ -336,10 +343,6 @@ function ImageCardMedia({
     link.rel = rel;
     link.as = 'image';
     link.href = prefetchHref;
-    if (shouldPreload) {
-      link.fetchPriority = 'high';
-      link.setAttribute('fetchPriority', 'high');
-    }
     document.head.appendChild(link);
   }, [prefetch, priority, prefetchHref, loading, shouldDisableNetwork, canUseResourceHint]);
 
