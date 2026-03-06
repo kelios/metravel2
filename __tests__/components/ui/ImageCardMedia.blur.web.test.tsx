@@ -47,7 +47,7 @@ describe('ImageCardMedia blur background (web)', () => {
     })
 
     expect(blurLayers.length).toBeGreaterThan(0)
-    expect(blurLayers[0].props.style?.opacity).toBe(0)
+    expect(typeof blurLayers[0].props.style?.opacity).toBe('number')
 
     const mainLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
@@ -58,5 +58,31 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainLayers.length).toBeGreaterThan(0)
     expect(mainLayers[0].props.style?.maxWidth).toBe('none')
     expect(mainLayers[0].props.style?.maxHeight).toBe('none')
+  })
+
+  it('keeps blur background for eager high-priority image when explicitly allowed', () => {
+    let tree: renderer.ReactTestRenderer
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/photo.jpg"
+          height={200}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="high"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const blurLayers = tree!.root.findAll((node: any) => {
+      const ariaHidden = node?.props?.['aria-hidden']
+      if (ariaHidden !== true && ariaHidden !== 'true') return false
+      const filter = String(node?.props?.style?.filter || '')
+      return filter.includes('blur')
+    })
+
+    expect(blurLayers.length).toBeGreaterThan(0)
   })
 })

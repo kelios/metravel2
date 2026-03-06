@@ -34,30 +34,77 @@ export const createHomeHeroStyles = ({
   const pageWidth = bookHeight > 0 ? Math.round(bookHeight * 1040 / 765 / 2) : 0;
   const hasBookLayout = showSideSlider && bookHeight > 0;
   const isOver1200Desktop = showSideSlider && viewportWidth >= 1200;
+  const isNarrowDesktopBook = showSideSlider && viewportWidth >= 1280 && viewportWidth < 1480;
   const isLargeDesktopBook = showSideSlider && viewportWidth >= 1920;
   const isUltraWideBook = showSideSlider && viewportWidth >= 2560;
   const isCompactBookLayout = hasBookLayout && bookHeight <= 760;
   const leftPageWidth = showSideSlider ? (isOver1200Desktop ? '54%' : isDesktop ? '64%' : isTablet ? '58%' : '54%') : '100%';
   const rightPageWidth = showSideSlider ? (isDesktop ? '36%' : isTablet ? '42%' : '46%') : 320;
   const bookScale = hasBookLayout ? bookHeight / 864 : 1;
-  const desktopTypographyScale = !hasBookLayout ? 1 : isUltraWideBook ? 1.08 : isLargeDesktopBook ? 1.04 : isOver1200Desktop ? 1.08 : 1;
-  const desktopSubtitleWidthScale = !hasBookLayout ? 1 : isUltraWideBook ? 1.18 : isLargeDesktopBook ? 1.1 : isOver1200Desktop ? 1.08 : 1;
+  const desktopTypographyScale = !hasBookLayout
+    ? 1
+    : isNarrowDesktopBook
+      ? 0.82
+      : isUltraWideBook
+        ? 1.08
+        : isLargeDesktopBook
+          ? 1.04
+          : isOver1200Desktop
+            ? 1.08
+            : 1;
+  const desktopSubtitleWidthScale = !hasBookLayout
+    ? 1
+    : isNarrowDesktopBook
+      ? 0.9
+      : isUltraWideBook
+        ? 1.18
+        : isLargeDesktopBook
+          ? 1.1
+          : isOver1200Desktop
+            ? 1.08
+            : 1;
   const leftPageSafeInset = !hasBookLayout ? 0 : isUltraWideBook ? 68 : isLargeDesktopBook ? 56 : isOver1200Desktop ? 52 : 18;
-  const titleScaleMax = isUltraWideBook ? 58 : isLargeDesktopBook ? 50 : 42;
-  const titleLineHeightMax = isUltraWideBook ? 66 : isLargeDesktopBook ? 56 : 50;
-  const subtitleScaleMax = isUltraWideBook ? 17 : isLargeDesktopBook ? 15 : 14;
-  const subtitleLineHeightMax = isUltraWideBook ? 26 : isLargeDesktopBook ? 22 : 22;
-  const subtitleWidthMax = isUltraWideBook ? 440 : isLargeDesktopBook ? 380 : 330;
+  const titleScaleMax = isNarrowDesktopBook ? 36 : isUltraWideBook ? 74 : isLargeDesktopBook ? 62 : isOver1200Desktop ? 50 : 42;
+  const titleLineHeightMax = isNarrowDesktopBook ? 40 : isUltraWideBook ? 82 : isLargeDesktopBook ? 68 : isOver1200Desktop ? 56 : 50;
+  const subtitleScaleMax = isNarrowDesktopBook ? 13 : isUltraWideBook ? 22 : isLargeDesktopBook ? 18 : isOver1200Desktop ? 15 : 14;
+  const subtitleLineHeightMax = isUltraWideBook ? 32 : isLargeDesktopBook ? 27 : 22;
+  const subtitleWidthMax = isNarrowDesktopBook ? 290 : isUltraWideBook ? 560 : isLargeDesktopBook ? 460 : isOver1200Desktop ? 360 : 330;
   const leftPagePaddingLeftMax = isUltraWideBook ? 280 : isLargeDesktopBook ? 240 : 190;
   const leftPagePaddingRightMax = isUltraWideBook ? 220 : isLargeDesktopBook ? 200 : 120;
   const leftPagePaddingTopMax = isUltraWideBook ? 128 : isLargeDesktopBook ? 116 : 98;
   const leftPagePaddingBottomMax = isUltraWideBook ? 148 : isLargeDesktopBook ? 132 : 121;
   const leftPageRowGapMax = isUltraWideBook ? 14 : isLargeDesktopBook ? 12 : 10;
+  const rightPagePaddingTop: number | string = !hasBookLayout
+    ? 0
+    : isUltraWideBook
+      ? '8%'
+      : isLargeDesktopBook
+        ? '8%'
+        : '9%';
+  const rightPagePaddingBottom: number | string = !hasBookLayout
+    ? 0
+    : isUltraWideBook
+      ? '13%'
+      : isLargeDesktopBook
+        ? '16%'
+        : '19%';
+  const rightPagePaddingRight: number | string = !hasBookLayout
+    ? 0
+    : isUltraWideBook
+      ? '12%'
+      : '18%';
+  const rightPagePaddingLeft: number | string = !hasBookLayout
+    ? 0
+    : isUltraWideBook
+      ? '3%'
+      : '4%';
   // Baseline tuned from validated desktop layout (bookHeight ~= 864)
-  const leftPagePaddingLeft = hasBookLayout ? clamp(Math.round(190 * bookScale) + leftPageSafeInset, 96, leftPagePaddingLeftMax + leftPageSafeInset) : 100;
-  const leftPagePaddingRight = hasBookLayout ? clamp(Math.round(120 * bookScale), 28, leftPagePaddingRightMax) : 16;
-  const leftPagePaddingTop = hasBookLayout ? clamp(Math.round(98 * bookScale), 40, leftPagePaddingTopMax) : 48;
-  const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round(121 * bookScale), 72, leftPagePaddingBottomMax) : 110;
+  const leftPagePaddingLeft = hasBookLayout
+    ? clamp(Math.round((isNarrowDesktopBook ? 148 : 190) * bookScale) + leftPageSafeInset, isNarrowDesktopBook ? 72 : 96, leftPagePaddingLeftMax + leftPageSafeInset)
+    : 100;
+  const leftPagePaddingRight = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 84 : 120) * bookScale), 20, leftPagePaddingRightMax) : 16;
+  const leftPagePaddingTop = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 84 : 98) * bookScale), 32, leftPagePaddingTopMax) : 48;
+  const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 96 : 121) * bookScale), 56, leftPagePaddingBottomMax) : 110;
   const leftPageRowGap = hasBookLayout ? clamp(Math.round(10 * bookScale), 6, leftPageRowGapMax) : 8;
   const baseDesktopBookTitleSize = hasBookLayout
     ? Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056))
@@ -126,6 +173,9 @@ export const createHomeHeroStyles = ({
       backgroundRepeat: 'no-repeat',
       aspectRatio: '1040 / 765',
       maxHeight: 'calc(100vh - 130px)',
+      maxWidth: isUltraWideBook ? 1780 : isLargeDesktopBook ? 1600 : 1400,
+      marginLeft: 'auto',
+      marginRight: 'auto',
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
@@ -207,16 +257,30 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: showSideSlider ? {
       backgroundColor: 'transparent',
       borderRadius: 0,
-      paddingTop: isDesktop ? '9%' : '8%',
-      paddingBottom: isDesktop ? '20%' : '10%',
-      paddingLeft: isDesktop ? '0%' : '1%',
-      paddingRight: isDesktop ? '15%' : '11%',
+      paddingTop: rightPagePaddingTop,
+      paddingBottom: rightPagePaddingBottom,
+      paddingLeft: rightPagePaddingLeft,
+      paddingRight: rightPagePaddingRight,
       display: 'flex',
       flexDirection: 'column',
+      justifyContent: 'stretch',
       boxSizing: 'border-box',
       flex: 1,
       overflow: 'hidden',
     } as any : {} }),
+  },
+  sliderFrame: {
+    width: '100%',
+    flex: 1,
+    minHeight: 0,
+    position: 'relative' as const,
+    overflow: 'hidden',
+    borderRadius: isNarrowDesktopBook ? 14 : 12,
+    ...Platform.select({ web: {
+      alignSelf: 'stretch',
+      clipPath: `inset(0 round ${isNarrowDesktopBook ? 14 : 12}px)`,
+      boxSizing: 'border-box',
+    } as any }),
   },
   sliderPageGoldLine: {
     position: 'absolute' as const, top: 0, left: 0, right: 0,
@@ -244,11 +308,14 @@ export const createHomeHeroStyles = ({
     width: '100%', flex: 1, minHeight: sliderHeight, borderRadius: isMobile ? 4 : 6, overflow: 'hidden',
     backgroundColor: '#1A1A1A', borderWidth: 0,
     ...Platform.select({ web: {
-      boxShadow: '0 2px 12px rgba(10,8,6,0.25)',
-      border: '1px solid rgba(30,24,18,0.30)',
+      boxShadow: isNarrowDesktopBook
+        ? '0 0 0 1px rgba(245,240,232,0.20), 0 0 18px 4px rgba(244,239,232,0.34), 0 12px 24px rgba(10,8,6,0.10)'
+        : '0 0 0 1px rgba(245,240,232,0.16), 0 0 14px 3px rgba(244,239,232,0.26), 0 8px 18px rgba(10,8,6,0.12)',
       minHeight: sliderHeight,
       flexGrow: 1,
       flexShrink: 0,
+      transform: showSideSlider ? (isNarrowDesktopBook ? 'rotate(-1deg)' : 'rotate(-0.6deg)') : 'none',
+      transformOrigin: 'center center',
     } as any }),
   },
   slideWrapper: {

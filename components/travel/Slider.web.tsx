@@ -24,7 +24,6 @@ import React, {
   forwardRef,
 } from 'react';
 import {
-  Platform,
   View,
   ScrollView,
   LayoutChangeEvent,
@@ -32,15 +31,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
 import type { SliderProps, SliderRef } from './sliderParts/types';
-import { buildUriWeb, clamp, SLIDER_MAX_WIDTH, computeSliderHeight, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
+import { buildUriWeb, SLIDER_MAX_WIDTH, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
 import { createSliderStyles } from './sliderParts/styles';
 import Slide from './sliderParts/Slide';
-import { prefetchImage } from '@/components/ui/ImageCardMedia';
 import { useWebScrollInteraction } from './sliderParts/useWebScrollInteraction';
+import { useSliderCore } from './sliderParts/useSliderCore';
 
 // Re-export types for consumers that import from '@/components/travel/Slider.web'
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
@@ -74,7 +71,7 @@ if (typeof document !== 'undefined') {
 }
 
 /* ---------- Virtualization window size (current ± WINDOW) ---------- */
-const VIRTUAL_WINDOW = 2;
+const VIRTUAL_WINDOW = 1;
 
 /* ---------- Memoized sub-components ---------- */
 
@@ -206,132 +203,60 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   } = props;
 
   const sliderInstanceId = useId();
-  const insets = useSafeAreaInsets();
-  const { width: winW, height: winH, isPhone, isLargePhone, isTablet: isTabletBp, isLargeTablet } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
-  const isTablet = isTabletBp || isLargeTablet;
+  const {
+    containerW,
+    containerH: coreContainerH,
+    currentIndex,
+    indexRef,
+    containerWRef,
+    isMobile,
+    isTablet,
+    insets,
+    getUri,
+    setContainerWidth,
+    setActiveIndex,
+    setActiveIndexFromOffset,
+    dismissSwipeHint,
+    enablePrefetch,
+    next,
+    prev,
+    scrollTo,
+    setScrollToImpl,
+    pauseAutoplay,
+    resumeAutoplay,
+  } = useSliderCore({
+    images,
+    aspectRatio,
+    autoPlay,
+    autoPlayInterval,
+    preloadCount: _preloadCount,
+    mobileHeightPercent,
+    onIndexChanged,
+    buildUri: (img, w, h, isFirst) => buildUriWeb(img, w, h, fit, isFirst),
+    deferWebPrefetchUntilInteraction: true,
+    handleAppState: false,
+    includeUriMap: false,
+  });
 
-  // State
-  const [containerW, setContainerWState] = useState(winW);
-  const [currentIndex, setCurrentIndex] = useState(0);
   // Track whether onLayout has fired so we can use CSS '100%' width before the first measurement
   const [layoutMeasured, setLayoutMeasured] = useState(false);
 
   // Refs
-  const indexRef = useRef(0);
   const currentIndexRef = useRef(0);
-  const containerWRef = useRef(winW);
   const scrollRef = useRef<any>(null);
   const wrapperRef = useRef<any>(null);
   const isDraggingRef = useRef(false);
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoplayTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pausedByTouch = useRef(false);
   // Cached DOM node refs — set once, avoid querySelector on every interaction
   const scrollNodeRef = useRef<HTMLElement | null>(null);
   const wrapperNodeRef = useRef<HTMLElement | null>(null);
 
-  // First image aspect ratio
-  const firstAR = useMemo(() => {
-    const f = images[0];
-    return f?.width && f?.height ? f.width / f.height : aspectRatio;
-  }, [images, aspectRatio]);
-
-  // Compute height (ignored when fillContainer is true)
-  const computedH = useMemo(() => computeSliderHeight(containerW, {
-    imagesLength: images.length,
-    isMobile,
-    isTablet,
-    winH,
-    insetsTop: insets.top || 0,
-    insetsBottom: insets.bottom || 0,
-    mobileHeightPercent,
-    firstAR,
-  }), [containerW, images.length, isMobile, isTablet, winH, insets.top, insets.bottom, mobileHeightPercent, firstAR]);
-  
-  // When fillContainer, use '100%' for height
+  const computedH = coreContainerH;
   const containerH = fillContainer ? '100%' : computedH;
 
-  // Lazy URI builder — compute URI on demand instead of for all images upfront
-  const getUri = useCallback(
-    (index: number): string => {
-      const img = images[index];
-      if (!img) return '';
-      return buildUriWeb(img, containerW, computedH, fit, index === 0);
-    },
-    [images, containerW, computedH, fit],
-  );
-
-  const prefetchedUrisRef = useRef<Record<string, true>>({});
-  const mountedSlidesRef = useRef<Set<number>>(new Set([0]));
-
-  const canPrefetchOnWeb = useCallback(() => {
-    if (Platform.OS !== 'web') return false;
-    if (isMobile) return false;
-    if (typeof navigator === 'undefined') return false;
-    const connection =
-      (navigator as any).connection ||
-      (navigator as any).mozConnection ||
-      (navigator as any).webkitConnection;
-    if (connection?.saveData) return false;
-    const effectiveType = String(connection?.effectiveType || '').toLowerCase();
-    if (effectiveType.includes('2g') || effectiveType === '3g') return false;
-    return true;
-  }, [isMobile]);
-
   useEffect(() => {
-    if (!canPrefetchOnWeb()) return;
-    if (images.length < 2) return;
-
-    const candidates = [currentIndex - 1, currentIndex + 1];
-    for (const idx of candidates) {
-      if (idx < 0 || idx >= images.length) continue;
-      const uri = getUri(idx);
-      if (!uri) continue;
-      if (prefetchedUrisRef.current[uri]) continue;
-      prefetchedUrisRef.current[uri] = true;
-      prefetchImage(uri).catch(() => undefined);
-    }
-  }, [canPrefetchOnWeb, currentIndex, getUri, images.length]);
-
-  useEffect(() => {
-    mountedSlidesRef.current.add(currentIndex);
+    currentIndexRef.current = currentIndex;
   }, [currentIndex]);
-
-  useEffect(() => {
-    if (!canPrefetchOnWeb()) return;
-    if (images.length < 3) return;
-    if (images.length > 24) return;
-
-    for (let idx = 0; idx < images.length; idx++) {
-      if (idx === 0 || idx === currentIndex) continue;
-      const uri = getUri(idx);
-      if (!uri) continue;
-      if (prefetchedUrisRef.current[uri]) continue;
-      prefetchedUrisRef.current[uri] = true;
-      prefetchImage(uri).catch(() => undefined);
-    }
-  }, [canPrefetchOnWeb, currentIndex, getUri, images.length]);
-
-  // Container width setter
-  const setContainerWidth = useCallback((w: number) => {
-    if (Math.abs(w - containerWRef.current) > 2) {
-      containerWRef.current = w;
-      setContainerWState(w);
-    }
-  }, []);
-
-  // Set active index
-  const setActiveIndex = useCallback(
-    (idx: number) => {
-      const clampedIdx = clamp(idx, 0, Math.max(0, images.length - 1));
-      indexRef.current = clampedIdx;
-      currentIndexRef.current = clampedIdx;
-      setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
-      onIndexChanged?.(clampedIdx);
-    },
-    [images.length, onIndexChanged]
-  );
 
   // Extract underlying DOM element from a React Native Web ref
   const getDomNode = useCallback((ref: React.RefObject<any>): HTMLElement | null => {
@@ -423,7 +348,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       // showing a partial next/previous slide on first load.
       snapScrollToIndex(indexRef.current, w);
     }
-  }, [resolveNodes, setContainerWidth, snapScrollToIndex]);
+  }, [containerWRef, indexRef, resolveNodes, setContainerWidth, snapScrollToIndex]);
 
   // ResizeObserver
   useIsomorphicLayoutEffect(() => {
@@ -453,10 +378,10 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     };
   }, [syncContainerWidthFromDom]);
 
-  // ScrollTo implementation
-  const scrollTo = useCallback(
+  // Web-specific scroll implementation is injected into the shared slider core.
+  const scrollToDom = useCallback(
     (i: number, _animated = true) => {
-      const wrapped = clamp(i, 0, images.length - 1);
+      const wrapped = Math.max(0, Math.min(i, images.length - 1));
       resolveNodes();
       const node = scrollNodeRef.current;
       if (node) {
@@ -480,21 +405,20 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [resolveNodes, images.length, setActiveIndex, containerWRef]
   );
 
+  useEffect(() => {
+    setScrollToImpl(scrollToDom);
+    return () => setScrollToImpl(null);
+  }, [scrollToDom, setScrollToImpl]);
+
   // Expose methods via ref
   useImperativeHandle(
     ref,
     (): SliderRef => ({
       scrollTo,
-      next: () => {
-        const target = (indexRef.current + 1) % images.length;
-        scrollTo(target);
-      },
-      prev: () => {
-        const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
-        scrollTo(target);
-      },
+      next,
+      prev,
     }),
-    [scrollTo, images.length]
+    [next, prev, scrollTo]
   );
 
   // Layout handler
@@ -506,7 +430,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       resolveNodes();
       snapScrollToIndex(indexRef.current, w);
     },
-    [setContainerWidth, resolveNodes, snapScrollToIndex]
+    [indexRef, setContainerWidth, resolveNodes, snapScrollToIndex]
   );
 
   // Web scroll handler
@@ -517,51 +441,18 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const node = scrollNodeRef.current;
         const xIdle = node?.scrollLeft ?? 0;
         const cwIdle = containerWRef.current || 1;
-        const idx = Math.round(xIdle / cwIdle);
-        setActiveIndex(idx);
+        setActiveIndexFromOffset(xIdle);
+        const snappedIdx = Math.max(0, Math.min(Math.round(xIdle / cwIdle), images.length - 1));
+
+        if (!node) return;
+        const targetLeft = snappedIdx * cwIdle;
+        if (Math.abs(xIdle - targetLeft) > 1) {
+          scrollTo(snappedIdx, false);
+        }
       }, 80);
     },
-    [setActiveIndex]
+    [containerWRef, images.length, scrollTo, setActiveIndexFromOffset]
   );
-
-  // Autoplay control
-  const clearAutoplay = useCallback(() => {
-    if (autoplayTimer.current != null) {
-      clearInterval(autoplayTimer.current);
-      autoplayTimer.current = null;
-    }
-  }, []);
-
-  const autoplayAllowed = autoPlay && !isMobile;
-
-  const canAutoplay = useCallback(() => {
-    return autoplayAllowed && images.length > 1 && !pausedByTouch.current;
-  }, [autoplayAllowed, images.length]);
-
-  const scheduleAutoplay = useCallback(() => {
-    clearAutoplay();
-    if (!canAutoplay()) return;
-    autoplayTimer.current = setInterval(() => {
-      const target = (indexRef.current + 1) % images.length;
-      scrollTo(target);
-    }, Math.max(2500, autoPlayInterval));
-  }, [autoPlayInterval, canAutoplay, clearAutoplay, images.length, scrollTo]);
-
-  const pauseAutoplay = useCallback(() => {
-    pausedByTouch.current = true;
-    clearAutoplay();
-  }, [clearAutoplay]);
-
-  const resumeAutoplay = useCallback(() => {
-    pausedByTouch.current = false;
-    scheduleAutoplay();
-  }, [scheduleAutoplay]);
-
-  // Start autoplay on mount
-  useEffect(() => {
-    scheduleAutoplay();
-    return clearAutoplay;
-  }, [scheduleAutoplay, clearAutoplay]);
 
   // Consolidated web scroll/drag/keyboard/touch interaction (E6.2)
   useWebScrollInteraction({
@@ -573,7 +464,10 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     resolveNodes,
     setActiveIndex,
     scrollTo,
-    pausedByTouchRef: pausedByTouch,
+    enablePrefetch,
+    dismissSwipeHint,
+    pauseAutoplay,
+    resumeAutoplay,
   });
 
   // Invalidate cached DOM nodes on unmount
@@ -644,8 +538,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               // Virtualization: only render Slide for slides within the visible window
               const distanceToCurrent = Math.abs(index - currentIndex);
               const inWindow = distanceToCurrent <= VIRTUAL_WINDOW;
-              const alreadyMounted = mountedSlidesRef.current.has(index);
-              const shouldRender = inWindow || alreadyMounted;
+              const shouldRender = inWindow;
               const preloadPriority = distanceToCurrent <= 1;
 
               return (

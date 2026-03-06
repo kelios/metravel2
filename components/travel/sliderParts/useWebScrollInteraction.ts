@@ -24,8 +24,10 @@ export interface UseWebScrollInteractionOptions {
   setActiveIndex: (idx: number) => void;
   /** Programmatic scroll-to function */
   scrollTo: (idx: number, animated?: boolean) => void;
-  /** Whether autoplay is paused */
-  pausedByTouchRef: React.MutableRefObject<boolean>;
+  /** Prefetch can be enabled after first interaction */
+  enablePrefetch?: () => void;
+  /** Dismiss swipe hint after first interaction */
+  dismissSwipeHint?: () => void;
   /** Pause autoplay */
   pauseAutoplay?: () => void;
   /** Resume autoplay */
@@ -54,6 +56,10 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     resolveNodes,
     setActiveIndex,
     scrollTo,
+    enablePrefetch,
+    dismissSwipeHint,
+    pauseAutoplay,
+    resumeAutoplay,
   } = options;
 
   const isDraggingRef = useRef(false);
@@ -107,6 +113,8 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     if (parent) parent.setAttribute('tabindex', '0');
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      dismissSwipeHint?.();
+      enablePrefetch?.();
       if (e.key === 'ArrowLeft') {
         const target = (indexRef.current - 1 + slideCount) % Math.max(1, slideCount);
         scrollTo(target);
@@ -119,6 +127,9 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     // Mouse drag
     const onMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
+      dismissSwipeHint?.();
+      enablePrefetch?.();
+      pauseAutoplay?.();
       isDraggingRef.current = true;
       dragStartXRef.current = e.pageX;
       dragScrollLeftRef.current = node.scrollLeft;
@@ -150,6 +161,7 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       target = clamp(target, 0, Math.max(0, slideCount - 1));
       snapToSlide(target);
       node.style.scrollSnapType = '';
+      resumeAutoplay?.();
     };
 
     const onMouseLeave = () => {
@@ -158,6 +170,7 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       node.style.cursor = '';
       node.style.userSelect = '';
       settleToNearestSlide();
+      resumeAutoplay?.();
     };
 
     // Touch / pointer swipe (mobile web)
@@ -167,6 +180,9 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
 
     const onPointerDown = (e: PointerEvent) => {
       if (!isTouchPointerEvent(e)) return;
+      dismissSwipeHint?.();
+      enablePrefetch?.();
+      pauseAutoplay?.();
       isDraggingRef.current = true;
       dragStartXRef.current = e.pageX;
       dragScrollLeftRef.current = node.scrollLeft;
@@ -188,6 +204,7 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       if (!isTouchPointerEvent(e)) return;
       isDraggingRef.current = false;
       settleToNearestSlide();
+      resumeAutoplay?.();
     };
 
     const onPointerCancel = (e: PointerEvent) => {
@@ -195,11 +212,15 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       if (!isTouchPointerEvent(e)) return;
       isDraggingRef.current = false;
       settleToNearestSlide();
+      resumeAutoplay?.();
     };
 
     // iOS Safari fallback (no PointerEvent)
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
+      dismissSwipeHint?.();
+      enablePrefetch?.();
+      pauseAutoplay?.();
       isDraggingRef.current = true;
       dragStartXRef.current = e.touches[0].pageX;
       dragScrollLeftRef.current = node.scrollLeft;
@@ -218,6 +239,7 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       settleToNearestSlide();
+      resumeAutoplay?.();
     };
 
     const onScrollEnd = () => {
@@ -267,6 +289,5 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideCount, setActiveIndex, scrollTo, resolveNodes]);
+  }, [dismissSwipeHint, enablePrefetch, pauseAutoplay, resumeAutoplay, slideCount, setActiveIndex, scrollTo, resolveNodes]);
 }
-

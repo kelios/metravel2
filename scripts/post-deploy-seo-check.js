@@ -479,6 +479,8 @@ async function main() {
   if (summary.errorCount > 0) {
     process.exit(1)
   }
+
+  process.exit(0)
 }
 
 if (typeof module !== 'undefined' && module.exports) {

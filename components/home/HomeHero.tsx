@@ -46,7 +46,9 @@ const buildFilterPath = (base: string, params?: QuickFilterParams) => {
 
 const BOOK_IMAGES = [
   {
-    source: require('../../assets/images/pdf.webp'),
+    source: Platform.OS === 'web'
+      ? { uri: '/assets/images/pdf.webp' }
+      : require('../../assets/images/pdf.webp'),
     alt: 'Тропа ведьм — Германия',
     title: 'Тропа ведьм',
     subtitle: 'Хайкинг • Горный маршрут • Германия',
@@ -174,18 +176,21 @@ const HERO_HIGHLIGHTS = [
 ] as const;
 
 export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
+const HOME_HERO_BOOK_LAYOUT_MIN_WIDTH = 1280;
 
 const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, travelsCountLoading: _travelsCountLoading = false }: HomeHeroProps) {
   const router = useRouter();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop, width, isPortrait } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isDesktop, width, isPortrait } = useResponsive();
 
   const isMobile = isSmallPhone || isPhone || isLargePhone;
   const isLandscape = !isPortrait && isMobile; // RESP-05
   const isWeb = Platform.OS === 'web';
-  const isNarrowLayout = isMobile || (isWeb && width <= 860);
-  const showSideSlider = isWeb && (isDesktop || isLargeTablet || isTablet);
-  const sliderHeight = isDesktop ? 420 : 360;
+  const isNarrowLayout = isMobile || (isWeb && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH);
+  const showSideSlider = isWeb
+    && width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH
+    && isDesktop;
+  const sliderHeight = isDesktop ? (width < 1480 ? 360 : 420) : 360;
   const sliderMediaWidth = isDesktop ? 500 : 380;
   const featuredCardWidth = useMemo(() => {
     if (!isWeb) return undefined;
@@ -342,12 +347,6 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
 
                 {/* Title */}
                 <View>
-                  {showSideSlider && !isNarrowLayout && (
-                    <View style={styles.chapterHeader}>
-                      <Text style={styles.chapterLabel}>Глава 01</Text>
-                      <View style={styles.chapterDivider} />
-                    </View>
-                  )}
                   <Text style={styles.title}>
                     Куда поехать{isNarrowLayout ? ' ' : '\n'}
                   </Text>
@@ -475,80 +474,82 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                   {isWeb && <View style={styles.heroPageCurlRight} />}
                   {/* Page number */}
                   <Text style={styles.sliderPageNumber}>2</Text>
-              <Pressable
-                onPress={() => handleOpenArticles(currentSlide.href)}
-                style={styles.sliderContainer}
-                accessibilityRole="link"
-                accessibilityLabel={`Маршрут: ${currentSlide.title}`}
-                accessibilityHint="Открыть маршрут"
-              >
-                {/* Keep the currently visible slide mounted; switch after preload to avoid blank frame */}
-                <View
-                  style={[
-                    styles.slideWrapper,
-                    Platform.OS === 'web' ? ({ transition: 'opacity 0.5s ease' } as any) : null,
-                  ]}
-                >
-                  <ImageCardMedia
-                    source={currentSlide.source}
-                    width={sliderMediaWidth}
-                    height={sliderHeight}
-                    borderRadius={0}
-                    fit="contain"
-                    blurBackground
-                    quality={90}
-                    alt={currentSlide.alt}
-                    loading={isVisibleSlideLoaded ? 'eager' : 'lazy'}
-                    showImmediately={isVisibleSlideLoaded}
-                    style={styles.slideImage}
-                    onLoad={() => markSlideAsLoaded(visibleSlide)}
-                  />
-                </View>
+                  <View style={styles.sliderFrame}>
+                    <Pressable
+                      onPress={() => handleOpenArticles(currentSlide.href)}
+                      style={styles.sliderContainer}
+                      accessibilityRole="link"
+                      accessibilityLabel={`Маршрут: ${currentSlide.title}`}
+                      accessibilityHint="Открыть маршрут"
+                    >
+                      {/* Keep the currently visible slide mounted; switch after preload to avoid blank frame */}
+                      <View
+                        style={[
+                          styles.slideWrapper,
+                          Platform.OS === 'web' ? ({ transition: 'opacity 0.5s ease' } as any) : null,
+                        ]}
+                      >
+                        <ImageCardMedia
+                          source={currentSlide.source}
+                          width={sliderMediaWidth}
+                          height={sliderHeight}
+                          borderRadius={0}
+                          fit="contain"
+                          blurBackground
+                          allowCriticalWebBlur
+                          quality={90}
+                          alt={currentSlide.alt}
+                          loading={isVisibleSlideLoaded ? 'eager' : 'lazy'}
+                          showImmediately={isVisibleSlideLoaded}
+                          style={styles.slideImage}
+                          onLoad={() => markSlideAsLoaded(visibleSlide)}
+                        />
+                      </View>
+                      {/* Overlay with title */}
+                      <View style={styles.slideOverlay}>
+                        <View style={styles.slideEyebrow}>
+                          <Feather name="map-pin" size={11} color="#FFFFFF" />
+                          <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+                        </View>
+                        <View style={styles.slideCaption}>
+                          <Text style={styles.slideTitle}>{currentSlide.title}</Text>
+                          <Text style={styles.slideSubtitle}>{currentSlide.subtitle}</Text>
+                        </View>
+                      </View>
 
-                {/* Overlay with title */}
-                <View style={styles.slideOverlay}>
-                  <View style={styles.slideEyebrow}>
-                    <Feather name="map-pin" size={11} color="#FFFFFF" />
-                    <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+                      {/* Slide counter */}
+                      <View style={styles.slideCounter}>
+                        <Text style={styles.slideCounterText}>{visibleSlide + 1} / {totalSlides}</Text>
+                      </View>
+
+                      {/* Navigation arrows — inside sliderContainer to stay within book page bounds */}
+                      <View style={styles.sliderNav}>
+                        <Pressable
+                          onPress={handlePrevSlide}
+                          style={({ hovered }) => [
+                            styles.sliderNavBtn,
+                            hovered && styles.sliderNavBtnHover,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel="Предыдущий слайд"
+                        >
+                          <Feather name="chevron-left" size={18} color="#fff" />
+                        </Pressable>
+                        <Pressable
+                          onPress={handleNextSlide}
+                          style={({ hovered }) => [
+                            styles.sliderNavBtn,
+                            hovered && styles.sliderNavBtnHover,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel="Следующий слайд"
+                        >
+                          <Feather name="chevron-right" size={18} color="#fff" />
+                        </Pressable>
+                      </View>
+                    </Pressable>
                   </View>
-                  <View style={styles.slideCaption}>
-                    <Text style={styles.slideTitle}>{currentSlide.title}</Text>
-                    <Text style={styles.slideSubtitle}>{currentSlide.subtitle}</Text>
-                  </View>
                 </View>
-
-                {/* Slide counter */}
-                <View style={styles.slideCounter}>
-                  <Text style={styles.slideCounterText}>{visibleSlide + 1} / {totalSlides}</Text>
-                </View>
-
-                {/* Navigation arrows — inside sliderContainer to stay within book page bounds */}
-                <View style={styles.sliderNav}>
-                  <Pressable
-                    onPress={handlePrevSlide}
-                    style={({ hovered }) => [
-                      styles.sliderNavBtn,
-                      hovered && styles.sliderNavBtnHover,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Предыдущий слайд"
-                  >
-                    <Feather name="chevron-left" size={18} color="#fff" />
-                  </Pressable>
-                  <Pressable
-                    onPress={handleNextSlide}
-                    style={({ hovered }) => [
-                      styles.sliderNavBtn,
-                      hovered && styles.sliderNavBtnHover,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Следующий слайд"
-                  >
-                    <Feather name="chevron-right" size={18} color="#fff" />
-                  </Pressable>
-                </View>
-              </Pressable>
-              </View>
             )}
             </View>
           </View>
@@ -614,6 +615,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                 borderRadius={0}
                 fit="contain"
                 blurBackground
+                allowCriticalWebBlur
                 quality={72}
                 alt={BOOK_IMAGES[0].alt}
                 loading="eager"

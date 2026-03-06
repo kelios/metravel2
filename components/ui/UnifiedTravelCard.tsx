@@ -51,6 +51,7 @@ type Props = {
     placeholderBlurhash?: string;
     blurRadius?: number;
     blurBackground?: boolean;
+    allowCriticalWebBlur?: boolean;
     priority?: 'low' | 'normal' | 'high';
     loading?: 'lazy' | 'eager';
     prefetch?: boolean;
@@ -482,6 +483,7 @@ function UnifiedTravelCard({
                 alt={title}
                 fit={mediaFit}
                 blurBackground={mediaProps?.blurBackground ?? true}
+                allowCriticalWebBlur={mediaProps?.allowCriticalWebBlur ?? false}
                 blurRadius={mediaProps?.blurRadius ?? 16}
                 placeholderBlurhash={mediaProps?.placeholderBlurhash}
                 style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}

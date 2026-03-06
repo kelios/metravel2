@@ -44,4 +44,21 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(props.blurBackground).toBe(true)
     expect(props.fit).toBe('contain')
   })
+
+  it('passes allowCriticalWebBlur through mediaProps', () => {
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Test travel"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+          mediaProps={{ allowCriticalWebBlur: true, priority: 'high', loading: 'eager' }}
+        />
+      )
+    })
+
+    const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(props).toBeTruthy()
+    expect(props.allowCriticalWebBlur).toBe(true)
+  })
 })

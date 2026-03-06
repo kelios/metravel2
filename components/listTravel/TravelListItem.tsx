@@ -703,6 +703,7 @@ const unifiedCard = (
     mediaProps={{
       placeholderBlurhash: PLACEHOLDER_BLURHASH,
       blurBackground: true,
+      allowCriticalWebBlur: Platform.OS === 'web' ? !!isFirst : false,
       priority: Platform.OS === 'web' ? (isFirst ? 'high' : 'low') : 'normal',
       loading: Platform.OS === 'web' ? (isFirst ? 'eager' : 'lazy') : 'lazy',
       prefetch: Platform.OS === 'web' ? !!isFirst : false,

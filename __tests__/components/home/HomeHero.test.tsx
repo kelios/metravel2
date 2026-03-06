@@ -4,21 +4,24 @@ import { useRouter } from 'expo-router';
 import HomeHero from '@/components/home/HomeHero';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 
+const mockResponsiveState = {
+  isPhone: false,
+  isLargePhone: false,
+  isSmallPhone: false,
+  isTablet: false,
+  isLargeTablet: false,
+  isDesktop: true,
+  isPortrait: false,
+  width: 1280,
+  isHydrated: true,
+};
+
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
 jest.mock('@/utils/analytics');
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({
-    isPhone: false,
-    isLargePhone: false,
-    isSmallPhone: false,
-    isTablet: false,
-    isDesktop: true,
-    isPortrait: false,
-    width: 1280,
-    isHydrated: true,
-  }),
+  useResponsive: () => mockResponsiveState,
   useResponsiveColumns: () => 3,
   useResponsiveValue: (values: any) => values.desktop ?? values.default ?? Object.values(values)[0],
 }));
@@ -31,6 +34,17 @@ describe('HomeHero Component', () => {
   const mockPush = jest.fn();
 
   beforeEach(() => {
+    Object.assign(mockResponsiveState, {
+      isPhone: false,
+      isLargePhone: false,
+      isSmallPhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: true,
+      isPortrait: false,
+      width: 1280,
+      isHydrated: true,
+    });
     (mockUseRouter as jest.Mock).mockReturnValue({ push: mockPush } as any);
   });
 
@@ -87,6 +101,21 @@ describe('HomeHero Component', () => {
       const { getByText } = render(<HomeHero />);
       expect(getByText(/Куда поехать/)).toBeTruthy();
     });
+
+    it('keeps compact hero layout on intermediate widths before the book breakpoint', () => {
+      Object.assign(mockResponsiveState, {
+        isLargeTablet: true,
+        isDesktop: false,
+        width: 1025,
+        isPortrait: true,
+      });
+
+      const { getByText, queryByText } = render(<HomeHero />);
+
+      expect(getByText('Популярные маршруты')).toBeTruthy();
+      expect(queryByText('Маршрут недели')).toBeNull();
+    });
+
   });
 
   describe('Accessibility', () => {

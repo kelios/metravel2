@@ -10,6 +10,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type Priority = 'low' | 'normal' | 'high';
 
+const isRootRelativeUrl = (value: string): boolean => /^\/(?!\/)/.test(value);
+
 
 type WebMainImageProps = {
   src: string;
@@ -192,6 +194,7 @@ function ImageCardMedia({
     if (typeof resolvedSource === 'string') return resolvedSource;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
+    if (isRootRelativeUrl(uri)) return uri;
     const numericWidth = typeof width === 'number' ? width : undefined;
     const numericHeight = typeof height === 'number' ? height : undefined;
     if (!numericWidth && !numericHeight) return null;
@@ -224,6 +227,7 @@ function ImageCardMedia({
     if (typeof resolvedSource === 'string') return resolvedSource;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
+    if (isRootRelativeUrl(uri)) return uri;
 
     const numericWidth = typeof width === 'number' && Number.isFinite(width) ? width : 160;
     const numericHeight = typeof height === 'number' && Number.isFinite(height) ? height : 160;
@@ -247,6 +251,7 @@ function ImageCardMedia({
     if (typeof resolvedSource === 'string') return undefined;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
+    if (isRootRelativeUrl(uri)) return undefined;
     const baseWidth = typeof width === 'number' ? width : 320;
     const srcSetWidths = [
       Math.max(160, Math.round(baseWidth * 0.5)),
