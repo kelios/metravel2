@@ -379,6 +379,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [syncContainerWidthFromDom]);
 
   // Web-specific scroll implementation is injected into the shared slider core.
+  // Uses direct scrollLeft assignment with snap-disabled class because
+  // node.scrollTo() is silently blocked by scroll-snap-type: x mandatory in Chromium.
   const scrollToDom = useCallback(
     (i: number, _animated = true) => {
       const wrapped = Math.max(0, Math.min(i, images.length - 1));
@@ -387,9 +389,20 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       if (node) {
         const liveW = containerWRef.current;
         const left = wrapped * liveW;
-        const behavior = _animated ? 'smooth' : 'auto';
+        if (Math.abs((node.scrollLeft || 0) - left) < 1) {
+          setActiveIndex(wrapped);
+          return;
+        }
+        node.classList.add('slider-snap-disabled');
+        void node.offsetHeight;
+        node.scrollLeft = left;
         setActiveIndex(wrapped);
-        node.scrollTo({ left, behavior });
+        requestAnimationFrame(() => {
+          node.scrollLeft = left;
+          requestAnimationFrame(() => {
+            node.classList.remove('slider-snap-disabled');
+          });
+        });
       }
     },
     [resolveNodes, images.length, setActiveIndex, containerWRef]
