@@ -536,6 +536,83 @@ function injectTravelHeroPreload(baseHtml, preloadData) {
   );
 }
 
+function injectHiddenH1(baseHtml, headingText) {
+  const text = String(headingText || '').trim();
+  if (!text) return baseHtml;
+
+  const hiddenHeading = `<h1 data-ssg-travel-h1="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">${escapeAttr(text)}</h1>`;
+
+  if (/<h1[^>]*data-ssg-travel-h1="true"[^>]*>[\s\S]*?<\/h1>/i.test(baseHtml)) {
+    return baseHtml.replace(
+      /<h1[^>]*data-ssg-travel-h1="true"[^>]*>[\s\S]*?<\/h1>/i,
+      hiddenHeading
+    );
+  }
+
+  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${hiddenHeading}`);
+}
+
+function injectJsonLd(baseHtml, payload, marker) {
+  if (!payload || typeof payload !== 'object') return baseHtml;
+
+  const dataMarker = marker ? ` data-seo-jsonld="${escapeAttr(marker)}"` : '';
+  const scriptTag = `<script type="application/ld+json"${dataMarker}>${JSON.stringify(payload).replace(/<\/script/gi, '<\\/script')}</script>`;
+
+  if (marker) {
+    const markerRegex = new RegExp(`<script[^>]*data-seo-jsonld="${marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*>[\\s\\S]*?<\\/script>\\n?`, 'i');
+    if (markerRegex.test(baseHtml)) {
+      return baseHtml.replace(markerRegex, `${scriptTag}\n`);
+    }
+  }
+
+  return baseHtml.replace('</head>', `${scriptTag}\n</head>`);
+}
+
+function buildTravelArticleJsonLd({ title, description, canonical, image, travel }) {
+  if (!title || !canonical) return null;
+
+  const authorName =
+    String(
+      travel?.user?.display_name ||
+      travel?.user?.name ||
+      travel?.userName ||
+      travel?.authorName ||
+      ''
+    ).trim() || 'MeTravel';
+
+  const payload = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: String(title).trim(),
+    description: String(description || '').trim(),
+    mainEntityOfPage: canonical,
+    url: canonical,
+    inLanguage: 'ru',
+    publisher: {
+      '@type': 'Organization',
+      name: 'MeTravel',
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/assets/icons/logo_yellow.png`,
+      },
+    },
+    author: {
+      '@type': 'Person',
+      name: authorName,
+    },
+  };
+
+  if (image) payload.image = [image];
+
+  const publishedAt = travel?.created_at || travel?.date_create || travel?.datePublished || null;
+  const modifiedAt = travel?.updated_at || travel?.date_update || travel?.dateModified || null;
+  if (publishedAt) payload.datePublished = publishedAt;
+  if (modifiedAt) payload.dateModified = modifiedAt;
+
+  return payload;
+}
+
 /** Write file, creating directories as needed. */
 function writeFileSafe(filePath, content) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -806,14 +883,27 @@ async function main() {
         ],
       });
 
+      const htmlWithArticleJsonLd = injectJsonLd(
+        htmlWithBreadcrumb,
+        buildTravelArticleJsonLd({
+          title,
+          description,
+          canonical,
+          image,
+          travel,
+        }),
+        'travel-article'
+      );
+
       const travelHeroPreload = buildTravelHeroPreloadData(travel, detail);
-      const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithBreadcrumb, travelHeroPreload);
+      const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithArticleJsonLd, travelHeroPreload);
+      const finalTravelHtml = injectHiddenH1(htmlWithTravelPreload, name || routeKey);
 
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
       // it conflicts with creating `${routeKey}/index.html` on POSIX filesystems.
-      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), htmlWithTravelPreload);
-      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), htmlWithTravelPreload);
+      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), finalTravelHtml);
+      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), finalTravelHtml);
 
       generated++;
     }
@@ -941,6 +1031,9 @@ if (typeof module !== 'undefined' && module.exports) {
     buildOptimizedTravelImageUrl,
     buildTravelHeroPreloadData,
     injectTravelHeroPreload,
+    injectHiddenH1,
+    injectJsonLd,
+    buildTravelArticleJsonLd,
     injectBreadcrumbJsonLd,
   };
 }

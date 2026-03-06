@@ -8,6 +8,9 @@ export { getAnalyticsInlineScript };
 
 const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 0;
 const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || '';
+const SITE_BRAND = 'Metravel';
+const HOME_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel';
+const HOME_DESCRIPTION = 'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.';
 
 if (!METRIKA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
   console.error('[Analytics] EXPO_PUBLIC_METRIKA_ID is not set. Analytics will be disabled.');
@@ -150,6 +153,8 @@ const getLegacyParamRedirectScript = () => String.raw`
 })();
 `;
 
+const getCriticalHeadScript = () => String.raw`(function(){try{var p=window.location&&window.location.pathname||'/';var h=(p==='/'||p==='/index');var ft=h?${JSON.stringify(HOME_TITLE)}:${JSON.stringify(SITE_BRAND)};var fd=h?${JSON.stringify(HOME_DESCRIPTION)}:'';var t=document.querySelector('head title[data-rh="true"]');if(t){if(!t.textContent)t.textContent=ft}else if(!document.title){document.title=ft}if(!document.title)document.title=ft;var dm=document.querySelector('meta[name="description"]');if(h){if(dm){var dc=dm.getAttribute('content')||'';if(!dc.trim())dm.setAttribute('content',fd)}else if(fd){dm=document.createElement('meta');dm.setAttribute('name','description');dm.setAttribute('content',fd);document.head.appendChild(dm)}var ogt=document.querySelector('meta[property="og:title"]');if(ogt){var oc=ogt.getAttribute('content')||'';if(!oc.trim())ogt.setAttribute('content',ft)}var ogd=document.querySelector('meta[property="og:description"]');if(ogd){var od=ogd.getAttribute('content')||'';if(!od.trim())ogd.setAttribute('content',fd)}var twt=document.querySelector('meta[name="twitter:title"]');if(twt){var tc=twt.getAttribute('content')||'';if(!tc.trim())twt.setAttribute('content',ft)}var twd=document.querySelector('meta[name="twitter:description"]');if(twd){var td=twd.getAttribute('content')||'';if(!td.trim())twd.setAttribute('content',fd)}}}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false;try{var p2=window.location.pathname||'';if(p2.length>1)p2=p2.replace(/\/+$/,'');var o='https://metravel.by';var correctUrl=o+p2;var cl=document.querySelector('link[rel="canonical"]');if(cl){var h2=cl.getAttribute('href')||'';if(h2!==correctUrl){cl.setAttribute('href',correctUrl)}}else{cl=document.createElement('link');cl.rel='canonical';cl.href=correctUrl;document.head.appendChild(cl)}var ou=document.querySelector('meta[property="og:url"]');if(ou){var oc2=ou.getAttribute('content')||'';if(/\[|\%5B/.test(oc2)||oc2!==correctUrl){ou.setAttribute('content',correctUrl)}}else{ou=document.createElement('meta');ou.setAttribute('property','og:url');ou.setAttribute('content',correctUrl);document.head.appendChild(ou)}try{if(typeof MutationObserver!=='undefined'){var _canUrl=correctUrl;var _canObs=new MutationObserver(function(){var all=document.querySelectorAll('link[rel="canonical"]');if(all.length>1){for(var i=all.length-1;i>=1;i--){try{all[i].parentNode&&all[i].parentNode.removeChild(all[i])}catch(e){}}if(all[0]&&all[0].getAttribute('href')!==_canUrl){all[0].setAttribute('href',_canUrl)}}});_canObs.observe(document.head,{childList:true});setTimeout(function(){try{_canObs.disconnect()}catch(e){}},8000)}}catch(_2){}}catch(_){}})();`;
+
 export default function Root({ children }: { children: React.ReactNode }) {
   const isProduction = typeof process !== 'undefined' && 
     (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
@@ -170,10 +175,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: getLegacyParamRedirectScript() }}
       />
 
-	      {/* Consolidated critical head script: title fallback + theme detection + canonical fix */}
+      {/* Consolidated critical head script: title fallback + theme detection + canonical fix */}
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false;try{var p=window.location.pathname||'';if(p.length>1)p=p.replace(/\/+$/,'');var o='https://metravel.by';var correctUrl=o+p;var cl=document.querySelector('link[rel="canonical"]');if(cl){var h=cl.getAttribute('href')||'';if(h!==correctUrl){cl.setAttribute('href',correctUrl)}}else{cl=document.createElement('link');cl.rel='canonical';cl.href=correctUrl;document.head.appendChild(cl)}var ou=document.querySelector('meta[property="og:url"]');if(ou){var oc=ou.getAttribute('content')||'';if(/\[|\%5B/.test(oc)||oc!==correctUrl){ou.setAttribute('content',correctUrl)}}else{ou=document.createElement('meta');ou.setAttribute('property','og:url');ou.setAttribute('content',correctUrl);document.head.appendChild(ou)}try{if(typeof MutationObserver!=='undefined'){var _canUrl=correctUrl;var _canObs=new MutationObserver(function(){var all=document.querySelectorAll('link[rel="canonical"]');if(all.length>1){for(var i=all.length-1;i>=1;i--){try{all[i].parentNode&&all[i].parentNode.removeChild(all[i])}catch(e){}}if(all[0]&&all[0].getAttribute('href')!==_canUrl){all[0].setAttribute('href',_canUrl)}}});_canObs.observe(document.head,{childList:true});setTimeout(function(){try{_canObs.disconnect()}catch(e){}},8000)}}catch(_2){}}catch(_){}})();`,
+          __html: getCriticalHeadScript(),
         }}
       />
       

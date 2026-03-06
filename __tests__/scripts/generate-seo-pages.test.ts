@@ -16,6 +16,9 @@ const {
   buildOptimizedTravelImageUrl,
   buildTravelHeroPreloadData,
   injectTravelHeroPreload,
+  injectHiddenH1,
+  injectJsonLd,
+  buildTravelArticleJsonLd,
 } = require('@/scripts/generate-seo-pages');
 
 // ---------------------------------------------------------------------------
@@ -455,6 +458,43 @@ describe('travel hero preload helpers', () => {
     expect(second).toContain('q=40');
   });
 });
+
+describe('travel SSR SEO helpers', () => {
+  it('injectHiddenH1 adds exactly one hidden H1 into body', () => {
+    const result = injectHiddenH1(MINIMAL_BASE, 'Тропа ведьм')
+
+    expect(result).toMatch(/<h1[^>]*data-ssg-travel-h1="true"[^>]*>Тропа ведьм<\/h1>/)
+    expect((result.match(/<h1\b/gi) || []).length).toBe(1)
+  })
+
+  it('buildTravelArticleJsonLd builds page-level Article schema for travel pages', () => {
+    const payload = buildTravelArticleJsonLd({
+      title: 'Тропа ведьм | Metravel',
+      description: 'Подробный маршрут по Harzer Hexenstieg',
+      canonical: 'https://metravel.by/travels/tropa-vedm',
+      image: 'https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg',
+      travel: {
+        updated_at: '2026-03-05T10:00:00.000Z',
+        created_at: '2026-03-01T09:00:00.000Z',
+        userName: 'Julia',
+      },
+    })
+
+    expect(payload['@type']).toBe('Article')
+    expect(payload.headline).toBe('Тропа ведьм | Metravel')
+    expect(payload.author.name).toBe('Julia')
+    expect(payload.image).toEqual(['https://metravel.by/travel-image/1/conversions/pic-detail_hd.jpg'])
+  })
+
+  it('injectJsonLd inserts a marked JSON-LD block and replaces it on the next pass', () => {
+    const first = injectJsonLd(MINIMAL_BASE, { '@context': 'https://schema.org', '@type': 'Article', headline: 'One' }, 'travel-article')
+    const second = injectJsonLd(first, { '@context': 'https://schema.org', '@type': 'Article', headline: 'Two' }, 'travel-article')
+
+    expect((second.match(/data-seo-jsonld="travel-article"/g) || []).length).toBe(1)
+    expect(second).toContain('"headline":"Two"')
+    expect(second).not.toContain('"headline":"One"')
+  })
+})
 
 // ---------------------------------------------------------------------------
 // Fallback template canonical stripping (regression: [param].html had homepage canonical)
