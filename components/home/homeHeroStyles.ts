@@ -63,7 +63,7 @@ export const createHomeHeroStyles = ({
           : isOver1200Desktop
             ? 1.08
             : 1;
-  const leftPageSafeInset = !hasBookLayout ? 0 : isUltraWideBook ? 56 : isLargeDesktopBook ? 44 : isOver1200Desktop ? 34 : 18;
+  const leftPageSafeInset = !hasBookLayout ? 0 : isUltraWideBook ? 48 : isLargeDesktopBook ? 38 : isOver1200Desktop ? 26 : 14;
   const titleScaleMax = isNarrowDesktopBook ? 36 : isUltraWideBook ? 74 : isLargeDesktopBook ? 62 : isOver1200Desktop ? 50 : 42;
   const titleLineHeightMax = isNarrowDesktopBook ? 40 : isUltraWideBook ? 82 : isLargeDesktopBook ? 68 : isOver1200Desktop ? 56 : 50;
   const subtitleScaleMax = isNarrowDesktopBook ? 13 : isUltraWideBook ? 22 : isLargeDesktopBook ? 18 : isOver1200Desktop ? 15 : 14;
@@ -91,20 +91,20 @@ export const createHomeHeroStyles = ({
   const rightPagePaddingRight: number | string = !hasBookLayout
     ? 0
     : isUltraWideBook
-      ? '6%'
-      : '8%';
+      ? '5%'
+      : '6%';
   const rightPagePaddingLeft: number | string = !hasBookLayout
     ? 0
     : isUltraWideBook
-      ? '4%'
-      : '5%';
+      ? '3%'
+      : '4%';
   // Baseline tuned from validated desktop layout (bookHeight ~= 864)
   const leftPagePaddingLeft = hasBookLayout
-    ? clamp(Math.round((isNarrowDesktopBook ? 132 : 154) * bookScale) + leftPageSafeInset, isNarrowDesktopBook ? 64 : 82, leftPagePaddingLeftMax + leftPageSafeInset)
+    ? clamp(Math.round((isNarrowDesktopBook ? 124 : 144) * bookScale) + leftPageSafeInset, isNarrowDesktopBook ? 56 : 74, leftPagePaddingLeftMax + leftPageSafeInset)
     : 100;
-  const leftPagePaddingRight = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 72 : 96) * bookScale), 16, leftPagePaddingRightMax) : 16;
-  const leftPagePaddingTop = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 72 : 86) * bookScale), 28, leftPagePaddingTopMax) : 48;
-  const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 82 : 96) * bookScale), 48, leftPagePaddingBottomMax) : 110;
+  const leftPagePaddingRight = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 64 : 88) * bookScale), 16, leftPagePaddingRightMax) : 16;
+  const leftPagePaddingTop = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 66 : 80) * bookScale), 26, leftPagePaddingTopMax) : 48;
+  const leftPagePaddingBottom = hasBookLayout ? clamp(Math.round((isNarrowDesktopBook ? 78 : 90) * bookScale), 44, leftPagePaddingBottomMax) : 110;
   const leftPageRowGap = hasBookLayout ? clamp(Math.round(10 * bookScale), 6, leftPageRowGapMax) : 8;
   const baseDesktopBookTitleSize = hasBookLayout
     ? Math.min(Math.round(pageWidth * 0.072), Math.round(bookHeight * 0.056))
@@ -245,15 +245,15 @@ export const createHomeHeroStyles = ({
     overflow: 'hidden',
     ...Platform.select({ web: showSideSlider ? {
       alignSelf: 'stretch',
-      maxWidth: isNarrowDesktopBook ? '90%' : '88%',
+      maxWidth: isNarrowDesktopBook ? '92%' : '90%',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'flex-start',
       rowGap: isCompactBookLayout ? Math.max(leftPageRowGap, 8) : leftPageRowGap + 4,
-      paddingLeft: isNarrowDesktopBook ? '2%' : '3%',
-      paddingRight: isNarrowDesktopBook ? '5%' : '6%',
-      paddingTop: isNarrowDesktopBook ? '4%' : '5%',
-      paddingBottom: isNarrowDesktopBook ? '5%' : '6%',
+      paddingLeft: isNarrowDesktopBook ? '1%' : '2%',
+      paddingRight: isNarrowDesktopBook ? '4%' : '5%',
+      paddingTop: isNarrowDesktopBook ? '3%' : '4%',
+      paddingBottom: isNarrowDesktopBook ? '4%' : '5%',
       boxSizing: 'border-box',
     } as any : {} }),
   },
@@ -290,7 +290,7 @@ export const createHomeHeroStyles = ({
     } as any : {} }),
   },
   sliderFrame: {
-    width: isNarrowDesktopBook ? '92%' : '90%',
+    width: isNarrowDesktopBook ? '94%' : '92%',
     flex: 1,
     minHeight: 0,
     position: 'relative' as const,
@@ -329,12 +329,12 @@ export const createHomeHeroStyles = ({
     backgroundColor: '#1A1A1A', borderWidth: 0,
     ...Platform.select({ web: {
       boxShadow: isNarrowDesktopBook
-        ? '0 0 0 1px rgba(245,240,232,0.20), 0 0 18px 4px rgba(244,239,232,0.34), 0 12px 24px rgba(10,8,6,0.10)'
-        : '0 0 0 1px rgba(245,240,232,0.16), 0 0 14px 3px rgba(244,239,232,0.26), 0 8px 18px rgba(10,8,6,0.12)',
+        ? '0 0 0 1px rgba(245,240,232,0.16), 0 0 14px 3px rgba(244,239,232,0.26), 0 10px 22px rgba(10,8,6,0.08)'
+        : '0 0 0 1px rgba(245,240,232,0.14), 0 0 12px 2px rgba(244,239,232,0.22), 0 6px 14px rgba(10,8,6,0.10)',
       minHeight: sliderHeight,
       flexGrow: 1,
       flexShrink: 0,
-      transform: showSideSlider ? (isNarrowDesktopBook ? 'rotate(-1deg)' : 'rotate(-0.6deg)') : 'none',
+      transform: showSideSlider ? (isNarrowDesktopBook ? 'rotate(-0.7deg)' : 'rotate(-0.4deg)') : 'none',
       transformOrigin: 'center center',
     } as any }),
   },
@@ -439,7 +439,7 @@ export const createHomeHeroStyles = ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   chapterLabel: {
     fontSize: 11,
@@ -451,7 +451,7 @@ export const createHomeHeroStyles = ({
   },
   chapterDivider: {
     height: 1,
-    width: 86,
+    width: 108,
     backgroundColor: warmGold,
   },
   heroMetaRow: {
@@ -729,7 +729,7 @@ export const createHomeHeroStyles = ({
     width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: showSideSlider ? (isCompactBookLayout ? 6 : 8) : 2,
+    gap: showSideSlider ? 6 : 2,
     alignItems: 'stretch',
     ...Platform.select({ web: {
       marginTop: 2,
@@ -737,17 +737,17 @@ export const createHomeHeroStyles = ({
   },
   bookmarkChip: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: isCompactBookLayout ? 10 : 12, paddingVertical: showSideSlider ? (isCompactBookLayout ? 6 : 8) : 6,
-    borderRadius: 10,
+    paddingHorizontal: isCompactBookLayout ? 10 : 12, paddingVertical: showSideSlider ? (isCompactBookLayout ? 6 : 7) : 6,
+    borderRadius: 8,
     borderWidth: 1.5, borderColor: warmBorder,
-    backgroundColor: cardSurface,
+    backgroundColor: warmBgSoft,
     flexBasis: isCompactBookLayout ? '45%' : '45%',
     maxWidth: isCompactBookLayout ? '45%' : '45%',
     minWidth: 0,
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'all 0.18s ease',
-      boxShadow: DESIGN_TOKENS.shadows.light,
+      boxShadow: '0 1px 4px rgba(58,58,58,0.06)',
     } }),
   },
   bookmarkChipAccent: {
@@ -761,14 +761,14 @@ export const createHomeHeroStyles = ({
     opacity: 0.78,
   },
   bookmarkChipHover: {
-    backgroundColor: warmBgSoft, borderColor: colors.brandAlpha30,
+    backgroundColor: cardSurface, borderColor: colors.brandAlpha30,
     ...Platform.select({ web: {
-      transform: 'translateX(4px)',
-      boxShadow: DESIGN_TOKENS.shadows.hover,
+      transform: 'translateX(2px)',
+      boxShadow: '0 3px 8px rgba(58,58,58,0.08)',
     } }),
   },
   bookmarkChipIcon: {
-    width: isCompactBookLayout ? 24 : 28, height: isCompactBookLayout ? 24 : 28, borderRadius: 9, backgroundColor: brandSoft,
+    width: isCompactBookLayout ? 24 : 28, height: isCompactBookLayout ? 24 : 28, borderRadius: 8, backgroundColor: brandSoft,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: warmBorder,
   },
 
