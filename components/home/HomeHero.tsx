@@ -1,5 +1,5 @@
 import { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, Pressable, Platform, ScrollView, Dimensions, Image } from 'react-native';
+import { View, Text, Pressable, Platform, ScrollView, Dimensions, Image as RNImage } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -97,8 +97,8 @@ export const BOOK_IMAGES_FOR_TEST = BOOK_IMAGES;
 const getSlideRemoteUri = (source: { uri?: string } | number | null | undefined): string | null => {
   if (!source) return null;
   if (typeof source === 'number') {
-    // @ts-ignore -- Image.resolveAssetSource is available at runtime on web/native.
-    const resolvedUri = Image.resolveAssetSource?.(source)?.uri;
+    // @ts-ignore -- RNImage.resolveAssetSource is available at runtime on web/native.
+    const resolvedUri = RNImage.resolveAssetSource?.(source)?.uri;
     return typeof resolvedUri === 'string' && resolvedUri.trim().length > 0
       ? resolvedUri.trim()
       : null;
@@ -112,9 +112,9 @@ const getSlideRemoteUri = (source: { uri?: string } | number | null | undefined)
 
 const preloadWebImage = async (uri: string): Promise<boolean> => {
   if (!uri || Platform.OS !== 'web') return false;
-  if (typeof window === 'undefined' || typeof Image === 'undefined') return false;
+  if (typeof window === 'undefined' || typeof window.Image === 'undefined') return false;
   return new Promise((resolve) => {
-    const image = new Image();
+    const image = new window.Image();
     let settled = false;
     const settle = (result: boolean) => {
       if (settled) return;

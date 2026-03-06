@@ -327,18 +327,26 @@ function ImageCardMedia({
     }
   }, [prefetchHref]);
 
+  const shouldAddWebPrefetchHint = useMemo(() => {
+    if (Platform.OS !== 'web') return false;
+    if (!prefetch) return false;
+    if (loading !== 'lazy') return false;
+    if (priority !== 'low') return false;
+    return true;
+  }, [prefetch, loading, priority]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (shouldDisableNetwork) return;
-    if (!prefetch) return;
-    if (priority !== 'high') return;
+    if (!shouldAddWebPrefetchHint) return;
     if (!prefetchHref) return;
     if (!canUseResourceHint) return;
     if (typeof document === 'undefined') return;
 
-    // The actual <img> already uses eager loading + fetchPriority when needed.
-    // Additional <link rel="preload"> hints here produce noisy browser warnings
-    // when the resource is not consumed immediately after window load.
+    // Keep this as a low-priority prefetch hint only for genuinely non-critical,
+    // lazily rendered same-origin images. Critical images are already requested
+    // by the actual <img> element via loading/fetchPriority and should not add
+    // extra head hints that can survive route changes and trigger browser warnings.
     const rel = 'prefetch';
     const id = `img-hint-${encodeURIComponent(prefetchHref)}`;
     if (document.getElementById(id)) return;
@@ -349,7 +357,7 @@ function ImageCardMedia({
     link.as = 'image';
     link.href = prefetchHref;
     document.head.appendChild(link);
-  }, [prefetch, priority, prefetchHref, loading, shouldDisableNetwork, canUseResourceHint]);
+  }, [shouldAddWebPrefetchHint, prefetchHref, shouldDisableNetwork, canUseResourceHint]);
 
   return (
     <View

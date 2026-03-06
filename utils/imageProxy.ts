@@ -27,6 +27,18 @@ const isPrivateOrLocalHost = (host: string): boolean => {
   return false;
 };
 
+const normalizeDuplicatedMediaPath = (pathname: string): string => {
+  const match = pathname.match(/^\/(gallery|travel-image|address-image)\/[^/]+\/(gallery|travel-image|address-image)\/(.+)$/i);
+  if (!match) return pathname;
+
+  const [, outerSegment, innerSegment, remainder] = match;
+  if (outerSegment.toLowerCase() !== innerSegment.toLowerCase()) {
+    return pathname;
+  }
+
+  return `/${innerSegment}/${remainder}`;
+};
+
 const getPublicApiOrigin = (): string | null => {
   try {
     const raw = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
@@ -70,6 +82,7 @@ export function optimizeImageUrl(
   try {
     const publicOrigin = getPublicApiOrigin();
     const parsedUrl = new URL(trimmedUrl, publicOrigin || 'https://placeholder.invalid');
+    parsedUrl.pathname = normalizeDuplicatedMediaPath(parsedUrl.pathname);
 
     if (isPrivateOrLocalHost(parsedUrl.hostname)) return originalUrl;
 

@@ -30,6 +30,34 @@ describe('utils/imageOptimization', () => {
       expect(optimizeImageUrl('')).toBeUndefined()
     })
 
+    it('normalizes duplicated same-origin gallery path segments before adding optimization params', () => {
+      const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
+      process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+
+      try {
+        const result = optimizeImageUrl(
+          'https://metravel.by/gallery/544/gallery/92b330643a0e4b38b056b0d394ce21db.JPG?v=3567',
+          {
+            width: 640,
+            quality: 60,
+            format: 'webp',
+            fit: 'contain',
+          }
+        )!
+
+        const url = new URL(result)
+        expect(url.origin).toBe('https://metravel.by')
+        expect(url.pathname).toBe('/gallery/92b330643a0e4b38b056b0d394ce21db.JPG')
+        expect(url.searchParams.get('v')).toBe('3567')
+        expect(url.searchParams.get('w')).toBe('640')
+        expect(url.searchParams.get('q')).toBe('60')
+        expect(url.searchParams.get('f')).toBe('webp')
+        expect(url.searchParams.get('fit')).toBe('contain')
+      } finally {
+        process.env.EXPO_PUBLIC_API_URL = previousApiUrl
+      }
+    })
+
     it('adds width/height/quality/format/fit params and respects dpr on web', () => {
       withPlatform('web', () => {
         ;(window as any).devicePixelRatio = 2
