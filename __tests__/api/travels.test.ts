@@ -127,6 +127,26 @@ describe('src/api/travelsApi.ts', () => {
       expect(String((travel.gallery as any[])[1]?.url || '')).not.toContain('/api/gallery/');
     });
 
+    it('preserves backend gallery paths with entity id segment', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        gallery: [
+          {
+            id: 3328,
+            url: 'https://metravel.by/gallery/536/gallery/2f83a570f20d4ab6bfa1b837007da001.JPG',
+          },
+        ],
+      } as any);
+
+      expect(Array.isArray(travel.gallery)).toBe(true);
+      expect((travel.gallery as any[])[0]).toEqual(
+        expect.objectContaining({
+          id: 3328,
+          url: 'https://metravel.by/gallery/536/gallery/2f83a570f20d4ab6bfa1b837007da001.JPG',
+        })
+      );
+    });
+
   });
 
   describe('fetchTravelsForMap normalization', () => {

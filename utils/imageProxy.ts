@@ -16,6 +16,7 @@ export interface ImageOptimizationOptions {
 const optimizedUrlCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 400;
 const OPTIMIZATION_QUERY_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'dpr', 'blur'];
+const MEDIA_FILE_PATH = /^\/(gallery|travel-image|travel-description-image|address-image)\/(?:[^?#]*\/conversions\/|\d+\/(gallery|travel-image|travel-description-image|address-image)\/|[^/?#]+$)/i;
 
 const isPrivateOrLocalHost = (host: string): boolean => {
   const h = String(host || '').trim().toLowerCase();
@@ -25,18 +26,6 @@ const isPrivateOrLocalHost = (host: string): boolean => {
   if (/^192\.168\./.test(h)) return true;
   if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
   return false;
-};
-
-const normalizeDuplicatedMediaPath = (pathname: string): string => {
-  const match = pathname.match(/^\/(gallery|travel-image|address-image)\/[^/]+\/(gallery|travel-image|address-image)\/(.+)$/i);
-  if (!match) return pathname;
-
-  const [, outerSegment, innerSegment, remainder] = match;
-  if (outerSegment.toLowerCase() !== innerSegment.toLowerCase()) {
-    return pathname;
-  }
-
-  return `/${innerSegment}/${remainder}`;
 };
 
 const getPublicApiOrigin = (): string | null => {
@@ -82,9 +71,17 @@ export function optimizeImageUrl(
   try {
     const publicOrigin = getPublicApiOrigin();
     const parsedUrl = new URL(trimmedUrl, publicOrigin || 'https://placeholder.invalid');
-    parsedUrl.pathname = normalizeDuplicatedMediaPath(parsedUrl.pathname);
 
     if (isPrivateOrLocalHost(parsedUrl.hostname)) return originalUrl;
+
+    if (MEDIA_FILE_PATH.test(parsedUrl.pathname)) {
+      if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
+        const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 50);
+        keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
+      }
+      optimizedUrlCache.set(cacheKey, parsedUrl.toString());
+      return parsedUrl.toString();
+    }
 
     const isOwnDomain = publicOrigin
       ? parsedUrl.origin === new URL(publicOrigin).origin
