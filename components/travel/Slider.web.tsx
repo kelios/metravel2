@@ -387,19 +387,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       if (node) {
         const liveW = containerWRef.current;
         const left = wrapped * liveW;
-        // Disable scroll-snap temporarily so programmatic scrollLeft is instant
-        node.classList.add('slider-snap-disabled');
-        void node.offsetHeight;
-        node.scrollLeft = left;
+        const behavior = _animated ? 'smooth' : 'auto';
         setActiveIndex(wrapped);
-        // Double rAF: survive React re-render from setActiveIndex, then restore snap
-        requestAnimationFrame(() => {
-          node.scrollLeft = left;
-          requestAnimationFrame(() => {
-            node.scrollLeft = left;
-            node.classList.remove('slider-snap-disabled');
-          });
-        });
+        node.scrollTo({ left, behavior });
       }
     },
     [resolveNodes, images.length, setActiveIndex, containerWRef]

@@ -543,7 +543,7 @@ export const createHomeHeroStyles = ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: showSideSlider ? 8 : 12,
+    marginBottom: showSideSlider ? 12 : 16,
   },
   chapterLabel: {
     fontSize: 10,
@@ -612,15 +612,17 @@ export const createHomeHeroStyles = ({
     } as any : { fontFamily: sansSerif } as any }),
   },
   subtitle: {
-    fontSize: isMobile ? 14 : 15, fontWeight: '400', color: inkMuted,
-    lineHeight: isMobile ? 22 : 24, textAlign: 'left', maxWidth: 460, alignSelf: 'flex-start',
+    fontSize: isMobile ? 16 : 17, fontWeight: '400', color: inkMuted,
+    lineHeight: isMobile ? 24 : 27, textAlign: 'left', maxWidth: 460, alignSelf: 'flex-start',
     letterSpacing: 0.1,
+    marginTop: isMobile ? 12 : 14,
     ...Platform.select({ web: showSideSlider ? {
       fontFamily: editorialSerif,
       fontSize: desktopBookSubtitleSize,
       lineHeight: desktopBookSubtitleLineHeight,
       maxWidth: '88%',
       letterSpacing: '0.01em',
+      marginTop: '3.2%',
     } as any : { fontFamily: sansSerif } as any }),
   },
   sectionLabelRow: {
@@ -861,8 +863,8 @@ export const createHomeHeroStyles = ({
     marginTop: isCompactBookLayout ? 8 : 14,
   },
   bookmarkChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: isVeryCompactBookLayout ? 5 : 7,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 15, paddingVertical: isVeryCompactBookLayout ? 7 : 9,
     borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1, borderColor: warmBorder,
     backgroundColor: 'rgba(255,252,245,0.88)',
@@ -891,12 +893,12 @@ export const createHomeHeroStyles = ({
   // -- Mood chips (mobile horizontal scroll) --
   moodChipsContainer: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: warmBorder, width: '100%' },
   moodChipsScrollContent: {
-    flexDirection: 'row', gap: 8, paddingHorizontal: 0,
+    flexDirection: 'row', gap: 10, paddingHorizontal: 0,
     justifyContent: 'flex-start', flexWrap: 'nowrap' as const,
   },
   moodChip: {
-    flexDirection: 'row' as const, alignItems: 'center' as const, gap: 7,
-    paddingHorizontal: 14, paddingVertical: 9,
+    flexDirection: 'row' as const, alignItems: 'center' as const, gap: 9,
+    paddingHorizontal: 17, paddingVertical: 11,
     borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: cardSurface,
     borderWidth: 1, borderColor: warmBorder,
     ...Platform.select({ web: {
@@ -915,8 +917,8 @@ export const createHomeHeroStyles = ({
   },
   moodChipText: { gap: 0 },
   moodChipTitle: {
-    fontSize: 13, fontWeight: '500', color: inkStrong, letterSpacing: -0.1,
-    lineHeight: 17,
+    fontSize: 15, fontWeight: '500', color: inkStrong, letterSpacing: -0.12,
+    lineHeight: 20,
     ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
   },
   moodChipMeta: {

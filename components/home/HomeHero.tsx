@@ -410,7 +410,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                           accessibilityRole="button"
                           accessibilityLabel={`${card.title}. Идея поездки`}
                         >
-                          <Feather name={card.icon as any} size={13} color={colors.textMuted} />
+                          <Feather name={card.icon as any} size={16} color={colors.textMuted} />
                           <Text style={styles.moodChipTitle}>{card.title}</Text>
                         </Pressable>
                       ))}
@@ -618,7 +618,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                     accessibilityRole="button"
                     accessibilityLabel={`${card.title}. Идея поездки`}
                   >
-                    <Feather name={card.icon as any} size={14} color={colors.textMuted} />
+                    <Feather name={card.icon as any} size={17} color={colors.textMuted} />
                     <Text style={styles.moodChipTitle}>{card.title}</Text>
                   </Pressable>
                 ))}

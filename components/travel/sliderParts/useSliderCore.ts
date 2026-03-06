@@ -167,21 +167,24 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
 
   // Track if we've received the first real measurement from onLayout
   const hasInitialMeasurement = useRef(false);
-  
+
   // Stabilize containerW to prevent URI cache invalidation on minor width changes
   // (e.g., mobile address bar appearing/disappearing during scroll)
   // Allow first measurement unconditionally, then apply 50px threshold
   const setContainerWidth = useCallback((w: number) => {
+    const prevWidth = containerWRef.current;
+    containerWRef.current = w;
+
     // Always accept first real measurement from onLayout
     if (!hasInitialMeasurement.current) {
       hasInitialMeasurement.current = true;
-      containerWRef.current = w;
       setContainerWState(w);
       return;
     }
-    // After first measurement, only update on significant changes (>50px)
-    if (Math.abs(w - containerWRef.current) > 50) {
-      containerWRef.current = w;
+
+    // After first measurement, only update React state on significant changes (>50px)
+    // but keep the live ref in sync so scroll/index math always uses the actual width.
+    if (Math.abs(w - prevWidth) > 50) {
       setContainerWState(w);
     }
   }, []);
