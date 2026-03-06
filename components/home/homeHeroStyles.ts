@@ -140,8 +140,12 @@ export const createHomeHeroStyles = ({
     ...(showSideSlider && bookHeight > 0 ? { height: bookHeight } : {}),
     ...Platform.select({ web: showSideSlider ? {
       borderRadius: 0,
-      overflow: bookHeight > 0 ? 'hidden' : 'visible',
+      overflow: 'hidden',
       flex: 1,
+      flexWrap: 'nowrap',
+      // Строго ограничиваем ширину контейнера
+      maxWidth: '100%',
+      boxSizing: 'border-box',
     } as any : {} }),
   },
   heroBookSpine: {
@@ -212,7 +216,12 @@ export const createHomeHeroStyles = ({
 
   // -- Right page (slider / photo) --
   sliderSection: {
-    flex: 1, minWidth: 0, width: rightPageWidth, maxWidth: showSideSlider ? undefined : 600,
+    flex: showSideSlider ? 1 : 0, 
+    flexGrow: showSideSlider ? 1 : 0,
+    flexShrink: 1,
+    minWidth: 0, 
+    width: rightPageWidth, 
+    maxWidth: showSideSlider ? rightPageWidth : 600,
     position: 'relative' as const, alignSelf: 'stretch',
     minHeight: showSideSlider ? 0 : sliderHeight + (isMobile ? 40 : 64),
     ...Platform.select({ web: showSideSlider ? {
@@ -226,7 +235,6 @@ export const createHomeHeroStyles = ({
       flexDirection: 'column',
       justifyContent: 'stretch',
       boxSizing: 'border-box',
-      flex: 1,
       overflow: 'hidden',
     } as any : {} }),
   },
