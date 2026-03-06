@@ -104,6 +104,8 @@
     "design:verify": "node scripts/verify-design-system.js",
     "test:seo:prod": "node scripts/test-seo-prod.js",
     "test:seo:prod:verbose": "node scripts/test-seo-prod.js --verbose",
+    "test:seo:postdeploy": "node scripts/post-deploy-seo-check.js",
+    "test:seo:postdeploy:verbose": "node scripts/post-deploy-seo-check.js --verbose",
     "release:check": "yarn run lint && ./verify-security-fixes.sh && yarn run audit:high && yarn run test:run && yarn run e2e && yarn run build:web",
     "validator:error-codes:docs:update": "node scripts/update-validator-error-codes-doc-table.js --file docs/TESTING.md",
     "validator:contracts:check": "jest --passWithNoTests --runInBand __tests__/scripts/validator-error-codes-centralization.test.ts __tests__/scripts/validator-error-codes-prefix-policy.test.ts __tests__/scripts/validator-error-codes-uniqueness.test.ts __tests__/scripts/validate-validator-error-codes-doc-table.test.ts __tests__/scripts/validate-validator-error-codes-policy.test.ts __tests__/scripts/validate-validator-contracts-summary.test.ts __tests__/scripts/summarize-validator-contracts-summary-validation.test.ts",

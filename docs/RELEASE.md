@@ -46,6 +46,28 @@ npm run build:web
 DEPLOY=0 ./build-prod.sh prod
 ```
 
+## Post-deploy SEO check
+
+Run after production deploy against the real URL:
+
+```bash
+npm run test:seo:postdeploy
+```
+
+Verbose mode:
+
+```bash
+npm run test:seo:postdeploy:verbose
+```
+
+What it checks:
+- sitemap pages + key non-sitemap routes
+- raw HTML `title`, `description`, `canonical`
+- `og:*` and `twitter:*`
+- `robots`
+- travel page SSR `H1` and `Article` JSON-LD
+- home mobile icons and `manifest.json`
+
 ## Web cache policy (do not revert)
 
 - Service Worker caching for web is disabled by policy.

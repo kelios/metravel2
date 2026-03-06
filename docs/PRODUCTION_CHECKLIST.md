@@ -76,6 +76,10 @@ npm run prod:web
 - [ ] API errors < 1%
 - [ ] App load time < 3s
 - [ ] No critical bugs reported
+- [ ] Post-deploy SEO audit
+  ```bash
+  npm run test:seo:postdeploy
+  ```
 - [ ] SEO: 1 canonical, 1 description (no duplicates)
 - [ ] Staging: `robots: noindex,nofollow`
 - [ ] Analytics не запускается без consent
