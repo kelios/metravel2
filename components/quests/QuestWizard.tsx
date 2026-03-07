@@ -184,10 +184,11 @@ type StepCardProps = {
     step: QuestStep; index: number; attempts: number; hintVisible: boolean; savedAnswer?: string;
     onSubmit: (v: string) => void; onWrongAttempt: () => void; onToggleHint: () => void; onSkip: () => void;
     showMap: boolean; onToggleMap: () => void;
+    showLocationControls?: boolean;
 };
 
 const StepCard = memo((props: StepCardProps) => {
-    const { step, index, attempts, hintVisible, savedAnswer, onSubmit, onWrongAttempt, onToggleHint, onSkip, showMap, onToggleMap } = props;
+    const { step, index, attempts, hintVisible, savedAnswer, onSubmit, onWrongAttempt, onToggleHint, onSkip, showMap, onToggleMap, showLocationControls = true } = props;
     const { colors, styles } = useQuestWizardTheme();
 
     const [value, setValue] = useState(''); const [error, setError] = useState('');
@@ -264,6 +265,8 @@ const StepCard = memo((props: StepCardProps) => {
 
     const isPassed = !!savedAnswer && step.id !== 'intro';
     const showHintAfter = 2;
+    const hasMapPaneContent = showLocationControls || (showMap && !!step.image);
+    const hasLocationContent = isPassed || hasMapPaneContent;
 
     return (
         <Animated.View style={[styles.card, { transform: [{ perspective: 800 }, { rotateY: rot }] }]}>
@@ -365,60 +368,72 @@ const StepCard = memo((props: StepCardProps) => {
                         <Text style={styles.hintText}>Подсказка: {step.hint}</Text>
                     </View>
                 )}
-
-                {isPassed && (
-                    <View style={styles.answerContainer}>
-                        <Text style={styles.answerLabel}>Ваш ответ:</Text>
-                        <Text style={styles.answerValue}>{savedAnswer}</Text>
-                    </View>
-                )}
             </View>
 
             {/* Локация */}
-            {step.id !== 'intro' && (
+            {step.id !== 'intro' && hasLocationContent && (
                 <View style={styles.section}>
-                    <View style={styles.navRow}>
-                        <Pressable style={styles.navButton} onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
-                            <Text style={styles.navButtonText}>Навигация</Text>
-                        </Pressable>
-                        <Pressable style={styles.navToggle} onPress={() => setNavExpanded(v => !v)} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
-                            <Text style={styles.navToggleText}>{navExpanded ? '▲' : '▼'}</Text>
-                        </Pressable>
-                        <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}`}>
-                            <Text style={styles.coordsButtonText}>{step.lat.toFixed(4)}, {step.lng.toFixed(4)}</Text>
-                        </Pressable>
-                        {step.image && (
-                            <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}>
-                                <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
-                            </Pressable>
+                    <View style={[styles.answerMapSplit, isPassed && hasMapPaneContent && styles.answerMapSplitWithAnswer]}>
+                        {isPassed && (
+                            <View style={[styles.answerMapPane, styles.answerPane]}>
+                                <View style={styles.answerContainer}>
+                                    <Text style={styles.answerLabel}>Ваш ответ:</Text>
+                                    <Text style={styles.answerValue}>{savedAnswer}</Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {hasMapPaneContent && (
+                            <View style={[styles.answerMapPane, styles.mapPane]}>
+                                {showLocationControls && (
+                                    <>
+                                        <View style={styles.navRow}>
+                                            <Pressable style={styles.navButton} onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
+                                                <Text style={styles.navButtonText}>Навигация</Text>
+                                            </Pressable>
+                                            <Pressable style={styles.navToggle} onPress={() => setNavExpanded(v => !v)} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
+                                                <Text style={styles.navToggleText}>{navExpanded ? '▲' : '▼'}</Text>
+                                            </Pressable>
+                                            <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}`}>
+                                                <Text style={styles.coordsButtonText}>{step.lat.toFixed(4)}, {step.lng.toFixed(4)}</Text>
+                                            </Pressable>
+                                            {step.image && (
+                                                <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}>
+                                                    <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
+                                                </Pressable>
+                                            )}
+                                        </View>
+                                        {navExpanded && (
+                                            <View style={styles.navDropdown}>
+                                                <Pressable style={styles.navOption} onPress={() => { openInMap('google'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
+                                                {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openInMap('apple'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
+                                                <Pressable style={styles.navOption} onPress={() => { openInMap('yandex'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
+                                                {hasOrganic && (<Pressable style={styles.navOption} onPress={() => { openInMap('organic'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
+                                                {hasMapsme && (<Pressable style={styles.navOption} onPress={() => { openInMap('mapsme'); setNavExpanded(false); }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
+                                            </View>
+                                        )}
+                                    </>
+                                )}
+
+                                {showMap && step.image && (
+                                    <>
+                                        <Text style={styles.photoHint}>Это статичное фото-подсказка, не интерактивная карта.</Text>
+                                        <Pressable style={styles.imagePreview} onPress={() => setImageModalVisible(true)}>
+                                            <ImageCardMedia
+                                                source={typeof step.image === 'string' ? { uri: step.image } : step.image}
+                                                fit="contain"
+                                                blurBackground
+                                                blurRadius={16}
+                                                alt={step.title ? `Фото-подсказка для шага ${step.title}` : 'Фото-подсказка'}
+                                                style={styles.previewImage}
+                                            />
+                                            <View style={styles.imageOverlay}><Text style={styles.overlayText}>Нажмите для увеличения</Text></View>
+                                        </Pressable>
+                                    </>
+                                )}
+                            </View>
                         )}
                     </View>
-                    {navExpanded && (
-                        <View style={styles.navDropdown}>
-                            <Pressable style={styles.navOption} onPress={() => { openInMap('google'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
-                            {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openInMap('apple'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-                            <Pressable style={styles.navOption} onPress={() => { openInMap('yandex'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
-                            {hasOrganic && (<Pressable style={styles.navOption} onPress={() => { openInMap('organic'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
-                            {hasMapsme && (<Pressable style={styles.navOption} onPress={() => { openInMap('mapsme'); setNavExpanded(false); }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
-                        </View>
-                    )}
-
-                    {showMap && step.image && (
-                        <>
-                            <Text style={styles.photoHint}>Это статичное фото-подсказка, не интерактивная карта.</Text>
-                            <Pressable style={styles.imagePreview} onPress={() => setImageModalVisible(true)}>
-                                <ImageCardMedia
-                                    source={typeof step.image === 'string' ? { uri: step.image } : step.image}
-                                    fit="contain"
-                                    blurBackground
-                                    blurRadius={16}
-                                    alt={step.title ? `Фото-подсказка для шага ${step.title}` : 'Фото-подсказка'}
-                                    style={styles.previewImage}
-                                />
-                                <View style={styles.imageOverlay}><Text style={styles.overlayText}>Нажмите для увеличения</Text></View>
-                            </Pressable>
-                        </>
-                    )}
 
                     <ImageZoomModal image={typeof step.image === 'string' ? { uri: step.image } : step.image} visible={imageModalVisible} onClose={() => setImageModalVisible(false)} />
                 </View>
@@ -458,10 +473,16 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const [hints, setHints] = useState<Record<string, boolean>>({});
     const [showMap, setShowMap] = useState(true);
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
+    const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
+    const [desktopHasOrganic, setDesktopHasOrganic] = useState(false);
+    const [desktopHasMapsme, setDesktopHasMapsme] = useState(false);
     const suppressSave = useRef(false);
 
     const compactNav = screenW < 600;
     const wideDesktop = screenW >= 1100;
+    const compactDesktopLayout = Platform.OS === 'web' && screenW >= 1200;
+    const useWideInlineLayout = wideDesktop;
+    const useWideExcursionsSidebar = wideDesktop && !compactDesktopLayout;
 
     // Загрузка прогресса: приоритет — initialProgress (бэкенд), fallback — AsyncStorage
     useEffect(() => {
@@ -546,6 +567,78 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     }, [maxAnsweredIndex, allSteps.length]);
 
     const currentStep = allSteps[currentIndex];
+
+    useEffect(() => {
+        setDesktopNavExpanded(false);
+    }, [currentStep?.id]);
+
+    useEffect(() => {
+        if (!useWideInlineLayout || !currentStep || currentStep.id === 'intro') {
+            setDesktopHasOrganic(false);
+            setDesktopHasMapsme(false);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const om = await Linking.canOpenURL('om://map');
+                const om2 = await Linking.canOpenURL('organicmaps://');
+                if (!cancelled) setDesktopHasOrganic(Boolean(om || om2));
+            } catch {
+                if (!cancelled) setDesktopHasOrganic(false);
+            }
+            try {
+                const mm = await Linking.canOpenURL('mapsme://map');
+                if (!cancelled) setDesktopHasMapsme(Boolean(mm));
+            } catch {
+                if (!cancelled) setDesktopHasMapsme(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [currentStep, useWideInlineLayout]);
+
+    const openDesktopMapCandidates = useCallback(async (cands: Array<string | undefined>) => {
+        for (const url of cands) {
+            if (!url) continue;
+            try {
+                const opened = await openExternalUrl(url, {
+                    allowedProtocols: ['http:', 'https:', 'geo:', 'om:', 'organicmaps:', 'mapsme:'],
+                });
+                if (opened) return;
+            } catch {
+                /* ignore failed link open */
+            }
+        }
+        notify('Не удалось открыть карты. Проверьте, что установлено нужное приложение.');
+    }, []);
+
+    const openCurrentStepInMap = useCallback(async (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => {
+        if (!currentStep) return;
+        const { lat, lng } = currentStep;
+        const name = encodeURIComponent(currentStep.title || 'Point');
+        const urls = {
+            google: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+            apple: `http://maps.apple.com/?ll=${lat},${lng}`,
+            yandex: `https://yandex.ru/maps/?pt=${lng},${lat}&z=15`,
+            organic_1: `om://map?ll=${lat},${lng}&z=17`,
+            organic_2: `organicmaps://map?ll=${lat},${lng}&z=17`,
+            organic_web: `https://omaps.app/?lat=${lat}&lon=${lng}&zoom=17`,
+            mapsme: `mapsme://map?ll=${lat},${lng}&zoom=17&n=${name}`,
+            geo: Platform.OS === 'android' ? `geo:${lat},${lng}?q=${lat},${lng}(${name})` : undefined,
+        } as const;
+        if (app === 'organic') return openDesktopMapCandidates([urls.organic_1, urls.organic_2, urls.organic_web, urls.geo, urls.google]);
+        if (app === 'mapsme') return openDesktopMapCandidates([urls.mapsme, urls.geo, urls.google]);
+        return openDesktopMapCandidates([urls[app]]);
+    }, [currentStep, openDesktopMapCandidates]);
+
+    const copyCurrentStepCoords = useCallback(async () => {
+        if (!currentStep) return;
+        const Clipboard = await getClipboard();
+        await Clipboard.setStringAsync(`${currentStep.lat.toFixed(6)}, ${currentStep.lng.toFixed(6)}`);
+        notify('Координаты скопированы');
+    }, [currentStep]);
 
     // === уведомление + переход
     const handleAnswer = async (step: QuestStep, answer: string) => {
@@ -646,168 +739,303 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         }
         setVideoOk(true);
     }, [onFinaleVideoRetry]);
+
+    const handlePrintDownload = useCallback(() => {
+        const questUrl = typeof window !== 'undefined'
+            ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
+            : undefined;
+        void generatePrintableQuest({ title, steps, intro, questUrl });
+    }, [intro, steps, title]);
+
     useEffect(() => { 
         console.info('[QuestWizard] Video changed, resetting videoOk state');
         setVideoOk(true); 
     }, [finale.video]);
 
-    return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaView style={styles.container}>
-                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                    {/* Шапка */}
-                    <View style={styles.header}>
-                        <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
-                            {!isMobile && <Text style={styles.title}>{title}</Text>}
-                            <Pressable onPress={resetQuest} style={styles.resetButton} hitSlop={6}>
-                                <Text style={styles.resetText}>Сбросить</Text>
-                            </Pressable>
+    const mainContent = (
+        <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
+            {/* Левая колонка: шаги + карта + финал */}
+            <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
+                {/* Шаги/карты — скрываем, если показываем только финал */}
+                {(!showFinaleOnly) && currentStep && (
+                    <View style={useWideInlineLayout ? styles.desktopRow : undefined}>
+                        <View style={useWideInlineLayout ? styles.desktopMain : undefined}>
+                            <StepCard
+                                step={currentStep}
+                                index={currentIndex}
+                                attempts={attempts[currentStep.id] || 0}
+                                hintVisible={hints[currentStep.id] || false}
+                                savedAnswer={answers[currentStep.id]}
+                                onSubmit={(a) => handleAnswer(currentStep, a)}
+                                onWrongAttempt={() => handleWrongAttempt(currentStep)}
+                                onToggleHint={() => toggleHint(currentStep)}
+                                onSkip={skipStep}
+                                showMap={showMap}
+                                onToggleMap={toggleMap}
+                                showLocationControls={!useWideInlineLayout}
+                            />
                         </View>
 
-                        {/* Прогресс */}
-                        <View style={styles.progressContainer}>
-                            <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
-                            <Text style={styles.progressText}>{completedSteps.length} / {steps.length} завершено</Text>
-                        </View>
-
-                        {/* Навигация по шагам + Финал */}
-                        {wideDesktop ? (
-                            <View style={styles.stepsGrid}>
-                                {allSteps.map((s, i) => {
-                                    const isActive = i === currentIndex && !showFinaleOnly;
-                                    const isDone = !!answers[s.id] && s.id !== 'intro';
-                                    const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
-                                    return (
-                                        <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                   style={[styles.stepPill, styles.stepPillUnlocked, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
-                                                   hitSlop={6}>
-                                            <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
-                                            <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
-                                                {s.id === 'intro' ? 'Старт' : s.title}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-                                <FinalePill active={showFinaleOnly} />
-                            </View>
-                        ) : (
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stepsNavigation} contentContainerStyle={{ paddingRight: 8, paddingLeft: 2 }}>
-                                {allSteps.map((s, i) => {
-                                    const isActive = i === currentIndex && !showFinaleOnly;
-                                    const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
-                                    const isDone = !!answers[s.id] && s.id !== 'intro';
-
-                                    if (screenW < 600) {
-                                        return (
-                                            <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                       style={[styles.stepDotMini, isUnlocked && styles.stepDotMiniUnlocked, isActive && styles.stepDotMiniActive, isDone && styles.stepDotMiniDone, !isUnlocked && styles.stepDotMiniLocked]}
-                                                       hitSlop={6}>
-                                                {s.id === 'intro' ? (
-                                                    <Feather
-                                                        name="play"
-                                                        size={12}
-                                                        color={(isActive || isDone) ? colors.textOnPrimary : colors.primaryText}
-                                                    />
-                                                ) : (
-                                                    <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{i}</Text>
-                                                )}
+                        {!!steps.length && (
+                            <View
+                                style={[
+                                    styles.fullMapSection,
+                                    useWideInlineLayout && (compactDesktopLayout ? styles.compactDesktopSide : styles.desktopSide),
+                                ]}
+                            >
+                                {useWideInlineLayout && currentStep.id !== 'intro' && (
+                                    <View style={styles.mapTopControls}>
+                                        <View style={styles.navRow}>
+                                            <Pressable style={styles.navButton} onPress={() => openCurrentStepInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
+                                                <Text style={styles.navButtonText}>Навигация</Text>
                                             </Pressable>
-                                        );
-                                    }
-
-                                    return (
-                                        <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                   style={[styles.stepPill, styles.stepPillUnlocked, styles.stepPillNarrow, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
-                                                   hitSlop={6}>
-                                            <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
-                                            <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
-                                                {s.id === 'intro' ? 'Старт' : s.title}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-                                {compactNav ? <FinaleDot active={showFinaleOnly} /> : <FinalePill active={showFinaleOnly} />}
-                            </ScrollView>
-                        )}
-                        {compactNav ? (
-                            <Text style={styles.navActiveTitle} numberOfLines={1}>
-                                {showFinaleOnly ? 'Финал' : (currentIndex === 0 ? 'Старт' : allSteps[currentIndex]?.title)}
-                            </Text>
-                        ) : (
-                            <Text style={styles.navHint}>Нажмите на шаг (или «Финал»), чтобы перейти</Text>
-                        )}
-                    </View>
-
-                    {/* Контент */}
-                    <ScrollView
-                        style={styles.content}
-                        showsVerticalScrollIndicator={false}
-                        keyboardShouldPersistTaps="handled"
-                        onScrollBeginDrag={Keyboard.dismiss}
-                        contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 }, wideDesktop && styles.contentInner]}
-                    >
-                        <View style={wideDesktop && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
-                            {/* Левая колонка: шаги + карта + финал */}
-                            <View style={wideDesktop && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
-                                {/* Шаги/карты — скрываем, если показываем только финал */}
-                                {(!showFinaleOnly) && currentStep && (
-                                    <View style={wideDesktop ? styles.desktopRow : undefined}>
-                                        <View style={wideDesktop ? styles.desktopMain : undefined}>
-                                            <StepCard
-                                                step={currentStep}
-                                                index={currentIndex}
-                                                attempts={attempts[currentStep.id] || 0}
-                                                hintVisible={hints[currentStep.id] || false}
-                                                savedAnswer={answers[currentStep.id]}
-                                                onSubmit={(a) => handleAnswer(currentStep, a)}
-                                                onWrongAttempt={() => handleWrongAttempt(currentStep)}
-                                                onToggleHint={() => toggleHint(currentStep)}
-                                                onSkip={skipStep}
-                                                showMap={showMap}
-                                                onToggleMap={toggleMap}
-                                            />
-
-                                            {Platform.OS === 'web' && (
-                                                <View style={styles.printSection}>
-                                                    <Text style={styles.printHint}>
-                                                        Скачайте подарочную печатную версию: маршрут, задания и место для ответов.
-                                                    </Text>
-                                                    <Pressable
-                                                        style={styles.printButton}
-                                                        onPress={() => {
-                                                            const questUrl = typeof window !== 'undefined'
-                                                                ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
-                                                                : undefined;
-                                                            void generatePrintableQuest({ title, steps, intro, questUrl });
-                                                        }}
-                                                        hitSlop={6}
-                                                    >
-                                                        <Text style={styles.printButtonText}>Скачать печатную версию</Text>
-                                                    </Pressable>
-                                                </View>
+                                            <Pressable style={styles.navToggle} onPress={() => setDesktopNavExpanded(v => !v)} hitSlop={6} accessibilityRole="button" accessibilityLabel={desktopNavExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
+                                                <Text style={styles.navToggleText}>{desktopNavExpanded ? '▲' : '▼'}</Text>
+                                            </Pressable>
+                                            <Pressable style={styles.coordsButton} onPress={copyCurrentStepCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${currentStep.lat.toFixed(4)}, ${currentStep.lng.toFixed(4)}`}>
+                                                <Text style={styles.coordsButtonText}>{currentStep.lat.toFixed(4)}, {currentStep.lng.toFixed(4)}</Text>
+                                            </Pressable>
+                                            {currentStep.image && (
+                                                <Pressable style={styles.photoToggle} onPress={toggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}>
+                                                    <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
+                                                </Pressable>
                                             )}
                                         </View>
-
-                                        {!!steps.length && (
-                                            <View style={[styles.fullMapSection, wideDesktop && styles.desktopSide]}>
-                                                <Suspense fallback={<QuestMapSkeleton />}>
-                                                    <QuestFullMap
-                                                        steps={steps}
-                                                        height={wideDesktop ? 520 : 360}
-                                                        title="Карта квеста"
-                                                    />
-                                                </Suspense>
+                                        {desktopNavExpanded && (
+                                            <View style={styles.navDropdown}>
+                                                <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('google'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
+                                                {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('apple'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
+                                                <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('yandex'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
+                                                {desktopHasOrganic && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('organic'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
+                                                {desktopHasMapsme && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('mapsme'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
                                             </View>
                                         )}
                                     </View>
                                 )}
 
-                                {/* Экскурсии рядом — на узких экранах под контентом */}
-                                {!wideDesktop && (!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
-                                    <View style={styles.excursionsSection}>
-                                        <View style={styles.excursionsDivider} />
-                                        <View style={styles.excursionsCard}>
-                                            <View style={styles.excursionsHeader}>
+                                <Suspense fallback={<QuestMapSkeleton />}>
+                                    <QuestFullMap
+                                        steps={steps}
+                                        height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
+                                        title="Карта квеста"
+                                    />
+                                </Suspense>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* Экскурсии рядом — на узких экранах под контентом */}
+                {!useWideExcursionsSidebar && !compactDesktopLayout && (!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
+                    <View style={styles.excursionsSection}>
+                        <View style={styles.excursionsDivider} />
+                        <View style={styles.excursionsCard}>
+                            <View style={styles.excursionsHeader}>
+                                <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
+                                <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                            </View>
+                            <Suspense fallback={null}>
+                                <BelkrajWidgetLazy
+                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
+                                    countryCode={city.countryCode}
+                                    collapsedHeight={compactNav ? 520 : 760}
+                                    expandedHeight={compactNav ? 600 : 900}
+                                    className="belkraj-slot"
+                                    allowScroll
+                                />
+                            </Suspense>
+                        </View>
+                    </View>
+                )}
+
+                {/* Финал — доступен всегда; видео — когда всё пройдено */}
+                {showFinaleOnly && (
+                    <View style={styles.completionScreen}>
+                        {allCompleted ? (
+                            <>
+                                <Text style={styles.completionTitle}>Квест завершен!</Text>
+
+                                {/* Видео: web = DOM <video>, native = expo-av */}
+                                {finale.video && (
+                                    <View
+                                        style={[
+                                            styles.videoFrame,
+                                            {
+                                                width: '100%',
+                                                maxWidth: frameW,
+                                                aspectRatio: 16 / 9,
+                                            },
+                                        ]}
+                                    >
+                                        {Platform.OS === 'web' ? (
+                                            youtubeEmbedUri ? (
+                                                <iframe
+                                                    src={youtubeEmbedUri}
+                                                    width="100%"
+                                                    height="100%"
+                                                    style={{ border: 'none', display: 'block' }}
+                                                    loading="lazy"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                                    allowFullScreen
+                                                    title="Видео квеста"
+                                                />
+                                            ) : videoOk ? (
+                                                <WebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
+                                            ) : (
+                                                <>
+                                                    {posterUri ? (
+                                                        <ImageCardMedia
+                                                            src={posterUri}
+                                                            fit="cover"
+                                                            blurBackground
+                                                            blurRadius={18}
+                                                            style={StyleSheet.absoluteFillObject as any}
+                                                            alt="Постер видео квеста"
+                                                        />
+                                                    ) : null}
+                                                    <View style={styles.videoFallbackOverlay}>
+                                                        <Text style={styles.videoFallbackText}>Не удалось воспроизвести видео. Попробуйте ещё раз.</Text>
+                                                        <Pressable onPress={handleVideoRetry} style={styles.videoRetryBtn} hitSlop={8}>
+                                                            <Text style={styles.videoRetryText}>Повторить</Text>
+                                                        </Pressable>
+                                                    </View>
+                                                </>
+                                            )
+                                        ) : (
+                                            <Suspense fallback={null}>
+                                                <NativeVideoLazy
+                                                    source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
+                                                    posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
+                                                    usePoster={!!finale.poster}
+                                                    style={StyleSheet.absoluteFill}
+                                                    useNativeControls
+                                                    shouldPlay={false}
+                                                    isLooping={false}
+                                                    onError={() => setVideoOk(false)}
+                                                />
+                                            </Suspense>
+                                        )}
+                                    </View>
+                                )}
+
+                                <Text style={styles.completionText}>{finale.text}</Text>
+                            </>
+                        ) : (
+                            <Text style={[styles.completionText, { opacity: 0.8 }]}> 
+                                Чтобы открыть приз/видео — завершите все шаги ({completedSteps.length} из {steps.length}).
+                            </Text>
+                        )}
+                    </View>
+                )}
+            </View>
+
+            {/* Правая колонка: блок экскурсий — постоянно видим на desktop */}
+            {useWideExcursionsSidebar && city && Platform.OS === 'web' && (
+                <View style={styles.excursionsSidebar}>
+                    <View style={styles.excursionsSidebarInner}>
+                        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
+                        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
+                        <View style={styles.excursionsSidebarWidget}>
+                            <Suspense fallback={null}>
+                                <BelkrajWidgetLazy
+                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
+                                    countryCode={city.countryCode}
+                                    collapsedHeight={560}
+                                    expandedHeight={900}
+                                    className="belkraj-slot"
+                                    allowScroll
+                                />
+                            </Suspense>
+                        </View>
+                    </View>
+                </View>
+            )}
+        </View>
+    );
+
+    return (
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <SafeAreaView style={styles.container}>
+                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                    {compactDesktopLayout ? (
+                        <View style={styles.compactShell}>
+                            <View style={styles.compactSidebar}>
+                                <View style={styles.compactSidebarHeader}>
+                                    <Text style={styles.compactSidebarTitle}>{title}</Text>
+                                    <View style={styles.compactSidebarActions}>
+                                        <Pressable
+                                            onPress={handlePrintDownload}
+                                            style={styles.compactIconButton}
+                                            hitSlop={6}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Скачать печатную версию квеста"
+                                        >
+                                            <Feather name="download" size={16} color={colors.textMuted} />
+                                        </Pressable>
+                                        <Pressable onPress={resetQuest} style={styles.resetButton} hitSlop={6}>
+                                            <Text style={styles.resetText}>Сбросить</Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+
+                                <View style={styles.progressContainer}>
+                                    <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
+                                    <Text style={styles.progressText}>{completedSteps.length} / {steps.length} завершено</Text>
+                                </View>
+
+                                <ScrollView style={styles.compactStepsList} showsVerticalScrollIndicator={false} contentContainerStyle={styles.compactStepsListContent}>
+                                    {allSteps.map((s, i) => {
+                                        const isActive = i === currentIndex && !showFinaleOnly;
+                                        const isDone = !!answers[s.id] && s.id !== 'intro';
+                                        const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
+                                        return (
+                                            <Pressable
+                                                key={s.id}
+                                                onPress={() => { if (isUnlocked) goToStep(i); }}
+                                                style={[
+                                                    styles.stepPill,
+                                                    styles.compactStepPill,
+                                                    styles.stepPillUnlocked,
+                                                    isActive && styles.stepPillActive,
+                                                    isDone && styles.stepPillDone,
+                                                    !isUnlocked && styles.stepPillLocked,
+                                                ]}
+                                                hitSlop={6}
+                                            >
+                                                {s.id === 'intro' ? (
+                                                    <Feather
+                                                        name="play"
+                                                        size={12}
+                                                        color={(isActive || isDone) ? colors.textOnPrimary : colors.primaryText}
+                                                        style={{ marginRight: 8 }}
+                                                    />
+                                                ) : (
+                                                    <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{i}</Text>
+                                                )}
+                                                <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={2}>
+                                                    {s.id === 'intro' ? 'Старт' : s.title}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })}
+
+                                    <Pressable
+                                        onPress={() => setShowFinaleOnly(true)}
+                                        style={[
+                                            styles.stepPill,
+                                            styles.compactStepPill,
+                                            styles.stepPillUnlocked,
+                                            showFinaleOnly && styles.stepPillActive,
+                                        ]}
+                                        hitSlop={6}
+                                    >
+                                        <Text style={[styles.stepPillIndex, showFinaleOnly && { color: colors.textOnPrimary }]}>Ф</Text>
+                                        <Text style={[styles.stepPillTitle, showFinaleOnly && { color: colors.textOnPrimary }]}>Финал</Text>
+                                    </Pressable>
+
+                                    {city && Platform.OS === 'web' && (
+                                        <View style={styles.compactExcursionsSection}>
+                                            <View style={styles.compactExcursionsHeader}>
                                                 <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
                                                 <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
                                             </View>
@@ -815,122 +1043,144 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                 <BelkrajWidgetLazy
                                                     points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
                                                     countryCode={city.countryCode}
-                                                    collapsedHeight={compactNav ? 520 : 760}
-                                                    expandedHeight={compactNav ? 600 : 900}
+                                                    collapsedHeight={380}
+                                                    expandedHeight={760}
                                                     className="belkraj-slot"
                                                     allowScroll
                                                 />
                                             </Suspense>
                                         </View>
+                                    )}
+                                </ScrollView>
+                            </View>
+
+                            <ScrollView
+                                style={[styles.content, styles.compactMainContent]}
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
+                                onScrollBeginDrag={Keyboard.dismiss}
+                                contentContainerStyle={{ paddingBottom: SPACING.xl + 96 }}
+                            >
+                                {mainContent}
+                                <View style={{ height: SPACING.xl }} />
+                            </ScrollView>
+                        </View>
+                    ) : (
+                        <>
+                            {/* Шапка */}
+                            <View style={styles.header}>
+                                <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
+                                    {!isMobile && <Text style={styles.title}>{title}</Text>}
+                                    <Pressable onPress={resetQuest} style={styles.resetButton} hitSlop={6}>
+                                        <Text style={styles.resetText}>Сбросить</Text>
+                                    </Pressable>
+                                </View>
+
+                                {/* Прогресс */}
+                                <View style={styles.progressContainer}>
+                                    <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
+                                    <Text style={styles.progressText}>{completedSteps.length} / {steps.length} завершено</Text>
+                                </View>
+
+                                {/* Навигация по шагам + Финал */}
+                                {wideDesktop ? (
+                                    <View style={styles.stepsGrid}>
+                                        {allSteps.map((s, i) => {
+                                            const isActive = i === currentIndex && !showFinaleOnly;
+                                            const isDone = !!answers[s.id] && s.id !== 'intro';
+                                            const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
+                                            return (
+                                                <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
+                                                           style={[styles.stepPill, styles.stepPillUnlocked, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
+                                                           hitSlop={6}>
+                                                    <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
+                                                    <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
+                                                        {s.id === 'intro' ? 'Старт' : s.title}
+                                                    </Text>
+                                                </Pressable>
+                                            );
+                                        })}
+                                        <FinalePill active={showFinaleOnly} />
                                     </View>
-                                )}
-
-                                {/* Финал — доступен всегда; видео — когда всё пройдено */}
-                                {showFinaleOnly && (
-                                    <View style={styles.completionScreen}>
-                                {allCompleted ? (
-                                    <>
-                                        <Text style={styles.completionTitle}>Квест завершен!</Text>
-
-                                        {/* Видео: web = DOM <video>, native = expo-av */}
-                                        {finale.video && (
-                                            <View
-                                                style={[
-                                                    styles.videoFrame,
-                                                    {
-                                                        width: '100%',
-                                                        maxWidth: frameW,
-                                                        aspectRatio: 16 / 9,
-                                                    },
-                                                ]}
-                                            >
-                                                {Platform.OS === 'web' ? (
-                                                    youtubeEmbedUri ? (
-                                                        <iframe
-                                                            src={youtubeEmbedUri}
-                                                            width="100%"
-                                                            height="100%"
-                                                            style={{ border: 'none', display: 'block' }}
-                                                            loading="lazy"
-                                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                                            allowFullScreen
-                                                            title="Видео квеста"
-                                                        />
-                                                    ) : videoOk ? (
-                                                        <WebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
-                                                    ) : (
-                                                        <>
-                                                            {posterUri ? (
-                                                                <ImageCardMedia
-                                                                    src={posterUri}
-                                                                    fit="cover"
-                                                                    blurBackground
-                                                                    blurRadius={18}
-                                                                    style={StyleSheet.absoluteFillObject as any}
-                                                                    alt="Постер видео квеста"
-                                                                />
-                                                            ) : null}
-                                                            <View style={styles.videoFallbackOverlay}>
-                                                                <Text style={styles.videoFallbackText}>Не удалось воспроизвести видео. Попробуйте ещё раз.</Text>
-                                                                <Pressable onPress={handleVideoRetry} style={styles.videoRetryBtn} hitSlop={8}>
-                                                                    <Text style={styles.videoRetryText}>Повторить</Text>
-                                                                </Pressable>
-                                                            </View>
-                                                        </>
-                                                    )
-                                                ) : (
-                                                    <Suspense fallback={null}>
-                                                        <NativeVideoLazy
-                                                            source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
-                                                            posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
-                                                            usePoster={!!finale.poster}
-                                                            style={StyleSheet.absoluteFill}
-                                                            useNativeControls
-                                                            shouldPlay={false}
-                                                            isLooping={false}
-                                                            onError={() => setVideoOk(false)}
-                                                        />
-                                                    </Suspense>
-                                                )}
-                                            </View>
-                                        )}
-
-                                        <Text style={styles.completionText}>{finale.text}</Text>
-                                    </>
                                 ) : (
-                                    <Text style={[styles.completionText, { opacity: 0.8 }]}>
-                                        Чтобы открыть приз/видео — завершите все шаги ({completedSteps.length} из {steps.length}).
-                                    </Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stepsNavigation} contentContainerStyle={{ paddingRight: 8, paddingLeft: 2 }}>
+                                        {allSteps.map((s, i) => {
+                                            const isActive = i === currentIndex && !showFinaleOnly;
+                                            const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
+                                            const isDone = !!answers[s.id] && s.id !== 'intro';
+
+                                            if (screenW < 600) {
+                                                return (
+                                                    <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
+                                                               style={[styles.stepDotMini, isUnlocked && styles.stepDotMiniUnlocked, isActive && styles.stepDotMiniActive, isDone && styles.stepDotMiniDone, !isUnlocked && styles.stepDotMiniLocked]}
+                                                               hitSlop={6}>
+                                                        {s.id === 'intro' ? (
+                                                            <Feather
+                                                                name="play"
+                                                                size={12}
+                                                                color={(isActive || isDone) ? colors.textOnPrimary : colors.primaryText}
+                                                            />
+                                                        ) : (
+                                                            <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{i}</Text>
+                                                        )}
+                                                    </Pressable>
+                                                );
+                                            }
+
+                                            return (
+                                                <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
+                                                           style={[styles.stepPill, styles.stepPillUnlocked, styles.stepPillNarrow, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
+                                                           hitSlop={6}>
+                                                    <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
+                                                    <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
+                                                        {s.id === 'intro' ? 'Старт' : s.title}
+                                                    </Text>
+                                                </Pressable>
+                                            );
+                                        })}
+                                        {compactNav ? <FinaleDot active={showFinaleOnly} /> : <FinalePill active={showFinaleOnly} />}
+                                    </ScrollView>
                                 )}
+                                {compactNav ? (
+                                    <Text style={styles.navActiveTitle} numberOfLines={1}>
+                                        {showFinaleOnly ? 'Финал' : (currentIndex === 0 ? 'Старт' : allSteps[currentIndex]?.title)}
+                                    </Text>
+                                ) : (
+                                    <Text style={styles.navHint}>Нажмите на шаг (или «Финал»), чтобы перейти</Text>
+                                )}
+
+                                {Platform.OS === 'web' && (
+                                    <View style={styles.printSection}>
+                                        <Text style={styles.printHint}>
+                                            Печатная версия квеста: маршрут, задания и место для ответов.
+                                        </Text>
+                                        <Pressable
+                                            style={styles.printButton}
+                                            onPress={handlePrintDownload}
+                                            hitSlop={6}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Скачать печатную версию квеста"
+                                        >
+                                            <Feather name="download" size={16} color={colors.textOnPrimary} />
+                                            <Text style={styles.printButtonText}>Скачать печатную версию</Text>
+                                        </Pressable>
                                     </View>
                                 )}
                             </View>
 
-                            {/* Правая колонка: блок экскурсий — постоянно видим на desktop */}
-                            {wideDesktop && city && Platform.OS === 'web' && (
-                                <View style={styles.excursionsSidebar}>
-                                    <View style={styles.excursionsSidebarInner}>
-                                        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-                                        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
-                                        <View style={styles.excursionsSidebarWidget}>
-                                            <Suspense fallback={null}>
-                                                <BelkrajWidgetLazy
-                                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                                    countryCode={city.countryCode}
-                                                    collapsedHeight={560}
-                                                    expandedHeight={900}
-                                                    className="belkraj-slot"
-                                                    allowScroll
-                                                />
-                                            </Suspense>
-                                        </View>
-                                    </View>
-                                </View>
-                            )}
-                        </View>
-
-                        <View style={{ height: SPACING.xl }} />
-                    </ScrollView>
+                            {/* Контент */}
+                            <ScrollView
+                                style={styles.content}
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
+                                onScrollBeginDrag={Keyboard.dismiss}
+                                contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 }, useWideExcursionsSidebar && styles.contentInner]}
+                            >
+                                {mainContent}
+                                <View style={{ height: SPACING.xl }} />
+                            </ScrollView>
+                        </>
+                    )}
                 </KeyboardAvoidingView>
             </SafeAreaView>
         </GestureHandlerRootView>
@@ -1159,11 +1409,94 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         letterSpacing: -0.1,
     },
 
+    compactShell: {
+        flex: 1,
+        flexDirection: 'row',
+        backgroundColor: colors.background,
+        ...Platform.select({
+            web: {
+                maxWidth: 1400,
+                width: '100%',
+                alignSelf: 'center',
+            } as any,
+        }),
+    },
+    compactSidebar: {
+        width: 340,
+        flexShrink: 0,
+        backgroundColor: colors.surface,
+        borderRightWidth: 1,
+        borderRightColor: colors.borderLight,
+        paddingHorizontal: SPACING.md,
+        paddingTop: SPACING.md,
+        paddingBottom: SPACING.md,
+    },
+    compactSidebarHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: SPACING.sm,
+        marginBottom: SPACING.md,
+    },
+    compactSidebarActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.xs,
+    },
+    compactIconButton: {
+        width: 34,
+        height: 34,
+        borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.backgroundSecondary,
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
+    },
+    compactSidebarTitle: {
+        flex: 1,
+        fontSize: 22,
+        fontWeight: '800',
+        color: colors.text,
+        lineHeight: 28,
+        letterSpacing: -0.4,
+    },
+    compactStepsList: {
+        flex: 1,
+        marginTop: SPACING.sm,
+    },
+    compactStepsListContent: {
+        paddingRight: 2,
+        paddingBottom: SPACING.md,
+    },
+    compactStepPill: {
+        width: '100%',
+        maxWidth: '100%',
+        marginRight: 0,
+        marginBottom: 8,
+        borderRadius: 12,
+        minHeight: 44,
+    },
+    compactExcursionsSection: {
+        marginTop: SPACING.md,
+        backgroundColor: colors.surface,
+        borderRadius: 14,
+        padding: SPACING.md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+    },
+    compactExcursionsHeader: {
+        marginBottom: SPACING.sm,
+    },
+
     content: { flex: 1, padding: SPACING.lg },
+    compactMainContent: {
+        paddingTop: SPACING.md,
+    },
     contentInner: { maxWidth: 1160, alignSelf: 'center', width: '100%' },
     desktopRow: { flexDirection: 'row', gap: SPACING.lg },
     desktopMain: { flex: 1, minWidth: 0 },
     desktopSide: { width: 400, flexShrink: 0 },
+    compactDesktopSide: { width: 340, flexShrink: 0 },
 
     card: {
         backgroundColor: colors.surface,
@@ -1377,11 +1710,37 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderColor: colors.successLight,
     },
     hintText: { color: colors.text, fontSize: 14, lineHeight: 20 },
+    answerMapSplit: {
+        flexDirection: 'column',
+        gap: SPACING.md,
+    },
+    answerMapSplitWithAnswer: {
+        ...Platform.select({
+            web: {
+                flexDirection: 'row',
+                alignItems: 'stretch',
+            } as any,
+        }),
+    },
+    answerMapPane: {
+        minWidth: 0,
+    },
+    answerPane: {
+        ...Platform.select({
+            web: {
+                width: 260,
+                flexShrink: 0,
+            } as any,
+        }),
+    },
+    mapPane: {
+        flex: 1,
+    },
     answerContainer: {
         backgroundColor: colors.successSoft,
         padding: SPACING.md,
         borderRadius: 12,
-        marginTop: SPACING.sm,
+        marginTop: 0,
         borderWidth: 1,
         borderColor: colors.successLight,
     },
@@ -1463,19 +1822,46 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
 
     printSection: {
-        backgroundColor: colors.backgroundSecondary,
-        borderRadius: 14, padding: SPACING.md,
-        marginBottom: SPACING.md, alignItems: 'center',
-        borderWidth: 1, borderColor: colors.borderLight,
+        backgroundColor: colors.surface,
+        borderRadius: 14,
+        padding: SPACING.md,
+        marginTop: SPACING.md,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.brandSoft,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
+            } as any,
+        }),
     },
-    printHint: { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 19, marginBottom: SPACING.sm },
+    printHint: {
+        fontSize: 13,
+        color: colors.textMuted,
+        textAlign: 'center',
+        lineHeight: 19,
+        marginBottom: SPACING.sm,
+        fontWeight: '600',
+    },
     printButton: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        backgroundColor: colors.surface, paddingHorizontal: 20, paddingVertical: 10,
-        borderRadius: 999, borderWidth: 1, borderColor: colors.border,
-        ...Platform.select({ web: { cursor: 'pointer', transition: 'opacity 0.15s ease' } as any }),
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        backgroundColor: colors.brand,
+        paddingHorizontal: 22,
+        paddingVertical: 11,
+        borderRadius: 999,
+        minHeight: 44,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+                transition: 'transform 0.15s ease, opacity 0.15s ease',
+                boxShadow: '0 6px 16px rgba(245, 132, 44, 0.25)',
+            } as any,
+        }),
     },
-    printButtonText: { color: colors.text, fontSize: 14, fontWeight: '600' },
+    printButtonText: { color: colors.textOnPrimary, fontSize: 14, fontWeight: '700' },
 
     fullMapSection: {
         backgroundColor: colors.surface,
@@ -1489,6 +1875,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 boxShadow: '0 4px 20px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03)',
             } as any,
         }),
+    },
+    mapTopControls: {
+        marginBottom: SPACING.sm,
     },
 
     pageRow: {

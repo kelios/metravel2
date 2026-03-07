@@ -32,6 +32,7 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import type { SliderProps, SliderRef } from './sliderParts/types';
 import { buildUriWeb, SLIDER_MAX_WIDTH, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
 import { createSliderStyles } from './sliderParts/styles';
@@ -203,6 +204,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   } = props;
 
   const sliderInstanceId = useId();
+  const { isPhone, isLargePhone } = useResponsive();
+  const isMobileDevice = isPhone || isLargePhone;
   const {
     containerW,
     containerH: coreContainerH,
@@ -229,7 +232,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     aspectRatio,
     autoPlay,
     autoPlayInterval,
-    preloadCount: _preloadCount,
+    preloadCount: isMobileDevice ? Math.max(_preloadCount, 2) : _preloadCount,
     mobileHeightPercent,
     onIndexChanged,
     buildUri: (img, w, h, isFirst) => buildUriWeb(img, w, h, fit, isFirst),
@@ -436,25 +439,28 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [indexRef, setContainerWidth, resolveNodes, snapScrollToIndex]
   );
 
-  // Web scroll handler
+  // Web scroll handler — on mobile, native scroll-snap settles automatically so
+  // we only sync React state; on desktop we also correct drift.
   const handleScroll = useCallback(
     (_e: any) => {
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current);
+      const idleDelay = isMobile ? 150 : 80;
       scrollIdleTimerRef.current = setTimeout(() => {
         const node = scrollNodeRef.current;
         const xIdle = node?.scrollLeft ?? 0;
         const cwIdle = containerWRef.current || 1;
         setActiveIndexFromOffset(xIdle);
-        const snappedIdx = Math.max(0, Math.min(Math.round(xIdle / cwIdle), images.length - 1));
 
-        if (!node) return;
+        // On mobile, native scroll-snap handles final position — skip JS correction
+        if (isMobile || !node) return;
+        const snappedIdx = Math.max(0, Math.min(Math.round(xIdle / cwIdle), images.length - 1));
         const targetLeft = snappedIdx * cwIdle;
         if (Math.abs(xIdle - targetLeft) > 1) {
           scrollTo(snappedIdx, false);
         }
-      }, 80);
+      }, idleDelay);
     },
-    [containerWRef, images.length, scrollTo, setActiveIndexFromOffset]
+    [containerWRef, images.length, isMobile, scrollTo, setActiveIndexFromOffset]
   );
 
   // Consolidated web scroll/drag/keyboard/touch interaction (E6.2)
@@ -471,6 +477,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     dismissSwipeHint,
     pauseAutoplay,
     resumeAutoplay,
+    isMobile,
   });
 
   // Invalidate cached DOM nodes on unmount
@@ -528,7 +535,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={100}
+            scrollEventThrottle={isMobile ? 200 : 100}
             style={[styles.scrollView, styles.scrollSnap]}
             contentContainerStyle={[styles.scrollContent, { height: containerH }]}
             onScrollBeginDrag={pauseAutoplay}
@@ -561,7 +568,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       slideHeight={slideHeight}
                       imagesLength={imagesLen}
                       styles={styles}
-                      blurBackground={blurBackground}
+                      blurBackground={isMobile ? false : blurBackground}
                       isActive={index === currentIndex}
                       imageProps={imageProps}
                       onFirstImageLoad={onFirstImageLoad}

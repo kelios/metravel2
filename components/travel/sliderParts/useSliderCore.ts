@@ -90,14 +90,13 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
 
   const canPrefetchOnWeb = useCallback(() => {
     if (!isWeb) return true;
-    if (isMobile) return false;
     if (typeof navigator === 'undefined') return false;
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
     if (connection?.saveData) return false;
     const effectiveType = String(connection?.effectiveType || '').toLowerCase();
     if (effectiveType.includes('2g') || effectiveType === '3g') return false;
     return true;
-  }, [isWeb, isMobile]);
+  }, [isWeb]);
 
   const firstAR = useMemo(() => {
     const f = images[0];
@@ -312,18 +311,28 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
     return clearAutoplay;
   }, [scheduleAutoplay, clearAutoplay]);
 
+  // On mobile web, auto-enable prefetch shortly after mount since users swipe immediately.
+  // On desktop web, prefetch is deferred until first interaction (hover/keyboard).
+  useEffect(() => {
+    if (!isWeb || !isMobile || prefetchEnabled) return;
+    const timer = setTimeout(() => {
+      if (canPrefetchOnWeb()) setPrefetchEnabled(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isWeb, isMobile, prefetchEnabled, canPrefetchOnWeb]);
+
   useEffect(() => {
     if (!images.length || (isWeb && !prefetchEnabled)) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
     if (isWeb) {
-      timer = setTimeout(() => warmNeighbors(0), 200);
+      timer = setTimeout(() => warmNeighbors(0), isMobile ? 100 : 200);
     } else {
       warmNeighbors(0);
     }
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [images.length, warmNeighbors, isWeb, prefetchEnabled]);
+  }, [images.length, warmNeighbors, isWeb, isMobile, prefetchEnabled]);
 
   return {
     containerW,

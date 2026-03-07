@@ -75,12 +75,32 @@ export function optimizeImageUrl(
     if (isPrivateOrLocalHost(parsedUrl.hostname)) return originalUrl;
 
     if (MEDIA_FILE_PATH.test(parsedUrl.pathname)) {
+      // Media file paths are served by the backend image proxy which understands
+      // the same w/h/q/f/fit/blur query params.  Strip stale optimization params
+      // and append fresh ones so that the browser fetches a properly-sized variant
+      // instead of always downloading the full-resolution original.
+      OPTIMIZATION_QUERY_PARAMS.forEach((key) => {
+        try { parsedUrl.searchParams.delete(key); } catch { /* noop */ }
+      });
+
+      const proxyParams = new URLSearchParams();
+      if (options.width) proxyParams.set('w', String(Math.round(options.width)));
+      if (options.height) proxyParams.set('h', String(Math.round(options.height)));
+      if (options.quality != null) proxyParams.set('q', String(Math.min(100, Math.max(1, options.quality))));
+      if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
+      if (options.fit) proxyParams.set('fit', options.fit);
+      if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
+
+      const paramStr = proxyParams.toString();
+      const base = parsedUrl.toString();
+      const result = paramStr ? `${base}${base.includes('?') ? '&' : '?'}${paramStr}` : base;
+
       if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
         const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 50);
         keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
       }
-      optimizedUrlCache.set(cacheKey, parsedUrl.toString());
-      return parsedUrl.toString();
+      optimizedUrlCache.set(cacheKey, result);
+      return result;
     }
 
     const isOwnDomain = publicOrigin

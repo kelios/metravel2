@@ -30,7 +30,7 @@ describe('utils/imageOptimization', () => {
       expect(optimizeImageUrl('')).toBeUndefined()
     })
 
-    it('normalizes duplicated same-origin gallery path segments before adding optimization params', () => {
+    it('appends optimization params to same-origin gallery media paths', () => {
       const previousApiUrl = process.env.EXPO_PUBLIC_API_URL
       process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
 
@@ -49,10 +49,10 @@ describe('utils/imageOptimization', () => {
         expect(url.origin).toBe('https://metravel.by')
         expect(url.pathname).toBe('/gallery/544/gallery/92b330643a0e4b38b056b0d394ce21db.JPG')
         expect(url.searchParams.get('v')).toBe('3567')
-        expect(url.searchParams.get('w')).toBeNull()
-        expect(url.searchParams.get('q')).toBeNull()
-        expect(url.searchParams.get('f')).toBeNull()
-        expect(url.searchParams.get('fit')).toBeNull()
+        expect(url.searchParams.get('w')).toBe('640')
+        expect(url.searchParams.get('q')).toBe('60')
+        expect(url.searchParams.get('f')).toBe('webp')
+        expect(url.searchParams.get('fit')).toBe('contain')
       } finally {
         process.env.EXPO_PUBLIC_API_URL = previousApiUrl
       }

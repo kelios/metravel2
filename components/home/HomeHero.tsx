@@ -523,6 +523,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                       onPress={() => handleOpenArticles(currentSlide.href)}
                       testID="home-hero-slider-container"
                       style={styles.sliderContainer}
+                      {...(isWeb ? { dataSet: { bookSlider: 'true' } } : {}) as any}
                       accessibilityRole="link"
                       accessibilityLabel={`Маршрут: ${currentSlide.title}`}
                       accessibilityHint="Открыть маршрут"

@@ -128,6 +128,9 @@ config.resolver.resolveRequest = ((orig) => {
     if (platform === 'web' && moduleName === 'quill/dist/quill.snow.css') {
       return orig(context, moduleName, platform)
     }
+    if (platform === 'web' && (moduleName === './global.css' || moduleName.endsWith('/global.css'))) {
+      return orig(context, moduleName, platform)
+    }
     if (platform === 'web' && moduleName.endsWith('.css')) {
       return {
         filePath: path.resolve(__dirname, 'metro-stubs/empty.js'),

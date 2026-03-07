@@ -32,6 +32,8 @@ export interface UseWebScrollInteractionOptions {
   pauseAutoplay?: () => void;
   /** Resume autoplay */
   resumeAutoplay?: () => void;
+  /** Whether the device is a mobile phone — skips manual touch drag in favor of native scroll-snap */
+  isMobile?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,6 +62,7 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     dismissSwipeHint,
     pauseAutoplay,
     resumeAutoplay,
+    isMobile = false,
   } = options;
 
   const isDraggingRef = useRef(false);
@@ -173,12 +176,15 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       resumeAutoplay?.();
     };
 
-    // Touch / pointer swipe (mobile web)
+    // Touch / pointer swipe — only on non-mobile (desktop/tablet).
+    // On mobile phones, native CSS scroll-snap provides GPU-accelerated swiping
+    // that is far smoother than JS-based manual scrollLeft management.
+    // A lightweight passive touchstart listener still fires prefetch/dismiss.
     const isTouchPointerEvent = (e: PointerEvent) => {
       return (e as any).pointerType === 'touch' || (e as any).pointerType === 'pen';
     };
 
-    const onPointerDown = (e: PointerEvent) => {
+    const onPointerDown = !isMobile ? (e: PointerEvent) => {
       if (!isTouchPointerEvent(e)) return;
       dismissSwipeHint?.();
       enablePrefetch?.();
@@ -189,37 +195,39 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       dragStartIndexRef.current = indexRef.current;
       node.style.scrollSnapType = 'none';
       try { e.preventDefault(); } catch { /* noop */ }
-    };
+    } : null;
 
-    const onPointerMove = (e: PointerEvent) => {
+    const onPointerMove = !isMobile ? (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
       if (!isTouchPointerEvent(e)) return;
       try { e.preventDefault(); } catch { /* noop */ }
       const dx = e.pageX - dragStartXRef.current;
       node.scrollLeft = dragScrollLeftRef.current - dx;
-    };
+    } : null;
 
-    const onPointerUp = (e: PointerEvent) => {
+    const onPointerUp = !isMobile ? (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
       if (!isTouchPointerEvent(e)) return;
       isDraggingRef.current = false;
       settleToNearestSlide();
       resumeAutoplay?.();
-    };
+    } : null;
 
-    const onPointerCancel = (e: PointerEvent) => {
+    const onPointerCancel = !isMobile ? (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
       if (!isTouchPointerEvent(e)) return;
       isDraggingRef.current = false;
       settleToNearestSlide();
       resumeAutoplay?.();
-    };
+    } : null;
 
-    // iOS Safari fallback (no PointerEvent)
+    // On mobile: lightweight passive touch listener for prefetch/dismiss only
+    // On non-mobile: full manual touch drag (iOS Safari fallback for PointerEvent)
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       dismissSwipeHint?.();
       enablePrefetch?.();
+      if (isMobile) return; // let native scroll-snap handle the rest
       pauseAutoplay?.();
       isDraggingRef.current = true;
       dragStartXRef.current = e.touches[0].pageX;
@@ -228,19 +236,19 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       node.style.scrollSnapType = 'none';
     };
 
-    const onTouchMove = (e: TouchEvent) => {
+    const onTouchMove = !isMobile ? (e: TouchEvent) => {
       if (!isDraggingRef.current) return;
       if (e.touches.length !== 1) return;
       const dx = e.touches[0].pageX - dragStartXRef.current;
       node.scrollLeft = dragScrollLeftRef.current - dx;
-    };
+    } : null;
 
-    const onTouchEnd = () => {
+    const onTouchEnd = !isMobile ? () => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       settleToNearestSlide();
       resumeAutoplay?.();
-    };
+    } : null;
 
     const onScrollEnd = () => {
       const cw = containerWRef.current || 1;
@@ -257,14 +265,14 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     node.addEventListener('mouseleave', onMouseLeave);
     node.addEventListener('scrollend', onScrollEnd);
 
-    node.addEventListener('pointerdown', onPointerDown as EventListener, { passive: false } as any);
-    node.addEventListener('pointermove', onPointerMove as EventListener, { passive: false } as any);
-    node.addEventListener('pointerup', onPointerUp as EventListener, { passive: true } as any);
-    node.addEventListener('pointercancel', onPointerCancel as EventListener, { passive: true } as any);
+    if (onPointerDown) node.addEventListener('pointerdown', onPointerDown as EventListener, { passive: false } as any);
+    if (onPointerMove) node.addEventListener('pointermove', onPointerMove as EventListener, { passive: false } as any);
+    if (onPointerUp) node.addEventListener('pointerup', onPointerUp as EventListener, { passive: true } as any);
+    if (onPointerCancel) node.addEventListener('pointercancel', onPointerCancel as EventListener, { passive: true } as any);
 
     node.addEventListener('touchstart', onTouchStart as EventListener, { passive: true } as any);
-    node.addEventListener('touchmove', onTouchMove as EventListener, { passive: true } as any);
-    node.addEventListener('touchend', onTouchEnd as EventListener, { passive: true } as any);
+    if (onTouchMove) node.addEventListener('touchmove', onTouchMove as EventListener, { passive: true } as any);
+    if (onTouchEnd) node.addEventListener('touchend', onTouchEnd as EventListener, { passive: true } as any);
 
     return () => {
       parent?.removeEventListener('keydown', handleKeyDown as EventListener);
@@ -274,14 +282,14 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       node.removeEventListener('mouseleave', onMouseLeave);
       node.removeEventListener('scrollend', onScrollEnd);
 
-      node.removeEventListener('pointerdown', onPointerDown as EventListener);
-      node.removeEventListener('pointermove', onPointerMove as EventListener);
-      node.removeEventListener('pointerup', onPointerUp as EventListener);
-      node.removeEventListener('pointercancel', onPointerCancel as EventListener);
+      if (onPointerDown) node.removeEventListener('pointerdown', onPointerDown as EventListener);
+      if (onPointerMove) node.removeEventListener('pointermove', onPointerMove as EventListener);
+      if (onPointerUp) node.removeEventListener('pointerup', onPointerUp as EventListener);
+      if (onPointerCancel) node.removeEventListener('pointercancel', onPointerCancel as EventListener);
 
       node.removeEventListener('touchstart', onTouchStart as EventListener);
-      node.removeEventListener('touchmove', onTouchMove as EventListener);
-      node.removeEventListener('touchend', onTouchEnd as EventListener);
+      if (onTouchMove) node.removeEventListener('touchmove', onTouchMove as EventListener);
+      if (onTouchEnd) node.removeEventListener('touchend', onTouchEnd as EventListener);
 
       if (scrollIdleTimerRef.current) {
         clearTimeout(scrollIdleTimerRef.current);
@@ -289,5 +297,5 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dismissSwipeHint, enablePrefetch, pauseAutoplay, resumeAutoplay, slideCount, setActiveIndex, scrollTo, resolveNodes]);
+  }, [dismissSwipeHint, enablePrefetch, pauseAutoplay, resumeAutoplay, slideCount, setActiveIndex, scrollTo, resolveNodes, isMobile]);
 }

@@ -460,3 +460,69 @@ html[data-theme="dark"] .modal-select option {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* Эффект раскрытой книги для слайдера на главной странице.
+ * The sliderContainer (Pressable) carries data-book-slider="true".
+ * Inline styles from homeHeroStyles.ts already provide position, transform,
+ * box-shadow, border-radius and overflow — so we only add non-destructive
+ * decorative layers here (pseudo-elements, img filters, texture overlays).
+ * Do NOT override position, overflow, transform or box-shadow on children —
+ * the slideWrapper uses position:absolute and will collapse otherwise. */
+
+/* Subtle illustration filter on the slide image */
+[data-book-slider="true"] img {
+  filter:
+    sepia(0.10)
+    contrast(1.04)
+    brightness(0.99)
+    saturate(0.96);
+  transition: filter 0.3s ease;
+}
+
+[data-book-slider="true"]:hover img {
+  filter:
+    sepia(0.06)
+    contrast(1.02)
+    brightness(1)
+    saturate(1);
+}
+
+/* Виньетирование — subtle edge darkening for old-illustration feel */
+[data-book-slider="true"]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(
+      ellipse 85% 75% at 50% 45%,
+      transparent 0%,
+      transparent 50%,
+      rgba(58, 48, 38, 0.06) 80%,
+      rgba(58, 48, 38, 0.12) 100%
+    );
+  pointer-events: none;
+  z-index: 5;
+  border-radius: inherit;
+}
+
+/* Тень от корешка книги — spine shadow */
+[data-book-slider="true"]::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 80px;
+  background: linear-gradient(to right,
+    rgba(0,0,0,0.12) 0%,
+    rgba(0,0,0,0.06) 25%,
+    rgba(0,0,0,0.02) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 7;
+  border-radius: inherit;
+}

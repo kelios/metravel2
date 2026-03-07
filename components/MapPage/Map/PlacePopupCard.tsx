@@ -28,6 +28,16 @@ type Props = {
   imageHeight?: number;
 };
 
+const POPUP_TOOLTIPS = {
+  openPhoto: 'Открыть фото на весь экран',
+  copyCoords: 'Скопировать координаты',
+  openGoogleMaps: 'Открыть точку в Google Maps',
+  openOrganicMaps: 'Открыть точку в Organic Maps',
+  shareTelegram: 'Поделиться точкой в Telegram',
+  openArticle: 'Открыть статью по точке',
+  buildRoute: 'Построить маршрут сюда',
+} as const;
+
 const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: boolean; onClose: () => void }> = ({ imageUrl, alt, visible, onClose }) => {
   const { width, height } = useWindowDimensions();
   const colors = useThemedColors();
@@ -305,7 +315,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Открыть фото на полный экран"
             onPress={handleOpenFullscreen}
-            title="Открыть фото на полный экран"
+            title={POPUP_TOOLTIPS.openPhoto}
             style={styles.heroTouchable as any}
           >
             <ImageCardMedia
@@ -360,7 +370,7 @@ const PlacePopupCard: React.FC<Props> = ({
         <CardActionPressable
           accessibilityLabel="Скопировать координаты"
           onPress={onCopyCoord ? () => void onCopyCoord() : undefined}
-          title="Скопировать координаты"
+          title={POPUP_TOOLTIPS.copyCoords}
           style={styles.coordRow}
         >
           <Text style={styles.coordText} numberOfLines={1} selectable>{coord}</Text>
@@ -375,7 +385,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
             onPress={onOpenGoogleMaps}
-            title="Google Maps"
+            title={POPUP_TOOLTIPS.openGoogleMaps}
             style={actionBtnStyle}
           >
             <Feather name="map" size={16} color={colors.textMuted} />
@@ -386,7 +396,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Открыть в Organic Maps"
             onPress={onOpenOrganicMaps}
-            title="Organic Maps"
+            title={POPUP_TOOLTIPS.openOrganicMaps}
             style={actionBtnStyle}
           >
             <Feather name="compass" size={16} color={colors.textMuted} />
@@ -397,7 +407,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Поделиться в Telegram"
             onPress={onShareTelegram}
-            title="Телеграм"
+            title={POPUP_TOOLTIPS.shareTelegram}
             style={actionBtnStyle}
           >
             <Feather name="send" size={16} color={colors.textMuted} />
@@ -408,7 +418,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Открыть статью"
             onPress={onOpenArticle}
-            title="Статья"
+            title={POPUP_TOOLTIPS.openArticle}
             style={actionBtnStyle}
           >
             <Feather name="book-open" size={16} color={colors.textMuted} />
@@ -419,7 +429,7 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Маршрут сюда"
             onPress={onBuildRoute}
-            title="Маршрут сюда"
+            title={POPUP_TOOLTIPS.buildRoute}
             testID="popup-build-route"
             style={({ pressed }) => [
               styles.iconBtn,
