@@ -891,25 +891,28 @@ export const createHomeHeroStyles = ({
   },
 
   // -- Mood chips (mobile horizontal scroll) --
-  moodChipsContainer: { marginTop: showSideSlider ? 24 : 16, paddingTop: 14, borderTopWidth: showSideSlider ? 0 : 1, borderTopColor: warmBorder, width: '100%' },
+  moodChipsContainer: { marginTop: showSideSlider ? 24 : 20, paddingTop: 18, borderTopWidth: showSideSlider ? 0 : 1, borderTopColor: warmBorder, width: '100%' },
   moodChipsScrollContent: {
-    flexDirection: 'row', gap: 10, paddingHorizontal: 0,
+    flexDirection: 'row', gap: 12, paddingHorizontal: 0,
     justifyContent: 'flex-start', flexWrap: 'nowrap' as const,
   },
   moodChip: {
-    flexDirection: 'row' as const, alignItems: 'center' as const, gap: 9,
-    paddingHorizontal: 17, paddingVertical: 11,
+    flexDirection: 'row' as const, alignItems: 'center' as const, gap: 10,
+    paddingHorizontal: 20, paddingVertical: 13,
     borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: cardSurface,
-    borderWidth: 1, borderColor: warmBorder,
+    borderWidth: 1.5, borderColor: warmBorder,
     ...Platform.select({ web: {
       cursor: 'pointer',
-      transition: 'border-color 0.15s ease, background-color 0.15s ease',
-      boxShadow: '0 1px 0 rgba(120,96,62,0.08)',
+      transition: 'all 0.2s ease',
+      boxShadow: '0 2px 8px rgba(120,96,62,0.06)',
     } }) as any,
   },
   moodChipHover: {
     backgroundColor: warmBgSoft, borderColor: colors.brand,
-    ...Platform.select({ web: {} }),
+    ...Platform.select({ web: {
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(120,96,62,0.12)',
+    } }),
   },
   moodChipAccent: { width: 0, height: 0 },
   moodChipIcon: {
@@ -917,8 +920,8 @@ export const createHomeHeroStyles = ({
   },
   moodChipText: { gap: 0 },
   moodChipTitle: {
-    fontSize: 15, fontWeight: '500', color: inkStrong, letterSpacing: -0.12,
-    lineHeight: 20,
+    fontSize: 16, fontWeight: '500', color: inkStrong, letterSpacing: -0.12,
+    lineHeight: 22,
     ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
   },
   moodChipMeta: {
@@ -928,73 +931,73 @@ export const createHomeHeroStyles = ({
   },
 
   // -- Popular section (mobile) --
-  popularSection: { marginTop: isMobile ? 28 : 40, width: '100%' },
+  popularSection: { marginTop: isMobile ? 32 : 40, width: '100%' },
   popularTitle: {
-    fontSize: 12, fontWeight: '600', color: '#8B7D6B', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1.4,
+    fontSize: 13, fontWeight: '600', color: '#8B7D6B', marginBottom: 18, textTransform: 'uppercase', letterSpacing: 1.6,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
-  popularScrollContent: { flexDirection: 'row', gap: 14, paddingRight: 16 },
+  popularScrollContent: { flexDirection: 'row', gap: 16, paddingRight: 16 },
 
   // -- Featured card (mobile hero image) --
   featuredCard: {
-    width: '100%', borderRadius: 20, overflow: 'hidden',
-    backgroundColor: cardSurface, borderWidth: 1, borderColor: warmBorder,
-    marginBottom: 24, position: 'relative' as const,
+    width: '100%', borderRadius: 24, overflow: 'hidden',
+    backgroundColor: cardSurface, borderWidth: 0, borderColor: 'transparent',
+    marginBottom: 28, position: 'relative' as const,
     ...Platform.select({ web: {
       cursor: 'pointer',
-      transition: 'all 0.22s ease',
-      boxShadow: `0 4px 24px ${warmShadow}`,
+      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: `0 8px 32px ${warmShadow}, 0 2px 8px rgba(120,90,50,0.08)`,
     } }),
   },
   featuredCardHover: {
     ...Platform.select({ web: {
-      transform: 'translateY(-3px)',
-      boxShadow: `0 8px 32px rgba(120,90,50,0.14)`,
-      borderColor: 'rgba(180,160,130,0.3)',
+      transform: 'translateY(-4px) scale(1.005)',
+      boxShadow: `0 16px 48px rgba(120,90,50,0.18), 0 4px 12px rgba(120,90,50,0.12)`,
+      borderColor: 'transparent',
     } }),
   },
   featuredCardImage: { width: '100%', aspectRatio: 16 / 9 },
   featuredCardOverlay: {
     position: 'absolute' as const, bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingVertical: 18, paddingTop: 56,
+    paddingHorizontal: 24, paddingVertical: 22, paddingTop: 64,
     ...Platform.select({ web: {
-      backgroundImage: 'linear-gradient(to top, rgba(15,12,8,0.90) 0%, rgba(15,12,8,0.50) 50%, rgba(15,12,8,0.15) 75%, transparent 100%)',
+      backgroundImage: 'linear-gradient(to top, rgba(12,10,8,0.94) 0%, rgba(12,10,8,0.60) 45%, rgba(12,10,8,0.20) 70%, transparent 100%)',
     } }),
   },
   featuredCardTitle: {
-    fontSize: isMobile ? 18 : 22, fontWeight: '600', color: '#FFFFFF', marginBottom: 4, letterSpacing: -0.3,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    fontSize: isMobile ? 20 : 24, fontWeight: '700', color: '#FFFFFF', marginBottom: 6, letterSpacing: -0.4,
+    ...Platform.select({ web: { fontFamily: editorialSerif, textShadow: '0 2px 12px rgba(0,0,0,0.4)' } as any }),
   },
   featuredCardSubtitle: {
-    fontSize: isMobile ? 12 : 13, fontWeight: '400', color: 'rgba(255,255,255,0.78)', letterSpacing: 0.2,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    fontSize: isMobile ? 13 : 14, fontWeight: '400', color: 'rgba(255,255,255,0.85)', letterSpacing: 0.3,
+    ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
   },
 
   // -- Image card (horizontal scroll items) --
   imageCard: {
-    width: isMobile ? 200 : 230, borderRadius: 16, backgroundColor: cardSurface,
-    borderWidth: 1, borderColor: warmBorder, overflow: 'hidden',
+    width: isMobile ? 210 : 240, borderRadius: 18, backgroundColor: cardSurface,
+    borderWidth: 0, borderColor: 'transparent', overflow: 'hidden',
     ...Platform.select({ web: {
-      transition: 'all 0.22s ease',
+      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
       cursor: 'pointer',
-      boxShadow: `0 2px 10px ${warmShadow}`,
+      boxShadow: `0 4px 16px ${warmShadow}, 0 1px 4px rgba(120,90,50,0.06)`,
     } }),
   },
   imageCardHover: {
     ...Platform.select({ web: {
-      transform: 'translateY(-3px)',
-      boxShadow: `0 8px 28px rgba(120,90,50,0.12)`,
-      borderColor: 'rgba(180,160,130,0.3)',
+      transform: 'translateY(-4px) scale(1.02)',
+      boxShadow: `0 12px 36px rgba(120,90,50,0.14), 0 4px 12px rgba(120,90,50,0.08)`,
+      borderColor: 'transparent',
     } }),
   },
-  imageCardImage: { width: isMobile ? 200 : 230, height: isMobile ? 135 : 160 },
-  imageCardContent: { padding: 14, gap: 4 },
+  imageCardImage: { width: isMobile ? 210 : 240, height: isMobile ? 140 : 165 },
+  imageCardContent: { padding: 16, gap: 6 },
   imageCardTitle: {
-    fontSize: 14, fontWeight: '600', color: '#2A1F14', lineHeight: 19, letterSpacing: -0.2,
-    ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    fontSize: 15, fontWeight: '600', color: '#2A1F14', lineHeight: 20, letterSpacing: -0.2,
+    ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
   },
   imageCardSubtitle: {
-    fontSize: 12, fontWeight: '400', color: '#8B7D6B', lineHeight: 17,
+    fontSize: 13, fontWeight: '400', color: '#8B7D6B', lineHeight: 18,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 });

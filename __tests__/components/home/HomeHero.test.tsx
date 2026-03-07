@@ -110,10 +110,10 @@ describe('HomeHero Component', () => {
         isPortrait: true,
       });
 
-      const { getByText, queryByText } = render(<HomeHero />);
+      const { getByText } = render(<HomeHero />);
 
       expect(getByText('Популярные маршруты')).toBeTruthy();
-      expect(queryByText('Маршрут недели')).toBeNull();
+      expect(getByText('Маршрут недели')).toBeTruthy();
     });
 
   });

@@ -2,6 +2,7 @@ import { Filters, TravelFormData } from '@/types/types';
 import { devError } from '@/utils/logger';
 import { safeJsonParse } from '@/utils/safeJsonParse';
 import { sanitizeInput } from '@/utils/security';
+import { stripBase64Images } from '@/utils/htmlUtils';
 import { validateAIMessage, validateImageFile } from '@/utils/aiValidation';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem } from '@/utils/secureStorage';
@@ -129,7 +130,7 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
     const sanitizedData = {
       ...data,
       name: sanitizeStringField(data.name, 200),
-      description: typeof data.description === 'string' ? sanitizeInput(data.description) : data.description,
+      description: typeof data.description === 'string' ? sanitizeInput(stripBase64Images(data.description)) : data.description,
       minus: sanitizeStringField(data.minus, 5000),
       plus: sanitizeStringField(data.plus, 5000),
       recommendation: sanitizeStringField(data.recommendation, 5000),

@@ -254,6 +254,152 @@ const PointActionChip = React.memo(function PointActionChip({
   );
 });
 
+/* ---------------- list row (compact) ---------------- */
+
+type ViewMode = 'cards' | 'list';
+
+const PointListRow = React.memo(function PointListRow({
+  point,
+  index,
+  onCopy,
+  onShare,
+  onOpenMap,
+  onAddPoint,
+  addButtonLoading,
+  addButtonDisabled,
+  onCardPress,
+  colors,
+  styles,
+}: {
+  point: Point;
+  index: number;
+  onCopy: (coordStr: string) => void;
+  onShare: (coordStr: string) => void;
+  onOpenMap: (coordStr: string) => void;
+  onAddPoint?: () => void;
+  addButtonLoading?: boolean;
+  addButtonDisabled?: boolean;
+  onCardPress?: () => void;
+  colors: ReturnType<typeof useThemedColors>;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const [imageError, setImageError] = React.useState(false);
+  const imgUri = getOptimizedImageUrl(point.travelImageThumbUrl, point.updated_at);
+  const handleImageError = useCallback(() => setImageError(true), []);
+  const openMapFromLink = useCallback(() => onOpenMap(point.coord), [onOpenMap, point.coord]);
+  const categoryStr = normalizeCategoryNameToString(point.categoryName).split(',')[0]?.trim();
+
+  return (
+    <View style={styles.listRow}>
+      <Pressable
+        onPress={onCardPress ?? openMapFromLink}
+        style={[styles.listRowPressable, globalFocusStyles.focusable]}
+        accessibilityRole="button"
+        accessibilityLabel={`Открыть место: ${point.address}`}
+      >
+        {/* Thumbnail */}
+        <View style={styles.listRowThumb}>
+          {imgUri && !imageError ? (
+            <ImageCardMedia
+              src={imgUri}
+              alt={point.address}
+              fit="cover"
+              priority="low"
+              loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
+              onError={handleImageError}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <View style={styles.listRowThumbPlaceholder} />
+          )}
+        </View>
+
+        {/* Info */}
+        <View style={styles.listRowInfo}>
+          <View style={styles.listRowHeader}>
+            <View style={styles.listRowBullet}>
+              <Text style={styles.listRowBulletText}>{index + 1}</Text>
+            </View>
+            <Text style={styles.listRowTitle} numberOfLines={2}>
+              {point.address || 'Без адреса'}
+            </Text>
+          </View>
+
+          {point.coord ? (
+            <CardActionPressable
+              style={[styles.listRowCoordChip, globalFocusStyles.focusable]}
+              onPress={openMapFromLink}
+              accessibilityLabel={`Координаты: ${point.coord}`}
+              title="Открыть координаты в Google Maps"
+            >
+              <Feather name="map-pin" size={12} color={colors.textMuted} />
+              <Text style={styles.listRowCoordText} numberOfLines={1}>
+                {point.coord}
+              </Text>
+            </CardActionPressable>
+          ) : null}
+
+          {!!categoryStr && (
+            <Text style={styles.listRowCategory} numberOfLines={1}>
+              {categoryStr}
+            </Text>
+          )}
+
+          {/* Actions row */}
+          <View style={styles.listRowActions}>
+            {point.coord ? (
+              <>
+                <CardActionPressable
+                  accessibilityLabel="Скопировать координаты"
+                  onPress={() => onCopy(point.coord)}
+                  title="Скопировать координаты"
+                  style={styles.listRowIconBtn}
+                >
+                  <Feather name="copy" size={14} color={colors.textMuted} />
+                </CardActionPressable>
+                <CardActionPressable
+                  accessibilityLabel="Поделиться в Telegram"
+                  onPress={() => onShare(point.coord)}
+                  title="Телеграм"
+                  style={styles.listRowIconBtn}
+                >
+                  <Feather name="send" size={14} color={colors.textMuted} />
+                </CardActionPressable>
+                <PointActionChip label="Google" title="Открыть в Google Maps" onPress={() => void openExternal(buildMapUrl(point.coord))} chipStyle={styles.listRowMapChip} textStyle={styles.listRowMapChipText} />
+                <PointActionChip label="Яндекс" title="Открыть в Яндекс Картах" onPress={() => void openExternal(buildYandexMapsUrl(point.coord))} chipStyle={styles.listRowMapChip} textStyle={styles.listRowMapChipText} />
+                <PointActionChip label="OSM" title="Открыть в OpenStreetMap" onPress={() => void openExternal(buildOsmUrl(point.coord))} chipStyle={styles.listRowMapChip} textStyle={styles.listRowMapChipText} />
+              </>
+            ) : null}
+
+            {onAddPoint && (
+              <CardActionPressable
+                onPress={onAddPoint}
+                disabled={Boolean(addButtonDisabled) || Boolean(addButtonLoading)}
+                accessibilityLabel="Мои точки"
+                title="Мои точки"
+                style={({ pressed }) => [
+                  styles.listRowAddBtn,
+                  pressed && !addButtonDisabled && !addButtonLoading && styles.addButtonPressed,
+                  (addButtonDisabled || addButtonLoading) && styles.addButtonDisabled,
+                ]}
+              >
+                {addButtonLoading ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <>
+                    <Feather name="map-pin" size={13} color={colors.primary} />
+                    <Text style={styles.listRowAddBtnText}>Мои точки</Text>
+                  </>
+                )}
+              </CardActionPressable>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    </View>
+  );
+});
+
 /* ---------------- card ---------------- */
 
 const PointCard = React.memo(function PointCard({
@@ -473,6 +619,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
   const isMobile = isPhone || isLargePhone;
   const isLargeDesktop = width >= 1440;
   const [showList, setShowList] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [siteCategoryDictionary, setSiteCategoryDictionary] = useState<CategoryDictionaryItem[]>([]);
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
   const { isAuthenticated, authReady } = useAuth();
@@ -885,7 +1032,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
     <View style={styles.wrapper}>
       <Pressable
         onPress={() => setShowList((p) => !p)}
-        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed, globalFocusStyles.focusable]}
         accessibilityRole="button"
         accessibilityLabel={toggleLabel}
         accessibilityState={{ expanded: showList }}
@@ -938,20 +1085,74 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         </Pressable>
       )}
 
+      {showList && Platform.OS === 'web' && (
+        <View style={styles.viewModeBar}>
+          <Pressable
+            onPress={() => setViewMode('cards')}
+            style={[styles.viewModeBtn, viewMode === 'cards' && styles.viewModeBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Карточки"
+            accessibilityState={{ selected: viewMode === 'cards' }}
+          >
+            <Feather name="grid" size={16} color={viewMode === 'cards' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.viewModeBtnText, viewMode === 'cards' && styles.viewModeBtnTextActive]}>
+              Карточки
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setViewMode('list')}
+            style={[styles.viewModeBtn, viewMode === 'list' && styles.viewModeBtnActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Список"
+            accessibilityState={{ selected: viewMode === 'list' }}
+          >
+            <Feather name="list" size={16} color={viewMode === 'list' ? colors.primary : colors.textMuted} />
+            <Text style={[styles.viewModeBtnText, viewMode === 'list' && styles.viewModeBtnTextActive]}>
+              Список
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
       {showList && (
         Platform.OS === 'web' ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator
-            contentContainerStyle={styles.horizontalListContent}
-            style={styles.horizontalScroll}
-          >
-            {safePoints.map((item) => (
-              <React.Fragment key={keyExtractor(item)}>
-                {renderItem({ item } as any)}
-              </React.Fragment>
-            ))}
-          </ScrollView>
+          viewMode === 'list' ? (
+            <View style={styles.verticalListWrap}>
+              {safePoints.map((item, idx) => {
+                const isAdding = addingPointId === item.id;
+                const addDisabled = !authReady;
+                return (
+                  <PointListRow
+                    key={item.id}
+                    point={item}
+                    index={idx}
+                    onCopy={onCopy}
+                    onShare={onShare}
+                    onOpenMap={onOpenMap}
+                    onAddPoint={() => { void handleAddPoint(item); }}
+                    addButtonLoading={isAdding}
+                    addButtonDisabled={addDisabled}
+                    onCardPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
+                    colors={colors}
+                    styles={styles}
+                  />
+                );
+              })}
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator
+              contentContainerStyle={styles.horizontalListContent}
+              style={styles.horizontalScroll}
+            >
+              {safePoints.map((item) => (
+                <React.Fragment key={keyExtractor(item)}>
+                  {renderItem({ item } as any)}
+                </React.Fragment>
+              ))}
+            </ScrollView>
+          )
         ) : (
           <FlashList
             key={`cols-${numColumns}`}
@@ -1367,5 +1568,189 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '600',
     letterSpacing: -0.2,
     color: colors.textOnPrimary,
+  },
+
+  // View mode toggle bar
+  viewModeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    alignSelf: 'flex-end',
+  },
+  viewModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'all 0.2s ease',
+      },
+    }),
+  },
+  viewModeBtnActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  viewModeBtnText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '500',
+    color: colors.textMuted,
+  },
+  viewModeBtnTextActive: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+
+  // Vertical list view
+  verticalListWrap: {
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  listRow: {
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    overflow: 'hidden',
+    ...Platform.select({
+      web: {
+        transition: 'border-color 0.2s ease',
+      },
+    }),
+  },
+  listRowPressable: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
+  },
+  listRowThumb: {
+    width: 80,
+    minHeight: 80,
+    backgroundColor: colors.backgroundSecondary,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  listRowThumbPlaceholder: {
+    width: 80,
+    minHeight: 80,
+    backgroundColor: colors.backgroundTertiary,
+  },
+  listRowInfo: {
+    flex: 1,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    gap: 4,
+    justifyContent: 'center',
+  },
+  listRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  listRowBullet: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  listRowBulletText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primaryText,
+  },
+  listRowTitle: {
+    flex: 1,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 18,
+  },
+  listRowCoordChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  listRowCoordText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontFamily: Platform.select({
+      web: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+      default: undefined,
+    }),
+  },
+  listRowCategory: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  listRowActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  listRowIconBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    backgroundColor: colors.backgroundSecondary ?? colors.surface,
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
+  },
+  listRowMapChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
+  },
+  listRowMapChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  listRowAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: 'transparent',
+    marginLeft: 'auto' as any,
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
+  },
+  listRowAddBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
   },
 });

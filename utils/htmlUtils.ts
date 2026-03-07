@@ -84,6 +84,16 @@ export function appendPlainTextToHtml(existingHtml: string, text: string): strin
 }
 
 /**
+ * Removes <img> tags with base64 data-URI src from HTML.
+ * This prevents massive inline images from inflating the description
+ * beyond backend character limits (e.g. 10 000 000 chars).
+ */
+export function stripBase64Images(html: string): string {
+    if (!html || typeof html !== 'string') return html ?? '';
+    return html.replace(/<img\s[^>]*src\s*=\s*["']data:[^"']+["'][^>]*\/?>/gi, '');
+}
+
+/**
  * Safe JSON stringify that avoids breaking HTML script tags
  */
 export function safeJsonString(value: string): string {

@@ -292,13 +292,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             position: isWeb ? 'sticky' : 'relative',
             top: isWeb ? 0 : undefined,
             zIndex: isWeb ? 20 : undefined,
+            overflow: isWeb ? ('visible' as any) : undefined,
         },
         label: {
             fontSize: DESIGN_TOKENS.typography.sizes.md,
             fontWeight: '600' as const,
             color: colors.text,
         },
-        row: { flexDirection: 'row', alignItems: 'center' },
+        row: { flexDirection: 'row', alignItems: 'center', overflow: isWeb ? ('visible' as any) : undefined },
         btn: {
             marginLeft: DESIGN_TOKENS.spacing.md,
         },
@@ -308,8 +309,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             ...(isWeb
                 ? ({
                     maxHeight: fullscreen ? undefined : 560,
-                    // Keep the Quill toolbar visible; only editor content should scroll.
-                    overflow: 'hidden',
+                    // Allow Quill toolbar dropdowns (font, size, color pickers) to overflow;
+                    // inner .ql-editor already handles its own scroll via overflow-y:auto in CSS.
+                    overflow: 'visible',
                 } as any)
                 : null),
         },
@@ -580,7 +582,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-toolbar.ql-snow button{flex:0 0 auto}
       .ql-container{max-width:100%;border:none}
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
-      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;border:none}
+      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;max-height:500px;min-height:0;border:none}
       .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
       .ql-toolbar.ql-snow::-webkit-scrollbar{height:8px}
       .ql-toolbar.ql-snow::-webkit-scrollbar-thumb{background:rgba(120,120,120,0.35);border-radius:999px}
@@ -834,9 +836,16 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             };
 
             const onDrop = (e: DragEvent) => {
-                if (!e.dataTransfer?.files?.length) return;
+                const file = e.dataTransfer?.files?.[0];
+                if (!file) return;
+                if (typeof file.type !== 'string' || !file.type.startsWith('image/')) return;
                 e.preventDefault();
-                uploadAndInsert(e.dataTransfer.files[0]);
+                try {
+                    (e as any).stopImmediatePropagation?.();
+                } catch {
+                    // noop
+                }
+                uploadAndInsert(file);
             };
             const onPaste = (e: ClipboardEvent) => {
                 const file = Array.from(e.clipboardData?.files ?? [])[0];
@@ -850,6 +859,25 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     uploadAndInsert(file);
                     return;
                 }
+
+                const pastedHtml = e.clipboardData?.getData('text/html') ?? '';
+                if (pastedHtml && /src\s*=\s*["']data:/i.test(pastedHtml)) {
+                    const cleaned = pastedHtml.replace(/<img\s[^>]*src\s*=\s*["']data:[^"']+["'][^>]*\/?>/gi, '');
+                    if (cleaned !== pastedHtml) {
+                        e.preventDefault();
+                        try {
+                            (e as any).stopImmediatePropagation?.();
+                        } catch (err) {
+                            void err;
+                        }
+                        const ed = quillRef.current?.getEditor?.();
+                        if (ed && typeof ed.clipboard?.dangerouslyPasteHTML === 'function') {
+                            const range = ed.getSelection() || { index: ed.getLength(), length: 0 };
+                            if (range.length > 0) ed.deleteText(range.index, range.length, 'silent');
+                            ed.clipboard.dangerouslyPasteHTML(range.index, cleaned, 'user');
+                        }
+                    }
+                }
             };
 
             const onSelectionChange = (range: { index: number; length: number } | null) => {
@@ -859,7 +887,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
             root.addEventListener('dragover', onDragOver);
             root.addEventListener('dragenter', onDragOver);
-            root.addEventListener('drop', onDrop);
+            root.addEventListener('drop', onDrop, true);
             root.addEventListener('paste', onPaste, true);
 
             if (typeof editor.on === 'function') {
@@ -869,7 +897,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             cleanup = () => {
                 root.removeEventListener('dragover', onDragOver);
                 root.removeEventListener('dragenter', onDragOver);
-                root.removeEventListener('drop', onDrop);
+                root.removeEventListener('drop', onDrop, true);
                 root.removeEventListener('paste', onPaste, true);
                 if (typeof editor.off === 'function') {
                     editor.off('selection-change', onSelectionChange);

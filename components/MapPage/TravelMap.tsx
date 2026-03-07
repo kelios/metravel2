@@ -17,6 +17,7 @@ import ClusterLayer from './Map/ClusterLayer';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import { useLeafletIcons } from './Map/useLeafletIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { normalizePoint } from '@/components/map-core/types';
 
 interface TravelMapProps {
   /**
@@ -282,7 +283,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // `travelData` comes from API and can be null/invalid for some items.
   // Coerce to an array to avoid runtime crashes inside hooks/components that iterate it.
   const safeTravelData = useMemo<any[]>(
-    () => (Array.isArray(travelData) ? travelData : []),
+    () => (Array.isArray(travelData) ? travelData.map((item, i) => normalizePoint(item, i)) : []),
     [travelData]
   );
   const mapRef = useRef<any>(null);

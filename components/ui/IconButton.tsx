@@ -163,6 +163,7 @@ const getStyles = (colors: ThemedColors) => {
           transition: 'all 0.2s ease',
           cursor: 'pointer',
           boxShadow: boxShadows.light,
+          overflow: 'visible',
           // @ts-ignore -- CSS pseudo-selector :hover is web-only, not in RN style types
           ':hover': {
             backgroundColor: colors.primarySoft,
@@ -184,7 +185,8 @@ const getStyles = (colors: ThemedColors) => {
   },
   tooltip: {
     position: 'absolute',
-    top: -44,
+    top: '100%',
+    marginTop: 4,
     right: 0,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,

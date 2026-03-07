@@ -43,6 +43,10 @@ jest.mock('@/utils/security', () => ({
   sanitizeInput: (...args: any[]) => mockSanitizeInput(...args),
 }))
 
+jest.mock('@/utils/htmlUtils', () => ({
+  stripBase64Images: (html: string) => html?.replace(/<img\s[^>]*src\s*=\s*["']data:[^"']+["'][^>]*\/?>/gi, '') ?? '',
+}))
+
 jest.mock('@/utils/logger', () => ({
   devError: (...args: any[]) => mockDevError(...args),
 }))
@@ -238,5 +242,26 @@ describe('api/misc', () => {
     mockFetchWithTimeout.mockResolvedValue({ ok: false, statusText: 'Bad Request' })
 
     await expect(sendAIMessage('hello')).rejects.toThrow('AI request failed: Bad Request')
+  })
+
+  it('saveFormData strips base64 images from description before sending', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockSanitizeInput.mockImplementation((v: string) => v)
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 2 })
+
+    const base64Img = '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==" />'
+    const payload = {
+      ...baseForm,
+      name: 'Travel with images',
+      description: `<p>Hello</p>${base64Img}<p>World</p>`,
+    } as any
+
+    await saveFormData(payload)
+
+    const requestOptions = mockApiClientRequest.mock.calls[0][1]
+    const body = JSON.parse(requestOptions.body)
+    expect(body.description).not.toContain('data:image')
+    expect(body.description).toContain('Hello')
+    expect(body.description).toContain('World')
   })
 })
