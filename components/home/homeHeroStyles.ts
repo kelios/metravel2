@@ -64,8 +64,8 @@ export const createHomeHeroStyles = ({
   const leftPagePaddingTop = hasBookLayout
     ? (isUltraWideBook ? '8%' : isLargeDesktopBook ? '8.5%' : '9%')
     : 48;
-  const leftPageWidth = showSideSlider ? '51%' : '100%';
-  const rightPageWidth = showSideSlider ? '49%' : 320;
+  const leftPageWidth = showSideSlider ? (isNarrowDesktopBook ? '49%' : '50%') : '100%';
+  const rightPageWidth = showSideSlider ? (isNarrowDesktopBook ? '51%' : '50%') : 320;
   const isCompactBookLayout = hasBookLayout && bookHeight <= 760;
   const isVeryCompactBookLayout = hasBookLayout && bookHeight <= 640;
 
@@ -95,8 +95,8 @@ export const createHomeHeroStyles = ({
   return StyleSheet.create({
   container: {
     width: '100%',
-    paddingTop: isMobile ? (isLandscape ? 0 : 8) : (showSideSlider ? 16 : 0),
-    paddingBottom: isMobile ? (isLandscape ? 8 : 16) : (showSideSlider ? 16 : 0),
+    paddingTop: isMobile ? (isLandscape ? 0 : 8) : (showSideSlider ? 20 : 8),
+    paddingBottom: isMobile ? (isLandscape ? 8 : 16) : (showSideSlider ? 24 : 8),
     backgroundColor: warmBg,
     ...Platform.select({ web: {
       backgroundImage: 'none',
@@ -159,15 +159,15 @@ export const createHomeHeroStyles = ({
   // No double-padding: heroSection owns all padding, leftPageFrame is zero-overhead.
   heroSection: {
     alignItems: isMobile ? 'stretch' : 'flex-start',
-    gap: showSideSlider ? 0 : (isMobile ? 16 : 18),
+    gap: showSideSlider ? 0 : (isMobile ? 16 : 20),
     width: leftPageWidth,
     maxWidth: showSideSlider ? leftPageWidth : (isMobile ? '100%' : 720),
     flexShrink: 0,
     flexGrow: 0,
     paddingLeft: isMobile ? 20 : 48,
     paddingRight: isMobile ? 20 : 48,
-    paddingTop: isMobile ? 28 : 32,
-    paddingBottom: isMobile ? 28 : 32,
+    paddingTop: isMobile ? 28 : 36,
+    paddingBottom: isMobile ? 28 : 36,
     position: 'relative' as const,
     ...Platform.select({ web: showSideSlider ? {
       backgroundColor: 'transparent',
@@ -188,8 +188,8 @@ export const createHomeHeroStyles = ({
       // Строго ограничиваем ширину левой страницы
       minWidth: 0,
     } as any : {
-      backgroundColor: 'rgba(255,255,255,0.85)',
-      borderRadius: isMobile ? 8 : 10,
+      backgroundColor: isMobile ? 'rgba(255,255,255,0.85)' : 'transparent',
+      borderRadius: isMobile ? 8 : 0,
     } as any }),
   },
   leftPageFrame: {
@@ -233,10 +233,10 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: showSideSlider ? {
       backgroundColor: 'transparent',
       borderRadius: 0,
-      paddingTop: isUltraWideBook ? '6%' : isLargeDesktopBook ? '6.5%' : '7%',
-      paddingBottom: isUltraWideBook ? '14%' : isLargeDesktopBook ? '15%' : '17%',
-      paddingLeft: isUltraWideBook ? '1%' : '2%',
-      paddingRight: '15%',
+      paddingTop: isUltraWideBook ? '6%' : isLargeDesktopBook ? '6.5%' : '6.5%',
+      paddingBottom: isUltraWideBook ? '14%' : isLargeDesktopBook ? '15%' : '16%',
+      paddingLeft: isUltraWideBook ? '1%' : isNarrowDesktopBook ? '1%' : '2%',
+      paddingRight: isNarrowDesktopBook ? '13%' : '15%',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'stretch',
@@ -281,24 +281,24 @@ export const createHomeHeroStyles = ({
   // -- Slider / immersive photo --
   // Cinematic photo effect: subtle rotation, clean shadow, no busy border
   sliderContainer: {
-    width: '100%', flex: 1, minHeight: hasBookLayout ? 0 : sliderHeight, borderRadius: isMobile ? 4 : 8, overflow: 'hidden',
+    width: '100%', flex: 1, minHeight: hasBookLayout ? 0 : sliderHeight, borderRadius: isMobile ? 4 : 10, overflow: 'hidden',
     backgroundColor: '#1A1A1A', borderWidth: 0,
     ...Platform.select({ web: showSideSlider ? {
       boxShadow: `
         0 0 0 1.5px rgba(255,252,245,0.5),
-        0 8px 40px rgba(20,15,10,0.32),
+        0 10px 44px rgba(20,15,10,0.35),
         0 2px 8px rgba(20,15,10,0.18),
         inset 0 0 0 1px rgba(255,250,242,0.38),
-        inset 0 0 18px rgba(255,248,238,0.14),
-        inset 18px 0 26px rgba(255,247,235,0.18),
-        inset -18px 0 26px rgba(255,247,235,0.18),
-        inset 0 18px 24px rgba(255,247,235,0.12),
-        inset 0 -18px 30px rgba(12,10,8,0.16)
+        inset 0 0 20px rgba(255,248,238,0.16),
+        inset 18px 0 28px rgba(255,247,235,0.2),
+        inset -18px 0 28px rgba(255,247,235,0.2),
+        inset 0 18px 26px rgba(255,247,235,0.14),
+        inset 0 -18px 32px rgba(12,10,8,0.18)
       `,
       minHeight: 0,
       flexGrow: 1,
       flexShrink: 1,
-      transform: isNarrowDesktopBook ? 'rotate(-1.5deg)' : 'rotate(-1deg)',
+      transform: isNarrowDesktopBook ? 'rotate(-1.2deg)' : 'rotate(-0.8deg)',
       transformOrigin: 'center center',
       borderRadius: 10,
       border: '2px solid rgba(255,252,245,0.7)',
@@ -400,14 +400,14 @@ export const createHomeHeroStyles = ({
     maxWidth: '90%', alignSelf: 'flex-start',
   },
   slideTitle: {
-    fontSize: isMobile ? 20 : (showSideSlider ? 22 : 26),
+    fontSize: isMobile ? 20 : (showSideSlider ? 24 : 26),
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 5,
+    marginBottom: 6,
     letterSpacing: -0.5,
     ...Platform.select({ web: showSideSlider ? {
       fontFamily: editorialSerif,
-      textShadow: '0 2px 12px rgba(0,0,0,0.5)',
+      textShadow: '0 2px 14px rgba(0,0,0,0.55)',
       lineHeight: '1.25',
       letterSpacing: '-0.02em',
     } : {
@@ -416,7 +416,7 @@ export const createHomeHeroStyles = ({
     } as any }),
   },
   slideSubtitle: {
-    fontSize: 11, fontWeight: '400', color: 'rgba(255,255,255,0.72)', letterSpacing: 0.3,
+    fontSize: 12, fontWeight: '400', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.3,
     ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
   },
 
@@ -590,9 +590,9 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   title: {
-    fontSize: isSmallPhone ? 28 : isMobile ? 32 : 32,
+    fontSize: isSmallPhone ? 28 : isMobile ? 32 : 36,
     fontWeight: '700', color: inkStrong, letterSpacing: -0.8,
-    lineHeight: isSmallPhone ? 34 : isMobile ? 40 : 40, textAlign: 'left',
+    lineHeight: isSmallPhone ? 34 : isMobile ? 40 : 44, textAlign: 'left',
     ...Platform.select({ web: showSideSlider ? {
       fontFamily: editorialSerif,
       fontSize: desktopBookTitleSize,
@@ -601,9 +601,9 @@ export const createHomeHeroStyles = ({
     } as any : { fontFamily: sansSerif } as any }),
   },
   titleAccent: {
-    fontSize: isSmallPhone ? 28 : isMobile ? 32 : 32,
+    fontSize: isSmallPhone ? 28 : isMobile ? 32 : 36,
     fontWeight: '800', color: colors.brand, letterSpacing: -0.8,
-    lineHeight: isSmallPhone ? 34 : isMobile ? 40 : 40, textAlign: 'left',
+    lineHeight: isSmallPhone ? 34 : isMobile ? 40 : 44, textAlign: 'left',
     ...Platform.select({ web: showSideSlider ? {
       fontFamily: editorialSerif,
       fontSize: desktopBookTitleSize,
@@ -613,9 +613,9 @@ export const createHomeHeroStyles = ({
   },
   subtitle: {
     fontSize: isMobile ? 16 : 17, fontWeight: '400', color: inkMuted,
-    lineHeight: isMobile ? 24 : 27, textAlign: 'left', maxWidth: 460, alignSelf: 'flex-start',
+    lineHeight: isMobile ? 24 : 27, textAlign: 'left', maxWidth: 520, alignSelf: 'flex-start',
     letterSpacing: 0.1,
-    marginTop: isMobile ? 12 : 14,
+    marginTop: isMobile ? 12 : 16,
     ...Platform.select({ web: showSideSlider ? {
       fontFamily: editorialSerif,
       fontSize: desktopBookSubtitleSize,
@@ -821,9 +821,9 @@ export const createHomeHeroStyles = ({
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   secondaryButton: {
-    paddingHorizontal: isMobile ? 24 : (showSideSlider ? (isCompactBookLayout ? 22 : 26) : 26),
-    paddingVertical: isMobile ? 13 : (showSideSlider ? (isCompactBookLayout ? 11 : 13) : 13),
-    minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 44 : 48) : 48),
+    paddingHorizontal: isMobile ? 26 : (showSideSlider ? (isCompactBookLayout ? 24 : 28) : 28),
+    paddingVertical: isMobile ? 13 : (showSideSlider ? (isCompactBookLayout ? 12 : 14) : 14),
+    minHeight: isMobile ? 50 : (showSideSlider ? (isCompactBookLayout ? 44 : 48) : 50),
     borderRadius: DESIGN_TOKENS.radii.pill,
     backgroundColor: 'transparent',
     borderWidth: 1.5,
@@ -831,7 +831,7 @@ export const createHomeHeroStyles = ({
     width: stackHeroButtons ? '100%' : undefined,
     ...Platform.select({ web: {
       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-      boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.35)',
+      boxShadow: 'none',
     } }),
   },
   secondaryButtonHover: {
@@ -891,7 +891,7 @@ export const createHomeHeroStyles = ({
   },
 
   // -- Mood chips (mobile horizontal scroll) --
-  moodChipsContainer: { marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: warmBorder, width: '100%' },
+  moodChipsContainer: { marginTop: showSideSlider ? 24 : 16, paddingTop: 14, borderTopWidth: showSideSlider ? 0 : 1, borderTopColor: warmBorder, width: '100%' },
   moodChipsScrollContent: {
     flexDirection: 'row', gap: 10, paddingHorizontal: 0,
     justifyContent: 'flex-start', flexWrap: 'nowrap' as const,
@@ -928,9 +928,9 @@ export const createHomeHeroStyles = ({
   },
 
   // -- Popular section (mobile) --
-  popularSection: { marginTop: isMobile ? 28 : 44, width: '100%' },
+  popularSection: { marginTop: isMobile ? 28 : 40, width: '100%' },
   popularTitle: {
-    fontSize: 11, fontWeight: '600', color: '#8B7D6B', marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1.2,
+    fontSize: 12, fontWeight: '600', color: '#8B7D6B', marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1.4,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   popularScrollContent: { flexDirection: 'row', gap: 14, paddingRight: 16 },
@@ -939,11 +939,11 @@ export const createHomeHeroStyles = ({
   featuredCard: {
     width: '100%', borderRadius: 20, overflow: 'hidden',
     backgroundColor: cardSurface, borderWidth: 1, borderColor: warmBorder,
-    marginBottom: 20, position: 'relative' as const,
+    marginBottom: 24, position: 'relative' as const,
     ...Platform.select({ web: {
       cursor: 'pointer',
       transition: 'all 0.22s ease',
-      boxShadow: `0 4px 20px ${warmShadow}`,
+      boxShadow: `0 4px 24px ${warmShadow}`,
     } }),
   },
   featuredCardHover: {
@@ -956,23 +956,23 @@ export const createHomeHeroStyles = ({
   featuredCardImage: { width: '100%', aspectRatio: 16 / 9 },
   featuredCardOverlay: {
     position: 'absolute' as const, bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 18, paddingVertical: 16, paddingTop: 44,
+    paddingHorizontal: 20, paddingVertical: 18, paddingTop: 56,
     ...Platform.select({ web: {
-      backgroundImage: 'linear-gradient(to top, rgba(15,12,8,0.88) 0%, rgba(15,12,8,0.35) 60%, transparent 100%)',
+      backgroundImage: 'linear-gradient(to top, rgba(15,12,8,0.90) 0%, rgba(15,12,8,0.50) 50%, rgba(15,12,8,0.15) 75%, transparent 100%)',
     } }),
   },
   featuredCardTitle: {
-    fontSize: 18, fontWeight: '600', color: '#FFFFFF', marginBottom: 3, letterSpacing: -0.2,
+    fontSize: isMobile ? 18 : 22, fontWeight: '600', color: '#FFFFFF', marginBottom: 4, letterSpacing: -0.3,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
   featuredCardSubtitle: {
-    fontSize: 12, fontWeight: '400', color: 'rgba(255,255,255,0.75)', letterSpacing: 0.2,
+    fontSize: isMobile ? 12 : 13, fontWeight: '400', color: 'rgba(255,255,255,0.78)', letterSpacing: 0.2,
     ...Platform.select({ web: { fontFamily: sansSerif } as any }),
   },
 
   // -- Image card (horizontal scroll items) --
   imageCard: {
-    width: isMobile ? 200 : 220, borderRadius: 16, backgroundColor: cardSurface,
+    width: isMobile ? 200 : 230, borderRadius: 16, backgroundColor: cardSurface,
     borderWidth: 1, borderColor: warmBorder, overflow: 'hidden',
     ...Platform.select({ web: {
       transition: 'all 0.22s ease',
@@ -987,7 +987,7 @@ export const createHomeHeroStyles = ({
       borderColor: 'rgba(180,160,130,0.3)',
     } }),
   },
-  imageCardImage: { width: isMobile ? 200 : 220, height: isMobile ? 135 : 155 },
+  imageCardImage: { width: isMobile ? 200 : 230, height: isMobile ? 135 : 160 },
   imageCardContent: { padding: 14, gap: 4 },
   imageCardTitle: {
     fontSize: 14, fontWeight: '600', color: '#2A1F14', lineHeight: 19, letterSpacing: -0.2,

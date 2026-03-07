@@ -176,6 +176,7 @@ const HERO_HIGHLIGHTS = [
   { icon: 'pen-tool', title: 'За 2 минуты', subtitle: 'подборка под ваш ритм' },
   { icon: 'book-open', title: 'Личная книга', subtitle: 'фото, заметки и PDF' },
   { icon: 'compass', title: 'Маршруты рядом', subtitle: 'фильтры по дистанции и формату' },
+  { icon: 'download', title: 'GPS-треки', subtitle: 'скачай и следуй маршруту' },
 ] as const;
 
 export const MOOD_CARDS_FOR_TEST = MOOD_CARDS;
@@ -204,12 +205,17 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
     && width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH
     && isDesktop;
   const sliderHeight = isDesktop ? (width < 1480 ? 360 : 420) : 360;
-  const sliderMediaWidth = isDesktop ? 500 : 380;
+  const sliderMediaWidth = isDesktop ? (width < 1480 ? 480 : 500) : 380;
   const featuredCardWidth = useMemo(() => {
     if (!isWeb) return undefined;
     const horizontalPadding = isMobile ? 32 : 48;
-    return Math.max(280, Math.min(width - horizontalPadding, 720));
+    return Math.max(280, Math.min(width - horizontalPadding, 800));
   }, [isMobile, isWeb, width]);
+  const featuredCardHeight = useMemo(() => {
+    if (isMobile) return 220;
+    if (isTablet) return 280;
+    return 300;
+  }, [isMobile, isTablet]);
 
   // Book wrapper measured height for adaptive aspect-ratio
   // Use ref to track and stabilize to prevent layout thrashing
@@ -233,7 +239,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
   }, [bookWrapperWidth]);
   const isCompactBookLayout = showSideSlider && bookHeight > 0 && bookHeight <= 760;
   const useInlineBookmarkRail = showSideSlider && !isNarrowLayout && !isCompactBookLayout && width >= 1280;
-  const useStackedCtas = isNarrowLayout || isCompactBookLayout || (showSideSlider && width < 1180);
+  const useStackedCtas = isMobile || isCompactBookLayout || (showSideSlider && width < 1180);
 
   // Slider state
   const [activeSlide, setActiveSlide] = useState(0);
@@ -340,9 +346,11 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
 
   const currentSlide = BOOK_IMAGES[visibleSlide];
   const isVisibleSlideLoaded = loadedSlides.has(visibleSlide);
-  const heroSubtitle = isMobile || (showSideSlider && bookHeight > 0 && bookHeight < 760)
+  const heroSubtitle = isMobile
     ? 'Готовые маршруты с фото и GPS-треками.'
-    : 'Готовые маршруты, заметки и личная книга путешествий.';
+    : (showSideSlider && bookHeight > 0 && bookHeight < 760)
+      ? 'Готовые маршруты, заметки и GPS-треки.'
+      : 'Готовые маршруты, заметки и личная книга путешествий.';
 
   return (
     <View testID="home-hero" style={styles.container}>
@@ -644,7 +652,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
               <ImageCardMedia
                 source={BOOK_IMAGES[0].source}
                 width={featuredCardWidth}
-                height={isMobile ? 200 : 260}
+                height={featuredCardHeight}
                 borderRadius={0}
                 fit="contain"
                 blurBackground
@@ -655,6 +663,10 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                 style={styles.featuredCardImage}
               />
               <View style={styles.featuredCardOverlay}>
+                <View style={styles.slideEyebrow}>
+                  <Feather name="map-pin" size={11} color="#FFFFFF" />
+                  <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+                </View>
                 <Text style={styles.featuredCardTitle} numberOfLines={1}>
                   {BOOK_IMAGES[0].title}
                 </Text>
