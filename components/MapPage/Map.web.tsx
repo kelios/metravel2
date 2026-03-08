@@ -500,7 +500,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     });
   }, [coordinates, isFallbackMinskCenter]);
 
-  // Get user location (fallback/refresh for web map session)
+  // Get user location — gated behind first user interaction to avoid
+  // Lighthouse "geolocation-on-start" Best Practices penalty.
+  const geoRequestedRef = useRef(false);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!L || !rl) return;
@@ -508,6 +510,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     let cancelled = false;
 
     const loadLocation = () => {
+      if (geoRequestedRef.current || cancelled) return;
+      geoRequestedRef.current = true;
       ;(async () => {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
@@ -532,12 +536,16 @@ const MapPageComponent: React.FC<Props> = (props) => {
       })();
     };
 
-    loadLocation();
+    const el = document.getElementById(mapContainerIdRef.current);
+    if (!el) return;
+    const events = ['pointerdown', 'touchstart', 'keydown'] as const;
+    events.forEach((evt) => el.addEventListener(evt, loadLocation, { once: true, passive: true }));
 
     return () => {
       cancelled = true;
+      events.forEach((evt) => el.removeEventListener(evt, loadLocation));
     };
-  }, [L, rl]);
+  }, [L, rl, mapContainerIdRef]);
 
   // Center user location handler
   const centerOnUserLocation = useCallback(() => {

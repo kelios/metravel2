@@ -186,7 +186,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     images,
     showArrows = true,
     showDots = true,
-    hideArrowsOnMobile,
+    hideArrowsOnMobile = true,
     aspectRatio = DEFAULT_AR,
     fit = 'contain',
     fullBleed = false,
@@ -333,7 +333,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       node.scrollLeft = left;
       requestAnimationFrame(() => {
         node.scrollLeft = left;
-        node.classList.remove('slider-snap-disabled');
+        requestAnimationFrame(() => {
+          node.classList.remove('slider-snap-disabled');
+        });
       });
     },
     [containerWRef],

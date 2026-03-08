@@ -57,6 +57,8 @@ export const createSliderStyles = (colors: Record<string, any>) =>
           overflowX: 'auto',
           overflowY: 'hidden',
           overscrollBehaviorX: 'contain',
+          scrollBehavior: 'smooth',
+          WebkitScrollSnapPointsX: 'repeat(100%)',
         } as any)
       : {},
     scrollContent: {
@@ -76,7 +78,11 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       backgroundColor: colors.backgroundTertiary || '#333',
     },
     slideSnap: Platform.OS === 'web'
-      ? ({ scrollSnapAlign: 'start', scrollSnapStop: 'always' } as any)
+      ? ({ 
+          scrollSnapAlign: 'start', 
+          scrollSnapStop: 'always',
+          WebkitScrollSnapCoordinate: '0 0',
+        } as any)
       : {},
     blurBg: {
       ...StyleSheet.absoluteFillObject,

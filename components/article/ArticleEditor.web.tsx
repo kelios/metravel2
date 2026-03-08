@@ -587,7 +587,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-toolbar.ql-snow button{flex:0 0 auto}
       .ql-container{max-width:100%;border:none}
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
-      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;max-height:500px;min-height:0;border:none}
+      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;min-height:0;border:none}
       .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
       @media (max-width: 900px) {.ql-editor{padding:14px 16px}}
       @media (max-width: 640px) {.ql-editor{padding:12px 14px;font-size:15px}.ql-toolbar.ql-snow{padding:7px 8px;gap:4px}.ql-toolbar.ql-snow .ql-formats{margin-right:4px}}
@@ -726,7 +726,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         if (!quillRef.current) return;
         const editor = quillRef.current.getEditor();
         const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
-        editor.insertEmbed(range.index, 'image', url);
+        editor.insertEmbed(range.index, 'image', url, 'user');
         editor.setSelection(range.index + 1, 0, 'silent');
         fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 });
     }, [fireChange]);
@@ -779,7 +779,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             form.append('collection', 'description');
             if (idTravel) form.append('id', idTravel);
             const res = await uploadImage(form);
-            if (!res?.url) throw new Error('no url');
+            const imageUrl = typeof res?.url === 'string' ? res.url : null;
+            if (!imageUrl) throw new Error('no url');
             if (selectionSnapshot && quillRef.current?.getEditor) {
                 try {
                     const editor = quillRef.current.getEditor();
@@ -788,7 +789,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     // noop
                 }
             }
-            insertImage(res.url);
+            insertImage(imageUrl);
         } catch {
             Alert.alert('Ошибка', 'Не удалось загрузить изображение');
         }
@@ -829,7 +830,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             }
 
             const onDragOver = (e: DragEvent) => {
-                if (!e.dataTransfer?.files?.length) return;
+                if (!e.dataTransfer?.types?.includes('Files')) return;
                 e.preventDefault();
                 try {
                     e.dataTransfer.dropEffect = 'copy';

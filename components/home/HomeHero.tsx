@@ -525,7 +525,7 @@ const HomeHero = memo(function HomeHero({ travelsCount: _travelsCount = 0, trave
                       style={styles.sliderContainer}
                       {...(isWeb ? { dataSet: { bookSlider: 'true' } } : {}) as any}
                       accessibilityRole="link"
-                      accessibilityLabel={`Маршрут: ${currentSlide.title}`}
+                      accessibilityLabel={`Маршрут недели: ${currentSlide.title}. ${currentSlide.subtitle}`}
                       accessibilityHint="Открыть маршрут"
                     >
                       {/* Keep the currently visible slide mounted; switch after preload to avoid blank frame */}

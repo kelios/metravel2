@@ -221,7 +221,7 @@ describe('ArticleEditor.web link', () => {
 
     await waitFor(() => {
       expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
-      expect(editor.insertEmbed).toHaveBeenCalledWith(0, 'image', 'https://example.com/uploaded.jpg');
+      expect(editor.insertEmbed).toHaveBeenCalledWith(0, 'image', 'https://example.com/uploaded.jpg', 'user');
     });
 
     createElementSpy.mockRestore();

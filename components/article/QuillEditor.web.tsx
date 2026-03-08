@@ -127,6 +127,28 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
 
         quillInstance = quill
         quillRef.current = quill
+
+        // Strip base64 data-URI images from clipboard/drop content.
+        // Our custom handlers in ArticleEditor upload images to S3 and insert
+        // the real URL; Quill's default clipboard would insert base64 inline.
+        try {
+          const clipboard = quill.getModule?.('clipboard')
+          if (clipboard && typeof clipboard.addMatcher === 'function') {
+            clipboard.addMatcher('IMG', (node: HTMLElement, delta: any) => {
+              const src = node.getAttribute?.('src') ?? ''
+              if (src.startsWith('data:')) {
+                // Return empty delta to suppress the base64 image
+                const Delta = quill.constructor?.import?.('delta') ?? quill.import?.('delta')
+                if (Delta) return new Delta()
+                return { ops: [] }
+              }
+              return delta
+            })
+          }
+        } catch (e) {
+          void e
+        }
+
         try {
           const toolbarModule = quill.getModule?.('toolbar')
           const candidate = toolbarModule?.container
