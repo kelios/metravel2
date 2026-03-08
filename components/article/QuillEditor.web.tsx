@@ -149,6 +149,20 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
           void e
         }
 
+        // Disable Quill's default uploader module to prevent it from intercepting
+        // drop events. Our custom drop handler in ArticleEditor handles S3 uploads.
+        try {
+          const uploader = quill.getModule?.('uploader')
+          if (uploader) {
+            // Remove the uploader's drop handler if it exists
+            if (typeof uploader.onDrop === 'function') {
+              quill.root.removeEventListener('drop', uploader.onDrop)
+            }
+          }
+        } catch (e) {
+          void e
+        }
+
         try {
           const toolbarModule = quill.getModule?.('toolbar')
           const candidate = toolbarModule?.container

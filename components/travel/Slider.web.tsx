@@ -415,7 +415,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   useEffect(() => {
     setScrollToImpl(scrollToDom);
-    return () => setScrollToImpl(null);
+    // Note: Do NOT reset to null on cleanup — this causes race conditions where
+    // scrollToFn.current is null between effect cleanup and re-run, breaking
+    // arrow button clicks. The ref will be updated with the new function on next render.
   }, [scrollToDom, setScrollToImpl]);
 
   // Expose methods via ref

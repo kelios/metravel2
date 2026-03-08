@@ -779,10 +779,15 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             const form = new FormData();
             form.append('file', file);
             form.append('collection', 'description');
-            if (idTravel) form.append('id', idTravel);
+            if (idTravel) form.append('id', String(idTravel));
             const res = await uploadImage(form);
             const imageUrl = typeof res?.url === 'string' ? res.url : null;
-            if (!imageUrl) throw new Error('no url');
+            if (!imageUrl) {
+                if (__DEV__) {
+                    console.warn('[ArticleEditor] Upload response missing url:', res);
+                }
+                throw new Error('no url in response');
+            }
             if (selectionSnapshot && quillRef.current?.getEditor) {
                 try {
                     const editor = quillRef.current.getEditor();
@@ -792,7 +797,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 }
             }
             insertImage(imageUrl);
-        } catch {
+        } catch (err) {
+            if (__DEV__) {
+                console.error('[ArticleEditor] Image upload failed:', err);
+            }
             Alert.alert('Ошибка', 'Не удалось загрузить изображение');
         }
     }, [idTravel, insertImage, isAuthenticated]);
@@ -846,12 +854,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 if (!file) return;
                 if (typeof file.type !== 'string' || !file.type.startsWith('image/')) return;
                 e.preventDefault();
+                e.stopPropagation();
                 try {
                     (e as any).stopImmediatePropagation?.();
                 } catch {
                     // noop
                 }
-                uploadAndInsert(file);
+                void uploadAndInsert(file);
             };
             const onPaste = (e: ClipboardEvent) => {
                 const file = Array.from(e.clipboardData?.files ?? [])[0];
