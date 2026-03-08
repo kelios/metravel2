@@ -127,8 +127,9 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       }
     };
 
-    // Mouse drag
-    const onMouseDown = (e: MouseEvent) => {
+    // Mouse drag (desktop/tablet only). On mobile browsers synthesized mouse events
+    // can interfere with native touch scroll-snap.
+    const onMouseDown = !isMobile ? (e: MouseEvent) => {
       if (e.button !== 0) return;
       dismissSwipeHint?.();
       enablePrefetch?.();
@@ -140,16 +141,16 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       node.style.cursor = 'grabbing';
       node.style.scrollSnapType = 'none';
       node.style.userSelect = 'none';
-    };
+    } : null;
 
-    const onMouseMove = (e: MouseEvent) => {
+    const onMouseMove = !isMobile ? (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       e.preventDefault();
       const dx = e.pageX - dragStartXRef.current;
       node.scrollLeft = dragScrollLeftRef.current - dx;
-    };
+    } : null;
 
-    const onMouseUp = (e: MouseEvent) => {
+    const onMouseUp = !isMobile ? (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       node.style.cursor = '';
@@ -165,16 +166,16 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       snapToSlide(target);
       node.style.scrollSnapType = '';
       resumeAutoplay?.();
-    };
+    } : null;
 
-    const onMouseLeave = () => {
+    const onMouseLeave = !isMobile ? () => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       node.style.cursor = '';
       node.style.userSelect = '';
       settleToNearestSlide();
       resumeAutoplay?.();
-    };
+    } : null;
 
     // Touch / pointer swipe — only on non-mobile (desktop/tablet).
     // On mobile phones, native CSS scroll-snap provides GPU-accelerated swiping
@@ -259,10 +260,10 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
 
     // Attach listeners
     parent?.addEventListener('keydown', handleKeyDown as EventListener);
-    node.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    node.addEventListener('mouseleave', onMouseLeave);
+    if (onMouseDown) node.addEventListener('mousedown', onMouseDown);
+    if (onMouseMove) window.addEventListener('mousemove', onMouseMove);
+    if (onMouseUp) window.addEventListener('mouseup', onMouseUp);
+    if (onMouseLeave) node.addEventListener('mouseleave', onMouseLeave);
     node.addEventListener('scrollend', onScrollEnd);
 
     if (onPointerDown) node.addEventListener('pointerdown', onPointerDown as EventListener, { passive: false } as any);
@@ -276,10 +277,10 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
 
     return () => {
       parent?.removeEventListener('keydown', handleKeyDown as EventListener);
-      node.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      node.removeEventListener('mouseleave', onMouseLeave);
+      if (onMouseDown) node.removeEventListener('mousedown', onMouseDown);
+      if (onMouseMove) window.removeEventListener('mousemove', onMouseMove);
+      if (onMouseUp) window.removeEventListener('mouseup', onMouseUp);
+      if (onMouseLeave) node.removeEventListener('mouseleave', onMouseLeave);
       node.removeEventListener('scrollend', onScrollEnd);
 
       if (onPointerDown) node.removeEventListener('pointerdown', onPointerDown as EventListener);

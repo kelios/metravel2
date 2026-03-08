@@ -338,6 +338,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 ? ({
                     minHeight: '100dvh',
                     minWidth: '100vw',
+                    position: 'fixed',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                    zIndex: 1000,
                 } as any)
                 : null),
             backgroundColor: colors.background,
@@ -345,10 +351,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         fullInner: {
             flex: 1,
             width: '100%',
-            maxWidth: isWeb ? 1400 : '100%',
-            alignSelf: 'center',
-            paddingHorizontal: isWeb ? DESIGN_TOKENS.spacing.sm : 0,
-            paddingBottom: isWeb ? DESIGN_TOKENS.spacing.sm : 0,
+            maxWidth: '100%',
+            paddingHorizontal: 0,
+            paddingBottom: 0,
         },
     }), [colors, fullscreen]);
 
@@ -574,9 +579,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-editor{background:var(--bg);color:var(--fg);padding:16px 20px;line-height:1.65}
       .ql-toolbar{background:var(--bar);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;max-width:100%;display:flex}
       .quill > .ql-toolbar{display:flex !important;visibility:visible !important;opacity:1 !important}
-      .ql-toolbar.ql-snow{display:flex !important;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;overflow-x:auto;overflow-y:visible;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+      .ql-toolbar.ql-snow{display:flex !important;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;overflow:visible}
       .ql-toolbar.ql-snow .ql-picker{position:relative}
-      .ql-toolbar.ql-snow .ql-picker-options{z-index:30}
+      .ql-toolbar.ql-snow .ql-picker-options{z-index:1000;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 24px rgba(0,0,0,0.12);max-height:260px;overflow-y:auto}
       .ql-toolbar.ql-snow .ql-formats{display:flex;flex-wrap:wrap;gap:4px;margin-right:6px}
       .ql-toolbar.ql-snow .ql-picker{max-width:100%}
       .ql-toolbar.ql-snow button{flex:0 0 auto}
@@ -584,8 +589,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
       .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;max-height:500px;min-height:0;border:none}
       .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
-      .ql-toolbar.ql-snow::-webkit-scrollbar{height:8px}
-      .ql-toolbar.ql-snow::-webkit-scrollbar-thumb{background:rgba(120,120,120,0.35);border-radius:999px}
       @media (max-width: 900px) {.ql-editor{padding:14px 16px}}
       @media (max-width: 640px) {.ql-editor{padding:12px 14px;font-size:15px}.ql-toolbar.ql-snow{padding:7px 8px;gap:4px}.ql-toolbar.ql-snow .ql-formats{margin-right:4px}}
 	      /* We use our own link/anchor modals; hide Quill's built-in tooltip to avoid stray rectangles on web. */
