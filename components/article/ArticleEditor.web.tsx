@@ -736,8 +736,20 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const uploadAndInsert = useCallback(async (file: File) => {
         if (!isAuthenticated) {
+            if (__DEV__) {
+                console.info('[ArticleEditor] upload blocked: not authenticated');
+            }
             Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения');
             return;
+        }
+
+        if (__DEV__) {
+            console.info('[ArticleEditor] upload start', {
+                name: file?.name,
+                type: file?.type,
+                size: file?.size,
+                idTravel,
+            });
         }
 
         const selectionSnapshot = (() => {
@@ -768,6 +780,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             form.append('collection', 'description');
             if (idTravel) form.append('id', String(idTravel));
             const res = await uploadImage(form);
+            if (__DEV__) {
+                console.info('[ArticleEditor] upload response', res);
+            }
             const uploadedUrlRaw =
                 typeof res?.url === 'string'
                     ? res.url
@@ -850,6 +865,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
             const onDrop = (e: DragEvent) => {
                 const file = e.dataTransfer?.files?.[0];
+                if (__DEV__) {
+                    console.info('[ArticleEditor] drop event', {
+                        hasFile: !!file,
+                        type: file?.type,
+                        fileCount: e.dataTransfer?.files?.length ?? 0,
+                    });
+                }
                 if (!file) return;
                 if (typeof file.type !== 'string' || !file.type.startsWith('image/')) return;
                 e.preventDefault();
@@ -875,6 +897,15 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     })
                     .find((candidate): candidate is File => !!candidate);
                 const file = fileFromFiles ?? fileFromItems;
+                if (__DEV__) {
+                    console.info('[ArticleEditor] paste event', {
+                        filesCount: e.clipboardData?.files?.length ?? 0,
+                        itemsCount: e.clipboardData?.items?.length ?? 0,
+                        hasFileFromFiles: !!fileFromFiles,
+                        hasFileFromItems: !!fileFromItems,
+                        resolvedType: file?.type,
+                    });
+                }
                 if (file && typeof file.type === 'string' && file.type.startsWith('image/')) {
                     e.preventDefault();
                     try {
