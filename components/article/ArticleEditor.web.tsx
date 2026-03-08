@@ -1495,6 +1495,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 style={dynamicStyles.editorArea}
                 {...(isWeb
                     ? ({
+                          'data-editor-surface': 'article-editor',
                           onMouseDown: (e: any) => {
                               const target = e?.target as HTMLElement | null;
                               if (target?.closest?.('.ql-editor')) return;
