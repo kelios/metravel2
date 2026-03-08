@@ -57,6 +57,32 @@ export const createSliderStyles = (colors: Record<string, any>) =>
           overflowX: 'auto',
           overflowY: 'hidden',
           overscrollBehaviorX: 'contain',
+          WebkitScrollSnapPointsX: 'repeat(100%)',
+        } as any)
+      : {},
+    // Mobile-specific: instant snap without smooth scroll for Instagram-like feel
+    scrollSnapMobile: Platform.OS === 'web'
+      ? ({
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          willChange: 'scroll-position',
+          touchAction: 'pan-x',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
+          WebkitScrollSnapPointsX: 'repeat(100%)',
+        } as any)
+      : {},
+    // Desktop: smooth scroll for polished feel
+    scrollSnapDesktop: Platform.OS === 'web'
+      ? ({
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          willChange: 'scroll-position',
+          touchAction: 'pan-x',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
           scrollBehavior: 'smooth',
           WebkitScrollSnapPointsX: 'repeat(100%)',
         } as any)

@@ -538,7 +538,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={isMobile ? 200 : 100}
-            style={[styles.scrollView, styles.scrollSnap]}
+            style={[styles.scrollView, isMobile ? styles.scrollSnapMobile : styles.scrollSnapDesktop]}
             contentContainerStyle={[styles.scrollContent, { height: containerH }]}
             onScrollBeginDrag={pauseAutoplay}
             onScrollEndDrag={resumeAutoplay}

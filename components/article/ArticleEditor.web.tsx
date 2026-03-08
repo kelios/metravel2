@@ -61,6 +61,7 @@ const quillModulesDefault = {
     ],
     history: { delay: 2000, maxStack: 100, userOnly: true },
     clipboard: { matchVisual: false },
+    uploader: false,
 } as const;
 
 const quillModulesCompact = {
@@ -72,6 +73,7 @@ const quillModulesCompact = {
     ],
     history: { delay: 2000, maxStack: 100, userOnly: true },
     clipboard: { matchVisual: false },
+    uploader: false,
 } as const;
 
 export interface ArticleEditorProps {
