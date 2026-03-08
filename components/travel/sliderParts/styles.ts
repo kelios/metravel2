@@ -2,7 +2,9 @@ import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export const DOT_SIZE = 6;
-const DOT_ACTIVE_WIDTH = 20;
+const DOT_ACTIVE_SIZE = 8;
+/** Max visible dots in the Instagram-style sliding window */
+export const MAX_VISIBLE_DOTS = 5;
 
 export const createSliderStyles = (colors: Record<string, any>) =>
   StyleSheet.create<Record<string, any>>({
@@ -46,7 +48,10 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     },
     scrollView: {
       flex: 1,
-      ...(Platform.OS === 'web' ? ({ cursor: 'grab' } as any) : {}),
+      ...(Platform.OS === 'web' ? ({
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+      } as any) : {}),
     },
     scrollSnap: Platform.OS === 'web'
       ? ({
@@ -215,21 +220,17 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       zIndex: DESIGN_TOKENS.zIndex.fixed,
     },
     dotsMobile: {
-      bottom: 12,
+      bottom: 10,
     },
     dotsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 12,
-      borderWidth: 0,
-      gap: 4,
+      justifyContent: 'center',
+      gap: 5,
+      height: 16,
       ...Platform.select({
         web: {
-          backdropFilter: 'blur(16px) saturate(1.8)',
-          WebkitBackdropFilter: 'blur(16px) saturate(1.8)',
+          overflow: 'hidden',
         },
       }),
     },
@@ -238,7 +239,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
     dot: {
-      backgroundColor: 'rgba(255,255,255,0.35)',
+      backgroundColor: 'rgba(255,255,255,0.4)',
       height: DOT_SIZE,
       borderRadius: DOT_SIZE / 2,
       width: DOT_SIZE,
@@ -250,14 +251,22 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       }),
     },
     dotActive: {
-      width: DOT_ACTIVE_WIDTH,
+      width: DOT_ACTIVE_SIZE,
+      height: DOT_ACTIVE_SIZE,
       backgroundColor: '#ffffff',
-      borderRadius: DOT_SIZE / 2,
-      ...Platform.select({
-        web: {
-          boxShadow: '0 0 8px rgba(255,255,255,0.4)',
-        } as any,
-      }),
+      borderRadius: DOT_ACTIVE_SIZE / 2,
+    },
+    dotSmall: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      opacity: 0.5,
+    },
+    dotTiny: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      opacity: 0.3,
     },
     counter: {
       position: 'absolute',

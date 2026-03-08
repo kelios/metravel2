@@ -116,7 +116,7 @@ describe('Slider navigation - Web', () => {
       expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
     })
 
-    it('wraps around to first slide when pressing Next on last slide', async () => {
+    it('stops at last slide — no wrap-around (Instagram-style)', async () => {
       const images = createImages(3)
       let tree: renderer.ReactTestRenderer
 
@@ -133,20 +133,28 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+      let nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+
+      // Navigate to slide 1
+      await act(async () => {
+        nextButton.props.onPress() // 0 -> 1
+      })
+
+      // Re-find Next button (it may have re-rendered)
+      nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
 
       // Navigate to last slide (index 2)
       await act(async () => {
-        nextButton.props.onPress() // 0 -> 1
         nextButton.props.onPress() // 1 -> 2
-        nextButton.props.onPress() // 2 -> 0 (wrap)
       })
 
-      // Should be back at slide 0
-      expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+      // Next arrow should be hidden at last slide
+      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toThrow()
+      // Previous arrow should be visible
+      expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
     })
 
-    it('wraps around to last slide when pressing Previous on first slide', async () => {
+    it('hides Previous arrow on first slide (Instagram-style)', async () => {
       const images = createImages(3)
       let tree: renderer.ReactTestRenderer
 
@@ -163,15 +171,10 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      const prevButton = tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })
-
-      // Press Previous on first slide
-      await act(async () => {
-        prevButton.props.onPress() // 0 -> 2 (wrap)
-      })
-
-      // Should be at last slide
-      expect(tree!.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
+      // At index 0: Previous arrow should not exist
+      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toThrow()
+      // Next arrow should be visible
+      expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
     })
 
     it('does not render arrows when showArrows is false', async () => {
@@ -423,8 +426,8 @@ describe('Slider display correctness', () => {
     expect(tree!.root.findByProps({ testID: 'slider-clip' })).toBeTruthy()
     expect(tree!.root.findByProps({ testID: 'slider-scroll' })).toBeTruthy()
 
-    // Check navigation arrows
-    expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
+    // Check navigation arrows — at index 0, only Next is visible (Instagram-style)
+    expect(() => tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toThrow()
     expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
 
     // Check first image
@@ -471,10 +474,16 @@ describe('Slider display correctness', () => {
       )
     })
 
-    const prevButton = tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })
+    // Navigate to slide 1 so both arrows are visible
     const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    const prevButton = tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })
+    const nextBtn = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
 
     expect(prevButton.props.accessibilityRole).toBe('button')
-    expect(nextButton.props.accessibilityRole).toBe('button')
+    expect(nextBtn.props.accessibilityRole).toBe('button')
   })
 })

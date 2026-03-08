@@ -226,4 +226,128 @@ describe('ArticleEditor.web link', () => {
 
     createElementSpy.mockRestore();
   });
+
+  it('supports upload responses with nested data.url', async () => {
+    (uploadImage as jest.Mock).mockResolvedValueOnce({
+      data: { url: '/uploads/dropped-image.jpg' },
+    });
+
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    const file = new File(['binary-image'], 'photo.png', { type: 'image/png' });
+    const inputMock: any = {
+      type: '',
+      accept: '',
+      files: [file],
+      onchange: null,
+      click: jest.fn(() => {
+        if (typeof inputMock.onchange === 'function') inputMock.onchange();
+      }),
+    };
+
+    const realCreateElement = window.document.createElement.bind(window.document);
+    const createElementSpy = jest
+      .spyOn(window.document, 'createElement')
+      .mockImplementation(((tagName: string) => {
+        if (String(tagName).toLowerCase() === 'input') return inputMock;
+        return realCreateElement(tagName);
+      }) as any);
+
+    const { getByTestId } = render(<ArticleEditor content={'hello'} onChange={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+      expect((globalThis as any).__quillProps__).toBeTruthy();
+    });
+
+    const quillProps = (globalThis as any).__quillProps__;
+    const editor = (globalThis as any).__quillEditor__;
+    const imageHandler = quillProps?.modules?.toolbar?.handlers?.image;
+
+    expect(typeof imageHandler).toBe('function');
+
+    imageHandler.call({ quill: editor }, true);
+
+    await waitFor(() => {
+      expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
+      expect(editor.insertEmbed).toHaveBeenCalledWith(
+        0,
+        'image',
+        expect.stringMatching(/\/uploads\/dropped-image\.jpg$/),
+        'user'
+      );
+    });
+
+    createElementSpy.mockRestore();
+  });
+
+  it('passes the latest editor html into manual save and blocks save while image upload is in progress', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    const onManualSave = jest.fn();
+
+    let resolveUpload: ((value: unknown) => void) | null = null;
+    (uploadImage as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveUpload = resolve;
+        })
+    );
+
+    const file = new File(['binary-image'], 'photo.png', { type: 'image/png' });
+    const inputMock: any = {
+      type: '',
+      accept: '',
+      files: [file],
+      onchange: null,
+      click: jest.fn(() => {
+        if (typeof inputMock.onchange === 'function') inputMock.onchange();
+      }),
+    };
+
+    const realCreateElement = window.document.createElement.bind(window.document);
+    const createElementSpy = jest
+      .spyOn(window.document, 'createElement')
+      .mockImplementation(((tagName: string) => {
+        if (String(tagName).toLowerCase() === 'input') return inputMock;
+        return realCreateElement(tagName);
+      }) as any);
+
+    const { getByTestId, getByLabelText } = render(
+      <ArticleEditor content={'hello'} onChange={jest.fn()} onManualSave={onManualSave} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+      expect((globalThis as any).__quillProps__).toBeTruthy();
+      expect((globalThis as any).__quillEditor__).toBeTruthy();
+    });
+
+    const quillProps = (globalThis as any).__quillProps__;
+    const editor = (globalThis as any).__quillEditor__;
+    const imageHandler = quillProps?.modules?.toolbar?.handlers?.image;
+
+    expect(typeof imageHandler).toBe('function');
+
+    imageHandler.call({ quill: editor }, true);
+
+    await waitFor(() => {
+      expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.press(getByLabelText('Загрузка изображения…') as any);
+    expect(onManualSave).not.toHaveBeenCalled();
+
+    resolveUpload?.({ url: 'https://example.com/uploaded.jpg' });
+
+    await waitFor(() => {
+      expect(getByLabelText('Сохранить путешествие')).toBeTruthy();
+    });
+
+    fireEvent.press(getByLabelText('Сохранить путешествие') as any);
+
+    await waitFor(() => {
+      expect(onManualSave).toHaveBeenCalledWith(expect.stringContaining('https://example.com/uploaded.jpg'));
+    });
+
+    createElementSpy.mockRestore();
+  });
 });

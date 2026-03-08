@@ -20,7 +20,7 @@ const ArticleEditor = lazy(() => import('@/components/article/ArticleEditor'));
 interface ContentUpsertSectionProps {
     formData: TravelFormData;
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
-    onManualSave?: () => Promise<unknown> | void;
+    onManualSave?: (dataOverride?: TravelFormData) => Promise<unknown> | void;
     firstErrorField?: string | null;
     autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
     focusAnchorId?: string | null;
@@ -471,8 +471,24 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                                         key={`description-fullscreen-${idTravelStr ?? 'new'}`}
                                                         label={title}
                                                         content={content ?? ''}
-                                                        onChange={onChange}
-                                                        onManualSave={isDescription ? onManualSave : undefined}
+                                                        onChange={(value) => {
+                                                            if (isDescription) {
+                                                                descriptionHtmlRef.current = value;
+                                                            }
+                                                            onChange(value);
+                                                        }}
+                                                        onManualSave={isDescription && onManualSave
+                                                            ? async (html) => {
+                                                                const nextDescription = typeof html === 'string'
+                                                                    ? html
+                                                                    : String(descriptionHtmlRef.current ?? formData.description ?? '');
+                                                                descriptionHtmlRef.current = nextDescription;
+                                                                return await onManualSave({
+                                                                    ...formData,
+                                                                    description: nextDescription,
+                                                                });
+                                                            }
+                                                            : undefined}
                                                         placeholder={hint}
                                                         idTravel={idTravelStr}
                                                         variant="default"
@@ -489,8 +505,24 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                             key={`${title}-${idTravelStr ?? 'new'}`}
                             label={title}
                             content={content ?? ''}
-                            onChange={onChange}
-                            onManualSave={isDescription ? onManualSave : undefined}
+                            onChange={(value) => {
+                                if (isDescription) {
+                                    descriptionHtmlRef.current = value;
+                                }
+                                onChange(value);
+                            }}
+                            onManualSave={isDescription && onManualSave
+                                ? async (html) => {
+                                    const nextDescription = typeof html === 'string'
+                                        ? html
+                                        : String(descriptionHtmlRef.current ?? formData.description ?? '');
+                                    descriptionHtmlRef.current = nextDescription;
+                                    return await onManualSave({
+                                        ...formData,
+                                        description: nextDescription,
+                                    });
+                                }
+                                : undefined}
                             idTravel={idTravelStr}
                             variant={isDescription ? 'default' : 'compact'}
                         />
@@ -537,6 +569,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
             isPastingDescriptionText,
             isCompactFullscreenHeader,
             pasteDescriptionText,
+            formData,
             onManualSave,
             styles,
         ]

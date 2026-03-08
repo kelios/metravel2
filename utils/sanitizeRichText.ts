@@ -90,6 +90,12 @@ function rewriteLocalImageUrl(value: string) {
       /^192\.168\./.test(host) ||
       /^10\./.test(host) ||
       /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    const isFirstPartyHost = host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by'
+
+    if (isFirstPartyHost && parsed.protocol === 'http:') {
+      parsed.protocol = 'https:'
+      return parsed.toString()
+    }
 
     if (isLocalhost || isPrivateV4) {
       parsed.protocol = 'https:'
@@ -170,6 +176,11 @@ function normalizeUrl(value?: string) {
   try {
     const url = new URL(value, 'https://metravel.by')
     if (!ALLOWED_SCHEMES.includes(url.protocol.replace(':', ''))) return undefined
+    const host = url.hostname.toLowerCase()
+    const isFirstPartyHost = host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by'
+    if (isFirstPartyHost && url.protocol === 'http:') {
+      url.protocol = 'https:'
+    }
     return url.href
   } catch {
     return undefined

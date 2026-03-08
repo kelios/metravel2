@@ -61,6 +61,20 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('id="day-3"')
   })
 
+  it('upgrades insecure first-party media urls to https', () => {
+    const html = [
+      '<p><img src="http://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp"></p>',
+      '<p><a href="http://metravel.by/gallery/123/conversions/cover.webp">open</a></p>',
+      '<p><img src="http://example.com/plain-http.jpg"></p>',
+    ].join('')
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).toContain('https://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp')
+    expect(sanitized).toContain('href="https://metravel.by/gallery/123/conversions/cover.webp"')
+    expect(sanitized).toContain('https://images.weserv.nl/?url=example.com%2Fplain-http.jpg')
+  })
+
   it('sanitizeRichTextForPdf preserves formatting and images', () => {
     const html = [
       '<h2>Маршрут</h2>',

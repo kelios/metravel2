@@ -20,6 +20,7 @@ export interface ArticleEditorProps {
   content: string;
   onChange: (html: string) => void;
   onAutosave?: (html: string) => Promise<void>;
+  onManualSave?: (html?: string) => Promise<unknown> | void;
   autosaveDelay?: number;
   idTravel?: string;
   editorRef?: React.Ref<any>;

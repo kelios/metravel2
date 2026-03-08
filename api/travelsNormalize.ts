@@ -17,6 +17,16 @@ export type MyTravelsPayload =
 const asRecord = (value: unknown): Record<string, unknown> =>
     value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
+const isPrivateOrLocalHost = (host: string): boolean => {
+    const normalizedHost = String(host || '').trim().toLowerCase();
+    if (!normalizedHost) return false;
+    return normalizedHost === 'localhost' ||
+        normalizedHost === '127.0.0.1' ||
+        /^10\./.test(normalizedHost) ||
+        /^192\.168\./.test(normalizedHost) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(normalizedHost);
+};
+
 const getPositiveNumericId = (value: unknown): number | null => {
     const n = typeof value === 'number' ? value : Number(value);
     if (!Number.isFinite(n) || n <= 0) return null;
@@ -37,10 +47,16 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     const t = asRecord(input);
     const out: Record<string, unknown> = { ...t };
     const mediaPathWithApiPrefix = /^\/api\/(travel-image|travel-description-image|address-image|gallery|uploads|media)(\/|$)/i;
+    const firstPartyMediaUrl = /http:\/\/(?:metravel\.by|cdn\.metravel\.by|api\.metravel\.by)(\/(?:travel-image|travel-description-image|address-image|gallery|uploads|media)[^\s"'<>)]*)/gi;
 
     const stripDraftPlaceholder = (value: unknown): unknown => {
         if (typeof value !== 'string') return value;
         return value.trim() === '__draft_placeholder__' ? '' : value;
+    };
+
+    const normalizeRichTextMediaUrls = (value: unknown): unknown => {
+        if (typeof value !== 'string' || !value) return value;
+        return value.replace(firstPartyMediaUrl, (_match, path: string) => `https://metravel.by${path}`);
     };
 
     if (typeof t.id !== 'undefined') {
@@ -95,11 +111,11 @@ export const normalizeTravelItem = (input: unknown): Travel => {
 
     // Backend can return "__draft_placeholder__" for empty draft fields.
     // Treat it as empty so UI doesn't render broken sections (e.g. Video tab with no YouTube id).
-    out.description = stripDraftPlaceholder(out.description);
+    out.description = normalizeRichTextMediaUrls(stripDraftPlaceholder(out.description));
     out.youtube_link = stripDraftPlaceholder(out.youtube_link);
-    out.recommendation = stripDraftPlaceholder(out.recommendation);
-    out.plus = stripDraftPlaceholder(out.plus);
-    out.minus = stripDraftPlaceholder(out.minus);
+    out.recommendation = normalizeRichTextMediaUrls(stripDraftPlaceholder(out.recommendation));
+    out.plus = normalizeRichTextMediaUrls(stripDraftPlaceholder(out.plus));
+    out.minus = normalizeRichTextMediaUrls(stripDraftPlaceholder(out.minus));
 
     // Нормализация полей рейтинга
     if (typeof t.rating !== 'undefined') {
@@ -140,13 +156,7 @@ export const normalizeTravelItem = (input: unknown): Travel => {
             try {
                 const parsed = new URL(trimmed);
                 const host = String(parsed.hostname || '').trim().toLowerCase();
-                const isPrivateOrLocal =
-                    host === 'localhost' ||
-                    host === '127.0.0.1' ||
-                    /^10\./.test(host) ||
-                    /^192\.168\./.test(host) ||
-                    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-                if (!isPrivateOrLocal) {
+                if (!isPrivateOrLocalHost(host)) {
                     return trimmed.replace(/^http:\/\//i, 'https://');
                 }
             } catch {

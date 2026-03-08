@@ -616,7 +616,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
       if (didScroll) {
         e.preventDefault?.();
         try {
-          window.history.pushState(null, "", href);
+          window.history.pushState(window.history.state ?? {}, "", href);
         } catch {
           window.location.hash = href;
         }

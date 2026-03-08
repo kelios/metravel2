@@ -7,7 +7,7 @@
  * - Slide virtualization: only current ±1 slides are fully rendered
  * - Cached DOM node refs: no querySelector on every interaction
  * - Lazy URI computation: URIs built only for visible slides
- * - Memoized sub-components: arrows, counter, dots don't re-render on slide change
+ * - Memoized sub-components: arrows, dots don't re-render unnecessarily
  * - Consolidated event listeners: single effect for mouse/keyboard/scrollend
  */
 
@@ -24,10 +24,10 @@ import React, {
   forwardRef,
 } from 'react';
 import {
+  Platform,
   View,
   ScrollView,
   LayoutChangeEvent,
-  Text,
   TouchableOpacity,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -35,7 +35,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import type { SliderProps, SliderRef } from './sliderParts/types';
 import { buildUriWeb, SLIDER_MAX_WIDTH, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
-import { createSliderStyles } from './sliderParts/styles';
+import { createSliderStyles, MAX_VISIBLE_DOTS } from './sliderParts/styles';
 import Slide from './sliderParts/Slide';
 import { useWebScrollInteraction } from './sliderParts/useWebScrollInteraction';
 import { useSliderCore } from './sliderParts/useSliderCore';
@@ -53,7 +53,11 @@ if (typeof document !== 'undefined') {
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      .slider-snap-disabled { scroll-snap-type: none !important; }
+      .slider-snap-disabled {
+        scroll-snap-type: none !important;
+        scroll-behavior: auto !important;
+      }
+      [data-testid="slider-scroll"]::-webkit-scrollbar { display: none !important; }
       [data-testid="slider-wrapper"]:hover [aria-label="Previous slide"],
       [data-testid="slider-wrapper"]:hover [aria-label="Next slide"] {
         opacity: 1 !important;
@@ -87,6 +91,10 @@ interface NavArrowsProps {
   onNext: () => void;
 }
 
+interface NavArrowsInternalProps extends NavArrowsProps {
+  currentIndex: number;
+}
+
 const NavArrows = memo(function NavArrows({
   imagesLen,
   isMobile,
@@ -96,56 +104,43 @@ const NavArrows = memo(function NavArrows({
   styles,
   onPrev,
   onNext,
-}: NavArrowsProps) {
+  currentIndex,
+}: NavArrowsInternalProps) {
   if (imagesLen < 2 || (isMobile && hideArrowsOnMobile)) return null;
   const iconSize = isMobile ? 16 : isTablet ? 18 : 20;
+  const isFirst = currentIndex === 0;
+  const isLast = currentIndex === imagesLen - 1;
   return (
     <>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Previous slide"
-        onPress={onPrev}
-        activeOpacity={0.9}
-        style={[styles.navBtn, { left: navOffset }]}
-        {...({ className: 'slider-nav-btn' } as any)}
-      >
-        <View style={styles.arrowIconContainer}>
-          <Feather name="chevron-left" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
-        </View>
-      </TouchableOpacity>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Next slide"
-        onPress={onNext}
-        activeOpacity={0.9}
-        style={[styles.navBtn, { right: navOffset }]}
-        {...({ className: 'slider-nav-btn' } as any)}
-      >
-        <View style={styles.arrowIconContainer}>
-          <Feather name="chevron-right" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
-        </View>
-      </TouchableOpacity>
+      {!isFirst && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Previous slide"
+          onPress={onPrev}
+          activeOpacity={0.9}
+          style={[styles.navBtn, { left: navOffset }]}
+          {...({ className: 'slider-nav-btn' } as any)}
+        >
+          <View style={styles.arrowIconContainer}>
+            <Feather name="chevron-left" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
+          </View>
+        </TouchableOpacity>
+      )}
+      {!isLast && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Next slide"
+          onPress={onNext}
+          activeOpacity={0.9}
+          style={[styles.navBtn, { right: navOffset }]}
+          {...({ className: 'slider-nav-btn' } as any)}
+        >
+          <View style={styles.arrowIconContainer}>
+            <Feather name="chevron-right" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
+          </View>
+        </TouchableOpacity>
+      )}
     </>
-  );
-});
-
-interface CounterProps {
-  currentIndex: number;
-  total: number;
-  isMobile: boolean;
-  styles: Record<string, any>;
-}
-
-const Counter = memo(function Counter({ currentIndex, total, isMobile, styles }: CounterProps) {
-  if (total < 2) return null;
-  return (
-    <View style={[styles.counter, isMobile && styles.counterMobile, { pointerEvents: 'none' }]}>
-      <View style={styles.counterContainer}>
-        <Text style={styles.counterText}>
-          {currentIndex + 1}/{total}
-        </Text>
-      </View>
-    </View>
   );
 });
 
@@ -156,16 +151,61 @@ interface PaginationDotsProps {
   styles: Record<string, any>;
 }
 
+/**
+ * Instagram-style sliding window pagination dots.
+ * Shows max MAX_VISIBLE_DOTS dots at a time. The active dot is slightly larger,
+ * and dots at the edges of the visible window shrink to create a smooth
+ * sliding effect when navigating through many slides.
+ */
 const PaginationDots = memo(function PaginationDots({ total, currentIndex, isMobile, styles }: PaginationDotsProps) {
   const dots = useMemo(() => {
+    if (total <= MAX_VISIBLE_DOTS) {
+      // Few slides — show all dots, no sliding window needed
+      const arr = [];
+      for (let i = 0; i < total; i++) {
+        arr.push(
+          <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />,
+        );
+      }
+      return arr;
+    }
+
+    // Sliding window: center the active dot within the visible range
+    const half = Math.floor(MAX_VISIBLE_DOTS / 2);
+    let windowStart = currentIndex - half;
+    let windowEnd = currentIndex + half;
+
+    // Clamp to boundaries
+    if (windowStart < 0) {
+      windowStart = 0;
+      windowEnd = MAX_VISIBLE_DOTS - 1;
+    }
+    if (windowEnd >= total) {
+      windowEnd = total - 1;
+      windowStart = total - MAX_VISIBLE_DOTS;
+    }
+
     const arr = [];
-    for (let i = 0; i < total; i++) {
-      arr.push(
-        <View key={i} style={[styles.dot, i === currentIndex && styles.dotActive]} />,
-      );
+    for (let i = windowStart; i <= windowEnd; i++) {
+      const distFromActive = Math.abs(i - currentIndex);
+      const isEdge = i === windowStart || i === windowEnd;
+      const isActive = i === currentIndex;
+
+      let dotStyle;
+      if (isActive) {
+        dotStyle = [styles.dot, styles.dotActive];
+      } else if (isEdge && distFromActive >= 2) {
+        dotStyle = [styles.dot, styles.dotTiny];
+      } else if (distFromActive >= 2) {
+        dotStyle = [styles.dot, styles.dotSmall];
+      } else {
+        dotStyle = [styles.dot];
+      }
+
+      arr.push(<View key={i} style={dotStyle} />);
     }
     return arr;
-  }, [total, currentIndex, styles.dot, styles.dotActive]);
+  }, [total, currentIndex, styles.dot, styles.dotActive, styles.dotSmall, styles.dotTiny]);
 
   if (total < 2) return null;
 
@@ -243,6 +283,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   // Track whether onLayout has fired so we can use CSS '100%' width before the first measurement
   const [layoutMeasured, setLayoutMeasured] = useState(false);
+  const [measuredSlideWidth, setMeasuredSlideWidth] = useState<number | null>(null);
 
   // Refs
   const currentIndexRef = useRef(0);
@@ -256,6 +297,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const computedH = coreContainerH;
   const containerH = fillContainer ? '100%' : computedH;
+  const renderedSlideWidth = measuredSlideWidth ?? containerW;
 
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -347,6 +389,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     const node = wrapperNodeRef.current;
     const w = node?.getBoundingClientRect?.()?.width ?? 0;
     if (!Number.isFinite(w) || w <= 0) return;
+    setMeasuredSlideWidth(w);
     if (Math.abs(containerWRef.current - w) > 4) {
       setContainerWidth(w);
       // Keep the scroll position aligned to the current index when width changes to avoid
@@ -435,6 +478,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const w = e.nativeEvent.layout.width;
+      setMeasuredSlideWidth(w);
       setContainerWidth(w);
       setLayoutMeasured(true);
       resolveNodes();
@@ -444,7 +488,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   );
 
   // Web scroll handler — on mobile, native scroll-snap settles automatically so
-  // we only sync React state; on desktop we also correct drift.
+  // we sync React state and, if needed, correct any residual drift after touch settles.
   const handleScroll = useCallback(
     (_e: any) => {
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current);
@@ -455,11 +499,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const cwIdle = containerWRef.current || 1;
         setActiveIndexFromOffset(xIdle);
 
-        // On mobile, native scroll-snap handles final position — skip JS correction
-        if (isMobile || !node) return;
+        if (!node) return;
         const snappedIdx = Math.max(0, Math.min(Math.round(xIdle / cwIdle), images.length - 1));
         const targetLeft = snappedIdx * cwIdle;
-        if (Math.abs(xIdle - targetLeft) > 1) {
+        const correctionThreshold = isMobile ? 8 : 1;
+        if (Math.abs(xIdle - targetLeft) > correctionThreshold) {
           scrollTo(snappedIdx, false);
         }
       }, idleDelay);
@@ -492,15 +536,17 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     };
   }, []);
 
-  // Stable arrow callbacks
+  // Stable arrow callbacks — no wrap-around (Instagram-style: stop at boundaries)
   const onPrev = useCallback(() => {
-    const target = (currentIndexRef.current - 1 + images.length) % Math.max(1, images.length);
-    scrollTo(target);
-  }, [images.length, scrollTo]);
+    const cur = currentIndexRef.current;
+    if (cur <= 0) return;
+    scrollTo(cur - 1);
+  }, [scrollTo]);
 
   const onNext = useCallback(() => {
-    const target = (currentIndexRef.current + 1) % images.length;
-    scrollTo(target);
+    const cur = currentIndexRef.current;
+    if (cur >= images.length - 1) return;
+    scrollTo(cur + 1);
   }, [images.length, scrollTo]);
 
   if (!images.length) return null;
@@ -549,11 +595,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             {...({ dataSet: { sliderInstance: sliderInstanceId } } as any)}
           >
             {images.map((item, index) => {
-              // Virtualization: only render Slide for slides within the visible window
+              // Virtualization: only render Slide for slides within ±VIRTUAL_WINDOW
               const distanceToCurrent = Math.abs(index - currentIndex);
-              const inWindow = distanceToCurrent <= VIRTUAL_WINDOW;
-              const keepPreviousEdge = currentIndex >= VIRTUAL_WINDOW && index < currentIndex && index >= currentIndex - (VIRTUAL_WINDOW + 1);
-              const shouldRender = inWindow || keepPreviousEdge;
+              const shouldRender = distanceToCurrent <= VIRTUAL_WINDOW;
               const preloadPriority = distanceToCurrent <= 1;
 
               return (
@@ -561,14 +605,19 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   key={`${String(item.id)}|${index}`}
                   testID={`slider-slide-${index}`}
                   {...({ dataSet: { testid: `slider-slide-${index}` } } as any)}
-                  style={[styles.slide, { width: layoutMeasured ? containerW : '100%', height: containerH }, styles.slideSnap]}
+                  style={[
+                    styles.slide,
+                    { width: layoutMeasured ? renderedSlideWidth : '100%', height: containerH },
+                    Platform.OS === 'web' ? ({ pointerEvents: 'none', touchAction: 'pan-x' } as any) : null,
+                    styles.slideSnap,
+                  ]}
                 >
                   {shouldRender ? (
                     <Slide
                       item={item}
                       index={index}
                       uri={getUri(index)}
-                      containerW={containerW}
+                      containerW={renderedSlideWidth}
                       slideHeight={slideHeight}
                       imagesLength={imagesLen}
                       styles={styles}
@@ -588,7 +637,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           </ScrollView>
         </View>
 
-        {/* Navigation arrows */}
+        {/* Navigation arrows — hidden at boundaries (Instagram-style) */}
         {showArrows && (
           <NavArrows
             imagesLen={imagesLen}
@@ -599,13 +648,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             styles={styles}
             onPrev={onPrev}
             onNext={onNext}
+            currentIndex={currentIndex}
           />
         )}
 
-        {/* Counter (Instagram-style 1/N) */}
-        <Counter currentIndex={currentIndex} total={imagesLen} isMobile={isMobile} styles={styles} />
-
-        {/* Pagination dots */}
+        {/* Instagram-style sliding window pagination dots */}
         {showDots && (
           <PaginationDots total={imagesLen} currentIndex={currentIndex} isMobile={isMobile} styles={styles} />
         )}

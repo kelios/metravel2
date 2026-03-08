@@ -127,6 +127,21 @@ describe('src/api/travelsApi.ts', () => {
       expect(String((travel.gallery as any[])[1]?.url || '')).not.toContain('/api/gallery/');
     });
 
+    it('upgrades insecure first-party media urls inside rich-text fields', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        description: '<p><img src="http://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp"></p>',
+        recommendation: '<p><img src="http://cdn.metravel.by/gallery/123/conversions/cover.webp"></p>',
+        plus: '<p><img src="http://api.metravel.by/address-image/77/conversions/main.webp"></p>',
+        minus: '<p><img src="http://example.com/plain-http.jpg"></p>',
+      } as any);
+
+      expect(String(travel.description)).toContain('https://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp');
+      expect(String(travel.recommendation)).toContain('https://metravel.by/gallery/123/conversions/cover.webp');
+      expect(String(travel.plus)).toContain('https://metravel.by/address-image/77/conversions/main.webp');
+      expect(String(travel.minus)).toContain('http://example.com/plain-http.jpg');
+    });
+
     it('preserves backend gallery paths with entity id segment', () => {
       const { normalizeTravelItem } = loadTravelsApi();
       const travel = normalizeTravelItem({

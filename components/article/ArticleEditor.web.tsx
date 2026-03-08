@@ -32,6 +32,7 @@ import {
     normalizeAnchorId, 
     escapeHtml 
 } from '@/utils/htmlUtils';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import UiIconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
 
@@ -82,7 +83,7 @@ export interface ArticleEditorProps {
     content: string;
     onChange: (html: string) => void;
     onAutosave?: (html: string) => Promise<void>;
-    onManualSave?: () => Promise<unknown> | void;
+    onManualSave?: (html?: string) => Promise<unknown> | void;
     autosaveDelay?: number;
     idTravel?: string;
     editorRef?: Ref<any>;
@@ -116,6 +117,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const [anchorValue, setAnchorValue] = useState('');
     const [linkModalVisible, setLinkModalVisible] = useState(false);
     const [linkValue, setLinkValue] = useState('');
+    const [isImageUploading, setIsImageUploading] = useState(false);
     const [isManualSaving, setIsManualSaving] = useState(false);
     const htmlSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
     const [htmlForcedSelection, setHtmlForcedSelection] = useState<{ start: number; end: number } | null>(null);
@@ -572,36 +574,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [content, html, showHtml]);
 
     useEffect(() => {
-        if (!win) return;
-        const style = win.document.createElement('style');
-        // ✅ ДИЗАЙН: CSS-переменные синхронизированы с DESIGN_TOKENS
-        style.innerHTML = `
-      :root{--bg:${colors.surface};--fg:${colors.text};--bar:${colors.surfaceElevated};--border:${colors.border}}
-      .quill{display:flex;flex-direction:column;height:100%;min-height:0}
-      .ql-editor{background:var(--bg);color:var(--fg);padding:16px 20px;line-height:1.65}
-      .ql-toolbar{background:var(--bar);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;max-width:100%;display:flex}
-      .quill > .ql-toolbar{display:flex !important;visibility:visible !important;opacity:1 !important}
-      .ql-toolbar.ql-snow{display:flex !important;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;overflow:visible}
-      .ql-toolbar.ql-snow .ql-picker{position:relative}
-      .ql-toolbar.ql-snow .ql-picker-options{z-index:1000;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 24px rgba(0,0,0,0.12);max-height:260px;overflow-y:auto}
-      .ql-toolbar.ql-snow .ql-formats{display:flex;flex-wrap:wrap;gap:4px;margin-right:6px}
-      .ql-toolbar.ql-snow .ql-picker{max-width:100%}
-      .ql-toolbar.ql-snow button{flex:0 0 auto}
-      .ql-container{max-width:100%;border:none}
-      .ql-editor{max-width:100%;overflow-wrap:anywhere}
-      .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;min-height:0;border:none}
-      .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
-      @media (max-width: 900px) {.ql-editor{padding:14px 16px}}
-      @media (max-width: 640px) {.ql-editor{padding:12px 14px;font-size:15px}.ql-toolbar.ql-snow{padding:7px 8px;gap:4px}.ql-toolbar.ql-snow .ql-formats{margin-right:4px}}
-	      /* We use our own link/anchor modals; hide Quill's built-in tooltip to avoid stray rectangles on web. */
-	      .ql-tooltip{display:none !important}
-      .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
-    `;
-        win.document.head.appendChild(style);
-        return () => { win.document.head.removeChild(style); };
-    }, [colors]);
-
-    useEffect(() => {
         autosaveIsMountedRef.current = true;
         return () => {
             autosaveIsMountedRef.current = false;
@@ -724,6 +696,20 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         }
     }, [showHtml]);
 
+    const getCurrentHtml = useCallback(() => {
+        if (showHtml) {
+            return typeof htmlRef.current === 'string' ? htmlRef.current : '';
+        }
+        try {
+            const editor = quillRef.current?.getEditor?.();
+            const fromEditor = String(editor?.root?.innerHTML ?? '');
+            if (fromEditor) return fromEditor;
+        } catch {
+            // noop
+        }
+        return typeof htmlRef.current === 'string' ? htmlRef.current : '';
+    }, [showHtml]);
+
     const insertImage = useCallback((url: string) => {
         if (!quillRef.current) return;
         const editor = quillRef.current.getEditor();
@@ -776,12 +762,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         })();
 
         try {
+            setIsImageUploading(true);
             const form = new FormData();
             form.append('file', file);
             form.append('collection', 'description');
             if (idTravel) form.append('id', String(idTravel));
             const res = await uploadImage(form);
-            const imageUrl = typeof res?.url === 'string' ? res.url : null;
+            const uploadedUrlRaw =
+                typeof res?.url === 'string'
+                    ? res.url
+                    : typeof (res as Record<string, any> | undefined)?.data?.url === 'string'
+                      ? (res as Record<string, any>).data.url
+                      : typeof res?.path === 'string'
+                        ? res.path
+                        : typeof res?.file_url === 'string'
+                          ? res.file_url
+                          : null;
+            const imageUrl = uploadedUrlRaw ? normalizeMediaUrl(uploadedUrlRaw) : null;
             if (!imageUrl) {
                 if (__DEV__) {
                     console.warn('[ArticleEditor] Upload response missing url:', res);
@@ -802,6 +799,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 console.error('[ArticleEditor] Image upload failed:', err);
             }
             Alert.alert('Ошибка', 'Не удалось загрузить изображение');
+        } finally {
+            setIsImageUploading(false);
         }
     }, [idTravel, insertImage, isAuthenticated]);
 
@@ -863,7 +862,19 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 void uploadAndInsert(file);
             };
             const onPaste = (e: ClipboardEvent) => {
-                const file = Array.from(e.clipboardData?.files ?? [])[0];
+                const fileFromFiles = Array.from(e.clipboardData?.files ?? [])[0];
+                const fileFromItems = Array.from(e.clipboardData?.items ?? [])
+                    .map(item => {
+                        if (!item || typeof item.kind !== 'string' || item.kind !== 'file') return null;
+                        if (typeof item.type !== 'string' || !item.type.startsWith('image/')) return null;
+                        try {
+                            return item.getAsFile?.() ?? null;
+                        } catch {
+                            return null;
+                        }
+                    })
+                    .find((candidate): candidate is File => !!candidate);
+                const file = fileFromFiles ?? fileFromItems;
                 if (file && typeof file.type === 'string' && file.type.startsWith('image/')) {
                     e.preventDefault();
                     try {
@@ -944,14 +955,15 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     };
 
     const handleManualSave = useCallback(async () => {
-        if (!onManualSave || isManualSaving) return;
+        if (!onManualSave || isManualSaving || isImageUploading) return;
         setIsManualSaving(true);
         try {
-            await Promise.resolve(onManualSave());
+            const currentHtml = getCurrentHtml();
+            await Promise.resolve(onManualSave(currentHtml));
         } finally {
             setIsManualSaving(false);
         }
-    }, [isManualSaving, onManualSave]);
+    }, [getCurrentHtml, isImageUploading, isManualSaving, onManualSave]);
 
     const insertAnchor = useCallback((idRaw: string) => {
         if (!quillRef.current) return;
@@ -1068,15 +1080,15 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 />
                 {onManualSave && (
                     <UiIconButton
-                        icon={isManualSaving
+                        icon={isManualSaving || isImageUploading
                             ? <ActivityIndicator size="small" color={colors.textSecondary} />
                             : <Feather name="save" size={20} color={colors.textSecondary} />}
                         onPress={() => {
                             void handleManualSave();
                         }}
-                        label={isManualSaving ? 'Сохранение…' : 'Сохранить путешествие'}
+                        label={isImageUploading ? 'Загрузка изображения…' : isManualSaving ? 'Сохранение…' : 'Сохранить путешествие'}
                         style={dynamicStyles.btn}
-                        disabled={isManualSaving}
+                        disabled={isManualSaving || isImageUploading}
                     />
                 )}
                 <IconButton

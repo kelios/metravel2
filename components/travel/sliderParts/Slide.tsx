@@ -177,7 +177,13 @@ const Slide = memo(function Slide({
   }, [onImagePress, index]);
 
   const slideContent = (
-    <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
+    <View
+      style={[
+        styles.slide,
+        { width: containerW, height: slideHeight },
+        Platform.OS === 'web' ? ({ pointerEvents: 'none' } as any) : null,
+      ]}
+    >
       {/* Main image with integrated blur background */}
       {hasError ? (
         <View
@@ -229,7 +235,7 @@ const Slide = memo(function Slide({
     </View>
   );
 
-  if (onImagePress) {
+  if (onImagePress && Platform.OS !== 'web') {
     return (
       <TouchableOpacity
         activeOpacity={0.9}
