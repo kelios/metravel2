@@ -50,6 +50,20 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const handleBackPress = () => {
+    if (model.backToPath) {
+      router.push(model.backToPath as any);
+      return;
+    }
+
+    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace('/' as any);
+  };
+
   const containerStyle = useMemo(() => {
     return [styles.container, isMobile && styles.containerMobile];
   }, [isMobile, styles]);
@@ -64,13 +78,7 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
         <View testID={testID ?? 'header-context-bar'} style={containerStyle}>
           <View style={styles.mobileRow}>
           <Pressable
-            onPress={() => {
-              if (model.backToPath) {
-                router.push(model.backToPath as any);
-                return;
-              }
-              router.back();
-            }}
+            onPress={handleBackPress}
             accessibilityRole="button"
             accessibilityLabel="Назад"
             style={[styles.backButton, globalFocusStyles.focusable]}

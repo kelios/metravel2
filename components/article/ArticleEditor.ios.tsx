@@ -7,25 +7,20 @@ import Feather from '@expo/vector-icons/Feather';
 
 import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
-import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { normalizeAnchorId, safeJsonString } from '@/utils/htmlUtils';
+import { useDebounce } from '@/hooks/useDebounce';
 import UiIconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
-
-export interface ArticleEditorProps {
-  label?: string;
-  placeholder?: string;
-  content: string;
-  onChange: (html: string) => void;
-  onAutosave?: (html: string) => Promise<void>;
-  onManualSave?: (html?: string) => Promise<unknown> | void;
-  autosaveDelay?: number;
-  idTravel?: string;
-  editorRef?: React.Ref<any>;
-  variant?: 'default' | 'compact';
-}
+import {
+  ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
+  ARTICLE_EDITOR_NATIVE_MESSAGE_DEBOUNCE_MS,
+  extractArticleEditorUploadUrl,
+  sanitizeArticleEditorNativeContent,
+} from './articleEditorConfig';
+import { buildArticleEditorNativeHtml } from './articleEditorNativeHtml';
+import type { ArticleEditorProps } from './articleEditor.types';
 
 const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   label = 'Описание',
@@ -33,7 +28,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   content,
   onChange,
   onAutosave,
-  autosaveDelay = 5000,
+  autosaveDelay = ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
   idTravel,
   variant = 'default',
 }) => {
@@ -41,7 +36,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const colors = useThemedColors();
 
   const sanitizeForEditor = useCallback((value: string) => {
-    return sanitizeRichText(value);
+    return sanitizeArticleEditorNativeContent(value);
   }, []);
 
   const [html, setHtml] = useState(() => sanitizeForEditor(content));
@@ -54,230 +49,28 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const lastPropContentRef = useRef<string>(content);
   const isUserEditingRef = useRef<boolean>(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onChangeDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingContentUpdateRef = useRef<string | null>(null);
   const { isAuthenticated } = useAuth();
+  const debouncedOnChange = useDebounce((nextHtml: string) => {
+    onChange(nextHtml);
+    isUserEditingRef.current = false;
+  }, ARTICLE_EDITOR_NATIVE_MESSAGE_DEBOUNCE_MS);
 
   const initialSanitizedContent = useMemo(() => sanitizeForEditor(content), [content, sanitizeForEditor]);
   const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder]);
   const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent]);
 
   // Quill HTML template with dynamic theme colors
-  const quillHTML = useMemo(() => `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      padding: 0;
-      margin: 0;
-      background: ${colors.surface};
-      color: ${colors.text};
-    }
-    #editor-container {
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    #toolbar {
-      background: ${colors.surfaceElevated};
-      border-bottom: 1px solid ${colors.border};
-      padding: 8px;
-      flex-shrink: 0;
-    }
-    .ql-container {
-      flex: 1;
-      font-size: 16px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      border: none;
-    }
-    .ql-editor {
-      padding: 16px;
-      min-height: 100%;
-      color: ${colors.text};
-    }
-    .ql-editor img {
-      max-width: 100%;
-      height: auto;
-      display: block;
-      margin: 12px auto;
-    }
-    .ql-editor.ql-blank::before {
-      color: ${colors.textSecondary};
-      font-style: normal;
-    }
-    ${variant === 'compact' ? `
-      #toolbar .ql-formats { margin-right: 8px; }
-      .ql-toolbar button { width: 32px; height: 32px; }
-    ` : ''}
-  </style>
-</head>
-<body>
-  <div id="editor-container">
-    <div id="toolbar">
-      ${variant === 'compact' ? `
-        <button class="ql-bold"></button>
-        <button class="ql-italic"></button>
-        <button class="ql-underline"></button>
-        <button class="ql-list" value="bullet"></button>
-        <button class="ql-link"></button>
-      ` : `
-        <button class="ql-bold"></button>
-        <button class="ql-italic"></button>
-        <button class="ql-underline"></button>
-        <button class="ql-strike"></button>
-        <select class="ql-header">
-          <option value="1">H1</option>
-          <option value="2">H2</option>
-          <option value="3">H3</option>
-          <option selected>Normal</option>
-        </select>
-        <button class="ql-list" value="ordered"></button>
-        <button class="ql-list" value="bullet"></button>
-        <button class="ql-link"></button>
-        <button class="ql-image"></button>
-      `}
-    </div>
-    <div id="editor"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-  <script>
-    var INITIAL_PLACEHOLDER = ${safePlaceholder};
-    var INITIAL_CONTENT = ${safeInitialContent};
-
-    function normalizeAnchorId(value) {
-      try {
-        var raw = String(value || '').trim().toLowerCase();
-        return raw
-          .replace(/\\s+/g, '-')
-          .replace(/[^a-z0-9_-]+/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '');
-      } catch (e) {
-        return '';
-      }
-    }
-
-    try {
-      var Parchment = Quill.import('parchment');
-      var IdAttribute = new Parchment.Attributor.Attribute('id', 'id');
-      Quill.register(IdAttribute, true);
-    } catch (e) {
-    }
-
-    var quill = new Quill('#editor', {
-      theme: 'snow',
-      modules: {
-        toolbar: '#toolbar',
-        history: {
-          delay: 1000,
-          maxStack: 100,
-          userOnly: true
-        },
-        clipboard: {
-          matchVisual: false
-        }
-      },
-      placeholder: INITIAL_PLACEHOLDER,
-    });
-
-    try {
-      var toolbar = quill.getModule('toolbar');
-      if (toolbar && typeof toolbar.addHandler === 'function') {
-        toolbar.addHandler('image', function() {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'request-image-upload'
-          }));
-        });
-      }
-    } catch (e) {
-    }
-
-    // Установка начального контента через Delta (сохраняет форматирование)
-    var tempDiv = document.createElement('div');
-    tempDiv.innerHTML = INITIAL_CONTENT;
-    quill.clipboard.dangerouslyPasteHTML(0, INITIAL_CONTENT, 'silent');
-
-    // Отправка изменений в React Native с debouncing
-    var changeTimer = null;
-    quill.on('text-change', function(delta, oldDelta, source) {
-      // Игнорируем программные изменения
-      if (source !== 'user') return;
-      
-      clearTimeout(changeTimer);
-      changeTimer = setTimeout(function() {
-        var html = quill.root.innerHTML;
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'content-change',
-          html: html,
-          source: source
-        }));
-      }, 150);
-    });
-
-    // Обработка команд от React Native
-    window.addEventListener('message', function(e) {
-      try {
-        var data = JSON.parse(e.data);
-        
-        if (data.type === 'set-content') {
-          // Сохраняем позицию курсора
-          var selection = quill.getSelection();
-          var currentLength = quill.getLength();
-          
-          // Используем Delta API для обновления содержимого
-          quill.clipboard.dangerouslyPasteHTML(0, data.html, 'api');
-          
-          // Восстанавливаем курсор если возможно
-          if (selection) {
-            var newLength = quill.getLength();
-            var newIndex = Math.min(selection.index, newLength - 1);
-            setTimeout(function() {
-              quill.setSelection(newIndex, 0);
-            }, 0);
-          }
-        }
-        
-        if (data.type === 'insert-image') {
-          var range = quill.getSelection() || { index: quill.getLength() - 1, length: 0 };
-          quill.insertEmbed(range.index, 'image', data.url, 'user');
-          quill.setSelection(range.index + 1, 0);
-        }
-
-        if (data.type === 'undo') {
-          quill.history.undo();
-        }
-
-        if (data.type === 'redo') {
-          quill.history.redo();
-        }
-
-        if (data.type === 'insert-anchor') {
-          var id = normalizeAnchorId(data.id);
-          if (!id) return;
-          var range = quill.getSelection() || { index: quill.getLength() - 1, length: 0 };
-          quill.clipboard.dangerouslyPasteHTML(range.index, '<span id="' + id + '">&#8203;</span>', 'user');
-          quill.setSelection(range.index + 1, 0);
-        }
-      } catch (err) {
-        console.error('Error processing message:', err);
-      }
-    });
-
-    // Сообщаем React Native что редактор готов
-    window.ReactNativeWebView.postMessage(JSON.stringify({
-      type: 'ready'
-    }));
-  </script>
-</body>
-</html>
-  `, [
+  const quillHTML = useMemo(() => buildArticleEditorNativeHtml({
+    borderColor: colors.border,
+    placeholder: safePlaceholder,
+    initialContent: safeInitialContent,
+    surfaceColor: colors.surface,
+    surfaceElevatedColor: colors.surfaceElevated,
+    textColor: colors.text,
+    textSecondaryColor: colors.textSecondary,
+    variant,
+  }), [
     colors.border,
     colors.surface,
     colors.surfaceElevated,
@@ -317,15 +110,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         
         // Обновляем локальное состояние без санитизации (доверяем Quill)
         setHtml(newHtml);
-        
-        // Debounced onChange callback
-        if (onChangeDebounceTimer.current) {
-          clearTimeout(onChangeDebounceTimer.current);
-        }
-        onChangeDebounceTimer.current = setTimeout(() => {
-          onChange(newHtml);
-          isUserEditingRef.current = false;
-        }, 300);
+        debouncedOnChange(newHtml);
         
         // Автосохранение
         if (onAutosave) {
@@ -344,7 +129,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     } catch (error) {
       console.error('Error parsing WebView message:', error);
     }
-  }, [onChange, onAutosave, autosaveDelay]);
+  }, [autosaveDelay, debouncedOnChange, onAutosave]);
 
   // Обновление контента при изменении prop (только внешние изменения)
   useLayoutEffect(() => {
@@ -391,9 +176,6 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       if (autosaveTimer.current) {
         clearTimeout(autosaveTimer.current);
       }
-      if (onChangeDebounceTimer.current) {
-        clearTimeout(onChangeDebounceTimer.current);
-      }
     };
   }, []);
 
@@ -435,11 +217,12 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         if (idTravel) formData.append('id', idTravel);
 
         const response = await uploadImage(formData);
-        
-        if (response?.url) {
+        const uploadedUrl = extractArticleEditorUploadUrl(response);
+
+        if (uploadedUrl) {
           webViewRef.current?.postMessage(JSON.stringify({
             type: 'insert-image',
-            url: response.url
+            url: uploadedUrl
           }));
         } else {
           throw new Error('No URL in response');
@@ -459,18 +242,18 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   }, [imageUploadRequest, handleImagePick]);
 
   // Отмена/повтор
-  const handleUndo = () => {
+  const handleUndo = useCallback(() => {
     webViewRef.current?.postMessage(JSON.stringify({ type: 'undo' }));
-  };
+  }, []);
 
-  const handleRedo = () => {
+  const handleRedo = useCallback(() => {
     webViewRef.current?.postMessage(JSON.stringify({ type: 'redo' }));
-  };
+  }, []);
 
-  const handleInsertAnchor = () => {
+  const handleInsertAnchor = useCallback(() => {
     setAnchorValue('');
     setAnchorModalVisible(true);
-  };
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>

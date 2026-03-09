@@ -19,6 +19,10 @@ npm run lint
 npm run test:run
 ```
 
+- If a task changes UI, layout, styling, visual states, or interaction behavior visible on web,
+  open a local browser preview and visually verify the changed scenario in the browser before
+  considering the task complete.
+ 
 - Always run `npm run lint` and `npm run test:run` at the end of a task to verify nothing broke.
 - For performance checks (Lighthouse), run against a production web export:
 

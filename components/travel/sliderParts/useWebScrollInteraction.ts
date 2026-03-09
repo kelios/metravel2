@@ -116,10 +116,18 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       scrollIdleTimerRef.current = setTimeout(() => {
         const node = scrollNodeRef.current;
         if (!node || isDraggingRef.current) return;
-        setActiveIndexFromOffset?.(node.scrollLeft);
+        const offsetX = node.scrollLeft;
+        const cw = containerWRef.current || 1;
+        const targetIndex = clamp(Math.round(offsetX / cw), 0, Math.max(0, slideCount - 1));
+        const targetLeft = targetIndex * cw;
+        setActiveIndexFromOffset?.(offsetX);
+        const correctionThreshold = isMobile ? 8 : 1;
+        if (Math.abs(offsetX - targetLeft) > correctionThreshold) {
+          scrollTo(targetIndex, false);
+        }
       }, delay);
     },
-    [clearScrollIdleTimer, scrollNodeRef, setActiveIndexFromOffset],
+    [clearScrollIdleTimer, containerWRef, isMobile, scrollNodeRef, scrollTo, setActiveIndexFromOffset, slideCount],
   );
 
   const beginDrag = useCallback(
@@ -222,26 +230,27 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
 
     // Mouse drag (desktop/tablet only). On mobile browsers synthesized mouse events
     // can interfere with native touch scroll-snap.
-    const onMouseDown = !isMobile ? (e: MouseEvent) => {
+    const onMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
+      if ((e as any).sourceCapabilities?.firesTouchEvents) return;
       beginDrag(e.pageX);
-    } : null;
+    };
 
-    const onMouseMove = !isMobile ? (e: MouseEvent) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       e.preventDefault();
       moveDrag(e.pageX);
-    } : null;
+    };
 
-    const onMouseUp = !isMobile ? (_e: MouseEvent) => {
+    const onMouseUp = (_e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       endDrag();
-    } : null;
+    };
 
-    const onMouseLeave = !isMobile ? () => {
+    const onMouseLeave = () => {
       if (!isDraggingRef.current) return;
       endDrag();
-    } : null;
+    };
 
     // Touch / pointer swipe — only on non-mobile (desktop/tablet).
     // On mobile phones, native CSS scroll-snap provides GPU-accelerated swiping
@@ -251,30 +260,36 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       return (e as any).pointerType === 'touch' || (e as any).pointerType === 'pen';
     };
 
-    const onPointerDown = !isMobile ? (e: PointerEvent) => {
-      if (!isTouchPointerEvent(e) && e.pointerType !== 'mouse') return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') {
+        beginDrag(e.pageX, e.pointerId);
+        try { e.preventDefault(); } catch { /* noop */ }
+        return;
+      }
+      if (isMobile) return;
+      if (!isTouchPointerEvent(e)) return;
       beginDrag(e.pageX, e.pointerId);
       try { e.preventDefault(); } catch { /* noop */ }
-    } : null;
+    };
 
-    const onPointerMove = !isMobile ? (e: PointerEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
       if (activePointerIdRef.current != null && e.pointerId !== activePointerIdRef.current) return;
       try { e.preventDefault(); } catch { /* noop */ }
       moveDrag(e.pageX);
-    } : null;
+    };
 
-    const onPointerUp = !isMobile ? (e: PointerEvent) => {
+    const onPointerUp = (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
       if (activePointerIdRef.current != null && e.pointerId !== activePointerIdRef.current) return;
       endDrag();
-    } : null;
+    };
 
-    const onPointerCancel = !isMobile ? (e: PointerEvent) => {
+    const onPointerCancel = (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
       if (activePointerIdRef.current != null && e.pointerId !== activePointerIdRef.current) return;
       endDrag();
-    } : null;
+    };
 
     // On mobile: lightweight passive touch listener for prefetch/dismiss only
     // On non-mobile: full manual touch drag (iOS Safari fallback for PointerEvent)

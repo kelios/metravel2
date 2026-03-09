@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
-import ArticleEditorIOS, { ArticleEditorProps } from './ArticleEditor.ios';
+import ArticleEditorIOS from './ArticleEditor.ios';
+import type { ArticleEditorProps } from './articleEditor.types';
 
 export type { ArticleEditorProps };
 

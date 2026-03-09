@@ -291,6 +291,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       window.cancelAnimationFrame(scrollAnimationFrameRef.current);
       scrollAnimationFrameRef.current = null;
     }
+    scrollNodeRef.current?.classList.remove('slider-snap-disabled');
     scrollAnimationIdRef.current += 1;
   }, []);
 
@@ -381,15 +382,23 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // Sync container width from DOM
   const syncContainerWidthFromDom = useCallback(() => {
     resolveNodes();
-    const node = wrapperNodeRef.current;
-    const w = node?.getBoundingClientRect?.()?.width ?? 0;
+    const wrapperNode = wrapperNodeRef.current;
+    const scrollNode = scrollNodeRef.current;
+    const w = wrapperNode?.getBoundingClientRect?.()?.width ?? 0;
     if (!Number.isFinite(w) || w <= 0) return;
     setMeasuredSlideWidth(w);
+    setLayoutMeasured(true);
     if (Math.abs(containerWRef.current - w) > 4) {
       setContainerWidth(w);
-      // Keep the scroll position aligned to the current index when width changes to avoid
-      // showing a partial next/previous slide on first load.
-      snapScrollToIndex(indexRef.current, w);
+    }
+
+    if (scrollNode) {
+      const targetLeft = indexRef.current * w;
+      if (Math.abs((scrollNode.scrollLeft || 0) - targetLeft) > 1) {
+        // Keep the scroll position aligned to the current index when width changes
+        // or when DOM nodes resolve after the initial layout pass.
+        snapScrollToIndex(indexRef.current, w);
+      }
     }
   }, [containerWRef, indexRef, resolveNodes, setContainerWidth, snapScrollToIndex]);
 
@@ -636,7 +645,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       slideHeight={slideHeight}
                       imagesLength={imagesLen}
                       styles={styles}
-                      blurBackground={isMobile ? false : blurBackground}
+                      blurBackground={blurBackground}
                       isActive={index === currentIndex}
                       imageProps={imageProps}
                       onFirstImageLoad={onFirstImageLoad}

@@ -202,8 +202,7 @@ describe('ArticleEditor.web anchors', () => {
   it('opens travel preview in a new tab', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
-    const openSpy = jest.fn();
-    ;(globalThis as any).open = openSpy;
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => ({ opener: null } as Window));
 
     const { getByLabelText, getByTestId } = render(
       <ArticleEditor content={'hello'} onChange={jest.fn()} idTravel={'733'} />
@@ -220,6 +219,8 @@ describe('ArticleEditor.web anchors', () => {
       '_blank',
       'noopener,noreferrer'
     );
+
+    openSpy.mockRestore();
   });
 
   it('normalizes full HTML document to body HTML when leaving HTML mode (content should not disappear)', async () => {

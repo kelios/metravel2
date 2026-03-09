@@ -54,6 +54,8 @@ jest.mock('react-native', () => {
 describe('HeaderContextBar', () => {
   const mockPush = jest.fn();
   const mockBack = jest.fn();
+  const mockReplace = jest.fn();
+  const mockCanGoBack = jest.fn();
   const mockRequestToggleMapPanel = jest.fn();
 
   const { useBreadcrumbModel } = jest.requireMock('@/hooks/useBreadcrumbModel') as {
@@ -71,7 +73,13 @@ describe('HeaderContextBar', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useRouter as jest.Mock).mockReturnValue({ push: mockPush, back: mockBack });
+    mockCanGoBack.mockReturnValue(false);
+    (useRouter as jest.Mock).mockReturnValue({
+      push: mockPush,
+      back: mockBack,
+      replace: mockReplace,
+      canGoBack: mockCanGoBack,
+    });
 
     const { useMapPanelStore } = jest.requireMock('@/stores/mapPanelStore') as {
       useMapPanelStore: jest.Mock;
@@ -254,5 +262,43 @@ describe('HeaderContextBar', () => {
 
     const { getByTestId } = renderWithClient(<HeaderContextBar />);
     expect(getByTestId('mobile-sections-open')).toBeTruthy();
+  });
+
+  it('should fall back to home on mobile back press when there is no history and no backToPath', () => {
+    (usePathname as jest.Mock).mockReturnValue('/map');
+    (global as any).__mockResponsive = {
+      width: 390,
+      height: 844,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
+
+    useBreadcrumbModel.mockReturnValue({
+      showBreadcrumbs: false,
+      pageContextTitle: 'Карта',
+      currentTitle: 'Карта',
+      backToPath: null,
+      items: [],
+    });
+
+    const { getByLabelText } = renderWithClient(<HeaderContextBar />);
+
+    fireEvent.press(getByLabelText('Назад'));
+
+    expect(mockCanGoBack).toHaveBeenCalled();
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith('/');
   });
 });

@@ -5,7 +5,6 @@ import React, {
     useState,
     Suspense,
     forwardRef,
-    type Ref,
     useMemo,
     useLayoutEffect,
 } from 'react';
@@ -26,6 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDebounce } from '@/hooks/useDebounce';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { 
     sanitizeHtml, 
     normalizeHtmlForQuill, 
@@ -35,6 +35,13 @@ import {
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import UiIconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
+import {
+    ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
+    ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
+    extractArticleEditorUploadUrl,
+    getQuillModulesForVariant,
+} from './articleEditorConfig';
+import type { ArticleEditorProps } from './articleEditor.types';
 
 const isWeb = Platform.OS === 'web';
 const win = isWeb && typeof window !== 'undefined' ? window : undefined;
@@ -49,47 +56,6 @@ const QuillEditor =
         ? (React.lazy(() => import('@/components/article/QuillEditor.web')) as any)
         : undefined;
 
-const quillModulesDefault = {
-    toolbar: [
-        [{ font: [] }, { size: ['small', false, 'large', 'huge'] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ header: [1, 2, 3, false] }],
-        [{ color: [] }, { background: [] }],
-        [{ align: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        ['link', 'image'],
-        ['clean'],
-    ],
-    history: { delay: 2000, maxStack: 100, userOnly: true },
-    clipboard: { matchVisual: false },
-    uploader: false,
-} as const;
-
-const quillModulesCompact = {
-    toolbar: [
-        ['bold', 'italic', 'underline'],
-        [{ list: 'bullet' }],
-        ['link'],
-        ['clean'],
-    ],
-    history: { delay: 2000, maxStack: 100, userOnly: true },
-    clipboard: { matchVisual: false },
-    uploader: false,
-} as const;
-
-export interface ArticleEditorProps {
-    label?: string;
-    placeholder?: string;
-    content: string;
-    onChange: (html: string) => void;
-    onAutosave?: (html: string) => Promise<void>;
-    onManualSave?: (html?: string) => Promise<unknown> | void;
-    autosaveDelay?: number;
-    idTravel?: string;
-    editorRef?: Ref<any>;
-    variant?: 'default' | 'compact';
-}
-
 const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     label = 'Описание',
     placeholder = 'Введите описание…',
@@ -97,7 +63,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     onChange,
     onAutosave,
     onManualSave,
-    autosaveDelay = 5000,
+    autosaveDelay = ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
     idTravel,
     editorRef,
     variant = 'default',
@@ -152,6 +118,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const forceSyncAttemptRef = useRef(0);
     const lastForceSyncedContentRef = useRef<string>('');
     const lastSanitizedForceSyncRef = useRef<{ raw: string; clean: string } | null>(null);
+    const pendingDroppedImageRef = useRef<File | null>(null);
+    const processingPendingDroppedImageRef = useRef(false);
 
     const anchorInputRef = useRef<any>(null);
     const linkInputRef = useRef<any>(null);
@@ -226,51 +194,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         [editorRef]
     );
 
-    useEffect(() => {
-        if (!isWeb || !win) return;
+    const requestQuillLoad = useCallback(() => {
         if (shouldLoadQuill) return;
-        if (showHtml) return;
-
-        const startLoad = () => setShouldLoadQuill(true);
-
-        const el = editorViewportRef.current as Element | null;
-        let observer: IntersectionObserver | null = null;
-        let idleId: any = null;
-        let t: any = null;
-
-        if (typeof (win as any).IntersectionObserver === 'function' && el) {
-            observer = new (win as any).IntersectionObserver(
-                (entries: any[]) => {
-                    const hit = entries?.some(e => e?.isIntersecting);
-                    if (hit) {
-                        startLoad();
-                        observer?.disconnect();
-                        observer = null;
-                    }
-                },
-                { rootMargin: '300px 0px' }
-            );
-            if (observer) observer.observe(el);
-        }
-
-        if (typeof (win as any).requestIdleCallback === 'function') {
-            idleId = (win as any).requestIdleCallback(() => startLoad(), { timeout: 2500 });
-        } else {
-            t = setTimeout(() => startLoad(), 2500);
-        }
-
-        return () => {
-            if (observer) observer.disconnect();
-            if (idleId && typeof (win as any).cancelIdleCallback === 'function') {
-                try {
-                    (win as any).cancelIdleCallback(idleId);
-                } catch {
-                    // noop
-                }
-            }
-            if (t) clearTimeout(t);
-        };
-    }, [shouldLoadQuill, showHtml]);
+        setShouldLoadQuill(true);
+    }, [shouldLoadQuill]);
 
     // Динамические стили на основе темы
     const dynamicStyles = useMemo(() => StyleSheet.create({
@@ -362,13 +289,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }), [colors, fullscreen]);
 
     useEffect(() => {
-        if (!editorRef) return;
-        if (!quillRef.current) return;
-        if (typeof editorRef === 'function') editorRef(quillRef.current);
-        else (editorRef as any).current = quillRef.current;
-    }, [editorRef, quillMountKey, shouldLoadQuill]);
-
-    useEffect(() => {
         if (!isWeb) return;
         const originalError = console.error;
         console.error = (...args: any[]) => {
@@ -419,7 +339,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, [anchorModalVisible, fullscreen, linkModalVisible]);
 
-    const debouncedParentChangeRaw = useDebounce(onChange, 250);
+    const debouncedParentChangeRaw = useDebounce(onChange, ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS);
     const debouncedParentChange = useCallback(
         (val: string) => {
             sentToParentSetRef.current.add(val);
@@ -459,15 +379,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [content]);
 
     useEffect(() => {
-        if (!isWeb) return;
-        if (showHtml) return;
-        if (shouldLoadQuill) return;
-        const next = typeof html === 'string' ? html : '';
-        if (next.trim().length === 0) return;
-        setShouldLoadQuill(true);
-    }, [html, shouldLoadQuill, showHtml]);
-
-    useEffect(() => {
         const prev = lastExternalContentRef.current;
         lastExternalContentRef.current = typeof content === 'string' ? content : '';
         if (typeof prev === 'string' && typeof content === 'string') {
@@ -480,6 +391,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     useEffect(() => {
         if (!isWeb) return;
         if (showHtml) return;
+        if (!shouldLoadQuill) return;
         const next = typeof content === 'string' ? content : '';
         if (next.trim().length === 0) return;
 
@@ -571,7 +483,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         return () => {
             clearPending();
         };
-    }, [content, html, showHtml]);
+    }, [content, html, showHtml, shouldLoadQuill]);
 
     useEffect(() => {
         autosaveIsMountedRef.current = true;
@@ -719,7 +631,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 });
     }, [fireChange]);
 
-    const openPreview = useCallback(() => {
+    const openPreview = useCallback(async () => {
         if (!isWeb || !win) return;
         if (!idTravel) {
             Alert.alert('Превью', 'Сначала сохраните путешествие, чтобы открыть превью');
@@ -728,7 +640,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
         try {
             const url = `${win.location.origin}/travels/${encodeURIComponent(String(idTravel))}`;
-            win.open(url, '_blank', 'noopener,noreferrer');
+            await openExternalUrlInNewTab(url);
         } catch {
             // noop
         }
@@ -783,16 +695,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             if (__DEV__) {
                 console.info('[ArticleEditor] upload response', res);
             }
-            const uploadedUrlRaw =
-                typeof res?.url === 'string'
-                    ? res.url
-                    : typeof (res as Record<string, any> | undefined)?.data?.url === 'string'
-                      ? (res as Record<string, any>).data.url
-                      : typeof res?.path === 'string'
-                        ? res.path
-                        : typeof res?.file_url === 'string'
-                          ? res.file_url
-                          : null;
+            const uploadedUrlRaw = extractArticleEditorUploadUrl(res);
             const imageUrl = uploadedUrlRaw ? normalizeMediaUrl(uploadedUrlRaw) : null;
             if (!imageUrl) {
                 if (__DEV__) {
@@ -830,6 +733,29 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
         input.click();
     }, [uploadAndInsert]);
+
+    const handleSurfaceFileDrop = useCallback((file: File | null | undefined) => {
+        if (!file) return false;
+        if (typeof file.type !== 'string' || !file.type.startsWith('image/')) return false;
+        pendingDroppedImageRef.current = file;
+        requestQuillLoad();
+        return true;
+    }, [requestQuillLoad]);
+
+    useEffect(() => {
+        if (!shouldLoadQuill) return;
+        if (!pendingDroppedImageRef.current) return;
+        if (processingPendingDroppedImageRef.current) return;
+        if (!quillRef.current?.getEditor?.()) return;
+
+        const file = pendingDroppedImageRef.current;
+        pendingDroppedImageRef.current = null;
+        processingPendingDroppedImageRef.current = true;
+
+        void uploadAndInsert(file).finally(() => {
+            processingPendingDroppedImageRef.current = false;
+        });
+    }, [quillMountKey, shouldLoadQuill, uploadAndInsert]);
 
     useEffect(() => {
         if (!isWeb) return;
@@ -1161,7 +1087,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                             if (normalized !== currentRaw) {
                                 fireChange(normalized);
                             }
-                            if (normalized.trim().length > 0) setShouldLoadQuill(true);
+                            if (normalized.trim().length > 0) requestQuillLoad();
                         }
                         setShowHtml(v => !v);
                     }}
@@ -1384,7 +1310,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     );
 
     const modules = useMemo(() => {
-        const base = variant === 'compact' ? quillModulesCompact : quillModulesDefault;
+        const base = getQuillModulesForVariant(variant);
         const container = (base as any).toolbar;
 
         return {
@@ -1496,12 +1422,39 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 {...(isWeb
                     ? ({
                           'data-editor-surface': 'article-editor',
+                          onDragEnter: (e: any) => {
+                              const file = e?.dataTransfer?.files?.[0] ?? null;
+                              if (!handleSurfaceFileDrop(file)) return;
+                              e.preventDefault();
+                          },
+                          onDragOver: (e: any) => {
+                              const file = e?.dataTransfer?.files?.[0] ?? null;
+                              if (!handleSurfaceFileDrop(file)) return;
+                              e.preventDefault();
+                              try {
+                                  e.dataTransfer.dropEffect = 'copy';
+                              } catch {
+                                  // noop
+                              }
+                          },
+                          onDrop: (e: any) => {
+                              const file = e?.dataTransfer?.files?.[0] ?? null;
+                              const accepted = handleSurfaceFileDrop(file);
+                              if (!accepted) return;
+                              e.preventDefault();
+                              e.stopPropagation?.();
+                          },
+                          onFocusCapture: () => {
+                              requestQuillLoad();
+                          },
                           onMouseDown: (e: any) => {
+                              requestQuillLoad();
                               const target = e?.target as HTMLElement | null;
                               if (target?.closest?.('.ql-editor')) return;
                               focusQuill();
                           },
                           onTouchStart: (e: any) => {
+                              requestQuillLoad();
                               const target = e?.target as HTMLElement | null;
                               if (target?.closest?.('.ql-editor')) return;
                               focusQuill();
@@ -1663,105 +1616,25 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                 size="sm"
                             />
                         </View>
-            </View>
-        </View>
-    </Modal>
-</>
-);
+                    </View>
+                </View>
+            </Modal>
+        </>
+    );
 
-return fullscreen ? (
-    <Modal visible animationType="slide">
-        <SafeAreaView style={dynamicStyles.fullWrap}>
-            <View style={dynamicStyles.fullInner}>{body}</View>
-        </SafeAreaView>
-    </Modal>
-) : (
-    <View style={dynamicStyles.wrap}>{body}</View>
-);
-};
-
-const NativeEditor: React.FC<ArticleEditorProps> = ({
-                                                        label = 'Описание',
-                                                        placeholder = 'Введите описание…',
-                                                        content,
-                                                        onChange,
-                                                        onAutosave,
-                                                        autosaveDelay = 5000,
-                                                    }) => {
-    const colors = useThemedColors();
-    const [text, setText] = useState(content);
-    const debouncedParentChange = useDebounce(onChange, 250);
-    const hasUserEditedRef = useRef(false);
-    const lastAutosavedTextRef = useRef<string>(typeof content === 'string' ? content : '');
-
-    const dynamicStyles = useMemo(() => StyleSheet.create({
-        wrap: {
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderRadius: DESIGN_TOKENS.radii.md,
-            marginVertical: DESIGN_TOKENS.spacing.sm,
-            backgroundColor: colors.surface,
-            width: '100%',
-            maxWidth: '100%',
-            overflow: 'hidden',
-        },
-        label: {
-            fontSize: DESIGN_TOKENS.typography.sizes.md,
-            fontWeight: '600' as const,
-            color: colors.text,
-            padding: DESIGN_TOKENS.spacing.sm,
-        },
-        html: {
-            minHeight: 200,
-            flex: 1,
-            padding: DESIGN_TOKENS.spacing.md,
-            fontSize: DESIGN_TOKENS.typography.sizes.sm,
-            color: colors.text,
-            backgroundColor: colors.surface,
-        },
-    }), [colors]);
-
-    useEffect(() => {
-        if (content !== text) setText(content);
-    }, [content]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    useEffect(() => {
-        if (!onAutosave) return;
-        if (!hasUserEditedRef.current) return;
-        if (text === lastAutosavedTextRef.current) return;
-        const t = setTimeout(() => {
-            void Promise.resolve(onAutosave(text)).finally(() => {
-                lastAutosavedTextRef.current = text;
-                hasUserEditedRef.current = false;
-            });
-        }, autosaveDelay);
-        return () => clearTimeout(t);
-    }, [text, onAutosave, autosaveDelay]);
-
-    const onEdit = (t: string) => {
-        setText(t);
-        hasUserEditedRef.current = true;
-        debouncedParentChange(t);
-    };
-
-    return (
-        <View style={dynamicStyles.wrap}>
-            <Text style={dynamicStyles.label}>{label}</Text>
-            <TextInput
-                multiline
-                value={text}
-                onChangeText={onEdit}
-                placeholder={placeholder}
-                placeholderTextColor={colors.textSecondary}
-                style={dynamicStyles.html}
-                textAlignVertical="top"
-            />
-        </View>
+    return fullscreen ? (
+        <Modal visible animationType="slide">
+            <SafeAreaView style={dynamicStyles.fullWrap}>
+                <View style={dynamicStyles.fullInner}>{body}</View>
+            </SafeAreaView>
+        </Modal>
+    ) : (
+        <View style={dynamicStyles.wrap}>{body}</View>
     );
 };
 
 const ArticleEditor = forwardRef<any, ArticleEditorProps>((props, ref) => {
-    return isWeb ? <WebEditor {...props} editorRef={ref} /> : <NativeEditor {...props} />;
+    return <WebEditor {...props} editorRef={ref} />;
 });
 
 export default React.memo(ArticleEditor);

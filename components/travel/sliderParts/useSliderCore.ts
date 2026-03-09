@@ -223,7 +223,8 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
   const setActiveIndexFromOffset = useCallback(
     (offsetX: number) => {
       if (!Number.isFinite(offsetX)) return;
-      const idx = clampInt(offsetX / (containerW || 1), 0, Math.max(0, images.length - 1));
+      const liveWidth = containerWRef.current || containerW || 1;
+      const idx = clampInt(offsetX / liveWidth, 0, Math.max(0, images.length - 1));
       if (indexRef.current !== idx) setActiveIndex(idx);
     },
     [containerW, images.length, setActiveIndex]
