@@ -13,6 +13,7 @@ import SliderWeb from '@/components/travel/Slider.web'
 import Slider from '@/components/travel/Slider'
 import type { SliderImage } from '@/components/travel/Slider'
 import {
+  getTouchGestureAxis,
   shouldHandleMouseDragStart,
   shouldHandlePointerDragStart,
 } from '@/components/travel/sliderParts/useWebScrollInteraction'
@@ -29,16 +30,17 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
 }))
 
+const responsiveMock = {
+  width: 1200,
+  height: 900,
+  isPhone: false,
+  isLargePhone: false,
+  isTablet: false,
+  isLargeTablet: false,
+}
 
 jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({
-    width: 1200,
-    height: 900,
-    isPhone: false,
-    isLargePhone: false,
-    isTablet: false,
-    isLargeTablet: false,
-  }),
+  useResponsive: () => responsiveMock,
 }))
 
 describe('Slider navigation - Web', () => {
@@ -46,6 +48,14 @@ describe('Slider navigation - Web', () => {
 
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
+    Object.assign(responsiveMock, {
+      width: 1200,
+      height: 900,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+    })
   })
 
   afterEach(() => {
@@ -315,6 +325,13 @@ describe('Slider navigation - Web', () => {
       expect(shouldHandlePointerDragStart('touch', false)).toBe(true)
       expect(shouldHandlePointerDragStart('pen', false)).toBe(true)
     })
+
+    it('locks swipe direction only after a clear axis is established', () => {
+      expect(getTouchGestureAxis(4, 3)).toBeNull()
+      expect(getTouchGestureAxis(18, 5)).toBe('x')
+      expect(getTouchGestureAxis(6, 19)).toBe('y')
+      expect(getTouchGestureAxis(14, 12)).toBeNull()
+    })
   })
 })
 
@@ -436,6 +453,14 @@ describe('Slider display correctness', () => {
 
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
+    Object.assign(responsiveMock, {
+      width: 1200,
+      height: 900,
+      isPhone: false,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+    })
   })
 
   afterEach(() => {
@@ -477,6 +502,40 @@ describe('Slider display correctness', () => {
 
     // Check first image
     expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+  })
+
+  it('uses vertical page pan touch-action on mobile web slides', async () => {
+    Object.assign(responsiveMock, {
+      width: 390,
+      height: 844,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+    })
+
+    const images = createImages(3)
+    let tree: renderer.ReactTestRenderer
+
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+        />,
+      )
+    })
+
+    const slide = tree!.root.findByProps({ testID: 'slider-slide-0' })
+    const style = Array.isArray(slide.props.style)
+      ? Object.assign({}, ...slide.props.style.filter(Boolean))
+      : slide.props.style
+
+    expect(style.touchAction).toBe('pan-y pinch-zoom')
   })
 
   it('renders correct number of slide containers', async () => {

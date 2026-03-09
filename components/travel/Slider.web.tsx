@@ -627,7 +627,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   style={[
                     styles.slide,
                     { width: layoutMeasured ? renderedSlideWidth : '100%', height: containerH },
-                    Platform.OS === 'web' ? ({ pointerEvents: 'none', touchAction: 'pan-x' } as any) : null,
+                    Platform.OS === 'web'
+                      ? ({ pointerEvents: 'none', touchAction: isMobile ? 'pan-y pinch-zoom' : 'pan-x' } as any)
+                      : null,
                     styles.slideSnap,
                   ]}
                 >

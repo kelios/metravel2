@@ -71,7 +71,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
           scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
           willChange: 'scroll-position',
-          touchAction: 'pan-x',
+          touchAction: 'pan-y pinch-zoom',
           overflowX: 'auto',
           overflowY: 'hidden',
           overscrollBehaviorX: 'contain',

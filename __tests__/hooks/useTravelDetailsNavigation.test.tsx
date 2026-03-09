@@ -152,4 +152,73 @@ describe('useTravelDetailsNavigation', () => {
 
     ;(window as any).requestAnimationFrame = raf
   })
+
+  it('retries scroll reset on web until the scroll container is available (regression)', () => {
+    const scrollTo = jest.fn()
+    const scrollContainer = document.createElement('div') as any
+    scrollContainer.setAttribute('data-testid', 'travel-details-scroll')
+    scrollContainer.scrollHeight = 1200
+    scrollContainer.clientHeight = 400
+    scrollContainer.scrollTop = 240
+    scrollContainer.getBoundingClientRect = jest.fn(() => ({ top: 0, bottom: 400 } as any))
+    scrollContainer.scrollTo = jest.fn((arg: any) => {
+      if (arg && typeof arg === 'object') {
+        scrollContainer.scrollTop = Number(arg.top ?? arg.y ?? 0)
+      }
+    })
+
+    const docScrollEl = document.documentElement as any
+    Object.defineProperty(docScrollEl, 'scrollTop', { value: 180, writable: true })
+    Object.defineProperty(document, 'scrollingElement', {
+      configurable: true,
+      value: docScrollEl,
+    })
+
+    const originalWindowScrollTo = window.scrollTo
+    window.scrollTo = jest.fn() as any
+
+    const scrollRef = {
+      current: {
+        scrollTo: jest.fn(),
+        getScrollableNode: () => null,
+      },
+    }
+
+    useScrollNavigation.mockReturnValue({
+      anchors: { gallery: { current: null } },
+      scrollTo,
+      scrollRef,
+    })
+
+    const setActiveSection = jest.fn()
+    useActiveSection.mockReturnValue({
+      activeSection: 'gallery',
+      setActiveSection,
+    })
+
+    jest.spyOn(window, 'getComputedStyle').mockImplementation((el: any) => {
+      if (el === scrollContainer) {
+        return { overflowY: 'auto' } as any
+      }
+      return { overflowY: 'visible' } as any
+    })
+
+    const startTransition = (cb: () => void) => cb()
+
+    renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
+
+    act(() => {
+      jest.advanceTimersByTime(40)
+      document.body.appendChild(scrollContainer)
+      jest.advanceTimersByTime(320)
+    })
+
+    expect(scrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 0, animated: false })
+    expect(scrollContainer.scrollTo).toHaveBeenCalled()
+    expect(scrollContainer.scrollTop).toBe(0)
+    expect(docScrollEl.scrollTop).toBe(0)
+    expect(window.scrollTo).toHaveBeenCalled()
+
+    window.scrollTo = originalWindowScrollTo
+  })
 })

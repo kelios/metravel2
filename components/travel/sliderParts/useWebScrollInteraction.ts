@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { clamp } from './utils';
 
+const TOUCH_AXIS_THRESHOLD_PX = 8;
+const TOUCH_AXIS_DOMINANCE_PX = 4;
+
 export function shouldHandleMouseDragStart(event: {
   button: number;
   sourceCapabilities?: { firesTouchEvents?: boolean } | null;
@@ -16,6 +19,15 @@ export function shouldHandlePointerDragStart(pointerType: string | undefined, is
   if (pointerType === 'mouse') return true;
   if (isMobile) return false;
   return pointerType === 'touch' || pointerType === 'pen';
+}
+
+export function getTouchGestureAxis(deltaX: number, deltaY: number): 'x' | 'y' | null {
+  const absX = Math.abs(deltaX);
+  const absY = Math.abs(deltaY);
+  if (absX < TOUCH_AXIS_THRESHOLD_PX && absY < TOUCH_AXIS_THRESHOLD_PX) return null;
+  if (absX > absY + TOUCH_AXIS_DOMINANCE_PX) return 'x';
+  if (absY > absX + TOUCH_AXIS_DOMINANCE_PX) return 'y';
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +105,9 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollWriteFrameRef = useRef<number | null>(null);
   const pendingScrollLeftRef = useRef(0);
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  const touchAxisLockRef = useRef<'x' | 'y' | null>(null);
 
   const clearScrollIdleTimer = useCallback(() => {
     if (scrollIdleTimerRef.current) {
@@ -214,6 +229,12 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     resumeAutoplay?.();
   }, [clampScrollLeft, containerWRef, isMobile, resumeAutoplay, scheduleScrollSync, scrollNodeRef, scrollTo, slideCount]);
 
+  const resetTouchGesture = useCallback(() => {
+    touchAxisLockRef.current = null;
+    touchStartXRef.current = 0;
+    touchStartYRef.current = 0;
+  }, []);
+
   // Consolidated effect: keyboard + mouse drag + pointer/touch swipe + scrollend
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -309,20 +330,52 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       if (e.touches.length !== 1) return;
       dismissSwipeHint?.();
       enablePrefetch?.();
-      if (isMobile) return; // let native scroll-snap handle the rest
+      touchStartXRef.current = e.touches[0].pageX;
+      touchStartYRef.current = e.touches[0].pageY;
+      touchAxisLockRef.current = null;
+      if (isMobile) return;
       beginDrag(e.touches[0].pageX);
     };
 
-    const onTouchMove = !isMobile ? (e: TouchEvent) => {
-      if (!isDraggingRef.current) return;
+    const onTouchMove = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
-      moveDrag(e.touches[0].pageX);
-    } : null;
 
-    const onTouchEnd = !isMobile ? () => {
+      if (isMobile) {
+        const touch = e.touches[0];
+        const deltaX = touch.pageX - touchStartXRef.current;
+        const deltaY = touch.pageY - touchStartYRef.current;
+        const lockedAxis = touchAxisLockRef.current ?? getTouchGestureAxis(deltaX, deltaY);
+
+        if (!lockedAxis) return;
+        touchAxisLockRef.current = lockedAxis;
+
+        if (lockedAxis === 'y') {
+          if (isDraggingRef.current) endDrag();
+          return;
+        }
+
+        if (!isDraggingRef.current) {
+          beginDrag(touchStartXRef.current);
+        }
+
+        try { e.preventDefault(); } catch { /* noop */ }
+        moveDrag(touch.pageX);
+        return;
+      }
+
       if (!isDraggingRef.current) return;
+      moveDrag(e.touches[0].pageX);
+    };
+
+    const onTouchEnd = () => {
+      const lockedAxis = touchAxisLockRef.current;
+      resetTouchGesture();
+      if (!isDraggingRef.current) return;
+      if (isMobile && lockedAxis !== 'x') {
+        return;
+      }
       endDrag();
-    } : null;
+    };
 
     const onScroll = () => {
       if (isDraggingRef.current) return;
@@ -349,8 +402,9 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     if (onPointerCancel) node.addEventListener('pointercancel', onPointerCancel as EventListener, { passive: true } as any);
 
     node.addEventListener('touchstart', onTouchStart as EventListener, { passive: true } as any);
-    if (onTouchMove) node.addEventListener('touchmove', onTouchMove as EventListener, { passive: true } as any);
-    if (onTouchEnd) node.addEventListener('touchend', onTouchEnd as EventListener, { passive: true } as any);
+    node.addEventListener('touchmove', onTouchMove as EventListener, { passive: false } as any);
+    node.addEventListener('touchend', onTouchEnd as EventListener, { passive: true } as any);
+    node.addEventListener('touchcancel', onTouchEnd as EventListener, { passive: true } as any);
 
     return () => {
       parent?.removeEventListener('keydown', handleKeyDown as EventListener);
@@ -367,8 +421,9 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       if (onPointerCancel) node.removeEventListener('pointercancel', onPointerCancel as EventListener);
 
       node.removeEventListener('touchstart', onTouchStart as EventListener);
-      if (onTouchMove) node.removeEventListener('touchmove', onTouchMove as EventListener);
-      if (onTouchEnd) node.removeEventListener('touchend', onTouchEnd as EventListener);
+      node.removeEventListener('touchmove', onTouchMove as EventListener);
+      node.removeEventListener('touchend', onTouchEnd as EventListener);
+      node.removeEventListener('touchcancel', onTouchEnd as EventListener);
 
       if (scrollWriteFrameRef.current != null) {
         window.cancelAnimationFrame(scrollWriteFrameRef.current);
@@ -378,7 +433,8 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
         clearTimeout(scrollIdleTimerRef.current);
         scrollIdleTimerRef.current = null;
       }
+      resetTouchGesture();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [beginDrag, cancelScrollAnimation, clearScrollIdleTimer, dismissSwipeHint, enablePrefetch, endDrag, indexRef, isMobile, moveDrag, pauseAutoplay, resolveNodes, resumeAutoplay, scheduleScrollSync, scrollTo, setActiveIndexFromOffset, slideCount, wrapperNodeRef]);
+  }, [beginDrag, cancelScrollAnimation, clearScrollIdleTimer, dismissSwipeHint, enablePrefetch, endDrag, indexRef, isMobile, moveDrag, pauseAutoplay, resetTouchGesture, resolveNodes, resumeAutoplay, scheduleScrollSync, scrollTo, setActiveIndexFromOffset, slideCount, wrapperNodeRef]);
 }
