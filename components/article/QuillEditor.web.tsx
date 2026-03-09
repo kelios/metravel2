@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { View } from 'react-native'
+import { StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 type QuillInstance = any
@@ -18,6 +18,10 @@ type Props = {
   modules?: any
   placeholder?: string
   style?: any
+  editorChromeAttrs?: {
+    compact?: boolean
+    fullscreen?: boolean
+  }
 }
 
 const isTestEnv =
@@ -35,8 +39,16 @@ if (typeof window !== 'undefined' && !isTestEnv) {
 
 let quillLoadPromise: Promise<any> | null = null
 const QUILL_EDITOR_WEB_STYLES_ID = 'article-editor-quill-web-styles'
-const QUILL_EDITOR_WEB_CSS = `
-[data-editor-surface="article-editor"] .ql-toolbar.ql-snow {
+export const ARTICLE_EDITOR_QUILL_WEB_CSS = `
+[data-editor-chrome="article-editor"] {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: visible;
+}
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -47,65 +59,131 @@ const QUILL_EDITOR_WEB_CSS = `
   background: var(--color-surface);
   box-sizing: border-box;
 }
-[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-formats {
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-formats {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   margin-right: 0;
 }
-[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker {
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker {
   max-width: 100%;
 }
-[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
-[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
-[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
   width: clamp(96px, 18vw, 160px);
 }
-[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker-label {
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker-label {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-[data-editor-surface="article-editor"] .ql-container.ql-snow {
-  border: 0;
+[data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker-options {
+  z-index: 30;
 }
-.ql-editor img {
-  display: block;
-  width: 100%;
+[data-editor-chrome="article-editor"] .ql-container.ql-snow {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  border: 0;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+[data-editor-chrome="article-editor"][data-fullscreen="false"][data-compact="false"] .ql-container.ql-snow {
+  max-height: 560px;
+}
+[data-editor-chrome="article-editor"][data-fullscreen="false"][data-compact="true"] .ql-container.ql-snow {
+  max-height: 460px;
+}
+[data-editor-chrome="article-editor"] .ql-editor {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 280px;
+  padding: 16px 18px 28px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+[data-editor-chrome="article-editor"][data-compact="true"] .ql-editor {
+  min-height: 240px;
+}
+[data-editor-chrome="article-editor"] .ql-editor > * {
   max-width: 100%;
+  box-sizing: border-box;
+}
+[data-editor-chrome="article-editor"] .ql-editor p,
+[data-editor-chrome="article-editor"] .ql-editor li,
+[data-editor-chrome="article-editor"] .ql-editor blockquote,
+[data-editor-chrome="article-editor"] .ql-editor h1,
+[data-editor-chrome="article-editor"] .ql-editor h2,
+[data-editor-chrome="article-editor"] .ql-editor h3,
+[data-editor-chrome="article-editor"] .ql-editor h4,
+[data-editor-chrome="article-editor"] .ql-editor h5,
+[data-editor-chrome="article-editor"] .ql-editor h6 {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+[data-editor-chrome="article-editor"] .ql-editor p,
+[data-editor-chrome="article-editor"] .ql-editor ul,
+[data-editor-chrome="article-editor"] .ql-editor ol,
+[data-editor-chrome="article-editor"] .ql-editor blockquote {
+  margin: 0 0 16px;
+}
+[data-editor-chrome="article-editor"] .ql-editor p:empty {
+  min-height: 1.5em;
+}
+[data-editor-chrome="article-editor"] .ql-editor img,
+[data-editor-chrome="article-editor"] .ql-editor figure img {
+  display: block;
+  width: auto !important;
+  max-width: min(660px, 100%) !important;
   height: auto;
   max-height: 55vh;
   object-fit: contain;
   object-position: center;
-  margin: 6px 0 26px;
+  margin: 12px auto 20px !important;
   border-radius: 16px;
   box-sizing: border-box;
+  border: 1px solid var(--color-borderLight);
+  background: var(--color-surfaceMuted);
+}
+[data-editor-chrome="article-editor"] .ql-editor figure {
+  margin: 0 0 20px;
+}
+[data-editor-chrome="article-editor"] .ql-editor img + *,
+[data-editor-chrome="article-editor"] .ql-editor figure + * {
+  margin-top: 18px !important;
+}
+[data-editor-chrome="article-editor"] .ql-editor > *:last-child {
+  margin-bottom: 0 !important;
 }
 @media (max-width: 767px) {
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow {
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow {
     gap: 6px 8px;
     padding: 10px;
   }
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-formats {
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-formats {
     gap: 2px;
   }
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
     width: min(132px, 40vw);
   }
 }
 @media (max-width: 479px) {
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow {
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow {
     padding: 8px;
   }
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-formats {
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-formats {
     width: 100%;
   }
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
-  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
+  [data-editor-chrome="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
     width: min(132px, 100%);
   }
 }
@@ -155,7 +233,7 @@ const ensureIdAttributeRegistered = (Quill: any) => {
 }
 
 const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any) {
-  const { theme, value, onChange, placeholder, style } = props
+  const { theme, value, onChange, placeholder, style, editorChromeAttrs } = props
   const containerRef = useRef<HTMLDivElement | null>(null)
   const quillRef = useRef<QuillInstance | null>(null)
   const [loadError, setLoadError] = useState<Error | null>(null)
@@ -165,6 +243,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
   const initialValueRef = useRef<string>(typeof value === 'string' ? value : '')
 
   const modules = useMemo(() => props.modules ?? {}, [props.modules])
+  const shellStyle = useMemo(() => StyleSheet.flatten(style) ?? {}, [style])
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -177,7 +256,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
     if (!styleEl) {
       styleEl = document.createElement('style')
       styleEl.id = QUILL_EDITOR_WEB_STYLES_ID
-      styleEl.textContent = QUILL_EDITOR_WEB_CSS
+      styleEl.textContent = ARTICLE_EDITOR_QUILL_WEB_CSS
       document.head.appendChild(styleEl)
     }
   }, [])
@@ -356,14 +435,19 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
   }))
 
   return (
-    <View style={style}>
-      <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+    <div
+      data-editor-chrome="article-editor"
+      data-compact={editorChromeAttrs?.compact ? 'true' : 'false'}
+      data-fullscreen={editorChromeAttrs?.fullscreen ? 'true' : 'false'}
+      style={shellStyle}
+    >
+      <div ref={containerRef} style={{ width: '100%', minHeight: 0 }} />
       {loadError ? (
         <div style={{ padding: 8, color: DESIGN_TOKENS.colors.error, fontSize: 12 }}>
           Не удалось загрузить редактор. Попробуйте обновить страницу.
         </div>
       ) : null}
-    </View>
+    </div>
   )
 })
 

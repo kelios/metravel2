@@ -50,8 +50,11 @@ jest.mock('@/components/article/QuillEditor.web', () => {
         getLength: () => (typeof editorRef.current?.root?.innerHTML === 'string' ? editorRef.current.root.innerHTML.length : 0),
         setSelection: jest.fn(),
         getFormat: jest.fn(() => ({})),
+        getContents: jest.fn(() => ({ ops: [{ insert: String(editorRef.current?.root?.innerHTML ?? '') }] })),
         format: jest.fn(),
         formatText: jest.fn(),
+        formatLine: jest.fn(),
+        removeFormat: jest.fn(),
         insertEmbed: jest.fn((index: number, type: string, value: string) => {
           const current = String(editorRef.current.root.innerHTML ?? '');
           const safeIndex = Math.max(0, Math.min(current.length, Number(index) || 0));
@@ -227,6 +230,40 @@ describe('ArticleEditor.web link', () => {
     createElementSpy.mockRestore();
   });
 
+  it('clears formatting on text without removing images from the selection', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    ;(globalThis as any).__quillSelection__ = { index: 0, length: 12 };
+
+    const { getByLabelText, getByTestId } = render(
+      <ArticleEditor
+        content={'<p><strong>Hello</strong><img src="https://example.com/keep.jpg" />world</p>'}
+        onChange={jest.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+      expect((globalThis as any).__quillEditor__).toBeTruthy();
+    });
+
+    const editor = (globalThis as any).__quillEditor__;
+    editor.getContents.mockReturnValue({
+      ops: [
+        { insert: 'Hello ' },
+        { insert: { image: 'https://example.com/keep.jpg' } },
+        { insert: 'world' },
+      ],
+    });
+
+    fireEvent.press(getByLabelText('Очистить форматирование') as any);
+
+    await waitFor(() => {
+      expect(editor.formatText).toHaveBeenCalledWith(0, 6, 'bold', false, 'user');
+      expect(editor.formatText).toHaveBeenCalledWith(7, 5, 'bold', false, 'user');
+      expect(editor.removeFormat).not.toHaveBeenCalled();
+    });
+  });
+
   it('supports upload responses with nested data.url', async () => {
     (uploadImage as jest.Mock).mockResolvedValueOnce({
       data: { url: '/uploads/dropped-image.jpg' },
@@ -278,6 +315,53 @@ describe('ArticleEditor.web link', () => {
     });
 
     createElementSpy.mockRestore();
+  });
+
+  it('uploads dropped images in fullscreen mode via document-level fallback on web modal', async () => {
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
+    const onChange = jest.fn();
+    const file = new File(['binary-image'], 'fullscreen-drop.png', { type: 'image/png' });
+    const documentAddEventListenerSpy = jest.spyOn(document, 'addEventListener');
+
+    const { getByTestId, getByLabelText } = render(
+      <ArticleEditor content={'hello'} onChange={onChange} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+      expect((globalThis as any).__quillEditor__).toBeTruthy();
+    });
+
+    fireEvent.press(getByLabelText('Перейти в полноэкранный режим') as any);
+
+    await waitFor(() => {
+      expect(getByLabelText('Выйти из полноэкранного режима')).toBeTruthy();
+    });
+
+    const dropListener = documentAddEventListenerSpy.mock.calls.find(
+      ([eventName, _listener, options]) => eventName === 'drop' && options === true
+    )?.[1] as ((event: DragEvent) => void) | undefined;
+
+    expect(typeof dropListener).toBe('function');
+
+    const dropEvent = new Event('drop', { bubbles: true, cancelable: true }) as any;
+    Object.defineProperty(dropEvent, 'dataTransfer', {
+      configurable: true,
+      value: {
+        files: [file],
+        types: ['Files'],
+      },
+    });
+
+    dropListener?.(dropEvent as DragEvent);
+
+    const editor = (globalThis as any).__quillEditor__;
+    await waitFor(() => {
+      expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
+      expect(editor.insertEmbed).toHaveBeenCalledWith(0, 'image', 'https://example.com/uploaded.jpg', 'user');
+    });
+
+    documentAddEventListenerSpy.mockRestore();
   });
 
   it('passes the latest editor html into manual save and blocks save while image upload is in progress', async () => {

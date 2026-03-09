@@ -175,12 +175,10 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
   // Sync with oldImage
   useEffect(() => {
     const isFirstRender = prevOldImageRef.current === undefined;
-    const prevOldImage = prevOldImageRef.current;
     prevOldImageRef.current = oldImage;
     if (isManuallySelected) return;
     if (oldImage && ignoredOldImageRef.current && oldImage === ignoredOldImageRef.current && /^(blob:|data:)/i.test(oldImage)) return;
     if (!oldImage || !oldImage.trim()) {
-      if (!isFirstRender && prevOldImage && prevOldImage.trim()) return;
       if (isFirstRender) return;
       setImageUri(null); setPreviewUrl(null); setFallbackImageUrl(null); setHasTriedFallback(false);
       return;
@@ -311,4 +309,3 @@ export function usePhotoUpload(opts: UsePhotoUploadOptions) {
     blobUrlsRef,
   };
 }
-

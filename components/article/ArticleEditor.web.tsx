@@ -50,6 +50,7 @@ const isTestEnv =
     typeof process !== 'undefined' &&
     (process as any)?.env &&
     ((process as any).env.NODE_ENV === 'test' || (process as any).env.JEST_WORKER_ID !== undefined);
+const EMPTY_EDITOR_PRELOAD_DELAY_MS = 900;
 
 // Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
 const loadQuillEditorModule =
@@ -211,6 +212,32 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         setShouldLoadQuill(true);
     }, [shouldLoadQuill]);
 
+    useEffect(() => {
+        if (isTestEnv) return;
+        if (!isWeb || !win) return;
+        if (shouldLoadQuill) return;
+
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        let idleId: number | null = null;
+
+        const trigger = () => {
+            requestQuillLoad();
+        };
+
+        if (typeof win.requestIdleCallback === 'function') {
+            idleId = win.requestIdleCallback(trigger, { timeout: EMPTY_EDITOR_PRELOAD_DELAY_MS });
+        } else {
+            timeoutId = setTimeout(trigger, EMPTY_EDITOR_PRELOAD_DELAY_MS);
+        }
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            if (idleId != null && typeof win.cancelIdleCallback === 'function') {
+                win.cancelIdleCallback(idleId);
+            }
+        };
+    }, [requestQuillLoad, shouldLoadQuill]);
+
     // Динамические стили на основе темы
     const dynamicStyles = useMemo(() => StyleSheet.create({
         wrap: {
@@ -221,7 +248,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             backgroundColor: colors.surface,
             width: '100%',
             maxWidth: '100%',
-            overflow: isWeb ? ('visible' as any) : 'hidden',
+            overflow: 'hidden',
         },
         bar: {
             flexDirection: 'row',
@@ -262,16 +289,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         editorArea: {
             flex: 1,
             minHeight: 0,
-            ...(isWeb
-                ? ({
-                    maxHeight: fullscreen ? undefined : (isCompactViewport ? 460 : 560),
-                    // Allow Quill toolbar dropdowns (font, size, color pickers) to overflow;
-                    // inner .ql-editor already handles its own scroll via overflow-y:auto in CSS.
-                    overflow: 'visible',
-                } as any)
-                : null),
+            ...(isWeb ? ({ overflow: 'visible' } as any) : null),
         },
-        editor: { minHeight: 200, flex: 1 },
+        editor: {
+            minHeight: 200,
+            flex: 1,
+            ...(isWeb ? ({ width: '100%', minWidth: 0 } as any) : null),
+        },
         html: {
             minHeight: isCompactViewport ? 240 : 200,
             flex: 1,
@@ -284,8 +308,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             padding: DESIGN_TOKENS.spacing.lg,
             alignItems: 'center',
             justifyContent: 'center',
+            gap: DESIGN_TOKENS.spacing.sm,
         },
         loadTxt: { color: colors.textSecondary },
+        loadHint: {
+            color: colors.textSecondary,
+            textAlign: 'center',
+            maxWidth: 360,
+        },
         fullWrap: {
             flex: 1,
             height: '100%',
@@ -333,7 +363,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             alignItems: isSmallViewport ? 'stretch' : 'center',
             gap: DESIGN_TOKENS.spacing.sm,
         },
-    }), [colors, fullscreen, isCompactViewport, isSmallViewport]);
+    }), [colors, isCompactViewport, isSmallViewport]);
 
     useEffect(() => {
         if (!isWeb) return;
@@ -1013,6 +1043,63 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, [fireChange, resolveEditorSelection, showHtml, shouldLoadQuill, uploadAndInsert, quillMountKey]);
 
+    useEffect(() => {
+        if (!isWeb || !win || !fullscreen) return;
+
+        const doc = win.document;
+        if (!doc) return;
+
+        const isInsideEditorSurface = (target: EventTarget | null) => {
+            const editor = quillRef.current?.getEditor?.();
+            const quillRoot = editor?.root as HTMLElement | undefined;
+            const viewport = editorViewportRef.current as HTMLElement | undefined;
+            const candidate = target instanceof win.Node ? target : null;
+            const containers = [viewport, quillRoot, quillRoot?.parentElement].filter(
+                (value): value is HTMLElement => !!value && typeof value.contains === 'function'
+            );
+
+            if (containers.length === 0) return true;
+            if (!candidate) return true;
+
+            return containers.some(container => container === candidate || container.contains(candidate));
+        };
+
+        const onDocumentDragOver = (event: DragEvent) => {
+            if (!hasSurfaceDraggedFiles(event)) return;
+            if (!isInsideEditorSurface(event.target)) return;
+            event.preventDefault();
+            try {
+                event.dataTransfer!.dropEffect = 'copy';
+            } catch {
+                // noop
+            }
+        };
+
+        const onDocumentDrop = (event: DragEvent) => {
+            if (!isInsideEditorSurface(event.target)) return;
+            const file = event.dataTransfer?.files?.[0] ?? null;
+            const accepted = handleSurfaceFileDrop(file);
+            if (!accepted) return;
+            event.preventDefault();
+            event.stopPropagation();
+            try {
+                (event as any).stopImmediatePropagation?.();
+            } catch {
+                // noop
+            }
+        };
+
+        doc.addEventListener('dragenter', onDocumentDragOver, true);
+        doc.addEventListener('dragover', onDocumentDragOver, true);
+        doc.addEventListener('drop', onDocumentDrop, true);
+
+        return () => {
+            doc.removeEventListener('dragenter', onDocumentDragOver, true);
+            doc.removeEventListener('dragover', onDocumentDragOver, true);
+            doc.removeEventListener('drop', onDocumentDrop, true);
+        };
+    }, [fullscreen, handleSurfaceFileDrop, hasSurfaceDraggedFiles, quillMountKey]);
+
     const IconButton = function IconButtonWrapper({
         name,
         onPress,
@@ -1139,6 +1226,68 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         }
     }, [fireChange, resolveEditorSelection]);
 
+    const clearFormattingPreservingEmbeds = useCallback(() => {
+        const editor = quillRef.current?.getEditor?.();
+        if (!editor) return;
+
+        const selection = editor.getSelection?.() || { index: 0, length: editor.getLength?.() ?? 0 };
+        const inlineFormats = ['bold', 'italic', 'underline', 'strike', 'link', 'color', 'background', 'font', 'size', 'script'];
+        const lineFormats = ['header', 'list', 'align', 'blockquote', 'indent', 'direction', 'code-block'];
+
+        if (!selection.length || selection.length <= 0) {
+            const formats = editor.getFormat?.(selection) ?? {};
+            Object.keys(formats).forEach((formatName) => {
+                try {
+                    editor.format?.(formatName, false, 'user');
+                } catch {
+                    // noop
+                }
+            });
+            fireChange(editor.root.innerHTML);
+            return;
+        }
+
+        const contents = editor.getContents?.(selection.index, selection.length);
+        const ops = Array.isArray(contents?.ops) ? contents.ops : null;
+
+        if (!ops) {
+            editor.removeFormat?.(selection.index, selection.length, 'user');
+            fireChange(editor.root.innerHTML);
+            return;
+        }
+
+        let offset = selection.index;
+        ops.forEach((op: any) => {
+            const insert = op?.insert;
+            if (typeof insert === 'string') {
+                const textLength = insert.length;
+                if (textLength > 0) {
+                    inlineFormats.forEach((formatName) => {
+                        try {
+                            editor.formatText?.(offset, textLength, formatName, false, 'user');
+                        } catch {
+                            // noop
+                        }
+                    });
+                    lineFormats.forEach((formatName) => {
+                        try {
+                            editor.formatLine?.(offset, textLength, formatName, false, 'user');
+                        } catch {
+                            // noop
+                        }
+                    });
+                }
+                offset += textLength;
+                return;
+            }
+
+            // Preserve embeds such as images while advancing the logical Quill index.
+            offset += 1;
+        });
+
+        fireChange(editor.root.innerHTML);
+    }, [fireChange]);
+
     const Toolbar = () => (
         <View style={dynamicStyles.bar}>
             <Text style={dynamicStyles.label}>{label}</Text>
@@ -1238,13 +1387,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 />
                 <IconButton
                     name="delete"
-                    onPress={() => {
-                        if (!quillRef.current) return;
-                        const editor = quillRef.current.getEditor();
-                        const sel = editor.getSelection() || { index: 0, length: editor.getLength() };
-                        editor.removeFormat(sel.index, sel.length);
-                        fireChange(editor.root.innerHTML);
-                    }}
+                    onPress={clearFormattingPreservingEmbeds}
                     label="Очистить форматирование"
                 />
                 <IconButton
@@ -1422,9 +1565,27 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, [fullscreen, showHtml, shouldLoadQuill, ensureQuillContent]);
 
-    const Loader = () => (
+    const Loader = ({ canActivate = false }: { canActivate?: boolean }) => (
         <View style={dynamicStyles.loadBox}>
-            <Text style={dynamicStyles.loadTxt}>Загрузка…</Text>
+            {canActivate ? (
+                <>
+                    <Text style={dynamicStyles.loadTxt}>Редактор подготавливается</Text>
+                    <Text style={dynamicStyles.loadHint}>
+                        Можно открыть его сразу или подождать автоматическую загрузку.
+                    </Text>
+                    <Button
+                        onPress={requestQuillLoad}
+                        label="Открыть редактор"
+                        variant="outline"
+                        size="sm"
+                    />
+                </>
+            ) : (
+                <>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={dynamicStyles.loadTxt}>Загрузка…</Text>
+                </>
+            )}
         </View>
     );
 
@@ -1525,10 +1686,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     modules={modules}
                     placeholder={placeholder}
                     style={dynamicStyles.editor}
+                    editorChromeAttrs={{
+                        compact: isCompactViewport,
+                        fullscreen,
+                    }}
                 />
             </Suspense>
         ) : (
-            <Loader />
+            <Loader canActivate />
         )
     );
 

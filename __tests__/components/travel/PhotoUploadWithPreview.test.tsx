@@ -186,6 +186,38 @@ describe('PhotoUploadWithPreview', () => {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
             }
         });
+
+        it('web: clears preview when oldImage is removed by parent state', async () => {
+            const originalOs = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            try {
+                const screen = render(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage="https://example.com/image-to-remove.jpg"
+                    />
+                );
+
+                await waitFor(() => {
+                    const imgNode = getWebPreviewImg(screen);
+                    expect(String(imgNode.props.src)).toBe('https://example.com/image-to-remove.jpg');
+                });
+
+                screen.rerender(
+                    <PhotoUploadWithPreview
+                        {...defaultProps}
+                        oldImage={null}
+                    />
+                );
+
+                await waitFor(() => {
+                    expect(queryWebPreviewImg(screen)).toBeNull();
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalOs });
+            }
+        });
     });
 
     describe('File Upload', () => {
