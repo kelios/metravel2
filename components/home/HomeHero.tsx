@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
@@ -60,17 +61,11 @@ const buildFilterPath = (base: string, params?: QuickFilterParams) => {
   return query.length > 0 ? `${base}?${query}` : base
 }
 
-const PDF_COVER_IMAGE = require('../../assets/images/pdf.webp')
-const PDF_COVER_SOURCE = (() => {
-  const resolvedUri = RNImage.resolveAssetSource?.(PDF_COVER_IMAGE)?.uri
-  return typeof resolvedUri === 'string' && resolvedUri.trim().length > 0
-    ? { uri: resolvedUri.trim() }
-    : PDF_COVER_IMAGE
-})()
-
 const BOOK_IMAGES = [
   {
-    source: PDF_COVER_SOURCE,
+    source: {
+      uri: 'https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp',
+    },
     alt: 'Тропа ведьм — Германия',
     title: 'Тропа ведьм',
     subtitle: 'Хайкинг • Горный маршрут • Германия',
@@ -252,6 +247,7 @@ const HomeHero = memo(function HomeHero({
     isMobile || (isWeb && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH)
   const showSideSlider =
     isWeb && width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && isDesktop
+  const sliderIconColor = colors.textOnDark ?? DESIGN_TOKENS.colors.textOnDark
   const sliderHeight = isDesktop ? (width < 1480 ? 360 : 420) : 360
   const sliderMediaWidth = isDesktop ? (width < 1480 ? 480 : 500) : 380
   const featuredCardWidth = useMemo(() => {
@@ -818,6 +814,12 @@ const HomeHero = memo(function HomeHero({
                       </View>
                       {isWeb && (
                         <>
+                          <View style={styles.sliderPaperInset} />
+                          <View style={styles.sliderPaperFrame} />
+                        </>
+                      )}
+                      {isWeb && (
+                        <>
                           <View style={styles.sliderTopBlur} />
                           <View
                             style={[
@@ -856,7 +858,11 @@ const HomeHero = memo(function HomeHero({
                       {/* Overlay with title */}
                       <View style={styles.slideOverlay}>
                         <View style={styles.slideEyebrow}>
-                          <Feather name="map-pin" size={11} color="#FFFFFF" />
+                          <Feather
+                            name="map-pin"
+                            size={11}
+                            color={sliderIconColor}
+                          />
                           <Text style={styles.slideEyebrowText}>
                             Маршрут недели
                           </Text>
@@ -882,7 +888,11 @@ const HomeHero = memo(function HomeHero({
                           accessibilityRole="button"
                           accessibilityLabel="Предыдущий слайд"
                         >
-                          <Feather name="chevron-left" size={18} color="#fff" />
+                          <Feather
+                            name="chevron-left"
+                            size={16}
+                            color={sliderIconColor}
+                          />
                         </Pressable>
                         <Pressable
                           onPress={handleNextSlide}
@@ -895,8 +905,8 @@ const HomeHero = memo(function HomeHero({
                         >
                           <Feather
                             name="chevron-right"
-                            size={18}
-                            color="#fff"
+                            size={16}
+                            color={sliderIconColor}
                           />
                         </Pressable>
                       </View>

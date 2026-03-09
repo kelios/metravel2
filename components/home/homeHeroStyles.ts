@@ -372,11 +372,11 @@ export const createHomeHeroStyles = ({
       minHeight: 0,
       position: 'relative' as const,
       overflow: 'hidden',
-      borderRadius: isNarrowDesktopBook ? 14 : 12,
+      borderRadius: isNarrowDesktopBook ? 12 : 10,
       ...Platform.select({
         web: {
           alignSelf: 'stretch',
-          clipPath: `inset(0 round ${isNarrowDesktopBook ? 14 : 12}px)`,
+          clipPath: `inset(0 round ${isNarrowDesktopBook ? 12 : 10}px)`,
           boxSizing: 'border-box',
         } as any,
       }),
@@ -426,23 +426,18 @@ export const createHomeHeroStyles = ({
       width: '100%',
       flex: 1,
       minHeight: hasBookLayout ? 0 : sliderHeight,
-      borderRadius: isMobile ? 4 : 10,
+      borderRadius: isMobile ? 4 : 8,
       overflow: 'hidden',
-      backgroundColor: '#1A1A1A',
+      backgroundColor: DESIGN_TOKENS.colors.overlay,
       borderWidth: 0,
       ...Platform.select({
         web: showSideSlider
           ? ({
               boxShadow: `
-        0 0 0 1.5px rgba(255,252,245,0.5),
-        0 10px 44px rgba(20,15,10,0.35),
-        0 2px 8px rgba(20,15,10,0.18),
-        inset 0 0 0 1px rgba(255,250,242,0.38),
-        inset 0 0 20px rgba(255,248,238,0.16),
-        inset 18px 0 28px rgba(255,247,235,0.2),
-        inset -18px 0 28px rgba(255,247,235,0.2),
-        inset 0 18px 26px rgba(255,247,235,0.14),
-        inset 0 -18px 32px rgba(12,10,8,0.18)
+        0 0 0 1px rgba(246,239,227,0.46),
+        0 8px 28px rgba(24,17,11,0.2),
+        0 2px 6px rgba(24,17,11,0.12),
+        inset 0 0 0 1px rgba(248,242,233,0.2)
       `,
               minHeight: 0,
               flexGrow: 1,
@@ -451,8 +446,8 @@ export const createHomeHeroStyles = ({
                 ? 'rotate(-1.2deg)'
                 : 'rotate(-0.8deg)',
               transformOrigin: 'center center',
-              borderRadius: 10,
-              border: '2px solid rgba(255,252,245,0.7)',
+              borderRadius: 8,
+              border: '1px solid rgba(247,241,232,0.56)',
               isolation: 'isolate',
             } as any)
           : ({
@@ -477,23 +472,63 @@ export const createHomeHeroStyles = ({
     slideImage: {
       width: '100%',
       height: '100%',
-      ...Platform.select({ web: { filter: 'saturate(1.05) contrast(1.02)' } }),
+      ...Platform.select({
+        web: { filter: 'saturate(1.03) contrast(1.01) brightness(0.98)' },
+      }),
+    },
+    sliderPaperInset: {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1,
+      pointerEvents: 'none' as const,
+      ...Platform.select({
+        web: {
+          boxShadow: `
+            inset 0 1px 0 rgba(255,248,238,0.55),
+            inset 0 0 0 1px rgba(255,247,236,0.18),
+            inset 14px 0 22px rgba(255,247,235,0.12),
+            inset -10px 0 18px rgba(78,60,40,0.08),
+            inset 0 10px 16px rgba(255,248,239,0.08),
+            inset 0 -10px 18px rgba(24,17,11,0.08)
+          `,
+        } as any,
+      }),
+    },
+    sliderPaperFrame: {
+      position: 'absolute' as const,
+      top: 8,
+      left: 8,
+      right: 8,
+      bottom: 8,
+      zIndex: 1,
+      borderRadius: isMobile ? 2 : 5,
+      pointerEvents: 'none' as const,
+      ...Platform.select({
+        web: {
+          border: '1px solid rgba(237,228,214,0.78)',
+          boxShadow:
+            'inset 0 0 0 1px rgba(110,86,58,0.06), inset 0 0 24px rgba(255,247,234,0.04)',
+        } as any,
+      }),
     },
     slideOverlay: {
       position: 'absolute' as const,
       bottom: 0,
       left: 0,
       right: 0,
-      zIndex: 2,
+      zIndex: 3,
       paddingHorizontal: 20,
-      paddingTop: 80,
-      paddingBottom: 22,
+      paddingTop: 72,
+      paddingBottom: 20,
       pointerEvents: 'none' as const,
       ...Platform.select({
         web: showSideSlider
           ? {
               backgroundImage:
-                'linear-gradient(to top, rgba(12,10,8,0.92) 0%, rgba(12,10,8,0.62) 34%, rgba(12,10,8,0.2) 64%, transparent 100%)',
+                'linear-gradient(to top, rgba(26,19,13,0.8) 0%, rgba(26,19,13,0.44) 30%, rgba(26,19,13,0.14) 56%, rgba(26,19,13,0.02) 70%, transparent 100%)',
             }
           : {
               backgroundImage:
@@ -537,21 +572,22 @@ export const createHomeHeroStyles = ({
       top: 0,
       left: 0,
       right: 0,
-      height: 88,
+      height: 62,
       zIndex: 1,
       pointerEvents: 'none' as const,
-      opacity: 0,
+      opacity: showSideSlider ? 1 : 0,
       ...Platform.select({
         web: {
-          backdropFilter: 'blur(0px)',
-          WebkitBackdropFilter: 'blur(0px)',
-          backgroundImage: 'none',
+          backgroundImage: `
+            linear-gradient(180deg, rgba(255,249,241,0.44) 0%, rgba(255,247,238,0.14) 26%, rgba(255,247,238,0.02) 52%, transparent 72%),
+            linear-gradient(90deg, rgba(112,84,55,0.08) 0%, rgba(255,248,239,0) 14%, rgba(255,248,239,0) 84%, rgba(94,69,45,0.05) 100%)
+          `,
         } as any,
       }),
     },
     sliderPageWave: {
       position: 'absolute' as const,
-      left: '-1.5%',
+      left: '-1%',
       right: '-1.5%',
       zIndex: 1,
       pointerEvents: 'none' as const,
@@ -563,34 +599,36 @@ export const createHomeHeroStyles = ({
       }),
     },
     sliderPageWaveTop: {
-      top: -3,
-      height: isNarrowDesktopBook ? 54 : 68,
+      top: -2,
+      left: '-0.6%',
+      right: '-2.2%',
+      height: isNarrowDesktopBook ? 48 : 58,
       ...Platform.select({
         web: {
           backgroundImage: `
-          radial-gradient(72% 112% at 24% -42%, rgba(255,251,245,0.92) 0%, rgba(255,249,241,0.62) 18%, rgba(255,248,239,0.18) 38%, rgba(255,248,239,0) 60%),
-          radial-gradient(88% 116% at 84% -34%, rgba(255,250,242,0.68) 0%, rgba(255,248,239,0.34) 18%, rgba(255,248,239,0.08) 34%, rgba(255,248,239,0) 56%),
-          linear-gradient(180deg, rgba(255,252,246,0.2) 0%, rgba(255,252,246,0.08) 34%, rgba(255,252,246,0) 78%)
+          radial-gradient(68% 116% at 18% -46%, rgba(255,250,243,0.82) 0%, rgba(255,248,240,0.42) 18%, rgba(255,248,240,0.08) 38%, rgba(255,248,240,0) 56%),
+          radial-gradient(86% 120% at 86% -38%, rgba(255,250,243,0.52) 0%, rgba(255,247,238,0.22) 20%, rgba(255,247,238,0.06) 34%, rgba(255,247,238,0) 50%),
+          linear-gradient(180deg, rgba(255,250,243,0.18) 0%, rgba(255,250,243,0.06) 34%, rgba(255,250,243,0) 74%)
         `,
-          filter: 'blur(0.2px)',
-          transform: 'skewX(-1deg) scaleX(1.02)',
+          filter: 'blur(0.12px)',
+          transform: 'skewX(-1.35deg) scaleX(1.018)',
         } as any,
       }),
     },
     sliderPageWaveBottom: {
-      bottom: -4,
-      left: '-1%',
-      right: '-2%',
-      height: isNarrowDesktopBook ? 76 : 92,
+      bottom: -2,
+      left: '-1.8%',
+      right: '-0.8%',
+      height: isNarrowDesktopBook ? 64 : 78,
       ...Platform.select({
         web: {
           backgroundImage: `
-          radial-gradient(76% 122% at 31% 124%, rgba(255,247,236,0.08) 0%, rgba(255,247,236,0.18) 14%, rgba(255,247,236,0.34) 24%, rgba(15,12,9,0.38) 48%, rgba(10,8,6,0.82) 78%, rgba(10,8,6,0) 100%),
-          radial-gradient(92% 128% at 88% 122%, rgba(255,245,232,0.05) 0%, rgba(255,245,232,0.12) 12%, rgba(255,245,232,0.22) 20%, rgba(12,10,8,0.28) 42%, rgba(10,8,6,0.72) 70%, rgba(10,8,6,0) 100%),
-          linear-gradient(to top, rgba(10,8,6,0.58) 0%, rgba(10,8,6,0.22) 40%, rgba(10,8,6,0.04) 70%, rgba(10,8,6,0) 100%)
+          radial-gradient(78% 124% at 28% 122%, rgba(255,245,233,0.1) 0%, rgba(255,244,232,0.18) 12%, rgba(255,242,229,0.26) 20%, rgba(41,30,20,0.2) 42%, rgba(24,17,11,0.56) 74%, rgba(24,17,11,0) 100%),
+          radial-gradient(90% 130% at 92% 124%, rgba(255,245,231,0.06) 0%, rgba(255,243,229,0.12) 11%, rgba(255,241,226,0.18) 18%, rgba(35,26,18,0.16) 38%, rgba(24,17,11,0.42) 70%, rgba(24,17,11,0) 100%),
+          linear-gradient(to top, rgba(24,17,11,0.44) 0%, rgba(24,17,11,0.18) 34%, rgba(24,17,11,0.03) 66%, rgba(24,17,11,0) 100%)
         `,
-          filter: 'blur(0.25px)',
-          transform: 'skewX(1.2deg) scaleX(1.03)',
+          filter: 'blur(0.16px)',
+          transform: 'skewX(1.9deg) scaleX(1.026)',
         } as any,
       }),
     },
@@ -599,17 +637,17 @@ export const createHomeHeroStyles = ({
       alignItems: 'center',
       gap: 5,
       alignSelf: 'flex-start',
-      marginBottom: 10,
-      paddingHorizontal: 9,
-      paddingVertical: 4,
+      marginBottom: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: 'rgba(255,255,255,0.12)',
+      backgroundColor: 'rgba(252,248,241,0.08)',
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.22)',
+      borderColor: 'rgba(244,235,221,0.24)',
       ...Platform.select({
         web: {
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
         },
       }),
     },
@@ -617,8 +655,8 @@ export const createHomeHeroStyles = ({
       fontSize: 10,
       lineHeight: 14,
       fontWeight: '500',
-      letterSpacing: 0.8,
-      color: 'rgba(255,255,255,0.92)',
+      letterSpacing: 0.45,
+      color: 'rgba(247,240,228,0.94)',
       textTransform: 'uppercase' as const,
       ...Platform.select({ web: { fontFamily: editorialCaps } as any }),
     },
@@ -634,16 +672,16 @@ export const createHomeHeroStyles = ({
     slideTitle: {
       fontSize: isMobile ? 20 : showSideSlider ? 24 : 26,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: DESIGN_TOKENS.colors.textOnDark,
       marginBottom: 6,
-      letterSpacing: -0.5,
+      letterSpacing: -0.35,
       ...Platform.select({
         web: showSideSlider
           ? {
               fontFamily: editorialSerif,
-              textShadow: '0 2px 14px rgba(0,0,0,0.55)',
+              textShadow: '0 1px 10px rgba(0,0,0,0.34)',
               lineHeight: '1.25',
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.015em',
             }
           : ({
               fontFamily: sansSerif,
@@ -654,8 +692,8 @@ export const createHomeHeroStyles = ({
     slideSubtitle: {
       fontSize: 12,
       fontWeight: '400',
-      color: 'rgba(255,255,255,0.75)',
-      letterSpacing: 0.3,
+      color: 'rgba(239,229,214,0.82)',
+      letterSpacing: 0.12,
       ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
     },
 
@@ -667,34 +705,35 @@ export const createHomeHeroStyles = ({
       right: 0,
       flexDirection: 'row',
       justifyContent: 'space-between',
-      paddingHorizontal: 10,
+      paddingHorizontal: 4,
       ...Platform.select({
         web: { transform: 'translateY(-50%)', pointerEvents: 'none' },
       }),
     },
     sliderNavBtn: {
-      width: showSideSlider ? 34 : 40,
-      height: showSideSlider ? 34 : 40,
-      borderRadius: showSideSlider ? 17 : 20,
-      backgroundColor: 'rgba(255,255,255,0.12)',
+      width: showSideSlider ? 32 : 40,
+      height: showSideSlider ? 32 : 40,
+      borderRadius: showSideSlider ? 16 : 20,
+      backgroundColor: 'rgba(248,241,231,0.1)',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.24)',
+      borderColor: 'rgba(248,240,228,0.3)',
       ...Platform.select({
         web: {
           cursor: 'pointer',
-          transition: 'background-color 0.18s ease, border-color 0.18s ease',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          transition:
+            'background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           pointerEvents: 'auto',
         },
       }),
     },
     sliderNavBtnHover: {
-      backgroundColor: 'rgba(255,255,255,0.22)',
-      borderColor: 'rgba(255,255,255,0.44)',
-      ...Platform.select({ web: {} }),
+      backgroundColor: 'rgba(248,241,231,0.18)',
+      borderColor: 'rgba(248,240,228,0.42)',
+      ...Platform.select({ web: { transform: 'scale(1.03)' } as any }),
     },
     sliderDots: {
       position: 'absolute' as const,
