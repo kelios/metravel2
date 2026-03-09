@@ -234,8 +234,8 @@ describe('Slider navigation - Web', () => {
   })
 
 
-  describe('Virtualization', () => {
-    it('renders slides within virtualization window (current ±2)', async () => {
+  describe('Web rendering stability', () => {
+    it('keeps all slides mounted on web to avoid blank gaps during fast swipes', async () => {
       const images = createImages(10)
       let tree: renderer.ReactTestRenderer
 
@@ -252,13 +252,10 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      // At index 0, slides 0, 1, 2 should be rendered (window ±2)
       expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
       expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
       expect(tree!.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
-
-      // Slide 5 should NOT be rendered (outside window)
-      expect(() => tree!.root.findByProps({ testID: 'slider-image-5' })).toThrow()
+      expect(tree!.root.findByProps({ testID: 'slider-image-5' })).toBeTruthy()
     })
 
     it('keeps previous slides rendered when navigating forward', async () => {
@@ -285,7 +282,8 @@ describe('Slider navigation - Web', () => {
         nextButton.props.onPress() // 0 -> 1
       })
 
-      // Both slide 0 and slide 1 should be rendered (virtualization keeps neighbors)
+      // Previously visited slides stay mounted, so the browser never needs to
+      // reconstruct a missing slide during the swipe animation.
       expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
       expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
     })

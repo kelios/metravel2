@@ -40,6 +40,15 @@ jest.mock('@/utils/toast', () => ({
   showToast: jest.fn(),
 }))
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({
+    width: 390,
+    height: 1000,
+    isPhone: true,
+    isLargePhone: false,
+  }),
+}))
+
 describe('TravelHeroSection mobile image fit', () => {
   beforeEach(() => {
     Platform.OS = 'ios'
@@ -98,5 +107,61 @@ describe('TravelHeroSection mobile image fit', () => {
     const lastProps = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]?.[0]
     expect(lastProps).toBeTruthy()
     expect(lastProps.fit).toBe('contain')
+  })
+
+  it('keeps hero slider height at least 70 percent of the viewport on mobile', async () => {
+    const travel: any = {
+      id: 2,
+      name: 'Tall mobile hero',
+      gallery: [
+        {
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        },
+      ],
+      travelAddress: [],
+    }
+
+    const anchors: any = {
+      gallery: { current: null },
+      video: { current: null },
+      description: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      map: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    const heroSection = tree!.root.findByProps({ testID: 'travel-details-hero' })
+    const sliderContainer = heroSection.findAll(
+      (node) => node.props?.style && Array.isArray(node.props.style) && node.props.style.some((style: any) => style?.height === 700),
+    )[0]
+
+    expect(sliderContainer).toBeTruthy()
   })
 })

@@ -24,6 +24,7 @@ import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { 
@@ -74,6 +75,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     variant = 'default',
 }) => {
     const colors = useThemedColors();
+    const { width } = useResponsive();
+    const isCompactViewport = width > 0 && width < 768;
+    const isSmallViewport = width > 0 && width < 480;
     const [html, setHtml] = useState(content);
     const [quillMountKey, setQuillMountKey] = useState(0);
     const [shouldLoadQuill, setShouldLoadQuill] = useState(() => {
@@ -222,8 +226,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         bar: {
             flexDirection: 'row',
             justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            alignItems: isCompactViewport ? 'flex-start' : 'center',
+            flexWrap: 'wrap',
+            paddingHorizontal: isCompactViewport ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.md,
             paddingVertical: DESIGN_TOKENS.spacing.sm,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
@@ -237,17 +242,29 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             fontSize: DESIGN_TOKENS.typography.sizes.md,
             fontWeight: '600' as const,
             color: colors.text,
+            width: isCompactViewport ? '100%' : undefined,
+            marginBottom: isCompactViewport ? DESIGN_TOKENS.spacing.xs : 0,
+            paddingRight: DESIGN_TOKENS.spacing.sm,
         },
-        row: { flexDirection: 'row', alignItems: 'center', overflow: isWeb ? ('visible' as any) : undefined },
+        row: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: isCompactViewport ? 'flex-start' : 'flex-end',
+            flexWrap: 'wrap',
+            flexShrink: 1,
+            width: isCompactViewport ? '100%' : undefined,
+            overflow: isWeb ? ('visible' as any) : undefined,
+        },
         btn: {
-            marginLeft: DESIGN_TOKENS.spacing.md,
+            marginLeft: isCompactViewport ? 0 : DESIGN_TOKENS.spacing.sm,
+            marginTop: isCompactViewport ? DESIGN_TOKENS.spacing.xs : 0,
         },
         editorArea: {
             flex: 1,
             minHeight: 0,
             ...(isWeb
                 ? ({
-                    maxHeight: fullscreen ? undefined : 560,
+                    maxHeight: fullscreen ? undefined : (isCompactViewport ? 460 : 560),
                     // Allow Quill toolbar dropdowns (font, size, color pickers) to overflow;
                     // inner .ql-editor already handles its own scroll via overflow-y:auto in CSS.
                     overflow: 'visible',
@@ -256,7 +273,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         },
         editor: { minHeight: 200, flex: 1 },
         html: {
-            minHeight: 200,
+            minHeight: isCompactViewport ? 240 : 200,
             flex: 1,
             padding: DESIGN_TOKENS.spacing.md,
             fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -294,7 +311,29 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             paddingHorizontal: 0,
             paddingBottom: 0,
         },
-    }), [colors, fullscreen]);
+        modalBackdrop: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.35)',
+            justifyContent: 'center',
+            padding: isCompactViewport ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
+        },
+        modalCard: {
+            width: '100%',
+            maxWidth: 520,
+            alignSelf: 'center',
+            backgroundColor: colors.surface,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+            padding: isCompactViewport ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
+        },
+        modalActions: {
+            flexDirection: isSmallViewport ? 'column-reverse' : 'row',
+            justifyContent: 'flex-end',
+            alignItems: isSmallViewport ? 'stretch' : 'center',
+            gap: DESIGN_TOKENS.spacing.sm,
+        },
+    }), [colors, fullscreen, isCompactViewport, isSmallViewport]);
 
     useEffect(() => {
         if (!isWeb) return;
@@ -984,6 +1023,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 icon={<Feather name={name} size={20} color={colors.textSecondary} />}
                 onPress={onPress}
                 label={label}
+                size={isCompactViewport ? 'sm' : 'md'}
                 style={dynamicStyles.btn}
             />
         );
@@ -1122,6 +1162,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                             void handleManualSave();
                         }}
                         label={isImageUploading ? 'Загрузка изображения…' : isManualSaving ? 'Сохранение…' : 'Сохранить путешествие'}
+                        size={isCompactViewport ? 'sm' : 'md'}
                         style={dynamicStyles.btn}
                         disabled={isManualSaving || isImageUploading}
                     />
@@ -1553,8 +1594,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 onShow={focusAnchorInput}
                 onRequestClose={() => setAnchorModalVisible(false)}
             >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
-                    <View style={{ backgroundColor: colors.surface, borderRadius: DESIGN_TOKENS.radii.md, borderWidth: 1, borderColor: colors.border, padding: DESIGN_TOKENS.spacing.lg }}>
+                <View style={dynamicStyles.modalBackdrop}>
+                    <View style={dynamicStyles.modalCard}>
                         <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600' as const, marginBottom: DESIGN_TOKENS.spacing.sm }}>
                             Вставить якорь
                         </Text>
@@ -1580,7 +1621,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                 marginBottom: DESIGN_TOKENS.spacing.md,
                             }}
                         />
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: DESIGN_TOKENS.spacing.sm }}>
+                        <View style={dynamicStyles.modalActions}>
                             <Button
                                 onPress={() => setAnchorModalVisible(false)}
                                 label="Отмена"
@@ -1650,8 +1691,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 onShow={focusLinkInput}
                 onRequestClose={() => setLinkModalVisible(false)}
             >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
-                    <View style={{ backgroundColor: colors.surface, borderRadius: DESIGN_TOKENS.radii.md, borderWidth: 1, borderColor: colors.border, padding: DESIGN_TOKENS.spacing.lg }}>
+                <View style={dynamicStyles.modalBackdrop}>
+                    <View style={dynamicStyles.modalCard}>
                         <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600' as const, marginBottom: DESIGN_TOKENS.spacing.sm }}>
                             Ссылка
                         </Text>
@@ -1677,7 +1718,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                 marginBottom: DESIGN_TOKENS.spacing.md,
                             }}
                         />
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: DESIGN_TOKENS.spacing.sm }}>
+                        <View style={dynamicStyles.modalActions}>
                             <Button
                                 onPress={() => {
                                     setLinkModalVisible(false);

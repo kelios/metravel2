@@ -62,8 +62,10 @@ export function useTravelHeroState(travel: Travel, isMobile: boolean, onFirstIma
       const target = winH * 0.7;
       return Math.max(360, Math.min(target, 750));
     }
+    const minViewportHeight = Math.round(winH * 0.7);
     const arHeight = resolvedWidth ? Math.round(resolvedWidth / aspectRatio) : winH * 0.6;
-    return Math.max(280, Math.min(arHeight, winH * 0.6));
+    const boundedAspectHeight = Math.max(280, Math.min(arHeight, Math.round(winH * 0.85)));
+    return Math.max(minViewportHeight, boundedAspectHeight);
   }, [isMobile, winH, resolvedWidth, aspectRatio]);
 
   // --- Gallery images ---

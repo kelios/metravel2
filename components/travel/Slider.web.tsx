@@ -4,7 +4,7 @@
  * Uses CSS scroll-snap and standard React APIs instead.
  *
  * Performance optimizations:
- * - Slide virtualization: only current ±1 slides are fully rendered
+ * - All slides stay mounted on web to avoid blank gaps during fast swipes
  * - Cached DOM node refs: no querySelector on every interaction
  * - Lazy URI computation: URIs built only for visible slides
  * - Memoized sub-components: arrows, dots don't re-render unnecessarily
@@ -75,9 +75,6 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(style);
   }
 }
-
-/* ---------- Virtualization window size (current ± WINDOW) ---------- */
-const VIRTUAL_WINDOW = 2;
 
 /* ---------- Memoized sub-components ---------- */
 
@@ -619,10 +616,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             {...({ dataSet: { sliderInstance: sliderInstanceId } } as any)}
           >
             {images.map((item, index) => {
-              // Virtualization: only render Slide for slides within ±VIRTUAL_WINDOW
               const distanceToCurrent = Math.abs(index - currentIndex);
-              const shouldRender = distanceToCurrent <= VIRTUAL_WINDOW;
-              const preloadPriority = distanceToCurrent <= 1;
+              const preloadPriority = distanceToCurrent <= (isMobile ? 2 : 1);
 
               return (
                 <View
@@ -636,25 +631,23 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     styles.slideSnap,
                   ]}
                 >
-                  {shouldRender ? (
-                    <Slide
-                      item={item}
-                      index={index}
-                      uri={getUri(index)}
-                      containerW={renderedSlideWidth}
-                      slideHeight={slideHeight}
-                      imagesLength={imagesLen}
-                      styles={styles}
-                      blurBackground={blurBackground}
-                      isActive={index === currentIndex}
-                      imageProps={imageProps}
-                      onFirstImageLoad={onFirstImageLoad}
-                      onImagePress={onImagePress}
-                      firstImagePreloaded={firstImagePreloaded}
-                      preloadPriority={preloadPriority}
-                      fit={fit}
-                    />
-                  ) : null}
+                  <Slide
+                    item={item}
+                    index={index}
+                    uri={getUri(index)}
+                    containerW={renderedSlideWidth}
+                    slideHeight={slideHeight}
+                    imagesLength={imagesLen}
+                    styles={styles}
+                    blurBackground={blurBackground}
+                    isActive={index === currentIndex}
+                    imageProps={imageProps}
+                    onFirstImageLoad={onFirstImageLoad}
+                    onImagePress={onImagePress}
+                    firstImagePreloaded={firstImagePreloaded}
+                    preloadPriority={preloadPriority}
+                    fit={fit}
+                  />
                 </View>
               );
             })}

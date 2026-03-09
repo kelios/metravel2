@@ -105,4 +105,24 @@ describe('Slider (web) blur background', () => {
     expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
     expect(tree.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
   })
+
+  it('keeps all slides mounted on web to avoid blank gaps during fast swipes', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+        />,
+      )
+    })
+
+    expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+    expect(tree.root.findByProps({ testID: 'slider-image-3' })).toBeTruthy()
+    expect(tree.root.findByProps({ testID: 'slider-image-5' })).toBeTruthy()
+  })
 })

@@ -36,6 +36,40 @@ if (typeof window !== 'undefined' && !isTestEnv) {
 let quillLoadPromise: Promise<any> | null = null
 const QUILL_EDITOR_WEB_STYLES_ID = 'article-editor-quill-web-styles'
 const QUILL_EDITOR_WEB_CSS = `
+[data-editor-surface="article-editor"] .ql-toolbar.ql-snow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-sizing: border-box;
+}
+[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-formats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-right: 0;
+}
+[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker {
+  max-width: 100%;
+}
+[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
+[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
+[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
+  width: clamp(96px, 18vw, 160px);
+}
+[data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker-label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-editor-surface="article-editor"] .ql-container.ql-snow {
+  border: 0;
+}
 .ql-editor img {
   display: block;
   width: 100%;
@@ -47,6 +81,33 @@ const QUILL_EDITOR_WEB_CSS = `
   margin: 6px 0 26px;
   border-radius: 16px;
   box-sizing: border-box;
+}
+@media (max-width: 767px) {
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow {
+    gap: 6px 8px;
+    padding: 10px;
+  }
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-formats {
+    gap: 2px;
+  }
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
+    width: min(132px, 40vw);
+  }
+}
+@media (max-width: 479px) {
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow {
+    padding: 8px;
+  }
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-formats {
+    width: 100%;
+  }
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-font,
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-size,
+  [data-editor-surface="article-editor"] .ql-toolbar.ql-snow .ql-picker.ql-header {
+    width: min(132px, 100%);
+  }
 }
 `
 
