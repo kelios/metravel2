@@ -890,7 +890,7 @@ const HomeHero = memo(function HomeHero({
                         >
                           <Feather
                             name="chevron-left"
-                            size={16}
+                            size={14}
                             color={sliderIconColor}
                           />
                         </Pressable>
@@ -905,7 +905,7 @@ const HomeHero = memo(function HomeHero({
                         >
                           <Feather
                             name="chevron-right"
-                            size={16}
+                            size={14}
                             color={sliderIconColor}
                           />
                         </Pressable>

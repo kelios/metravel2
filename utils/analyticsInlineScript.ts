@@ -163,6 +163,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   function scheduleAnalyticsBootstrap() {
     var started = false;
     var fallbackTimer = null;
+    var loadTimer = null;
     var events = ['pointerdown', 'keydown', 'touchstart', 'click'];
     var visibilityEvents = ['visibilitychange', 'pagehide', 'beforeunload'];
     var disableAutoBootstrap = !!(window.navigator && window.navigator.webdriver);
@@ -176,6 +177,9 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       }
       if (fallbackTimer) {
         try { clearTimeout(fallbackTimer); } catch (_e3) {}
+      }
+      if (loadTimer) {
+        try { clearTimeout(loadTimer); } catch (_e4) {}
       }
     }
 
@@ -212,13 +216,24 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       return;
     }
 
+    function scheduleAfterLoad() {
+      loadTimer = setTimeout(trigger, 1500);
+    }
+
+    if (document.readyState === 'complete') {
+      scheduleAfterLoad();
+    } else {
+      window.addEventListener('load', scheduleAfterLoad, { once: true });
+    }
+
     // Safety net for long passive sessions without interaction.
-    // Delayed enough to stay out of initial performance-critical window.
+    // Keep it for background tabs / unusual browsers even if load-based bootstrap misses.
     fallbackTimer = setTimeout(trigger, 30000);
   }
 
   // Автозагрузка:
   // - После первого взаимодействия пользователя.
+  // - Вскоре после полной загрузки страницы.
   // - Либо при уходе со страницы (visibility/pagehide) для коротких сессий без кликов.
   // Это снижает влияние аналитики на LCP/TBT в initial render.
   if (isAnalyticsAllowed()) {

@@ -1,7 +1,7 @@
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript'
 
 describe('getAnalyticsInlineScript', () => {
-  it('bootstraps GA even without saved consent (opt-out model)', () => {
+  it('contains delayed GA bootstrap logic', () => {
     const script = getAnalyticsInlineScript(0, 'G-TEST123456')
     expect(script).toContain('bootstrapGa()')
     expect(script).toContain('ga-disable-')
@@ -13,5 +13,11 @@ describe('getAnalyticsInlineScript', () => {
     const script = getAnalyticsInlineScript(0, 'G-TEST123456')
     expect(script).toContain("window['ga-disable-' + GA_ID]")
     expect(script).toContain("!window['ga-disable-' + GA_ID]")
+  })
+
+  it('schedules analytics bootstrap shortly after page load', () => {
+    const script = getAnalyticsInlineScript(12345678, 'G-TEST123456')
+    expect(script).toContain("window.addEventListener('load', scheduleAfterLoad, { once: true })")
+    expect(script).toContain('loadTimer = setTimeout(trigger, 1500);')
   })
 })

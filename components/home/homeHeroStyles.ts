@@ -342,24 +342,24 @@ export const createHomeHeroStyles = ({
               backgroundColor: 'transparent',
               borderRadius: 0,
               paddingTop: isUltraWideBook
-                ? '6%'
+                ? '6.8%'
                 : isLargeDesktopBook
-                  ? '6.5%'
-                  : '6.5%',
+                  ? '7.1%'
+                  : '7.2%',
               paddingBottom: isUltraWideBook
-                ? '14%'
+                ? '16.2%'
                 : isLargeDesktopBook
-                  ? '15%'
-                  : '16%',
+                  ? '17.4%'
+                  : '17.8%',
               paddingLeft: isUltraWideBook
-                ? '1%'
+                ? '1.8%'
                 : isNarrowDesktopBook
-                  ? '1%'
-                  : '2%',
-              paddingRight: isNarrowDesktopBook ? '13%' : '15%',
+                  ? '1.6%'
+                  : '2.4%',
+              paddingRight: isNarrowDesktopBook ? '12.2%' : '14.2%',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'stretch',
+              justifyContent: 'flex-start',
               boxSizing: 'border-box',
               overflow: 'hidden',
             } as any)
@@ -368,7 +368,8 @@ export const createHomeHeroStyles = ({
     },
     sliderFrame: {
       width: '100%',
-      flex: 1,
+      flexGrow: 0,
+      flexShrink: 1,
       minHeight: 0,
       position: 'relative' as const,
       overflow: 'hidden',
@@ -376,6 +377,8 @@ export const createHomeHeroStyles = ({
       ...Platform.select({
         web: {
           alignSelf: 'stretch',
+          height: isNarrowDesktopBook ? '90.5%' : '92.5%',
+          marginTop: 4,
           clipPath: `inset(0 round ${isNarrowDesktopBook ? 12 : 10}px)`,
           boxSizing: 'border-box',
         } as any,
@@ -434,20 +437,18 @@ export const createHomeHeroStyles = ({
         web: showSideSlider
           ? ({
               boxShadow: `
-        0 0 0 1px rgba(246,239,227,0.46),
-        0 8px 28px rgba(24,17,11,0.2),
-        0 2px 6px rgba(24,17,11,0.12),
-        inset 0 0 0 1px rgba(248,242,233,0.2)
+        0 0 0 1px rgba(246,239,227,0.36),
+        0 6px 18px rgba(24,17,11,0.14),
+        0 1px 4px rgba(24,17,11,0.08),
+        inset 0 0 0 1px rgba(248,242,233,0.14)
       `,
               minHeight: 0,
               flexGrow: 1,
               flexShrink: 1,
-              transform: isNarrowDesktopBook
-                ? 'rotate(-1.2deg)'
-                : 'rotate(-0.8deg)',
+              transform: 'none',
               transformOrigin: 'center center',
               borderRadius: 8,
-              border: '1px solid rgba(247,241,232,0.56)',
+              border: '1px solid rgba(247,241,232,0.42)',
               isolation: 'isolate',
             } as any)
           : ({
@@ -487,30 +488,29 @@ export const createHomeHeroStyles = ({
       ...Platform.select({
         web: {
           boxShadow: `
-            inset 0 1px 0 rgba(255,248,238,0.55),
-            inset 0 0 0 1px rgba(255,247,236,0.18),
-            inset 14px 0 22px rgba(255,247,235,0.12),
-            inset -10px 0 18px rgba(78,60,40,0.08),
-            inset 0 10px 16px rgba(255,248,239,0.08),
-            inset 0 -10px 18px rgba(24,17,11,0.08)
+            inset 0 1px 0 rgba(255,248,238,0.38),
+            inset 0 0 0 1px rgba(255,247,236,0.1),
+            inset 10px 0 14px rgba(255,247,235,0.08),
+            inset -8px 0 12px rgba(78,60,40,0.05),
+            inset 0 8px 10px rgba(255,248,239,0.04),
+            inset 0 -8px 12px rgba(24,17,11,0.05)
           `,
         } as any,
       }),
     },
     sliderPaperFrame: {
       position: 'absolute' as const,
-      top: 8,
-      left: 8,
-      right: 8,
-      bottom: 8,
+      top: 10,
+      left: 10,
+      right: 10,
+      bottom: 10,
       zIndex: 1,
       borderRadius: isMobile ? 2 : 5,
       pointerEvents: 'none' as const,
       ...Platform.select({
         web: {
-          border: '1px solid rgba(237,228,214,0.78)',
-          boxShadow:
-            'inset 0 0 0 1px rgba(110,86,58,0.06), inset 0 0 24px rgba(255,247,234,0.04)',
+          border: '1px solid rgba(237,228,214,0.16)',
+          boxShadow: 'inset 0 0 0 1px rgba(110,86,58,0.015)',
         } as any,
       }),
     },
@@ -521,14 +521,14 @@ export const createHomeHeroStyles = ({
       right: 0,
       zIndex: 3,
       paddingHorizontal: 20,
-      paddingTop: 72,
-      paddingBottom: 20,
+      paddingTop: 58,
+      paddingBottom: 16,
       pointerEvents: 'none' as const,
       ...Platform.select({
         web: showSideSlider
           ? {
               backgroundImage:
-                'linear-gradient(to top, rgba(26,19,13,0.8) 0%, rgba(26,19,13,0.44) 30%, rgba(26,19,13,0.14) 56%, rgba(26,19,13,0.02) 70%, transparent 100%)',
+                'linear-gradient(to top, rgba(26,19,13,0.62) 0%, rgba(26,19,13,0.3) 24%, rgba(26,19,13,0.08) 46%, rgba(26,19,13,0.01) 60%, transparent 100%)',
             }
           : {
               backgroundImage:
@@ -572,15 +572,15 @@ export const createHomeHeroStyles = ({
       top: 0,
       left: 0,
       right: 0,
-      height: 62,
+      height: 18,
       zIndex: 1,
       pointerEvents: 'none' as const,
       opacity: showSideSlider ? 1 : 0,
       ...Platform.select({
         web: {
           backgroundImage: `
-            linear-gradient(180deg, rgba(255,249,241,0.44) 0%, rgba(255,247,238,0.14) 26%, rgba(255,247,238,0.02) 52%, transparent 72%),
-            linear-gradient(90deg, rgba(112,84,55,0.08) 0%, rgba(255,248,239,0) 14%, rgba(255,248,239,0) 84%, rgba(94,69,45,0.05) 100%)
+            linear-gradient(180deg, rgba(255,249,241,0.14) 0%, rgba(255,247,238,0.025) 42%, rgba(255,247,238,0) 78%),
+            linear-gradient(90deg, rgba(112,84,55,0.025) 0%, rgba(255,248,239,0) 12%, rgba(255,248,239,0) 88%, rgba(94,69,45,0.02) 100%)
           `,
         } as any,
       }),
@@ -602,16 +602,15 @@ export const createHomeHeroStyles = ({
       top: -2,
       left: '-0.6%',
       right: '-2.2%',
-      height: isNarrowDesktopBook ? 48 : 58,
+      height: isNarrowDesktopBook ? 18 : 22,
       ...Platform.select({
         web: {
           backgroundImage: `
-          radial-gradient(68% 116% at 18% -46%, rgba(255,250,243,0.82) 0%, rgba(255,248,240,0.42) 18%, rgba(255,248,240,0.08) 38%, rgba(255,248,240,0) 56%),
-          radial-gradient(86% 120% at 86% -38%, rgba(255,250,243,0.52) 0%, rgba(255,247,238,0.22) 20%, rgba(255,247,238,0.06) 34%, rgba(255,247,238,0) 50%),
-          linear-gradient(180deg, rgba(255,250,243,0.18) 0%, rgba(255,250,243,0.06) 34%, rgba(255,250,243,0) 74%)
+          radial-gradient(62% 108% at 18% -52%, rgba(255,250,243,0.24) 0%, rgba(255,248,240,0.08) 18%, rgba(255,248,240,0.015) 34%, rgba(255,248,240,0) 50%),
+          radial-gradient(82% 112% at 86% -40%, rgba(255,250,243,0.16) 0%, rgba(255,247,238,0.05) 18%, rgba(255,247,238,0.015) 28%, rgba(255,247,238,0) 42%)
         `,
-          filter: 'blur(0.12px)',
-          transform: 'skewX(-1.35deg) scaleX(1.018)',
+          filter: 'blur(0.06px)',
+          transform: 'skewX(-0.8deg) scaleX(1.008)',
         } as any,
       }),
     },
@@ -619,16 +618,16 @@ export const createHomeHeroStyles = ({
       bottom: -2,
       left: '-1.8%',
       right: '-0.8%',
-      height: isNarrowDesktopBook ? 64 : 78,
+      height: isNarrowDesktopBook ? 52 : 62,
       ...Platform.select({
         web: {
           backgroundImage: `
-          radial-gradient(78% 124% at 28% 122%, rgba(255,245,233,0.1) 0%, rgba(255,244,232,0.18) 12%, rgba(255,242,229,0.26) 20%, rgba(41,30,20,0.2) 42%, rgba(24,17,11,0.56) 74%, rgba(24,17,11,0) 100%),
-          radial-gradient(90% 130% at 92% 124%, rgba(255,245,231,0.06) 0%, rgba(255,243,229,0.12) 11%, rgba(255,241,226,0.18) 18%, rgba(35,26,18,0.16) 38%, rgba(24,17,11,0.42) 70%, rgba(24,17,11,0) 100%),
-          linear-gradient(to top, rgba(24,17,11,0.44) 0%, rgba(24,17,11,0.18) 34%, rgba(24,17,11,0.03) 66%, rgba(24,17,11,0) 100%)
+          radial-gradient(78% 124% at 28% 122%, rgba(255,245,233,0.08) 0%, rgba(255,244,232,0.14) 12%, rgba(255,242,229,0.18) 20%, rgba(41,30,20,0.14) 42%, rgba(24,17,11,0.34) 72%, rgba(24,17,11,0) 100%),
+          radial-gradient(90% 130% at 92% 124%, rgba(255,245,231,0.05) 0%, rgba(255,243,229,0.08) 11%, rgba(255,241,226,0.12) 18%, rgba(35,26,18,0.12) 38%, rgba(24,17,11,0.24) 68%, rgba(24,17,11,0) 100%),
+          linear-gradient(to top, rgba(24,17,11,0.26) 0%, rgba(24,17,11,0.1) 30%, rgba(24,17,11,0.02) 58%, rgba(24,17,11,0) 100%)
         `,
-          filter: 'blur(0.16px)',
-          transform: 'skewX(1.9deg) scaleX(1.026)',
+          filter: 'blur(0.1px)',
+          transform: 'skewX(1.4deg) scaleX(1.016)',
         } as any,
       }),
     },
@@ -637,9 +636,9 @@ export const createHomeHeroStyles = ({
       alignItems: 'center',
       gap: 5,
       alignSelf: 'flex-start',
-      marginBottom: 12,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
+      marginBottom: 10,
+      paddingHorizontal: 9,
+      paddingVertical: 4,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: 'rgba(252,248,241,0.08)',
       borderWidth: 1,
@@ -705,20 +704,20 @@ export const createHomeHeroStyles = ({
       right: 0,
       flexDirection: 'row',
       justifyContent: 'space-between',
-      paddingHorizontal: 4,
+      paddingHorizontal: 2,
       ...Platform.select({
         web: { transform: 'translateY(-50%)', pointerEvents: 'none' },
       }),
     },
     sliderNavBtn: {
-      width: showSideSlider ? 32 : 40,
-      height: showSideSlider ? 32 : 40,
-      borderRadius: showSideSlider ? 16 : 20,
-      backgroundColor: 'rgba(248,241,231,0.1)',
+      width: showSideSlider ? 24 : 40,
+      height: showSideSlider ? 24 : 40,
+      borderRadius: showSideSlider ? 12 : 20,
+      backgroundColor: 'rgba(248,241,231,0.06)',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: 'rgba(248,240,228,0.3)',
+      borderColor: 'rgba(248,240,228,0.14)',
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -731,9 +730,9 @@ export const createHomeHeroStyles = ({
       }),
     },
     sliderNavBtnHover: {
-      backgroundColor: 'rgba(248,241,231,0.18)',
-      borderColor: 'rgba(248,240,228,0.42)',
-      ...Platform.select({ web: { transform: 'scale(1.03)' } as any }),
+      backgroundColor: 'rgba(248,241,231,0.1)',
+      borderColor: 'rgba(248,240,228,0.2)',
+      ...Platform.select({ web: { transform: 'scale(1.02)' } as any }),
     },
     sliderDots: {
       position: 'absolute' as const,

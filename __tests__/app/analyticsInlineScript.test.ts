@@ -214,4 +214,26 @@ describe('analytics inline script', () => {
 
     jest.useRealTimers()
   })
+
+  it('autoloads analytics shortly after page load for short passive sessions', () => {
+    jest.useFakeTimers()
+    const { windowMock } = setupDomEnv()
+
+    runAnalyticsSnippet()
+
+    expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+
+    jest.advanceTimersByTime(1499)
+    expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+
+    jest.advanceTimersByTime(1)
+    expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
+    expect(windowMock.ym).toHaveBeenCalledWith(
+      parseInt(TEST_METRIKA_ID, 10),
+      'init',
+      expect.objectContaining({ trackLinks: true })
+    )
+
+    jest.useRealTimers()
+  })
 })
