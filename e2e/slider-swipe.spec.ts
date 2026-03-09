@@ -6,13 +6,12 @@
  *   2. Mouse drag-to-scroll (desktop web)
  *   3. Keyboard arrows (left / right)
  *
- * The test opens the travel list, picks the first card, navigates to its detail
- * page, and waits for the slider with >1 image to appear.
+ * The test opens a deterministic mocked travel details page and verifies slider
+ * interactions without relying on live list data.
  */
 
 import { test, expect } from './fixtures';
 import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
-import { getTravelsListPath } from './helpers/routes';
 
 /**
  * Extract current and total from the slider counter element.
@@ -52,13 +51,64 @@ async function waitForCounterValue(page: import('@playwright/test').Page, expect
   return getCounter(page);
 }
 
+async function dragSlider(
+  page: import('@playwright/test').Page,
+  startRatio: number,
+  endRatio: number,
+) {
+  return page.evaluate(async ({ startRatio, endRatio }) => {
+    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const node = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
+    if (!node) return false;
+
+    const rect = node.getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
+    const startX = rect.left + rect.width * startRatio;
+    const endX = rect.left + rect.width * endRatio;
+
+    node.dispatchEvent(new MouseEvent('mousedown', {
+      button: 0, clientX: startX, clientY: centerY, bubbles: true,
+    }));
+    await delay(50);
+
+    const steps = 15;
+    for (let i = 1; i <= steps; i++) {
+      const x = startX + (endX - startX) * (i / steps);
+      window.dispatchEvent(new MouseEvent('mousemove', {
+        clientX: x, clientY: centerY, bubbles: true,
+      }));
+      await delay(16);
+    }
+
+    window.dispatchEvent(new MouseEvent('mouseup', {
+      button: 0, clientX: endX, clientY: centerY, bubbles: true,
+    }));
+
+    return true;
+  }, { startRatio, endRatio });
+}
+
+async function waitForSliderReady(
+  page: import('@playwright/test').Page,
+  opts?: { timeout?: number; requireVisibleNextArrow?: boolean },
+) {
+  const timeout = opts?.timeout ?? 60_000;
+  const requireVisibleNextArrow = opts?.requireVisibleNextArrow ?? true;
+  const bundling = page.getByText('Bundling...').first();
+  await bundling.waitFor({ state: 'hidden', timeout }).catch(() => null);
+  await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout });
+  if (requireVisibleNextArrow) {
+    await page.locator('[aria-label="Next slide"]').first().waitFor({ state: 'visible', timeout });
+  }
+}
+
 /**
  * Navigate to the first travel from the list that has a multi-image slider.
  * Tries up to `maxCards` cards. Returns the counter or null.
  */
 async function navigateToTravelWithSlider(
   page: import('@playwright/test').Page,
-  maxCards = 5
+  opts?: { requireVisibleNextArrow?: boolean },
 ): Promise<{ current: number; total: number } | null> {
   const fallbackId = 990011;
   const fallbackSlug = 'e2e-slider-swipe-fallback';
@@ -118,7 +168,26 @@ async function navigateToTravelWithSlider(
   await page.route('**/travels/by-slug/**', fallbackRoute);
   await page.route(`**/api/travels/${fallbackId}/`, fallbackRoute);
 
+  await page.addInitScript(
+    ({ slug, data }) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__metravelTravelPreload = {
+        slug,
+        isId: false,
+        data,
+      };
+      w.__metravelTravelPreloadPending = false;
+      w.__metravelTravelPreloadPromise = undefined;
+    },
+    { slug: fallbackSlug, data: fallbackTravel },
+  );
+
   await gotoWithRetry(page, `/travels/${fallbackSlug}`);
+  await waitForSliderReady(page, { requireVisibleNextArrow: opts?.requireVisibleNextArrow ?? true });
+  if (opts?.requireVisibleNextArrow === false) {
+    return waitForCounterValue(page, 1, 10_000);
+  }
+
   const fallbackNext = await page
     .locator('[aria-label="Next slide"]')
     .first()
@@ -130,47 +199,12 @@ async function navigateToTravelWithSlider(
     if (fallbackCounter) return fallbackCounter;
   }
 
-  // Last resort: try list-driven navigation.
-  await gotoWithRetry(page, getTravelsListPath());
-
-  const cards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
-  await cards.first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
-  const count = await cards.count();
-  if (count === 0) return null;
-
-  for (let i = 0; i < Math.min(count, maxCards); i++) {
-    // RNW renders links as <div role="link"> — no href attribute.
-    // Navigate to the list page, click the i-th card, wait for /travels/ URL.
-    if (i > 0) {
-      await gotoWithRetry(page, getTravelsListPath());
-      await cards.first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
-    }
-
-    await cards.nth(i).click();
-    const navigated = await page
-      .waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!navigated) continue;
-
-    // Wait for the "Next slide" button — it only renders when images.length > 1
-    const nextBtn = page.locator('[aria-label="Next slide"]').first();
-    const hasNext = await nextBtn
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!hasNext) continue;
-
-    // Wait for the counter
-    const counter = await waitForCounterValue(page, 1, 10_000);
-    if (counter) return counter;
-  }
-
   return null;
 }
 
 test.describe('Slider navigation on web', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test('arrow buttons change the active slide', async ({ page }) => {
     await preacceptCookies(page);
 
@@ -211,81 +245,38 @@ test.describe('Slider navigation on web', () => {
 
     expect(counter.current).toBe(1);
 
-    // Dispatch mouse drag events directly on the scroll container DOM node.
-    // Avoid relying on image alt text or overflow detection (both can change with
-    // virtualization / placeholder rendering).
-    const dragOk = await page.evaluate(async () => {
-      const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const node = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
-      if (!node) return false;
-
-      const rect = node.getBoundingClientRect();
-      const centerY = rect.top + rect.height / 2;
-      const startX = rect.left + rect.width * 0.8;
-      const endX = rect.left + rect.width * 0.1;
-
-      node.dispatchEvent(new MouseEvent('mousedown', {
-        button: 0, clientX: startX, clientY: centerY, bubbles: true,
-      }));
-      await delay(50);
-
-      const steps = 15;
-      for (let i = 1; i <= steps; i++) {
-        const x = startX + (endX - startX) * (i / steps);
-        window.dispatchEvent(new MouseEvent('mousemove', {
-          clientX: x, clientY: centerY, bubbles: true,
-        }));
-        await delay(16);
-      }
-
-      window.dispatchEvent(new MouseEvent('mouseup', {
-        button: 0, clientX: endX, clientY: centerY, bubbles: true,
-      }));
-
-      return true;
-    });
+    const dragOk = await dragSlider(page, 0.72, 0.36);
     expect(dragOk).toBe(true);
 
     await page.waitForTimeout(1000); // wait for snap animation
     const afterDrag = await waitForCounterValue(page, 2, 10_000);
     expect(afterDrag?.current).toBe(2);
 
-    // Drag back: left to right (swipe right → previous slide)
-    const dragBackOk = await page.evaluate(async () => {
-      const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const node = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
-      if (!node) return false;
-
-      const rect = node.getBoundingClientRect();
-      const centerY = rect.top + rect.height / 2;
-      const startX = rect.left + rect.width * 0.2;
-      const endX = rect.left + rect.width * 0.9;
-
-      node.dispatchEvent(new MouseEvent('mousedown', {
-        button: 0, clientX: startX, clientY: centerY, bubbles: true,
-      }));
-      await delay(50);
-
-      const steps = 15;
-      for (let i = 1; i <= steps; i++) {
-        const x = startX + (endX - startX) * (i / steps);
-        window.dispatchEvent(new MouseEvent('mousemove', {
-          clientX: x, clientY: centerY, bubbles: true,
-        }));
-        await delay(16);
-      }
-
-      window.dispatchEvent(new MouseEvent('mouseup', {
-        button: 0, clientX: endX, clientY: centerY, bubbles: true,
-      }));
-
-      return true;
-    });
+    const dragBackOk = await dragSlider(page, 0.28, 0.64);
     expect(dragBackOk).toBe(true);
 
     await page.waitForTimeout(1000); // wait for snap animation
     const afterDragBack = await waitForCounterValue(page, 1, 10_000);
     expect(afterDragBack?.current).toBe(1);
+  });
+
+  test('mouse drag still navigates in a narrow web viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 393, height: 852 });
+    await preacceptCookies(page);
+
+    const counter = await navigateToTravelWithSlider(page, { requireVisibleNextArrow: false });
+    if (!counter) {
+      throw new Error('Slider test precondition failed');
+    }
+
+    expect(counter.current).toBe(1);
+
+    const dragOk = await dragSlider(page, 0.72, 0.38);
+    expect(dragOk).toBe(true);
+
+    await page.waitForTimeout(1000);
+    const afterDrag = await waitForCounterValue(page, 2, 10_000);
+    expect(afterDrag?.current).toBe(2);
   });
 
   test('keyboard arrows navigate the slider', async ({ page }) => {

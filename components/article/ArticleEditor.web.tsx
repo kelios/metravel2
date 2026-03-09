@@ -51,9 +51,14 @@ const isTestEnv =
     ((process as any).env.NODE_ENV === 'test' || (process as any).env.JEST_WORKER_ID !== undefined);
 
 // Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
+const loadQuillEditorModule =
+    isWeb && win
+        ? () => import('@/components/article/QuillEditor.web')
+        : null;
+
 const QuillEditor =
     isWeb && win
-        ? (React.lazy(() => import('@/components/article/QuillEditor.web')) as any)
+        ? (React.lazy(() => loadQuillEditorModule!()) as any)
         : undefined;
 
 const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
@@ -195,6 +200,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     );
 
     const requestQuillLoad = useCallback(() => {
+        if (loadQuillEditorModule) {
+            void loadQuillEditorModule().catch(() => null);
+        }
         if (shouldLoadQuill) return;
         setShouldLoadQuill(true);
     }, [shouldLoadQuill]);
@@ -622,11 +630,67 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         return typeof htmlRef.current === 'string' ? htmlRef.current : '';
     }, [showHtml]);
 
-    const insertImage = useCallback((url: string) => {
+    const readImageDimensions = useCallback(async (file: File) => {
+        if (!isWeb || !win || typeof Image === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+            return null;
+        }
+
+        return await new Promise<{ width: number; height: number } | null>((resolve) => {
+            let objectUrl = '';
+            try {
+                objectUrl = URL.createObjectURL(file);
+            } catch {
+                resolve(null);
+                return;
+            }
+
+            const image = new Image();
+            const finalize = (value: { width: number; height: number } | null) => {
+                try {
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
+                } catch {
+                    // noop
+                }
+                resolve(value);
+            };
+
+            image.onload = () => {
+                const width = Number((image as any).naturalWidth || image.width || 0);
+                const height = Number((image as any).naturalHeight || image.height || 0);
+                if (width > 0 && height > 0) {
+                    finalize({ width, height });
+                    return;
+                }
+                finalize(null);
+            };
+
+            image.onerror = () => finalize(null);
+            image.src = objectUrl;
+        });
+    }, []);
+
+    const insertImage = useCallback((url: string, dimensions?: { width: number; height: number } | null) => {
         if (!quillRef.current) return;
         const editor = quillRef.current.getEditor();
         const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
-        editor.insertEmbed(range.index, 'image', url, 'user');
+        const width = Number(dimensions?.width ?? 0);
+        const height = Number(dimensions?.height ?? 0);
+        if (
+            width > 0 &&
+            height > 0 &&
+            editor.clipboard?.dangerouslyPasteHTML
+        ) {
+            if (range.length > 0 && typeof editor.deleteText === 'function') {
+                editor.deleteText(range.index, range.length, 'user');
+            }
+            const safeUrl = String(url)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;');
+            const htmlSnippet = `<img src="${safeUrl}" width="${width}" height="${height}" style="display:block;width:100%;max-width:100%;height:auto;max-height:55vh;object-fit:contain;object-position:center;margin:6px 0 26px;" />`;
+            editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
+        } else {
+            editor.insertEmbed(range.index, 'image', url, 'user');
+        }
         editor.setSelection(range.index + 1, 0, 'silent');
         fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 });
     }, [fireChange]);
@@ -691,7 +755,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             form.append('file', file);
             form.append('collection', 'description');
             if (idTravel) form.append('id', String(idTravel));
-            const res = await uploadImage(form);
+            const [res, imageDimensions] = await Promise.all([
+                uploadImage(form),
+                readImageDimensions(file),
+            ]);
             if (__DEV__) {
                 console.info('[ArticleEditor] upload response', res);
             }
@@ -711,7 +778,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     // noop
                 }
             }
-            insertImage(imageUrl);
+            insertImage(imageUrl, imageDimensions);
         } catch (err) {
             if (__DEV__) {
                 console.error('[ArticleEditor] Image upload failed:', err);
@@ -720,7 +787,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         } finally {
             setIsImageUploading(false);
         }
-    }, [idTravel, insertImage, isAuthenticated]);
+    }, [idTravel, insertImage, isAuthenticated, readImageDimensions]);
 
     const openImagePicker = useCallback(() => {
         if (!win) return;
@@ -734,13 +801,24 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         input.click();
     }, [uploadAndInsert]);
 
+    const hasSurfaceDraggedFiles = useCallback((event: any) => {
+        const types = event?.dataTransfer?.types;
+        if (!types) return false;
+        if (typeof types.includes === 'function') return types.includes('Files');
+        return Array.from(types).includes('Files');
+    }, []);
+
     const handleSurfaceFileDrop = useCallback((file: File | null | undefined) => {
         if (!file) return false;
         if (typeof file.type !== 'string' || !file.type.startsWith('image/')) return false;
+        if (shouldLoadQuill && quillRef.current?.getEditor?.()) {
+            void uploadAndInsert(file);
+            return true;
+        }
         pendingDroppedImageRef.current = file;
         requestQuillLoad();
         return true;
-    }, [requestQuillLoad]);
+    }, [requestQuillLoad, shouldLoadQuill, uploadAndInsert]);
 
     useEffect(() => {
         if (!shouldLoadQuill) return;
@@ -1423,13 +1501,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     ? ({
                           'data-editor-surface': 'article-editor',
                           onDragEnter: (e: any) => {
-                              const file = e?.dataTransfer?.files?.[0] ?? null;
-                              if (!handleSurfaceFileDrop(file)) return;
+                              if (!hasSurfaceDraggedFiles(e)) return;
                               e.preventDefault();
                           },
                           onDragOver: (e: any) => {
-                              const file = e?.dataTransfer?.files?.[0] ?? null;
-                              if (!handleSurfaceFileDrop(file)) return;
+                              if (!hasSurfaceDraggedFiles(e)) return;
                               e.preventDefault();
                               try {
                                   e.dataTransfer.dropEffect = 'copy';
@@ -1445,6 +1521,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                               e.stopPropagation?.();
                           },
                           onFocusCapture: () => {
+                              requestQuillLoad();
+                          },
+                          onPointerDown: () => {
+                              requestQuillLoad();
+                          },
+                          onClickCapture: () => {
                               requestQuillLoad();
                           },
                           onMouseDown: (e: any) => {

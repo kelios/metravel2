@@ -12,6 +12,10 @@ import { render, fireEvent } from '@testing-library/react-native'
 import SliderWeb from '@/components/travel/Slider.web'
 import Slider from '@/components/travel/Slider'
 import type { SliderImage } from '@/components/travel/Slider'
+import {
+  shouldHandleMouseDragStart,
+  shouldHandlePointerDragStart,
+} from '@/components/travel/sliderParts/useWebScrollInteraction'
 
 const createImages = (count: number): SliderImage[] =>
   Array.from({ length: count }, (_, index) => ({
@@ -284,6 +288,34 @@ describe('Slider navigation - Web', () => {
       // Both slide 0 and slide 1 should be rendered (virtualization keeps neighbors)
       expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
       expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
+    })
+  })
+
+  describe('Web drag gating regression', () => {
+    it('allows mouse drag start in narrow web viewport logic', () => {
+      expect(
+        shouldHandleMouseDragStart({
+          button: 0,
+          sourceCapabilities: null,
+        })
+      ).toBe(true)
+
+      expect(shouldHandlePointerDragStart('mouse', true)).toBe(true)
+    })
+
+    it('ignores synthesized mouse events that come from touch input', () => {
+      expect(
+        shouldHandleMouseDragStart({
+          button: 0,
+          sourceCapabilities: { firesTouchEvents: true },
+        })
+      ).toBe(false)
+    })
+
+    it('keeps touch pointer drag disabled on mobile while allowing it on non-mobile web', () => {
+      expect(shouldHandlePointerDragStart('touch', true)).toBe(false)
+      expect(shouldHandlePointerDragStart('touch', false)).toBe(true)
+      expect(shouldHandlePointerDragStart('pen', false)).toBe(true)
     })
   })
 })

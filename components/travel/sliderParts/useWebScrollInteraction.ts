@@ -3,6 +3,21 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { clamp } from './utils';
 
+export function shouldHandleMouseDragStart(event: {
+  button: number;
+  sourceCapabilities?: { firesTouchEvents?: boolean } | null;
+}): boolean {
+  if (event.button !== 0) return false;
+  if (event.sourceCapabilities?.firesTouchEvents) return false;
+  return true;
+}
+
+export function shouldHandlePointerDragStart(pointerType: string | undefined, isMobile: boolean): boolean {
+  if (pointerType === 'mouse') return true;
+  if (isMobile) return false;
+  return pointerType === 'touch' || pointerType === 'pen';
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -231,8 +246,10 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     // Mouse drag (desktop/tablet only). On mobile browsers synthesized mouse events
     // can interfere with native touch scroll-snap.
     const onMouseDown = (e: MouseEvent) => {
-      if (e.button !== 0) return;
-      if ((e as any).sourceCapabilities?.firesTouchEvents) return;
+      if (!shouldHandleMouseDragStart({
+        button: e.button,
+        sourceCapabilities: (e as any).sourceCapabilities ?? null,
+      })) return;
       beginDrag(e.pageX);
     };
 
@@ -256,18 +273,13 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     // On mobile phones, native CSS scroll-snap provides GPU-accelerated swiping
     // that is far smoother than JS-based manual scrollLeft management.
     // A lightweight passive touchstart listener still fires prefetch/dismiss.
-    const isTouchPointerEvent = (e: PointerEvent) => {
-      return (e as any).pointerType === 'touch' || (e as any).pointerType === 'pen';
-    };
-
     const onPointerDown = (e: PointerEvent) => {
+      if (!shouldHandlePointerDragStart(e.pointerType, isMobile)) return;
       if (e.pointerType === 'mouse') {
         beginDrag(e.pageX, e.pointerId);
         try { e.preventDefault(); } catch { /* noop */ }
         return;
       }
-      if (isMobile) return;
-      if (!isTouchPointerEvent(e)) return;
       beginDrag(e.pageX, e.pointerId);
       try { e.preventDefault(); } catch { /* noop */ }
     };

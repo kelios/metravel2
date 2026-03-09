@@ -1,6 +1,7 @@
 import { act, fireEvent, render, type RenderAPI } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import Slider, { type SliderImage } from '@/components/travel/Slider'
+import { computeSliderHeight } from '@/components/travel/sliderParts/utils'
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
@@ -377,5 +378,20 @@ describe('Slider', () => {
     // При mobileHeightPercent=0.6 и высоте 1000px, высота должна быть 600px
     const image = getByTestId('slider-image-0')
     expect(image).toBeTruthy()
+  })
+
+  it('uses fixed viewport percentage for mobile slider height', () => {
+    expect(
+      computeSliderHeight(360, {
+        imagesLength: 1,
+        isMobile: true,
+        isTablet: false,
+        winH: 1000,
+        insetsTop: 0,
+        insetsBottom: 0,
+        mobileHeightPercent: 0.7,
+        firstAR: 16 / 9,
+      })
+    ).toBe(700)
   })
 })

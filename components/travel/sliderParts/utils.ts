@@ -127,8 +127,8 @@ export const computeSliderHeight = (
 
   if (opts.isMobile) {
     const viewportH = Math.max(0, opts.winH);
-    const maxH = viewportH * opts.mobileHeightPercent;
-    return clamp(arDriven, 200, maxH);
+    const mobileH = viewportH * opts.mobileHeightPercent;
+    return clamp(mobileH, 200, viewportH);
   }
 
   if (opts.isTablet) {

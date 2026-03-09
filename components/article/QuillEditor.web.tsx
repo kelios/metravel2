@@ -34,6 +34,22 @@ if (typeof window !== 'undefined' && !isTestEnv) {
 }
 
 let quillLoadPromise: Promise<any> | null = null
+const QUILL_EDITOR_WEB_STYLES_ID = 'article-editor-quill-web-styles'
+const QUILL_EDITOR_WEB_CSS = `
+.ql-editor img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: 55vh;
+  object-fit: contain;
+  object-position: center;
+  margin: 6px 0 26px;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+`
+
 const loadQuill = () => {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Quill is only available in the browser'))
@@ -92,6 +108,18 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+
+    let styleEl = document.getElementById(QUILL_EDITOR_WEB_STYLES_ID) as HTMLStyleElement | null
+    if (!styleEl) {
+      styleEl = document.createElement('style')
+      styleEl.id = QUILL_EDITOR_WEB_STYLES_ID
+      styleEl.textContent = QUILL_EDITOR_WEB_CSS
+      document.head.appendChild(styleEl)
+    }
+  }, [])
 
   useEffect(() => {
     if (!containerRef.current) return
