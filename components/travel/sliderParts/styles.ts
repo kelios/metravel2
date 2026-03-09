@@ -95,6 +95,31 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     scrollContent: {
       flexDirection: 'row',
     },
+    carouselViewport: {
+      width: '100%',
+      height: '100%',
+      overflow: 'hidden',
+      position: 'relative',
+      ...Platform.select<any>({
+        web: {
+          contain: 'layout paint size',
+          userSelect: 'none',
+        },
+        default: {},
+      }),
+    },
+    carouselTrack: {
+      flexDirection: 'row',
+      height: '100%',
+      ...Platform.select<any>({
+        web: {
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          transform: 'translate3d(0,0,0)',
+        },
+        default: {},
+      }),
+    },
     slide: {
       flexShrink: 0,
       position: 'relative',

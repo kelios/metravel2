@@ -29,6 +29,9 @@ const AUTHOR_WRAPPER_STYLE = { marginTop: 12 } as const
 
 type ImgLike = { url: string; width?: number; height?: number; updated_at?: string | null; id?: number | string }
 
+const shouldShowHeroSliderArrows = (isMobile: boolean) => Platform.OS === 'web' || !isMobile
+const shouldHideHeroSliderArrowsOnMobile = Platform.OS !== 'web'
+
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
   createSafeImageUrl(url, updated_at, id)
 
@@ -225,7 +228,7 @@ function TravelHeroSectionInner({
             <>
               {webHeroLoaded && (
                 <View style={{ position: 'absolute', inset: 0, zIndex: 1 } as any} collapsable={false}>
-                  <Slider images={galleryImages} showArrows={!isMobile} hideArrowsOnMobile showDots={isMobile} autoPlay={false} preloadCount={0} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={handleSliderImageLoad} firstImagePreloaded={webHeroLoaded} onImagePress={handleImagePress} />
+                  <Slider images={galleryImages} showArrows={shouldShowHeroSliderArrows(isMobile)} hideArrowsOnMobile={shouldHideHeroSliderArrowsOnMobile} showDots={isMobile} autoPlay={false} preloadCount={0} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={handleSliderImageLoad} firstImagePreloaded={webHeroLoaded} onImagePress={handleImagePress} />
                 </View>
               )}
               {!overlayUnmounted && (
@@ -236,7 +239,7 @@ function TravelHeroSectionInner({
             </>
           ) : (
             <View style={{ position: 'absolute', inset: 0 } as any} collapsable={false}>
-              <Slider images={galleryImages} showArrows={!isMobile} hideArrowsOnMobile showDots={isMobile} autoPlay={false} preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={onFirstImageLoad} firstImagePreloaded={renderSlider && Platform.OS === 'web'} onImagePress={handleImagePress} />
+              <Slider images={galleryImages} showArrows={shouldShowHeroSliderArrows(isMobile)} hideArrowsOnMobile={shouldHideHeroSliderArrowsOnMobile} showDots={isMobile} autoPlay={false} preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2} blurBackground aspectRatio={aspectRatio as number} fillContainer fit="contain" onFirstImageLoad={onFirstImageLoad} firstImagePreloaded={renderSlider && Platform.OS === 'web'} onImagePress={handleImagePress} />
             </View>
           )}
 

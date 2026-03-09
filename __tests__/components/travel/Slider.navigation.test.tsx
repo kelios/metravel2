@@ -530,12 +530,48 @@ describe('Slider display correctness', () => {
       )
     })
 
-    const slide = tree!.root.findByProps({ testID: 'slider-slide-0' })
-    const style = Array.isArray(slide.props.style)
-      ? Object.assign({}, ...slide.props.style.filter(Boolean))
-      : slide.props.style
+    const viewport = tree!.root.findByProps({ testID: 'slider-scroll' })
+    const style = Array.isArray(viewport.props.style)
+      ? Object.assign({}, ...viewport.props.style.filter(Boolean))
+      : viewport.props.style
 
     expect(style.touchAction).toBe('pan-y pinch-zoom')
+  })
+
+  it('shows visible arrows on mobile web when explicitly enabled', async () => {
+    Object.assign(responsiveMock, {
+      width: 390,
+      height: 844,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+    })
+
+    const images = createImages(3)
+    let tree: renderer.ReactTestRenderer
+
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images}
+          showArrows
+          hideArrowsOnMobile={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+        />,
+      )
+    })
+
+    const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextStyle = Array.isArray(nextButton.props.style)
+      ? Object.assign({}, ...nextButton.props.style.filter(Boolean))
+      : nextButton.props.style
+
+    expect(nextButton).toBeTruthy()
+    expect(nextStyle.opacity).toBe(1)
   })
 
   it('renders correct number of slide containers', async () => {
