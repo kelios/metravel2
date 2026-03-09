@@ -148,13 +148,18 @@ describe('Slider navigation - Web', () => {
         nextButton.props.onPress() // 1 -> 2
       })
 
-      // Next arrow should be hidden at last slide
-      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toThrow()
-      // Previous arrow should be visible
+      // Both arrows stay available at the boundary, but navigation no longer wraps
+      expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
       expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
+
+      await act(async () => {
+        tree!.root.findByProps({ accessibilityLabel: 'Next slide' }).props.onPress()
+      })
+
+      expect(tree!.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
     })
 
-    it('hides Previous arrow on first slide (Instagram-style)', async () => {
+    it('keeps Previous arrow on first slide without wrap-around navigation', async () => {
       const images = createImages(3)
       let tree: renderer.ReactTestRenderer
 
@@ -171,10 +176,14 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      // At index 0: Previous arrow should not exist
-      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toThrow()
-      // Next arrow should be visible
+      expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
       expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
+
+      await act(async () => {
+        tree!.root.findByProps({ accessibilityLabel: 'Previous slide' }).props.onPress()
+      })
+
+      expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
     })
 
     it('does not render arrows when showArrows is false', async () => {
@@ -426,9 +435,15 @@ describe('Slider display correctness', () => {
     expect(tree!.root.findByProps({ testID: 'slider-clip' })).toBeTruthy()
     expect(tree!.root.findByProps({ testID: 'slider-scroll' })).toBeTruthy()
 
-    // Check navigation arrows — at index 0, only Next is visible (Instagram-style)
-    expect(() => tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toThrow()
+    expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
     expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
+     expect(
+       tree!.root.find(
+         (node: renderer.ReactTestInstance) =>
+           Array.isArray(node.props?.children) &&
+           node.props.children.join('') === '1/5'
+       )
+     ).toBeTruthy()
 
     // Check first image
     expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()

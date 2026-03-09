@@ -20,10 +20,12 @@ export interface UseWebScrollInteractionOptions {
   wrapperNodeRef: React.MutableRefObject<HTMLElement | null>;
   /** Resolve cached DOM nodes */
   resolveNodes: () => void;
-  /** Set active index */
-  setActiveIndex: (idx: number) => void;
   /** Programmatic scroll-to function */
   scrollTo: (idx: number, animated?: boolean) => void;
+  /** Sync active index from scroll offset */
+  setActiveIndexFromOffset?: (offsetX: number) => void;
+  /** Cancel active programmatic scroll animation */
+  cancelScrollAnimation?: () => void;
   /** Prefetch can be enabled after first interaction */
   enablePrefetch?: () => void;
   /** Dismiss swipe hint after first interaction */
@@ -56,8 +58,9 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     scrollNodeRef,
     wrapperNodeRef,
     resolveNodes,
-    setActiveIndex,
     scrollTo,
+    setActiveIndexFromOffset,
+    cancelScrollAnimation,
     enablePrefetch,
     dismissSwipeHint,
     pauseAutoplay,
@@ -68,37 +71,125 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragScrollLeftRef = useRef(0);
-  const dragStartIndexRef = useRef(0);
+  const dragLastXRef = useRef(0);
+  const dragLastTsRef = useRef(0);
+  const dragVelocityRef = useRef(0);
+  const activePointerIdRef = useRef<number | null>(null);
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollWriteFrameRef = useRef<number | null>(null);
+  const pendingScrollLeftRef = useRef(0);
 
-  // Snap helper
-  const snapToSlide = useCallback(
-    (targetIdx: number) => {
-      const node = scrollNodeRef.current;
-      if (!node) return;
-      const cw = containerWRef.current || 1;
-      node.classList.add('slider-snap-disabled');
-      node.scrollLeft = targetIdx * cw;
-      setActiveIndex(targetIdx);
-      requestAnimationFrame(() => {
-        node.scrollLeft = targetIdx * cw;
-        requestAnimationFrame(() => {
-          node.classList.remove('slider-snap-disabled');
-        });
-      });
-    },
-    [scrollNodeRef, containerWRef, setActiveIndex],
+  const clearScrollIdleTimer = useCallback(() => {
+    if (scrollIdleTimerRef.current) {
+      clearTimeout(scrollIdleTimerRef.current);
+      scrollIdleTimerRef.current = null;
+    }
+  }, []);
+
+  const getMaxScrollLeft = useCallback(() => {
+    const cw = containerWRef.current || 1;
+    return Math.max(0, (slideCount - 1) * cw);
+  }, [containerWRef, slideCount]);
+
+  const clampScrollLeft = useCallback(
+    (value: number) => clamp(value, 0, getMaxScrollLeft()),
+    [getMaxScrollLeft],
   );
 
-  const settleToNearestSlide = useCallback(() => {
+  const writeScrollLeft = useCallback(
+    (value: number) => {
+      pendingScrollLeftRef.current = clampScrollLeft(value);
+      if (scrollWriteFrameRef.current != null) return;
+      scrollWriteFrameRef.current = window.requestAnimationFrame(() => {
+        scrollWriteFrameRef.current = null;
+        const node = scrollNodeRef.current;
+        if (!node) return;
+        node.scrollLeft = pendingScrollLeftRef.current;
+      });
+    },
+    [clampScrollLeft, scrollNodeRef],
+  );
+
+  const scheduleScrollSync = useCallback(
+    (delay: number) => {
+      clearScrollIdleTimer();
+      scrollIdleTimerRef.current = setTimeout(() => {
+        const node = scrollNodeRef.current;
+        if (!node || isDraggingRef.current) return;
+        setActiveIndexFromOffset?.(node.scrollLeft);
+      }, delay);
+    },
+    [clearScrollIdleTimer, scrollNodeRef, setActiveIndexFromOffset],
+  );
+
+  const beginDrag = useCallback(
+    (pageX: number, pointerId?: number) => {
+      const node = scrollNodeRef.current;
+      if (!node) return;
+      cancelScrollAnimation?.();
+      clearScrollIdleTimer();
+      dismissSwipeHint?.();
+      enablePrefetch?.();
+      pauseAutoplay?.();
+      isDraggingRef.current = true;
+      activePointerIdRef.current = pointerId ?? null;
+      dragStartXRef.current = pageX;
+      dragLastXRef.current = pageX;
+      dragLastTsRef.current = performance.now();
+      dragVelocityRef.current = 0;
+      dragScrollLeftRef.current = node.scrollLeft;
+      pendingScrollLeftRef.current = node.scrollLeft;
+      node.classList.add('slider-snap-disabled');
+      node.style.cursor = 'grabbing';
+      node.style.userSelect = 'none';
+      if (pointerId != null) {
+        try {
+          node.setPointerCapture(pointerId);
+        } catch {
+          activePointerIdRef.current = null;
+        }
+      }
+    },
+    [cancelScrollAnimation, clearScrollIdleTimer, dismissSwipeHint, enablePrefetch, pauseAutoplay, scrollNodeRef],
+  );
+
+  const moveDrag = useCallback(
+    (pageX: number) => {
+      if (!isDraggingRef.current) return;
+      const dx = pageX - dragStartXRef.current;
+      const nextLeft = dragScrollLeftRef.current - dx;
+      writeScrollLeft(nextLeft);
+      const now = performance.now();
+      const dt = Math.max(1, now - dragLastTsRef.current);
+      dragVelocityRef.current = (pageX - dragLastXRef.current) / dt;
+      dragLastXRef.current = pageX;
+      dragLastTsRef.current = now;
+    },
+    [writeScrollLeft],
+  );
+
+  const endDrag = useCallback(() => {
     const node = scrollNodeRef.current;
-    if (!node) return;
+    if (!node || !isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    node.style.cursor = '';
+    node.style.userSelect = '';
+    if (activePointerIdRef.current != null) {
+      try {
+        node.releasePointerCapture(activePointerIdRef.current);
+      } catch {
+        // noop
+      }
+    }
+    activePointerIdRef.current = null;
     const cw = containerWRef.current || 1;
-    const idx = Math.round(node.scrollLeft / cw);
-    const target = clamp(idx, 0, Math.max(0, slideCount - 1));
-    snapToSlide(target);
-    node.style.scrollSnapType = '';
-  }, [scrollNodeRef, containerWRef, slideCount, snapToSlide]);
+    const baseLeft = Number.isFinite(node.scrollLeft) ? node.scrollLeft : pendingScrollLeftRef.current;
+    const projectedLeft = clampScrollLeft(baseLeft - dragVelocityRef.current * Math.min(320, Math.max(160, cw * 0.35)));
+    const target = clamp(Math.round(projectedLeft / cw), 0, Math.max(0, slideCount - 1));
+    scrollTo(target, true);
+    scheduleScrollSync(isMobile ? 140 : 80);
+    resumeAutoplay?.();
+  }, [clampScrollLeft, containerWRef, isMobile, resumeAutoplay, scheduleScrollSync, scrollNodeRef, scrollTo, slideCount]);
 
   // Consolidated effect: keyboard + mouse drag + pointer/touch swipe + scrollend
   useEffect(() => {
@@ -119,10 +210,12 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       dismissSwipeHint?.();
       enablePrefetch?.();
       if (e.key === 'ArrowLeft') {
-        const target = (indexRef.current - 1 + slideCount) % Math.max(1, slideCount);
+        const target = Math.max(0, indexRef.current - 1);
+        if (target === indexRef.current) return;
         scrollTo(target);
       } else if (e.key === 'ArrowRight') {
-        const target = (indexRef.current + 1) % slideCount;
+        const target = Math.min(Math.max(0, slideCount - 1), indexRef.current + 1);
+        if (target === indexRef.current) return;
         scrollTo(target);
       }
     };
@@ -131,50 +224,23 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     // can interfere with native touch scroll-snap.
     const onMouseDown = !isMobile ? (e: MouseEvent) => {
       if (e.button !== 0) return;
-      dismissSwipeHint?.();
-      enablePrefetch?.();
-      pauseAutoplay?.();
-      isDraggingRef.current = true;
-      dragStartXRef.current = e.pageX;
-      dragScrollLeftRef.current = node.scrollLeft;
-      dragStartIndexRef.current = indexRef.current;
-      node.style.cursor = 'grabbing';
-      node.style.scrollSnapType = 'none';
-      node.style.userSelect = 'none';
+      beginDrag(e.pageX);
     } : null;
 
     const onMouseMove = !isMobile ? (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       e.preventDefault();
-      const dx = e.pageX - dragStartXRef.current;
-      node.scrollLeft = dragScrollLeftRef.current - dx;
+      moveDrag(e.pageX);
     } : null;
 
-    const onMouseUp = !isMobile ? (e: MouseEvent) => {
+    const onMouseUp = !isMobile ? (_e: MouseEvent) => {
       if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
-      node.style.cursor = '';
-      node.style.userSelect = '';
-      const dx = e.pageX - dragStartXRef.current;
-      const cw = containerWRef.current || 1;
-      const cur = dragStartIndexRef.current;
-      const threshold = cw * 0.15;
-      let target = cur;
-      if (dx < -threshold) target = cur + 1;
-      else if (dx > threshold) target = cur - 1;
-      target = clamp(target, 0, Math.max(0, slideCount - 1));
-      snapToSlide(target);
-      node.style.scrollSnapType = '';
-      resumeAutoplay?.();
+      endDrag();
     } : null;
 
     const onMouseLeave = !isMobile ? () => {
       if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
-      node.style.cursor = '';
-      node.style.userSelect = '';
-      settleToNearestSlide();
-      resumeAutoplay?.();
+      endDrag();
     } : null;
 
     // Touch / pointer swipe — only on non-mobile (desktop/tablet).
@@ -186,40 +252,28 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     };
 
     const onPointerDown = !isMobile ? (e: PointerEvent) => {
-      if (!isTouchPointerEvent(e)) return;
-      dismissSwipeHint?.();
-      enablePrefetch?.();
-      pauseAutoplay?.();
-      isDraggingRef.current = true;
-      dragStartXRef.current = e.pageX;
-      dragScrollLeftRef.current = node.scrollLeft;
-      dragStartIndexRef.current = indexRef.current;
-      node.style.scrollSnapType = 'none';
+      if (!isTouchPointerEvent(e) && e.pointerType !== 'mouse') return;
+      beginDrag(e.pageX, e.pointerId);
       try { e.preventDefault(); } catch { /* noop */ }
     } : null;
 
     const onPointerMove = !isMobile ? (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
-      if (!isTouchPointerEvent(e)) return;
+      if (activePointerIdRef.current != null && e.pointerId !== activePointerIdRef.current) return;
       try { e.preventDefault(); } catch { /* noop */ }
-      const dx = e.pageX - dragStartXRef.current;
-      node.scrollLeft = dragScrollLeftRef.current - dx;
+      moveDrag(e.pageX);
     } : null;
 
     const onPointerUp = !isMobile ? (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
-      if (!isTouchPointerEvent(e)) return;
-      isDraggingRef.current = false;
-      settleToNearestSlide();
-      resumeAutoplay?.();
+      if (activePointerIdRef.current != null && e.pointerId !== activePointerIdRef.current) return;
+      endDrag();
     } : null;
 
     const onPointerCancel = !isMobile ? (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
-      if (!isTouchPointerEvent(e)) return;
-      isDraggingRef.current = false;
-      settleToNearestSlide();
-      resumeAutoplay?.();
+      if (activePointerIdRef.current != null && e.pointerId !== activePointerIdRef.current) return;
+      endDrag();
     } : null;
 
     // On mobile: lightweight passive touch listener for prefetch/dismiss only
@@ -229,33 +283,28 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       dismissSwipeHint?.();
       enablePrefetch?.();
       if (isMobile) return; // let native scroll-snap handle the rest
-      pauseAutoplay?.();
-      isDraggingRef.current = true;
-      dragStartXRef.current = e.touches[0].pageX;
-      dragScrollLeftRef.current = node.scrollLeft;
-      dragStartIndexRef.current = indexRef.current;
-      node.style.scrollSnapType = 'none';
+      beginDrag(e.touches[0].pageX);
     };
 
     const onTouchMove = !isMobile ? (e: TouchEvent) => {
       if (!isDraggingRef.current) return;
       if (e.touches.length !== 1) return;
-      const dx = e.touches[0].pageX - dragStartXRef.current;
-      node.scrollLeft = dragScrollLeftRef.current - dx;
+      moveDrag(e.touches[0].pageX);
     } : null;
 
     const onTouchEnd = !isMobile ? () => {
       if (!isDraggingRef.current) return;
-      isDraggingRef.current = false;
-      settleToNearestSlide();
-      resumeAutoplay?.();
+      endDrag();
     } : null;
 
+    const onScroll = () => {
+      if (isDraggingRef.current) return;
+      scheduleScrollSync(isMobile ? 140 : 72);
+    };
+
     const onScrollEnd = () => {
-      const cw = containerWRef.current || 1;
-      const idx = Math.round(node.scrollLeft / cw);
-      const target = clamp(idx, 0, Math.max(0, slideCount - 1));
-      setActiveIndex(target);
+      clearScrollIdleTimer();
+      setActiveIndexFromOffset?.(node.scrollLeft);
     };
 
     // Attach listeners
@@ -264,6 +313,7 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
     if (onMouseMove) window.addEventListener('mousemove', onMouseMove);
     if (onMouseUp) window.addEventListener('mouseup', onMouseUp);
     if (onMouseLeave) node.addEventListener('mouseleave', onMouseLeave);
+    node.addEventListener('scroll', onScroll, { passive: true } as any);
     node.addEventListener('scrollend', onScrollEnd);
 
     if (onPointerDown) node.addEventListener('pointerdown', onPointerDown as EventListener, { passive: false } as any);
@@ -281,6 +331,7 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       if (onMouseMove) window.removeEventListener('mousemove', onMouseMove);
       if (onMouseUp) window.removeEventListener('mouseup', onMouseUp);
       if (onMouseLeave) node.removeEventListener('mouseleave', onMouseLeave);
+      node.removeEventListener('scroll', onScroll as EventListener);
       node.removeEventListener('scrollend', onScrollEnd);
 
       if (onPointerDown) node.removeEventListener('pointerdown', onPointerDown as EventListener);
@@ -292,11 +343,15 @@ export function useWebScrollInteraction(options: UseWebScrollInteractionOptions)
       if (onTouchMove) node.removeEventListener('touchmove', onTouchMove as EventListener);
       if (onTouchEnd) node.removeEventListener('touchend', onTouchEnd as EventListener);
 
+      if (scrollWriteFrameRef.current != null) {
+        window.cancelAnimationFrame(scrollWriteFrameRef.current);
+        scrollWriteFrameRef.current = null;
+      }
       if (scrollIdleTimerRef.current) {
         clearTimeout(scrollIdleTimerRef.current);
         scrollIdleTimerRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dismissSwipeHint, enablePrefetch, pauseAutoplay, resumeAutoplay, slideCount, setActiveIndex, scrollTo, resolveNodes, isMobile]);
+  }, [beginDrag, cancelScrollAnimation, clearScrollIdleTimer, dismissSwipeHint, enablePrefetch, endDrag, indexRef, isMobile, moveDrag, pauseAutoplay, resolveNodes, resumeAutoplay, scheduleScrollSync, scrollTo, setActiveIndexFromOffset, slideCount, wrapperNodeRef]);
 }

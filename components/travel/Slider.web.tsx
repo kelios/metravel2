@@ -28,6 +28,7 @@ import {
   View,
   ScrollView,
   LayoutChangeEvent,
+  Text,
   TouchableOpacity,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -91,10 +92,6 @@ interface NavArrowsProps {
   onNext: () => void;
 }
 
-interface NavArrowsInternalProps extends NavArrowsProps {
-  currentIndex: number;
-}
-
 const NavArrows = memo(function NavArrows({
   imagesLen,
   isMobile,
@@ -104,42 +101,35 @@ const NavArrows = memo(function NavArrows({
   styles,
   onPrev,
   onNext,
-  currentIndex,
-}: NavArrowsInternalProps) {
+}: NavArrowsProps) {
   if (imagesLen < 2 || (isMobile && hideArrowsOnMobile)) return null;
   const iconSize = isMobile ? 16 : isTablet ? 18 : 20;
-  const isFirst = currentIndex === 0;
-  const isLast = currentIndex === imagesLen - 1;
   return (
     <>
-      {!isFirst && (
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Previous slide"
-          onPress={onPrev}
-          activeOpacity={0.9}
-          style={[styles.navBtn, { left: navOffset }]}
-          {...({ className: 'slider-nav-btn' } as any)}
-        >
-          <View style={styles.arrowIconContainer}>
-            <Feather name="chevron-left" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
-          </View>
-        </TouchableOpacity>
-      )}
-      {!isLast && (
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Next slide"
-          onPress={onNext}
-          activeOpacity={0.9}
-          style={[styles.navBtn, { right: navOffset }]}
-          {...({ className: 'slider-nav-btn' } as any)}
-        >
-          <View style={styles.arrowIconContainer}>
-            <Feather name="chevron-right" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
-          </View>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Previous slide"
+        onPress={onPrev}
+        activeOpacity={0.9}
+        style={[styles.navBtn, { left: navOffset }]}
+        {...({ className: 'slider-nav-btn' } as any)}
+      >
+        <View style={styles.arrowIconContainer}>
+          <Feather name="chevron-left" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Next slide"
+        onPress={onNext}
+        activeOpacity={0.9}
+        style={[styles.navBtn, { right: navOffset }]}
+        {...({ className: 'slider-nav-btn' } as any)}
+      >
+        <View style={styles.arrowIconContainer}>
+          <Feather name="chevron-right" size={iconSize} color="rgba(255,255,255,0.95)" style={styles.arrowIcon} />
+        </View>
+      </TouchableOpacity>
     </>
   );
 });
@@ -257,12 +247,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     insets,
     getUri,
     setContainerWidth,
-    setActiveIndex,
     setActiveIndexFromOffset,
     dismissSwipeHint,
     enablePrefetch,
-    next,
-    prev,
     scrollTo,
     setScrollToImpl,
     pauseAutoplay,
@@ -289,15 +276,23 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const currentIndexRef = useRef(0);
   const scrollRef = useRef<any>(null);
   const wrapperRef = useRef<any>(null);
-  const isDraggingRef = useRef(false);
-  const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Cached DOM node refs — set once, avoid querySelector on every interaction
   const scrollNodeRef = useRef<HTMLElement | null>(null);
   const wrapperNodeRef = useRef<HTMLElement | null>(null);
+  const scrollAnimationFrameRef = useRef<number | null>(null);
+  const scrollAnimationIdRef = useRef(0);
 
   const computedH = coreContainerH;
   const containerH = fillContainer ? '100%' : computedH;
   const renderedSlideWidth = measuredSlideWidth ?? containerW;
+
+  const cancelScrollAnimation = useCallback(() => {
+    if (scrollAnimationFrameRef.current != null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(scrollAnimationFrameRef.current);
+      scrollAnimationFrameRef.current = null;
+    }
+    scrollAnimationIdRef.current += 1;
+  }, []);
 
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -364,7 +359,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (idx: number, widthOverride?: number) => {
       const node = scrollNodeRef.current;
       if (!node) return;
-      if (isDraggingRef.current) return;
+      cancelScrollAnimation();
       const w = widthOverride ?? containerWRef.current;
       if (!Number.isFinite(w) || w <= 0) return;
       const left = idx * w;
@@ -380,7 +375,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         });
       });
     },
-    [containerWRef],
+    [cancelScrollAnimation, containerWRef],
   );
 
   // Sync container width from DOM
@@ -430,7 +425,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // Uses direct scrollLeft assignment with snap-disabled class because
   // node.scrollTo() is silently blocked by scroll-snap-type: x mandatory in Chromium.
   const scrollToDom = useCallback(
-    (i: number, _animated = true) => {
+    (i: number, animated = true) => {
       const wrapped = Math.max(0, Math.min(i, images.length - 1));
       resolveNodes();
       const node = scrollNodeRef.current;
@@ -438,22 +433,53 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const liveW = containerWRef.current;
         const left = wrapped * liveW;
         if (Math.abs((node.scrollLeft || 0) - left) < 1) {
-          setActiveIndex(wrapped);
           return;
         }
-        node.classList.add('slider-snap-disabled');
-        void node.offsetHeight;
-        node.scrollLeft = left;
-        setActiveIndex(wrapped);
-        requestAnimationFrame(() => {
+        cancelScrollAnimation();
+
+        if (!animated) {
+          node.classList.add('slider-snap-disabled');
+          void node.offsetHeight;
           node.scrollLeft = left;
           requestAnimationFrame(() => {
+            node.scrollLeft = left;
+            requestAnimationFrame(() => {
+              node.classList.remove('slider-snap-disabled');
+            });
+          });
+          return;
+        }
+
+        const animationId = scrollAnimationIdRef.current + 1;
+        scrollAnimationIdRef.current = animationId;
+        const startLeft = node.scrollLeft || 0;
+        const delta = left - startLeft;
+        const duration = Math.max(180, Math.min(320, Math.abs(delta) * 0.35));
+        const startTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        node.classList.add('slider-snap-disabled');
+
+        const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+        const step = (ts: number) => {
+          if (scrollAnimationIdRef.current !== animationId) return;
+          const elapsed = ts - startTs;
+          const progress = duration <= 0 ? 1 : Math.min(1, elapsed / duration);
+          node.scrollLeft = startLeft + delta * easeOutCubic(progress);
+          if (progress < 1) {
+            scrollAnimationFrameRef.current = window.requestAnimationFrame(step);
+            return;
+          }
+          node.scrollLeft = left;
+          scrollAnimationFrameRef.current = null;
+          requestAnimationFrame(() => {
+            if (scrollAnimationIdRef.current !== animationId) return;
             node.classList.remove('slider-snap-disabled');
           });
-        });
+        };
+
+        scrollAnimationFrameRef.current = window.requestAnimationFrame(step);
       }
     },
-    [resolveNodes, images.length, setActiveIndex, containerWRef]
+    [cancelScrollAnimation, resolveNodes, images.length, containerWRef]
   );
 
   useEffect(() => {
@@ -468,10 +494,20 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     ref,
     (): SliderRef => ({
       scrollTo,
-      next,
-      prev,
+      next: () => {
+        const cur = currentIndexRef.current;
+        const target = Math.min(images.length - 1, cur + 1);
+        if (target === cur) return;
+        scrollTo(target);
+      },
+      prev: () => {
+        const cur = currentIndexRef.current;
+        const target = Math.max(0, cur - 1);
+        if (target === cur) return;
+        scrollTo(target);
+      },
     }),
-    [next, prev, scrollTo]
+    [images.length, scrollTo]
   );
 
   // Layout handler
@@ -487,30 +523,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [indexRef, setContainerWidth, resolveNodes, snapScrollToIndex]
   );
 
-  // Web scroll handler — on mobile, native scroll-snap settles automatically so
-  // we sync React state and, if needed, correct any residual drift after touch settles.
-  const handleScroll = useCallback(
-    (_e: any) => {
-      if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current);
-      const idleDelay = isMobile ? 150 : 80;
-      scrollIdleTimerRef.current = setTimeout(() => {
-        const node = scrollNodeRef.current;
-        const xIdle = node?.scrollLeft ?? 0;
-        const cwIdle = containerWRef.current || 1;
-        setActiveIndexFromOffset(xIdle);
-
-        if (!node) return;
-        const snappedIdx = Math.max(0, Math.min(Math.round(xIdle / cwIdle), images.length - 1));
-        const targetLeft = snappedIdx * cwIdle;
-        const correctionThreshold = isMobile ? 8 : 1;
-        if (Math.abs(xIdle - targetLeft) > correctionThreshold) {
-          scrollTo(snappedIdx, false);
-        }
-      }, idleDelay);
-    },
-    [containerWRef, images.length, isMobile, scrollTo, setActiveIndexFromOffset]
-  );
-
   // Consolidated web scroll/drag/keyboard/touch interaction (E6.2)
   useWebScrollInteraction({
     slideCount: images.length,
@@ -519,8 +531,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     scrollNodeRef,
     wrapperNodeRef,
     resolveNodes,
-    setActiveIndex,
     scrollTo,
+    setActiveIndexFromOffset,
+    cancelScrollAnimation,
     enablePrefetch,
     dismissSwipeHint,
     pauseAutoplay,
@@ -531,22 +544,25 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // Invalidate cached DOM nodes on unmount
   useEffect(() => {
     return () => {
+      cancelScrollAnimation();
       scrollNodeRef.current = null;
       wrapperNodeRef.current = null;
     };
-  }, []);
+  }, [cancelScrollAnimation]);
 
   // Stable arrow callbacks — no wrap-around (Instagram-style: stop at boundaries)
   const onPrev = useCallback(() => {
     const cur = currentIndexRef.current;
-    if (cur <= 0) return;
-    scrollTo(cur - 1);
+    const target = Math.max(0, cur - 1);
+    if (target === cur) return;
+    scrollTo(target);
   }, [scrollTo]);
 
   const onNext = useCallback(() => {
     const cur = currentIndexRef.current;
-    if (cur >= images.length - 1) return;
-    scrollTo(cur + 1);
+    const target = Math.min(images.length - 1, cur + 1);
+    if (target === cur) return;
+    scrollTo(target);
   }, [images.length, scrollTo]);
 
   if (!images.length) return null;
@@ -585,12 +601,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={isMobile ? 200 : 100}
+            scrollEventThrottle={16}
             style={[styles.scrollView, isMobile ? styles.scrollSnapMobile : styles.scrollSnapDesktop]}
             contentContainerStyle={[styles.scrollContent, { height: containerH }]}
             onScrollBeginDrag={pauseAutoplay}
             onScrollEndDrag={resumeAutoplay}
-            onScroll={handleScroll}
             testID="slider-scroll"
             {...({ dataSet: { sliderInstance: sliderInstanceId } } as any)}
           >
@@ -648,8 +663,17 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             styles={styles}
             onPrev={onPrev}
             onNext={onNext}
-            currentIndex={currentIndex}
           />
+        )}
+
+        {imagesLen > 1 && (
+          <View style={[styles.counter, isMobile && styles.counterMobile, { pointerEvents: 'none' }]}>
+            <View style={styles.counterContainer}>
+              <Text style={styles.counterText}>
+                {currentIndex + 1}/{imagesLen}
+              </Text>
+            </View>
+          </View>
         )}
 
         {/* Instagram-style sliding window pagination dots */}
