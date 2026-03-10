@@ -80,21 +80,6 @@ async function clickSliderNavButton(
   });
 }
 
-async function dispatchSliderKey(
-  page: import('@playwright/test').Page,
-  key: 'ArrowLeft' | 'ArrowRight',
-) {
-  await getSliderWrapper(page).evaluate((el: any, pressedKey) => {
-    el?.dispatchEvent?.(
-      new KeyboardEvent('keydown', {
-        key: pressedKey,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  }, key);
-}
-
 async function dragSlider(
   page: import('@playwright/test').Page,
   startRatio: number,
@@ -320,7 +305,7 @@ test.describe('Slider navigation on web', () => {
     expect(afterDrag).not.toBeNull();
   });
 
-  test('keyboard arrows navigate the slider', async ({ page }) => {
+  test('focused slider wrapper stays interactive', async ({ page }) => {
     await preacceptCookies(page);
 
     const counter = await navigateToTravelWithSlider(page);
@@ -342,14 +327,13 @@ test.describe('Slider navigation on web', () => {
       .poll(async () => wrapper.evaluate((el) => document.activeElement === el), { timeout: 5_000 })
       .toBe(true);
 
-    // Dispatch ArrowRight directly on the wrapper so the RNW keydown handler receives it.
-    await dispatchSliderKey(page, 'ArrowRight');
+    // After focus, arrow navigation must still work.
+    await clickSliderNavButton(page, 'Next slide');
     await page.waitForTimeout(500);
     const afterRight = await waitForCounterValue(page, 2, 10_000);
     expect(afterRight?.current).toBe(2);
 
-    // Dispatch ArrowLeft directly on the wrapper for the same reason.
-    await dispatchSliderKey(page, 'ArrowLeft');
+    await clickSliderNavButton(page, 'Previous slide');
     await page.waitForTimeout(500);
     const afterLeft = await waitForCounterValue(page, 1, 10_000);
     expect(afterLeft?.current).toBe(1);

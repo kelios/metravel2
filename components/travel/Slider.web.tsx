@@ -520,32 +520,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       resumeAutoplay();
     };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (imagesLen < 2) return;
-      dismissSwipeHint();
-      enablePrefetch();
-
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        scrollTo(Math.max(0, currentIndexRef.current - 1));
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        scrollTo(Math.min(maxIndex, currentIndexRef.current + 1));
-      } else if (event.key === 'Home') {
-        event.preventDefault();
-        scrollTo(0);
-      } else if (event.key === 'End') {
-        event.preventDefault();
-        scrollTo(maxIndex);
-      }
-    };
-
     viewportNode.addEventListener('pointerdown', beginPointer, { passive: true });
     viewportNode.addEventListener('pointermove', movePointer, { passive: false });
     viewportNode.addEventListener('pointerup', endPointer, { passive: true });
     viewportNode.addEventListener('pointercancel', endPointer, { passive: true });
     viewportNode.addEventListener('lostpointercapture', handleLostPointerCapture, { passive: true } as any);
-    wrapperNode.addEventListener('keydown', handleKeyDown);
 
     return () => {
       viewportNode.removeEventListener('pointerdown', beginPointer as EventListener);
@@ -553,7 +532,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       viewportNode.removeEventListener('pointerup', endPointer as EventListener);
       viewportNode.removeEventListener('pointercancel', endPointer as EventListener);
       viewportNode.removeEventListener('lostpointercapture', handleLostPointerCapture as EventListener);
-      wrapperNode.removeEventListener('keydown', handleKeyDown as EventListener);
       resetDrag();
     };
   }, [
@@ -581,6 +559,27 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const viewportTouchAction = isMobile ? 'pan-y pinch-zoom' : 'pan-x';
 
+  const onWrapperKeyDown = useCallback((event: any) => {
+    if (imagesLen < 2) return;
+    dismissSwipeHint();
+    enablePrefetch();
+
+    const key = typeof event?.key === 'string' ? event.key : '';
+    if (key === 'ArrowLeft') {
+      event?.preventDefault?.();
+      scrollTo(Math.max(0, currentIndexRef.current - 1));
+    } else if (key === 'ArrowRight') {
+      event?.preventDefault?.();
+      scrollTo(Math.min(maxIndex, currentIndexRef.current + 1));
+    } else if (key === 'Home') {
+      event?.preventDefault?.();
+      scrollTo(0);
+    } else if (key === 'End') {
+      event?.preventDefault?.();
+      scrollTo(maxIndex);
+    }
+  }, [dismissSwipeHint, enablePrefetch, imagesLen, maxIndex, scrollTo]);
+
   const onPrev = useCallback(() => {
     const target = Math.max(0, currentIndexRef.current - 1);
     if (target !== currentIndexRef.current) scrollTo(target);
@@ -600,6 +599,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         testID="slider-wrapper"
         {...({ dataSet: { sliderInstance: sliderInstanceId } } as any)}
         onLayout={onLayout}
+        onKeyDown={Platform.OS === 'web' ? (onWrapperKeyDown as any) : undefined}
         style={[
           styles.wrapper,
           { height: containerH },
