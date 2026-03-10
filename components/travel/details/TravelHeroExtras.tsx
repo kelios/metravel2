@@ -1,0 +1,143 @@
+import React, { Suspense, useMemo } from 'react'
+import { Pressable, ScrollView, Text, View } from 'react-native'
+
+import { useThemedColors } from '@/hooks/useTheme'
+import type { TravelSectionLink } from '@/components/travel/sectionLinks'
+import type { Travel } from '@/types/types'
+
+import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
+import { withLazy } from './TravelDetailsLazy'
+import { Icon } from './TravelDetailsIcons'
+
+const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
+const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
+
+const HERO_QUICK_JUMP_KEYS = [
+  'description',
+  'map',
+  'points',
+  'comments',
+  'video',
+] as const
+
+const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
+const AUTHOR_PLACEHOLDER_STYLE = { minHeight: 160 } as const
+const AUTHOR_WRAPPER_STYLE = { marginTop: 12 } as const
+
+function HeroQuickJumps({
+  links,
+  isMobile,
+  onQuickJump,
+}: {
+  links: TravelSectionLink[]
+  isMobile: boolean
+  onQuickJump: (key: string) => void
+}) {
+  const styles = useTravelDetailsHeroStyles()
+  const colors = useThemedColors()
+
+  const chips = links.map((link) => (
+    <Pressable
+      key={link.key}
+      onPress={() => onQuickJump(link.key)}
+      style={({ pressed }) => [
+        styles.quickJumpChip,
+        pressed && styles.quickJumpChipPressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`Перейти к разделу ${link.label}`}
+    >
+      <Icon name={link.icon} size={16} color={colors.primary} />
+      <Text style={styles.quickJumpLabel}>{link.label}</Text>
+    </Pressable>
+  ))
+
+  if (!isMobile) return <>{chips}</>
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.quickJumpScrollContent}
+      style={styles.quickJumpScroll}
+    >
+      {chips}
+    </ScrollView>
+  )
+}
+
+export const TravelHeroExtras: React.FC<{
+  travel: Travel
+  isMobile: boolean
+  sectionLinks: TravelSectionLink[]
+  onQuickJump: (key: string) => void
+}> = ({ travel, isMobile, sectionLinks, onQuickJump }) => {
+  const styles = useTravelDetailsHeroStyles()
+
+  const quickJumpLinks = useMemo(() => {
+    const linksByKey = new Map(sectionLinks.map((link) => [link.key, link]))
+    return HERO_QUICK_JUMP_KEYS.map((key) => linksByKey.get(key)).filter(
+      Boolean,
+    ) as TravelSectionLink[]
+  }, [sectionLinks])
+
+  return (
+    <>
+      <View
+        testID="travel-details-quick-facts"
+        accessibilityRole="none"
+        accessibilityLabel="Краткие факты"
+        style={[
+          styles.sectionContainer,
+          styles.contentStable,
+          styles.quickFactsContainer,
+        ]}
+      >
+        <Suspense fallback={<View style={QUICK_FACTS_PLACEHOLDER_STYLE} />}>
+          <QuickFacts travel={travel} />
+        </Suspense>
+      </View>
+
+      {quickJumpLinks.length > 0 && (
+        <View
+          style={[
+            styles.sectionContainer,
+            styles.contentStable,
+            styles.quickJumpWrapper,
+          ]}
+        >
+          <HeroQuickJumps
+            links={quickJumpLinks}
+            isMobile={isMobile}
+            onQuickJump={onQuickJump}
+          />
+        </View>
+      )}
+
+      {!isMobile && (
+        <View
+          testID="travel-details-author"
+          accessibilityRole="none"
+          accessibilityLabel="Автор маршрута"
+          style={[
+            styles.sectionContainer,
+            styles.contentStable,
+            styles.authorCardContainer,
+          ]}
+        >
+          <Text style={styles.sectionHeaderText}>Автор</Text>
+          <Text style={styles.sectionSubtitle}>
+            Профиль, соцсети и другие путешествия автора
+          </Text>
+          <View style={AUTHOR_WRAPPER_STYLE}>
+            <Suspense fallback={<View style={AUTHOR_PLACEHOLDER_STYLE} />}>
+              <AuthorCard travel={travel} />
+            </Suspense>
+          </View>
+        </View>
+      )}
+    </>
+  )
+}
+
+export default React.memo(TravelHeroExtras)

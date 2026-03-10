@@ -10,6 +10,64 @@ const CACHE_INDEX_KEY = 'offline_travel_ids';
 const CACHE_PREFIX = 'offline_travel_';
 const MAX_CACHED_TRAVELS = 20;
 
+export async function cacheTravelOffline(id: number | string, data: unknown, isNative: boolean) {
+  if (!isNative || !id || !data) return;
+
+  try {
+    const key = `${CACHE_PREFIX}${id}`;
+    const serialized = JSON.stringify(data);
+
+    await AsyncStorage.setItem(key, serialized);
+
+    const indexRaw = await AsyncStorage.getItem(CACHE_INDEX_KEY);
+    let ids: string[] = [];
+    try {
+      ids = indexRaw ? JSON.parse(indexRaw) : [];
+    } catch {
+      ids = [];
+    }
+
+    const idStr = String(id);
+    ids = ids.filter((i) => i !== idStr);
+    ids.push(idStr);
+
+    while (ids.length > MAX_CACHED_TRAVELS) {
+      const removed = ids.shift();
+      if (removed) {
+        await AsyncStorage.removeItem(`${CACHE_PREFIX}${removed}`).catch(() => {});
+      }
+    }
+
+    await AsyncStorage.setItem(CACHE_INDEX_KEY, JSON.stringify(ids));
+  } catch {
+    // Не критично — продолжаем без кэша
+  }
+}
+
+export async function getOfflineTravelCached(id: number | string, isNative: boolean): Promise<unknown | null> {
+  if (!isNative || !id) return null;
+
+  try {
+    const raw = await AsyncStorage.getItem(`${CACHE_PREFIX}${id}`);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function getOfflineTravelCachedIds(isNative: boolean): Promise<string[]> {
+  if (!isNative) return [];
+
+  try {
+    const raw = await AsyncStorage.getItem(CACHE_INDEX_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * AND-10: Хук для кэширования маршрутов для offline-просмотра.
  *
@@ -23,67 +81,16 @@ export function useOfflineTravelCache() {
   const isNative = Platform.OS !== 'web';
 
   const cacheTravel = useCallback(async (id: number | string, data: unknown) => {
-    if (!isNative || !id || !data) return;
-
-    try {
-      const key = `${CACHE_PREFIX}${id}`;
-      const serialized = JSON.stringify(data);
-
-      // Сохраняем данные маршрута
-      await AsyncStorage.setItem(key, serialized);
-
-      // Обновляем индекс (FIFO)
-      const indexRaw = await AsyncStorage.getItem(CACHE_INDEX_KEY);
-      let ids: string[] = [];
-      try {
-        ids = indexRaw ? JSON.parse(indexRaw) : [];
-      } catch {
-        ids = [];
-      }
-
-      // Убираем дубликат если есть, добавляем в конец
-      const idStr = String(id);
-      ids = ids.filter((i) => i !== idStr);
-      ids.push(idStr);
-
-      // FIFO: если превышен лимит — удаляем самые старые
-      while (ids.length > MAX_CACHED_TRAVELS) {
-        const removed = ids.shift();
-        if (removed) {
-          await AsyncStorage.removeItem(`${CACHE_PREFIX}${removed}`).catch(() => {});
-        }
-      }
-
-      await AsyncStorage.setItem(CACHE_INDEX_KEY, JSON.stringify(ids));
-    } catch {
-      // Не критично — продолжаем без кэша
-    }
+    await cacheTravelOffline(id, data, isNative);
   }, [isNative]);
 
   const getCachedTravel = useCallback(async (id: number | string): Promise<unknown | null> => {
-    if (!isNative || !id) return null;
-
-    try {
-      const raw = await AsyncStorage.getItem(`${CACHE_PREFIX}${id}`);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
+    return getOfflineTravelCached(id, isNative);
   }, [isNative]);
 
   const getCachedIds = useCallback(async (): Promise<string[]> => {
-    if (!isNative) return [];
-
-    try {
-      const raw = await AsyncStorage.getItem(CACHE_INDEX_KEY);
-      if (!raw) return [];
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
+    return getOfflineTravelCachedIds(isNative);
   }, [isNative]);
 
   return { cacheTravel, getCachedTravel, getCachedIds };
 }
-

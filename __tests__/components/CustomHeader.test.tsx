@@ -1,9 +1,10 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CustomHeader from '@/components/layout/CustomHeader';
 import * as ReactNative from 'react-native';
+import { Platform } from 'react-native';
 
 const mockAuthContext = {
     isAuthenticated: false,
@@ -40,6 +41,11 @@ jest.mock('@/context/FiltersProvider', () => ({
 }));
 
 jest.mock('../../components/layout/AccountMenu', () => () => null);
+jest.mock('../../components/layout/HeaderContextBar', () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return () => React.createElement(View, { testID: 'mock-header-context-bar' });
+});
 
 // Моки для expo-router
 jest.mock('expo-router', () => ({
@@ -74,6 +80,7 @@ describe('CustomHeader', () => {
     const mockRouter = {
         push: mockPush,
     };
+    const originalPlatformOS = Platform.OS;
 
     const dimensionsSpy = jest.spyOn(ReactNative, 'useWindowDimensions');
 
@@ -111,6 +118,10 @@ describe('CustomHeader', () => {
             isBetween: () => false,
         };
         dimensionsSpy.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 } as ReactNative.ScaledSize);
+    });
+
+    afterEach(() => {
+        Object.defineProperty(Platform, 'OS', { value: originalPlatformOS });
     });
 
     const renderHeader = () => {
@@ -177,6 +188,39 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const utils = renderHeader();
             expect(utils.queryByTestId('mobile-menu-open')).toBeNull();
+        });
+
+        it('defers header context bar on web travel routes', async () => {
+            jest.useFakeTimers();
+            const restoreWindow = global.window;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+            (global as any).window = {
+                ...restoreWindow,
+                addEventListener: jest.fn(),
+                removeEventListener: jest.fn(),
+            };
+
+            try {
+                (usePathname as jest.Mock).mockReturnValue('/travels/test-slug');
+                const { queryByTestId } = render(
+                    <QueryClientProvider client={createTestQueryClient()}>
+                        <CustomHeader />
+                    </QueryClientProvider>
+                );
+
+                expect(queryByTestId('mock-header-context-bar')).toBeNull();
+
+                await act(async () => {
+                    jest.advanceTimersByTime(4000);
+                    await Promise.resolve();
+                });
+
+                expect(queryByTestId('mock-header-context-bar')).toBeTruthy();
+            } finally {
+                jest.runOnlyPendingTimers();
+                jest.useRealTimers();
+                (global as any).window = restoreWindow;
+            }
         });
 
         it('does not crash when primary navigation config is unavailable', () => {

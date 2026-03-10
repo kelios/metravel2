@@ -88,15 +88,18 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.deferAllowed).toBe(true)
   })
 
-  it('marks slider ready after LCP is loaded and Slider chunk resolves', async () => {
+  it('marks slider ready after LCP is loaded and deferred shell is allowed', async () => {
     const { result } = renderHook(() =>
-      useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: true })
+      useTravelDetailsPerformance({
+        travel: { id: 1, name: 'Demo travel' } as any,
+        isMobile: false,
+        isLoading: false,
+      })
     )
 
     expect(result.current.sliderReady).toBe(false)
 
-    // setLcpLoaded triggers an effect that does import('@/components/travel/Slider')
-    // which is mocked and resolves as a microtask.
+    // Slider chunk is now gated by both lcpLoaded and deferAllowed.
     await act(async () => {
       result.current.setLcpLoaded(true)
     })

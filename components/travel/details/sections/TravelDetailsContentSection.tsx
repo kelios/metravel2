@@ -5,6 +5,7 @@ import {
   DescriptionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
 import type { Travel } from '@/types/types'
+import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
@@ -25,6 +26,8 @@ const WEB_SR_ONLY_HEADING_STYLE = {
   whiteSpace: 'nowrap',
   borderWidth: 0,
 } as const
+const DEFERRED_SECTION_PLACEHOLDER_STYLE = { minHeight: 160 } as const
+const VIDEO_PLACEHOLDER_STYLE = { minHeight: 220 } as const
 
 const TravelDescription = withLazy(() => import('@/components/travel/TravelDescription'))
 
@@ -89,9 +92,24 @@ export const TravelDetailsContentSection: React.FC<{
   }, [travel.description])
 
   const shouldUseMobileInsights = isMobile && insightConfigs.length > 0
+  const hasInsights = hasRecommendation || hasPlus || hasMinus
   const [mobileInsightKey, setMobileInsightKey] = useState<InsightKey | null>(() =>
     shouldUseMobileInsights ? insightConfigs[0]?.key ?? null : null
   )
+  const { shouldLoad: shouldLoadVideo, setElementRef: setVideoRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '220px',
+    threshold: 0.05,
+    fallbackDelay: 2600,
+    enabled: Boolean(travel.youtube_link),
+  })
+  const { shouldLoad: shouldLoadInsights, setElementRef: setInsightsRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '260px',
+    threshold: 0.05,
+    fallbackDelay: 3200,
+    enabled: hasInsights,
+  })
 
   const defaultInsightKey = shouldUseMobileInsights ? insightConfigs[0]?.key ?? null : null
 
@@ -171,8 +189,13 @@ export const TravelDetailsContentSection: React.FC<{
 
       {travel.youtube_link && (
         <View
+          ref={(node) => {
+            if (anchors.video && typeof anchors.video === 'object') {
+              ;(anchors.video as any).current = node
+            }
+            setVideoRef(node)
+          }}
           style={[styles.sectionContainer, styles.contentStable]}
-          ref={anchors.video}
           collapsable={false}
           accessibilityLabel="Видео маршрута"
           {...(Platform.OS === 'web' ? { 'data-section-key': 'video' } : {})}
@@ -180,7 +203,11 @@ export const TravelDetailsContentSection: React.FC<{
           <Text style={styles.sectionHeaderText}>Видео</Text>
           <Text style={styles.sectionSubtitle}>Одно нажатие — и ролик начнёт проигрываться</Text>
           <View style={SECTION_CONTENT_MARGIN_STYLE}>
-            <LazyYouTube url={travel.youtube_link} />
+            {shouldLoadVideo ? (
+              <LazyYouTube url={travel.youtube_link} />
+            ) : (
+              <View style={VIDEO_PLACEHOLDER_STYLE} />
+            )}
           </View>
         </View>
       )}
@@ -227,79 +254,92 @@ export const TravelDetailsContentSection: React.FC<{
         </View>
       )}
 
-      {travel.recommendation && (
-        <Suspense fallback={<DescriptionFallback />}>
-          <View
-            ref={anchors.recommendation}
-            collapsable={false}
-            accessibilityLabel="Рекомендации"
-            {...(Platform.OS === 'web' ? { 'data-section-key': 'recommendation' } : {})}
-          >
-            <CollapsibleSection
-              title="Рекомендации"
-              initiallyOpen={!isMobile}
-              forceOpen={!isMobile && forceOpenKey === 'recommendation'}
-              iconName="tips-and-updates"
-              highlight="info"
-              badgeLabel="Опыт автора"
-              {...buildInsightControl('recommendation')}
-            >
-              <View style={styles.descriptionContainer}>
-                <TravelDescription title="Рекомендации" htmlContent={travel.recommendation} noBox />
-              </View>
-            </CollapsibleSection>
-          </View>
-        </Suspense>
-      )}
+      {hasInsights && (
+        <View ref={setInsightsRef as any} collapsable={false}>
+          {travel.recommendation &&
+            (shouldLoadInsights ? (
+              <Suspense key="recommendation" fallback={<DescriptionFallback />}>
+                <View
+                  ref={anchors.recommendation}
+                  collapsable={false}
+                  accessibilityLabel="Рекомендации"
+                  {...(Platform.OS === 'web' ? { 'data-section-key': 'recommendation' } : {})}
+                >
+                  <CollapsibleSection
+                    title="Рекомендации"
+                    initiallyOpen={!isMobile}
+                    forceOpen={!isMobile && forceOpenKey === 'recommendation'}
+                    iconName="tips-and-updates"
+                    highlight="info"
+                    badgeLabel="Опыт автора"
+                    {...buildInsightControl('recommendation')}
+                  >
+                    <View style={styles.descriptionContainer}>
+                      <TravelDescription title="Рекомендации" htmlContent={travel.recommendation} noBox />
+                    </View>
+                  </CollapsibleSection>
+                </View>
+              </Suspense>
+            ) : (
+              <View key="recommendation-placeholder" style={DEFERRED_SECTION_PLACEHOLDER_STYLE} />
+            ))}
 
-      {travel.plus && (
-        <Suspense fallback={<DescriptionFallback />}>
-          <View
-            ref={anchors.plus}
-            collapsable={false}
-            accessibilityLabel="Плюсы"
-            {...(Platform.OS === 'web' ? { 'data-section-key': 'plus' } : {})}
-          >
-            <CollapsibleSection
-              title="Плюсы"
-              initiallyOpen={!isMobile}
-              forceOpen={!isMobile && forceOpenKey === 'plus'}
-              iconName="thumb-up-alt"
-              highlight="positive"
-              badgeLabel="Что понравилось"
-              {...buildInsightControl('plus')}
-            >
-              <View style={styles.descriptionContainer}>
-                <TravelDescription title="Плюсы" htmlContent={travel.plus} noBox />
-              </View>
-            </CollapsibleSection>
-          </View>
-        </Suspense>
-      )}
+          {travel.plus &&
+            (shouldLoadInsights ? (
+              <Suspense key="plus" fallback={<DescriptionFallback />}>
+                <View
+                  ref={anchors.plus}
+                  collapsable={false}
+                  accessibilityLabel="Плюсы"
+                  {...(Platform.OS === 'web' ? { 'data-section-key': 'plus' } : {})}
+                >
+                  <CollapsibleSection
+                    title="Плюсы"
+                    initiallyOpen={!isMobile}
+                    forceOpen={!isMobile && forceOpenKey === 'plus'}
+                    iconName="thumb-up-alt"
+                    highlight="positive"
+                    badgeLabel="Что понравилось"
+                    {...buildInsightControl('plus')}
+                  >
+                    <View style={styles.descriptionContainer}>
+                      <TravelDescription title="Плюсы" htmlContent={travel.plus} noBox />
+                    </View>
+                  </CollapsibleSection>
+                </View>
+              </Suspense>
+            ) : (
+              <View key="plus-placeholder" style={DEFERRED_SECTION_PLACEHOLDER_STYLE} />
+            ))}
 
-      {travel.minus && (
-        <Suspense fallback={<DescriptionFallback />}>
-          <View
-            ref={anchors.minus}
-            collapsable={false}
-            accessibilityLabel="Минусы"
-            {...(Platform.OS === 'web' ? { 'data-section-key': 'minus' } : {})}
-          >
-            <CollapsibleSection
-              title="Минусы"
-              initiallyOpen={!isMobile}
-              forceOpen={!isMobile && forceOpenKey === 'minus'}
-              iconName="thumb-down-alt"
-              highlight="negative"
-              badgeLabel="Что смутило"
-              {...buildInsightControl('minus')}
-            >
-              <View style={styles.descriptionContainer}>
-                <TravelDescription title="Минусы" htmlContent={travel.minus} noBox />
-              </View>
-            </CollapsibleSection>
-          </View>
-        </Suspense>
+          {travel.minus &&
+            (shouldLoadInsights ? (
+              <Suspense key="minus" fallback={<DescriptionFallback />}>
+                <View
+                  ref={anchors.minus}
+                  collapsable={false}
+                  accessibilityLabel="Минусы"
+                  {...(Platform.OS === 'web' ? { 'data-section-key': 'minus' } : {})}
+                >
+                  <CollapsibleSection
+                    title="Минусы"
+                    initiallyOpen={!isMobile}
+                    forceOpen={!isMobile && forceOpenKey === 'minus'}
+                    iconName="thumb-down-alt"
+                    highlight="negative"
+                    badgeLabel="Что смутило"
+                    {...buildInsightControl('minus')}
+                  >
+                    <View style={styles.descriptionContainer}>
+                      <TravelDescription title="Минусы" htmlContent={travel.minus} noBox />
+                    </View>
+                  </CollapsibleSection>
+                </View>
+              </Suspense>
+            ) : (
+              <View key="minus-placeholder" style={DEFERRED_SECTION_PLACEHOLDER_STYLE} />
+            ))}
+        </View>
       )}
     </>
   )

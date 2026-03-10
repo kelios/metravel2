@@ -19,94 +19,28 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
 import Head from 'expo-router/head';
-import * as AuthHookModule from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
-import * as TravelDetailsHookModule from '@/hooks/travel-details';
-import { resolveExportedFunction } from '@/utils/moduleInterop';
+import { useTravelDetails } from '@/hooks/travel-details';
+import { useAuthStore } from '@/stores/authStore';
 
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from "@/utils/seo";
-import { createSafeJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
+import { createTravelArticleJsonLd, stripHtmlForSeo } from "@/utils/travelSeo";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { TravelDetailPageSkeleton } from '@/components/travel/TravelDetailPageSkeleton';
 
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
-import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
+import { useTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
-import { useAccessibilityAnnounce } from "@/hooks/useKeyboardNavigation";
+import { useAccessibilityAnnounce } from "@/hooks/useAccessibilityAnnounce";
 import { useThemedColors } from "@/hooks/useTheme";
 import { useTdTrace } from '@/hooks/useTdTrace';
-import { useOfflineTravelCache } from '@/hooks/useOfflineTravelCache';
 import { rIC } from '@/utils/rIC';
-
-/* -------------------- helpers -------------------- */
-
-type UseTravelDetailsHook = typeof TravelDetailsHookModule.useTravelDetails;
-const resolvedUseTravelDetails = resolveExportedFunction<UseTravelDetailsHook>(
-  TravelDetailsHookModule as unknown as Record<string, unknown>,
-  'useTravelDetails'
-);
-type UseAuthHook = typeof AuthHookModule.useAuth;
-const resolvedUseAuth = resolveExportedFunction<UseAuthHook>(
-  AuthHookModule as unknown as Record<string, unknown>,
-  'useAuth'
-);
-const useAuthResolved: UseAuthHook =
-  resolvedUseAuth ??
-  ((() => ({
-    isSuperuser: false,
-    userId: null,
-  })) as UseAuthHook);
-const useTravelDetailsResolved: UseTravelDetailsHook =
-  resolvedUseTravelDetails ??
-  ((() => ({
-    data: {
-      travel: undefined,
-      isLoading: false,
-      isError: true,
-      error: new Error('useTravelDetails is unavailable'),
-      refetch: () => {},
-      slug: '',
-      isId: false,
-      isMissingParam: true,
-    },
-    layout: {
-      headerOffset: 0,
-      contentHorizontalPadding: 0,
-      sideMenuPlatformStyles: {},
-    },
-    navigation: {
-      anchors: {},
-      scrollTo: () => {},
-      scrollRef: { current: null },
-      activeSection: null,
-      setActiveSection: () => {},
-      forceOpenKey: null,
-    },
-    performance: {
-      lcpLoaded: false,
-      setLcpLoaded: () => {},
-      sliderReady: false,
-      deferAllowed: false,
-    },
-    menu: {
-      closeMenu: () => {},
-      animatedX: new Animated.Value(0),
-      menuWidthNum: 0,
-    },
-    scroll: {
-      scrollY: new Animated.Value(0),
-      contentHeight: 0,
-      viewportHeight: 0,
-      handleContentSizeChange: () => {},
-      handleLayout: () => {},
-    },
-  })) as unknown as UseTravelDetailsHook);
 
 const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
 const AccessibilityAnnouncer = withLazy(() => import("@/components/accessibility/AccessibilityAnnouncer"));
@@ -128,7 +62,7 @@ const TravelDeferredSections = withLazy(() =>
 // - getSafeOrigin: валидация origin
 
 // Переадресация для обратной совместимости внутри компонента
-const stripToDescription = (html?: string) => stripHtml(html).slice(0, 160);
+const stripToDescription = (html?: string) => stripHtmlForSeo(html).slice(0, 160);
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
 
@@ -187,7 +121,7 @@ export default function TravelDetailsContainer() {
   /* ✅ PHASE 2: Accessibility Hooks */
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
   const themedColors = useThemedColors();
-  const styles = useTravelDetailsStyles();
+  const styles = useTravelDetailsShellStyles();
 
   // Web: avoid large layout shifts when switching from page skeleton → real content.
   // Keep skeleton mounted briefly and fade it out (no layout collapse).
@@ -196,7 +130,7 @@ export default function TravelDetailsContainer() {
   const tdTrace = useTdTrace()
 
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const travelDetails = useTravelDetailsResolved({
+  const travelDetails = useTravelDetails({
     isMobile,
     screenWidth,
     startTransition,
@@ -211,13 +145,23 @@ export default function TravelDetailsContainer() {
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
     travelDetails.scroll
 
-  // AND-10: Кэшировать просмотренный маршрут для offline-доступа
-  const { cacheTravel } = useOfflineTravelCache();
   useEffect(() => {
-    if (travel && travel.id && !isLoading && !isError) {
-      cacheTravel(travel.id, travel);
-    }
-  }, [travel, isLoading, isError, cacheTravel]);
+    if (Platform.OS === 'web') return;
+    if (!travel || !travel.id || isLoading || isError) return;
+
+    let cancelled = false;
+
+    void import('@/hooks/useOfflineTravelCache')
+      .then((mod) => {
+        if (cancelled) return;
+        return mod.cacheTravelOffline(travel.id, travel, true);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [travel, isLoading, isError]);
 
   useEffect(() => {
     tdTrace('container:mount')
@@ -334,7 +278,7 @@ export default function TravelDetailsContainer() {
         ? firstUrl.replace(/^http:\/\//, "https://")
         : buildOgImageUrl(firstUrl)
       : buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
-    const structuredData = createSafeJsonLd(travel);
+    const structuredData = createTravelArticleJsonLd(travel);
 
     return {
       readyTitle: title,
@@ -431,6 +375,8 @@ export default function TravelDetailsContainer() {
 	  }, [isFocused, navigation, readyTitle, readyDesc, readyImage, canonicalUrl]);
 
   const forceDeferMount = !!forceOpenKey;
+  const criticalChromeReady =
+    Platform.OS !== 'web' || lcpLoaded || forceDeferMount || isWebAutomation
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
   // Расширяем scrollTo для добавления логики закрытия меню на мобильных
@@ -533,7 +479,8 @@ export default function TravelDetailsContainer() {
   // }, [travel?.id, queryClient]);
 
   /* ---- user flags ---- */
-  const { isSuperuser, userId } = useAuthResolved();
+  const isSuperuser = useAuthStore((state) => state.isSuperuser);
+  const userId = useAuthStore((state) => state.userId);
 
   /* -------------------- SEO (must mount before early returns) -------------------- */
   // ⚠️ CRITICAL: InstantSEO must render from the FIRST render, not after async data loads.
@@ -703,7 +650,7 @@ export default function TravelDetailsContainer() {
           )}
 
           {/* Прогресс-бар чтения */}
-          {travel && contentHeight > viewportHeight && (
+          {travel && contentHeight > viewportHeight && criticalChromeReady && (
             <Suspense fallback={null}>
               <ReadingProgressBar
                 scrollY={scrollY}
@@ -745,7 +692,9 @@ export default function TravelDetailsContainer() {
                       />
                     </View>
 
-                    {responsiveWidth < METRICS.breakpoints.largeTablet && sectionLinks.length > 0 && (
+                    {responsiveWidth < METRICS.breakpoints.largeTablet &&
+                      sectionLinks.length > 0 &&
+                      criticalChromeReady && (
                       <View style={styles.sectionTabsContainer}>
                         <Suspense fallback={null}>
                           <TravelSectionsSheet
@@ -782,7 +731,7 @@ export default function TravelDetailsContainer() {
           </ScrollView>
 
           {/* ✅ Кнопка "Наверх" */}
-          {travel && (
+          {travel && criticalChromeReady && (
             <Suspense fallback={null}>
               <ScrollToTopButton scrollViewRef={scrollRef} scrollY={scrollY} threshold={300} />
             </Suspense>

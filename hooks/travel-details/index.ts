@@ -30,7 +30,7 @@ export function useTravelDetails(args: {
     isLoading: data.isLoading,
   })
 
-  const menu = useTravelDetailsMenu(args.isMobile, performance.deferAllowed)
+  const menu = useTravelDetailsMenu(args.isMobile, performance.deferAllowed, args.screenWidth)
 
   const scroll = useTravelDetailsScrollState()
 

@@ -10,7 +10,7 @@ import { __testables } from '@/components/travel/details/TravelDetailsHero'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
 
-jest.mock('@/components/travel/Slider', () => ({
+jest.mock('@/components/travel/Slider.web', () => ({
   __esModule: true,
   default: (props: any) => mockSliderSpy(props),
 }))

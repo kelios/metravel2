@@ -9,7 +9,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { safeGetYoutubeId } from '@/utils/travelDetailsSecure'
+import { safeGetYoutubeId } from '@/utils/travelMedia'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { Icon } from '../TravelDetailsIcons'

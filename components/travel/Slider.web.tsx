@@ -246,6 +246,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     setContainerWidth,
     setActiveIndex,
     dismissSwipeHint,
+    prefetchEnabled,
     enablePrefetch,
     scrollTo,
     setScrollToImpl,
@@ -638,7 +639,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             >
               {images.map((item, index) => {
                 const distanceToCurrent = Math.abs(index - currentIndex);
-                const preloadPriority = distanceToCurrent <= (isMobile ? 2 : 1);
+                const preloadPriority =
+                  prefetchEnabled && distanceToCurrent <= (isMobile ? 2 : 1);
 
                 return (
                   <View

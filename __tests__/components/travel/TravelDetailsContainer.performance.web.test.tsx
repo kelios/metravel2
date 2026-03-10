@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 
 jest.mock('@/hooks/useMenuState', () => ({
   useMenuState: () => ({
@@ -57,6 +57,33 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.getAttribute('loading')).toBe('eager')
     expect(lcpImg?.getAttribute('fetchpriority')).toBe('high')
     expect(lcpImg?.getAttribute('alt')).toBe('Hero image')
+  })
+
+  it('does not render the blur backdrop before the hero image has loaded', () => {
+    const { container } = render(
+      <__testables.OptimizedLCPHero
+        img={{
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        }}
+        alt='Hero image'
+        isMobile={false}
+      />,
+    )
+
+    expect(container.querySelector('[data-hero-backdrop="true"]')).toBeNull()
+
+    const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
+    expect(lcpImg).toBeTruthy()
+
+    if (lcpImg) {
+      fireEvent.load(lcpImg)
+    }
+
+    expect(container.querySelector('[data-hero-backdrop="true"]')).toBeTruthy()
   })
 
   // useLCPPreload was removed — preloading is handled by the inline script in +html.tsx

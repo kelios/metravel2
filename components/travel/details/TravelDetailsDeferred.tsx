@@ -6,15 +6,14 @@ import {
   MapSkeleton,
   TravelListSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
+import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
-import { rIC } from '@/utils/rIC'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
-import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
 
 const TravelDetailsMapSection = withLazy(() =>
   import('./sections/TravelDetailsMapSection').then((m) => ({
@@ -34,6 +33,11 @@ const CommentsSection = withLazy(() =>
 
 const TravelRatingSection = withLazy(() =>
   import('@/components/travel/TravelRatingSection')
+)
+const TravelDetailsFooterSection = withLazy(() =>
+  import('./sections/TravelDetailsFooterSection').then((m) => ({
+    default: m.TravelDetailsFooterSection,
+  }))
 )
 
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
@@ -106,13 +110,57 @@ export const TravelDeferredSections: React.FC<{
   scrollToMapSection,
 }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false)
-  const [canRenderMap, setCanRenderMap] = useState(false)
-  const [canRenderSidebar, setCanRenderSidebar] = useState(false)
-  const [canRenderComments, setCanRenderComments] = useState(false)
   // TD-06: ref для IntersectionObserver на секции комментариев
   const commentsObserverRef = useRef<View>(null)
+  const footerObserverRef = useRef<View>(null)
+  const mobileAuthorShareObserverRef = useRef<View>(null)
+  const ratingObserverRef = useRef<View>(null)
+  const mapObserverRef = useRef<View>(null)
+  const sidebarObserverRef = useRef<View>(null)
 
   const tdTrace = useTdTrace()
+  const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '120px',
+    threshold: 0.05,
+    fallbackDelay: 5200,
+    enabled: canRenderHeavy,
+  })
+  const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '160px',
+    threshold: 0.05,
+    fallbackDelay: 6200,
+    enabled: canRenderHeavy,
+  })
+  const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '160px',
+    threshold: 0.05,
+    fallbackDelay: 7000,
+    enabled: canRenderHeavy,
+  })
+  const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '160px',
+    threshold: 0.05,
+    fallbackDelay: 5200,
+    enabled: canRenderHeavy,
+  })
+  const { shouldLoad: shouldLoadMobileAuthorShare, setElementRef: setMobileAuthorShareRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '180px',
+    threshold: 0.05,
+    fallbackDelay: 2600,
+    enabled: canRenderHeavy && isMobile,
+  })
+  const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '180px',
+    threshold: 0.05,
+    fallbackDelay: 3000,
+    enabled: canRenderHeavy,
+  })
 
   useEffect(() => {
     tdTrace('deferred:mount', { travelId: travel?.id })
@@ -136,40 +184,21 @@ export const TravelDeferredSections: React.FC<{
     if (canRenderHeavy) tdTrace('deferred:heavy:enabled')
   }, [canRenderHeavy, tdTrace])
 
-  // Stagger heavy sections on web to spread TBT across multiple idle periods
-  // instead of mounting all chunks at once.
   useEffect(() => {
-    if (!canRenderHeavy) return
-    if (Platform.OS !== 'web') {
-      setCanRenderMap(true)
-      setCanRenderSidebar(true)
-      setCanRenderComments(true)
-      return
-    }
-    // Map section: next idle after content
-    const cancelMap = rIC(() => setCanRenderMap(true), 1200)
-    // Sidebar (near/popular lists): after map
-    const cancelSidebar = rIC(() => setCanRenderSidebar(true), 2500)
-    // CommentsSection chunk is ~247ms to parse — load it last.
-    const cancelComments = rIC(() => setCanRenderComments(true), 4000)
-    return () => {
-      cancelMap()
-      cancelSidebar()
-      cancelComments()
-    }
-  }, [canRenderHeavy])
+    if (shouldLoadMap) tdTrace('deferred:map:visible')
+  }, [shouldLoadMap, tdTrace])
 
   useEffect(() => {
-    if (canRenderMap) tdTrace('deferred:map:enabled')
-  }, [canRenderMap, tdTrace])
+    if (shouldLoadSidebar) tdTrace('deferred:sidebar:visible')
+  }, [shouldLoadSidebar, tdTrace])
 
   useEffect(() => {
-    if (canRenderSidebar) tdTrace('deferred:sidebar:enabled')
-  }, [canRenderSidebar, tdTrace])
+    if (shouldLoadComments) tdTrace('deferred:comments:visible')
+  }, [shouldLoadComments, tdTrace])
 
   useEffect(() => {
-    if (canRenderComments) tdTrace('deferred:comments:enabled')
-  }, [canRenderComments, tdTrace])
+    if (shouldLoadFooter) tdTrace('deferred:footer:visible')
+  }, [shouldLoadFooter, tdTrace])
 
   return (
     <>
@@ -182,48 +211,92 @@ export const TravelDeferredSections: React.FC<{
 
       {/* P0-2: AuthorCard и ShareButtons после контента на mobile */}
       {isMobile && (
-        <MobileAuthorShareSection travel={travel} />
+        <View
+          ref={(el) => {
+            ;(mobileAuthorShareObserverRef as any).current = el
+            setMobileAuthorShareRef(el)
+          }}
+          collapsable={false}
+        >
+          {shouldLoadMobileAuthorShare ? (
+            <MobileAuthorShareSection travel={travel} />
+          ) : (
+            <>
+              <View style={PLACEHOLDER_MIN_H_160} />
+              <View style={PLACEHOLDER_MIN_H_56} />
+            </>
+          )}
+        </View>
       )}
 
       {/* Секция рейтинга путешествия */}
-      <TravelRatingWrapper travel={travel} />
+      <View
+        ref={(el) => {
+          ;(ratingObserverRef as any).current = el
+          setRatingRef(el)
+        }}
+        collapsable={false}
+      >
+        {shouldLoadRating ? (
+          <TravelRatingWrapper travel={travel} />
+        ) : (
+          <View style={PLACEHOLDER_MIN_H_56} />
+        )}
+      </View>
 
-      {canRenderMap ? (
-        <Suspense fallback={<DeferredMapPlaceholder />}>
-          <TravelDetailsMapSection
-            travel={travel}
-            anchors={anchors}
-            canRenderHeavy={canRenderHeavy}
-            scrollToMapSection={scrollToMapSection}
-          />
-        </Suspense>
-      ) : (
-        <DeferredMapPlaceholder />
-      )}
+      <View
+        ref={(el) => {
+          ;(mapObserverRef as any).current = el
+          setMapRef(el)
+        }}
+        collapsable={false}
+      >
+        {shouldLoadMap ? (
+          <Suspense fallback={<DeferredMapPlaceholder />}>
+            <TravelDetailsMapSection
+              travel={travel}
+              anchors={anchors}
+              canRenderHeavy={canRenderHeavy}
+              scrollToMapSection={scrollToMapSection}
+            />
+          </Suspense>
+        ) : (
+          <DeferredMapPlaceholder />
+        )}
+      </View>
 
-      {canRenderSidebar ? (
-        <Suspense fallback={<DeferredSidebarPlaceholder />}>
-          <TravelDetailsSidebarSection
-            travel={travel}
-            anchors={anchors}
-            scrollY={scrollY}
-            viewportHeight={viewportHeight}
-            canRenderHeavy={canRenderHeavy}
-          />
-        </Suspense>
-      ) : (
-        <DeferredSidebarPlaceholder />
-      )}
+      <View
+        ref={(el) => {
+          ;(sidebarObserverRef as any).current = el
+          setSidebarRef(el)
+        }}
+        collapsable={false}
+      >
+        {shouldLoadSidebar ? (
+          <Suspense fallback={<DeferredSidebarPlaceholder />}>
+            <TravelDetailsSidebarSection
+              travel={travel}
+              anchors={anchors}
+              scrollY={scrollY}
+              viewportHeight={viewportHeight}
+              canRenderHeavy={canRenderHeavy}
+            />
+          </Suspense>
+        ) : (
+          <DeferredSidebarPlaceholder />
+        )}
+      </View>
 
       <View 
         ref={(el) => {
           (anchors.comments as any).current = el;
           (commentsObserverRef as any).current = el;
+          setCommentsRef(el)
         }}
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
-        {canRenderComments && travel?.id ? (
+        {shouldLoadComments && travel?.id ? (
           <Suspense fallback={<DeferredCommentsPlaceholder />}>
             <CommentsSection travelId={travel.id} />
           </Suspense>
@@ -232,7 +305,21 @@ export const TravelDeferredSections: React.FC<{
         )}
       </View>
 
-      <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
+      <View
+        ref={(el) => {
+          (footerObserverRef as any).current = el
+          setFooterRef(el)
+        }}
+        collapsable={false}
+      >
+        {shouldLoadFooter ? (
+          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_160} />}>
+            <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
+          </Suspense>
+        ) : (
+          <View style={PLACEHOLDER_MIN_H_160} />
+        )}
+      </View>
     </>
   )
 })

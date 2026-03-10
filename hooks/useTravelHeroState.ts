@@ -8,11 +8,7 @@ import {
 } from 'react'
 import { Platform } from 'react-native'
 
-import { useFavorites } from '@/context/FavoritesContext'
-import { useAuth } from '@/context/AuthContext'
-import { useRequireAuth } from '@/hooks/useRequireAuth'
 import { useResponsive } from '@/hooks/useResponsive'
-import { showToast } from '@/utils/toast'
 import { useTdTrace } from '@/hooks/useTdTrace'
 import type { Travel } from '@/types/types'
 
@@ -44,72 +40,11 @@ const normalizeGalleryImage = (
         id: (item as Record<string, unknown>).id || fallbackId,
       } as GalleryImage)
 
-function useHeroFavoriteAction(travel: Travel) {
-  const { isAuthenticated } = useAuth()
-  const { requireAuth } = useRequireAuth({ intent: 'favorite' })
-  const {
-    addFavorite,
-    removeFavorite,
-    isFavorite: checkIsFavorite,
-  } = useFavorites()
-  const isFavorite = checkIsFavorite(travel.id, 'travel')
-
-  const handleFavoriteToggle = useCallback(async () => {
-    if (!isAuthenticated) {
-      requireAuth()
-      return
-    }
-    try {
-      if (isFavorite) {
-        await removeFavorite(travel.id, 'travel')
-        showToast({
-          type: 'success',
-          text1: 'Удалено из избранного',
-          visibilityTime: 2000,
-        })
-      } else {
-        await addFavorite({
-          id: travel.id,
-          type: 'travel',
-          title: travel.name,
-          imageUrl: travel.travel_image_thumb_url,
-          url: `/travels/${(travel as Record<string, unknown>).slug || travel.id}`,
-          country: (travel as Record<string, unknown>).countryName as
-            | string
-            | undefined,
-        })
-        showToast({
-          type: 'success',
-          text1: 'Добавлено в избранное',
-          visibilityTime: 2000,
-        })
-      }
-    } catch {
-      showToast({
-        type: 'error',
-        text1: 'Не удалось обновить избранное',
-        visibilityTime: 3000,
-      })
-    }
-  }, [
-    isAuthenticated,
-    requireAuth,
-    isFavorite,
-    travel,
-    addFavorite,
-    removeFavorite,
-  ])
-
-  return {
-    isFavorite,
-    handleFavoriteToggle,
-  }
-}
-
 function useHeroMediaModel(
   travel: Travel,
   isMobile: boolean,
   onFirstImageLoad: () => void,
+  renderSlider: boolean,
 ) {
   const { width: winW, height: winH } = useResponsive()
   const tdTrace = useTdTrace()
@@ -233,6 +168,11 @@ function useHeroMediaModel(
 
   useEffect(() => {
     if (!webHeroLoaded || Platform.OS !== 'web') return
+    if (!renderSlider) {
+      setIsOverlayFading(false)
+      setOverlayUnmounted(false)
+      return
+    }
     if (sliderImageReady) {
       setIsOverlayFading(true)
       const t = setTimeout(() => setOverlayUnmounted(true), 340)
@@ -243,7 +183,7 @@ function useHeroMediaModel(
       setOverlayUnmounted(true)
     }, 6000)
     return () => clearTimeout(fallback)
-  }, [webHeroLoaded, sliderImageReady])
+  }, [webHeroLoaded, sliderImageReady, renderSlider])
 
   useEffect(() => {
     if (Platform.OS === 'web' && webHeroLoaded) tdTrace('hero:webHeroLoaded')
@@ -332,13 +272,12 @@ export function useTravelHeroState(
   isMobile: boolean,
   onFirstImageLoad: () => void,
   deferExtras: boolean,
+  renderSlider: boolean,
 ) {
-  const favorite = useHeroFavoriteAction(travel)
-  const media = useHeroMediaModel(travel, isMobile, onFirstImageLoad)
+  const media = useHeroMediaModel(travel, isMobile, onFirstImageLoad, renderSlider)
   const deferred = useDeferredHeroExtras(deferExtras)
 
   return {
-    ...favorite,
     ...media,
     ...deferred,
   }

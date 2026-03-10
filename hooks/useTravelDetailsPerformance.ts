@@ -30,9 +30,12 @@ export function useTravelDetailsPerformance({
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
+    if (!deferAllowed) return
 
     // LCP metric is already captured. Before swapping to the Slider,
-    // ensure its chunk is downloaded to avoid a withLazy fallback flash.
+    // ensure its chunk is downloaded, but only after the critical shell is
+    // already allowed to proceed. Downloading it immediately after LCP still
+    // competes with hero stabilization on slower devices.
     let cancelled = false
     import('@/components/travel/Slider')
       .catch(() => {})
@@ -40,7 +43,7 @@ export function useTravelDetailsPerformance({
         if (!cancelled) setSliderReady(true)
       })
     return () => { cancelled = true }
-  }, [lcpLoaded])
+  }, [lcpLoaded, deferAllowed])
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -114,6 +117,7 @@ export function useTravelDetailsPerformance({
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!travel) return
+    if (!deferAllowed) return
     const connection = (window as { navigator?: { connection?: { effectiveType?: string; saveData?: boolean } } })?.navigator?.connection
     const effectiveType = String(connection?.effectiveType || '')
     const saveData = Boolean(connection?.saveData)
@@ -128,8 +132,8 @@ export function useTravelDetailsPerformance({
       import('@/components/travel/Slider').catch(() => {})
     }, 800)
 
-    // Prefetch deferred section chunks so they are ready when
-    // TravelDeferredSections mounts.
+    // Defer below-the-fold chunks until after the shell is already allowed
+    // to mount. Prefetching them earlier competes with the hero/LCP path.
     rIC(() => {
       Promise.allSettled([
         import('@/components/travel/TravelDescription'),
@@ -139,8 +143,8 @@ export function useTravelDetailsPerformance({
         // Removed ToggleableMapSection from eager prefetch to keep map bundles lazy
         // import('@/components/travel/ToggleableMapSection'),
       ])
-    }, 1600)
-  }, [travel])
+    }, 4200)
+  }, [travel, deferAllowed])
 
   return useMemo(() => ({
     lcpLoaded,

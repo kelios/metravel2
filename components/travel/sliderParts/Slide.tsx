@@ -97,7 +97,10 @@ const Slide = memo(function Slide({
   const fallbackTriedRef = useRef(false);
 
   const isFirstSlide = index === 0;
-  const shouldEagerLoad = isFirstSlide || isActive || !!preloadPriority;
+  const shouldEagerLoad =
+    Platform.OS === 'web'
+      ? isFirstSlide
+      : isFirstSlide || isActive || !!preloadPriority;
   const mainPriority =
     Platform.OS === 'web'
       ? shouldEagerLoad

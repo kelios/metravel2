@@ -125,4 +125,28 @@ describe('Slider (web) blur background', () => {
     expect(tree.root.findByProps({ testID: 'slider-image-3' })).toBeTruthy()
     expect(tree.root.findByProps({ testID: 'slider-image-5' })).toBeTruthy()
   })
+
+  it('keeps non-first slides lazy before web prefetch is enabled', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+        />,
+      )
+    })
+
+    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
+
+    expect(firstImage.props.loading).toBe('eager')
+    expect(firstImage.props.fetchPriority).toBe('high')
+    expect(secondImage.props.loading).toBe('lazy')
+    expect(secondImage.props.fetchPriority).toBe('auto')
+  })
 })

@@ -10,16 +10,13 @@ import React, {
 import {
   LayoutChangeEvent,
   Platform,
-  Pressable,
-  ScrollView,
   Text,
   View,
 } from 'react-native'
 
-import Feather from '@expo/vector-icons/Feather'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
-import { createSafeImageUrl } from '@/utils/travelDetailsSecure'
+import { createSafeImageUrl } from '@/utils/travelMedia'
 import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
@@ -28,9 +25,8 @@ import {
 import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { AnchorsMap } from './TravelDetailsTypes'
-import { useTravelDetailsStyles } from './TravelDetailsStyles'
+import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { withLazy } from './TravelDetailsLazy'
-import { Icon } from './TravelDetailsIcons'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
 // AND-28: Fullscreen gallery for native
 const FullscreenGallery =
@@ -39,20 +35,22 @@ const FullscreenGallery =
     : () => null
 
 const Slider: React.FC<any> = withLazy(
-  () => import('@/components/travel/Slider'),
+  () =>
+    Platform.OS === 'web'
+      ? import('@/components/travel/Slider.web')
+      : import('@/components/travel/Slider'),
 )
-const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
-const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
-const HERO_QUICK_JUMP_KEYS = [
-  'description',
-  'map',
-  'points',
-  'comments',
-  'video',
-] as const
+const TravelHeroFavoriteToggle = withLazy(() =>
+  import('./TravelHeroFavoriteToggle').then((m) => ({
+    default: m.TravelHeroFavoriteToggle,
+  }))
+)
+const TravelHeroExtras = withLazy(() =>
+  import('./TravelHeroExtras').then((m) => ({
+    default: m.TravelHeroExtras,
+  }))
+)
 const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
-const AUTHOR_PLACEHOLDER_STYLE = { minHeight: 160 } as const
-const AUTHOR_WRAPPER_STYLE = { marginTop: 12 } as const
 
 type ImgLike = {
   url: string
@@ -155,94 +153,6 @@ function HeroSliderStage({
   )
 }
 
-function HeroFavoriteButton({
-  isFavorite,
-  isMobile,
-  onPress,
-  label,
-  accessibilityLabel,
-}: {
-  isFavorite: boolean
-  isMobile: boolean
-  onPress: () => void
-  label: string
-  accessibilityLabel: string
-}) {
-  const styles = useTravelDetailsStyles()
-  const colors = useThemedColors()
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.heroFavoriteBtn,
-        isFavorite && styles.heroFavoriteBtnActive,
-        isMobile && styles.heroFavoriteBtnMobile,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-    >
-      <Feather
-        name="heart"
-        size={20}
-        color={isFavorite ? colors.textOnDark : colors.textOnDark}
-      />
-      {isMobile ? (
-        <Text
-          style={[
-            styles.heroFavoriteBtnLabel,
-            isFavorite && styles.heroFavoriteBtnLabelActive,
-          ]}
-        >
-          {label}
-        </Text>
-      ) : null}
-    </Pressable>
-  )
-}
-
-function HeroQuickJumps({
-  links,
-  isMobile,
-  onQuickJump,
-}: {
-  links: TravelSectionLink[]
-  isMobile: boolean
-  onQuickJump: (key: string) => void
-}) {
-  const styles = useTravelDetailsStyles()
-  const colors = useThemedColors()
-
-  const chips = links.map((link) => (
-    <Pressable
-      key={link.key}
-      onPress={() => onQuickJump(link.key)}
-      style={({ pressed }) => [
-        styles.quickJumpChip,
-        pressed && styles.quickJumpChipPressed,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={`Перейти к разделу ${link.label}`}
-    >
-      <Icon name={link.icon} size={16} color={colors.primary} />
-      <Text style={styles.quickJumpLabel}>{link.label}</Text>
-    </Pressable>
-  ))
-
-  if (!isMobile) return <>{chips}</>
-
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.quickJumpScrollContent}
-      style={styles.quickJumpScroll}
-    >
-      {chips}
-    </ScrollView>
-  )
-}
-
 /* ---- OptimizedLCPHeroInner ---- */
 const OptimizedLCPHeroInner: React.FC<{
   img: ImgLike
@@ -254,6 +164,7 @@ const OptimizedLCPHeroInner: React.FC<{
   const [loadError, setLoadError] = useState(false)
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null)
   const [didTryApiPrefix, setDidTryApiPrefix] = useState(false)
+  const [backdropVisible, setBackdropVisible] = useState(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const colors = useThemedColors()
 
@@ -291,6 +202,10 @@ const OptimizedLCPHeroInner: React.FC<{
       /* noop */
     }
   }, [])
+
+  useEffect(() => {
+    setBackdropVisible(false)
+  }, [img.id, img.updated_at, img.url])
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
   const blurBackdropSrc = useMemo(() => {
@@ -369,21 +284,24 @@ const OptimizedLCPHeroInner: React.FC<{
             backgroundColor: colors.backgroundSecondary,
           }}
         >
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: '-5%',
-              width: '110%',
-              height: '110%',
-              backgroundImage: `url("${blurBackdropSrc}")`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(22px)',
-              transform: 'scale(1.04)',
-              opacity: 0.9,
-            }}
-          />
+          {backdropVisible && (
+            <div
+              aria-hidden="true"
+              data-hero-backdrop="true"
+              style={{
+                position: 'absolute',
+                inset: '-5%',
+                width: '110%',
+                height: '110%',
+                backgroundImage: `url("${blurBackdropSrc}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(22px)',
+                transform: 'scale(1.04)',
+                opacity: 0.9,
+              }}
+            />
+          )}
           <img
             src={srcWithRetry}
             srcSet={responsive.srcSet}
@@ -408,6 +326,7 @@ const OptimizedLCPHeroInner: React.FC<{
             referrerPolicy="no-referrer-when-downgrade"
             data-lcp
             onLoad={() => {
+              setBackdropVisible(true)
               onLoad?.()
             }}
             onError={() => {
@@ -452,11 +371,9 @@ function TravelHeroSectionInner({
   onQuickJump: (key: string) => void
   deferExtras?: boolean
 }) {
-  const styles = useTravelDetailsStyles()
+  const styles = useTravelDetailsHeroStyles()
 
   const {
-    isFavorite,
-    handleFavoriteToggle,
     firstImg,
     heroHeight,
     galleryImages,
@@ -470,15 +387,9 @@ function TravelHeroSectionInner({
     handleWebHeroLoad,
     handleSliderImageLoad,
     extrasReady,
-  } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras)
+  } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras, renderSlider)
 
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
-  const favoriteButtonLabel = isFavorite ? 'В избранном' : 'В избранное'
-  const favoriteButtonA11yLabel = isMobile
-    ? favoriteButtonLabel
-    : isFavorite
-      ? 'Удалить из избранного'
-      : 'Добавить в избранное'
 
   // AND-28: Fullscreen gallery state (native only)
   const [fullscreenVisible, setFullscreenVisible] = useState(false)
@@ -493,12 +404,6 @@ function TravelHeroSectionInner({
     [],
   )
 
-  const quickJumpLinks = useMemo(() => {
-    const linksByKey = new Map(sectionLinks.map((link) => [link.key, link]))
-    return HERO_QUICK_JUMP_KEYS.map((key) => linksByKey.get(key)).filter(
-      Boolean,
-    ) as TravelSectionLink[]
-  }, [sectionLinks])
   const shouldRenderWebOptimizedHero =
     Platform.OS === 'web' && shouldShowOptimizedHero
   const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2
@@ -538,7 +443,7 @@ function TravelHeroSectionInner({
             <NeutralHeroPlaceholder height={heroHeight} />
           ) : shouldRenderWebOptimizedHero ? (
             <>
-              {webHeroLoaded && (
+              {webHeroLoaded && renderSlider && (
                 <View
                   style={[ABSOLUTE_FILL_STYLE, { zIndex: 1 }]}
                   collapsable={false}
@@ -609,82 +514,51 @@ function TravelHeroSectionInner({
             </View>
           ) : null}
 
-          <HeroFavoriteButton
-            isFavorite={isFavorite}
-            isMobile={isMobile}
-            onPress={handleFavoriteToggle}
-            label={favoriteButtonLabel}
-            accessibilityLabel={favoriteButtonA11yLabel}
-          />
+          {(Platform.OS !== 'web' || extrasReady) && (
+            <Suspense fallback={null}>
+              <TravelHeroFavoriteToggle
+                travel={travel}
+                isMobile={isMobile}
+              />
+            </Suspense>
+          )}
         </View>
       </View>
 
-      <View
-        testID="travel-details-quick-facts"
-        accessibilityRole="none"
-        accessibilityLabel="Краткие факты"
-        style={[
-          styles.sectionContainer,
-          styles.contentStable,
-          styles.quickFactsContainer,
-        ]}
-      >
-        {extrasReady ? (
-          <Suspense fallback={<View style={QUICK_FACTS_PLACEHOLDER_STYLE} />}>
-            <QuickFacts travel={travel} />
-          </Suspense>
-        ) : (
-          <View style={QUICK_FACTS_PLACEHOLDER_STYLE} />
-        )}
-      </View>
-
-      {quickJumpLinks.length > 0 && !extrasReady && (
-        <View
-          style={[
-            styles.sectionContainer,
-            styles.contentStable,
-            styles.quickJumpWrapper,
-            { minHeight: 48 },
-          ]}
-        />
-      )}
-      {quickJumpLinks.length > 0 && extrasReady && (
-        <View
-          style={[
-            styles.sectionContainer,
-            styles.contentStable,
-            styles.quickJumpWrapper,
-          ]}
-        >
-          <HeroQuickJumps
-            links={quickJumpLinks}
+      {extrasReady ? (
+        <Suspense fallback={<View style={QUICK_FACTS_PLACEHOLDER_STYLE} />}>
+          <TravelHeroExtras
+            travel={travel}
             isMobile={isMobile}
+            sectionLinks={sectionLinks}
             onQuickJump={onQuickJump}
           />
-        </View>
-      )}
-
-      {!isMobile && extrasReady && (
-        <View
-          testID="travel-details-author"
-          accessibilityRole="none"
-          accessibilityLabel="Автор маршрута"
-          style={[
-            styles.sectionContainer,
-            styles.contentStable,
-            styles.authorCardContainer,
-          ]}
-        >
-          <Text style={styles.sectionHeaderText}>Автор</Text>
-          <Text style={styles.sectionSubtitle}>
-            Профиль, соцсети и другие путешествия автора
-          </Text>
-          <View style={AUTHOR_WRAPPER_STYLE}>
-            <Suspense fallback={<View style={AUTHOR_PLACEHOLDER_STYLE} />}>
-              <AuthorCard travel={travel} />
-            </Suspense>
+        </Suspense>
+      ) : (
+        <>
+          <View
+            testID="travel-details-quick-facts"
+            accessibilityRole="none"
+            accessibilityLabel="Краткие факты"
+            style={[
+              styles.sectionContainer,
+              styles.contentStable,
+              styles.quickFactsContainer,
+            ]}
+          >
+            <View style={QUICK_FACTS_PLACEHOLDER_STYLE} />
           </View>
-        </View>
+          {sectionLinks.length > 0 && (
+            <View
+              style={[
+                styles.sectionContainer,
+                styles.contentStable,
+                styles.quickJumpWrapper,
+                { minHeight: 48 },
+              ]}
+            />
+          )}
+        </>
       )}
 
       {/* AND-28: Fullscreen gallery (native only) */}

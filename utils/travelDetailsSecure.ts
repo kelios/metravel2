@@ -7,6 +7,11 @@
  */
 
 import type { Travel } from "@/types/types";
+export {
+  createSafeImageUrl,
+  safeGetYoutubeId,
+  validateYoutubeId,
+} from '@/utils/travelMedia';
 
 // DOMPurify is ~60KB — lazy-loaded to keep it out of the critical JS bundle.
 // stripHtml uses a fast regex path first; DOMPurify is only loaded on demand.
@@ -25,63 +30,6 @@ const getDOMPurify = (): typeof import('dompurify').default | null => {
     return null;
   }
 };
-
-/**
- * Validate YouTube ID format to prevent injection attacks
- * YouTube IDs are exactly 11 alphanumeric characters (including -, _)
- * ⚠️ SECURITY: This prevents malformed IDs that could be used in attacks
- */
-export function validateYoutubeId(id: string): boolean {
-  // Must be exactly 11 characters
-  if (!id || id.length !== 11) {
-    return false;
-  }
-
-  // Must contain only alphanumeric, dash, underscore
-  if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
-    return false;
-  }
-
-  // Additional check: no consecutive special characters
-  return !/[_-]{2,}/.test(id);
-}
-
-/**
- * Safely extract YouTube ID from various URL formats with validation
- * ⚠️ SECURITY: Returns null if ID doesn't match strict YouTube format
- */
-export function safeGetYoutubeId(url?: string | null): string | null {
-  if (!url) return null;
-
-  // Maximum reasonable length for a YouTube URL
-  if (url.length > 2000) {
-    return null;
-  }
-
-  try {
-    // Sanitize the URL first - remove control characters (avoid ESLint no-control-regex)
-    const controlCharRegex = /[\x00-\x1f\x7f]/g; // eslint-disable-line no-control-regex
-    const sanitizedUrl = url.replace(controlCharRegex, '');
-
-    const patterns = [
-      /(?:youtu\.be\/|shorts\/|embed\/|watch\?v=|watch\?.*?v%3D)([^?&/#]+)/,
-      /youtube\.com\/.*?[?&]v=([^?&#]+)/,
-    ];
-
-    for (const pattern of patterns) {
-      const match = sanitizedUrl.match(pattern);
-      const id = match?.[1] ?? null;
-
-      if (id && validateYoutubeId(id)) {
-        return id;
-      }
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Create safe JSON-LD structured data without injection vulnerabilities
@@ -312,63 +260,6 @@ export function stripHtml(html?: string | null): string {
   }
 
   return fallback;
-}
-
-/**
- * Create safe image URL with versioning without revealing implementation
- * ⚠️ SECURITY: Validates URL format and prevents path traversal attacks
- */
-export function createSafeImageUrl(
-  baseUrl?: string,
-  updatedAt?: string | null,
-  id?: any
-): string {
-  if (!baseUrl) {
-    return "";
-  }
-
-  // Reject URLs that look like path traversal
-  if (baseUrl.includes('..') || baseUrl.includes('//..')) {
-    return "";
-  }
-
-  try {
-    // Create URL object to validate format
-    const url = new URL(baseUrl);
-    try {
-      const isLocalhost =
-        typeof window !== 'undefined' &&
-        /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
-      const isPrivateIp = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(url.hostname);
-      if (isLocalhost && isPrivateIp) {
-        if (url.protocol === 'https:') url.protocol = 'http:';
-      } else {
-        if (url.protocol === 'http:') url.protocol = 'https:';
-      }
-    } catch {
-      // ignore
-    }
-
-    // Only allow http and https protocols
-    if (!['http:', 'https:'].includes(url.protocol)) {
-      return "";
-    }
-
-    // Add version parameter if provided
-    const ver = updatedAt
-      ? Date.parse(updatedAt)
-      : id && Number.isFinite(Number(id))
-        ? Number(id)
-        : 0;
-
-    if (ver && Number.isFinite(ver) && ver > 0) {
-      url.searchParams.append("v", String(ver));
-    }
-
-    return url.toString();
-  } catch {
-    return "";
-  }
 }
 
 /**

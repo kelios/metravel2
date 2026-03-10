@@ -9,8 +9,6 @@ jest.mock('expo-router', () => ({
   },
 }));
 
-const mockUseWindowDimensions = jest.fn(() => ({ width: 375, height: 667 }));
-
 // Mock react-native pieces we rely on
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
@@ -18,7 +16,6 @@ jest.mock('react-native', () => {
 
   return {
     ...RN,
-    useWindowDimensions: mockUseWindowDimensions,
     Image: ({ style, ...props }: any) =>
       React.createElement(RN.View, {
         testID: 'logo-image',
@@ -28,13 +25,7 @@ jest.mock('react-native', () => {
   };
 });
 
-const getUseWindowDimensionsMock = () => mockUseWindowDimensions;
-
 describe('Logo', () => {
-  beforeEach(() => {
-    getUseWindowDimensionsMock().mockReturnValue({ width: 375, height: 667 });
-  });
-
   it('should render logo image', () => {
     const { UNSAFE_getAllByType } = render(<Logo />);
     const { Image } = require('react-native');
@@ -42,8 +33,6 @@ describe('Logo', () => {
   });
 
   it('should render logo text on desktop', () => {
-    getUseWindowDimensionsMock().mockReturnValue({ width: 1024, height: 768 });
-
     const { toJSON } = render(<Logo />);
     const tree = toJSON();
     const treeStr = JSON.stringify(tree);
@@ -54,12 +43,12 @@ describe('Logo', () => {
   });
 
   it('should not render logo text on mobile', () => {
-    const { toJSON } = render(<Logo />);
+    const { queryByText, toJSON } = render(<Logo showWordmark={false} />);
     const tree = toJSON();
-    
-    // На мобильном текста не должно быть (или он скрыт)
-    // Проверяем что компонент рендерится
+
     expect(tree).toBeTruthy();
+    expect(queryByText('Me')).toBeNull();
+    expect(queryByText('Travel')).toBeNull();
   });
 
   it('should navigate to home when pressed', () => {
@@ -87,9 +76,7 @@ describe('Logo', () => {
   });
 
   it('should apply mobile styles on small screens', () => {
-    getUseWindowDimensionsMock().mockReturnValue({ width: 320, height: 568 });
-
-    const { toJSON } = render(<Logo />);
+    const { toJSON } = render(<Logo isCompact />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });

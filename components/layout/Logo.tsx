@@ -1,12 +1,19 @@
 import React, { useMemo, useState } from 'react';
 import { Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
-export default React.memo(function Logo({ variant: _variant = 'default' }: any) {
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+type LogoProps = {
+    isCompact?: boolean;
+    showWordmark?: boolean;
+    variant?: 'default';
+};
+
+export default React.memo(function Logo({
+    isCompact = false,
+    showWordmark = true,
+    variant: _variant = 'default',
+}: LogoProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
     const [logoLoadFailed, setLogoLoadFailed] = useState(false);
@@ -28,13 +35,13 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
         >
             <Image
                 source={logoLoadFailed ? fallbackSource : primarySource}
-                style={[styles.logo, isMobile && styles.logoMobile]}
+                style={[styles.logo, isCompact && styles.logoCompact]}
                 resizeMode="contain"
                 onError={() => setLogoLoadFailed(true)}
                 accessibilityLabel="MeTravel логотип"
                 alt="MeTravel логотип"
             />
-            {!isMobile && (
+            {showWordmark && (
                 <Text style={styles.logoTextRow}>
                     <Text style={styles.logoTextMe}>Me</Text><Text style={styles.logoTextTravel}>Travel</Text>
                 </Text>
@@ -52,7 +59,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         width: 32, 
         height: 32,
     },
-    logoMobile: { 
+    logoCompact: {
         width: 26, 
         height: 26,
     },

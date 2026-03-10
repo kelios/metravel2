@@ -3,10 +3,10 @@ import { Platform } from 'react-native'
 
 
 import {
-  useTravelDetailsStyles,
+  useTravelDetailsShellStyles,
   HEADER_OFFSET_DESKTOP,
   HEADER_OFFSET_MOBILE,
-} from '@/components/travel/details/TravelDetailsStyles'
+} from '@/components/travel/details/TravelDetailsShellStyles'
 
 export interface UseTravelDetailsLayoutArgs {
   isMobile: boolean
@@ -23,7 +23,7 @@ export function useTravelDetailsLayout({
   isMobile,
   screenWidth,
 }: UseTravelDetailsLayoutArgs): UseTravelDetailsLayoutReturn {
-  const styles = useTravelDetailsStyles()
+  const styles = useTravelDetailsShellStyles()
 
   const headerOffset = useMemo(
     () => (isMobile ? HEADER_OFFSET_MOBILE : HEADER_OFFSET_DESKTOP),

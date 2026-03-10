@@ -156,26 +156,40 @@ export default function RootLayout() {
       },
       [pathname]
     );
+    const isTravelPerformanceRoute = useMemo(
+      () => typeof pathname === 'string' && pathname.startsWith('/travels/'),
+      [pathname]
+    );
 
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);
     
     /** === SSR-safe Toast: рендерим только на клиенте === */
     const [isMounted, setIsMounted] = useState(false);
+    const [showFooterChrome, setShowFooterChrome] = useState(
+      !isWeb || !isTravelPerformanceRoute
+    );
     const [showConsentBanner, setShowConsentBanner] = useState(false);
     
     useEffect(() => {
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
+        let footerTimer: ReturnType<typeof setTimeout> | null = null;
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
         let rafId: number | null = null;
 
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
+        if (isWeb) {
+          const footerDelay = isTravelPerformanceRoute ? 6500 : 0;
+          footerTimer = setTimeout(() => setShowFooterChrome(true), footerDelay);
+        }
+
         // Defer ConsentBanner for LCP, but skip entirely if consent is already saved.
         if (isWeb && typeof window !== 'undefined') {
           if (!readConsent()) {
-            consentTimer = setTimeout(() => setShowConsentBanner(true), 4000);
+            const consentDelay = isTravelPerformanceRoute ? 9000 : 4000;
+            consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay);
           }
         }
 
@@ -187,10 +201,11 @@ export default function RootLayout() {
 
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
+          if (footerTimer) clearTimeout(footerTimer);
           if (consentTimer) clearTimeout(consentTimer);
           if (rafId != null) cancelAnimationFrame(rafId);
         };
-    }, []);
+    }, [isTravelPerformanceRoute]);
 
     // One-time web migration: remove legacy Service Worker registrations/caches
     // from older releases after SW support was disabled.
@@ -373,6 +388,7 @@ export default function RootLayout() {
           <ThemedContent
             showMapBackground={showMapBackground}
             showFooter={showFooter}
+            showFooterChrome={showFooterChrome}
             isMobile={isMobile}
             dockHeight={dockHeight}
             setDockHeight={setDockHeight}
@@ -389,6 +405,7 @@ export default function RootLayout() {
 function ThemedContent({
   showMapBackground,
   showFooter,
+  showFooterChrome,
   isMobile,
   dockHeight,
   setDockHeight,
@@ -398,6 +415,7 @@ function ThemedContent({
 }: {
   showMapBackground: boolean;
   showFooter: boolean;
+  showFooterChrome: boolean;
   isMobile: boolean;
   dockHeight: number;
   setDockHeight: (h: number) => void;
@@ -511,7 +529,7 @@ function ThemedContent({
                                 </React.Suspense>
                               )}
 
-                              {showFooter && (!isWeb || isMounted) && (
+                              {showFooter && showFooterChrome && (!isWeb || isMounted) && (
                                 <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
                                   <React.Suspense
                                     fallback={

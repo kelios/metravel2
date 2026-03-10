@@ -10,6 +10,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/TESTING.md` — Jest + Playwright (E2E) + CI quality gate
 - `docs/RELEASE.md` — release/deploy flow
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
+- `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — рабочая спецификация performance refactor для travel details web
 
 ## Governance templates
 

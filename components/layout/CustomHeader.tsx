@@ -1,51 +1,21 @@
-import React, { Suspense, useMemo, useRef, useState, useCallback, lazy } from 'react';
-import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, ScrollView } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
-import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
+import React, { Suspense, useMemo, useRef, useState, lazy, useEffect } from 'react';
+import { View, StyleSheet, Platform, StatusBar } from 'react-native';
+import { usePathname } from 'expo-router';
 import Logo from './Logo';
-import { useAuth } from '@/context/AuthContext';
-import { useFavorites as _useFavorites } from '@/context/FavoritesContext';
-import * as FiltersProviderModule from '@/context/FiltersProvider';
-import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive'; 
-import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { useUnreadCount } from '@/hooks/useMessages';
-
-const useFavoritesSafe = (): { favorites: { length: number } } => {
-    try {
-        return _useFavorites();
-    } catch {
-        return { favorites: [] as any };
-    }
-};
-
-const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
-    try {
-        const filtersAccessor = resolveExportedFunction<() => { updateFilters: (next: any) => void }>(
-            FiltersProviderModule as unknown as Record<string, unknown>,
-            'useFilters'
-        );
-        const ctx = typeof filtersAccessor === 'function' ? filtersAccessor() : null;
-        if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
-    } catch {
-        // no-op fallback to avoid runtime crashes when chunk exports drift
-    }
-    return { updateFilters: () => {} };
-};
 
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
 
-const AccountMenuLazy = lazy(() => import('./AccountMenu'));
 const HeaderContextBarLazy = lazy(() => import('./HeaderContextBar'));
-const ThemeToggleLazy = lazy(() => import('@/components/layout/ThemeToggle'));
-const CustomHeaderMobileMenuComp = isTestEnv
-  ? (require('./CustomHeaderMobileMenu').default as React.ComponentType<any>)
-  : lazy(() => import('./CustomHeaderMobileMenu'));
+const CustomHeaderNavSectionComp = isTestEnv
+  ? (require('./CustomHeaderNavSection').default as React.ComponentType<any>)
+  : lazy(() => import('./CustomHeaderNavSection'));
+const CustomHeaderAccountSectionComp = isTestEnv
+  ? (require('./CustomHeaderAccountSection').default as React.ComponentType<any>)
+  : lazy(() => import('./CustomHeaderAccountSection'));
 
 type CustomHeaderProps = {
     onHeightChange?: (height: number) => void;
@@ -54,64 +24,134 @@ type CustomHeaderProps = {
 function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const colors = useThemedColors();
     const pathname = usePathname();
-    const router = useRouter();
     const { isPhone, isLargePhone, isTablet } = useResponsive();
     // NAV-10: На web-планшете (768–1024px) показываем inline-навигацию вместо бургера.
     // На native планшет остаётся мобильным (бургер + dock).
     const isMobile = Platform.OS === 'web'
         ? (isPhone || isLargePhone)
         : (isPhone || isLargePhone || isTablet);
-    const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
-    const mobileMenuOpenedAtRef = useRef(0);
-    const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
-    const { favorites } = useFavoritesSafe();
-    const { updateFilters } = useFiltersSafe();
-    const { count: unreadCount } = useUnreadCount(isAuthenticated && mobileMenuVisible, mobileMenuVisible);
-    const [avatarLoadError, setAvatarLoadError] = useState(false);
     const lastHeightRef = useRef(0);
+    const isTravelPerformanceRoute = Platform.OS === 'web' && typeof pathname === 'string' && pathname.startsWith('/travels/');
+    const [showHeaderContextBar, setShowHeaderContextBar] = useState(!isTravelPerformanceRoute);
+    const [showNavSection, setShowNavSection] = useState(!isTravelPerformanceRoute);
+    const [showAccountSection, setShowAccountSection] = useState(!isTravelPerformanceRoute);
 
-    React.useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        if (!mobileMenuVisible) return;
+    useEffect(() => {
+        if (!isTravelPerformanceRoute) {
+            setShowHeaderContextBar(true);
+            return;
+        }
 
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                setMobileMenuVisible(false);
+        setShowHeaderContextBar(false);
+
+        if (typeof window === 'undefined') return;
+
+        let cleared = false;
+        let contextBarTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+            if (cleared) return;
+            setShowHeaderContextBar(true);
+        }, 4000);
+
+        const reveal = () => {
+            if (cleared) return;
+            cleared = true;
+            if (contextBarTimer) {
+                clearTimeout(contextBarTimer);
+                contextBarTimer = null;
             }
+            setShowHeaderContextBar(true);
         };
 
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [mobileMenuVisible]);
+        window.addEventListener('pointerdown', reveal, { passive: true, once: true });
+        window.addEventListener('keydown', reveal, { once: true });
+        window.addEventListener('scroll', reveal, { passive: true, once: true });
 
-    const avatarUri = useMemo(() => {
-        if (avatarLoadError) return null;
-        const raw = String(userAvatar ?? '').trim();
-        if (!raw) return null;
-        const lower = raw.toLowerCase();
-        if (lower === 'null' || lower === 'undefined') return null;
+        return () => {
+            cleared = true;
+            if (contextBarTimer) clearTimeout(contextBarTimer);
+            window.removeEventListener('pointerdown', reveal as EventListener);
+            window.removeEventListener('keydown', reveal as EventListener);
+            window.removeEventListener('scroll', reveal as EventListener);
+        };
+    }, [isTravelPerformanceRoute]);
 
-        let normalized = raw;
-        if (raw.startsWith('/')) {
-            const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
-            if (base) {
-                normalized = `${base}${raw}`;
-            } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                normalized = `${window.location.origin}${raw}`;
+    useEffect(() => {
+        if (!isTravelPerformanceRoute) {
+            setShowNavSection(true);
+            return;
+        }
+
+        setShowNavSection(false);
+
+        if (typeof window === 'undefined') return;
+
+        let cleared = false;
+        let navTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+            if (cleared) return;
+            setShowNavSection(true);
+        }, 2600);
+
+        const reveal = () => {
+            if (cleared) return;
+            cleared = true;
+            if (navTimer) {
+                clearTimeout(navTimer);
+                navTimer = null;
             }
+            setShowNavSection(true);
+        };
+
+        window.addEventListener('pointerdown', reveal, { passive: true, once: true });
+        window.addEventListener('keydown', reveal, { once: true });
+        window.addEventListener('scroll', reveal, { passive: true, once: true });
+
+        return () => {
+            cleared = true;
+            if (navTimer) clearTimeout(navTimer);
+            window.removeEventListener('pointerdown', reveal as EventListener);
+            window.removeEventListener('keydown', reveal as EventListener);
+            window.removeEventListener('scroll', reveal as EventListener);
+        };
+    }, [isTravelPerformanceRoute]);
+
+    useEffect(() => {
+        if (!isTravelPerformanceRoute) {
+            setShowAccountSection(true);
+            return;
         }
 
-        if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
-            return normalized;
-        }
+        setShowAccountSection(false);
 
-        const separator = normalized.includes('?') ? '&' : '?';
-        return `${normalized}${separator}v=${profileRefreshToken}`;
-    }, [avatarLoadError, userAvatar, profileRefreshToken]);
+        if (typeof window === 'undefined') return;
 
-    React.useEffect(() => {
-        setAvatarLoadError(false);
-    }, [profileRefreshToken, userAvatar]);
+        let cleared = false;
+        let accountTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+            if (cleared) return;
+            setShowAccountSection(true);
+        }, 3200);
+
+        const reveal = () => {
+            if (cleared) return;
+            cleared = true;
+            if (accountTimer) {
+                clearTimeout(accountTimer);
+                accountTimer = null;
+            }
+            setShowAccountSection(true);
+        };
+
+        window.addEventListener('pointerdown', reveal, { passive: true, once: true });
+        window.addEventListener('keydown', reveal, { once: true });
+        window.addEventListener('scroll', reveal, { passive: true, once: true });
+
+        return () => {
+            cleared = true;
+            if (accountTimer) clearTimeout(accountTimer);
+            window.removeEventListener('pointerdown', reveal as EventListener);
+            window.removeEventListener('keydown', reveal as EventListener);
+            window.removeEventListener('scroll', reveal as EventListener);
+        };
+    }, [isTravelPerformanceRoute]);
 
     // Определяем активную страницу
     const activePath = useMemo(() => {
@@ -126,47 +166,6 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         if (pathname.startsWith('/roulette')) return '/roulette';
         return pathname;
     }, [pathname]);
-
-    const handleNavPress = (path: string, external?: boolean) => {
-        if (external) {
-            if (Platform.OS === 'web') {
-                openExternalUrlInNewTab(path);
-            } else {
-                openExternalUrl(path);
-            }
-            setMobileMenuVisible(false);
-            return;
-        }
-        router.push(path as any);
-        setMobileMenuVisible(false);
-    };
-
-    const handleUserAction = useCallback(
-        (path: string, extraAction?: () => void) => {
-            extraAction?.();
-            router.push(path as any);
-            setMobileMenuVisible(false);
-        },
-        [router]
-    );
-
-    const handleMyTravels = useCallback(() => {
-        const numericUserId = userId ? Number(userId) : undefined;
-        handleUserAction('/metravel', () => {
-            updateFilters({ user_id: numericUserId });
-        });
-    }, [handleUserAction, updateFilters, userId]);
-
-    const handleLogout = useCallback(async () => {
-        await logout();
-        setMobileMenuVisible(false);
-        router.push('/');
-    }, [logout, router]);
-
-    const openMobileMenu = useCallback(() => {
-        mobileMenuOpenedAtRef.current = Date.now();
-        setMobileMenuVisible(true);
-    }, []);
 
     const webStickyStyle = Platform.OS === 'web'
         ? { position: 'sticky' as const, top: 0, zIndex: 2000, width: '100%' }
@@ -514,193 +513,38 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
           <View style={styles.wrapper}>
               <View style={[styles.inner, isMobile && styles.innerMobile]}>
                   {/* Логотип - слева */}
-                  <Logo />
+                  <Logo isCompact={isMobile} showWordmark={!isMobile} />
                   
                   {/* Навигация - в центре, показываем только на десктопе и планшетах */}
-                  {!isMobile && (
-                      <ScrollView
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          contentContainerStyle={styles.navContainer}
-                          style={styles.navScroll}
-                          alwaysBounceHorizontal={false}
-                      >
-                          {(PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => {
-                              const isActive = !item.external && activePath === item.path;
-                              return (
-                                  <Pressable
-                                      key={item.path}
-                                      onPress={() => handleNavPress(item.path, item.external)}
-                                      style={[
-                                          styles.navItem, 
-                                          isActive && styles.navItemActive,
-                                          globalFocusStyles.focusable, 
-                                      ]}
-                                      accessibilityRole="link"
-                                      accessibilityLabel={item.label}
-                                      accessibilityState={{ selected: isActive }}
-                                  >
-                                      <View style={styles.iconSlot18}>
-                                          <Feather
-                                              name={item.icon as any}
-                                              size={18}
-                                              color={isActive ? colors.brandText : colors.textMuted}
-                                          />
-                                      </View>
-                                      <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-                                          {item.label}
-                                      </Text>
-                                  </Pressable>
-                              );
-                          })}
-                      </ScrollView>
-                  )}
+                  {!isMobile ? (
+                    showNavSection ? (
+                      <Suspense fallback={<View style={styles.navScroll} />}>
+                        <CustomHeaderNavSectionComp activePath={activePath} styles={styles} />
+                      </Suspense>
+                    ) : (
+                      <View style={styles.navScroll} />
+                    )
+                  ) : null}
                   
                   {/* Элементы пользователя - справа */}
-                  <View style={styles.rightSection}>
-                      {/* Мобильное меню - кнопка (только на мобильных) */}
-                      {isMobile ? (
-                          <>
-                              {isAuthenticated && username ? (
-                                  <Pressable
-                                      onPress={() => handleUserAction('/profile')}
-                                      style={[styles.mobileUserPill, globalFocusStyles.focusable]}
-                                      accessibilityRole="button"
-                                      accessibilityLabel={`Открыть профиль ${username}`}
-                                  >
-                                      <View style={styles.mobileUserAvatarContainer}>
-                                          {avatarUri ? (
-                                              <Image
-                                                  source={{ uri: avatarUri }}
-                                                  style={styles.mobileUserAvatar}
-                                                  onError={() => setAvatarLoadError(true)}
-                                              />
-                                          ) : (
-                                              <Feather name="user" size={24} color={colors.text} />
-                                          )}
-                                      </View>
-                                      <Text style={styles.mobileUserName} numberOfLines={1}>
-                                          {username}
-                                      </Text>
-                                  </Pressable>
-                              ) : (
-                                  <View style={[styles.mobileUserPillPlaceholder, { pointerEvents: 'none' } as any]}>
-                                      <View style={styles.mobileUserAvatarContainer}>
-                                          <Feather name="user" size={24} color={colors.text} />
-                                      </View>
-                                      <Text style={styles.mobileUserName} numberOfLines={1}>
-                                          {' '}
-                                      </Text>
-                                  </View>
-                              )}
-
-                              <Pressable
-                                  onPress={openMobileMenu}
-                                  style={[
-                                      styles.mobileMenuButton,
-                                      globalFocusStyles.focusable, 
-                                  ]}
-                                  accessibilityRole="button"
-                                  accessibilityLabel="Открыть меню"
-                                  testID="mobile-menu-open"
-                              >
-                                  <View style={styles.iconSlot24}>
-                                      <Feather name="menu" size={24} color={colors.text} />
-                                  </View>
-                              </Pressable>
-                          </>
-                      ) : (
-                          <Suspense fallback={null}>
-                              <AccountMenuLazy />
-                          </Suspense>
-                      )}
-                  </View>
+                  {showAccountSection ? (
+                    <Suspense fallback={null}>
+                      <CustomHeaderAccountSectionComp
+                        activePath={activePath}
+                        isMobile={isMobile}
+                        styles={styles}
+                      />
+                    </Suspense>
+                  ) : (
+                    <View style={styles.rightSection} />
+                  )}
               </View>
           
-          <Suspense fallback={null}>
-            <HeaderContextBarLazy />
-          </Suspense>
-
-          {isMobile && mobileMenuVisible && (
-            isTestEnv ? (
-              <>
-                <Pressable
-                  testID="mobile-menu-overlay"
-                  accessibilityRole="button"
-                  accessibilityLabel="Закрыть меню"
-                  onPress={() => {
-                    const isUnitTest =
-                      typeof process !== 'undefined' &&
-                      (process as any).env &&
-                      (process as any).env.NODE_ENV === 'test';
-                    const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
-                    if (!isUnitTest && sinceOpen < 250) return;
-                    setMobileMenuVisible(false);
-                  }}
-                >
-                  <View />
-                </Pressable>
-
-                <CustomHeaderMobileMenuComp
-                  visible={mobileMenuVisible}
-                  onRequestClose={() => setMobileMenuVisible(false)}
-                  onOverlayPress={() => {
-                    const isUnitTest =
-                      typeof process !== 'undefined' &&
-                      (process as any).env &&
-                      (process as any).env.NODE_ENV === 'test';
-                    const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
-                    if (!isUnitTest && sinceOpen < 250) return;
-                    setMobileMenuVisible(false);
-                  }}
-                  onNavPress={handleNavPress}
-                  onUserAction={handleUserAction}
-                  onMyTravels={handleMyTravels}
-                  onLogout={handleLogout}
-                  colors={colors as any}
-                  styles={styles}
-                  activePath={activePath}
-                  isAuthenticated={isAuthenticated}
-                  username={username}
-                  favoritesCount={favorites.length}
-                  unreadCount={unreadCount}
-                  themeToggleNode={null}
-                />
-              </>
-            ) : (
-              <Suspense fallback={null}>
-                <CustomHeaderMobileMenuComp
-                  visible={mobileMenuVisible}
-                  onRequestClose={() => setMobileMenuVisible(false)}
-                  onOverlayPress={() => {
-                    const isUnitTest =
-                      typeof process !== 'undefined' &&
-                      (process as any).env &&
-                      (process as any).env.NODE_ENV === 'test';
-                    const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
-                    if (!isUnitTest && sinceOpen < 250) return;
-                    setMobileMenuVisible(false);
-                  }}
-                  onNavPress={handleNavPress}
-                  onUserAction={handleUserAction}
-                  onMyTravels={handleMyTravels}
-                  onLogout={handleLogout}
-                  colors={colors as any}
-                  styles={styles}
-                  activePath={activePath}
-                  isAuthenticated={isAuthenticated}
-                  username={username}
-                  favoritesCount={favorites.length}
-                  unreadCount={unreadCount}
-                  themeToggleNode={
-                    <Suspense fallback={null}>
-                      <ThemeToggleLazy compact layout="vertical" showLabels />
-                    </Suspense>
-                  }
-                />
-              </Suspense>
-            )
-          )}
+          {showHeaderContextBar ? (
+            <Suspense fallback={null}>
+              <HeaderContextBarLazy />
+            </Suspense>
+          ) : null}
           </View>
       </View>
     );

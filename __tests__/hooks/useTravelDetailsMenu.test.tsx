@@ -1,60 +1,40 @@
 import { renderHook } from '@testing-library/react-native'
+import { Animated } from 'react-native'
 
 import { useTravelDetailsMenu } from '@/hooks/useTravelDetailsMenu'
 
-jest.mock('@/hooks/useMenuState', () => ({
-  useMenuState: jest.fn(),
-}))
-
-const useMenuState = jest.requireMock('@/hooks/useMenuState').useMenuState as jest.Mock
-
 describe('useTravelDetailsMenu', () => {
+  const timingStart = jest.fn()
+
   beforeEach(() => {
-    jest.clearAllMocks()
+    timingStart.mockReset()
+    jest.spyOn(Animated, 'timing').mockReturnValue({
+      start: timingStart,
+    } as any)
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
   })
 
   it('opens desktop menu after defer is allowed', () => {
-    const openMenuOnDesktop = jest.fn()
-    useMenuState.mockReturnValue({
-      closeMenu: jest.fn(),
-      animatedX: {},
-      menuWidth: {},
-      menuWidthNum: 320,
-      openMenuOnDesktop,
-    })
+    const { result } = renderHook(() => useTravelDetailsMenu(false, true, 1200))
 
-    renderHook(() => useTravelDetailsMenu(false, true))
-
-    expect(openMenuOnDesktop).toHaveBeenCalledTimes(1)
+    expect(result.current.isMenuOpen).toBe(true)
+    expect(result.current.menuWidthNum).toBe(336)
   })
 
   it('does not open menu on mobile', () => {
-    const openMenuOnDesktop = jest.fn()
-    useMenuState.mockReturnValue({
-      closeMenu: jest.fn(),
-      animatedX: {},
-      menuWidth: {},
-      menuWidthNum: 320,
-      openMenuOnDesktop,
-    })
+    const { result } = renderHook(() => useTravelDetailsMenu(true, true, 390))
 
-    renderHook(() => useTravelDetailsMenu(true, true))
-
-    expect(openMenuOnDesktop).not.toHaveBeenCalled()
+    expect(result.current.isMenuOpen).toBe(false)
+    expect(result.current.menuWidth).toBe('100%')
   })
 
   it('does not open menu before defer is allowed', () => {
-    const openMenuOnDesktop = jest.fn()
-    useMenuState.mockReturnValue({
-      closeMenu: jest.fn(),
-      animatedX: {},
-      menuWidth: {},
-      menuWidthNum: 320,
-      openMenuOnDesktop,
-    })
+    const { result } = renderHook(() => useTravelDetailsMenu(false, false, 1200))
 
-    renderHook(() => useTravelDetailsMenu(false, false))
-
-    expect(openMenuOnDesktop).not.toHaveBeenCalled()
+    expect(result.current.isMenuOpen).toBe(true)
+    expect(timingStart).not.toHaveBeenCalled()
   })
 })
