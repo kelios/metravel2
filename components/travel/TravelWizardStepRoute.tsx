@@ -261,6 +261,17 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         });
     }, [formData, handleMarkersChange, onManualSave, selectedCountryIds]);
 
+    const handleMarkerEditSave = useCallback(async (updatedMarkers: MarkerData[]) => {
+        handleMarkersChange(updatedMarkers);
+        if (!onManualSave) return;
+
+        await onManualSave({
+            ...formData,
+            countries: (selectedCountryIds || []).map(String),
+            coordsMeTravel: updatedMarkers,
+        });
+    }, [formData, handleMarkersChange, onManualSave, selectedCountryIds]);
+
     // ✅ ФАЗА 2: Handler для выбора места из поиска
     const handleLocationSelect = useCallback(async (result: any) => {
         const lat = Number(result.lat);
@@ -786,6 +797,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             onCountrySelect={onCountrySelect}
                                             onCountryDeselect={onCountryDeselect}
                                             onPhotoMarkerReady={handlePhotoMarkerReady}
+                                            onMarkerEditSave={handleMarkerEditSave}
                                         />
                                     </Suspense>
                                 ) : (

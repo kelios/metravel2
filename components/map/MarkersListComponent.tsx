@@ -12,6 +12,7 @@ interface MarkersListComponentProps {
     categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
+    handleMarkerSave?: (index: number, payload: { address: string; categories: string[]; image: string }) => Promise<void> | void;
     handleMarkerRemove: (index: number) => void;
     editingIndex: number | null;
     setEditingIndex: (index: number | null) => void;
@@ -27,6 +28,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                categoryTravelAddress,
                                                                handleMarkerChange,
                                                                handleImageUpload,
+                                                               handleMarkerSave,
                                                                handleMarkerRemove,
                                                                editingIndex,
                                                                setEditingIndex,
@@ -234,6 +236,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                     categoryTravelAddress={categoryTravelAddress}
                     handleMarkerChange={handleMarkerChange}
                     handleImageUpload={handleImageUpload}
+                    handleMarkerSave={handleMarkerSave}
                     onClose={() => setEditingIndex(null)}
                     onRemove={onRemove}
                     styles={styles}

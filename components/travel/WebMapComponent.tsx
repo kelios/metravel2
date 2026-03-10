@@ -68,6 +68,7 @@ type WebMapComponentProps = {
     onCountrySelect: (countryId: any) => void;
     onCountryDeselect: (countryId: any) => void;
     onPhotoMarkerReady?: (payload: { markers: any[]; derivedCountryId: number | null }) => Promise<void> | void;
+    onMarkerEditSave?: (markers: any[]) => Promise<void> | void;
 };
 
 const WebMapComponent = ({
@@ -78,6 +79,7 @@ const WebMapComponent = ({
     onCountrySelect,
     onCountryDeselect,
     onPhotoMarkerReady,
+    onMarkerEditSave,
 }: WebMapComponentProps) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
@@ -247,7 +249,10 @@ const WebMapComponent = ({
                     const idKey = makeIdKey(m);
                     const llKey = makeLlKey(m);
                     const localMarker = (idKey ? localById.get(idKey) : null) ?? localByLl.get(llKey);
-                    // Сохраняем локальное blob/data превью только если внешний маркер не имеет изображения.
+                    // Backend can echo a serializer fallback image for a newly created point
+                    // before the real point-photo upload finishes. As long as we still have
+                    // the pending local file, prefer the local blob preview over that server
+                    // fallback so the deferred upload flow can complete deterministically.
                     if (localMarker?.image && /^(blob:|data:)/i.test(String(localMarker.image))) {
                         const serverImage = m?.image;
                         const hasPendingFile = /^(blob:)/i.test(String(localMarker.image))
@@ -501,6 +506,29 @@ const WebMapComponent = ({
         updated[index] = { ...updated[index], [field]: value };
         debouncedMarkersChange(updated);
     };
+
+    const handleMarkerSave = useCallback(
+        async (index: number, payload: { address: string; categories: string[]; image: string }) => {
+            const updated = [...localMarkers];
+            const prevMarker = updated[index];
+            if (!prevMarker) return;
+
+            updated[index] = {
+                ...prevMarker,
+                address: payload.address,
+                categories: Array.isArray(payload.categories)
+                    ? payload.categories
+                          .map((categoryId) => Number(categoryId))
+                          .filter((categoryId) => Number.isFinite(categoryId))
+                    : [],
+                image: payload.image || null,
+            };
+
+            debouncedMarkersChange(updated);
+            await onMarkerEditSave?.(updated);
+        },
+        [debouncedMarkersChange, localMarkers, onMarkerEditSave]
+    );
 
     const handleImageUpload = (index: number, imageUrl: string) => {
         const updated = [...localMarkers];
@@ -1080,6 +1108,7 @@ const WebMapComponent = ({
                                             categoryTravelAddress={categoryTravelAddress}
                                             handleMarkerChange={handleMarkerChange}
                                             handleImageUpload={handleImageUpload}
+                                            handleMarkerSave={handleMarkerSave}
                                             handleMarkerRemove={handleMarkerRemove}
                                             editingIndex={editingIndex}
                                             setEditingIndex={setEditingIndex}
@@ -1105,6 +1134,7 @@ const WebMapComponent = ({
                                 categoryTravelAddress={categoryTravelAddress}
                                 handleMarkerChange={handleMarkerChange}
                                 handleImageUpload={handleImageUpload}
+                                handleMarkerSave={handleMarkerSave}
                                 handleMarkerRemove={handleMarkerRemove}
                                 editingIndex={editingIndex}
                                 setEditingIndex={setEditingIndex}

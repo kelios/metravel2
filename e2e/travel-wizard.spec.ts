@@ -1136,6 +1136,7 @@ test.describe('Создание путешествия - Полный flow', () 
     let seenUpload = false;
     let capturedUpsertPayload: any = null;
     let uploadedPointId: string | null = null;
+    const fallbackPointImage = 'https://example.com/travel-cover/fallback.webp';
 
     await page.unroute('**/api/travels/upsert/**').catch(() => null);
     await page.unroute('**/api/travels/upsert/').catch(() => null);
@@ -1169,8 +1170,13 @@ test.describe('Создание путешествия - Полный flow', () 
         const firstMarkerImage = payload?.coordsMeTravel?.[0]?.image;
         const hasBlobImage = typeof firstMarkerImage === 'string' && /^blob:/i.test(firstMarkerImage);
 
+        const pointImageValidationError =
+          typeof firstMarkerImage !== 'string' || firstMarkerImage.trim().length === 0
+            ? 'image is required'
+            : null;
+
         await route.fulfill({
-          status: hasBlobImage ? 400 : 200,
+          status: hasBlobImage || pointImageValidationError ? 400 : 200,
           contentType: 'application/json',
           body: JSON.stringify({
             ...payload,
@@ -1179,10 +1185,10 @@ test.describe('Создание путешествия - Полный flow', () 
               ? payload.coordsMeTravel.map((marker: any, index: number) => ({
                   ...marker,
                   id: marker?.id ?? 5000 + index,
-                  image: null,
+                  image: fallbackPointImage,
                 }))
               : [],
-            detail: hasBlobImage ? 'blob image is not allowed' : undefined,
+            detail: hasBlobImage ? 'blob image is not allowed' : pointImageValidationError ?? undefined,
           }),
         });
       });
@@ -1241,7 +1247,9 @@ test.describe('Создание путешествия - Полный flow', () 
     expect(uploadedPointId).toBeTruthy();
     expect(capturedUpsertPayload).toBeTruthy();
     expect(capturedUpsertPayload?.coordsMeTravel?.length).toBeGreaterThan(0);
-    expect(capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBeFalsy();
+    expect(typeof capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBe('string');
+    expect(capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBeTruthy();
+    expect(String(capturedUpsertPayload?.coordsMeTravel?.[0]?.image)).not.toMatch(/^blob:/i);
 
     const pointPhoto = page.locator('img[src*="e2e-point.webp"]').first();
     await expect(pointPhoto).toBeVisible({ timeout: 15_000 });

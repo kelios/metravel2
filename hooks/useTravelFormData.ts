@@ -165,6 +165,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (!needsMarkerIds) return null;
 
       try {
+        // Some backend deployments persist the new point but do not return its id
+        // in the immediate upsert response. We re-fetch once and merge by id/lat-lng
+        // so the deferred point-photo upload still has a concrete point id.
         const freshTravel = await fetchTravel(Number(resolvedTravelId));
         const transformed = normalizeDraftPlaceholders(transformTravelToFormData(freshTravel));
         const serverMarkers = Array.isArray(transformed.coordsMeTravel)
@@ -383,6 +386,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         let markersForUpload = effectiveMarkers as MarkerData[];
         const refreshedMarkers = await rehydrateMarkerIdsFromServer(travelIdForRefresh, effectiveMarkers as MarkerData[]);
         if (refreshedMarkers && refreshedMarkers.length > 0) {
+          // Keep the refreshed marker ids in form state before attempting upload.
+          // Without this step the point can stay "id-less" locally and the pending
+          // point photo never leaves the blob preview state.
           markersForUpload = refreshedMarkers;
           const refreshedData = {
             ...(formDataRef.current as TravelFormData),

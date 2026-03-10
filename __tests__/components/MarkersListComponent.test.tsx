@@ -131,4 +131,37 @@ describe('MarkersListComponent - Edit modal categories', () => {
             );
         });
     });
+
+    it('calls marker save callback when modal save is clicked', async () => {
+        const handleMarkerSave = jest.fn().mockResolvedValue(undefined);
+
+        render(
+            <MarkersListComponent
+                markers={[baseMarker]}
+                categoryTravelAddress={[
+                    { id: 1, name: 'Кафе' },
+                    { id: 2, name: 'Парки' },
+                ]}
+                handleMarkerChange={jest.fn()}
+                handleImageUpload={jest.fn()}
+                handleMarkerSave={handleMarkerSave}
+                handleMarkerRemove={jest.fn()}
+                editingIndex={0}
+                setEditingIndex={jest.fn()}
+            />,
+        );
+
+        fireEvent.click(screen.getByText('Сохранить'));
+
+        await waitFor(() => {
+            expect(handleMarkerSave).toHaveBeenCalledWith(
+                0,
+                expect.objectContaining({
+                    address: 'Test address',
+                    categories: ['1', '2'],
+                    image: '',
+                }),
+            );
+        });
+    });
 });

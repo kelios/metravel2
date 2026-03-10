@@ -297,9 +297,9 @@ export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: strin
         if (imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)) {
             normalized.image = imageValue;
         } else if (normalizedFallbackImage) {
-            // Backend requires coordsMeTravel[].image for some serializers.
-            // Use travel-level media as serializer-compatible fallback.
-            // Local blob preview is preserved separately after save until point photo upload finishes.
+            // Backend requires coordsMeTravel[].image for some serializers even for new points.
+            // We send a serializer-compatible fallback here, but merge logic must preserve
+            // the local blob preview after save until the actual point-photo upload succeeds.
             normalized.image = normalizedFallbackImage;
         }
 

@@ -16,6 +16,7 @@ export interface EditMarkerModalProps {
     categoryTravelAddress: { id: number | string; name: string }[];
     handleMarkerChange: (index: number, field: string, value: string | string[]) => void;
     handleImageUpload: (index: number, imageUrl: string) => void;
+    handleMarkerSave?: (index: number, payload: { address: string; categories: string[]; image: string }) => Promise<void> | void;
     onClose: () => void;
     onRemove: (index: number) => void;
     styles: any;
@@ -28,6 +29,7 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
     categoryTravelAddress,
     handleMarkerChange,
     handleImageUpload,
+    handleMarkerSave,
     onClose,
     onRemove,
     styles,
@@ -71,8 +73,16 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
         onClose();
     };
 
-    const handleSave = () => {
-        persistEdits();
+    const handleSave = async () => {
+        if (handleMarkerSave) {
+            await handleMarkerSave(index, {
+                address,
+                categories,
+                image: localImage,
+            });
+        } else {
+            persistEdits();
+        }
         onClose();
     };
 
@@ -173,7 +183,9 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
                         <div style={styles.primaryActions}>
                             <button
                                 type="button"
-                                onClick={handleSave}
+                                onClick={() => {
+                                    void handleSave();
+                                }}
                                 style={styles.primaryButton}
                             >
                                 Сохранить
@@ -203,4 +215,3 @@ const EditMarkerModal: React.FC<EditMarkerModalProps> = ({
 };
 
 export default React.memo(EditMarkerModal);
-

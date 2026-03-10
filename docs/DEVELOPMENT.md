@@ -45,6 +45,32 @@ npm run android
 - `./build-dev.sh` — full dev web build + deploy to dev server (`DEPLOY=0` to skip deploy).
 - `./build-prod.sh [dev|preprod|prod]` — production-mode web export into `dist/<env>`, SEO/public-files post-processing, and deploy to prod server by default (`DEPLOY=0` for build-only, `CLEAN=1` to reinstall deps).
 
+## Route point from photo
+
+Flow for adding a route point from a photo on web must stay exactly this way:
+
+1. Read GPS coordinates from EXIF.
+2. Reverse geocode coordinates into address and country.
+3. Add a new local route point with:
+   - `id: null`
+   - resolved `address`
+   - resolved `country`
+   - local photo preview as `blob:...`
+4. Save travel via `PUT /api/travels/upsert/`.
+5. Backend may require `coordsMeTravel[].image` even for a new point.
+   - In this case frontend may send a serializer-compatible fallback image in `upsert`.
+   - But frontend must still preserve the local `blob:` preview in local state after save.
+6. After backend assigns a real point `id`, frontend must upload the actual point photo via `POST /api/upload` with:
+   - `collection=travelImageAddress`
+   - `id=<point id>`
+7. After upload succeeds, the point image in UI/state must be replaced with the uploaded server URL.
+
+Regression expectations:
+- `upsert` must never send `blob:` URLs to backend;
+- successful `upsert` must not erase the pending local point photo;
+- if backend echoes a fallback image for the point, UI must still keep the local preview until real point-photo upload finishes;
+- after the deferred upload finishes, the point must show the uploaded server image and the UI marker card must still indicate that the point has a photo.
+
 ## Environment variables
 
 Minimum required for unit tests and local dev:
