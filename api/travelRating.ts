@@ -23,6 +23,9 @@ export type RateTravelParams = {
     rating: number; // 1-5
 };
 
+const isAbortError = (error: unknown): boolean =>
+    !!error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError';
+
 /**
  * Отправляет оценку путешествия
  * POST /api/travels/rating/
@@ -76,8 +79,12 @@ export const getUserTravelRating = async (travelId: number): Promise<number | nu
 
         return null;
     } catch (error: unknown) {
-        // 404 означает что пользователь ещё не оценивал
-        if (error instanceof ApiError && error.status === 404) {
+        // Abort/401/403/404 are expected here and should resolve to "no user rating"
+        // without noisy console logging.
+        if (isAbortError(error)) {
+            return null;
+        }
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403 || error.status === 404)) {
             return null;
         }
         devError('Error fetching user travel rating:', error);
@@ -93,4 +100,3 @@ export const getUserTravelRating = async (travelId: number): Promise<number | nu
 export const fetchUserRatingForTravel = async (travelId: number): Promise<number | null> => {
     return getUserTravelRating(travelId);
 };
-

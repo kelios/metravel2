@@ -76,6 +76,25 @@ describe('src/api/client.ts apiClient', () => {
     expect(devError).toHaveBeenCalled();
   });
 
+  it('пробрасывает AbortError без devError логирования', async () => {
+    mockedGetSecureItem.mockResolvedValueOnce('token');
+    const abortError = new DOMException('signal is aborted without reason', 'AbortError');
+    mockedFetchWithTimeout.mockRejectedValueOnce(abortError);
+
+    await expect(apiClient.get('/aborted')).rejects.toBe(abortError);
+
+    expect(devError).not.toHaveBeenCalled();
+  });
+
+  it('не логирует пустой reject value', async () => {
+    mockedGetSecureItem.mockResolvedValueOnce('token');
+    mockedFetchWithTimeout.mockRejectedValueOnce(undefined);
+
+    await expect(apiClient.get('/empty-error')).rejects.toBeUndefined();
+
+    expect(devError).not.toHaveBeenCalled();
+  });
+
   it('пытается сделать refresh при 401 и повторяет запрос', async () => {
     mockedGetSecureItem
       .mockResolvedValueOnce('oldToken') // первый вызов в request

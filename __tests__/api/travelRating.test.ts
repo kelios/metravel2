@@ -1,6 +1,7 @@
 import { rateTravel, getUserTravelRating } from '@/api/travelRating';
 import { apiClient } from '@/api/client';
 import { useAuthStore } from '@/stores/authStore';
+import { devError } from '@/utils/logger';
 
 jest.mock('@/api/client', () => {
   const post = jest.fn();
@@ -21,6 +22,10 @@ jest.mock('@/api/client', () => {
     ApiError,
   };
 });
+
+jest.mock('@/utils/logger', () => ({
+  devError: jest.fn(),
+}));
 
 describe('api/travelRating', () => {
   beforeEach(() => {
@@ -96,5 +101,30 @@ describe('api/travelRating', () => {
     const result = await getUserTravelRating(50);
 
     expect(result).toBeNull();
+  });
+
+  it('getUserTravelRating returns null on 401 without logging', async () => {
+    useAuthStore.setState({ userId: '77' });
+
+    const { ApiError } = jest.requireMock('@/api/client') as { ApiError: new (msg: string, status: number) => Error & { status: number } };
+    (apiClient.get as unknown as jest.Mock).mockRejectedValue(new ApiError('Unauthorized', 401));
+
+    const result = await getUserTravelRating(50);
+
+    expect(result).toBeNull();
+    expect(devError).not.toHaveBeenCalled();
+  });
+
+  it('getUserTravelRating returns null on AbortError without logging', async () => {
+    useAuthStore.setState({ userId: '77' });
+
+    (apiClient.get as unknown as jest.Mock).mockRejectedValue(
+      new DOMException('signal is aborted without reason', 'AbortError')
+    );
+
+    const result = await getUserTravelRating(50);
+
+    expect(result).toBeNull();
+    expect(devError).not.toHaveBeenCalled();
   });
 });

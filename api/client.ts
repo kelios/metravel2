@@ -74,6 +74,20 @@ const getApiErrorMessage = (data: unknown, fallbackStatusText: string): string =
     );
 };
 
+const hasLoggableRequestError = (error: unknown): boolean => {
+    if (error == null) return false;
+    if (typeof error === 'string') {
+        return error.trim().length > 0;
+    }
+    if (error instanceof Error) {
+        return error.message.trim().length > 0 || error.name.trim().length > 0;
+    }
+    if (typeof error === 'object') {
+        return Object.keys(error as Record<string, unknown>).length > 0;
+    }
+    return true;
+};
+
 /**
  * Единый API клиент
  */
@@ -462,6 +476,7 @@ class ApiClient {
                 (typeof options.signal !== 'undefined' && options.signal?.aborted === true);
             if (isAbortError) {
                 this.releaseRateLimitSlot(rateLimitSlot);
+                throw error;
             }
 
             if (error instanceof ApiError) {
@@ -469,7 +484,9 @@ class ApiClient {
             }
             
             // ✅ ИСПРАВЛЕНИЕ: Улучшенная обработка сетевых ошибок
-            devError('API request error:', error);
+            if (hasLoggableRequestError(error)) {
+                devError('API request error:', error);
+            }
             
             // Проверяем, является ли это сетевой ошибкой
             const errorMessage = error instanceof Error ? error.message : String(error);
