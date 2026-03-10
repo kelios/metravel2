@@ -17,7 +17,7 @@ It runs:
 - `./verify-security-fixes.sh`
 - `npm run audit:high`
 - `npm run test:run`
-- `npm run build:web`
+- `npm run build:web:prod`
 
 Notes:
 - `npm run lint` includes `npm run guard:external-links`.
@@ -27,10 +27,10 @@ Notes:
 ## Web build
 
 ```bash
-npm run build:web
+npm run build:web:prod
 ```
 
-(Expo export for web)
+(Production web export + SEO page generation + travel SEO validation)
 
 ### Prod deploy script
 

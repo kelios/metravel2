@@ -64,7 +64,8 @@ npm run android:submit:latest
 
 ### Web
 ```bash
-npm run prod:web
+npm run build:web:prod
+DEPLOY=0 ./build-prod.sh prod
 ```
 
 ---

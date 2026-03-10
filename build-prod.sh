@@ -114,9 +114,10 @@ install_deps
 build_env "$ENV"
 
 echo "Генерация SEO-страниц..."
-node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by || {
-  echo "⚠️  SEO-генерация не удалась, продолжаю деплой без неё..."
-}
+node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by
+
+echo "Проверка SEO-артефактов..."
+node scripts/verify-static-travel-seo.js --dist "dist/$ENV" --api https://metravel.by
 
 echo "Постобработка билда..."
 node scripts/copy-public-files.js "dist/$ENV"

@@ -299,10 +299,12 @@ const HomeHero = memo(function HomeHero({
   // Slider state
   const [activeSlide, setActiveSlide] = useState(0)
   const [visibleSlide, setVisibleSlide] = useState(0)
+  const [fadingSlide, setFadingSlide] = useState<number | null>(null)
   const [loadedSlides, setLoadedSlides] = useState<Set<number>>(
     () => new Set([0]),
   )
   const totalSlides = BOOK_IMAGES.length
+  const previousVisibleSlideRef = useRef(0)
 
   const markSlideAsLoaded = useCallback((slideIndex: number) => {
     setLoadedSlides((prev) => {
@@ -363,6 +365,29 @@ const HomeHero = memo(function HomeHero({
       setVisibleSlide(activeSlide)
     }
   }, [activeSlide, loadedSlides])
+
+  useEffect(() => {
+    const previousVisibleSlide = previousVisibleSlideRef.current
+    if (previousVisibleSlide === visibleSlide) return
+
+    previousVisibleSlideRef.current = visibleSlide
+    setFadingSlide(previousVisibleSlide)
+
+    if (Platform.OS !== 'web') {
+      setFadingSlide(null)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setFadingSlide((current) =>
+        current === previousVisibleSlide ? null : current,
+      )
+    }, 520)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [visibleSlide])
 
   // Auto-advance slider
   useEffect(() => {
@@ -481,7 +506,17 @@ const HomeHero = memo(function HomeHero({
   )
 
   const currentSlide = BOOK_IMAGES[visibleSlide]
-  const isVisibleSlideLoaded = loadedSlides.has(visibleSlide)
+  const renderedSlideIndices = useMemo(() => {
+    if (
+      fadingSlide === null ||
+      fadingSlide === visibleSlide ||
+      !loadedSlides.has(fadingSlide)
+    ) {
+      return [visibleSlide]
+    }
+
+    return [fadingSlide, visibleSlide]
+  }, [fadingSlide, loadedSlides, visibleSlide])
   const topWaveAnimatedStyle = useMemo(
     () => ({
       opacity: waveBreath.interpolate({
@@ -787,31 +822,63 @@ const HomeHero = memo(function HomeHero({
                       accessibilityLabel={`Маршрут недели: ${currentSlide.title}. ${currentSlide.subtitle}`}
                       accessibilityHint="Открыть маршрут"
                     >
-                      {/* Keep the currently visible slide mounted; switch after preload to avoid blank frame */}
-                      <View
-                        style={[
-                          styles.slideWrapper,
-                          Platform.OS === 'web'
-                            ? ({ transition: 'opacity 0.5s ease' } as any)
-                            : null,
-                        ]}
-                      >
-                        <ImageCardMedia
-                          source={currentSlide.source}
-                          width={sliderMediaWidth}
-                          height={sliderHeight}
-                          borderRadius={0}
-                          fit="contain"
-                          blurBackground
-                          allowCriticalWebBlur
-                          quality={90}
-                          alt={currentSlide.alt}
-                          loading={isVisibleSlideLoaded ? 'eager' : 'lazy'}
-                          showImmediately={isVisibleSlideLoaded}
-                          style={styles.slideImage}
-                          onLoad={() => markSlideAsLoaded(visibleSlide)}
-                        />
-                      </View>
+                      {renderedSlideIndices.map((slideIndex) => {
+                        const slide = BOOK_IMAGES[slideIndex]
+                        const isCurrentVisibleSlide = slideIndex === visibleSlide
+                        const isSlideLoaded = loadedSlides.has(slideIndex)
+
+                        return (
+                          <View
+                            key={`hero-slide-${slideIndex}`}
+                            style={[
+                              styles.slideWrapper,
+                              Platform.OS === 'web'
+                                ? ({
+                                    opacity: isCurrentVisibleSlide ? 1 : 0,
+                                    zIndex: isCurrentVisibleSlide ? 2 : 1,
+                                  } as any)
+                                : null,
+                            ]}
+                            pointerEvents="none"
+                          >
+                            <ImageCardMedia
+                              source={slide.source}
+                              width={sliderMediaWidth}
+                              height={sliderHeight}
+                              borderRadius={0}
+                              fit="contain"
+                              blurBackground
+                              allowCriticalWebBlur
+                              quality={90}
+                              alt={slide.alt}
+                              loading={isSlideLoaded ? 'eager' : 'lazy'}
+                              showImmediately={isSlideLoaded}
+                              style={styles.slideImage}
+                              onLoad={() => markSlideAsLoaded(slideIndex)}
+                            />
+                            <View style={styles.slideOverlay}>
+                              <View style={styles.slideEyebrow}>
+                                <Feather
+                                  name="map-pin"
+                                  size={11}
+                                  color={sliderIconColor}
+                                />
+                                <Text style={styles.slideEyebrowText}>
+                                  Маршрут недели
+                                </Text>
+                              </View>
+                              <View style={styles.slideCaption}>
+                                <Text style={styles.slideTitle}>
+                                  {slide.title}
+                                </Text>
+                                <Text style={styles.slideSubtitle}>
+                                  {slide.subtitle}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        )
+                      })}
                       {isWeb && (
                         <>
                           <View style={styles.sliderPaperInset} />
@@ -855,28 +922,6 @@ const HomeHero = memo(function HomeHero({
                           )}
                         </>
                       )}
-                      {/* Overlay with title */}
-                      <View style={styles.slideOverlay}>
-                        <View style={styles.slideEyebrow}>
-                          <Feather
-                            name="map-pin"
-                            size={11}
-                            color={sliderIconColor}
-                          />
-                          <Text style={styles.slideEyebrowText}>
-                            Маршрут недели
-                          </Text>
-                        </View>
-                        <View style={styles.slideCaption}>
-                          <Text style={styles.slideTitle}>
-                            {currentSlide.title}
-                          </Text>
-                          <Text style={styles.slideSubtitle}>
-                            {currentSlide.subtitle}
-                          </Text>
-                        </View>
-                      </View>
-
                       {/* Navigation arrows — inside sliderContainer to stay within book page bounds */}
                       <View style={styles.sliderNav}>
                         <Pressable
