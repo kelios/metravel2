@@ -5,6 +5,12 @@
 import type { TravelFormData } from '@/types/types';
 
 export const DRAFT_PLACEHOLDER_PREFIX = '__draft_placeholder__';
+const DRAFT_NAME_PREFIX = `${DRAFT_PLACEHOLDER_PREFIX}name__`;
+
+export function getDraftNamePlaceholder(): string {
+    const suffix = Math.random().toString(36).slice(2, 8);
+    return `${DRAFT_NAME_PREFIX}-${suffix}`;
+}
 
 /**
  * Проверяет, является ли значение локальным превью (blob: или data:)
@@ -120,6 +126,11 @@ export function ensureRequiredDraftFields(payload: TravelFormData): TravelFormDa
     });
 
     const isDraft = !normalized.publish && !normalized.moderation;
+    const normalizedName = typeof normalized.name === 'string' ? normalized.name.trim() : '';
+
+    if (isDraft && normalizedName.length < 3) {
+        normalized.name = getDraftNamePlaceholder() as any;
+    }
 
     stringFields.forEach(field => {
         const value = normalized[field];
@@ -142,6 +153,10 @@ export function normalizeDraftPlaceholders(payload: TravelFormData): TravelFormD
     const stringFields: Array<keyof TravelFormData> = [
         'minus', 'plus', 'recommendation', 'description', 'youtube_link',
     ];
+
+    if (typeof normalized.name === 'string' && normalized.name.startsWith(DRAFT_NAME_PREFIX)) {
+        normalized.name = '' as any;
+    }
 
     stringFields.forEach(field => {
         const value = normalized[field];

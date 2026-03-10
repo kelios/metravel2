@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { Platform } from 'react-native';
 import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -23,6 +24,12 @@ async function showToastMessage(payload: any) {
 }
 
 const reverseGeocode = async (latlng: any) => {
+    // Browser-side reverse geocoding is unstable in production due to CORS/CSP/rate limits.
+    // Keep web flow deterministic and fall back to a coordinate-based address there.
+    if (Platform.OS === 'web') {
+        return null;
+    }
+
     // Пробуем несколько сервисов для получения наиболее точного адреса
     
     // 1. Nominatim с zoom=18 для максимальной детализации
@@ -66,7 +73,6 @@ type WebMapComponentProps = {
     countrylist: any[];
     onCountrySelect: (countryId: any) => void;
     onCountryDeselect: (countryId: any) => void;
-    onRequestSaveDraft?: () => Promise<any> | void;
 };
 
 const WebMapComponent = ({
@@ -76,7 +82,6 @@ const WebMapComponent = ({
     countrylist,
     onCountrySelect,
     onCountryDeselect,
-    onRequestSaveDraft,
 }: WebMapComponentProps) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
@@ -438,24 +443,6 @@ const WebMapComponent = ({
         setActiveIndex(Math.max(0, nextMarkers.length - 1));
     };
 
-    const lastSaveKickAtRef = useRef(0);
-    const kickDraftSave = useCallback(() => {
-        if (!onRequestSaveDraft) return;
-        const now = Date.now();
-        if (now - lastSaveKickAtRef.current < 1500) return;
-        lastSaveKickAtRef.current = now;
-        setTimeout(() => {
-            try {
-                const res = onRequestSaveDraft();
-                if (res && typeof (res as any).catch === 'function') {
-                    (res as any).catch(() => null);
-                }
-            } catch {
-                // ignore
-            }
-        }, 0);
-    }, [onRequestSaveDraft]);
-
     const uploadStateByBlobRef = useRef(new Map<string, { inFlight: boolean; attempts: number; lastToastAt?: number }>());
 
     const tryUploadMarkerImage = useCallback(async (marker: any) => {
@@ -550,7 +537,6 @@ const WebMapComponent = ({
         }
 
         await addMarker({ lat: coords.lat, lng: coords.lng }, { image: previewUrl });
-        kickDraftSave();
         void showToastMessage({
             type: 'success',
             text1: 'Точка добавлена',

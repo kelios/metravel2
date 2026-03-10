@@ -46,6 +46,20 @@ interface UseTravelFormDataOptions {
   onAuthRequired?: (context: { redirect: string }) => void | Promise<void>;
 }
 
+async function invalidateTravelCollections(
+  queryClient: { invalidateQueries?: (filters: unknown) => Promise<unknown> | unknown } | null | undefined,
+  userId: string | null,
+) {
+  if (!queryClient?.invalidateQueries) return;
+
+  await queryClient.invalidateQueries({ queryKey: ['travels'], refetchType: 'all' });
+
+  if (!userId) return;
+
+  await queryClient.invalidateQueries({ queryKey: ['my-travels-count', userId], refetchType: 'all' });
+  await queryClient.invalidateQueries({ queryKey: ['export-my-travels-count', userId], refetchType: 'all' });
+}
+
 export function useTravelFormData(options: UseTravelFormDataOptions) {
   const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired } = options;
   const router = useRouter();
@@ -106,7 +120,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, []);
 
 
-  const cleanAndSave = useCallback(async (data: TravelFormData) => {
+  const cleanAndSave = useCallback(async (data: TravelFormData, options?: { autosave?: boolean }) => {
     // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition
     if (saveAbortControllerRef.current) {
       saveAbortControllerRef.current.abort();
@@ -158,7 +172,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         throw new Error('Component unmounted');
       }
 
-      const result = await saveFormData(payload, abortController.signal);
+      const result = await saveFormData(payload, abortController.signal, options);
 
       // ✅ FIX: Проверяем, что запрос не был отменён
       if (abortController.signal.aborted) {
@@ -201,6 +215,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         kf(k, 'nil');
       });
       kf('name', 'nil');
+      kf('name', 'emptyString');
 
       // If backend returns empty arrays for filter fields, don't wipe user selections.
       (['categories', 'transports', 'complexity', 'companions', 'over_nights_stay', 'month'] as const).forEach(k => {
@@ -251,10 +266,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       // so "Мои путешествия" can show the new draft without a hard refresh.
       if (!hadId && hasId && !didInvalidateAfterCreateRef.current) {
         didInvalidateAfterCreateRef.current = true;
-        queryClient?.invalidateQueries({ queryKey: ['travels'] });
+        void invalidateTravelCollections(queryClient, userId);
       }
     },
-    [formState, queryClient]
+    [formState, queryClient, userId]
   );
 
   const handleSaveSuccess = useCallback(
@@ -319,7 +334,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (manualSaveInFlightRef.current) {
         throw new Error('Request aborted');
       }
-      return await cleanAndSave(dataToSave as TravelFormData);
+      return await cleanAndSave(dataToSave as TravelFormData, { autosave: true });
     },
     onSuccess: handleSaveSuccess,
     onError: handleSaveError,

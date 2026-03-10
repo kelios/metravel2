@@ -131,6 +131,15 @@ describe('travelFormNormalization', () => {
       expect(result.description).toBe(DRAFT_PLACEHOLDER_PREFIX);
     });
 
+    it('fills blank draft name with generated placeholder', () => {
+      const result = ensureRequiredDraftFields({
+        publish: false,
+        moderation: false,
+        name: '',
+      } as any);
+      expect(result.name).toContain(`${DRAFT_PLACEHOLDER_PREFIX}name__`);
+    });
+
     it('fills blank string fields with null for published', () => {
       const result = ensureRequiredDraftFields({
         publish: true,
@@ -156,6 +165,13 @@ describe('travelFormNormalization', () => {
         minus: '   ',
       } as any);
       expect(result.minus).toBe('');
+    });
+
+    it('hides generated draft name placeholders from UI', () => {
+      const result = normalizeDraftPlaceholders({
+        name: `${DRAFT_PLACEHOLDER_PREFIX}name__abc123`,
+      } as any);
+      expect(result.name).toBe('');
     });
   });
 

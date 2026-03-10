@@ -1,4 +1,6 @@
 import { renderHook, waitFor, act, cleanup } from '@testing-library/react-native';
+import React from 'react';
+import { QueryClientContext } from '@tanstack/react-query';
 
 import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { fetchTravel } from '@/api/travelsApi';
@@ -16,6 +18,7 @@ jest.mock('@/api/misc', () => ({
 }));
 
 describe('useTravelFormData', () => {
+  const mockInvalidateQueries = jest.fn();
   const baseOptions = {
     travelId: '123',
     isNew: false,
@@ -29,6 +32,8 @@ describe('useTravelFormData', () => {
     // Ensure a consistent baseline; some tests temporarily enable fake timers.
     jest.useRealTimers();
     jest.clearAllMocks();
+    mockInvalidateQueries.mockReset();
+    mockInvalidateQueries.mockResolvedValue(undefined);
   });
   
   afterEach(() => {
@@ -36,6 +41,20 @@ describe('useTravelFormData', () => {
     jest.useRealTimers();
     cleanup();
   });
+
+  const createWrapper = () => {
+    const queryClient = {
+      invalidateQueries: mockInvalidateQueries,
+    };
+
+    return function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(
+        QueryClientContext.Provider,
+        { value: queryClient as any },
+        children
+      );
+    };
+  };
 
   it('sets loadError when travel does not exist', async () => {
     (fetchTravel as jest.Mock).mockRejectedValue(new ApiError(404, 'Not found'));
@@ -188,6 +207,42 @@ describe('useTravelFormData', () => {
     const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
     expect(sentPayload.publish).toBe(true);
     expect(sentPayload.moderation).toBe(false);
+  });
+
+  it('invalidates my travels queries after first successful create', async () => {
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 817 }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: null,
+          isNew: true,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false, wrapper: createWrapper() }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: null,
+        name: 'Created travel',
+        description: 'Long enough description to keep save flow deterministic in tests.',
+      });
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave();
+    });
+
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['travels'], refetchType: 'all' });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['my-travels-count', '42'], refetchType: 'all' });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['export-my-travels-count', '42'], refetchType: 'all' });
   });
 
   it('manual save keeps local description if backend responds with description=null (no placeholder on next save)', async () => {

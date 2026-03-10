@@ -91,19 +91,26 @@ const makeUniqueSlug = (value?: string): string => {
   return base ? `${base}-${suffix}` : `travel-${suffix}`;
 };
 
-export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): Promise<TravelFormData> => {
+export const saveFormData = async (
+  data: TravelFormData,
+  signal?: AbortSignal,
+  options?: { autosave?: boolean }
+): Promise<TravelFormData> => {
   try {
     const token = await getSecureItem('userToken');
     if (!token) {
       throw new Error('Пользователь не авторизован');
     }
 
+    const isDraft = !data?.publish && !data?.moderation;
+    const isAutosaveDraft = options?.autosave === true && isDraft;
+
     // ✅ FIX: Валидация критичных полей перед отправкой
     const trimmedName = typeof data.name === 'string' ? data.name.trim() : '';
-    if (trimmedName.length === 0) {
+    if (!isAutosaveDraft && trimmedName.length === 0) {
       throw new Error('Название обязательно для заполнения');
     }
-    if (trimmedName.length < 3) {
+    if (!isAutosaveDraft && trimmedName.length < 3) {
       throw new Error('Название должно содержать минимум 3 символа');
     }
     if (trimmedName.length > 200) {

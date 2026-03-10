@@ -434,6 +434,8 @@ npm run lighthouse:produrl:summary
 - [x] Итерация 36: travel route больше не провоцирует раннюю загрузку `FavoritesProvider` через idle window; для него оставлен только interaction trigger и поздний fallback.
 - [x] Итерация 37: root layout переведен на `effectivePathname`, чтобы web travel route распознавался по реальному browser path уже на первой гидратации, а не только после стабилизации `usePathname()`.
 - [x] Итерация 37: defer для `Footer` и другого route-aware chrome на `travels/*` теперь вычисляется от эффективного пути и не должен срываться на прямом заходе.
+- [x] Итерация 38: `NetworkStatus` в `app/_layout.tsx` переведен на route-aware deferred mount для web `travels/*`, чтобы root status chrome не входил в раннее hydration/Lighthouse окно.
+- [x] Итерация 38: `ToastHost` в `app/_layout.tsx` переведен на route-aware deferred mount для web `travels/*` с ранним reveal по interaction и таймерным fallback.
 - [ ] Этап 2: формально выделить critical shell как отдельный слой внутри travel details.
 - [ ] Этап 3: упростить hero/LCP path до более детерминированного SSR-first media flow.
 - [ ] Этап 4: сократить initial JS travel route и shared bundle pressure.

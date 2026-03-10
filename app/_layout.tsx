@@ -183,6 +183,12 @@ export default function RootLayout() {
     const [showFooterChrome, setShowFooterChrome] = useState(
       !isWeb || !isTravelPerformanceRoute
     );
+    const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(
+      !isWeb || !isTravelPerformanceRoute
+    );
+    const [showToastChrome, setShowToastChrome] = useState(
+      !isWeb || !isTravelPerformanceRoute
+    );
     const [showConsentBanner, setShowConsentBanner] = useState(false);
     
     useEffect(() => {
@@ -193,15 +199,29 @@ export default function RootLayout() {
     useEffect(() => {
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
         let footerTimer: ReturnType<typeof setTimeout> | null = null;
+        let networkTimer: ReturnType<typeof setTimeout> | null = null;
+        let toastTimer: ReturnType<typeof setTimeout> | null = null;
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
         let rafId: number | null = null;
 
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
+        const revealDeferredRootChrome = () => {
+          setShowNetworkStatusChrome(true);
+          setShowToastChrome(true);
+        };
+
         if (isWeb) {
           const footerDelay = isTravelPerformanceRoute ? 6500 : 0;
           footerTimer = setTimeout(() => setShowFooterChrome(true), footerDelay);
+          const networkDelay = isTravelPerformanceRoute ? 4200 : 0;
+          const toastDelay = isTravelPerformanceRoute ? 5200 : 0;
+          networkTimer = setTimeout(() => setShowNetworkStatusChrome(true), networkDelay);
+          toastTimer = setTimeout(() => setShowToastChrome(true), toastDelay);
+          window.addEventListener('pointerdown', revealDeferredRootChrome, { passive: true, once: true });
+          window.addEventListener('keydown', revealDeferredRootChrome, { passive: true, once: true });
+          window.addEventListener('scroll', revealDeferredRootChrome, { passive: true, once: true });
         }
 
         // Defer ConsentBanner for LCP, but skip entirely if consent is already saved.
@@ -221,8 +241,15 @@ export default function RootLayout() {
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
           if (footerTimer) clearTimeout(footerTimer);
+          if (networkTimer) clearTimeout(networkTimer);
+          if (toastTimer) clearTimeout(toastTimer);
           if (consentTimer) clearTimeout(consentTimer);
           if (rafId != null) cancelAnimationFrame(rafId);
+          if (isWeb && typeof window !== 'undefined') {
+            window.removeEventListener('pointerdown', revealDeferredRootChrome);
+            window.removeEventListener('keydown', revealDeferredRootChrome);
+            window.removeEventListener('scroll', revealDeferredRootChrome);
+          }
         };
     }, [isTravelPerformanceRoute]);
 
@@ -281,6 +308,8 @@ export default function RootLayout() {
             showMapBackground={showMapBackground}
             showFooter={showFooter}
             showFooterChrome={showFooterChrome}
+            showNetworkStatusChrome={showNetworkStatusChrome}
+            showToastChrome={showToastChrome}
             isMobile={isMobile}
             pathname={effectivePathname}
             currentColorScheme={colorScheme}
@@ -300,6 +329,8 @@ function ThemedContent({
   showMapBackground,
   showFooter,
   showFooterChrome,
+  showNetworkStatusChrome,
+  showToastChrome,
   isMobile,
   pathname,
   currentColorScheme,
@@ -312,6 +343,8 @@ function ThemedContent({
   showMapBackground: boolean;
   showFooter: boolean;
   showFooterChrome: boolean;
+  showNetworkStatusChrome: boolean;
+  showToastChrome: boolean;
   isMobile: boolean;
   pathname?: string;
   currentColorScheme: 'light' | 'dark' | null | undefined;
@@ -385,7 +418,7 @@ function ThemedContent({
                               )}
 
                               {/* ✅ FIX-005: Индикатор статуса сети */}
-                              {(!isWeb || isMounted) && (
+                              {(!isWeb || (isMounted && showNetworkStatusChrome)) && (
                                 <React.Suspense fallback={null}>
                                   <NetworkStatusLazy position="top" />
                                 </React.Suspense>
@@ -444,7 +477,7 @@ function ThemedContent({
                               )}
                         </View>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
-            {isMounted && (
+            {isMounted && (!isWeb || showToastChrome) && (
               <React.Suspense fallback={null}>
                 <ToastLazy />
               </React.Suspense>

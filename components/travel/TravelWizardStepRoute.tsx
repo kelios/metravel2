@@ -314,7 +314,13 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     }, []);
 
     const reverseGeocode = useCallback(async (lat: number, lng: number) => {
-        // Use a CORS-friendly provider first, then fall back to Nominatim
+        // Browser-side reverse geocoding is unstable in production due to CSP/CORS/rate limits.
+        // Keep web flow deterministic and rely on coordinate fallback there.
+        if (Platform.OS === 'web') {
+            return null;
+        }
+
+        // Use a provider fallback chain on native only.
         try {
             const primary = await fetch(
                 `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
@@ -405,19 +411,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         setManualLng('');
         setManualPhotoPreviewUrl(null);
         setIsManualPointVisible(false);
-        if (manualPhotoPreviewUrl && onManualSave) {
-            setTimeout(() => {
-                try {
-                    const res = onManualSave();
-                    if (res && typeof (res as any).catch === 'function') {
-                        (res as any).catch(() => null);
-                    }
-                } catch {
-                    // ignore
-                }
-            }, 0);
-        }
-    }, [countries, handleMarkersChange, manualCoords, manualLat, manualLng, manualPhotoPreviewUrl, onManualSave, parseCoordsPair, reverseGeocode, selectedCountryIds, onCountrySelect, markers]);
+    }, [countries, handleMarkersChange, manualCoords, manualLat, manualLng, manualPhotoPreviewUrl, parseCoordsPair, reverseGeocode, selectedCountryIds, onCountrySelect, markers]);
 
     const cleanupManualPhotoPreview = useCallback(() => {
         if (!manualPhotoPreviewUrl) return;
@@ -772,7 +766,6 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             countrylist={countries}
                                             onCountrySelect={onCountrySelect}
                                             onCountryDeselect={onCountryDeselect}
-                                            onRequestSaveDraft={onManualSave}
                                         />
                                     </Suspense>
                                 ) : (

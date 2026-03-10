@@ -133,6 +133,36 @@ describe('api/misc', () => {
     expect(body.travelImageThumbUrArr).toEqual([3796])
   })
 
+  it('saveFormData allows draft autosave payload without a user-entered name', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 2, name: '__draft_placeholder__name__abc123' })
+
+    const payload = {
+      ...baseForm,
+      id: null,
+      name: '',
+      publish: false,
+      moderation: false,
+    } as any
+
+    await expect(saveFormData(payload, undefined, { autosave: true })).resolves.toBeDefined()
+    expect(mockApiClientRequest).toHaveBeenCalled()
+  })
+
+  it('saveFormData still requires name for manual draft save', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+
+    const payload = {
+      ...baseForm,
+      id: null,
+      name: '',
+      publish: false,
+      moderation: false,
+    } as any
+
+    await expect(saveFormData(payload)).rejects.toThrow('Название обязательно для заполнения')
+  })
+
   it('uploadImage validates file and requires token', async () => {
     mockGetSecureItem.mockResolvedValue(null)
     await expect(uploadImage(new FormData())).rejects.toThrow('Пользователь не авторизован')
