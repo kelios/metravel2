@@ -424,6 +424,8 @@ npm run lighthouse:produrl:summary
 - [x] Итерация 31: `FiltersProvider` локализован в `CustomHeaderAccountSection`, где `useFilters` реально используется для account/header действий.
 - [x] Итерация 32: `CustomHeader` перестал использовать общий `useResponsive`; header shell переведен на lightweight viewport split через `useWindowDimensions` и локальную hydration-логику.
 - [x] Итерация 32: mobile/desktop режим header теперь вычисляется локально по breakpoint-границам без подключения shared responsive store в ранний web path.
+- [x] Итерация 33: static-config prefetch для `QueryClient` вынесен из `reactQueryConfig.ts` в отдельный lazy helper, чтобы root query-client path не импортировал heavy `api/misc` и `queryKeys` напрямую.
+- [x] Итерация 33: idle-prefetch фильтров и стран теперь запускается через отдельный chunk `queryClientStaticPrefetch`, а не через inline root-path логику в `createOptimizedQueryClient`.
 - [ ] Этап 2: формально выделить critical shell как отдельный слой внутри travel details.
 - [ ] Этап 3: упростить hero/LCP path до более детерминированного SSR-first media flow.
 - [ ] Этап 4: сократить initial JS travel route и shared bundle pressure.

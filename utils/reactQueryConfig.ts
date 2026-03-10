@@ -81,23 +81,13 @@ export function createOptimizedQueryClient(
     // P5.1: Prefetch статических данных (фильтры, страны) при idle
     if ('requestIdleCallback' in window) {
       (window as any).requestIdleCallback(() => {
-        import('@/api/misc').then(({ fetchFilters, fetchAllCountries }) => {
-          const { queryKeys } = require('@/queryKeys');
-
-          client.prefetchQuery({
-            queryKey: queryKeys.filters(),
-            queryFn: () => fetchFilters(),
-            staleTime: 30 * 60 * 1000, // 30 минут (static config)
-          });
-
-          client.prefetchQuery({
-            queryKey: queryKeys.countries(),
-            queryFn: () => fetchAllCountries(),
-            staleTime: 30 * 60 * 1000, // 30 минут (static config)
-          });
-        }).catch(() => {
+        import('@/utils/queryClientStaticPrefetch')
+          .then(({ runStaticQueryClientPrefetch }) => {
+            runStaticQueryClientPrefetch(client);
+          })
+          .catch(() => {
           // Не блокируем приложение при ошибке prefetch
-        });
+          });
       }, { timeout: 5000 });
     }
   }
