@@ -1,8 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import Button from '@/components/ui/Button';
 
 interface Props {
   children: ReactNode;
@@ -13,6 +12,39 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+}
+
+type ErrorActionButtonProps = {
+  label: string;
+  onPress: () => void;
+  accessibilityLabel: string;
+  styles: ReturnType<typeof getStyles>;
+  primary?: boolean;
+}
+
+function ErrorActionButton({
+  label,
+  onPress,
+  accessibilityLabel,
+  styles,
+  primary = false,
+}: ErrorActionButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [
+        styles.button,
+        primary ? styles.primaryButton : styles.secondaryButton,
+        pressed && styles.buttonPressed,
+      ]}
+    >
+      <Text style={[styles.buttonLabel, primary ? styles.primaryButtonLabel : styles.secondaryButtonLabel]}>
+        {label}
+      </Text>
+    </Pressable>
+  )
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -88,19 +120,19 @@ export default class ErrorBoundary extends Component<Props, State> {
             <Text style={styles.message}>
               {this.state.error?.message || 'Произошла непредвиденная ошибка'}
             </Text>
-            <Button
+            <ErrorActionButton
               label="Попробовать снова"
               onPress={this.handleReset}
-              style={[styles.button, styles.primaryButton]}
               accessibilityLabel="Попробовать снова"
+              styles={styles}
+              primary
             />
             {Platform.OS === 'web' && (
-              <Button
+              <ErrorActionButton
                 label="Перезагрузить страницу"
                 onPress={this.reloadPage}
-                variant="ghost"
-                style={[styles.button, styles.secondaryButton]}
                 accessibilityLabel="Перезагрузить страницу"
+                styles={styles}
               />
             )}
           </View>
@@ -140,12 +172,17 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     lineHeight: 24,
   },
   button: {
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 12,
     minWidth: 200,
     minHeight: 44,
+  },
+  buttonPressed: {
+    opacity: 0.92,
   },
   primaryButton: {
     backgroundColor: colors.primary,
@@ -170,6 +207,8 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   secondaryButton: {
     backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.border,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -180,5 +219,15 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         },
       },
     }),
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  primaryButtonLabel: {
+    color: colors.textOnPrimary,
+  },
+  secondaryButtonLabel: {
+    color: colors.text,
   },
 });

@@ -18,10 +18,10 @@ import RouteElevationProfile from '@/components/travel/details/sections/RouteEle
 import {
   buildTravelRouteDownloadPath,
   downloadTravelRouteFileBlob,
-  listTravelRouteFiles,
 } from '@/api/travelRoutes'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { parseRouteFilePreviews } from '@/utils/routeFileParser'
+import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
@@ -152,6 +152,7 @@ export const TravelDetailsMapSection: React.FC<{
 }> = ({ travel, anchors, canRenderHeavy, scrollToMapSection }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
+  const { data: routeFiles = [] } = useTravelRouteFiles(travel?.id)
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
   const primaryRoutePreview = routePreviewItems[0]?.preview ?? null
   const hasMapData =
@@ -218,10 +219,7 @@ export const TravelDetailsMapSection: React.FC<{
         return
       }
       try {
-        const files = await listTravelRouteFiles(travel.id)
-        if (!active) return
-
-        const supportedFiles = files.filter((file) => {
+        const supportedFiles = routeFiles.filter((file) => {
           const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
             .toLowerCase()
             .replace(/^\./, '')
@@ -273,7 +271,7 @@ export const TravelDetailsMapSection: React.FC<{
     return () => {
       active = false
     }
-  }, [canRenderHeavy, routeColorPalette, shouldRender, travel?.id])
+  }, [canRenderHeavy, routeColorPalette, routeFiles, shouldRender, travel?.id])
 
   const notifyDownloadUnavailable = useCallback(() => {
     if (Platform.OS === 'web') {

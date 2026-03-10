@@ -4,6 +4,10 @@
 
 import { QueryClient, DefaultOptions } from '@tanstack/react-query';
 
+interface QueryClientRuntimeOptions {
+  enableStaticPrefetch?: boolean;
+}
+
 /**
  * Оптимизированные настройки по умолчанию для React Query
  */
@@ -66,7 +70,8 @@ const defaultQueryOptions: DefaultOptions = {
  * Создает оптимизированный QueryClient
  */
 export function createOptimizedQueryClient(
-  customOptions?: Partial<DefaultOptions>
+  customOptions?: Partial<DefaultOptions>,
+  runtimeOptions?: QueryClientRuntimeOptions
 ): QueryClient {
   const client = new QueryClient({
     defaultOptions: {
@@ -77,7 +82,7 @@ export function createOptimizedQueryClient(
 
   // ✅ НОВОЕ: Настройка для React 19 - автоматический batching
   // React 19 автоматически батчит обновления, но мы можем оптимизировать дальше
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && runtimeOptions?.enableStaticPrefetch !== false) {
     // P5.1: Prefetch статических данных (фильтры, страны) при idle
     if ('requestIdleCallback' in window) {
       (window as any).requestIdleCallback(() => {

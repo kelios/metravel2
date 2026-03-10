@@ -15,6 +15,7 @@ interface SkipLink {
 
 interface SkipLinksProps {
   links?: SkipLink[];
+  initiallyVisible?: boolean;
 }
 
 const DEFAULT_LINKS: SkipLink[] = [
@@ -23,9 +24,12 @@ const DEFAULT_LINKS: SkipLink[] = [
   { id: 'skip-search', label: 'Перейти к поиску', targetId: 'search-input' },
 ];
 
-export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
+export default function SkipLinks({
+  links = DEFAULT_LINKS,
+  initiallyVisible = false,
+}: SkipLinksProps) {
   const colors = useThemedColors();
-  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [focusedIndex, setFocusedIndex] = useState(initiallyVisible ? 0 : -1);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -40,6 +44,11 @@ export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!initiallyVisible) return;
+    setFocusedIndex(0);
+  }, [initiallyVisible]);
 
   const handleSkip = (targetId: string) => {
     if (Platform.OS !== 'web') return;

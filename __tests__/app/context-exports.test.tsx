@@ -20,6 +20,7 @@ import useFiltersDefault,
   useFilters,
   FiltersProvider,
 } from '@/context/FiltersProvider';
+import { useAuth } from '@/context/AuthContext';
 
 // ── Mocks for transitive deps that need native/network ─────────────
 jest.mock('@/api/client', () => ({
@@ -36,6 +37,7 @@ jest.mock('@/stores/authStore', () => {
     username: '',
     email: '',
     userAvatar: null,
+    authReady: false,
     profileRefreshToken: 0,
     isSuperuser: false,
     login: jest.fn(),
@@ -218,6 +220,34 @@ describe('Context module exports (prod-build regression)', () => {
       );
 
       expect(rendered).toBe(true);
+    });
+
+    it('keeps useAuth callable while AuthProvider is deferred', async () => {
+      const { default: AppProviders } = await import(
+        '@/components/layout/AppProviders'
+      );
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+
+      function wrapper({ children }: { children: React.ReactNode }) {
+        return (
+          <AppProviders
+            queryClient={queryClient}
+            deferAuthProvider
+            authDeferMode="interaction"
+          >
+            {children}
+          </AppProviders>
+        );
+      }
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      expect(result.current).toBeDefined();
+      expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.authReady).toBe(false);
     });
 
   });

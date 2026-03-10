@@ -109,11 +109,11 @@ export const TravelDeferredSections: React.FC<{
   viewportHeight,
   scrollToMapSection,
 }) => {
-  const [canRenderHeavy, setCanRenderHeavy] = useState(false)
+  const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === 'web')
   // TD-06: ref для IntersectionObserver на секции комментариев
   const commentsObserverRef = useRef<View>(null)
   const footerObserverRef = useRef<View>(null)
-  const mobileAuthorShareObserverRef = useRef<View>(null)
+  const authorSectionObserverRef = useRef<View>(null)
   const ratingObserverRef = useRef<View>(null)
   const mapObserverRef = useRef<View>(null)
   const sidebarObserverRef = useRef<View>(null)
@@ -147,12 +147,12 @@ export const TravelDeferredSections: React.FC<{
     fallbackDelay: 5200,
     enabled: canRenderHeavy,
   })
-  const { shouldLoad: shouldLoadMobileAuthorShare, setElementRef: setMobileAuthorShareRef } = useProgressiveLoad({
+  const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '180px',
     threshold: 0.05,
     fallbackDelay: 2600,
-    enabled: canRenderHeavy && isMobile,
+    enabled: canRenderHeavy,
   })
   const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
     priority: 'low',
@@ -171,13 +171,6 @@ export const TravelDeferredSections: React.FC<{
     if (Platform.OS === 'web') return
     const task = InteractionManager.runAfterInteractions(() => setCanRenderHeavy(true))
     return () => task.cancel()
-  }, [])
-
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      // Parent Defer wrapper already gates mounting — no extra delay needed.
-      setCanRenderHeavy(true)
-    }
   }, [])
 
   useEffect(() => {
@@ -209,27 +202,25 @@ export const TravelDeferredSections: React.FC<{
         forceOpenKey={forceOpenKey}
       />
 
-      {/* P0-2: AuthorCard и ShareButtons после контента на mobile */}
-      {isMobile && (
-        <View
-          ref={(el) => {
-            ;(mobileAuthorShareObserverRef as any).current = el
-            setMobileAuthorShareRef(el)
-          }}
-          collapsable={false}
-        >
-          {shouldLoadMobileAuthorShare ? (
-            <MobileAuthorShareSection travel={travel} />
-          ) : (
-            <>
-              <View style={PLACEHOLDER_MIN_H_160} />
-              <View style={PLACEHOLDER_MIN_H_56} />
-            </>
-          )}
-        </View>
-      )}
+      {/* Full author details stay below the hero shell on every platform. */}
+      <View
+        ref={(el) => {
+          ;(authorSectionObserverRef as any).current = el
+          setAuthorSectionRef(el)
+        }}
+        collapsable={false}
+      >
+        {shouldLoadAuthorSection ? (
+          <DeferredAuthorSection travel={travel} isMobile={isMobile} />
+        ) : (
+          <>
+            <View style={PLACEHOLDER_MIN_H_160} />
+            {isMobile && <View style={PLACEHOLDER_MIN_H_56} />}
+          </>
+        )}
+      </View>
 
-      {/* Секция рейтинга путешествия */}
+      {/* Рейтинг и интерактивные блоки остаются после контентного слоя. */}
       <View
         ref={(el) => {
           ;(ratingObserverRef as any).current = el
@@ -321,6 +312,37 @@ export const TravelDeferredSections: React.FC<{
         )}
       </View>
     </>
+  )
+})
+
+const DeferredAuthorSection: React.FC<{ travel: Travel; isMobile: boolean }> = memo(({
+  travel,
+  isMobile,
+}) => {
+  if (isMobile) {
+    return <MobileAuthorShareSection travel={travel} />
+  }
+
+  return <DesktopAuthorSection travel={travel} />
+})
+
+const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(({ travel }) => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View
+      testID="travel-details-author"
+      accessibilityRole="none"
+      accessibilityLabel="Автор маршрута"
+      style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
+    >
+      <Text style={styles.sectionHeaderText}>Автор</Text>
+      <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
+      <View style={PLACEHOLDER_MT_12}>
+        <Suspense fallback={<View style={PLACEHOLDER_MIN_H_160} />}>
+          <AuthorCard travel={travel} />
+        </Suspense>
+      </View>
+    </View>
   )
 })
 

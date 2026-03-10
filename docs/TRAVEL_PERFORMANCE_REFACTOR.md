@@ -148,6 +148,40 @@ Critical shell должен:
 
 Работа идет только по этапам. Следующий этап начинается после проверки предыдущего.
 
+### Текущий статус реализации
+
+- Сделано: route module travel page держится тонким и лениво подтягивает `TravelDetailsContainer`.
+- Сделано: hero-path переведен на `OptimizedLCPHero` с одним `loading="eager"` и `fetchpriority="high"` LCP image.
+- Сделано: slider handoff на web идет после LCP, а не на первом paint.
+- Сделано: `TravelDetailsDeferred` держит map/sidebar/comments/footer за отдельными lazy-границами.
+- Сделано: heavy секции ниже первого экрана грузятся через `useProgressiveLoad` по visibility/fallback, а не сразу при первом mount.
+- Сделано: full author details убраны из `TravelHeroExtras` и перенесены в deferred content layer для desktop и mobile.
+- Сделано: non-critical shell chrome (`TravelSectionsSheet`, `ReadingProgressBar`, `ScrollToTopButton`, mobile `TravelStickyActions`) больше не монтируется до разрешения deferred phase.
+- Сделано: `TravelDetailPageSkeleton` убран из eager import path и теперь догружается только для loading state.
+- Сделано: `AccessibilityAnnouncer` больше не подтягивает chunk в happy path без реального сообщения для live-region.
+- Сделано: `stores/authStore.ts` больше не тянет `api/auth` и `api/user` top-level импортами; auth API-код уходит в on-demand dynamic import path.
+- Сделано: `AuthProvider` в root providers теперь может откладываться для travel route через fallback context, без eager auth-init в первом кадре.
+- Сделано: root `ErrorBoundary` больше не зависит от общего `Button` primitive в happy path; fallback actions стали локальными lightweight `Pressable`.
+- Сделано: root layout больше не тянет `runtimeConfigDiagnostics`, `logger` и `consent` eagerly; эти утилиты переведены на post-mount dynamic import path.
+- Сделано: дублирующий runtime `Head` блок с favicon/apple-touch-icon убран из `_layout`; иконки остаются только в `app/+html.tsx`.
+- Сделано: static React Query prefetch для filters/countries отключен на travel entry route; `createOptimizedQueryClient()` теперь умеет не планировать этот idle prefetch в critical travel path.
+- Сделано: `SkipLinks` больше не грузятся сразу после web mount; chunk подтягивается только при первом `Tab`, при этом ссылки показываются сразу на первом keyboard interaction.
+- Сделано: `ToastHost` больше не запрашивается на web вообще; ранее этот lazy chunk грузился в root path, хотя web-реализация все равно возвращала `null`.
+- Сделано: `NetworkStatus` на web travel route больше не подтягивается таймером в happy path; chunk грузится только если страница уже открылась offline или браузер реально перешел в offline.
+- В работе: дальнейшее сокращение initial JS и audit того, что еще попадает в route/common chunks раньше необходимости.
+
+Последний production build после текущих shared-path правок:
+- `entry-*`: около `1.9 MB` (было около `2.0 MB`)
+- `__common-*`: около `2.3 MB` (было около `2.4 MB`)
+- `TravelDetailsContainer-*`: около `50 KB`
+- `TravelDetailsDeferred-*`: около `27 KB`
+- `TravelDetailsMapSection-*`: около `73 KB`
+
+Вывод:
+- локальные lazy-разрезы travel route уже работают как ожидается;
+- есть умеренное снижение root/shared bundle;
+- основной дальнейший резерв все еще в `entry/__common`, а не в travel-specific chunks.
+
 ### Этап 1. Зафиксировать baseline и бюджет
 
 Задачи:
@@ -236,6 +270,13 @@ Critical shell должен:
 - related sections;
 - embeds;
 - author/share blocks, если они не нужны above the fold.
+
+Статус:
+- Частично выполнено.
+- Уже переведены на visibility/fallback: comments, map, related/sidebar lists, YouTube embed, rating block.
+- Обновлено 10 марта 2026: full `AuthorCard` убран из hero extras и теперь монтируется только в deferred layer; mobile share block остается рядом с автором ниже content section.
+- Обновлено 10 марта 2026: non-critical chrome вокруг scroll/navigation теперь тоже монтируется только после deferred gate, чтобы не конкурировать с LCP shell.
+- Обновлено 10 марта 2026: full-page loading skeleton тоже вынесен из happy-path initial JS и остается lazy-only для loading сценариев.
 
 ### Этап 7. Закрепить budgets и regression guard
 

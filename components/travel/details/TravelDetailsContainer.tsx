@@ -30,7 +30,6 @@ import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from "@/uti
 import { createTravelArticleJsonLd, stripHtmlForSeo } from "@/utils/travelSeo";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
-import { TravelDetailPageSkeleton } from '@/components/travel/TravelDetailPageSkeleton';
 
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
@@ -49,6 +48,11 @@ const ReadingProgressBar = withLazy(() => import("@/components/ui/ReadingProgres
 const TravelSectionsSheet = withLazy(() => import("@/components/travel/TravelSectionsSheet"));
 const TravelStickyActions = withLazy(() => import("@/components/travel/details/TravelStickyActions"));
 const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
+const TravelDetailPageSkeleton = withLazy(() =>
+  import('@/components/travel/TravelDetailPageSkeleton').then((m) => ({
+    default: m.TravelDetailPageSkeleton,
+  }))
+);
 const TravelDeferredSections = withLazy(() =>
   import("@/components/travel/details/TravelDetailsDeferred").then((m) => ({
     default: m.TravelDeferredSections,
@@ -78,6 +82,8 @@ const buildSeoTitle = (base: string): string => {
 
   return `${clippedBase}${SEO_TITLE_SUFFIX}`;
 };
+
+const SKELETON_OVERLAY_FALLBACK_STYLE = { flex: 1 } as const
 
 /* -------------------- Defer wrapper -------------------- */
 const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, children }) => {
@@ -377,6 +383,7 @@ export default function TravelDetailsContainer() {
   const forceDeferMount = !!forceOpenKey;
   const criticalChromeReady =
     Platform.OS !== 'web' || lcpLoaded || forceDeferMount || isWebAutomation
+  const deferredChromeReady = deferAllowed || forceDeferMount || isWebAutomation
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
   // Расширяем scrollTo для добавления логики закрытия меню на мобильных
@@ -587,9 +594,11 @@ export default function TravelDetailsContainer() {
       <Suspense fallback={null}>
         <SkipToContentLink targetId="travel-main-content" label="Skip to main content" />
       </Suspense>
-      <Suspense fallback={null}>
-        <AccessibilityAnnouncer message={announcement} priority={announcementPriority} id="travel-announcer" />
-      </Suspense>
+      {announcement ? (
+        <Suspense fallback={null}>
+          <AccessibilityAnnouncer message={announcement} priority={announcementPriority} id="travel-announcer" />
+        </Suspense>
+      ) : null}
 
     <View
       testID="travel-details-page"
@@ -617,7 +626,11 @@ export default function TravelDetailsContainer() {
               } as any}
               aria-hidden={skeletonPhase !== 'loading'}
             >
-              {skeletonPhase !== 'hidden' && <TravelDetailPageSkeleton />}
+              {skeletonPhase !== 'hidden' && (
+                <Suspense fallback={<View style={SKELETON_OVERLAY_FALLBACK_STYLE} />}>
+                  <TravelDetailPageSkeleton />
+                </Suspense>
+              )}
             </View>
           )}
 
@@ -651,13 +664,15 @@ export default function TravelDetailsContainer() {
 
           {/* Прогресс-бар чтения */}
           {travel && contentHeight > viewportHeight && criticalChromeReady && (
-            <Suspense fallback={null}>
-              <ReadingProgressBar
-                scrollY={scrollY}
-                contentHeight={contentHeight}
-                viewportHeight={viewportHeight}
-              />
-            </Suspense>
+            <Defer when={deferredChromeReady}>
+              <Suspense fallback={null}>
+                <ReadingProgressBar
+                  scrollY={scrollY}
+                  contentHeight={contentHeight}
+                  viewportHeight={viewportHeight}
+                />
+              </Suspense>
+            </Defer>
           )}
 
           <ScrollView
@@ -695,16 +710,18 @@ export default function TravelDetailsContainer() {
                     {responsiveWidth < METRICS.breakpoints.largeTablet &&
                       sectionLinks.length > 0 &&
                       criticalChromeReady && (
-                      <View style={styles.sectionTabsContainer}>
-                        <Suspense fallback={null}>
-                          <TravelSectionsSheet
-                            links={sectionLinks}
-                            activeSection={activeSection}
-                            onNavigate={scrollToWithMenuClose}
-                            testID="travel-sections-sheet-wrapper"
-                          />
-                        </Suspense>
-                      </View>
+                      <Defer when={deferredChromeReady}>
+                        <View style={styles.sectionTabsContainer}>
+                          <Suspense fallback={null}>
+                            <TravelSectionsSheet
+                              links={sectionLinks}
+                              activeSection={activeSection}
+                              onNavigate={scrollToWithMenuClose}
+                              testID="travel-sections-sheet-wrapper"
+                            />
+                          </Suspense>
+                        </View>
+                      </Defer>
                     )}
 
                     {/* -------- deferred heavy content -------- */}
@@ -732,20 +749,24 @@ export default function TravelDetailsContainer() {
 
           {/* ✅ Кнопка "Наверх" */}
           {travel && criticalChromeReady && (
-            <Suspense fallback={null}>
-              <ScrollToTopButton scrollViewRef={scrollRef} scrollY={scrollY} threshold={300} />
-            </Suspense>
+            <Defer when={deferredChromeReady}>
+              <Suspense fallback={null}>
+                <ScrollToTopButton scrollViewRef={scrollRef} scrollY={scrollY} threshold={300} />
+              </Suspense>
+            </Defer>
           )}
 
           {/* 3.6: Sticky-bar действий на мобильном */}
           {isMobile && travel && (
-            <Suspense fallback={null}>
-              <TravelStickyActions
-                travel={travel}
-                scrollY={scrollY}
-                scrollToComments={scrollToComments}
-              />
-            </Suspense>
+            <Defer when={deferredChromeReady}>
+              <Suspense fallback={null}>
+                <TravelStickyActions
+                  travel={travel}
+                  scrollY={scrollY}
+                  scrollToComments={scrollToComments}
+                />
+              </Suspense>
+            </Defer>
           )}
          </View>
        </SafeAreaView>

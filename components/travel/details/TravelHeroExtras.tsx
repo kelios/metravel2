@@ -10,7 +10,6 @@ import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
-const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 
 const HERO_QUICK_JUMP_KEYS = [
   'description',
@@ -21,8 +20,6 @@ const HERO_QUICK_JUMP_KEYS = [
 ] as const
 
 const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
-const AUTHOR_PLACEHOLDER_STYLE = { minHeight: 160 } as const
-const AUTHOR_WRAPPER_STYLE = { marginTop: 12 } as const
 
 function HeroQuickJumps({
   links,
@@ -111,29 +108,6 @@ export const TravelHeroExtras: React.FC<{
             isMobile={isMobile}
             onQuickJump={onQuickJump}
           />
-        </View>
-      )}
-
-      {!isMobile && (
-        <View
-          testID="travel-details-author"
-          accessibilityRole="none"
-          accessibilityLabel="Автор маршрута"
-          style={[
-            styles.sectionContainer,
-            styles.contentStable,
-            styles.authorCardContainer,
-          ]}
-        >
-          <Text style={styles.sectionHeaderText}>Автор</Text>
-          <Text style={styles.sectionSubtitle}>
-            Профиль, соцсети и другие путешествия автора
-          </Text>
-          <View style={AUTHOR_WRAPPER_STYLE}>
-            <Suspense fallback={<View style={AUTHOR_PLACEHOLDER_STYLE} />}>
-              <AuthorCard travel={travel} />
-            </Suspense>
-          </View>
         </View>
       )}
     </>

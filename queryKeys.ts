@@ -2,6 +2,7 @@ export const queryKeys = {
   travel: (slugOrId: string | number) => ['travel', slugOrId] as const,
   travelsNear: (travelId: number) => ['travels-near', travelId] as const,
   travelsPopular: () => ['travels-popular'] as const,
+  travelRouteFiles: (travelId: string | number) => ['travel-route-files', travelId] as const,
   travelsOfMonth: () => ['travels-of-month'] as const,
   /** P5.1: Ключи для фильтров и стран (queryConfigs.static) */
   filters: () => ['filters'] as const,

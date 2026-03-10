@@ -22,7 +22,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useAuth } from '@/context/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
+import * as ReactQuery from '@tanstack/react-query';
 import { userPointsApi } from '@/api/userPoints';
 import { fetchFilters } from '@/api/misc';
 import { showToast } from '@/utils/toast';
@@ -36,6 +36,8 @@ import {
 } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
 import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks';
+import { queryKeys } from '@/queryKeys';
+import { queryConfigs } from '@/utils/reactQueryConfig';
 
 type Point = {
   id: string;
@@ -620,10 +622,9 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
   const isLargeDesktop = width >= 1440;
   const [showList, setShowList] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
-  const [siteCategoryDictionary, setSiteCategoryDictionary] = useState<CategoryDictionaryItem[]>([]);
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
   const { isAuthenticated, authReady } = useAuth();
-  const queryClient = useQueryClient();
+  const queryClient = ReactQuery.useQueryClient();
   const pointsCount = safePoints.length;
   const countLabel = pointsCount > 0 ? ` (${pointsCount})` : '';
   const toggleLabel = showList
@@ -680,25 +681,49 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
     [isMobile, isTablet, isLargeDesktop, width]
   );
 
+  const [siteCategoryDictionaryFallback, setSiteCategoryDictionaryFallback] = useState<CategoryDictionaryItem[]>([]);
+  const queryRunner = (ReactQuery as { useQuery?: typeof ReactQuery.useQuery }).useQuery as
+    | typeof ReactQuery.useQuery
+    | undefined;
+  let siteCategoryDictionaryQuery: CategoryDictionaryItem[] | undefined;
+
+  if (typeof queryRunner === 'function') {
+    try {
+      const queryResult = queryRunner<CategoryDictionaryItem[]>({
+        queryKey: queryKeys.filters(),
+        queryFn: async () => {
+          const data = await fetchFilters();
+          const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
+          return normalizeCategoryDictionary(raw);
+        },
+        ...queryConfigs.static,
+        select: (data) => (Array.isArray(data) ? data : []),
+      });
+      siteCategoryDictionaryQuery = queryResult.data;
+    } catch {
+      siteCategoryDictionaryQuery = undefined;
+    }
+  }
+
   useEffect(() => {
+    if (siteCategoryDictionaryQuery) return;
     let active = true;
     const loadDictionary = async () => {
       try {
         const data = await fetchFilters();
         const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
-        if (!active) return;
-        setSiteCategoryDictionary(normalizeCategoryDictionary(raw));
+        if (active) setSiteCategoryDictionaryFallback(normalizeCategoryDictionary(raw));
       } catch {
-        if (active) {
-          setSiteCategoryDictionary([]);
-        }
+        if (active) setSiteCategoryDictionaryFallback([]);
       }
     };
-    loadDictionary();
+    void loadDictionary();
     return () => {
       active = false;
     };
-  }, []);
+  }, [siteCategoryDictionaryQuery]);
+
+  const siteCategoryDictionary = siteCategoryDictionaryQuery ?? siteCategoryDictionaryFallback;
 
   const categoryNameToIds = useMemo(
     () => createCategoryNameToIdsMap(siteCategoryDictionary),

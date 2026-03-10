@@ -24,8 +24,9 @@ import Button from '@/components/ui/Button';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { buildTravelRouteDownloadPath, listTravelRouteFiles } from '@/api/travelRoutes';
+import { buildTravelRouteDownloadPath } from '@/api/travelRoutes';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)
 if (Platform.OS === 'web') {
@@ -122,6 +123,7 @@ function CompactSideBarTravel({
     return null;
   }, [travel]);
   const { profile: authorProfile } = useUserProfileCached(travelOwnerId, { enabled: !!travelOwnerId });
+  const { data: routeFiles = [] } = useTravelRouteFiles((travel as any)?.id);
   const avatar =
     (authorProfile as any)?.avatar ??
     (travel as any).user?.avatar ??
@@ -137,35 +139,14 @@ function CompactSideBarTravel({
   const [hasDownloadableRoute, setHasDownloadableRoute] = useState(false);
 
   useEffect(() => {
-    let activeRequest = true;
-
-    const loadRouteAvailability = async () => {
-      const travelId = (travel as any)?.id;
-      if (!travelId) {
-        if (activeRequest) setHasDownloadableRoute(false);
-        return;
-      }
-
-      try {
-        const files = await listTravelRouteFiles(travelId);
-        if (!activeRequest) return;
-        const hasSupported = files.some((file) => {
-          const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
-            .toLowerCase()
-            .replace(/^\./, '');
-          return ext === 'gpx' || ext === 'kml';
-        });
-        setHasDownloadableRoute(hasSupported);
-      } catch {
-        if (activeRequest) setHasDownloadableRoute(false);
-      }
-    };
-
-    void loadRouteAvailability();
-    return () => {
-      activeRequest = false;
-    };
-  }, [travel]);
+    const hasSupported = routeFiles.some((file) => {
+      const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
+        .toLowerCase()
+        .replace(/^\./, '');
+      return ext === 'gpx' || ext === 'kml';
+    });
+    setHasDownloadableRoute(hasSupported);
+  }, [routeFiles]);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);

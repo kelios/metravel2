@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
-import Head from "expo-router/head";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -48,9 +47,6 @@ const WebAppRuntimeEffectsLazy = safeLazy(
 );
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
-import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
-import { devError, devWarn } from "@/utils/logger";
-import { readConsent } from "@/utils/consent";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
@@ -103,15 +99,22 @@ export default function RootLayout() {
             const h = window.location?.hostname;
             if (h === 'metravel.by' || h === 'www.metravel.by') return;
         }
-        const diagnostics = getRuntimeConfigDiagnostics();
-        for (const diagnostic of diagnostics) {
-            const line = `[Config:${diagnostic.code}] ${diagnostic.message}`;
-            if (diagnostic.severity === 'error') {
+        void import('@/utils/runtimeConfigDiagnostics')
+          .then(async ({ getRuntimeConfigDiagnostics }) => {
+            const diagnostics = getRuntimeConfigDiagnostics();
+            if (diagnostics.length === 0) return;
+
+            const { devError, devWarn } = await import('@/utils/logger');
+            for (const diagnostic of diagnostics) {
+              const line = `[Config:${diagnostic.code}] ${diagnostic.message}`;
+              if (diagnostic.severity === 'error') {
                 devError(line);
-            } else {
+              } else {
                 devWarn(line);
+              }
             }
-        }
+          })
+          .catch(() => undefined);
     }, []);
 
     return <RootLayoutNav />;
@@ -126,13 +129,6 @@ export default function RootLayout() {
       () => getThemedColors(colorScheme === 'dark'),
       [colorScheme],
     );
-
-    // ✅ FIX: Создаем queryClient внутри компонента для избежания проблем с SSR/гидрацией
-    const [queryClient] = useState(() => createOptimizedQueryClient({
-        mutations: {
-            retry: false,
-        },
-    }));
 
     // Web analytics page-view tracking is handled centrally in getAnalyticsInlineScript().
     // Keeping additional tracking here duplicates GA/Yandex events on route changes.
@@ -175,6 +171,18 @@ export default function RootLayout() {
       [effectivePathname]
     );
 
+    // ✅ FIX: Создаем queryClient внутри компонента для избежания проблем с SSR/гидрацией
+    const [queryClient] = useState(() => createOptimizedQueryClient(
+      {
+        mutations: {
+          retry: false,
+        },
+      },
+      {
+        enableStaticPrefetch: !isTravelPerformanceRoute,
+      }
+    ));
+
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);
     
@@ -186,10 +194,8 @@ export default function RootLayout() {
     const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(
       !isWeb || !isTravelPerformanceRoute
     );
-    const [showToastChrome, setShowToastChrome] = useState(
-      !isWeb || !isTravelPerformanceRoute
-    );
     const [showConsentBanner, setShowConsentBanner] = useState(false);
+    const [showSkipLinks, setShowSkipLinks] = useState(!isWeb);
     
     useEffect(() => {
         if (!isWeb) return;
@@ -199,37 +205,29 @@ export default function RootLayout() {
     useEffect(() => {
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
         let footerTimer: ReturnType<typeof setTimeout> | null = null;
-        let networkTimer: ReturnType<typeof setTimeout> | null = null;
-        let toastTimer: ReturnType<typeof setTimeout> | null = null;
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
         let rafId: number | null = null;
 
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
-        const revealDeferredRootChrome = () => {
-          setShowNetworkStatusChrome(true);
-          setShowToastChrome(true);
-        };
-
         if (isWeb) {
           const footerDelay = isTravelPerformanceRoute ? 6500 : 0;
           footerTimer = setTimeout(() => setShowFooterChrome(true), footerDelay);
-          const networkDelay = isTravelPerformanceRoute ? 4200 : 0;
-          const toastDelay = isTravelPerformanceRoute ? 5200 : 0;
-          networkTimer = setTimeout(() => setShowNetworkStatusChrome(true), networkDelay);
-          toastTimer = setTimeout(() => setShowToastChrome(true), toastDelay);
-          window.addEventListener('pointerdown', revealDeferredRootChrome, { passive: true, once: true });
-          window.addEventListener('keydown', revealDeferredRootChrome, { passive: true, once: true });
-          window.addEventListener('scroll', revealDeferredRootChrome, { passive: true, once: true });
         }
 
         // Defer ConsentBanner for LCP, but skip entirely if consent is already saved.
         if (isWeb && typeof window !== 'undefined') {
-          if (!readConsent()) {
-            const consentDelay = isTravelPerformanceRoute ? 9000 : 4000;
-            consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay);
-          }
+          void import('@/utils/consent')
+            .then(({ readConsent }) => {
+              if (readConsent()) return;
+              const consentDelay = isTravelPerformanceRoute ? 9000 : 4000;
+              consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay);
+            })
+            .catch(() => {
+              const consentDelay = isTravelPerformanceRoute ? 9000 : 4000;
+              consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay);
+            });
         }
 
         if (isWeb && typeof document !== 'undefined') {
@@ -241,16 +239,41 @@ export default function RootLayout() {
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
           if (footerTimer) clearTimeout(footerTimer);
-          if (networkTimer) clearTimeout(networkTimer);
-          if (toastTimer) clearTimeout(toastTimer);
           if (consentTimer) clearTimeout(consentTimer);
           if (rafId != null) cancelAnimationFrame(rafId);
-          if (isWeb && typeof window !== 'undefined') {
-            window.removeEventListener('pointerdown', revealDeferredRootChrome);
-            window.removeEventListener('keydown', revealDeferredRootChrome);
-            window.removeEventListener('scroll', revealDeferredRootChrome);
-          }
         };
+    }, [isTravelPerformanceRoute]);
+
+    useEffect(() => {
+      if (!isWeb || typeof window === 'undefined') return;
+
+      const revealSkipLinks = (event: KeyboardEvent) => {
+        if (event.key !== 'Tab' || event.shiftKey) return;
+        setShowSkipLinks(true);
+      };
+
+      window.addEventListener('keydown', revealSkipLinks, { passive: true, once: true });
+      return () => {
+        window.removeEventListener('keydown', revealSkipLinks);
+      };
+    }, []);
+
+    useEffect(() => {
+      if (!isWeb || typeof window === 'undefined' || !isTravelPerformanceRoute) return;
+
+      const revealNetworkStatus = () => {
+        setShowNetworkStatusChrome(true);
+      };
+
+      if (navigator.onLine === false) {
+        revealNetworkStatus();
+      }
+
+      window.addEventListener('offline', revealNetworkStatus);
+
+      return () => {
+        window.removeEventListener('offline', revealNetworkStatus);
+      };
     }, [isTravelPerformanceRoute]);
 
     // Fonts:
@@ -309,7 +332,7 @@ export default function RootLayout() {
             showFooter={showFooter}
             showFooterChrome={showFooterChrome}
             showNetworkStatusChrome={showNetworkStatusChrome}
-            showToastChrome={showToastChrome}
+            showSkipLinks={showSkipLinks}
             isMobile={isMobile}
             pathname={effectivePathname}
             currentColorScheme={colorScheme}
@@ -330,7 +353,7 @@ function ThemedContent({
   showFooter,
   showFooterChrome,
   showNetworkStatusChrome,
-  showToastChrome,
+  showSkipLinks,
   isMobile,
   pathname,
   currentColorScheme,
@@ -344,7 +367,7 @@ function ThemedContent({
   showFooter: boolean;
   showFooterChrome: boolean;
   showNetworkStatusChrome: boolean;
-  showToastChrome: boolean;
+  showSkipLinks: boolean;
   isMobile: boolean;
   pathname?: string;
   currentColorScheme: 'light' | 'dark' | null | undefined;
@@ -365,8 +388,12 @@ function ThemedContent({
     /^\/travels\/[^/]+$/.test(pathname);
   const shouldDeferFavoritesProvider =
     isTravelRoute;
+  const shouldDeferAuthProvider =
+    isTravelRoute;
   const favoritesDeferMode =
     isTravelRoute ? 'interaction' : 'idle';
+  const authDeferMode =
+    isTravelRoute ? 'idle' : 'idle';
 
   const bottomGutter = useMemo(() => {
     if (!showFooter || !isMobile) return null;
@@ -383,6 +410,8 @@ function ThemedContent({
   return (
     <AppProviders
       queryClient={queryClient}
+      deferAuthProvider={shouldDeferAuthProvider}
+      authDeferMode={authDeferMode}
       deferFavoritesProvider={shouldDeferFavoritesProvider}
       favoritesDeferMode={favoritesDeferMode}
     >
@@ -403,17 +432,11 @@ function ThemedContent({
                                   resizeMode="cover"
                                 />
                               )}
-	                              <Head>
-	                                  <link rel="icon" href="/favicon.ico" />
-	                                  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon-180x180.png" />
-	                                  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/logo_yellow_192x192.png" />
-	                                  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/logo_yellow_192x192.png" />
-	                              </Head>
 
                               {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
-                              {isWeb && isMounted && (
+                              {isWeb && isMounted && showSkipLinks && (
                                 <React.Suspense fallback={null}>
-                                  <SkipLinksLazy />
+                                  <SkipLinksLazy initiallyVisible />
                                 </React.Suspense>
                               )}
 
@@ -477,7 +500,7 @@ function ThemedContent({
                               )}
                         </View>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
-            {isMounted && (!isWeb || showToastChrome) && (
+            {!isWeb && isMounted && (
               <React.Suspense fallback={null}>
                 <ToastLazy />
               </React.Suspense>
