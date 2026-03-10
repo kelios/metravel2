@@ -347,7 +347,24 @@ npm run lighthouse:produrl:summary
 
 Этот документ является рабочей спецификацией для performance-refactor travel page, пока не будет заменен более точной финальной документацией в `docs/`.
 
-## 13. Progress
+## 13. Stage Status
+
+- [x] Этап 1. Зафиксировать baseline и бюджет.
+- [~] Этап 2. Отделить critical shell от deferred sections.
+- [~] Этап 3. Перестроить hero/LCP path.
+- [~] Этап 4. Сократить initial JS.
+- [~] Этап 5. Перестроить image delivery.
+- [~] Этап 6. Visibility-based hydration.
+- [ ] Этап 7. Закрепить budgets и regression guard.
+
+Примечания по текущему состоянию:
+- Этап 2 частично закрыт: critical shell фактически выделен серией итераций, но ещё не оформлен как отдельный явный слой на уровне структуры travel details.
+- Этап 3 частично закрыт: hero path сильно упрощён, но LCP по-прежнему нестабилен и этап нельзя считать завершённым.
+- Этап 4 в активной фазе: route-shell и header cleanup почти исчерпаны, оставшийся потенциал в `__common` и `entry`.
+- Этап 5 начат частично через hero priority и responsive-image fixes, но полноценная image delivery wave ещё не завершена.
+- Этап 6 частично закрыт: visibility-based hydration уже применена к нескольким heavy секциям, но не доведена до финального охвата и budget guard.
+
+## 14. Progress
 
 - [x] Итерация 1: зафиксирован рабочий документ и этапы рефакторинга.
 - [x] Итерация 1: ранний prefetch below-the-fold travel chunks перенесен за границу `deferAllowed`.
@@ -395,6 +412,18 @@ npm run lighthouse:produrl:summary
 - [x] Итерация 25: `CustomHeaderNavSection` на web `travels/*` переведен на route-aware defer с ранним reveal по interaction, чтобы navigation chrome не входил в ранний audit window.
 - [x] Итерация 26: `Logo` переведен с hook-driven responsive логики на prop-driven режим (`isCompact/showWordmark`), чтобы shell header не тянул `useResponsive` через логотип.
 - [x] Итерация 26: `CustomHeader` теперь явно управляет compact/wordmark состоянием `Logo`, сохраняя прежний UI без лишней shared responsive-зависимости внутри logo path.
+- [x] Итерация 27: root layout перестал использовать общий `useResponsive`; в `app/_layout.tsx` введена lightweight viewport/hydration логика только для `isMobile` split.
+- [x] Итерация 27: в документ добавлен отдельный статус этапов, чтобы прогресс фиксировался не только по итерациям, но и по состоянию этапов 1-7.
+- [x] Итерация 28: native-only runtime (`usePushNotifications` и Android navigation bar sync) вынесен из `app/_layout.tsx` в platform-specific `NativeAppRuntime`, чтобы web entry не импортировал этот путь.
+- [x] Итерация 28: `app/_layout.tsx` на web больше не зависит от native notification/runtime logic; shared root path стал чище и ближе к реальному web-only shell.
+- [x] Итерация 29: `FavoritesContext` разделен на lightweight shared context и отдельный heavy `FavoritesProvider`, чтобы root web path не импортировал store-heavy provider implementation по умолчанию.
+- [x] Итерация 29: на web `travels/*` `AppProviders` откладывает подключение реального `FavoritesProvider` и сначала использует fallback context, пока не наступит idle/interaction.
+- [x] Итерация 30: проведен auth-provider split experiment через lightweight `authContextBase`, чтобы проверить возможность убрать auth init path из раннего web entry.
+- [x] Итерация 30: experiment с defer `AuthProvider` откатан после повторяемого `NO_LCP` в desktop Lighthouse; этот путь признан невалидным и не используется дальше.
+- [x] Итерация 31: `FiltersProvider` убран из глобального `AppProviders`, чтобы root shared path не тащил filters context на каждый маршрут.
+- [x] Итерация 31: `FiltersProvider` локализован в `CustomHeaderAccountSection`, где `useFilters` реально используется для account/header действий.
+- [x] Итерация 32: `CustomHeader` перестал использовать общий `useResponsive`; header shell переведен на lightweight viewport split через `useWindowDimensions` и локальную hydration-логику.
+- [x] Итерация 32: mobile/desktop режим header теперь вычисляется локально по breakpoint-границам без подключения shared responsive store в ранний web path.
 - [ ] Этап 2: формально выделить critical shell как отдельный слой внутри travel details.
 - [ ] Этап 3: упростить hero/LCP path до более детерминированного SSR-first media flow.
 - [ ] Этап 4: сократить initial JS travel route и shared bundle pressure.

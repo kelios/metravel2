@@ -3,22 +3,16 @@
 // Сохраняет обратную совместимость: AuthProvider + useAuth() работают как раньше.
 // Вся логика (login, logout, checkAuthentication, epoch guard) живёт в authStore.
 
-import { createContext, FC, ReactNode, useContext, useEffect, useMemo } from 'react';
+import { FC, ReactNode, useContext, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
 import { setAuthInvalidationHandler } from '@/api/authInvalidation';
 import { useAuthStore, type AuthStore } from '@/stores/authStore';
 import { useShallow } from 'zustand/react/shallow';
-
-type AuthContextType = AuthStore;
+import { AuthContext, type AuthContextType } from '@/context/authContextBase';
 
 interface AuthProviderProps {
     children: ReactNode;
 }
-
-const globalForAuthContext = globalThis as any;
-const AuthContext: ReturnType<typeof createContext<AuthContextType | undefined>> =
-    globalForAuthContext.__metravelAuthContext ?? createContext<AuthContextType | undefined>(undefined);
-globalForAuthContext.__metravelAuthContext = AuthContext;
 
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     // Select only the stable action references needed for initialization.

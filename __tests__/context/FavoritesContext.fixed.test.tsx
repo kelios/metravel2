@@ -1,11 +1,13 @@
 jest.unmock('@/context/FavoritesContext')
+jest.unmock('@/context/FavoritesProvider')
 
 import React from 'react'
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native'
 import { View, Text, Pressable } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import Toast from 'react-native-toast-message'
-import { FavoritesProvider, useFavorites } from '@/context/FavoritesContext'
+import { useFavorites } from '@/context/FavoritesContext'
+import { FavoritesProvider } from '@/context/FavoritesProvider'
 import { AuthProvider } from '@/context/AuthContext'
 
 const mockUseAuth = jest.fn()

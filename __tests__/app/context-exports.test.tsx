@@ -54,24 +54,88 @@ jest.mock('@/stores/authStore', () => {
 });
 
 jest.mock('@/stores/favoritesStore', () => ({
-  useFavoritesStore: (selector?: any) => {
-    const s = { favorites: [], setFavorites: jest.fn(), addFavorite: jest.fn(), removeFavorite: jest.fn() };
-    return selector ? selector(s) : s;
-  },
+  useFavoritesStore: Object.assign(
+    (selector?: any) => {
+      const s = {
+        favorites: [],
+        setFavorites: jest.fn(),
+        addFavorite: jest.fn(),
+        removeFavorite: jest.fn(),
+        resetFetchState: jest.fn(),
+        loadServerCached: jest.fn(),
+        loadLocal: jest.fn(),
+        ensureServerData: jest.fn(async () => {}),
+        clearFavorites: jest.fn(async () => {}),
+        isFavorite: jest.fn(() => false),
+      };
+      return selector ? selector(s) : s;
+    },
+    {
+      getState: () => ({
+        favorites: [],
+        resetFetchState: jest.fn(),
+        loadServerCached: jest.fn(),
+        loadLocal: jest.fn(),
+        ensureServerData: jest.fn(async () => {}),
+        clearFavorites: jest.fn(async () => {}),
+        isFavorite: jest.fn(() => false),
+        addFavorite: jest.fn(async () => {}),
+        removeFavorite: jest.fn(async () => {}),
+      }),
+    }
+  ),
 }));
 
 jest.mock('@/stores/viewHistoryStore', () => ({
-  useViewHistoryStore: (selector?: any) => {
-    const s = { viewHistory: [], addToHistory: jest.fn(), clearHistory: jest.fn() };
-    return selector ? selector(s) : s;
-  },
+  useViewHistoryStore: Object.assign(
+    (selector?: any) => {
+      const s = {
+        viewHistory: [],
+        addToHistory: jest.fn(),
+        clearHistory: jest.fn(async () => {}),
+        resetFetchState: jest.fn(),
+        loadServerCached: jest.fn(),
+        loadLocal: jest.fn(),
+        ensureServerData: jest.fn(async () => {}),
+      };
+      return selector ? selector(s) : s;
+    },
+    {
+      getState: () => ({
+        viewHistory: [],
+        addToHistory: jest.fn(async () => {}),
+        clearHistory: jest.fn(async () => {}),
+        resetFetchState: jest.fn(),
+        loadServerCached: jest.fn(),
+        loadLocal: jest.fn(),
+        ensureServerData: jest.fn(async () => {}),
+      }),
+    }
+  ),
 }));
 
 jest.mock('@/stores/recommendationsStore', () => ({
-  useRecommendationsStore: (selector?: any) => {
-    const s = { recommended: [], getRecommendations: jest.fn(() => []) };
-    return selector ? selector(s) : s;
-  },
+  useRecommendationsStore: Object.assign(
+    (selector?: any) => {
+      const s = {
+        recommended: [],
+        getRecommendations: jest.fn(() => []),
+        resetFetchState: jest.fn(),
+        loadServerCached: jest.fn(),
+        ensureServerData: jest.fn(async () => {}),
+      };
+      return selector ? selector(s) : s;
+    },
+    {
+      getState: () => ({
+        recommended: [],
+        getRecommendations: jest.fn(() => []),
+        resetFetchState: jest.fn(),
+        loadServerCached: jest.fn(),
+        ensureServerData: jest.fn(async () => {}),
+      }),
+    }
+  ),
 }));
 
 // ────────────────────────────────────────────────────────────────────
@@ -126,7 +190,7 @@ describe('Context module exports (prod-build regression)', () => {
     });
   });
 
-  describe('AppProviders composes all contexts', () => {
+  describe('AppProviders composes root providers', () => {
     it('renders children with all providers without crashing', async () => {
       // Dynamic import to avoid hoisting issues with mocks
       const { default: AppProviders } = await import(
@@ -137,10 +201,10 @@ describe('Context module exports (prod-build regression)', () => {
         defaultOptions: { queries: { retry: false } },
       });
 
-      let hookResult: ReturnType<typeof useFilters> | null = null;
+      let rendered = false;
 
       function ProbeComponent() {
-        hookResult = useFilters();
+        rendered = true;
         return null;
       }
 
@@ -153,9 +217,8 @@ describe('Context module exports (prod-build regression)', () => {
         </AppProviders>
       );
 
-      expect(hookResult).not.toBeNull();
-      expect(typeof hookResult!.updateFilters).toBe('function');
-      expect(hookResult!.filters).toBeDefined();
+      expect(rendered).toBe(true);
     });
+
   });
 });

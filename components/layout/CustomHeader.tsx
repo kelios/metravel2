@@ -1,11 +1,10 @@
 import React, { Suspense, useMemo, useRef, useState, lazy, useEffect } from 'react';
-import { View, StyleSheet, Platform, StatusBar } from 'react-native';
+import { View, StyleSheet, Platform, StatusBar, useWindowDimensions } from 'react-native';
 import { usePathname } from 'expo-router';
 import Logo from './Logo';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive'; 
-
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
 
@@ -24,17 +23,27 @@ type CustomHeaderProps = {
 function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const colors = useThemedColors();
     const pathname = usePathname();
-    const { isPhone, isLargePhone, isTablet } = useResponsive();
+    const { width } = useWindowDimensions();
+    const [isViewportHydrated, setIsViewportHydrated] = useState(Platform.OS !== 'web');
     // NAV-10: На web-планшете (768–1024px) показываем inline-навигацию вместо бургера.
     // На native планшет остаётся мобильным (бургер + dock).
-    const isMobile = Platform.OS === 'web'
-        ? (isPhone || isLargePhone)
-        : (isPhone || isLargePhone || isTablet);
+    const isMobile = useMemo(() => {
+        if (Platform.OS === 'web') {
+            if (!isViewportHydrated) return false;
+            return width < METRICS.breakpoints.tablet;
+        }
+        return width < METRICS.breakpoints.largeTablet;
+    }, [isViewportHydrated, width]);
     const lastHeightRef = useRef(0);
     const isTravelPerformanceRoute = Platform.OS === 'web' && typeof pathname === 'string' && pathname.startsWith('/travels/');
     const [showHeaderContextBar, setShowHeaderContextBar] = useState(!isTravelPerformanceRoute);
     const [showNavSection, setShowNavSection] = useState(!isTravelPerformanceRoute);
     const [showAccountSection, setShowAccountSection] = useState(!isTravelPerformanceRoute);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        setIsViewportHydrated(true);
+    }, []);
 
     useEffect(() => {
         if (!isTravelPerformanceRoute) {

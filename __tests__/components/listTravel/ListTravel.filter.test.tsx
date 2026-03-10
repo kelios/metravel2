@@ -2,7 +2,7 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
-import { FavoritesProvider } from '@/context/FavoritesContext';
+import { FavoritesProvider } from '@/context/FavoritesProvider';
 import { fetchTravels } from '@/api/travelsApi';
 
 jest.mock('@/context/AuthContext', () => ({
@@ -257,4 +257,3 @@ describe('ListTravel - Filter Management', () => {
         });
     });
 });
-

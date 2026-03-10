@@ -1,8 +1,12 @@
+jest.unmock('@/context/FavoritesContext');
+jest.unmock('@/context/FavoritesProvider');
+
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import type { FavoriteItem, ViewHistoryItem } from '@/context/FavoritesContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '@/context/AuthContext';
+import { FavoritesProvider } from '@/context/FavoritesProvider';
 
 const mockToastShow = jest.fn();
 
@@ -42,7 +46,7 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockAuthContext,
 }));
 
-const { FavoritesProvider, useFavorites } = jest.requireActual('@/context/FavoritesContext');
+const { useFavorites } = jest.requireActual('@/context/FavoritesContext');
 
 // Test component that uses the hook
 const TestComponent: React.FC<{ onContext?: (context: any) => void }> = ({ onContext }) => {

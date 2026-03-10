@@ -48,7 +48,27 @@ type CustomHeaderAccountSectionProps = {
   styles: any;
 };
 
+function FiltersProviderSafe({ children }: { children: React.ReactNode }) {
+  const Provider = (FiltersProviderModule as unknown as { FiltersProvider?: React.ComponentType<{ children: React.ReactNode }> }).FiltersProvider;
+  if (typeof Provider !== 'function') {
+    return <>{children}</>;
+  }
+  return <Provider>{children}</Provider>;
+}
+
 export default function CustomHeaderAccountSection({
+  activePath,
+  isMobile,
+  styles,
+}: CustomHeaderAccountSectionProps) {
+  return (
+    <FiltersProviderSafe>
+      <CustomHeaderAccountSectionInner activePath={activePath} isMobile={isMobile} styles={styles} />
+    </FiltersProviderSafe>
+  );
+}
+
+function CustomHeaderAccountSectionInner({
   activePath,
   isMobile,
   styles,

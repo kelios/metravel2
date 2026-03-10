@@ -32,7 +32,8 @@ describe('FavoritesContext lazy server fetching', () => {
   })
 
   it('does not call backend fetches on mount; only when ensureServerData is called', async () => {
-    const { FavoritesProvider, useFavorites } = require('@/context/FavoritesContext')
+    const { useFavorites } = require('@/context/FavoritesContext')
+    const { FavoritesProvider } = require('@/context/FavoritesProvider')
     const apiUser = require('@/api/user')
 
     const Harness = () => {

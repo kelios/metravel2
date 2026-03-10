@@ -28,10 +28,6 @@ jest.mock('@/context/FiltersProvider', () => ({
   useFilters: () => ({ updateFilters: jest.fn() }),
 }));
 
-jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({ isPhone: false, isLargePhone: false, isTablet: false }),
-}));
-
 jest.mock('react-native-vector-icons/Feather', () => 'Feather');
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'MCIcon');
 jest.mock('@/components/layout/HeaderContextBar', () => {
@@ -42,6 +38,7 @@ jest.mock('@/components/layout/HeaderContextBar', () => {
 
 describe('CustomHeader sticky behavior on web', () => {
   const originalOS = Platform.OS;
+  const dimensionsSpy = jest.spyOn(require('react-native'), 'useWindowDimensions');
 
   beforeAll(() => {
     // Ensure StyleSheet.create returns plain objects
@@ -50,6 +47,10 @@ describe('CustomHeader sticky behavior on web', () => {
 
   afterAll(() => {
     (StyleSheet.create as jest.Mock).mockRestore?.();
+  });
+
+  beforeEach(() => {
+    dimensionsSpy.mockReturnValue({ width: 1024, height: 768, scale: 1, fontScale: 1 });
   });
 
   afterEach(() => {

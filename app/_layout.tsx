@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme } from "react-native";
+import { ActivityIndicator, Image, Platform, StatusBar as RNStatusBar, StyleSheet, View, LogBox, useColorScheme, useWindowDimensions } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import AppProviders from "@/components/layout/AppProviders";
+import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 // Defensive lazy imports: fallback to empty component if module resolution fails
 const EmptyFallback = () => null;
@@ -42,14 +43,12 @@ const FooterLazy = safeLazy(() => import('@/components/layout/Footer'), 'Footer'
 const ConsentBannerLazy = safeLazy(() => import('@/components/layout/ConsentBanner'), 'ConsentBanner');
 const ToastLazy = safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost');
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
-import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
 import { devError, devWarn } from "@/utils/logger";
 import { readConsent } from "@/utils/consent";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -117,7 +116,8 @@ export default function RootLayout() {
 	function RootLayoutNav() {
 	    const pathname = usePathname();
 	    const colorScheme = useColorScheme();
-	    const { width, isHydrated: isResponsiveHydrated = true } = useResponsive();
+      const { width } = useWindowDimensions();
+      const [isViewportHydrated, setIsViewportHydrated] = useState(!isWeb);
     const loadingColors = useMemo(
       () => getThemedColors(colorScheme === 'dark'),
       [colorScheme],
@@ -133,12 +133,12 @@ export default function RootLayout() {
     // Web analytics page-view tracking is handled centrally in getAnalyticsInlineScript().
     // Keeping additional tracking here duplicates GA/Yandex events on route changes.
 
-    // Single source of truth for width: useResponsive().
+    // Root layout only needs a stable mobile/desktop split.
     // While web hydration is not complete we keep desktop layout to avoid mismatch.
     const isMobile =
       Platform.OS !== "web"
         ? true
-        : isResponsiveHydrated
+        : isViewportHydrated
           ? width < DESIGN_TOKENS.breakpoints.mobile
           : false;
 
@@ -171,6 +171,11 @@ export default function RootLayout() {
     );
     const [showConsentBanner, setShowConsentBanner] = useState(false);
     
+    useEffect(() => {
+        if (!isWeb) return;
+        setIsViewportHydrated(true);
+    }, []);
+
     useEffect(() => {
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
         let footerTimer: ReturnType<typeof setTimeout> | null = null;
@@ -424,30 +429,16 @@ function ThemedContent({
   queryClient: any;
 }) {
   const colors = useThemedColors();
-  const currentColorScheme = useColorScheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-
-  // AND-28: Edge-to-edge — sync Android navigation bar with theme
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    try {
-      const NavigationBar = require('expo-navigation-bar');
-      NavigationBar.setBackgroundColorAsync(colors.background);
-      NavigationBar.setButtonStyleAsync(
-        currentColorScheme === 'dark' ? 'light' : 'dark'
-      );
-    } catch {
-      // expo-navigation-bar not available — ok
-    }
-  }, [colors.background, currentColorScheme]);
-
-  // AND-05: Push notifications — register token and send to backend
-  usePushNotifications({
-    autoRequest: false, // Token requested after user logs in (see authStore)
-  });
 
   const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
   const WEB_FOOTER_RESERVE_HEIGHT = 56;
+  const isTravelRoute =
+    Platform.OS === 'web' &&
+    typeof pathname === 'string' &&
+    /^\/travels\/[^/]+$/.test(pathname);
+  const shouldDeferFavoritesProvider =
+    isTravelRoute;
 
   const bottomGutter = useMemo(() => {
     if (!showFooter || !isMobile) return null;
@@ -462,7 +453,11 @@ function ThemedContent({
   }, [showFooter, isMobile, dockHeight]);
 
   return (
-    <AppProviders queryClient={queryClient}>
+    <AppProviders
+      queryClient={queryClient}
+      deferFavoritesProvider={shouldDeferFavoritesProvider}
+    >
+                          <NativeAppRuntime />
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
                           {Platform.OS !== 'web' && (
                             <RNStatusBar

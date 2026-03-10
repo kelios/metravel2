@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext';
-import { FavoritesProvider } from '@/context/FavoritesContext';
+import { FavoritesProvider } from '@/context/FavoritesProvider';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import type { Travel } from '@/types/types';
 
