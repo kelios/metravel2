@@ -1,6 +1,7 @@
 import {
   getEmptyFormData,
   transformTravelToFormData,
+  stripMarkerCoverFallbacks,
   syncCountriesFromMarkers,
   cleanEmptyFields,
   normalizeTravelId,
@@ -56,6 +57,53 @@ describe('travelFormUtils', () => {
       expect(result.id).toBe('123');
       expect(result.year).toBe('');
       expect(result.number_days).toBe('');
+    });
+
+    it('should strip marker image when backend echoes travel cover as point image fallback', () => {
+      const coverUrl = 'https://example.com/travel-cover.webp';
+      const travel: Travel = {
+        id: 123,
+        name: 'Test Travel',
+        travel_image_thumb_url: coverUrl,
+        travel_image_thumb_small_url: coverUrl,
+        coordsMeTravel: [
+          {
+            id: 77,
+            lat: 49.1,
+            lng: 21.2,
+            address: 'Point',
+            image: coverUrl,
+            categories: [],
+          },
+        ],
+      } as any;
+
+      const result = transformTravelToFormData(travel);
+      expect(result.coordsMeTravel[0]?.image).toBeNull();
+    });
+  });
+
+  describe('stripMarkerCoverFallbacks', () => {
+    it('removes marker image when it matches travel cover', () => {
+      const result = stripMarkerCoverFallbacks(
+        [
+          { id: 1, lat: 1, lng: 2, country: null, address: 'A', categories: [], image: 'https://example.com/cover.webp' },
+        ] as any,
+        ['https://example.com/cover.webp'],
+      );
+
+      expect(result[0]?.image).toBeNull();
+    });
+
+    it('keeps marker image when it differs from travel cover', () => {
+      const result = stripMarkerCoverFallbacks(
+        [
+          { id: 1, lat: 1, lng: 2, country: null, address: 'A', categories: [], image: 'https://example.com/point.webp' },
+        ] as any,
+        ['https://example.com/cover.webp'],
+      );
+
+      expect(result[0]?.image).toBe('https://example.com/point.webp');
     });
   });
 

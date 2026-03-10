@@ -88,6 +88,36 @@ const normalizeDefinedFields = <T extends Record<string, unknown>>(source: T): P
   ) as Partial<T>;
 };
 
+const normalizeComparableImageUrl = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+export const stripMarkerCoverFallbacks = (
+  markers: MarkerData[],
+  coverCandidates: Array<string | null | undefined>,
+): MarkerData[] => {
+  if (!Array.isArray(markers) || markers.length === 0) return [];
+
+  const coverSet = new Set(
+    coverCandidates
+      .map((candidate) => normalizeComparableImageUrl(candidate))
+      .filter(Boolean),
+  );
+
+  if (coverSet.size === 0) return markers;
+
+  return markers.map((marker) => {
+    const imageUrl = normalizeComparableImageUrl(marker?.image);
+    if (!imageUrl || !coverSet.has(imageUrl)) return marker;
+
+    return {
+      ...marker,
+      image: null,
+    };
+  });
+};
+
 const normalizeMarkersFromCoords = (coords: unknown[]): MarkerData[] => {
   if (!Array.isArray(coords)) return [];
   return coords
@@ -161,9 +191,19 @@ const normalizeMarkersFromTravelAddress = (travelAddress: unknown[]): MarkerData
 
 const resolveMarkers = (travel: Travel): MarkerData[] => {
   const travelRecord = travel as unknown as UnknownRecord;
-  const coordsMarkers = normalizeMarkersFromCoords((travelRecord.coordsMeTravel as unknown[]) ?? []);
+  const coverCandidates = [
+    typeof travelRecord.travel_image_thumb_url === 'string' ? travelRecord.travel_image_thumb_url : null,
+    typeof travelRecord.travel_image_thumb_small_url === 'string' ? travelRecord.travel_image_thumb_small_url : null,
+  ];
+  const coordsMarkers = stripMarkerCoverFallbacks(
+    normalizeMarkersFromCoords((travelRecord.coordsMeTravel as unknown[]) ?? []),
+    coverCandidates,
+  );
   if (coordsMarkers.length > 0) return coordsMarkers;
-  return normalizeMarkersFromTravelAddress((travelRecord.travelAddress as unknown[]) ?? []);
+  return stripMarkerCoverFallbacks(
+    normalizeMarkersFromTravelAddress((travelRecord.travelAddress as unknown[]) ?? []),
+    coverCandidates,
+  );
 };
 
 /**

@@ -13,6 +13,7 @@ import {
   cleanEmptyFields,
   normalizeTravelId,
   checkTravelEditAccess,
+  stripMarkerCoverFallbacks,
 } from '@/utils/travelFormUtils';
 import { showToast } from '@/utils/toast';
 import { ApiError } from '@/api/client';
@@ -363,9 +364,16 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         ? (currentDataSnapshot.coordsMeTravel as unknown)
         : [];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
-      const effectiveMarkers = markersFromResponse.length > 0
+      const effectiveMarkersRaw = markersFromResponse.length > 0
         ? mergeMarkersPreserveImages(markersFromResponse, currentMarkers)
         : currentMarkers;
+      const effectiveMarkers = stripMarkerCoverFallbacks(
+        effectiveMarkersRaw as MarkerData[],
+        [
+          normalizedSavedData.travel_image_thumb_url ?? null,
+          normalizedSavedData.travel_image_thumb_small_url ?? null,
+        ],
+      );
       const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, normalizedSavedData.countries || []);
 
       const finalData = {
