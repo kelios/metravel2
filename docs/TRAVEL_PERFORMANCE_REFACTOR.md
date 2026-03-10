@@ -168,6 +168,7 @@ Critical shell должен:
 - Сделано: `SkipLinks` больше не грузятся сразу после web mount; chunk подтягивается только при первом `Tab`, при этом ссылки показываются сразу на первом keyboard interaction.
 - Сделано: `ToastHost` больше не запрашивается на web вообще; ранее этот lazy chunk грузился в root path, хотя web-реализация все равно возвращала `null`.
 - Сделано: `NetworkStatus` на web travel route больше не подтягивается таймером в happy path; chunk грузится только если страница уже открылась offline или браузер реально перешел в offline.
+- Сделано: legacy service-worker cleanup вынесен из `WebAppRuntimeEffects` в отдельный deferred web chunk; теперь эта миграция не участвует в раннем post-hydration runtime path travel route.
 - В работе: дальнейшее сокращение initial JS и audit того, что еще попадает в route/common chunks раньше необходимости.
 
 Последний production build после текущих shared-path правок:

@@ -45,6 +45,10 @@ const WebAppRuntimeEffectsLazy = safeLazy(
   () => import('@/components/layout/WebAppRuntimeEffects'),
   'WebAppRuntimeEffects'
 );
+const WebServiceWorkerCleanupLazy = safeLazy(
+  () => import('@/components/layout/WebServiceWorkerCleanup'),
+  'WebServiceWorkerCleanup'
+);
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
@@ -196,6 +200,7 @@ export default function RootLayout() {
     );
     const [showConsentBanner, setShowConsentBanner] = useState(false);
     const [showSkipLinks, setShowSkipLinks] = useState(!isWeb);
+    const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(!isWeb);
     
     useEffect(() => {
         if (!isWeb) return;
@@ -276,6 +281,39 @@ export default function RootLayout() {
       };
     }, [isTravelPerformanceRoute]);
 
+    useEffect(() => {
+      if (!isWeb || typeof window === 'undefined') return;
+
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      let idleId: number | null = null;
+      const delay = isTravelPerformanceRoute ? 15000 : 6000;
+
+      timeoutId = setTimeout(() => {
+        setShowServiceWorkerCleanup(true);
+      }, delay);
+
+      if ('requestIdleCallback' in window) {
+        idleId = (window as any).requestIdleCallback(
+          () => {
+            setShowServiceWorkerCleanup(true);
+          },
+          { timeout: isTravelPerformanceRoute ? 12000 : 5000 }
+        );
+      }
+
+      return () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = null;
+        if (idleId !== null) {
+          try {
+            (window as any).cancelIdleCallback(idleId);
+          } catch {
+            // noop
+          }
+        }
+      };
+    }, [isTravelPerformanceRoute]);
+
     // Fonts:
     // - On native we must load app fonts before rendering.
     // - On web we do not load fonts via expo-font here. @expo/vector-icons manages its own
@@ -333,6 +371,7 @@ export default function RootLayout() {
             showFooterChrome={showFooterChrome}
             showNetworkStatusChrome={showNetworkStatusChrome}
             showSkipLinks={showSkipLinks}
+            showServiceWorkerCleanup={showServiceWorkerCleanup}
             isMobile={isMobile}
             pathname={effectivePathname}
             currentColorScheme={colorScheme}
@@ -354,6 +393,7 @@ function ThemedContent({
   showFooterChrome,
   showNetworkStatusChrome,
   showSkipLinks,
+  showServiceWorkerCleanup,
   isMobile,
   pathname,
   currentColorScheme,
@@ -368,6 +408,7 @@ function ThemedContent({
   showFooterChrome: boolean;
   showNetworkStatusChrome: boolean;
   showSkipLinks: boolean;
+  showServiceWorkerCleanup: boolean;
   isMobile: boolean;
   pathname?: string;
   currentColorScheme: 'light' | 'dark' | null | undefined;
@@ -450,6 +491,12 @@ function ThemedContent({
                               {isWeb && isMounted && (
                                 <React.Suspense fallback={null}>
                                   <WebAppRuntimeEffectsLazy pathname={pathname} />
+                                </React.Suspense>
+                              )}
+
+                              {isWeb && isMounted && showServiceWorkerCleanup && (
+                                <React.Suspense fallback={null}>
+                                  <WebServiceWorkerCleanupLazy />
                                 </React.Suspense>
                               )}
 
