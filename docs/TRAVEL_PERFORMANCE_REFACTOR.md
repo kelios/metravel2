@@ -169,6 +169,7 @@ Critical shell должен:
 - Сделано: `ToastHost` больше не запрашивается на web вообще; ранее этот lazy chunk грузился в root path, хотя web-реализация все равно возвращала `null`.
 - Сделано: `NetworkStatus` на web travel route больше не подтягивается таймером в happy path; chunk грузится только если страница уже открылась offline или браузер реально перешел в offline.
 - Сделано: legacy service-worker cleanup вынесен из `WebAppRuntimeEffects` в отдельный deferred web chunk; теперь эта миграция не участвует в раннем post-hydration runtime path travel route.
+- Сделано: весь deferred web chrome (`footer`, `consent`, `skip links`, `network status`, `web runtime effects`) вынесен из root `_layout` в отдельный lazy runtime-компонент, чтобы eager root path был тоньше и проще.
 - В работе: дальнейшее сокращение initial JS и audit того, что еще попадает в route/common chunks раньше необходимости.
 
 Последний production build после текущих shared-path правок:

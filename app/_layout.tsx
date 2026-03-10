@@ -16,15 +16,6 @@ const safeLazy = <T extends React.ComponentType<any>>(
   })
 );
 
-const SkipLinksLazy = safeLazy(() => import('@/components/layout/SkipLinks'), 'SkipLinks');
-const NetworkStatusLazy = safeLazy(
-  () => import('@/components/ui/NetworkStatus').then(m => {
-    const Component = m.NetworkStatus ?? (m as any).default;
-    if (!Component) throw new Error('NetworkStatus export not found');
-    return { default: Component };
-  }),
-  'NetworkStatus'
-);
 const SyncIndicatorLazy = safeLazy(
   () => import('@/components/ui/SyncIndicator').then(m => {
     const Component = m.SyncIndicator ?? (m as any).default;
@@ -38,16 +29,10 @@ const ReactQueryDevtoolsLazy: any = __DEV__
       import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
     )
   : null;
-const FooterLazy = safeLazy(() => import('@/components/layout/Footer'), 'Footer');
-const ConsentBannerLazy = safeLazy(() => import('@/components/layout/ConsentBanner'), 'ConsentBanner');
 const ToastLazy = safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost');
-const WebAppRuntimeEffectsLazy = safeLazy(
-  () => import('@/components/layout/WebAppRuntimeEffects'),
-  'WebAppRuntimeEffects'
-);
-const WebServiceWorkerCleanupLazy = safeLazy(
-  () => import('@/components/layout/WebServiceWorkerCleanup'),
-  'WebServiceWorkerCleanup'
+const RootWebDeferredChromeLazy = safeLazy(
+  () => import('@/components/layout/RootWebDeferredChrome'),
+  'RootWebDeferredChrome'
 );
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
@@ -192,16 +177,6 @@ export default function RootLayout() {
     
     /** === SSR-safe Toast: рендерим только на клиенте === */
     const [isMounted, setIsMounted] = useState(false);
-    const [showFooterChrome, setShowFooterChrome] = useState(
-      !isWeb || !isTravelPerformanceRoute
-    );
-    const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(
-      !isWeb || !isTravelPerformanceRoute
-    );
-    const [showConsentBanner, setShowConsentBanner] = useState(false);
-    const [showSkipLinks, setShowSkipLinks] = useState(!isWeb);
-    const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(!isWeb);
-    
     useEffect(() => {
         if (!isWeb) return;
         setIsViewportHydrated(true);
@@ -209,110 +184,14 @@ export default function RootLayout() {
 
     useEffect(() => {
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
-        let footerTimer: ReturnType<typeof setTimeout> | null = null;
-        let consentTimer: ReturnType<typeof setTimeout> | null = null;
-        let rafId: number | null = null;
 
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
-        if (isWeb) {
-          const footerDelay = isTravelPerformanceRoute ? 6500 : 0;
-          footerTimer = setTimeout(() => setShowFooterChrome(true), footerDelay);
-        }
-
-        // Defer ConsentBanner for LCP, but skip entirely if consent is already saved.
-        if (isWeb && typeof window !== 'undefined') {
-          void import('@/utils/consent')
-            .then(({ readConsent }) => {
-              if (readConsent()) return;
-              const consentDelay = isTravelPerformanceRoute ? 9000 : 4000;
-              consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay);
-            })
-            .catch(() => {
-              const consentDelay = isTravelPerformanceRoute ? 9000 : 4000;
-              consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay);
-            });
-        }
-
-        if (isWeb && typeof document !== 'undefined') {
-          rafId = requestAnimationFrame(() => {
-            document.documentElement.classList.add('app-hydrated');
-          });
-        }
-
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
-          if (footerTimer) clearTimeout(footerTimer);
-          if (consentTimer) clearTimeout(consentTimer);
-          if (rafId != null) cancelAnimationFrame(rafId);
         };
-    }, [isTravelPerformanceRoute]);
-
-    useEffect(() => {
-      if (!isWeb || typeof window === 'undefined') return;
-
-      const revealSkipLinks = (event: KeyboardEvent) => {
-        if (event.key !== 'Tab' || event.shiftKey) return;
-        setShowSkipLinks(true);
-      };
-
-      window.addEventListener('keydown', revealSkipLinks, { passive: true, once: true });
-      return () => {
-        window.removeEventListener('keydown', revealSkipLinks);
-      };
     }, []);
-
-    useEffect(() => {
-      if (!isWeb || typeof window === 'undefined' || !isTravelPerformanceRoute) return;
-
-      const revealNetworkStatus = () => {
-        setShowNetworkStatusChrome(true);
-      };
-
-      if (navigator.onLine === false) {
-        revealNetworkStatus();
-      }
-
-      window.addEventListener('offline', revealNetworkStatus);
-
-      return () => {
-        window.removeEventListener('offline', revealNetworkStatus);
-      };
-    }, [isTravelPerformanceRoute]);
-
-    useEffect(() => {
-      if (!isWeb || typeof window === 'undefined') return;
-
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-      let idleId: number | null = null;
-      const delay = isTravelPerformanceRoute ? 15000 : 6000;
-
-      timeoutId = setTimeout(() => {
-        setShowServiceWorkerCleanup(true);
-      }, delay);
-
-      if ('requestIdleCallback' in window) {
-        idleId = (window as any).requestIdleCallback(
-          () => {
-            setShowServiceWorkerCleanup(true);
-          },
-          { timeout: isTravelPerformanceRoute ? 12000 : 5000 }
-        );
-      }
-
-      return () => {
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = null;
-        if (idleId !== null) {
-          try {
-            (window as any).cancelIdleCallback(idleId);
-          } catch {
-            // noop
-          }
-        }
-      };
-    }, [isTravelPerformanceRoute]);
 
     // Fonts:
     // - On native we must load app fonts before rendering.
@@ -368,17 +247,12 @@ export default function RootLayout() {
           <ThemedContent
             showMapBackground={showMapBackground}
             showFooter={showFooter}
-            showFooterChrome={showFooterChrome}
-            showNetworkStatusChrome={showNetworkStatusChrome}
-            showSkipLinks={showSkipLinks}
-            showServiceWorkerCleanup={showServiceWorkerCleanup}
             isMobile={isMobile}
             pathname={effectivePathname}
             currentColorScheme={colorScheme}
             dockHeight={dockHeight}
             setDockHeight={setDockHeight}
             isMounted={isMounted}
-            showConsentBanner={showConsentBanner}
             queryClient={queryClient}
           />
         </ErrorBoundary>
@@ -390,32 +264,22 @@ export default function RootLayout() {
 function ThemedContent({
   showMapBackground,
   showFooter,
-  showFooterChrome,
-  showNetworkStatusChrome,
-  showSkipLinks,
-  showServiceWorkerCleanup,
   isMobile,
   pathname,
   currentColorScheme,
   dockHeight,
   setDockHeight,
   isMounted,
-  showConsentBanner,
   queryClient,
 }: {
   showMapBackground: boolean;
   showFooter: boolean;
-  showFooterChrome: boolean;
-  showNetworkStatusChrome: boolean;
-  showSkipLinks: boolean;
-  showServiceWorkerCleanup: boolean;
   isMobile: boolean;
   pathname?: string;
   currentColorScheme: 'light' | 'dark' | null | undefined;
   dockHeight: number;
   setDockHeight: (h: number) => void;
   isMounted: boolean;
-  showConsentBanner: boolean;
   queryClient: any;
 }) {
   const colors = useThemedColors();
@@ -474,32 +338,6 @@ function ThemedContent({
                                 />
                               )}
 
-                              {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
-                              {isWeb && isMounted && showSkipLinks && (
-                                <React.Suspense fallback={null}>
-                                  <SkipLinksLazy initiallyVisible />
-                                </React.Suspense>
-                              )}
-
-                              {/* ✅ FIX-005: Индикатор статуса сети */}
-                              {(!isWeb || (isMounted && showNetworkStatusChrome)) && (
-                                <React.Suspense fallback={null}>
-                                  <NetworkStatusLazy position="top" />
-                                </React.Suspense>
-                              )}
-
-                              {isWeb && isMounted && (
-                                <React.Suspense fallback={null}>
-                                  <WebAppRuntimeEffectsLazy pathname={pathname} />
-                                </React.Suspense>
-                              )}
-
-                              {isWeb && isMounted && showServiceWorkerCleanup && (
-                                <React.Suspense fallback={null}>
-                                  <WebServiceWorkerCleanupLazy />
-                                </React.Suspense>
-                              )}
-
                               {/* AND-10: Индикатор синхронизации при восстановлении сети (native only) */}
                               {!isWeb && (
                                 <React.Suspense fallback={null}>
@@ -522,28 +360,16 @@ function ThemedContent({
                                 </React.Suspense>
                               ) : null}
 
-                              {/* Баннер согласия с компактным интерфейсом (web only) */}
-                              {(!isWeb || showConsentBanner) && (
+                              {isWeb && isMounted && (
                                 <React.Suspense fallback={null}>
-                                  <ConsentBannerLazy />
+                                  <RootWebDeferredChromeLazy
+                                    isMobile={isMobile}
+                                    pathname={pathname}
+                                    showFooter={showFooter}
+                                    isTravelPerformanceRoute={isTravelRoute}
+                                    setDockHeight={setDockHeight}
+                                  />
                                 </React.Suspense>
-                              )}
-
-                              {showFooter && showFooterChrome && (!isWeb || isMounted) && (
-                                <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
-                                  <React.Suspense
-                                    fallback={
-                                      isWeb && isMobile ? (
-                                        <View style={{ height: WEB_FOOTER_RESERVE_HEIGHT, width: '100%' }} />
-                                      ) : null
-                                    }
-                                  >
-                                    <FooterLazy
-                                      /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
-                                      onDockHeight={(h) => setDockHeight(h)}
-                                    />
-                                  </React.Suspense>
-                                </View>
                               )}
                         </View>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
