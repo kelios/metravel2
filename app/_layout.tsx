@@ -42,6 +42,10 @@ const ReactQueryDevtoolsLazy: any = __DEV__
 const FooterLazy = safeLazy(() => import('@/components/layout/Footer'), 'Footer');
 const ConsentBannerLazy = safeLazy(() => import('@/components/layout/ConsentBanner'), 'ConsentBanner');
 const ToastLazy = safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost');
+const WebAppRuntimeEffectsLazy = safeLazy(
+  () => import('@/components/layout/WebAppRuntimeEffects'),
+  'WebAppRuntimeEffects'
+);
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
@@ -143,9 +147,19 @@ export default function RootLayout() {
           : false;
 
 
+    const effectivePathname = useMemo(() => {
+      if (typeof pathname === 'string' && pathname.length > 0 && pathname !== '/') {
+        return pathname;
+      }
+      if (isWeb && typeof window !== 'undefined') {
+        return window.location?.pathname || pathname || '';
+      }
+      return pathname || '';
+    }, [pathname]);
+
     const showFooter = useMemo(
       () => {
-        const p = pathname || "";
+        const p = effectivePathname || "";
         if (["/login", "/onboarding"].includes(p)) return false;
         // Map page uses full viewport height — footer steals space from the map
         if (p === "/map") return false;
@@ -154,11 +168,11 @@ export default function RootLayout() {
         // if (p.startsWith('/travel')) return false;
         return true;
       },
-      [pathname]
+      [effectivePathname]
     );
     const isTravelPerformanceRoute = useMemo(
-      () => typeof pathname === 'string' && pathname.startsWith('/travels/'),
-      [pathname]
+      () => typeof effectivePathname === 'string' && effectivePathname.startsWith('/travels/'),
+      [effectivePathname]
     );
 
     /** === динамическая высота ДОКА футера (только иконки) === */
@@ -212,49 +226,6 @@ export default function RootLayout() {
         };
     }, [isTravelPerformanceRoute]);
 
-    // One-time web migration: remove legacy Service Worker registrations/caches
-    // from older releases after SW support was disabled.
-    useEffect(() => {
-      if (!isWeb) return;
-      if (typeof window === 'undefined') return;
-      if (typeof navigator === 'undefined') return;
-      if (!('serviceWorker' in navigator)) return;
-
-      const MIGRATION_KEY = '__metravel_sw_disabled_migration_v1';
-
-      const runMigration = async () => {
-        try {
-          try {
-            if (window.localStorage.getItem(MIGRATION_KEY) === '1') return;
-          } catch {
-            // localStorage may be unavailable in some private modes
-          }
-
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map((registration) => registration.unregister()));
-
-          if (typeof caches !== 'undefined') {
-            const keys = await caches.keys();
-            const legacyKeys = keys.filter(
-              (key) => key.startsWith('metravel-') || key.startsWith('workbox-')
-            );
-            await Promise.all(legacyKeys.map((key) => caches.delete(key)));
-          }
-
-          try {
-            window.localStorage.setItem(MIGRATION_KEY, '1');
-          } catch {
-            // noop
-          }
-        } catch {
-          // noop
-        }
-      };
-
-      void runMigration();
-    }, []);
-
-
     // Fonts:
     // - On native we must load app fonts before rendering.
     // - On web we do not load fonts via expo-font here. @expo/vector-icons manages its own
@@ -281,95 +252,11 @@ export default function RootLayout() {
       }
     }, [fontsLoaded]);
 
-    // Font timeout suppression (web only).
-    useEffect(() => {
-      if (!isWeb) return;
-      const onUnhandled = (e: PromiseRejectionEvent) => {
-        const reason = (e as any)?.reason;
-        const msg = String(reason?.message ?? reason ?? '');
-        const stack = typeof reason?.stack === 'string' ? reason.stack : '';
-
-        const isFontTimeout =
-          msg.includes('timeout exceeded') &&
-          (String(msg).toLowerCase().includes('fontfaceobserver') ||
-            String(stack).toLowerCase().includes('fontfaceobserver') ||
-            msg.includes('6000ms timeout exceeded'));
-
-        if (isFontTimeout) {
-          e.preventDefault();
-        }
-      };
-
-      window.addEventListener('unhandledrejection', onUnhandled);
-      return () => {
-        window.removeEventListener('unhandledrejection', onUnhandled);
-      };
-    }, []);
-
-    // Avoid keeping focus inside screens that become aria-hidden after navigation (web)
-    useEffect(() => {
-      if (!isWeb) return;
-      const active = document.activeElement as HTMLElement | null;
-      if (active && typeof active.blur === 'function') {
-        active.blur();
-      }
-
-      const main = document.getElementById('main-content');
-      if (main) {
-        const hadTabIndex = main.hasAttribute('tabindex');
-        if (!hadTabIndex) {
-          main.setAttribute('tabindex', '-1');
-        }
-        main.focus();
-        if (!hadTabIndex) {
-          main.removeAttribute('tabindex');
-        }
-      }
-    }, [pathname]);
-
     useEffect(() => {
       if (fontError && !isWeb) {
         console.error("Font loading error:", fontError);
       }
     }, [fontError]);
-
-    // FIX: Browser back button doesn't work with Tabs navigator.
-    // Expo Router's useLinking calls replaceState (instead of pushState) when switching
-    // between already-visited tabs because the tab history length doesn't change.
-    // This patch converts replaceState → pushState when the URL path actually changes.
-    useEffect(() => {
-      if (!isWeb) return;
-      if (typeof window === 'undefined') return;
-
-      const originalReplace = window.history.replaceState.bind(window.history);
-      const originalPush = window.history.pushState.bind(window.history);
-
-      window.history.replaceState = function patchedReplaceState(
-        data: any,
-        unused: string,
-        url?: string | URL | null,
-      ) {
-        if (url != null) {
-          const currentPath = window.location.pathname + window.location.search;
-          let newPath: string;
-          try {
-            const resolved = new URL(String(url), window.location.href);
-            newPath = resolved.pathname + resolved.search;
-          } catch {
-            newPath = String(url);
-          }
-          if (newPath !== currentPath) {
-            // Path changed — push instead of replace so browser back button works
-            return originalPush(data, unused, url);
-          }
-        }
-        return originalReplace(data, unused, url);
-      };
-
-      return () => {
-        window.history.replaceState = originalReplace;
-      };
-    }, []);
 
     if (!fontsLoaded && !isWeb) {
       return (
@@ -395,6 +282,8 @@ export default function RootLayout() {
             showFooter={showFooter}
             showFooterChrome={showFooterChrome}
             isMobile={isMobile}
+            pathname={effectivePathname}
+            currentColorScheme={colorScheme}
             dockHeight={dockHeight}
             setDockHeight={setDockHeight}
             isMounted={isMounted}
@@ -412,6 +301,8 @@ function ThemedContent({
   showFooter,
   showFooterChrome,
   isMobile,
+  pathname,
+  currentColorScheme,
   dockHeight,
   setDockHeight,
   isMounted,
@@ -422,6 +313,8 @@ function ThemedContent({
   showFooter: boolean;
   showFooterChrome: boolean;
   isMobile: boolean;
+  pathname?: string;
+  currentColorScheme: 'light' | 'dark' | null | undefined;
   dockHeight: number;
   setDockHeight: (h: number) => void;
   isMounted: boolean;
@@ -439,6 +332,8 @@ function ThemedContent({
     /^\/travels\/[^/]+$/.test(pathname);
   const shouldDeferFavoritesProvider =
     isTravelRoute;
+  const favoritesDeferMode =
+    isTravelRoute ? 'interaction' : 'idle';
 
   const bottomGutter = useMemo(() => {
     if (!showFooter || !isMobile) return null;
@@ -456,6 +351,7 @@ function ThemedContent({
     <AppProviders
       queryClient={queryClient}
       deferFavoritesProvider={shouldDeferFavoritesProvider}
+      favoritesDeferMode={favoritesDeferMode}
     >
                           <NativeAppRuntime />
                           {/* AND-08: Global StatusBar — syncs barStyle with current theme (native only) */}
@@ -492,6 +388,12 @@ function ThemedContent({
                               {(!isWeb || isMounted) && (
                                 <React.Suspense fallback={null}>
                                   <NetworkStatusLazy position="top" />
+                                </React.Suspense>
+                              )}
+
+                              {isWeb && isMounted && (
+                                <React.Suspense fallback={null}>
+                                  <WebAppRuntimeEffectsLazy pathname={pathname} />
                                 </React.Suspense>
                               )}
 

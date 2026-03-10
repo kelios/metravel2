@@ -9,6 +9,7 @@ interface AppProvidersProps {
   queryClient: any;
   children: React.ReactNode;
   deferFavoritesProvider?: boolean;
+  favoritesDeferMode?: 'idle' | 'interaction';
 }
 
 const EmptyFallback = () => null;
@@ -34,6 +35,7 @@ export default function AppProviders({
   queryClient,
   children,
   deferFavoritesProvider = false,
+  favoritesDeferMode = 'idle',
 }: AppProvidersProps) {
   const [favoritesReady, setFavoritesReady] = useState(!deferFavoritesProvider);
   const fallbackFavorites = useMemo(() => createFavoritesFallbackValue(), []);
@@ -41,16 +43,17 @@ export default function AppProviders({
   useEffect(() => {
     if (!deferFavoritesProvider || Platform.OS !== 'web' || typeof window === 'undefined') return;
 
+    const fallbackDelay = favoritesDeferMode === 'interaction' ? 6500 : 1800;
     let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       setFavoritesReady(true);
-    }, 1800);
+    }, fallbackDelay);
     let idleId: number | null = null;
 
     const enable = () => {
       setFavoritesReady(true);
     };
 
-    if ('requestIdleCallback' in window) {
+    if (favoritesDeferMode === 'idle' && 'requestIdleCallback' in window) {
       idleId = (window as any).requestIdleCallback(enable, { timeout: 1200 });
     }
 
@@ -73,7 +76,7 @@ export default function AppProviders({
       window.removeEventListener('keydown', onInteraction);
       window.removeEventListener('scroll', onInteraction);
     };
-  }, [deferFavoritesProvider]);
+  }, [deferFavoritesProvider, favoritesDeferMode]);
 
   const content = (
     <QueryClientProvider client={queryClient}>

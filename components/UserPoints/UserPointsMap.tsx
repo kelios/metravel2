@@ -1038,14 +1038,9 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     ;(async () => {
       try {
         ensureLeafletCss();
-        await import('@/utils/leafletFix');
-        const [leafletModule, reactLeafletModule] = await Promise.all([
-          import('leaflet'),
-          import('react-leaflet'),
-        ]);
+        const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime');
+        const { L, RL } = await loadLeafletRuntime();
         if (cancelled) return;
-        const L = leafletModule.default ?? leafletModule;
-        const RL = reactLeafletModule as any;
         setMods({
           L,
           MapContainer: RL.MapContainer,

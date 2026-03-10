@@ -426,6 +426,14 @@ npm run lighthouse:produrl:summary
 - [x] Итерация 32: mobile/desktop режим header теперь вычисляется локально по breakpoint-границам без подключения shared responsive store в ранний web path.
 - [x] Итерация 33: static-config prefetch для `QueryClient` вынесен из `reactQueryConfig.ts` в отдельный lazy helper, чтобы root query-client path не импортировал heavy `api/misc` и `queryKeys` напрямую.
 - [x] Итерация 33: idle-prefetch фильтров и стран теперь запускается через отдельный chunk `queryClientStaticPrefetch`, а не через inline root-path логику в `createOptimizedQueryClient`.
+- [x] Итерация 34: `leaflet/react-leaflet` runtime централизован в единый lazy loader `loadLeafletRuntime`, чтобы map entry points не создавали несколько параллельных import graph.
+- [x] Итерация 34: `useLeafletLoader`, `Map.web`, `QuestFullMap`, `UserPointsMap` и `WebMapComponent` переведены на общий runtime loader вместо прямых dynamic import `leaflet/react-leaflet`.
+- [x] Итерация 35: web browser side effects (`history patch`, focus-management, font timeout suppression, legacy SW cleanup) вынесены из `app/_layout.tsx` в отдельный lazy island `WebAppRuntimeEffects`.
+- [x] Итерация 35: root web entry больше не держит служебные browser runtime эффекты в initial layout path; они подключаются после hydration через отдельный lazy chunk.
+- [x] Итерация 36: `AppProviders` получил route-aware режим defer для `FavoritesProvider`, чтобы на `travels/*` heavy favorites context поднимался по interaction-first, а не по раннему `requestIdleCallback`.
+- [x] Итерация 36: travel route больше не провоцирует раннюю загрузку `FavoritesProvider` через idle window; для него оставлен только interaction trigger и поздний fallback.
+- [x] Итерация 37: root layout переведен на `effectivePathname`, чтобы web travel route распознавался по реальному browser path уже на первой гидратации, а не только после стабилизации `usePathname()`.
+- [x] Итерация 37: defer для `Footer` и другого route-aware chrome на `travels/*` теперь вычисляется от эффективного пути и не должен срываться на прямом заходе.
 - [ ] Этап 2: формально выделить critical shell как отдельный слой внутри travel details.
 - [ ] Этап 3: упростить hero/LCP path до более детерминированного SSR-first media flow.
 - [ ] Этап 4: сократить initial JS travel route и shared bundle pressure.

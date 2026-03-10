@@ -209,16 +209,14 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     let cancelled = false;
     ;(async () => {
       try {
-        const [{ ensureLeafletCss }, leafletModule, reactLeafletModule] = await Promise.all([
+        const [{ ensureLeafletCss }, runtime] = await Promise.all([
           import('@/utils/ensureLeafletCss'),
-          import('leaflet'),
-          import('react-leaflet'),
+          import('@/utils/loadLeafletRuntime').then(({ loadLeafletRuntime }) => loadLeafletRuntime()),
         ]);
         ensureLeafletCss();
-        await import('@/utils/leafletFix');
         if (cancelled) return;
-        setL((leafletModule as any).default ?? leafletModule);
-        setRl(reactLeafletModule as any);
+        setL(runtime.L as any);
+        setRl(runtime.RL as any);
       } catch {
         if (!cancelled) {
           setL(null);

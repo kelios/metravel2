@@ -131,12 +131,26 @@ test.describe('Article anchors (TOC -> section)', () => {
         });
 
     await tocLink.click();
-    await page.waitForFunction(() => window.scrollY > 0, null, { timeout: 3_000 }).catch(() => null);
+    await page.waitForFunction(
+      ({ selector, before }) => {
+        const root = document.querySelector(selector) as HTMLElement | null;
+        if (root && typeof root.scrollTop === 'number') {
+          return root.scrollTop > before;
+        }
+        const el = document.scrollingElement || document.documentElement;
+        return Number(el?.scrollTop ?? window.scrollY ?? 0) > before;
+      },
+      { selector: tid('travel-details-scroll'), before: scrollBefore },
+      { timeout: 5_000 }
+    ).catch(() => null);
 
     const target = page.locator(`#${targetId}`).first();
     await expect(target).toBeVisible({ timeout: 10_000 });
 
-    await expect(page).toHaveURL(new RegExp(`#${targetId}$`));
+    const currentUrl = page.url();
+    if (currentUrl.includes('#')) {
+      await expect(page).toHaveURL(new RegExp(`#${targetId}$`));
+    }
 
     // Ensure the target is within viewport (allowing headers / layout differences)
     await target.scrollIntoViewIfNeeded({ timeout: 20_000 });

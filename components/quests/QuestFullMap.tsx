@@ -149,15 +149,10 @@ function QuestFullMap({
         let cancelled = false;
         (async () => {
             try {
-                await import('@/utils/leafletFix');
                 const { ensureLeafletCss } = await import('@/utils/ensureLeafletCss');
                 await ensureLeafletCss();
-                const [leafletModule, reactLeafletModule] = await Promise.all([
-                    import('leaflet'),
-                    import('react-leaflet'),
-                ]);
-                const L = leafletModule.default ?? leafletModule;
-                const RL = reactLeafletModule as any;
+                const { loadLeafletRuntime } = await import('@/utils/loadLeafletRuntime');
+                const { L, RL } = await loadLeafletRuntime();
                 if (cancelled) return;
                 setMods({
                     L,

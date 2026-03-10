@@ -30,9 +30,20 @@ import { getTravelsListPath } from './helpers/routes';
 async function getCounter(page: import('@playwright/test').Page) {
   return page.evaluate(() => {
     const re = /^(\d+)\/(\d+)$/;
-    const all = document.querySelectorAll('*');
+    const wrappers = Array.from(document.querySelectorAll('[data-testid="slider-wrapper"]')) as HTMLElement[];
+    const wrapper = wrappers.findLast((node) => {
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    });
+    const scope = wrapper ?? document.body;
+    const all = scope.querySelectorAll('*');
     for (const el of all) {
-      if (el.children.length > 0) continue;
+      const htmlEl = el as HTMLElement;
+      if (htmlEl.children.length > 0) continue;
+      if (htmlEl.getClientRects().length === 0) continue;
+      const style = getComputedStyle(htmlEl);
+      if (style.display === 'none' || style.visibility === 'hidden') continue;
       const t = (el.textContent || '').trim();
       const m = t.match(re);
       if (m) {
@@ -59,6 +70,24 @@ async function waitForCounterValue(
     await page.waitForTimeout(200);
   }
   return getCounter(page);
+}
+
+function getSliderWrapper(page: import('@playwright/test').Page) {
+  return page.locator('[data-testid="slider-wrapper"]').last();
+}
+
+function getSliderNavButton(page: import('@playwright/test').Page, label: 'Next slide' | 'Previous slide') {
+  return getSliderWrapper(page).locator(`[aria-label="${label}"]`).last();
+}
+
+async function clickSliderNavButton(
+  page: import('@playwright/test').Page,
+  label: 'Next slide' | 'Previous slide',
+) {
+  await getSliderWrapper(page).hover();
+  await getSliderNavButton(page, label).evaluate((el: any) => {
+    if (typeof el?.click === 'function') el.click();
+  });
 }
 
 /**
@@ -140,12 +169,15 @@ async function navigateToTravelWithSlider(
   await page.route(`**/api/travels/${fallbackId}/`, fallbackRoute);
 
   await gotoWithRetry(page, `/travels/${fallbackSlug}`);
-  const nextBtn = page.locator('[aria-label="Next slide"]').first();
+  const nextBtn = getSliderNavButton(page, 'Next slide');
   const hasNext = await nextBtn
     .waitFor({ state: 'attached', timeout: 15_000 })
     .then(() => true)
     .catch(() => false);
   if (!hasNext) return null;
+  await expect
+    .poll(async () => getSliderWrapper(page).getAttribute('tabindex'), { timeout: 15_000 })
+    .toBe('0');
 
   const counter = await waitForCounterValue(page, 1, 10_000);
   if (counter) return counter;
@@ -166,12 +198,17 @@ async function navigateToTravelWithSlider(
       .catch(() => false);
     if (!navigated) continue;
     const nextVisible = await page
+      .locator('[data-testid="slider-wrapper"]')
+      .last()
       .locator('[aria-label="Next slide"]')
-      .first()
+      .last()
       .waitFor({ state: 'attached', timeout: 10_000 })
       .then(() => true)
       .catch(() => false);
     if (!nextVisible) continue;
+    await expect
+      .poll(async () => getSliderWrapper(page).getAttribute('tabindex'), { timeout: 10_000 })
+      .toBe('0');
     const fromListCounter = await waitForCounterValue(page, 1, 8_000);
     if (fromListCounter) return fromListCounter;
   }
@@ -202,8 +239,7 @@ test.describe('Slider — counter accuracy', () => {
     expect(counter.current).toBe(1);
     expect(counter.total).toBeGreaterThan(1);
 
-    const nextBtn = page.locator('[aria-label="Next slide"]').first();
-    await nextBtn.click();
+    await clickSliderNavButton(page, 'Next slide');
     const c2 = await waitForCounterValue(page, 2, 8_000);
     expect(c2?.current).toBe(2);
     expect(c2?.total).toBe(counter.total); // total must not change
@@ -217,12 +253,12 @@ test.describe('Slider — counter accuracy', () => {
     }
 
     // Go to slide 2 first
-    await page.locator('[aria-label="Next slide"]').first().click();
+    await clickSliderNavButton(page, 'Next slide');
     await waitForCounterValue(page, 2, 8_000);
     await page.waitForTimeout(300); // let scroll snap settle before clicking prev
 
     // Then go back
-    await page.locator('[aria-label="Previous slide"]').first().click();
+    await clickSliderNavButton(page, 'Previous slide');
     const c = await waitForCounterValue(page, 1, 8_000);
     expect(c?.current).toBe(1);
   });
@@ -240,12 +276,13 @@ test.describe('Slider — pagination dots', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    await page.locator('[data-testid="slider-wrapper"]').first().waitFor({ state: 'visible', timeout: 10_000 });
+    await getSliderWrapper(page).waitFor({ state: 'visible', timeout: 10_000 });
 
     // On desktop, dots container should not be visible (showDots=isMobile=false)
     // Verify by checking that no dot-sized leaf divs exist in the wrapper
     const dotCount = await page.evaluate(() => {
-      const wrapper = document.querySelector('[data-testid="slider-wrapper"]');
+      const wrappers = Array.from(document.querySelectorAll('[data-testid="slider-wrapper"]'));
+      const wrapper = wrappers.at(-1);
       if (!wrapper) return 0;
       const allDivs = Array.from(wrapper.querySelectorAll('div'));
       for (const container of allDivs) {
@@ -276,12 +313,13 @@ test.describe('Slider — pagination dots', () => {
 
     // Now resize to mobile viewport to check dots
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('[data-testid="slider-wrapper"]').first().waitFor({ state: 'visible', timeout: 10_000 });
+    await getSliderWrapper(page).waitFor({ state: 'visible', timeout: 10_000 });
     await page.waitForTimeout(500); // allow layout to settle
 
     // On mobile, dots should be rendered
     const dotCount = await page.evaluate(() => {
-      const wrapper = document.querySelector('[data-testid="slider-wrapper"]');
+      const wrappers = Array.from(document.querySelectorAll('[data-testid="slider-wrapper"]'));
+      const wrapper = wrappers.at(-1);
       if (!wrapper) return 0;
       const allDivs = Array.from(wrapper.querySelectorAll('div'));
       for (const container of allDivs) {
@@ -302,7 +340,8 @@ test.describe('Slider — pagination dots', () => {
 
     // Active dot (index 0) should be wider than inactive
     const dotsInfo = await page.evaluate(() => {
-      const wrapper = document.querySelector('[data-testid="slider-wrapper"]');
+      const wrappers = Array.from(document.querySelectorAll('[data-testid="slider-wrapper"]'));
+      const wrapper = wrappers.at(-1);
       if (!wrapper) return null;
       const allDivs = Array.from(wrapper.querySelectorAll('div'));
       for (const container of allDivs) {
@@ -334,11 +373,11 @@ test.describe('Slider — arrow visibility', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    const wrapper = page.locator('[data-testid="slider-wrapper"]').first();
+    const wrapper = getSliderWrapper(page);
     await wrapper.waitFor({ state: 'visible', timeout: 10_000 });
 
-    const nextBtn = page.locator('[aria-label="Next slide"]').first();
-    const prevBtn = page.locator('[aria-label="Previous slide"]').first();
+    const nextBtn = getSliderNavButton(page, 'Next slide');
+    const prevBtn = getSliderNavButton(page, 'Previous slide');
 
     // Buttons must exist in DOM and be attached
     await expect(nextBtn).toBeAttached();
@@ -376,8 +415,7 @@ test.describe('Slider — boundary navigation', () => {
     expect(counter.current).toBe(1);
 
     // Click prev on first slide -> current implementation keeps the first slide active.
-    const prevBtn = page.locator('[aria-label="Previous slide"]').first();
-    await prevBtn.click();
+    await clickSliderNavButton(page, 'Previous slide');
     const afterBoundaryClick = await waitForCounterValue(page, 1, 8_000);
     expect(afterBoundaryClick?.current).toBe(1);
   });
@@ -390,14 +428,13 @@ test.describe('Slider — boundary navigation', () => {
     }
 
     // Navigate to last slide by clicking Next and waiting for counter to reach total
-    const nextBtn = page.locator('[aria-label="Next slide"]').first();
     // Keep clicking until we reach the last slide (with a max iteration guard)
     const maxAttempts = counter.total * 3;
     let attempts = 0;
     while (attempts < maxAttempts) {
       const current = await getCounter(page);
       if (current?.current === counter.total) break;
-      await nextBtn.click();
+      await clickSliderNavButton(page, 'Next slide');
       await page.waitForTimeout(300);
       attempts++;
     }
@@ -406,7 +443,7 @@ test.describe('Slider — boundary navigation', () => {
     expect(cLast?.current).toBe(counter.total);
 
     // Click next on the boundary -> current implementation clamps to the last slide.
-    await nextBtn.click();
+    await clickSliderNavButton(page, 'Next slide');
     const afterBoundaryClick = await waitForCounterValue(page, counter.total, 8_000);
     expect(afterBoundaryClick?.current).toBe(counter.total);
   });
@@ -420,8 +457,8 @@ test.describe('Slider — accessibility', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    const nextBtn = page.locator('[aria-label="Next slide"]').first();
-    const prevBtn = page.locator('[aria-label="Previous slide"]').first();
+    const nextBtn = getSliderNavButton(page, 'Next slide');
+    const prevBtn = getSliderNavButton(page, 'Previous slide');
 
     await expect(nextBtn).toBeAttached();
     await expect(prevBtn).toBeAttached();
@@ -559,8 +596,8 @@ test.describe('Slider — single image', () => {
     expect(counterText).toBe(false);
 
     // No next/prev buttons
-    expect(await page.locator('[aria-label="Next slide"]').count()).toBe(0);
-    expect(await page.locator('[aria-label="Previous slide"]').count()).toBe(0);
+    expect(await getSliderWrapper(page).locator('[aria-label="Next slide"]').count()).toBe(0);
+    expect(await getSliderWrapper(page).locator('[aria-label="Previous slide"]').count()).toBe(0);
   });
 });
 
@@ -748,11 +785,11 @@ test.describe('Slider — slide virtualization', () => {
     await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 });
 
     // Navigate to slide 3 (index 2)
-    const nextBtn = page.locator('[aria-label="Next slide"]').first();
+    const nextBtn = getSliderNavButton(page, 'Next slide');
     await expect(nextBtn).toBeVisible();
-    await nextBtn.click();
+    await clickSliderNavButton(page, 'Next slide');
     await waitForCounterValue(page, 2, 8_000);
-    await nextBtn.click();
+    await clickSliderNavButton(page, 'Next slide');
     await waitForCounterValue(page, 3, 8_000);
     await page.waitForTimeout(300); // allow React to re-render
 
@@ -893,12 +930,10 @@ test.describe('Slider — rapid navigation', () => {
       throw new Error('Slider test precondition failed');
     }
 
-    const nextBtn = page.locator('[aria-label="Next slide"]').first();
-
     // Click rapidly 3 times
-    await nextBtn.click();
-    await nextBtn.click();
-    await nextBtn.click();
+    await clickSliderNavButton(page, 'Next slide');
+    await clickSliderNavButton(page, 'Next slide');
+    await clickSliderNavButton(page, 'Next slide');
 
     // Wait for counter to settle
     await page.waitForTimeout(1500);

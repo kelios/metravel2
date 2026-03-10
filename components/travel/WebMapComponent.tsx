@@ -6,6 +6,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
+import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToast } from '@/utils/toast';
 import { uploadImage } from '@/api/misc';
@@ -90,13 +91,9 @@ const WebMapComponent = ({
         ;(async () => {
             try {
                 ensureLeafletCss();
-                await import('@/utils/leafletFix');
-                const [leafletModule, reactLeafletModule] = await Promise.all([
-                    import('leaflet'),
-                    import('react-leaflet'),
-                ]);
+                const { L: leafletModule, RL: reactLeafletModule } = await loadLeafletRuntime();
                 if (!cancelled) {
-                    setL(leafletModule.default ?? leafletModule);
+                    setL(leafletModule as any);
                     setRl(reactLeafletModule as any);
                 }
             } catch {

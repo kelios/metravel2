@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { ensureLeafletCss as ensureLeafletCssOverrides } from '@/utils/ensureLeafletCss';
+import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 
 interface UseLeafletLoaderOptions {
   /**
@@ -335,22 +336,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
         await ensureLeafletCss();
         if (cancelled) return;
 
-        // Import Leaflet
-        const LeafletModule = await import('leaflet');
+        const { L: LeafletResolved, RL: ReactLeafletResolved } = await loadLeafletRuntime();
         if (cancelled) return;
-
-        // Import React-Leaflet
-        const ReactLeafletModule = await import('react-leaflet');
-        if (cancelled) return;
-
-        // Import Leaflet fix for React (icon paths)
-        await import('@/utils/leafletFix');
-        if (cancelled) return;
-
-        // In some bundler/interop modes `import('leaflet')` yields the module namespace
-        // without a `default` export. Use `default ?? module` so `L` is always truthy.
-        const LeafletResolved = (LeafletModule as unknown).default ?? (LeafletModule as unknown);
-        const ReactLeafletResolved = (ReactLeafletModule as unknown).default ?? (ReactLeafletModule as unknown);
 
         setL(LeafletResolved);
         setRL(ReactLeafletResolved);
