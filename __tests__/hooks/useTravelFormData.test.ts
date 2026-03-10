@@ -741,6 +741,81 @@ describe('useTravelFormData', () => {
     expect(removePendingImageFile).toHaveBeenCalledWith(localPointImage);
   });
 
+  it('uploads pending point photo after manual save override assigns marker id', async () => {
+    const localPointImage = 'blob:https://example.com/override-point-preview';
+    const pendingFile = new Blob(['point'], { type: 'image/webp' });
+    const uploadedUrl = 'https://example.com/travel-address/override-point.webp';
+
+    (getPendingImageFile as jest.Mock).mockReturnValue(pendingFile);
+    (uploadImage as jest.Mock).mockResolvedValue({ url: uploadedUrl });
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({
+      ...payload,
+      coordsMeTravel: [
+        {
+          id: 77,
+          lat: String(payload.coordsMeTravel?.[0]?.lat),
+          lng: String(payload.coordsMeTravel?.[0]?.lng),
+          address: payload.coordsMeTravel?.[0]?.address ?? 'EXIF point',
+          categories: [],
+          image: null,
+        },
+      ],
+    }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    const override = {
+      ...(result.current.formData as any),
+      id: 123,
+      name: 'Travel with EXIF point',
+      description: 'A'.repeat(60),
+      coordsMeTravel: [
+        {
+          id: null,
+          lat: 49.6274333333,
+          lng: 21.1955611111,
+          address: 'EXIF point',
+          categories: [],
+          image: localPointImage,
+        },
+      ],
+    };
+
+    await act(async () => {
+      await result.current.handleManualSave(override as any);
+    });
+
+    await waitFor(() => {
+      expect(uploadImage).toHaveBeenCalledTimes(1);
+    });
+
+    const uploadFormData = (uploadImage as jest.Mock).mock.calls[0][0] as FormData;
+    expect(uploadFormData.get('collection')).toBe('travelImageAddress');
+    expect(uploadFormData.get('id')).toBe('77');
+
+    await waitFor(() => {
+      const savedMarkers = (result.current.formData as any).coordsMeTravel as any[];
+      expect(savedMarkers[0]?.id).toBe(77);
+      expect(savedMarkers[0]?.image).toBe(uploadedUrl);
+    });
+
+    expect(getPendingImageFile).toHaveBeenCalledWith(localPointImage);
+    expect(removePendingImageFile).toHaveBeenCalledWith(localPointImage);
+  });
+
   describe('Edit flow - access control', () => {
 	    it('sets hasAccess to false when user does not own the travel', async () => {
       const otherUserTravel = {

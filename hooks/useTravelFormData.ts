@@ -274,12 +274,15 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, [stableTravelId]);
 
   const applySavedData = useCallback(
-    (savedData: TravelFormData) => {
+    (savedData: TravelFormData, sourceData?: TravelFormData) => {
       // ✅ FIX: Проверяем монтирование перед обновлением состояния
       if (!mountedRef.current) return;
 
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
-      const currentDataSnapshot = formState.data as TravelFormData;
+      const currentDataSnapshot =
+        (sourceData as TravelFormData | undefined) ??
+        (formDataRef.current as TravelFormData) ??
+        (formState.data as TravelFormData);
       const hadId = normalizeTravelId((currentDataSnapshot as unknown)?.id) != null;
       const hasId = normalizeTravelId((normalizedSavedData as unknown)?.id) != null;
 
@@ -317,7 +320,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
         ? (normalizedSavedData.coordsMeTravel as unknown)
         : [];
-      const currentMarkers = Array.isArray(formState.data.coordsMeTravel) ? (formState.data.coordsMeTravel as unknown) : [];
+      const currentMarkers = Array.isArray(currentDataSnapshot.coordsMeTravel)
+        ? (currentDataSnapshot.coordsMeTravel as unknown)
+        : [];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
       const effectiveMarkers = markersFromResponse.length > 0
         ? mergeMarkersPreserveImages(markersFromResponse, currentMarkers)
@@ -456,10 +461,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
               dataOverride,
             )
           : formDataRef.current as TravelFormData;
+        formDataRef.current = toSave as TravelFormData;
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
         const savedData = await cleanAndSave(toSave);
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
-        applySavedData(normalizedSavedData);
+        applySavedData(normalizedSavedData, toSave as TravelFormData);
         autosave?.cancelPending?.();
         showToast('Сохранено');
         return savedData;
