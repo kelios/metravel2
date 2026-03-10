@@ -97,7 +97,15 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
   const email = String(process.env.E2E_EMAIL || '').trim();
   const password = String(process.env.E2E_PASSWORD || '').trim();
   if (email && password) {
-    return apiLogin(email, password);
+    try {
+      return await apiLogin(email, password);
+    } catch {
+      const tokenFromState = tokenFromStorageState();
+      if (tokenFromState) {
+        return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromState, userId: null };
+      }
+      throw new Error('Unable to create E2E API context: API login failed and no token found in storageState');
+    }
   }
 
   // Fallback: use token from the Playwright storageState (global-setup writes it).
