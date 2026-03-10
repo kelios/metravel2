@@ -260,7 +260,8 @@ export function normalizeNullableStrings(data: TravelFormData): TravelFormData {
  * Нормализует маркеры для отправки на сервер:
  * - числовые categories
  * - image: отправляем только валидный серверный URL
- * - id: не отправляем null/пустой id
+ * - id: сохраняем ключ id, потому что некоторые backend-сериализаторы
+ *   требуют его даже для новых точек внутри существующего маршрута
  */
 export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: string | null): any[] {
     if (!Array.isArray(markers)) return [];
@@ -282,8 +283,9 @@ export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: strin
             categories,
         };
 
-        // Do not send id=null for new markers: backend serializers may treat null as invalid.
-        if (id != null && String(id).trim() !== '') {
+        if (id == null) {
+            normalized.id = null;
+        } else if (String(id).trim() !== '') {
             normalized.id = id;
         }
 

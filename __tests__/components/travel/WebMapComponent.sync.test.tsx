@@ -63,7 +63,7 @@ beforeAll(() => {
 describe('WebMapComponent marker sync', () => {
   const baseProps = {
     categoryTravelAddress: [{ id: 1, name: 'Категория' }],
-    countrylist: [],
+    countrylist: [{ country_id: 268, title_ru: 'Грузия', code: 'GE' }],
     markers: [],
     onMarkersChange: jest.fn(),
     onCountrySelect: jest.fn(),
@@ -78,9 +78,18 @@ describe('WebMapComponent marker sync', () => {
     // Mock reverse geocode network calls.
     const mockFetch = jest.fn(async () => ({
       ok: true,
-      json: async () => ({ city: 'Test City' }),
+      json: async () => ({
+        city: 'Тбилиси',
+        address: {
+          city: 'Тбилиси',
+          country: 'Грузия',
+          country_code: 'ge',
+          road: 'Rustaveli Avenue',
+        },
+      }),
     }));
     (global as any).fetch = mockFetch;
+
   });
 
   it('updates marker preview when marker props change without length change', async () => {
@@ -156,12 +165,14 @@ describe('WebMapComponent marker sync', () => {
 
   it('adds marker on map click and propagates it via onMarkersChange (regression: point must be saved)', async () => {
     const onMarkersChange = jest.fn();
+    const onCountrySelect = jest.fn();
 
     render(
       <WebMapComponent
         {...baseProps}
         markers={[] as any}
         onMarkersChange={onMarkersChange}
+        onCountrySelect={onCountrySelect}
       />,
     );
 
@@ -187,8 +198,12 @@ describe('WebMapComponent marker sync', () => {
           lat: 10,
           lng: 20,
           id: null,
+          country: 268,
+          address: expect.stringContaining('Тбилиси'),
         }),
       );
     });
+
+    expect(onCountrySelect).toHaveBeenCalledWith('268');
   });
 });

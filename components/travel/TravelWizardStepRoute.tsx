@@ -34,6 +34,7 @@ const WebMapComponent = Platform.OS === 'web'
 interface TravelWizardStepRouteProps {
     currentStep: number;
     totalSteps: number;
+    formData: TravelFormData;
     markers: MarkerData[];
     setMarkers: (data: MarkerData[]) => void;
     categoryTravelAddress: TravelFilters['categoryTravelAddress'];
@@ -44,7 +45,7 @@ interface TravelWizardStepRouteProps {
     onCountryDeselect: (countryId: string) => void;
     onBack: () => void;
     onNext: () => void;
-    onManualSave?: () => Promise<TravelFormData | void>;
+    onManualSave?: (dataOverride?: TravelFormData) => Promise<TravelFormData | void>;
     isFiltersLoading?: boolean;
     stepMeta?: {
         title?: string;
@@ -67,6 +68,7 @@ const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed';
 const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     currentStep,
     totalSteps,
+    formData,
     markers,
     setMarkers,
     categoryTravelAddress,
@@ -241,6 +243,23 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         },
         [setMarkers],
     );
+
+    const handlePhotoMarkerReady = useCallback(async (
+        payload: { markers: MarkerData[]; derivedCountryId: number | null }
+    ) => {
+        handleMarkersChange(payload.markers);
+        if (!onManualSave) return;
+
+        const nextCountries = payload.derivedCountryId != null
+            ? Array.from(new Set([...(selectedCountryIds || []).map(String), String(payload.derivedCountryId)]))
+            : (selectedCountryIds || []).map(String);
+
+        await onManualSave({
+            ...formData,
+            countries: nextCountries,
+            coordsMeTravel: payload.markers,
+        });
+    }, [formData, handleMarkersChange, onManualSave, selectedCountryIds]);
 
     // ✅ ФАЗА 2: Handler для выбора места из поиска
     const handleLocationSelect = useCallback(async (result: any) => {
@@ -766,6 +785,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             countrylist={countries}
                                             onCountrySelect={onCountrySelect}
                                             onCountryDeselect={onCountryDeselect}
+                                            onPhotoMarkerReady={handlePhotoMarkerReady}
                                         />
                                     </Suspense>
                                 ) : (

@@ -1,4 +1,5 @@
 type GpsCoords = { lat: number; lng: number };
+type ExifGpsOverride = GpsCoords | ((file: File) => GpsCoords | null | Promise<GpsCoords | null>) | null;
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value);
@@ -11,6 +12,14 @@ const isValidGps = (coords: GpsCoords) =>
   coords.lng >= -180 &&
   coords.lng <= 180;
 
+const getTestGpsOverride = (): ExifGpsOverride => {
+  const globalValue = (globalThis as typeof globalThis & {
+    __METRAVEL_E2E_EXIF_GPS__?: ExifGpsOverride;
+  }).__METRAVEL_E2E_EXIF_GPS__;
+
+  return globalValue ?? null;
+};
+
 /**
  * Extracts GPS coordinates from image EXIF (if present).
  * - Web-only (expects browser `File`).
@@ -20,6 +29,15 @@ export async function extractGpsFromImageFile(file: File): Promise<GpsCoords | n
   if (typeof file === 'undefined' || file == null) return null;
 
   try {
+    const testOverride = getTestGpsOverride();
+    if (testOverride) {
+      const rawCoords =
+        typeof testOverride === 'function' ? await testOverride(file) : testOverride;
+      if (!rawCoords) return null;
+      const coords = { lat: Number(rawCoords.lat), lng: Number(rawCoords.lng) };
+      return isValidGps(coords) ? coords : null;
+    }
+
     const mod: any = await import('exifr');
     const gpsFn =
       (typeof mod?.gps === 'function' ? mod.gps : null) ||

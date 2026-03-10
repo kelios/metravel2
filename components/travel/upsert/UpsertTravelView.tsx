@@ -378,6 +378,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
           <TravelWizardStepRoute
             currentStep={controller.wizard.currentStep}
             totalSteps={controller.wizard.totalSteps}
+            formData={controller.formData}
             markers={controller.markers}
             setMarkers={controller.setMarkers}
             categoryTravelAddress={controller.filters.categoryTravelAddress}

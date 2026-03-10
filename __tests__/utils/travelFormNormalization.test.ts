@@ -249,6 +249,12 @@ describe('travelFormNormalization', () => {
       expect(result[0].categories).toEqual([1, 2]);
     });
 
+    it('keeps id=null for new markers in existing route payloads', () => {
+      const markers = [{ id: null, lat: 50, lng: 30, categories: [] }];
+      const result = normalizeMarkersForSave(markers);
+      expect(result[0].id).toBeNull();
+    });
+
     it('uses fallback image when marker image is missing', () => {
       const markers = [{ lat: 50, lng: 30, image: '' }];
       const result = normalizeMarkersForSave(markers, 'https://cdn.com/fallback.jpg');

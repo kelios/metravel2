@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
 
 // Mock dependencies
@@ -41,7 +42,29 @@ jest.mock('@/components/forms/MultiSelectField', () => {
 // Mock WebMapComponent
 jest.mock('@/components/travel/WebMapComponent', () => ({
     __esModule: true,
-    default: () => null,
+    default: (props: any) => {
+        const React = require('react');
+        return React.createElement(
+            'button',
+            {
+                onClick: () => props.onPhotoMarkerReady?.({
+                    markers: [
+                        {
+                            id: null,
+                            lat: 48.8566,
+                            lng: 2.3522,
+                            address: 'Париж, Франция',
+                            country: 1,
+                            categories: [],
+                            image: 'blob:https://example.com/preview',
+                        },
+                    ],
+                    derivedCountryId: 1,
+                }),
+            },
+            'mock-photo-marker-ready'
+        );
+    },
     matchCountryId: (countryName: string, countries: any[], countryCode?: string) => {
         if (countryCode === 'fr') return 1;
         if (countryName.includes('Франция')) return 1;
@@ -56,6 +79,30 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
     const defaultProps = {
         currentStep: 2,
         totalSteps: 6,
+        formData: {
+            id: '2677',
+            countries: [],
+            cities: [],
+            over_nights_stay: [],
+            complexity: [],
+            companions: [],
+            categories: [],
+            countryIds: [],
+            travelAddressIds: [],
+            travelAddressCity: [],
+            travelAddressCountry: [],
+            travelAddressAdress: [],
+            travelAddressCategory: [],
+            coordsMeTravel: [],
+            thumbs200ForCollectionArr: [],
+            travelImageThumbUrlArr: [],
+            travelImageAddress: [],
+            categoriesIds: [],
+            transports: [],
+            month: [],
+            visa: false,
+            publish: false,
+        },
         markers: [],
         setMarkers: jest.fn(),
         categoryTravelAddress: [],
@@ -210,6 +257,42 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
 
             // Имитация выбора места
             // (логика тестирования через mock LocationSearchInput)
+        });
+    });
+
+    describe('✅ Точка из фото', () => {
+        it('должен сразу сохранять точку после определения адреса и страны', async () => {
+            const onManualSave = jest.fn(async () => undefined);
+            const originalPlatform = Platform.OS;
+            Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+            try {
+                const { getByText } = render(
+                    <TravelWizardStepRoute
+                        {...defaultProps}
+                        onManualSave={onManualSave}
+                    />
+                );
+
+                fireEvent.press(getByText('mock-photo-marker-ready'));
+
+                await waitFor(() => {
+                    expect(onManualSave).toHaveBeenCalledWith(
+                        expect.objectContaining({
+                            countries: ['1'],
+                            coordsMeTravel: expect.arrayContaining([
+                                expect.objectContaining({
+                                    lat: 48.8566,
+                                    lng: 2.3522,
+                                    address: 'Париж, Франция',
+                                }),
+                            ]),
+                        })
+                    );
+                });
+            } finally {
+                Object.defineProperty(Platform, 'OS', { value: originalPlatform });
+            }
         });
     });
 

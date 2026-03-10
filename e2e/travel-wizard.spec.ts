@@ -4,6 +4,8 @@ import type { Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { simpleEncrypt } from './helpers/auth';
 
+const tinyJpegBuffer = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxAQEBUQEBAVFRUVFRUVFRUVFRUVFRUVFRUWFhUVFRUYHSggGBolGxUVITEhJSkrLi4uFx8zODMsNygtLisBCgoKDg0OGhAQGi0fHyUtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAAEAAQMBEQACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAAAQID/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEAMQAAAB6A//xAAVEAEBAAAAAAAAAAAAAAAAAAABAP/aAAgBAQABBQJf/8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAEP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAEP/aAAgBAQABPyF//9k=', 'base64');
+
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
 const travelId = process.env.E2E_TRAVEL_ID;
@@ -154,6 +156,36 @@ const maybeMockTravelUpsert = async (page: Page) => {
       });
     });
   }
+};
+
+const maybeMockExifGps = async (page: Page) => {
+  await page.addInitScript(() => {
+    (window as typeof window & {
+      __METRAVEL_E2E_EXIF_GPS__?: { lat: number; lng: number };
+    }).__METRAVEL_E2E_EXIF_GPS__ = {
+      lat: 49.6274333333,
+      lng: 21.1955611111,
+    };
+  });
+};
+
+const maybeMockImageUpload = async (page: Page) => {
+  if (USE_REAL_API) return;
+
+  await page.route('**/api/upload**', async (route) => {
+    if (route.request().method().toUpperCase() !== 'POST') {
+      await route.fallback();
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        url: 'https://example.com/travel-address/e2e-point.webp',
+      }),
+    });
+  });
 };
 
 const maybeDismissRouteCoachmark = async (page: Page) => {
@@ -585,6 +617,8 @@ test.describe('Создание путешествия - Полный flow', () 
     await maybeMockTravelUpsert(page);
     await maybeMockTravelFilters(page);
     await maybeMockNominatimSearch(page);
+    await maybeMockImageUpload(page);
+    await maybeMockExifGps(page);
     await maybeLogin(page);
     await page.goto('/');
   });
@@ -1093,6 +1127,114 @@ test.describe('Создание путешествия - Полный flow', () 
     const readJson: any = await readResp.json().catch(() => null);
     expect(readJson?.name).toBe('Тест автосохранения');
     await api.dispose();
+  });
+
+  test('должен сохранять точку из фото без blob image в upsert payload', async ({ page }) => {
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    if (!(await ensureCanCreateTravel(page))) return;
+
+    let seenUpload = false;
+    let capturedUpsertPayload: any = null;
+
+    await page.unroute('**/api/travels/upsert/**').catch(() => null);
+    await page.unroute('**/api/travels/upsert/').catch(() => null);
+    await page.unroute('**/travels/upsert/**').catch(() => null);
+    await page.unroute('**/travels/upsert/').catch(() => null);
+    await maybeMockTravelUpsert(page);
+
+    const upsertPatterns = ['**/api/travels/upsert/**', '**/api/travels/upsert/', '**/travels/upsert/**', '**/travels/upsert/'];
+    for (const pattern of upsertPatterns) {
+      await page.route(pattern, async (route) => {
+        const request = route.request();
+        const method = request.method().toUpperCase();
+        if (method !== 'PUT' && method !== 'POST') {
+          await route.fallback();
+          return;
+        }
+
+        let body: any = null;
+        try {
+          const raw = request.postData();
+          body = raw ? JSON.parse(raw) : null;
+        } catch {
+          body = null;
+        }
+
+        const payload = body?.data ?? body ?? {};
+        if (Array.isArray(payload?.coordsMeTravel) && payload.coordsMeTravel.length > 0) {
+          capturedUpsertPayload = payload;
+        }
+
+        const firstMarkerImage = payload?.coordsMeTravel?.[0]?.image;
+        const hasBlobImage = typeof firstMarkerImage === 'string' && /^blob:/i.test(firstMarkerImage);
+        const hasExpectedUrl = firstMarkerImage === 'https://example.com/travel-address/e2e-point.webp';
+
+        await route.fulfill({
+          status: hasBlobImage ? 400 : 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ...payload,
+            id: payload?.id ?? 10001,
+            coordsMeTravel: Array.isArray(payload?.coordsMeTravel)
+              ? payload.coordsMeTravel.map((marker: any, index: number) => ({
+                  ...marker,
+                  id: marker?.id ?? 5000 + index,
+                  image: hasExpectedUrl ? marker?.image : marker?.image ?? null,
+                }))
+              : [],
+            detail: hasBlobImage ? 'blob image is not allowed' : undefined,
+          }),
+        });
+      });
+    }
+
+    await page.route('**/api/upload**', async (route) => {
+      if (route.request().method().toUpperCase() !== 'POST') {
+        await route.fallback();
+        return;
+      }
+      seenUpload = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ url: 'https://example.com/travel-address/e2e-point.webp' }),
+      });
+    });
+
+    await fillMinimumValidBasics(page, 'Фото-точка e2e');
+    await waitForAutosaveOk(page, 30_000).catch(() => null);
+    await clickNext(page);
+    await ensureOnStep2(page);
+    await maybeDismissRouteCoachmark(page);
+
+    const photoInput = page.locator('input[type="file"]').first();
+    await expect(photoInput).toBeAttached({ timeout: 10_000 });
+    await photoInput.setInputFiles({
+      name: 'gps-photo.jpg',
+      mimeType: 'image/jpeg',
+      buffer: tinyJpegBuffer,
+    });
+
+    await expect(page.locator('text=Точек: 1')).toBeVisible({ timeout: 15_000 });
+
+    const saveResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PUT' &&
+        response.url().includes('/travels/upsert/') &&
+        response.status() === 200,
+      { timeout: 30_000 }
+    );
+
+    await page.locator('button:has-text("Сохранить")').first().click({ timeout: 30_000 }).catch(async () => {
+      await page.getByRole('button', { name: /сохранить/i }).first().click({ force: true, timeout: 30_000 });
+    });
+
+    await saveResponsePromise;
+
+    expect(seenUpload).toBe(true);
+    expect(capturedUpsertPayload).toBeTruthy();
+    expect(capturedUpsertPayload?.coordsMeTravel?.length).toBeGreaterThan(0);
+    expect(capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBe('https://example.com/travel-address/e2e-point.webp');
   });
 
   test('должен открыть существующее путешествие для редактирования', async ({ page }) => {

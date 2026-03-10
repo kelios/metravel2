@@ -4,10 +4,11 @@ import { QueryClientContext } from '@tanstack/react-query';
 
 import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { fetchTravel } from '@/api/travelsApi';
-import { saveFormData } from '@/api/misc';
+import { saveFormData, uploadImage } from '@/api/misc';
 import { ApiError } from '@/api/client';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
+import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 
 jest.mock('@/api/travelsApi', () => ({
   fetchTravel: jest.fn(),
@@ -15,6 +16,12 @@ jest.mock('@/api/travelsApi', () => ({
 
 jest.mock('@/api/misc', () => ({
   saveFormData: jest.fn(),
+  uploadImage: jest.fn(),
+}));
+
+jest.mock('@/utils/pendingImageFiles', () => ({
+  getPendingImageFile: jest.fn(),
+  removePendingImageFile: jest.fn(),
 }));
 
 describe('useTravelFormData', () => {
@@ -621,6 +628,117 @@ describe('useTravelFormData', () => {
     expect(savedMarkers[0]?.id).toBe(1000);
     // Server returned null, so we must keep local preview even though id changed.
     expect(savedMarkers[0]?.image).toBe(localPointImage);
+  });
+
+  it('keeps local point photo preview in coordsMeTravel during save until point gets its own id', async () => {
+    const localPointImage = 'blob:https://example.com/pending-point-preview';
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 123,
+        name: 'Travel with EXIF point',
+        description: 'A'.repeat(60),
+        coordsMeTravel: [
+          { id: null, lat: 49.6274333333, lng: 21.1955611111, address: 'EXIF point', categories: [], image: localPointImage },
+        ],
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave(result.current.formData as any);
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
+    expect(sentPayload.coordsMeTravel[0].id).toBeNull();
+    expect(sentPayload.coordsMeTravel[0].image).toBeUndefined();
+  });
+
+  it('uploads pending point photo after save response assigns marker id', async () => {
+    const localPointImage = 'blob:https://example.com/pending-point-preview';
+    const pendingFile = new Blob(['point'], { type: 'image/webp' });
+    const uploadedUrl = 'https://example.com/travel-address/point.webp';
+
+    (getPendingImageFile as jest.Mock).mockReturnValue(pendingFile);
+    (uploadImage as jest.Mock).mockResolvedValue({ url: uploadedUrl });
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({
+      ...payload,
+      coordsMeTravel: [
+        {
+          id: 55,
+          lat: 49.6274333333,
+          lng: 21.1955611111,
+          address: 'EXIF point',
+          categories: [],
+          image: null,
+        },
+      ],
+    }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 123,
+        name: 'Travel with EXIF point',
+        description: 'A'.repeat(60),
+        coordsMeTravel: [
+          { id: null, lat: 49.6274333333, lng: 21.1955611111, address: 'EXIF point', categories: [], image: localPointImage },
+        ],
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave(result.current.formData as any);
+    });
+
+    await waitFor(() => {
+      expect(uploadImage).toHaveBeenCalledTimes(1);
+    });
+
+    const uploadFormData = (uploadImage as jest.Mock).mock.calls[0][0] as FormData;
+    expect(uploadFormData.get('collection')).toBe('travelImageAddress');
+    expect(uploadFormData.get('id')).toBe('55');
+
+    await waitFor(() => {
+      const savedMarkers = (result.current.formData as any).coordsMeTravel as any[];
+      expect(savedMarkers[0]?.id).toBe(55);
+      expect(savedMarkers[0]?.image).toBe(uploadedUrl);
+    });
+
+    expect(getPendingImageFile).toHaveBeenCalledWith(localPointImage);
+    expect(removePendingImageFile).toHaveBeenCalledWith(localPointImage);
   });
 
   describe('Edit flow - access control', () => {

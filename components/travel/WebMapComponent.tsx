@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Platform } from 'react-native';
 import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -10,8 +9,7 @@ import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToast } from '@/utils/toast';
-import { uploadImage } from '@/api/misc';
-import { getPendingImageFile, registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
+import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
@@ -24,14 +22,10 @@ async function showToastMessage(payload: any) {
 }
 
 const reverseGeocode = async (latlng: any) => {
-    // Browser-side reverse geocoding is unstable in production due to CORS/CSP/rate limits.
-    // Keep web flow deterministic and fall back to a coordinate-based address there.
-    if (Platform.OS === 'web') {
-        return null;
-    }
+    // Пробуем несколько сервисов для получения наиболее точного адреса.
+    // Этот шаг нужен и на web: точка из фото должна сначала получить адрес/страну,
+    // затем сохраниться, и только после выдачи backend id можно грузить фото точки.
 
-    // Пробуем несколько сервисов для получения наиболее точного адреса
-    
     // 1. Nominatim с zoom=18 для максимальной детализации
     try {
         const nominatim = await fetch(
@@ -73,6 +67,7 @@ type WebMapComponentProps = {
     countrylist: any[];
     onCountrySelect: (countryId: any) => void;
     onCountryDeselect: (countryId: any) => void;
+    onPhotoMarkerReady?: (payload: { markers: any[]; derivedCountryId: number | null }) => Promise<void> | void;
 };
 
 const WebMapComponent = ({
@@ -82,6 +77,7 @@ const WebMapComponent = ({
     countrylist,
     onCountrySelect,
     onCountryDeselect,
+    onPhotoMarkerReady,
 }: WebMapComponentProps) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
@@ -223,6 +219,7 @@ const WebMapComponent = ({
                 const prev = lastMarkersRef.current[idx];
                 if (!prev) return true;
                 return (
+                    String(m.id ?? '') !== String(prev.id ?? '') ||
                     m.lat !== prev.lat ||
                     m.lng !== prev.lng ||
                     m.address !== prev.address ||
@@ -392,7 +389,7 @@ const WebMapComponent = ({
     }, [L]);
 
     const addMarker = async (latlng: any, options?: { image?: string | null }) => {
-        if (!isValidCoordinates(latlng)) return;
+        if (!isValidCoordinates(latlng)) return null;
 
         const geocodeData = await reverseGeocode(latlng);
         const country =
@@ -441,78 +438,8 @@ const WebMapComponent = ({
         const nextMarkers = [...baseMarkers, newMarker];
         debouncedMarkersChange(nextMarkers);
         setActiveIndex(Math.max(0, nextMarkers.length - 1));
+        return { nextMarkers, derivedCountryId };
     };
-
-    const uploadStateByBlobRef = useRef(new Map<string, { inFlight: boolean; attempts: number; lastToastAt?: number }>());
-
-    const tryUploadMarkerImage = useCallback(async (marker: any) => {
-        const imageUrl = typeof marker?.image === 'string' ? marker.image.trim() : '';
-        if (!imageUrl || !/^(blob:)/i.test(imageUrl)) return;
-        if (marker?.id == null) return;
-
-        const state = uploadStateByBlobRef.current.get(imageUrl) ?? { inFlight: false, attempts: 0 };
-        if (state.inFlight || state.attempts >= 3) return;
-
-        const file = getPendingImageFile(imageUrl);
-        if (!file) return;
-
-        uploadStateByBlobRef.current.set(imageUrl, { ...state, inFlight: true, attempts: state.attempts + 1 });
-
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('collection', 'travelImageAddress');
-            formData.append('id', String(marker.id));
-
-            const response = await uploadImage(formData);
-            const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
-            const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : '';
-            if (!uploadedUrl) {
-                throw new Error('Upload did not return URL');
-            }
-
-            const base = Array.isArray(lastMarkersRef.current) ? lastMarkersRef.current : localMarkers;
-            const updated = (base || []).map((m: any) => {
-                if (String(m?.id ?? '') === String(marker.id) && String(m?.image || '').trim() === imageUrl) {
-                    return { ...m, image: uploadedUrl };
-                }
-                return m;
-            });
-            debouncedMarkersChange(updated);
-
-            removePendingImageFile(imageUrl);
-            try {
-                URL.revokeObjectURL(imageUrl);
-            } catch {
-                // noop
-            }
-        } catch {
-            const now = Date.now();
-            const current = uploadStateByBlobRef.current.get(imageUrl) ?? { inFlight: false, attempts: state.attempts + 1 };
-            const lastToastAt = current.lastToastAt ?? 0;
-            const shouldToast = now - lastToastAt > 8000;
-            uploadStateByBlobRef.current.set(imageUrl, { ...current, inFlight: false, lastToastAt: shouldToast ? now : lastToastAt });
-            if (shouldToast) {
-                void showToastMessage({
-                    type: 'error',
-                    text1: 'Не удалось загрузить фото точки',
-                    text2: 'Фото останется локальным до следующей попытки. Проверьте интернет и попробуйте позже.',
-                });
-            }
-        } finally {
-            const cur = uploadStateByBlobRef.current.get(imageUrl);
-            if (cur) {
-                uploadStateByBlobRef.current.set(imageUrl, { ...cur, inFlight: false });
-            }
-        }
-    }, [debouncedMarkersChange, localMarkers]);
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
-        (localMarkers || []).forEach((m: any) => {
-            void tryUploadMarkerImage(m);
-        });
-    }, [localMarkers, tryUploadMarkerImage]);
 
     const handleAddMarkerFromPhoto = async (file: File) => {
         if (typeof window === 'undefined') return;
@@ -536,7 +463,23 @@ const WebMapComponent = ({
             previewUrl = null;
         }
 
-        await addMarker({ lat: coords.lat, lng: coords.lng }, { image: previewUrl });
+        const markerResult = await addMarker({ lat: coords.lat, lng: coords.lng }, { image: previewUrl });
+        if (!markerResult) return;
+
+        try {
+            await onPhotoMarkerReady?.({
+                markers: markerResult.nextMarkers,
+                derivedCountryId: markerResult.derivedCountryId,
+            });
+        } catch {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Не удалось сохранить точку',
+                text2: 'Координаты определены, но сохранение точки не завершилось. Попробуйте ещё раз.',
+            });
+            return;
+        }
+
         void showToastMessage({
             type: 'success',
             text1: 'Точка добавлена',
