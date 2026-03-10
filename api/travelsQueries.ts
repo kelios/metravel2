@@ -236,6 +236,20 @@ const applyPublishModeration = (
     if (source.moderation !== undefined) {
         target.moderation = source.moderation;
     }
+
+    if (source.moderation !== undefined && source.publish === undefined) {
+        if (source.moderation === 0 || source.moderation === '0') {
+            target.publish = 0;
+        } else if (source.moderation === 1 || source.moderation === '1') {
+            target.publish = 1;
+        }
+    }
+
+    if (source.publish !== undefined && source.moderation === undefined) {
+        if (source.publish === 1 || source.publish === '1') {
+            target.moderation = 1;
+        }
+    }
 };
 
 const getErrorStatus = (error: unknown): number | null => {
@@ -477,16 +491,7 @@ export const fetchTravelFacets = async (
                 whereObject.publish = urlParams.publish;
             }
         } else {
-            if (urlParams?.moderation !== undefined) {
-                whereObject.moderation = urlParams.moderation;
-            } else if (urlParams?.publish === undefined) {
-                whereObject.moderation = 1;
-            }
-            if (urlParams?.publish !== undefined) {
-                whereObject.publish = urlParams.publish;
-            } else if (urlParams?.moderation === undefined) {
-                whereObject.publish = 1;
-            }
+            applyPublishModeration(whereObject, urlParams, { publish: 1, moderation: 1 });
         }
 
         const arrayFields = ['countries', 'categories', 'transports', 'companions', 'complexity', 'month', 'over_nights_stay', 'categoryTravelAddress'];
@@ -593,16 +598,7 @@ export const fetchTravels = async (
             if (urlParams?.moderation !== undefined) whereObject.moderation = urlParams.moderation;
             if (urlParams?.publish !== undefined) whereObject.publish = urlParams.publish;
         } else {
-            if (urlParams?.moderation !== undefined) {
-                whereObject.moderation = urlParams.moderation;
-            } else if (urlParams?.publish === undefined) {
-                whereObject.moderation = 1;
-            }
-            if (urlParams?.publish !== undefined) {
-                whereObject.publish = urlParams.publish;
-            } else if (urlParams?.moderation === undefined) {
-                whereObject.publish = 1;
-            }
+            applyPublishModeration(whereObject, urlParams, { publish: 1, moderation: 1 });
         }
 
         const arrayFields = ['countries', 'categories', 'transports', 'companions', 'complexity', 'month', 'over_nights_stay', 'categoryTravelAddress'];

@@ -38,9 +38,9 @@ describe('buildTravelQueryParams', () => {
     expect(params.countries).toEqual([3])
   })
 
-  it('keeps explicit moderation filter without overriding publish', () => {
+  it('adds publish=0 when moderation=0 is explicitly requested', () => {
     const params = buildTravelQueryParams({ moderation: 0 }, {})
-    expect(params).toEqual({ moderation: 0 })
+    expect(params).toEqual({ moderation: 0, publish: 0 })
   })
 })
 

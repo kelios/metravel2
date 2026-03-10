@@ -30,7 +30,7 @@ export function useCommentsData(travelId: number) {
     isLoading: isLoadingThread,
     error: threadError,
     refetch: refetchThread,
-  } = useMainThread(travelId, { enabled: isAuthenticated });
+  } = useMainThread(travelId, { enabled: false });
 
   const {
     data: comments = [],
@@ -145,9 +145,9 @@ export function useCommentsData(travelId: number) {
     }
     createComment.mutate({
       text,
-      ...(mainThread?.id ? { thread_id: mainThread.id } : { travel_id: travelId }),
+      travel_id: travelId,
     });
-  }, [travelId, mainThread?.id, replyTo, editComment, createComment, updateComment, replyToComment, findTopLevelAncestor]);
+  }, [travelId, replyTo, editComment, createComment, updateComment, replyToComment, findTopLevelAncestor]);
 
   const handleReply = useCallback((comment: TravelComment) => { setReplyTo(comment); setEditComment(null); }, []);
   const handleEdit = useCallback((comment: TravelComment) => { setEditComment(comment); setReplyTo(null); }, []);

@@ -194,7 +194,7 @@ describe('CommentsSection', () => {
       await waitFor(() => {
         expect(mutateMock).toHaveBeenCalledWith({
           text: 'New comment',
-          thread_id: 1,
+          travel_id: 123,
         });
       });
     });

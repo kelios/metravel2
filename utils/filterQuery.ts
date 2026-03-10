@@ -112,18 +112,32 @@ export const buildTravelQueryParams = (
 
   const normalized = sanitizeFilterObject(filter)
   const params: Record<string, any> = { ...normalized }
+  const moderationValue = normalized.moderation !== undefined ? normalized.moderation : filter.moderation
+  const publishValue = normalized.publish !== undefined ? normalized.publish : filter.publish
 
-  // ✅ ИСПРАВЛЕНИЕ: Используем moderation напрямую из filter, не перезаписываем если он уже есть
   if (!(isMeTravel || isExport)) {
-    // Устанавливаем moderation и publish только если их нет в filter
-    if (!('moderation' in normalized) && !('moderation' in filter)) {
-      // По умолчанию: опубликованные и прошедшие модерацию
+    const hasExplicitModeration = 'moderation' in normalized || 'moderation' in filter
+    const hasExplicitPublish = 'publish' in normalized || 'publish' in filter
+
+    if (!hasExplicitModeration && !hasExplicitPublish) {
       params.publish = 1
       params.moderation = 1
-    } else if (!('publish' in normalized) && !('publish' in filter)) {
-      // Если moderation есть, но publish нет, устанавливаем publish по умолчанию
-      const moderationValue = normalized.moderation !== undefined ? normalized.moderation : filter.moderation
-      if (moderationValue === 1) {
+    } else {
+      if (hasExplicitModeration && !hasExplicitPublish) {
+        if (moderationValue === 0 || moderationValue === '0') {
+          params.publish = 0
+        } else if (moderationValue === 1 || moderationValue === '1') {
+          params.publish = 1
+        }
+      }
+
+      if (!hasExplicitModeration && hasExplicitPublish) {
+        if (publishValue === 1 || publishValue === '1') {
+          params.moderation = 1
+        }
+      }
+
+      if (hasExplicitModeration && !hasExplicitPublish && moderationValue === 1) {
         params.publish = 1
       }
     }

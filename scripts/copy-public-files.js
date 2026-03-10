@@ -25,6 +25,7 @@ const filesToCopy = [
   'manifest.json',
   'robots.txt',
   'icon.svg',
+  'travel-hero-preload.js',
   'assets/fonts/Roboto-Regular.ttf',
   'assets/fonts/Roboto-Medium.ttf',
 ];

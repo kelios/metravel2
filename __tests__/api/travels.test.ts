@@ -535,6 +535,19 @@ describe('src/api/travelsApi.ts', () => {
       await expect(fetchTravelFacets('', {}, {} as any)).rejects.toBe(abortError);
       expect(devError).not.toHaveBeenCalledWith('Error fetching travel facets:', abortError);
     });
+
+    it('добавляет publish=0 к facets when moderation=0 requested', async () => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ total: 0, facets: {} } as any);
+
+      await fetchTravelFacets('', { moderation: 0 }, {} as any);
+
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+      expect(where).toEqual(expect.objectContaining({ moderation: 0, publish: 0 }));
+    });
   });
 
   describe('fetchMyTravels', () => {
@@ -625,6 +638,21 @@ describe('src/api/travelsApi.ts', () => {
         items: [{ id: 1 }, { id: 2 }],
         total: 7,
       });
+    });
+  });
+
+  describe('fetchTravels moderation/public contract', () => {
+    it('добавляет publish=0 when moderation=0 requested for public/admin listing', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ results: [], count: 0 } as any);
+
+      await fetchTravels(0, 20, '', { moderation: 0 }, {} as any);
+
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+      expect(where).toEqual(expect.objectContaining({ moderation: 0, publish: 0 }));
     });
   });
 
