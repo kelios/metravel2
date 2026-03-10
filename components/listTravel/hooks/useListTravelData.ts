@@ -80,11 +80,6 @@ const resolveStableTotal = (pages: unknown[]): number => {
   return 0;
 };
 
-const getNextPageFromLoadedItems = (allPages: unknown[]): number => {
-  const loaded = countLoadedItems(allPages as Array<{ data?: Travel[] }>);
-  return Math.floor(loaded / PER_PAGE);
-};
-
 export function useListTravelData({
   queryParams,
   search,
@@ -145,10 +140,8 @@ export function useListTravelData({
         return undefined;
       }
 
-      // If the latest page is empty (e.g. transient 50x response mapped to empty payload),
-      // retry the same page index instead of freezing pagination.
       if (getPageItemsLength(lastPage) === 0) {
-        return getNextPageFromLoadedItems(allPages as unknown[]);
+        return undefined;
       }
 
       return allPages.length;
@@ -281,7 +274,7 @@ export function useRandomTravelData({
       }
 
       if (getPageItemsLength(lastPage) === 0) {
-        return getNextPageFromLoadedItems(allPages as unknown[]);
+        return undefined;
       }
 
       return allPages.length;

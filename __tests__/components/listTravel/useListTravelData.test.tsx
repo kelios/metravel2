@@ -133,7 +133,7 @@ describe('useListTravelData with infinite query', () => {
     queryClient.clear();
   });
 
-  it('retries the same page when a middle page resolves empty with zero total', async () => {
+  it('stops pagination when a next page resolves empty', async () => {
     (fetchTravels as jest.Mock)
       .mockResolvedValueOnce({
         total: 60,
@@ -142,10 +142,6 @@ describe('useListTravelData with infinite query', () => {
       .mockResolvedValueOnce({
         total: 0,
         data: [],
-      })
-      .mockResolvedValueOnce({
-        total: 60,
-        data: createTravels('page-1-retry', 20),
       });
 
     const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
@@ -158,15 +154,19 @@ describe('useListTravelData with infinite query', () => {
 
     await waitFor(() => expect(fetchTravels).toHaveBeenCalledTimes(2));
     expect(ref.current?.data).toHaveLength(20);
+    await waitFor(() => {
+      expect(ref.current?.hasMore).toBe(false);
+      expect(ref.current?.isNextPageLoading).toBe(false);
+    });
 
     act(() => {
       ref.current?.handleEndReached();
     });
 
-    await waitFor(() => expect(ref.current?.data).toHaveLength(40));
-    expect(fetchTravels).toHaveBeenCalledTimes(3);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(ref.current?.data).toHaveLength(20);
+    expect(fetchTravels).toHaveBeenCalledTimes(2);
     expect((fetchTravels as jest.Mock).mock.calls[1][0]).toBe(1);
-    expect((fetchTravels as jest.Mock).mock.calls[2][0]).toBe(1);
 
     unmount();
     queryClient.clear();
