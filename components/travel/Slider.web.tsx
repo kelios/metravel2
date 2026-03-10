@@ -14,6 +14,7 @@ import {
   LayoutChangeEvent,
   Text,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
