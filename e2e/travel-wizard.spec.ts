@@ -1129,12 +1129,13 @@ test.describe('Создание путешествия - Полный flow', () 
     await api.dispose();
   });
 
-  test('должен сохранять точку из фото без blob image в upsert payload', async ({ page }) => {
+  test('должен добавлять точку через фото и после сохранения показывать фото у этой точки', async ({ page }) => {
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
     if (!(await ensureCanCreateTravel(page))) return;
 
     let seenUpload = false;
     let capturedUpsertPayload: any = null;
+    let uploadedPointId: string | null = null;
 
     await page.unroute('**/api/travels/upsert/**').catch(() => null);
     await page.unroute('**/api/travels/upsert/').catch(() => null);
@@ -1167,7 +1168,6 @@ test.describe('Создание путешествия - Полный flow', () 
 
         const firstMarkerImage = payload?.coordsMeTravel?.[0]?.image;
         const hasBlobImage = typeof firstMarkerImage === 'string' && /^blob:/i.test(firstMarkerImage);
-        const hasExpectedUrl = firstMarkerImage === 'https://example.com/travel-address/e2e-point.webp';
 
         await route.fulfill({
           status: hasBlobImage ? 400 : 200,
@@ -1179,7 +1179,7 @@ test.describe('Создание путешествия - Полный flow', () 
               ? payload.coordsMeTravel.map((marker: any, index: number) => ({
                   ...marker,
                   id: marker?.id ?? 5000 + index,
-                  image: hasExpectedUrl ? marker?.image : marker?.image ?? null,
+                  image: null,
                 }))
               : [],
             detail: hasBlobImage ? 'blob image is not allowed' : undefined,
@@ -1194,6 +1194,8 @@ test.describe('Создание путешествия - Полный flow', () 
         return;
       }
       seenUpload = true;
+      const formData = await route.request().formData();
+      uploadedPointId = String(formData.id ?? '');
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -1231,10 +1233,19 @@ test.describe('Создание путешествия - Полный flow', () 
 
     await saveResponsePromise;
 
+    await expect
+      .poll(() => seenUpload, { timeout: 15_000 })
+      .toBe(true);
+
     expect(seenUpload).toBe(true);
+    expect(uploadedPointId).toBeTruthy();
     expect(capturedUpsertPayload).toBeTruthy();
     expect(capturedUpsertPayload?.coordsMeTravel?.length).toBeGreaterThan(0);
-    expect(capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBe('https://example.com/travel-address/e2e-point.webp');
+    expect(capturedUpsertPayload?.coordsMeTravel?.[0]?.image).toBeFalsy();
+
+    const pointPhoto = page.locator('img[src*="e2e-point.webp"]').first();
+    await expect(pointPhoto).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Есть фото').first()).toBeVisible({ timeout: 15_000 });
   });
 
   test('должен открыть существующее путешествие для редактирования', async ({ page }) => {

@@ -28,6 +28,7 @@ import {
   sanitizeCoverUrl,
   filterAllowedKeys,
   mergeOverridePreservingUserInput,
+  isLocalPreviewUrl,
 } from '@/utils/travelFormNormalization';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
@@ -148,6 +149,41 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       updateBaselineRef.current?.(nextFormData);
     },
     [formState]
+  );
+
+  const rehydrateMarkerIdsFromServer = useCallback(
+    async (travelIdValue: string | number | null | undefined, sourceMarkers: MarkerData[]) => {
+      const resolvedTravelId = normalizeTravelId(travelIdValue);
+      if (resolvedTravelId == null) return null;
+      if (!Array.isArray(sourceMarkers) || sourceMarkers.length === 0) return null;
+
+      const needsMarkerIds = sourceMarkers.some((marker) => {
+        const markerId = marker?.id;
+        const imageUrl = typeof marker?.image === 'string' ? marker.image.trim() : '';
+        return isLocalPreviewUrl(imageUrl) && (markerId == null || String(markerId).trim() === '');
+      });
+      if (!needsMarkerIds) return null;
+
+      try {
+        const freshTravel = await fetchTravel(Number(resolvedTravelId));
+        const transformed = normalizeDraftPlaceholders(transformTravelToFormData(freshTravel));
+        const serverMarkers = Array.isArray(transformed.coordsMeTravel)
+          ? (transformed.coordsMeTravel as unknown as MarkerData[])
+          : [];
+        if (serverMarkers.length === 0) return null;
+
+        const mergedMarkers = mergeMarkersPreserveImages(serverMarkers, sourceMarkers) as MarkerData[];
+        const hasResolvedIds = mergedMarkers.some((marker) => {
+          const imageUrl = typeof marker?.image === 'string' ? marker.image.trim() : '';
+          return isLocalPreviewUrl(imageUrl) && marker?.id != null && String(marker.id).trim() !== '';
+        });
+
+        return hasResolvedIds ? mergedMarkers : null;
+      } catch {
+        return null;
+      }
+    },
+    []
   );
 
   const uploadPendingMarkerImages = useCallback(
@@ -341,7 +377,24 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       setMarkers(effectiveMarkers);
       updateBaselineRef.current?.(finalData);
       pendingBaselineRef.current = null;
-      void uploadPendingMarkerImages(effectiveMarkers);
+
+      const travelIdForRefresh = normalizeTravelId((finalData as unknown)?.id) ?? stableTravelId;
+      void (async () => {
+        let markersForUpload = effectiveMarkers as MarkerData[];
+        const refreshedMarkers = await rehydrateMarkerIdsFromServer(travelIdForRefresh, effectiveMarkers as MarkerData[]);
+        if (refreshedMarkers && refreshedMarkers.length > 0) {
+          markersForUpload = refreshedMarkers;
+          const refreshedData = {
+            ...(formDataRef.current as TravelFormData),
+            coordsMeTravel: refreshedMarkers as unknown as TravelFormData['coordsMeTravel'],
+          };
+          formDataRef.current = refreshedData;
+          setMarkers(refreshedMarkers);
+          formState.updateField('coordsMeTravel', refreshedMarkers as unknown);
+          updateBaselineRef.current?.(refreshedData);
+        }
+        await uploadPendingMarkerImages(markersForUpload);
+      })();
 
       // ✅ FIX: Обновляем версию данных при получении с сервера
       setDataVersion(prev => prev + 1);
@@ -353,7 +406,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         void invalidateTravelCollections(queryClient, userId);
       }
     },
-    [formState, queryClient, uploadPendingMarkerImages, userId]
+    [formState, queryClient, rehydrateMarkerIdsFromServer, stableTravelId, uploadPendingMarkerImages, userId]
   );
 
   const handleSaveSuccess = useCallback(

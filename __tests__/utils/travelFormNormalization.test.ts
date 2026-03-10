@@ -257,7 +257,7 @@ describe('travelFormNormalization', () => {
 
     it('uses fallback image when marker image is missing', () => {
       const markers = [{ lat: 50, lng: 30, image: '' }];
-      const result = normalizeMarkersForSave(markers, 'https://cdn.com/fallback.jpg');
+      const result = normalizeMarkersForSave([{ ...markers[0], id: 7 }], 'https://cdn.com/fallback.jpg');
       expect(result[0].image).toBe('https://cdn.com/fallback.jpg');
     });
 
@@ -265,6 +265,12 @@ describe('travelFormNormalization', () => {
       const markers = [{ lat: 50, lng: 30, image: '' }];
       const result = normalizeMarkersForSave(markers, 'blob:http://localhost/fallback');
       expect(result[0].image).toBeUndefined();
+    });
+
+    it('uses fallback image for new marker when backend requires image field', () => {
+      const markers = [{ id: null, lat: 50, lng: 30, image: 'blob:http://localhost/point-preview' }];
+      const result = normalizeMarkersForSave(markers, 'https://cdn.com/fallback.jpg');
+      expect(result[0].image).toBe('https://cdn.com/fallback.jpg');
     });
   });
 

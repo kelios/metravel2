@@ -76,8 +76,12 @@ export function mergeMarkersPreserveImages(
         const current = (idKey ? currentById.get(idKey) : null) ?? currentByLl.get(llKey);
         if (!current) return m;
 
-        const serverImage = m?.image;
         const currentImage = current?.image;
+        if (typeof currentImage === 'string' && isLocalPreviewUrl(currentImage)) {
+            return { ...m, image: currentImage };
+        }
+
+        const serverImage = m?.image;
         if (isEmptyImageValue(serverImage)) {
             if (typeof currentImage === 'string' && currentImage.trim().length > 0) {
                 return { ...m, image: currentImage };
@@ -294,7 +298,8 @@ export function normalizeMarkersForSave(markers: any[], fallbackImageUrl?: strin
             normalized.image = imageValue;
         } else if (normalizedFallbackImage) {
             // Backend requires coordsMeTravel[].image for some serializers.
-            // Use travel-level media as safe fallback to keep draft save working.
+            // Use travel-level media as serializer-compatible fallback.
+            // Local blob preview is preserved separately after save until point photo upload finishes.
             normalized.image = normalizedFallbackImage;
         }
 

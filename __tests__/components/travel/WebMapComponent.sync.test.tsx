@@ -1,6 +1,14 @@
 import { render, screen, waitFor, act } from '@testing-library/react';
 import WebMapComponent from '@/components/travel/WebMapComponent';
 
+jest.mock('@/utils/pendingImageFiles', () => ({
+  registerPendingImageFile: jest.fn(),
+  removePendingImageFile: jest.fn(),
+  getPendingImageFile: jest.fn(),
+}));
+
+import { getPendingImageFile } from '@/utils/pendingImageFiles';
+
 jest.mock('@/components/ui/ImageCardMedia', () => {
   const React = require('react');
 
@@ -74,6 +82,7 @@ describe('WebMapComponent marker sync', () => {
   beforeEach(() => {
     lastMapEvents = null;
     jest.clearAllMocks();
+    (getPendingImageFile as jest.Mock).mockReturnValue(new Blob(['point'], { type: 'image/webp' }));
 
     // Mock reverse geocode network calls.
     const mockFetch = jest.fn(async () => ({
@@ -161,6 +170,39 @@ describe('WebMapComponent marker sync', () => {
 
     const updatedImg = screen.getAllByRole('img', { name: /Фото/i })[0] as HTMLImageElement;
     expect(updatedImg.src).toContain(blob);
+  });
+
+  it('preserves local blob preview when backend echoes fallback server image before point upload', async () => {
+    const blob = 'blob:https://example.com/preview';
+
+    const initialMarkers = [
+      { id: null, lat: 10, lng: 20, address: 'A', categories: [], image: blob, country: null },
+    ];
+    const serverMarkers = [
+      { id: 55, lat: '10', lng: '20', address: 'A', categories: [], image: 'https://example.com/travel-cover.webp', country: null },
+    ];
+
+    const utils = render(
+      <WebMapComponent
+        {...baseProps}
+        markers={initialMarkers as any}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    utils.rerender(
+      <WebMapComponent
+        {...baseProps}
+        markers={serverMarkers as any}
+      />,
+    );
+
+    const updatedImg = screen.getAllByRole('img', { name: /Фото/i })[0] as HTMLImageElement;
+    expect(updatedImg.src).toContain(blob);
+    expect(getPendingImageFile).toHaveBeenCalledWith(blob);
   });
 
   it('adds marker on map click and propagates it via onMarkersChange (regression: point must be saved)', async () => {

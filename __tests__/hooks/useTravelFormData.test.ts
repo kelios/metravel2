@@ -741,6 +741,64 @@ describe('useTravelFormData', () => {
     expect(removePendingImageFile).toHaveBeenCalledWith(localPointImage);
   });
 
+  it('preserves local point photo preview after save even if backend echoes fallback server image', async () => {
+    const localPointImage = 'blob:https://example.com/pending-point-preview';
+    const fallbackImage = 'https://example.com/travel-cover.webp';
+
+    (getPendingImageFile as jest.Mock).mockReturnValue(null);
+    (uploadImage as jest.Mock).mockReset();
+
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({
+      ...payload,
+      coordsMeTravel: [
+        {
+          id: 55,
+          lat: 49.6274333333,
+          lng: 21.1955611111,
+          address: 'EXIF point',
+          categories: [],
+          image: fallbackImage,
+        },
+      ],
+    }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        id: 123,
+        name: 'Travel with EXIF point',
+        description: 'A'.repeat(60),
+        travel_image_thumb_url: fallbackImage,
+        coordsMeTravel: [
+          { id: null, lat: 49.6274333333, lng: 21.1955611111, address: 'EXIF point', categories: [], image: localPointImage },
+        ],
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave(result.current.formData as any);
+    });
+
+    const savedMarkers = (result.current.formData as any).coordsMeTravel as any[];
+    expect(savedMarkers[0]?.id).toBe(55);
+    expect(savedMarkers[0]?.image).toBe(localPointImage);
+  });
+
   it('uploads pending point photo after manual save override assigns marker id', async () => {
     const localPointImage = 'blob:https://example.com/override-point-preview';
     const pendingFile = new Blob(['point'], { type: 'image/webp' });

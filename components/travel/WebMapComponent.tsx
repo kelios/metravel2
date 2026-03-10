@@ -9,7 +9,7 @@ import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToast } from '@/utils/toast';
-import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
+import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
 import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
@@ -250,7 +250,10 @@ const WebMapComponent = ({
                     // Сохраняем локальное blob/data превью только если внешний маркер не имеет изображения.
                     if (localMarker?.image && /^(blob:|data:)/i.test(String(localMarker.image))) {
                         const serverImage = m?.image;
-                        if (!serverImage || String(serverImage).trim().length === 0) {
+                        const hasPendingFile = /^(blob:)/i.test(String(localMarker.image))
+                            ? Boolean(getPendingImageFile(String(localMarker.image)))
+                            : true;
+                        if (hasPendingFile && (!serverImage || !/^(blob:|data:)/i.test(String(serverImage)))) {
                             return { ...m, image: localMarker.image };
                         }
                     }
