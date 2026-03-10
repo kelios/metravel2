@@ -1,6 +1,6 @@
 // app/quests/[city]/[questId].tsx
-import React, { Suspense, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import React, { Suspense, useCallback, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
 // ⚡️ иконки лениво, чтобы не тянуть весь @expo/vector-icons в entry
 const Ion = React.lazy(() =>
@@ -78,13 +78,81 @@ export default function QuestByIdScreen() {
             ogType: 'article' as const,
         };
     }, [loaded, bundle, questId]);
+    const canonical = useMemo(
+        () => buildCanonicalUrl(`/quests/${city}/${questId}`),
+        [city, questId]
+    );
+
+    useEffect(() => {
+        if (!isFocused) return undefined;
+        if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
+        if (!title) return undefined;
+
+        const patchMeta = (selector: string, attr: string, value: string) => {
+            const nodes = document.querySelectorAll(selector);
+            for (let i = 1; i < nodes.length; i++) nodes[i].remove();
+
+            let el = nodes[0] ?? null;
+            if (!el) {
+                el = document.createElement('meta');
+                const match = selector.match(/\[(\w+)="([^"]+)"]/);
+                if (match) el.setAttribute(match[1], match[2]);
+                el.setAttribute('data-rh', 'true');
+                document.head.appendChild(el);
+            }
+
+            if (el.getAttribute(attr) !== value) {
+                el.setAttribute(attr, value);
+            }
+        };
+
+        const patchCanonical = (href: string) => {
+            const selector = 'link[rel="canonical"]';
+            const nodes = document.querySelectorAll(selector);
+            for (let i = 1; i < nodes.length; i++) nodes[i].remove();
+
+            let el = nodes[0] as HTMLLinkElement | undefined;
+            if (!el) {
+                el = document.createElement('link');
+                el.setAttribute('rel', 'canonical');
+                el.setAttribute('data-rh', 'true');
+                document.head.appendChild(el);
+            }
+
+            if (el.getAttribute('href') !== href) {
+                el.setAttribute('href', href);
+            }
+        };
+
+        const applyHead = () => {
+            document.title = title;
+            patchMeta('meta[name="description"]', 'content', description);
+            patchMeta('meta[property="og:title"]', 'content', title);
+            patchMeta('meta[property="og:description"]', 'content', description);
+            patchMeta('meta[property="og:url"]', 'content', canonical);
+            patchMeta('meta[property="og:type"]', 'content', ogType);
+            patchMeta('meta[name="twitter:title"]', 'content', title);
+            patchMeta('meta[name="twitter:description"]', 'content', description);
+            patchCanonical(canonical);
+        };
+
+        const t1 = setTimeout(applyHead, 0);
+        const t2 = setTimeout(applyHead, 120);
+        const t3 = setTimeout(applyHead, 400);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+        };
+    }, [canonical, description, isFocused, ogType, title]);
 
     // AUTH GATE — квесты только для зарегистрированных
     if (!isAuthenticated) {
         return (
             <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
                 {isFocused && (
-                    <InstantSEO headKey={`quest-auth-${questId}`} title="Войдите, чтобы пройти квест" description="Для прохождения квестов необходима регистрация." canonical={buildCanonicalUrl(`/quests/${city}/${questId}`)} ogType="website" robots="noindex, nofollow" />
+                    <InstantSEO headKey={`quest-auth-${questId}`} title="Войдите, чтобы пройти квест" description="Для прохождения квестов необходима регистрация." canonical={canonical} ogType="website" robots="noindex, nofollow" />
                 )}
                 <View style={styles.authGate}>
                     <Suspense fallback={null}>
@@ -119,7 +187,7 @@ export default function QuestByIdScreen() {
         return (
             <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
                 {isFocused && (
-                    <InstantSEO headKey={`quest-loading-${questId}`} title="Загружаем квест…" description="Готовим маршрут и задания." canonical={buildCanonicalUrl(`/quests/${city}/${questId}`)} ogType="website" />
+                    <InstantSEO headKey={`quest-loading-${questId}`} title="Загружаем квест…" description="Готовим маршрут и задания." canonical={canonical} ogType="website" />
                 )}
                 <ActivityIndicator color={colors.primary} />
             </View>
@@ -158,7 +226,7 @@ export default function QuestByIdScreen() {
     return (
         <View style={styles.page}>
             {isFocused && (
-                <InstantSEO headKey={headKey} title={title} description={description} canonical={buildCanonicalUrl(`/quests/${city}/${questId}`)} ogType={ogType} />
+                <InstantSEO headKey={headKey} title={title} description={description} canonical={canonical} ogType={ogType} />
             )}
 
             <Suspense fallback={<View style={{ padding: 16 }}><ActivityIndicator color={colors.primary} /></View>}>

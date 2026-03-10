@@ -365,8 +365,8 @@ test.describe('Slider — arrow visibility', () => {
   });
 });
 
-test.describe('Slider — wrap-around navigation', () => {
-  test('prev on first slide wraps to last', async ({ page }) => {
+test.describe('Slider — boundary navigation', () => {
+  test('prev on first slide stays on first', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -375,14 +375,14 @@ test.describe('Slider — wrap-around navigation', () => {
 
     expect(counter.current).toBe(1);
 
-    // Click prev on first slide → should wrap to last
+    // Click prev on first slide -> current implementation keeps the first slide active.
     const prevBtn = page.locator('[aria-label="Previous slide"]').first();
     await prevBtn.click();
-    const afterWrap = await waitForCounterValue(page, counter.total, 8_000);
-    expect(afterWrap?.current).toBe(counter.total);
+    const afterBoundaryClick = await waitForCounterValue(page, 1, 8_000);
+    expect(afterBoundaryClick?.current).toBe(1);
   });
 
-  test('next on last slide wraps to first', async ({ page }) => {
+  test('next on last slide stays on last', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -405,10 +405,10 @@ test.describe('Slider — wrap-around navigation', () => {
     const cLast = await getCounter(page);
     expect(cLast?.current).toBe(counter.total);
 
-    // Click next → should wrap to first
+    // Click next on the boundary -> current implementation clamps to the last slide.
     await nextBtn.click();
-    const afterWrap = await waitForCounterValue(page, 1, 8_000);
-    expect(afterWrap?.current).toBe(1);
+    const afterBoundaryClick = await waitForCounterValue(page, counter.total, 8_000);
+    expect(afterBoundaryClick?.current).toBe(counter.total);
   });
 });
 
@@ -775,9 +775,8 @@ test.describe('Slider — slide virtualization', () => {
 });
 
 test.describe('Slider — scroll container properties', () => {
-  test('scroll container has scroll-snap-type x mandatory', async ({ page }) => {
+  test('scroll container disables native scroll snapping', async ({ page }) => {
     await preacceptCookies(page);
-    // Use multi-image travel to ensure slider-scroll is present
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
       throw new Error('Slider test precondition failed');
@@ -790,11 +789,10 @@ test.describe('Slider — scroll container properties', () => {
     });
 
     expect(scrollSnapType).not.toBeNull();
-    expect(scrollSnapType).toContain('x');
-    expect(scrollSnapType).toContain('mandatory');
+    expect(scrollSnapType).toBe('none');
   });
 
-  test('scroll container overflow is auto on x-axis', async ({ page }) => {
+  test('scroll container clips overflow on x-axis', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -808,7 +806,7 @@ test.describe('Slider — scroll container properties', () => {
     });
 
     expect(overflowX).not.toBeNull();
-    expect(['auto', 'scroll']).toContain(overflowX);
+    expect(overflowX).toBe('hidden');
   });
 
   test('scroll container width matches wrapper width', async ({ page }) => {

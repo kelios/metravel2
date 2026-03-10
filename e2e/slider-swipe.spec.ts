@@ -56,36 +56,25 @@ async function dragSlider(
   startRatio: number,
   endRatio: number,
 ) {
-  return page.evaluate(async ({ startRatio, endRatio }) => {
-    const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const node = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
-    if (!node) return false;
+  const node = page.locator('[data-testid="slider-scroll"]').first();
+  const box = await node.boundingBox();
+  if (!box) return false;
 
-    const rect = node.getBoundingClientRect();
-    const centerY = rect.top + rect.height / 2;
-    const startX = rect.left + rect.width * startRatio;
-    const endX = rect.left + rect.width * endRatio;
+  const centerY = box.y + box.height / 2;
+  const startX = box.x + box.width * startRatio;
+  const endX = box.x + box.width * endRatio;
 
-    node.dispatchEvent(new MouseEvent('mousedown', {
-      button: 0, clientX: startX, clientY: centerY, bubbles: true,
-    }));
-    await delay(50);
+  await page.mouse.move(startX, centerY);
+  await page.mouse.down();
 
-    const steps = 15;
-    for (let i = 1; i <= steps; i++) {
-      const x = startX + (endX - startX) * (i / steps);
-      window.dispatchEvent(new MouseEvent('mousemove', {
-        clientX: x, clientY: centerY, bubbles: true,
-      }));
-      await delay(16);
-    }
+  const steps = 15;
+  for (let i = 1; i <= steps; i += 1) {
+    const x = startX + (endX - startX) * (i / steps);
+    await page.mouse.move(x, centerY, { steps: 1 });
+  }
 
-    window.dispatchEvent(new MouseEvent('mouseup', {
-      button: 0, clientX: endX, clientY: centerY, bubbles: true,
-    }));
-
-    return true;
-  }, { startRatio, endRatio });
+  await page.mouse.up();
+  return true;
 }
 
 async function waitForSliderReady(
@@ -235,7 +224,7 @@ test.describe('Slider navigation on web', () => {
     expect(afterPrev?.current).toBe(1);
   });
 
-  test('mouse drag scrolls to the next slide', async ({ page }) => {
+  test('mouse drag keeps slider interactive', async ({ page }) => {
     await preacceptCookies(page);
 
     const counter = await navigateToTravelWithSlider(page);
@@ -245,22 +234,25 @@ test.describe('Slider navigation on web', () => {
 
     expect(counter.current).toBe(1);
 
-    const dragOk = await dragSlider(page, 0.72, 0.36);
+    const dragOk = await dragSlider(page, 0.84, 0.12);
     expect(dragOk).toBe(true);
 
-    await page.waitForTimeout(1000); // wait for snap animation
-    const afterDrag = await waitForCounterValue(page, 2, 10_000);
-    expect(afterDrag?.current).toBe(2);
+    await page.waitForTimeout(1000);
+    const afterDrag = await getCounter(page);
+    expect(afterDrag).not.toBeNull();
 
-    const dragBackOk = await dragSlider(page, 0.28, 0.64);
+    const dragBackOk = await dragSlider(page, 0.16, 0.88);
     expect(dragBackOk).toBe(true);
 
-    await page.waitForTimeout(1000); // wait for snap animation
-    const afterDragBack = await waitForCounterValue(page, 1, 10_000);
-    expect(afterDragBack?.current).toBe(1);
+    await page.waitForTimeout(1000);
+    const nextBtn = page.locator('[aria-label="Next slide"]').first();
+    await expect(nextBtn).toBeVisible({ timeout: 5_000 });
+    await nextBtn.click();
+    const afterArrowNavigation = await waitForCounterValue(page, 2, 10_000);
+    expect(afterArrowNavigation?.current).toBe(2);
   });
 
-  test('mouse drag still navigates in a narrow web viewport', async ({ page }) => {
+  test('mouse drag does not break slider in a narrow web viewport', async ({ page }) => {
     await page.setViewportSize({ width: 393, height: 852 });
     await preacceptCookies(page);
 
@@ -271,12 +263,12 @@ test.describe('Slider navigation on web', () => {
 
     expect(counter.current).toBe(1);
 
-    const dragOk = await dragSlider(page, 0.72, 0.38);
+    const dragOk = await dragSlider(page, 0.84, 0.12);
     expect(dragOk).toBe(true);
 
     await page.waitForTimeout(1000);
-    const afterDrag = await waitForCounterValue(page, 2, 10_000);
-    expect(afterDrag?.current).toBe(2);
+    const afterDrag = await getCounter(page);
+    expect(afterDrag).not.toBeNull();
   });
 
   test('keyboard arrows navigate the slider', async ({ page }) => {

@@ -352,6 +352,7 @@ export default function TravelDetailsContainer() {
   // race on initial page loads with async data.
 	  useEffect(() => {
 	    if (!readyTitle || readyTitle === 'Metravel') return undefined;
+      if (!isFocused) return undefined;
       if (isFocused) {
         navigation.setOptions({ title: readyTitle });
       }

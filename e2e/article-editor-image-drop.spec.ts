@@ -1,12 +1,10 @@
 import { test, expect } from './fixtures';
-import { request } from '@playwright/test';
 import { preacceptCookies } from './helpers/navigation';
+import { apiContextFromEnv, apiRequestContext, deleteTravel, loginAsUser } from './helpers/e2eApi';
 
 /**
  * E2E test: drag-drop image upload in ArticleEditor (description field).
- * Requires env:
- *   - E2E_EMAIL, E2E_PASSWORD (for login)
- *   - E2E_API_TOKEN (DRF Token for API calls)
+ * Requires existing e2e auth env handled by helpers/e2eApi.ts.
  */
 
 const UPSERT_TRAVEL = '/api/travels/upsert/';
@@ -56,30 +54,13 @@ const basePayload = {
 
 test.describe('ArticleEditor drag-drop image upload', () => {
   test('uploads image via drag-drop and inserts into editor', async ({ page, baseURL }) => {
-    const token = process.env.E2E_API_TOKEN;
-    const email = process.env.E2E_EMAIL;
-    const password = process.env.E2E_PASSWORD;
-
-    if (!token) {
-      test.info().annotations.push({
-        type: 'skip',
-        description: 'E2E_API_TOKEN is required for this test',
-      });
-      test.skip();
-      return;
-    }
-
     const targetBase = baseURL ?? process.env.BASE_URL;
     expect(targetBase).toBeTruthy();
+    const ctx = await apiContextFromEnv();
+    expect(ctx, 'E2E API context is required for ArticleEditor drag-drop image upload').toBeTruthy();
+    if (!ctx) return;
 
-    // Create travel via API to get an ID
-    const apiContext = await request.newContext({
-      baseURL: targetBase,
-      extraHTTPHeaders: {
-        Authorization: `Token ${token}`,
-      },
-    });
-
+    const apiContext = await apiRequestContext(ctx);
     const createResp = await apiContext.put(UPSERT_TRAVEL, { data: { ...basePayload } });
     expect(createResp.ok()).toBeTruthy();
     const created = await createResp.json();
@@ -87,21 +68,8 @@ test.describe('ArticleEditor drag-drop image upload', () => {
     expect(travelId).toBeTruthy();
 
     try {
-      // Set up auth in browser
-      if (email && password) {
-        await page.goto(`${targetBase}/`);
-        await preacceptCookies(page);
-
-        // Inject auth token into storage
-        await page.evaluate(
-          ({ token, email }) => {
-            localStorage.setItem('userToken', token);
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('isAuthenticated', 'true');
-          },
-          { token, email }
-        );
-      }
+      await loginAsUser(page);
+      await preacceptCookies(page);
 
       // Navigate to travel edit page
       await page.goto(`${targetBase}/travel/${travelId}`);
@@ -182,51 +150,41 @@ test.describe('ArticleEditor drag-drop image upload', () => {
       expect(src).toBeTruthy();
       expect(src?.startsWith('http')).toBeTruthy();
     } finally {
-      // Cleanup: delete the travel
-      await apiContext.delete(`${TRAVEL_BASE}/${travelId}/`).catch(() => undefined);
+      await deleteTravel(ctx, travelId).catch(() => undefined);
       await apiContext.dispose();
     }
   });
 
   test('shows error when not authenticated', async ({ page, baseURL }) => {
-    const token = process.env.E2E_API_TOKEN;
-
-    if (!token) {
-      test.info().annotations.push({
-        type: 'skip',
-        description: 'E2E_API_TOKEN is required for this test',
-      });
-      test.skip();
-      return;
-    }
-
     const targetBase = baseURL ?? process.env.BASE_URL;
     expect(targetBase).toBeTruthy();
+    const ctx = await apiContextFromEnv();
+    expect(ctx, 'E2E API context is required for ArticleEditor unauthenticated image-drop test').toBeTruthy();
+    if (!ctx) return;
 
-    // Create travel via API
-    const apiContext = await request.newContext({
-      baseURL: targetBase,
-      extraHTTPHeaders: {
-        Authorization: `Token ${token}`,
-      },
-    });
-
+    const apiContext = await apiRequestContext(ctx);
     const createResp = await apiContext.put(UPSERT_TRAVEL, { data: { ...basePayload } });
     expect(createResp.ok()).toBeTruthy();
     const created = await createResp.json();
     const travelId = created.id;
 
     try {
+      await page.addInitScript(() => {
+        try {
+          window.localStorage.removeItem('secure_userToken');
+          window.localStorage.removeItem('secure_userId');
+          window.localStorage.removeItem('userToken');
+          window.localStorage.removeItem('userId');
+          window.localStorage.removeItem('isAuthenticated');
+        } catch {
+          // ignore
+        }
+      });
+
       // Navigate without auth
       await page.goto(`${targetBase}/travel/${travelId}`);
       await preacceptCookies(page);
       await page.waitForLoadState('networkidle');
-
-      // Clear any existing auth
-      await page.evaluate(() => {
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('isAuthenticated');
-      });
 
       // Wait for editor
       const editorSelector = '.ql-editor';
@@ -259,7 +217,7 @@ test.describe('ArticleEditor drag-drop image upload', () => {
       // Should not have any new images since user is not authenticated
       expect(imageCount).toBe(0);
     } finally {
-      await apiContext.delete(`${TRAVEL_BASE}/${travelId}/`).catch(() => undefined);
+      await deleteTravel(ctx, travelId).catch(() => undefined);
       await apiContext.dispose();
     }
   });

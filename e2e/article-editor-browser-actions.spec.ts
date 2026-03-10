@@ -153,12 +153,13 @@ test.describe('ArticleEditor browser actions', () => {
     await expect(editor).toBeVisible({ timeout: 10_000 });
     await expect(editor).toContainText(text);
 
-    const fullscreenButton = page.getByRole('button', { name: /полноэкранного режима/i }).first();
+    const fullscreenButton = page.locator('[aria-label="Перейти в полноэкранный режим"]').last();
+    await expect(fullscreenButton).toBeVisible({ timeout: 10_000 });
     await fullscreenButton.click({ force: true });
-    await expect(page.getByRole('button', { name: /выйти из полноэкранного режима/i }).first()).toBeVisible({ timeout: 10_000 });
-
-    await page.getByRole('button', { name: /выйти из полноэкранного режима/i }).first().click({ force: true });
-    await expect(page.getByRole('button', { name: /перейти в полноэкранный режим/i }).first()).toBeVisible({ timeout: 10_000 });
+    const exitFullscreenButton = page.locator('[aria-label="Выйти из полноэкранного режима"]').last();
+    await expect(exitFullscreenButton).toBeVisible({ timeout: 10_000 });
+    await exitFullscreenButton.evaluate((node: HTMLElement) => node.click());
+    await expect(page.locator('[aria-label="Перейти в полноэкранный режим"]').last()).toBeVisible({ timeout: 10_000 });
     await expect(editor).toContainText(text);
   });
 
