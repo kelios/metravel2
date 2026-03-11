@@ -177,11 +177,9 @@ function useHeroMediaModel(
       const t = setTimeout(() => setOverlayUnmounted(true), 340)
       return () => clearTimeout(t)
     }
-    const fallback = setTimeout(() => {
-      setIsOverlayFading(true)
-      setOverlayUnmounted(true)
-    }, 6000)
-    return () => clearTimeout(fallback)
+    setIsOverlayFading(false)
+    setOverlayUnmounted(false)
+    return
   }, [allowSliderUpgrade, webHeroLoaded, sliderImageReady])
 
   useEffect(() => {
@@ -275,33 +273,16 @@ function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
 
     setSliderUpgradeAllowed(false)
 
-    let revealed = false
-    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-      if (revealed) return
-      revealed = true
-      setSliderUpgradeAllowed(true)
-    }, 10000)
-
     const reveal = () => {
-      if (revealed) return
-      revealed = true
-      if (revealTimer) {
-        clearTimeout(revealTimer)
-        revealTimer = null
-      }
       setSliderUpgradeAllowed(true)
     }
 
     window.addEventListener('pointerdown', reveal, { passive: true, once: true })
     window.addEventListener('keydown', reveal, { once: true })
-    window.addEventListener('scroll', reveal, { passive: true, once: true })
 
     return () => {
-      revealed = true
-      if (revealTimer) clearTimeout(revealTimer)
       window.removeEventListener('pointerdown', reveal as EventListener)
       window.removeEventListener('keydown', reveal as EventListener)
-      window.removeEventListener('scroll', reveal as EventListener)
     }
   }, [isWebAutomation, renderSlider])
 
