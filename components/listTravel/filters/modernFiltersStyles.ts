@@ -157,6 +157,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       backgroundColor: colors.surfaceMuted,
       paddingHorizontal: spacing.sm,
       paddingVertical: 6,
+      minHeight: 32,
       borderRadius: radii.pill,
       marginBottom: spacing.xs,
     },
@@ -614,4 +615,3 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
   });
 };
-

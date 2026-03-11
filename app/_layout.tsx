@@ -4,6 +4,10 @@ import { SplashScreen, Stack, usePathname } from "expo-router";
 import AppProviders from "@/components/layout/AppProviders";
 import NativeAppRuntime from "@/components/layout/NativeAppRuntime";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+
+/** ===== Helpers ===== */
+const isWeb = Platform.OS === "web";
+
 // Defensive lazy imports: fallback to empty component if module resolution fails
 const EmptyFallback = () => null;
 const safeLazy = <T extends React.ComponentType<any>>(
@@ -16,20 +20,24 @@ const safeLazy = <T extends React.ComponentType<any>>(
   })
 );
 
-const SyncIndicatorLazy = safeLazy(
-  () => import('@/components/ui/SyncIndicator').then(m => {
-    const Component = m.SyncIndicator ?? (m as any).default;
-    if (!Component) throw new Error('SyncIndicator export not found');
-    return { default: Component };
-  }),
-  'SyncIndicator'
-);
+const SyncIndicatorLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
+  ? safeLazy(
+      () => import('@/components/ui/SyncIndicator').then(m => {
+        const Component = m.SyncIndicator ?? (m as any).default;
+        if (!Component) throw new Error('SyncIndicator export not found');
+        return { default: Component };
+      }),
+      'SyncIndicator'
+    )
+  : null;
 const ReactQueryDevtoolsLazy: any = __DEV__
   ? React.lazy(() =>
       import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
     )
   : null;
-const ToastLazy = safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost');
+const ToastLazy: React.LazyExoticComponent<React.ComponentType<any>> | null = !isWeb
+  ? safeLazy(() => import('@/components/ui/ToastHost'), 'ToastHost')
+  : null;
 const RootWebDeferredChromeLazy = safeLazy(
   () => import('@/components/layout/RootWebDeferredChrome'),
   'RootWebDeferredChrome'
@@ -56,10 +64,6 @@ LogBox.ignoreLogs([
   'TouchableWithoutFeedback is deprecated. Please use Pressable.',
   'Image: style.tintColor is deprecated. Please use props.tintColor.',
 ]);
-
-/** ===== Helpers ===== */
-const isWeb = Platform.OS === "web";
-
 
 const useAppFonts: any = isWeb
   ? () => [true, null]

@@ -23,6 +23,20 @@ describe('normalizeMediaUrl', () => {
     expect(normalizeMediaUrl(url)).toBe(url);
   });
 
+  it('fixes malformed double-host absolute URLs', () => {
+    const url =
+      'http://192.168.50.36https://metravellocal.s3.amazonaws.com/quests/5/poster/video.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Signature=test';
+
+    expect(normalizeMediaUrl(url)).toBe(
+      'https://metravellocal.s3.amazonaws.com/quests/5/poster/video.mp4',
+    );
+  });
+
+  it('does not break valid urls with https in query params', () => {
+    const url = 'https://example.com/video?redirect=https://other.com';
+    expect(normalizeMediaUrl(url)).toBe(url);
+  });
+
   it('prefixes relative URLs with API host', () => {
     const original = process.env.EXPO_PUBLIC_API_URL;
     process.env.EXPO_PUBLIC_API_URL = 'http://192.168.50.36';

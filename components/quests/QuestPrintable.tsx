@@ -1,7 +1,5 @@
 import { Platform } from 'react-native';
 import type { QuestStep } from './QuestWizard';
-import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow';
-import { generateLeafletRouteSnapshot, generateStaticMapUrl } from '@/utils/mapImageGenerator';
 
 type PrintableProps = {
     title: string;
@@ -24,6 +22,9 @@ type PrintableMapPoint = {
     num: number;
     location: string;
 };
+
+type MapImageGeneratorModule = typeof import('@/utils/mapImageGenerator');
+type BookPreviewWindowModule = typeof import('@/utils/openBookPreviewWindow');
 
 function qrUrl(data: string, size = QR_NAV): string {
     return `https://quickchart.io/qr?text=${encodeURIComponent(data)}&size=${size * 2}&margin=1&format=png`;
@@ -50,8 +51,29 @@ function buildPrintableMapPoints(steps: QuestStep[]): PrintableMapPoint[] {
         }));
 }
 
-function buildPrintableStaticMapUrl(points: PrintableMapPoint[]): string {
+let mapImageGeneratorModulePromise: Promise<MapImageGeneratorModule> | null = null;
+let bookPreviewWindowModulePromise: Promise<BookPreviewWindowModule> | null = null;
+
+function loadMapImageGenerator(): Promise<MapImageGeneratorModule> {
+    if (!mapImageGeneratorModulePromise) {
+        mapImageGeneratorModulePromise = import('@/utils/mapImageGenerator');
+    }
+
+    return mapImageGeneratorModulePromise;
+}
+
+function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
+    if (!bookPreviewWindowModulePromise) {
+        bookPreviewWindowModulePromise = import('@/utils/openBookPreviewWindow');
+    }
+
+    return bookPreviewWindowModulePromise;
+}
+
+async function buildPrintableStaticMapUrl(points: PrintableMapPoint[]): Promise<string> {
     if (!points.length) return '';
+
+    const { generateStaticMapUrl } = await loadMapImageGenerator();
 
     return generateStaticMapUrl(
         points.map((point) => ({
@@ -71,6 +93,7 @@ async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[]): Pro
     if (!points.length) return '';
 
     try {
+        const { generateLeafletRouteSnapshot } = await loadMapImageGenerator();
         const snapshot = await generateLeafletRouteSnapshot(
             points.map((point) => ({
                 lat: point.lat,
@@ -176,9 +199,10 @@ export async function generatePrintableQuest({ title, steps, intro, questUrl }: 
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
     const mapPoints = buildPrintableMapPoints(validSteps);
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
-    const previewWindow = openPendingBookPreviewWindow();
+    const bookPreviewWindow = await loadBookPreviewWindowModule();
+    const previewWindow = bookPreviewWindow.openPendingBookPreviewWindow();
     const mapLeafletDataUrl = await buildPrintableLeafletMapDataUrl(mapPoints);
-    const mapStaticUrl = mapLeafletDataUrl || buildPrintableStaticMapUrl(mapPoints);
+    const mapStaticUrl = mapLeafletDataUrl || await buildPrintableStaticMapUrl(mapPoints);
     const mapSvg = buildPrintableMapSvg(mapPoints);
     const mapLegend = buildPrintableMapLegend(mapPoints);
     const mapHtml = mapStaticUrl ? `
@@ -488,7 +512,7 @@ export async function generatePrintableQuest({ title, steps, intro, questUrl }: 
 </body>
 </html>`;
 
-    openBookPreviewWindow(html, previewWindow);
+    bookPreviewWindow.openBookPreviewWindow(html, previewWindow);
 }
 
 function escInline(str: string): string {

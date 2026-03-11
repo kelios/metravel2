@@ -11,6 +11,7 @@ import type {
     ApiQuestFinale,
 } from '@/api/quests';
 import { getCountryCodeByCoords } from '@/utils/geoCountry';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 // ===================== ТИПЫ ФРОНТЕНДА =====================
 
@@ -138,49 +139,8 @@ export function buildAnswerChecker(answerType: string, answerValue: string): (in
 
 /** Исправляет URL медиа, если бэкенд приклеил свой хост перед S3/CDN URL */
 export function fixMediaUrl(url: string | null | undefined): string | undefined {
-    if (!url) return undefined;
-
-    let result = url.trim();
-    const lower = result.toLowerCase();
-    let didFixDoubleHost = false;
-
-    // Паттерн из прода: https://hosthttps://real-url (без слеша между host и второй схемой)
-    // а также старый вариант: http://host:porthttp(s)://real-url
-    if (lower.startsWith('http://') || lower.startsWith('https://')) {
-        const secondHttp = lower.indexOf('http://', 1);
-        const secondHttps = lower.indexOf('https://', 1);
-        const secondProtocolIndex = [secondHttp, secondHttps]
-            .filter(i => i > 0)
-            .sort((a, b) => a - b)[0];
-
-        if (typeof secondProtocolIndex === 'number') {
-            const protocolEnd = lower.indexOf('://') + 3;
-            const firstSlashAfterHost = lower.indexOf('/', protocolEnd);
-            // Чиним только если вторая схема появилась до первого path-слеша.
-            // Это исключает валидные URL вида /path?next=https://...
-            if (firstSlashAfterHost === -1 || secondProtocolIndex < firstSlashAfterHost) {
-                result = result.slice(secondProtocolIndex);
-                didFixDoubleHost = true;
-            }
-        }
-    }
-
-    // Удаляем невалидные S3 signed параметры для публичных файлов.
-    // Бэкенд генерирует signed URL, но подпись невалидна из-за приклеенного хоста.
-    // Файлы в metravelprod.s3.amazonaws.com публично доступны без подписи.
-    if (didFixDoubleHost && result.includes('.s3.amazonaws.com/') && result.includes('X-Amz-Signature=')) {
-        const urlObj = new URL(result);
-        // Удаляем все AWS signed параметры
-        urlObj.searchParams.delete('X-Amz-Algorithm');
-        urlObj.searchParams.delete('X-Amz-Credential');
-        urlObj.searchParams.delete('X-Amz-Date');
-        urlObj.searchParams.delete('X-Amz-Expires');
-        urlObj.searchParams.delete('X-Amz-SignedHeaders');
-        urlObj.searchParams.delete('X-Amz-Signature');
-        result = urlObj.toString();
-    }
-
-    return result;
+    const normalized = normalizeMediaUrl(url);
+    return normalized || undefined;
 }
 
 /** Конвертирует шаг из API формата во фронтенд формат */

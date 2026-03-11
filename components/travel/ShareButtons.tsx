@@ -9,48 +9,34 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { Travel } from '@/types/types';
-import type { BookSettings } from '@/components/export/BookSettingsModal';
-import * as useSingleTravelExportModule from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/types/pdf-export';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { resolveExportedFunction } from '@/utils/moduleInterop';
 import { showToast } from '@/utils/toast';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge';
 
-const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
+const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'));
 
-const FALLBACK_BOOK_SETTINGS: BookSettings = {
-  title: 'Мои путешествия',
-  subtitle: '',
-  coverType: 'auto',
-  template: 'minimal',
-  sortOrder: 'date-desc',
-  includeToc: true,
-  includeGallery: true,
-  includeMap: true,
-  includeChecklists: false,
-  checklistSections: ['clothing', 'food', 'electronics'],
+const INITIAL_PDF_EXPORT_STATE: ShareButtonsPdfExportState = {
+  isGenerating: false,
+  progress: 0,
+  currentStage: ExportStage.ERROR,
+  lastSettings: {
+    title: 'Мои путешествия',
+    subtitle: '',
+    coverType: 'auto',
+    template: 'minimal',
+    sortOrder: 'date-desc',
+    includeToc: true,
+    includeGallery: true,
+    includeMap: true,
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
+  },
 };
-
-const fallbackUseSingleTravelExport: typeof useSingleTravelExportModule.useSingleTravelExport = () => ({
-  pdfExport: {
-    isGenerating: false,
-    progress: 0,
-    currentStage: ExportStage.ERROR,
-  } as any,
-  lastSettings: FALLBACK_BOOK_SETTINGS,
-  settingsSummary: 'minimal',
-  handleOpenPrintBookWithSettings: async () => {},
-});
-
-const useSingleTravelExportSafe =
-  resolveExportedFunction<typeof useSingleTravelExportModule.useSingleTravelExport>(
-    useSingleTravelExportModule as unknown as Record<string, unknown>,
-    'useSingleTravelExport'
-  ) ?? fallbackUseSingleTravelExport;
 
 interface ShareButtonsProps {
   travel: Travel;
@@ -66,13 +52,10 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
 
   const [copied, setCopied] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [shouldMountPdfExport, setShouldMountPdfExport] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const {
-    pdfExport,
-    lastSettings,
-    handleOpenPrintBookWithSettings,
-  } = useSingleTravelExportSafe(travel);
-  const { isGenerating, progress, currentStage } = pdfExport;
+  const [{ isGenerating, progress, currentStage }, setPdfExportState] =
+    useState<ShareButtonsPdfExportState>(INITIAL_PDF_EXPORT_STATE);
 
   // Формируем URL для поделиться
   const shareUrl = useMemo(() => {
@@ -182,25 +165,6 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     setIsCollapsed(prev => !prev);
   }, []);
 
-  // Обработчик "Сохранить PDF" — переводим на новый HTML-поток печати
-  const handleExport = useCallback(
-    async (settings: BookSettings) => {
-      // Открываем HTML-книгу, дальше пользователь сохраняет через печать браузера
-      await handleOpenPrintBookWithSettings(settings);
-      setShowExportModal(false);
-    },
-    [handleOpenPrintBookWithSettings]
-  );
-
-  const handlePreview = useCallback(
-    async (settings: BookSettings) => {
-      // Для превью используем ту же HTML-книгу с печатью
-      await handleOpenPrintBookWithSettings(settings);
-      setShowExportModal(false);
-    },
-    [handleOpenPrintBookWithSettings]
-  );
-
   const palette = useMemo(
     () => ({
       neutral: colors.textMuted,
@@ -212,6 +176,10 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     [colors],
   );
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const handleOpenExport = useCallback(() => {
+    setShouldMountPdfExport(true);
+    setShowExportModal(true);
+  }, []);
 
   const shareButtons = [
     {
@@ -234,7 +202,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
           key: 'export' as const,
           label: isGenerating ? `Создание книги... ${progress}%` : 'Книга / PDF',
           icon: 'file-text' as const,
-          onPress: () => setShowExportModal(true),
+          onPress: handleOpenExport,
           color: palette.export,
           disabled: isGenerating,
         }]
@@ -393,17 +361,13 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
           </>
         )}
       </View>
-      {Platform.OS === 'web' && (
+      {Platform.OS === 'web' && shouldMountPdfExport && (
         <Suspense fallback={null}>
-          <BookSettingsModalLazy
+          <ShareButtonsPdfExportBridgeLazy
+            travel={travel}
             visible={showExportModal}
             onClose={() => setShowExportModal(false)}
-            onSave={handleExport}
-            onPreview={handlePreview}
-            travelCount={1}
-            defaultSettings={lastSettings}
-            userName={travel.userName || undefined}
-            mode="preview"
+            onStateChange={setPdfExportState}
           />
         </Suspense>
       )}

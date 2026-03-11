@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import { usePdfExport } from '@/hooks/usePdfExport';
 import type { ExportConfig } from '@/types/pdf-export';
 
 interface UseListTravelExportOptions {
@@ -18,7 +17,6 @@ export interface UseListTravelExportReturn {
   isSelected: (id: number | string) => boolean;
   hasSelection: boolean;
   selectionCount: number;
-  pdfExport: ReturnType<typeof usePdfExport>;
   baseSettings: BookSettings;
   lastSettings: BookSettings;
   setLastSettings: Dispatch<SetStateAction<BookSettings>>;
@@ -29,10 +27,9 @@ export interface UseListTravelExportReturn {
 
 export function useListTravelExport(
   travels: Travel[] = [],
-  { ownerName, pdfConfig }: UseListTravelExportOptions = {}
+  { ownerName }: UseListTravelExportOptions = {}
 ): UseListTravelExportReturn {
   const [selected, setSelected] = useState<Travel[]>([]);
-  const pdfExport = usePdfExport(selected, pdfConfig);
 
   useEffect(() => {
     setSelected((prev) => {
@@ -96,19 +93,17 @@ export function useListTravelExport(
   const handleSaveWithSettings = useCallback(
     async (settings: BookSettings) => {
       setLastSettings(settings);
-      // Для сохранения книги используем HTML-поток (openPrintBook)
-      await pdfExport.openPrintBook(settings);
+      return Promise.resolve();
     },
-    [pdfExport]
+    []
   );
 
   const handlePreviewWithSettings = useCallback(
     async (settings: BookSettings) => {
       setLastSettings(settings);
-      // Для превью также используем HTML-книгу
-      await pdfExport.openPrintBook(settings);
+      return Promise.resolve();
     },
-    [pdfExport]
+    []
   );
 
   return {
@@ -119,7 +114,6 @@ export function useListTravelExport(
     isSelected,
     hasSelection: selectionCount > 0,
     selectionCount,
-    pdfExport,
     baseSettings,
     lastSettings,
     setLastSettings,

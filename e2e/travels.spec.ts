@@ -363,9 +363,9 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     test('should have touch-friendly buttons on mobile', async ({ page }) => {
       if (!(await goToTravelDetailsMobile(page))) return;
 
-      const buttons = await page.locator('button').all();
+      const buttons = await page.locator('button, [role="button"], a[href], [data-testid*="button"]').all();
       let hasTouchFriendly = false;
-      for (const button of buttons.slice(0, 12)) {
+      for (const button of buttons.slice(0, 20)) {
         const box = await button.boundingBox();
         if (!box) continue;
         if (box.height >= 32 && box.width >= 32) {

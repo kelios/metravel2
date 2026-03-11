@@ -8,6 +8,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname, useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import useBreadcrumbModelDefault, {
@@ -41,8 +42,16 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const colors = useThemedColors();
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { isPhone, isLargePhone, width } = useResponsive();
+  const isJestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
+  const effectiveWidth =
+    Platform.OS === 'web' && !isJestEnv && typeof window !== 'undefined'
+      ? window.innerWidth
+      : width;
+  const isMobile =
+    Platform.OS === 'web'
+      ? effectiveWidth < METRICS.breakpoints.tablet
+      : isPhone || isLargePhone;
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
   const requestToggleMapPanel = useMapPanelStore((s) => s.requestToggle);
 

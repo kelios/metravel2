@@ -170,19 +170,43 @@ Critical shell должен:
 - Сделано: `NetworkStatus` на web travel route больше не подтягивается таймером в happy path; chunk грузится только если страница уже открылась offline или браузер реально перешел в offline.
 - Сделано: legacy service-worker cleanup вынесен из `WebAppRuntimeEffects` в отдельный deferred web chunk; теперь эта миграция не участвует в раннем post-hydration runtime path travel route.
 - Сделано: весь deferred web chrome (`footer`, `consent`, `skip links`, `network status`, `web runtime effects`) вынесен из root `_layout` в отдельный lazy runtime-компонент, чтобы eager root path был тоньше и проще.
+- Сделано: native-only lazy root imports (`SyncIndicator`, `ToastHost`) получили platform gate и больше не должны удерживать web paths в `__common` только из-за объявлений в `_layout`.
+- Сделано: `QuestPrintable` больше не импортирует `mapImageGenerator` top-level; heavy map snapshot/static-map logic теперь уходит в on-demand chunk только в момент генерации printable preview, а не в обычный web happy path.
+- Сделано: PDF/export runtime убран из eager travel share/export controls; `ShareButtons` и `TravelPdfExportControl` теперь монтируют export bridge с `useSingleTravelExport` только после явного клика по `Книга / PDF`.
+- Сделано: export UI списка путешествий вынесен из eager `ListTravel` path в lazy `ListTravelExportControls`; сам route chunk списка стал тоньше, а `BookSettingsModal`/export chrome больше не сидят в базовом `ListTravel` модуле.
+- Сделано: тяжелая runtime-логика `usePdfExport` вынесена из самого hook в отдельный lazy `usePdfExportRuntime`; eager shared path теперь держит только тонкий shell-hook, а `fetchTravel*`/preview/service orchestration загружаются только при фактическом export action.
+- Сделано: `openBookPreviewWindow`/`openPendingBookPreviewWindow` больше не импортируются eagerly из quest/pdf runtime path; helper вынесен в отдельный lazy chunk и теперь поднимается только в момент фактического открытия print preview.
 - В работе: дальнейшее сокращение initial JS и audit того, что еще попадает в route/common chunks раньше необходимости.
 
 Последний production build после текущих shared-path правок:
-- `entry-*`: около `1.9 MB` (было около `2.0 MB`)
-- `__common-*`: около `2.3 MB` (было около `2.4 MB`)
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.3 MB`
+- `ListTravel-*`: около `19 KB` (было около `38 KB`)
+- `ListTravelExportControls-*`: отдельный lazy chunk около `1.6 KB`
+- `usePdfExportRuntime-*`: отдельный lazy chunk около `5.2 KB`
+- `BookHtmlExportService-*`: отдельный lazy chunk около `12 KB`
+- `openBookPreviewWindow-*`: отдельный lazy chunk около `1.7 KB`
 - `TravelDetailsContainer-*`: около `50 KB`
 - `TravelDetailsDeferred-*`: около `27 KB`
 - `TravelDetailsMapSection-*`: около `73 KB`
+- `mapImageGenerator-*`: отдельный lazy chunk около `9.5 KB`
 
 Вывод:
 - локальные lazy-разрезы travel route уже работают как ожидается;
-- есть умеренное снижение root/shared bundle;
+- не каждый локальный вынос дает мгновенное заметное снижение aggregate snapshot, но структура чанков становится чище;
+- route-level export chrome и тяжелый PDF runtime уже вынесены в lazy chunks; в `__common` остался только легкий shell `usePdfExport`, а не весь export flow;
+- preview-window helper тоже больше не живет внутри `__common` и может грузиться независимо от остального export/runtime path;
 - основной дальнейший резерв все еще в `entry/__common`, а не в travel-specific chunks.
+
+Обновление от 10 марта 2026:
+- вынесен `utils/mapImageGenerator` из eager import path `QuestPrintable`, чтобы quest print/export flow не удерживал map/export code в shared web bundle до фактического запуска preview.
+- вынесен export hook/runtime из обычных travel share/export render paths, чтобы travel page не тянула PDF/print цепочку до первого export interaction.
+- вынесен export chrome списка путешествий из базового `ListTravel` route chunk, хотя сам `usePdfExport` все еще остается кандидатом на дальнейший shared-bundle audit.
+
+Обновление от 11 марта 2026:
+- `usePdfExport` переведен на two-layer схему: легкий hook-shell остается в shared path, а runtime с `fetchTravel`/`fetchTravelBySlug`/`openBookPreviewWindow`/`BookHtmlExportService` оркестрацией уезжает в отдельный lazy chunk только по export interaction.
+- production build после этого показывает отдельный `usePdfExportRuntime-*` chunk около `5.2 KB` и `BookHtmlExportService-*` около `12 KB`; `__common` остается большим, но уже без прежней полной PDF runtime-цепочки внутри hook-модуля.
+- `openBookPreviewWindow` дополнительно вынесен в собственный lazy chunk около `1.7 KB`, потому что helper больше не импортируется top-level ни из `usePdfExportRuntime`, ни из `QuestPrintable`.
 
 ### Этап 1. Зафиксировать baseline и бюджет
 

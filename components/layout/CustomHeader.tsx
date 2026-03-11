@@ -24,26 +24,26 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const colors = useThemedColors();
     const pathname = usePathname();
     const { width } = useWindowDimensions();
-    const [isViewportHydrated, setIsViewportHydrated] = useState(Platform.OS !== 'web');
+    const effectiveWebWidth = useMemo(() => {
+        if (Platform.OS !== 'web') return width;
+        if (!isTestEnv && typeof window !== 'undefined' && window.innerWidth > 0) {
+            return window.innerWidth;
+        }
+        return width;
+    }, [width]);
     // NAV-10: На web-планшете (768–1024px) показываем inline-навигацию вместо бургера.
     // На native планшет остаётся мобильным (бургер + dock).
     const isMobile = useMemo(() => {
         if (Platform.OS === 'web') {
-            if (!isViewportHydrated) return false;
-            return width < METRICS.breakpoints.tablet;
+            return effectiveWebWidth < METRICS.breakpoints.tablet;
         }
         return width < METRICS.breakpoints.largeTablet;
-    }, [isViewportHydrated, width]);
+    }, [effectiveWebWidth, width]);
     const lastHeightRef = useRef(0);
     const isTravelPerformanceRoute = Platform.OS === 'web' && typeof pathname === 'string' && pathname.startsWith('/travels/');
     const [showHeaderContextBar, setShowHeaderContextBar] = useState(!isTravelPerformanceRoute);
     const [showNavSection, setShowNavSection] = useState(!isTravelPerformanceRoute);
     const [showAccountSection, setShowAccountSection] = useState(!isTravelPerformanceRoute);
-
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        setIsViewportHydrated(true);
-    }, []);
 
     useEffect(() => {
         if (!isTravelPerformanceRoute) {

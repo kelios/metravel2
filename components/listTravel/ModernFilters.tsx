@@ -157,8 +157,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     return `Найдено ${resultsCount} ${getTravelLabel(resultsCount)}`;
   }, [resultsCount]);
 
+  const shouldReserveResultsBadge = Platform.OS !== 'web' || isNarrowWeb;
   const showResultsBadge =
-    resultsCount !== undefined && (Platform.OS !== 'web' || isNarrowWeb);
+    typeof resultsCount === 'number' && shouldReserveResultsBadge;
 
   return (
     <View
@@ -295,11 +296,16 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       </View>
 
       {/* Results Count Badge */}
-      {showResultsBadge && (
+      {(showResultsBadge || shouldReserveResultsBadge) && (
         <View style={styles.resultsBadge}>
-          <Feather name="search" size={14} color={colors.textMuted} />
+          <Feather
+            name="search"
+            size={14}
+            color={colors.textMuted}
+            style={!showResultsBadge ? ({ opacity: 0 } as any) : null}
+          />
           <Text style={styles.resultsBadgeText}>
-            {resultsText}
+            {showResultsBadge ? resultsText : 'Найдено 000 путешествий'}
           </Text>
         </View>
       )}

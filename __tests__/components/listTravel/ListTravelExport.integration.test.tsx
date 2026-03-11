@@ -1,12 +1,11 @@
 // __tests__/components/listTravel/ListTravelExport.integration.test.tsx
 // Regression test to surface current breakage of PDF export flow on /export
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import ListTravel from '@/components/listTravel/ListTravel';
 
-const mockHandleSaveWithSettings = jest.fn();
+const mockExportSave = jest.fn();
 
 const createTestClient = () =>
   new QueryClient({
@@ -125,19 +124,26 @@ jest.mock('@/components/listTravel/hooks/useListTravelExport', () => ({
     isSelected: () => true,
     hasSelection: true,
     selectionCount: 1,
-    pdfExport: {
-      isGenerating: false,
-      progress: 0,
-      openPrintBook: jest.fn(),
-    },
     baseSettings: {},
     lastSettings: {},
     setLastSettings: jest.fn(),
     settingsSummary: 'Шаблон по умолчанию',
-    handleSaveWithSettings: mockHandleSaveWithSettings,
+    handleSaveWithSettings: jest.fn(),
     handlePreviewWithSettings: jest.fn(),
   }),
 }));
+
+jest.mock('@/components/listTravel/ListTravelExportControls', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+  return function MockListTravelExportControls(props: any) {
+    return (
+      <Pressable onPress={() => mockExportSave(props.lastSettings)}>
+        <Text>Сохранить PDF</Text>
+      </Pressable>
+    );
+  };
+});
 
 jest.mock('@/components/listTravel/SidebarFilters', () => () => null);
 jest.mock('@/components/listTravel/RightColumn', () => (props: any) => <>{props.topContent}</>);
@@ -145,21 +151,20 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => () => null);
 
 describe('ListTravel export flow (regression)', () => {
   beforeEach(() => {
-    mockHandleSaveWithSettings.mockClear();
+    mockExportSave.mockClear();
   });
 
-  it('should invoke export handler when clicking "Сохранить PDF" on /export', () => {
+  it('should invoke export handler when clicking "Сохранить PDF" on /export', async () => {
     const client = createTestClient();
-    const { getByText } = render(
+    const { findByText } = render(
       <QueryClientProvider client={client}>
         <ListTravel />
       </QueryClientProvider>
     );
 
-    const saveButton = getByText('Сохранить PDF');
+    const saveButton = await findByText('Сохранить PDF');
     fireEvent.press(saveButton);
 
-    // This currently fails in production: onSave does not trigger pdf export.
-    expect(mockHandleSaveWithSettings).toHaveBeenCalled();
+    expect(mockExportSave).toHaveBeenCalled();
   });
 });

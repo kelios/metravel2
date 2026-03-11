@@ -469,8 +469,8 @@ describe('ListTravel Integration Tests', () => {
 
     renderWithProviders(<ListTravel />);
 
-    // Sidebar should not be visible on mobile
-    expect(screen.queryByText('Категории')).toBeNull();
+    expect(screen.getByLabelText('Закрыть фильтры')).toBeTruthy();
+    expect(screen.getByText('Показать результаты')).toBeTruthy();
   });
 
   it('updates results count when filters change', async () => {
@@ -613,8 +613,8 @@ describe('ListTravel Integration Tests', () => {
       </QueryClientProvider>
     );
 
-    // Sidebar should be hidden on mobile
-    expect(screen.queryByText('Категории')).toBeNull();
+    expect(screen.getByLabelText('Закрыть фильтры')).toBeTruthy();
+    expect(screen.getByText('Показать результаты')).toBeTruthy();
   });
 
   it('handles loading states correctly', async () => {

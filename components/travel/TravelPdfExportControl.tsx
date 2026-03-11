@@ -3,37 +3,28 @@ import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
-import type { BookSettings } from '@/components/export/BookSettingsModal'
-import * as useSingleTravelExportModule from '@/components/travel/hooks/useSingleTravelExport'
-import { resolveExportedFunction } from '@/utils/moduleInterop'
+import { ExportStage } from '@/types/pdf-export'
+import type { ShareButtonsPdfExportState } from '@/components/travel/ShareButtonsPdfExportBridge'
 
-const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'))
+const ShareButtonsPdfExportBridgeLazy = lazy(() => import('@/components/travel/ShareButtonsPdfExportBridge'))
 
-const FALLBACK_BOOK_SETTINGS: BookSettings = {
-  title: 'Мои путешествия',
-  subtitle: '',
-  coverType: 'auto',
-  template: 'minimal',
-  sortOrder: 'date-desc',
-  includeToc: true,
-  includeGallery: true,
-  includeMap: true,
-  includeChecklists: false,
-  checklistSections: ['clothing', 'food', 'electronics'],
+const INITIAL_PDF_EXPORT_STATE: ShareButtonsPdfExportState = {
+  isGenerating: false,
+  progress: 0,
+  currentStage: ExportStage.ERROR,
+  lastSettings: {
+    title: 'Мои путешествия',
+    subtitle: '',
+    coverType: 'auto',
+    template: 'minimal',
+    sortOrder: 'date-desc',
+    includeToc: true,
+    includeGallery: true,
+    includeMap: true,
+    includeChecklists: false,
+    checklistSections: ['clothing', 'food', 'electronics'],
+  },
 }
-
-const fallbackUseSingleTravelExport: typeof useSingleTravelExportModule.useSingleTravelExport = () => ({
-  pdfExport: { isGenerating: false } as any,
-  lastSettings: FALLBACK_BOOK_SETTINGS,
-  settingsSummary: 'minimal',
-  handleOpenPrintBookWithSettings: async () => {},
-})
-
-const useSingleTravelExportSafe =
-  resolveExportedFunction<typeof useSingleTravelExportModule.useSingleTravelExport>(
-    useSingleTravelExportModule as unknown as Record<string, unknown>,
-    'useSingleTravelExport'
-  ) ?? fallbackUseSingleTravelExport
 
 type Props = {
   travel: Travel
@@ -51,40 +42,25 @@ function TravelPdfExportControl({
   actionBtnDisabledStyle,
 }: Props) {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
-
-  const { pdfExport, lastSettings, handleOpenPrintBookWithSettings } = useSingleTravelExportSafe(travel)
+  const [shouldMountPdfExport, setShouldMountPdfExport] = useState(false)
+  const [{ isGenerating }, setPdfExportState] = useState<ShareButtonsPdfExportState>(INITIAL_PDF_EXPORT_STATE)
 
   const handleOpenExport = useCallback(() => {
     if (Platform.OS !== 'web') {
       Alert.alert?.('Недоступно', 'Экспорт PDF доступен только в веб-версии')
       return
     }
+    setShouldMountPdfExport(true)
     setShowSettingsModal(true)
   }, [])
 
-  const handleSaveSettings = useCallback(
-    async (settings: BookSettings) => {
-      await handleOpenPrintBookWithSettings(settings)
-      setShowSettingsModal(false)
-    },
-    [handleOpenPrintBookWithSettings]
-  )
-
-  const handlePreviewSettings = useCallback(
-    async (settings: BookSettings) => {
-      await handleOpenPrintBookWithSettings(settings)
-      setShowSettingsModal(false)
-    },
-    [handleOpenPrintBookWithSettings]
-  )
-
   const buttonContent = useMemo(() => {
-    if (pdfExport.isGenerating) {
+    if (isGenerating) {
       return <ActivityIndicator size="small" color={mutedText} />
     }
 
     return <Feather name="file-text" size={18} color={mutedText} />
-  }, [mutedText, pdfExport.isGenerating])
+  }, [isGenerating, mutedText])
 
   const setWebTitle = useCallback((el: any) => {
     if (Platform.OS === 'web' && el) {
@@ -97,19 +73,19 @@ function TravelPdfExportControl({
     <>
       <Pressable
         onPress={handleOpenExport}
-        disabled={pdfExport.isGenerating}
+        disabled={isGenerating}
         accessibilityRole="button"
         accessibilityLabel="Экспорт в PDF"
         ref={setWebTitle}
         style={({ pressed }) => [
           actionBtnStyle,
-          pressed && !pdfExport.isGenerating ? actionBtnPressedStyle : null,
-          pdfExport.isGenerating ? actionBtnDisabledStyle : null,
+          pressed && !isGenerating ? actionBtnPressedStyle : null,
+          isGenerating ? actionBtnDisabledStyle : null,
         ]}
         {...(Platform.OS === 'web'
           ? {
               'data-action-btn': true,
-              'data-disabled': pdfExport.isGenerating ? 'true' : 'false',
+              'data-disabled': isGenerating ? 'true' : 'false',
               role: 'button',
               'aria-label': 'Экспорт в PDF',
             }
@@ -118,16 +94,13 @@ function TravelPdfExportControl({
         {buttonContent}
       </Pressable>
 
-      {Platform.OS === 'web' && (
+      {Platform.OS === 'web' && shouldMountPdfExport && (
         <Suspense fallback={null}>
-          <BookSettingsModalLazy
+          <ShareButtonsPdfExportBridgeLazy
+            travel={travel}
             visible={showSettingsModal}
             onClose={() => setShowSettingsModal(false)}
-            onSave={handleSaveSettings}
-            onPreview={handlePreviewSettings}
-            defaultSettings={lastSettings}
-            travelCount={1}
-            userName={(travel as any)?.userName || (travel as any)?.user?.name || ''}
+            onStateChange={setPdfExportState}
           />
         </Suspense>
       )}

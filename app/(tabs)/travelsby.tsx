@@ -1,5 +1,5 @@
 // app/travelsby/index.tsx
-import React, { Suspense, createElement, lazy, useMemo } from 'react';
+import React, { Suspense, createElement, lazy, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -14,6 +14,12 @@ export default function TravelsByScreen() {
     const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const [canRenderList, setCanRenderList] = useState(Platform.OS !== 'web');
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        setCanRenderList(true);
+    }, []);
 
     const title = 'Маршруты по Беларуси, идеи поездок и маршрутов | Metravel';
     const description =
@@ -47,15 +53,19 @@ export default function TravelsByScreen() {
                         } as any,
                     }, title)
                 )}
-                <Suspense
-                    fallback={
-                        <View style={styles.loading}>
-                            <Text style={styles.loadingText}>Загрузка…</Text>
-                        </View>
-                    }
-                >
-                    <ListTravel />
-                </Suspense>
+                {canRenderList ? (
+                    <Suspense
+                        fallback={
+                            <View style={styles.loading}>
+                                <Text style={styles.loadingText}>Загрузка…</Text>
+                            </View>
+                        }
+                    >
+                        <ListTravel />
+                    </Suspense>
+                ) : (
+                    <View style={styles.loadingShell} testID="travelsby-shell-placeholder" />
+                )}
             </View>
         </>
     );
@@ -71,5 +81,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     loadingText: {
         color: colors.text,
+    },
+    loadingShell: {
+        flex: 1,
+        minHeight: 900,
     },
 });

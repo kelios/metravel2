@@ -1,5 +1,5 @@
 // ✅ УЛУЧШЕНИЕ: ListTravel.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Platform,
@@ -13,7 +13,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
-import BookSettingsModal from '@/components/export/BookSettingsModal'
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
@@ -35,6 +34,7 @@ import { createStyles } from './listTravelStyles'
 import { deleteTravel } from '@/api/travelsApi'
 
 const MemoizedTravelItem = memo(RenderTravelItem);
+const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
 
 const removeTravelFromInfiniteTravelsCache = (queryClient: ReturnType<typeof useQueryClient>, travelId: number) => {
   queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: any) => {
@@ -123,6 +123,28 @@ function ListTravel({
     });
 
     const { width, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
+    const effectiveResponsiveWidth =
+      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
+        ? window.innerWidth
+        : width;
+    const effectiveResponsiveHeight =
+      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
+        ? window.innerHeight
+        : 0;
+    const resolvedIsPortrait =
+      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
+        ? effectiveResponsiveHeight > effectiveResponsiveWidth
+        : isPortrait;
+    const resolvedIsMobileDevice =
+      Platform.OS === 'web'
+        ? effectiveResponsiveWidth < BREAKPOINTS.TABLET
+        : isPhone || isLargePhone || (isTabletSize && resolvedIsPortrait);
+    const resolvedIsTablet = Platform.OS === 'web'
+      ? effectiveResponsiveWidth >= BREAKPOINTS.TABLET && effectiveResponsiveWidth < BREAKPOINTS.DESKTOP
+      : isTabletSize;
+    const resolvedIsDesktop = Platform.OS === 'web'
+      ? effectiveResponsiveWidth >= BREAKPOINTS.DESKTOP
+      : isDesktopSize;
     const route = useRoute();
     const pathname = usePathname();
 
@@ -188,15 +210,18 @@ function ListTravel({
     const isTestEnv = process.env.NODE_ENV === 'test';
 
     // ✅ Используем значения из useResponsive
-    const windowWidth = Platform.OS === 'web' && isTestEnv ? Math.max(width, 1024) : width;
+    const windowWidth =
+      Platform.OS === 'web' && isTestEnv && effectiveResponsiveWidth <= 0
+        ? Math.max(effectiveResponsiveWidth, 1024)
+        : effectiveResponsiveWidth;
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
-    const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
+    const isMobileDevice = resolvedIsMobileDevice;
     // Cards layout rule: on mobile widths we always render a single column.
     const isCardsSingleColumn = windowWidth < BREAKPOINTS.MOBILE;
-    const isTablet = isTabletSize;
-    const isDesktop = isDesktopSize;
+    const isTablet = resolvedIsTablet;
+    const isDesktop = resolvedIsDesktop;
 
     const gapSize =
       windowWidth < BREAKPOINTS.XS
@@ -250,15 +275,15 @@ function ListTravel({
       }
 
       if (isMobileDevice) {
-        return calculateColumns(windowWidth, isPortrait ? 'portrait' : 'landscape');
+        return calculateColumns(windowWidth, resolvedIsPortrait ? 'portrait' : 'landscape');
       }
 
-      if (!isTablet || !isPortrait) {
+      if (!isTablet || !resolvedIsPortrait) {
         return calculateColumns(effectiveWidth, 'landscape');
       }
 
       return calculateColumns(effectiveWidth, 'portrait');
-    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, isPortrait, windowWidth]);
+    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, resolvedIsPortrait, windowWidth]);
 
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
         if (Platform.OS !== 'web') return false;
@@ -549,14 +574,11 @@ function ListTravel({
         isSelected,
         hasSelection,
         selectionCount,
-        pdfExport,
         lastSettings,
         baseSettings,
-        handleSaveWithSettings,
-        handlePreviewWithSettings,
+        settingsSummary,
+        setLastSettings,
     } = exportState;
-
-    const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
 
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
@@ -587,18 +609,6 @@ function ListTravel({
         width,
       ]
     );
-
-    const handleCloseSettings = useCallback(() => {
-      setIsBookSettingsOpen(false);
-    }, []);
-
-    const handleImmediateSave = useCallback(() => {
-      handleSaveWithSettings(lastSettings);
-    }, [handleSaveWithSettings, lastSettings]);
-
-    const handleOpenSettings = useCallback(() => {
-      setIsBookSettingsOpen(true);
-    }, []);
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
@@ -872,23 +882,6 @@ function ListTravel({
     
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
-      {isExport && Platform.OS === 'web' ? (
-        <BookSettingsModal
-          visible={isBookSettingsOpen}
-          onClose={handleCloseSettings}
-          onSave={(settings) => {
-            handleSaveWithSettings(settings);
-          }}
-          onPreview={(settings) => {
-            handlePreviewWithSettings(settings);
-          }}
-          defaultSettings={lastSettings || baseSettings}
-          travelCount={selectionCount}
-          userName={String(userId || '')}
-          mode="save"
-        />
-      ) : null}
-
       <SidebarFilters
         isMobile={isMobileDevice}
         filterGroups={filterGroups}
@@ -916,20 +909,23 @@ function ListTravel({
         }}
 	        topContent={
 	          isExport ? (
-            <ExportBar
-              isMobile={isMobileDevice}
-              selectedCount={selectionCount}
-              allCount={travels.length}
-              onToggleSelectAll={toggleSelectAll}
-              onClearSelection={clearSelection}
-              onSave={handleImmediateSave}
-              onSettings={handleOpenSettings}
-              isGenerating={pdfExport.isGenerating}
-              progress={pdfExport.progress}
-              settingsSummary={exportState.settingsSummary}
-              hasSelection={hasSelection}
-              styles={styles}
-            />
+            <Suspense fallback={null}>
+              <ListTravelExportControlsLazy
+                isMobile={isMobileDevice}
+                travels={travels}
+                selected={exportState.selected}
+                ownerName={userId}
+                toggleSelectAll={toggleSelectAll}
+                clearSelection={clearSelection}
+                hasSelection={hasSelection}
+                selectionCount={selectionCount}
+                baseSettings={baseSettings}
+                lastSettings={lastSettings}
+                settingsSummary={settingsSummary}
+                setLastSettings={setLastSettings}
+                styles={styles}
+              />
+            </Suspense>
           ) : null
         }
         isRecommendationsVisible={isRecommendationsVisible}

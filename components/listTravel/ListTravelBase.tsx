@@ -366,6 +366,18 @@ function ListTravelBase({
     // ✅ ДИЗАЙН: Используем динамические цвета темы
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
+
+    const {
+      width: rawWidth,
+      isHydrated,
+      isPhone,
+      isLargePhone,
+      isTablet: isTabletSize,
+      isDesktop: isDesktopSize,
+      isPortrait,
+    } = useResponsive();
+    const shouldDeferResponsiveShell = Platform.OS === 'web' && !isTestEnv && !isHydrated;
 
     // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
     useListTravelVisibility({
@@ -375,18 +387,41 @@ function ListTravelBase({
         onToggleWeeklyHighlights,
     });
 
-    const { width: rawWidth, isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
+    const effectiveResponsiveWidth =
+      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
+        ? window.innerWidth
+        : rawWidth;
+    const effectiveResponsiveHeight =
+      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
+        ? window.innerHeight
+        : 0;
+    const resolvedIsPortrait =
+      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
+        ? effectiveResponsiveHeight > effectiveResponsiveWidth
+        : isPortrait;
+    const resolvedIsMobileDevice =
+      Platform.OS === 'web'
+        ? effectiveResponsiveWidth < BREAKPOINTS.TABLET
+        : isPhone || isLargePhone || (isTabletSize && resolvedIsPortrait);
+    const resolvedIsTablet =
+      Platform.OS === 'web'
+        ? effectiveResponsiveWidth >= BREAKPOINTS.TABLET && effectiveResponsiveWidth < BREAKPOINTS.DESKTOP
+        : isTabletSize;
+    const resolvedIsDesktop =
+      Platform.OS === 'web'
+        ? effectiveResponsiveWidth >= BREAKPOINTS.DESKTOP
+        : isDesktopSize;
 
     // ✅ ОПТИМИЗАЦИЯ: Стабилизируем width чтобы избежать ре-рендеров при скролле
     // (мобильная адресная строка может менять viewport height/width)
-    const stableWidthRef = useRef(rawWidth);
+    const stableWidthRef = useRef(effectiveResponsiveWidth);
     const width = useMemo(() => {
       // Обновляем только при значительном изменении (>50px)
-      if (Math.abs(rawWidth - stableWidthRef.current) > 50) {
-        stableWidthRef.current = rawWidth;
+      if (Math.abs(effectiveResponsiveWidth - stableWidthRef.current) > 50) {
+        stableWidthRef.current = effectiveResponsiveWidth;
       }
       return stableWidthRef.current;
-    }, [rawWidth]);
+    }, [effectiveResponsiveWidth]);
     const route = useRoute();
     const pathname = usePathname();
 
@@ -458,11 +493,11 @@ function ListTravelBase({
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
-    const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
+    const isMobileDevice = resolvedIsMobileDevice;
     // Cards layout rule: on mobile widths we always render a single column.
     const isCardsSingleColumn = width < BREAKPOINTS.MOBILE;
-    const isTablet = isTabletSize;
-    const isDesktop = isDesktopSize;
+    const isTablet = resolvedIsTablet;
+    const isDesktop = resolvedIsDesktop;
 
     const gapSize =
       width < BREAKPOINTS.XS
@@ -516,15 +551,15 @@ function ListTravelBase({
       }
 
       if (isMobileDevice) {
-        return calculateColumns(width, isPortrait ? 'portrait' : 'landscape');
+        return calculateColumns(width, resolvedIsPortrait ? 'portrait' : 'landscape');
       }
 
-      if (!isTablet || !isPortrait) {
+      if (!isTablet || !resolvedIsPortrait) {
         return calculateColumns(effectiveWidth, 'landscape');
       }
 
       return calculateColumns(effectiveWidth, 'portrait');
-    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, isPortrait, width]);
+    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, resolvedIsPortrait, width]);
 
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
         if (Platform.OS !== 'web') return false;
@@ -1244,7 +1279,9 @@ function ListTravelBase({
       ]
     );
     
-  return (
+  return shouldDeferResponsiveShell ? (
+    <View style={[styles.root, styles.rootMobile]} testID="travels-list-loading-shell" />
+  ) : (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
       <SidebarFilters
         isMobile={isMobileDevice}

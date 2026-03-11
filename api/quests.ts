@@ -1,6 +1,7 @@
 // src/api/quests.ts
 // API модуль для работы с квестами через бэкенд
 import { apiClient, ApiError } from '@/api/client';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 // ===================== ТИПЫ (соответствуют OpenAPI схеме бэкенда) =====================
 
@@ -72,6 +73,49 @@ export type ApiQuestBundle = {
     city: ApiQuestCity;
 };
 
+function normalizeQuestStep(step: ApiQuestStep): ApiQuestStep {
+    return {
+        ...step,
+        image_url: step.image_url ? normalizeMediaUrl(step.image_url) : step.image_url,
+    };
+}
+
+function normalizeQuestBundle(bundle: ApiQuestBundle): ApiQuestBundle {
+    let normalizedSteps = bundle.steps;
+    let normalizedIntro = bundle.intro;
+
+    try {
+        const parsedSteps = typeof bundle.steps === 'string' ? JSON.parse(bundle.steps) : bundle.steps;
+        if (Array.isArray(parsedSteps)) {
+            normalizedSteps = JSON.stringify(parsedSteps.map((step) => normalizeQuestStep(step as ApiQuestStep)));
+        }
+    } catch {
+        normalizedSteps = bundle.steps;
+    }
+
+    try {
+        if (typeof bundle.intro === 'string' && bundle.intro.trim()) {
+            const parsedIntro = JSON.parse(bundle.intro) as ApiQuestStep;
+            normalizedIntro = JSON.stringify(normalizeQuestStep(parsedIntro));
+        }
+    } catch {
+        normalizedIntro = bundle.intro;
+    }
+
+    return {
+        ...bundle,
+        steps: normalizedSteps,
+        intro: normalizedIntro,
+        finale: bundle.finale
+            ? {
+                ...bundle.finale,
+                video_url: bundle.finale.video_url ? normalizeMediaUrl(bundle.finale.video_url) : bundle.finale.video_url,
+                poster_url: bundle.finale.poster_url ? normalizeMediaUrl(bundle.finale.poster_url) : bundle.finale.poster_url,
+            }
+            : bundle.finale,
+    };
+}
+
 /** Прогресс прохождения квеста */
 export type ApiQuestProgress = {
     id: number;
@@ -109,17 +153,20 @@ export async function fetchQuestsList(): Promise<ApiQuestMeta[]> {
 
 /** Получить квесты по городу */
 export async function fetchQuestsByCity(cityId: number): Promise<ApiQuestBundle> {
-    return apiClient.get<ApiQuestBundle>(`/quests/by-city/${cityId}/`);
+    const bundle = await apiClient.get<ApiQuestBundle>(`/quests/by-city/${cityId}/`);
+    return normalizeQuestBundle(bundle);
 }
 
 /** Получить полный бандл квеста по quest_id (строковый, напр. "minsk-cmok") */
 export async function fetchQuestByQuestId(questId: string): Promise<ApiQuestBundle> {
-    return apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`);
+    const bundle = await apiClient.get<ApiQuestBundle>(`/quests/by-quest-id/${questId}/`);
+    return normalizeQuestBundle(bundle);
 }
 
 /** Получить полный бандл квеста по числовому ID */
 export async function fetchQuestById(id: number): Promise<ApiQuestBundle> {
-    return apiClient.get<ApiQuestBundle>(`/quests/${id}/`);
+    const bundle = await apiClient.get<ApiQuestBundle>(`/quests/${id}/`);
+    return normalizeQuestBundle(bundle);
 }
 
 /** Получить список городов с квестами */
