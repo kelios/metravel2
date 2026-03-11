@@ -249,6 +249,5 @@ describe('Context module exports (prod-build regression)', () => {
       expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.authReady).toBe(false);
     });
-
   });
 });

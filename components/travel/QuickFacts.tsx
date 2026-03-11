@@ -5,11 +5,11 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
+import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
@@ -53,8 +53,8 @@ interface QuickFactsProps {
 }
 
 function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const styles = useMemo(() => createStyles(colors), [colors]);
 

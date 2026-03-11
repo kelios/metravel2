@@ -17,12 +17,14 @@ interface AuthProviderProps {
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     // Select only the stable action references needed for initialization.
     // State is NOT subscribed here — consumers pick their own slices via useAuth().
+    const authReady = useAuthStore((s) => s.authReady);
     const checkAuthentication = useAuthStore((s) => s.checkAuthentication);
     const invalidateAuthState = useAuthStore((s) => s.invalidateAuthState);
 
     // При первой загрузке проверяем данные аутентификации.
     // On web, defer to reduce TBT during initial render (AsyncStorage + API call).
     useEffect(() => {
+        if (authReady) return;
         if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
             const id = (window as any).requestIdleCallback(() => checkAuthentication(), { timeout: 1500 });
             return () => { try { (window as any).cancelIdleCallback(id); } catch { /* noop */ } };
@@ -30,7 +32,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
         checkAuthentication();
         return undefined;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [authReady]);
 
     // Регистрируем invalidation handler для api client (вызывается при 401)
     useEffect(() => {

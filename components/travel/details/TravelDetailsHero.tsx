@@ -423,6 +423,7 @@ function TravelHeroSectionInner({
         ]}
       >
         <View
+          testID="travel-details-hero-slider-container"
           style={[
             styles.sliderContainer,
             { height: heroHeight },

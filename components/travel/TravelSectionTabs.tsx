@@ -7,11 +7,12 @@ import {
   Text,
   Platform,
   Modal,
+  useWindowDimensions,
 } from "react-native"
 import Feather from '@expo/vector-icons/Feather';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
-import { useResponsive } from '@/hooks/useResponsive'
+import { METRICS } from '@/constants/layout'
 import { useThemedColors } from '@/hooks/useTheme' // ✅ РЕДИЗАЙН: Темная тема
 
 interface TravelSectionTabsProps {
@@ -27,8 +28,8 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
   onNavigate,
   stickyOffset,
 }) => {
-  const { isPhone, isLargePhone } = useResponsive()
-  const isMobile = isPhone || isLargePhone
+  const { width } = useWindowDimensions()
+  const isMobile = width < METRICS.breakpoints.tablet
   const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
   const [moreOpen, setMoreOpen] = useState(false)
   const moreButtonRef = useRef<any>(null)

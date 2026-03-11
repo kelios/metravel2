@@ -6,9 +6,8 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Platform } from 'react-native'
+import { Platform, useWindowDimensions } from 'react-native'
 
-import { useResponsive } from '@/hooks/useResponsive'
 import { useTdTrace } from '@/hooks/useTdTrace'
 import type { Travel } from '@/types/types'
 
@@ -46,7 +45,7 @@ function useHeroMediaModel(
   onFirstImageLoad: () => void,
   renderSlider: boolean,
 ) {
-  const { width: winW, height: winH } = useResponsive()
+  const { width: winW, height: winH } = useWindowDimensions()
   const tdTrace = useTdTrace()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(
     null,

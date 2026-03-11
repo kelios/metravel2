@@ -6,10 +6,11 @@ import {
     View,
     Platform,
     InteractionManager,
+    useWindowDimensions,
 } from "react-native";
 import StableContent from "@/components/travel/StableContent";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
+import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface TravelDescriptionProps {
@@ -28,8 +29,8 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  htmlContent,
                                                                  noBox = false,
                                                              }) => {
-    const { width, height } = useResponsive();
-    const isMobileLayout = width < 768;
+    const { width, height } = useWindowDimensions();
+    const isMobileLayout = width < METRICS.breakpoints.tablet;
     const colors = useThemedColors();
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера

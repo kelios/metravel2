@@ -1,14 +1,14 @@
 // ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 
@@ -26,8 +26,8 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     const { favorites, viewHistory, getRecommendations } = useFavorites();
     const { isAuthenticated } = useAuth();
     const router = useRouter();
-    const { isPhone, isLargePhone } = useResponsive();
-    const isMobile = isPhone || isLargePhone;
+    const { width } = useWindowDimensions();
+    const isMobile = width < METRICS.breakpoints.tablet;
     const colors = useThemedColors(); // ✅ МИГРАЦИЯ: Добавлен useThemedColors
 
     const [isCollapsed, setIsCollapsed] = useState(false);

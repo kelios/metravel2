@@ -14,14 +14,15 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useQuery } from '@tanstack/react-query';
 import { Title } from "@/ui/paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
 import { fetchTravelsPopular } from "@/api/map";
 import type { TravelsMap } from "@/types/types";
+import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // РЕДИЗАЙН: Темная тема
 import { queryKeys } from '@/queryKeys';
 import { queryConfigs } from '@/utils/reactQueryConfig';
@@ -50,16 +51,16 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
      showHeader = true,
      embedded = false,
    }) => {
-    const { width } = useResponsive();
+    const { width } = useWindowDimensions();
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const listConfig = Platform.OS === 'web' ? FLATLIST_CONFIG : FLATLIST_CONFIG_MOBILE;
 
     // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты для адаптивности
     const numColumns = useMemo(() => {
-      if (width <= 640) return 1; // mobile (≤ 640px)
-      if (width <= 1024) return Math.min(maxColumns, 2); // tablet (641–1024px)
-      return Math.min(maxColumns, 3); // desktop (≥ 1025px)
+      if (width < METRICS.breakpoints.tablet) return 1;
+      if (width < METRICS.breakpoints.largeTablet) return Math.min(maxColumns, 2);
+      return Math.min(maxColumns, 3);
     }, [width, maxColumns]);
     
     const {
@@ -205,7 +206,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       if (Platform.OS !== 'web') return undefined;
 
       // mobile-first: on small screens allow horizontal scroll while keeping CSS Grid as the layout engine
-      if (width <= 640) {
+      if (width < METRICS.breakpoints.tablet) {
         return {
           display: 'grid',
           gridAutoFlow: 'column',
@@ -315,7 +316,13 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
 
         <Animated.View style={{ opacity: fadeAnim }}>
           {Platform.OS === 'web' ? (
-            <View style={width <= 640 ? styles.webScrollContainer : undefined}>
+            <View
+              style={
+                width < METRICS.breakpoints.tablet
+                  ? styles.webScrollContainer
+                  : undefined
+              }
+            >
               <View
                 accessibilityRole="list"
                 style={[styles.flatListContent, styles.webGrid, webGridStyle]}

@@ -5,9 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites as _useFavorites } from '@/context/FavoritesContext';
-import * as FiltersProviderModule from '@/context/FiltersProvider';
-import { resolveExportedFunction } from '@/utils/moduleInterop';
-import { useUnreadCount } from '@/hooks/useMessages';
+import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -28,44 +26,18 @@ const useFavoritesSafe = (): { favorites: { length: number } } => {
   }
 };
 
-const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
-  try {
-    const filtersAccessor = resolveExportedFunction<() => { updateFilters: (next: any) => void }>(
-      FiltersProviderModule as unknown as Record<string, unknown>,
-      'useFilters'
-    );
-    const ctx = typeof filtersAccessor === 'function' ? filtersAccessor() : null;
-    if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
-  } catch {
-    // no-op fallback to avoid runtime crashes when chunk exports drift
-  }
-  return { updateFilters: () => {} };
-};
-
 type CustomHeaderAccountSectionProps = {
   activePath: string;
   isMobile: boolean;
   styles: any;
 };
 
-function FiltersProviderSafe({ children }: { children: React.ReactNode }) {
-  const Provider = (FiltersProviderModule as unknown as { FiltersProvider?: React.ComponentType<{ children: React.ReactNode }> }).FiltersProvider;
-  if (typeof Provider !== 'function') {
-    return <>{children}</>;
-  }
-  return <Provider>{children}</Provider>;
-}
-
 export default function CustomHeaderAccountSection({
   activePath,
   isMobile,
   styles,
 }: CustomHeaderAccountSectionProps) {
-  return (
-    <FiltersProviderSafe>
-      <CustomHeaderAccountSectionInner activePath={activePath} isMobile={isMobile} styles={styles} />
-    </FiltersProviderSafe>
-  );
+  return <CustomHeaderAccountSectionInner activePath={activePath} isMobile={isMobile} styles={styles} />;
 }
 
 function CustomHeaderAccountSectionInner({
@@ -78,10 +50,12 @@ function CustomHeaderAccountSectionInner({
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const mobileMenuOpenedAtRef = useRef(0);
   const [avatarLoadError, setAvatarLoadError] = useState(false);
-  const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
+  const { isAuthenticated, username, logout, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavoritesSafe();
-  const { updateFilters } = useFiltersSafe();
-  const { count: unreadCount } = useUnreadCount(isAuthenticated && mobileMenuVisible, mobileMenuVisible);
+  const { count: unreadCount } = useDeferredUnreadCount(
+    isAuthenticated && mobileMenuVisible,
+    mobileMenuVisible
+  );
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -136,11 +110,8 @@ function CustomHeaderAccountSectionInner({
   );
 
   const handleMyTravels = useCallback(() => {
-    const numericUserId = userId ? Number(userId) : undefined;
-    handleUserAction('/metravel', () => {
-      updateFilters({ user_id: numericUserId });
-    });
-  }, [handleUserAction, updateFilters, userId]);
+    handleUserAction('/metravel');
+  }, [handleUserAction]);
 
   const handleLogout = useCallback(async () => {
     await logout();

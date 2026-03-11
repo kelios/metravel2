@@ -113,6 +113,52 @@ export default function RootLayout() {
     return <RootLayoutNav />;
 }
 
+function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
+  const [isReady, setIsReady] = useState(!isWeb || !isTravelRoute);
+
+  useEffect(() => {
+    if (!isWeb || !isMounted) return;
+
+    if (!isTravelRoute) {
+      setIsReady(true);
+      return;
+    }
+
+    setIsReady(false);
+
+    let revealed = false;
+    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (revealed) return;
+      revealed = true;
+      setIsReady(true);
+    }, 4200);
+
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      if (revealTimer) {
+        clearTimeout(revealTimer);
+        revealTimer = null;
+      }
+      setIsReady(true);
+    };
+
+    window.addEventListener('pointerdown', reveal, { passive: true, once: true });
+    window.addEventListener('keydown', reveal, { once: true });
+    window.addEventListener('scroll', reveal, { passive: true, once: true });
+
+    return () => {
+      revealed = true;
+      if (revealTimer) clearTimeout(revealTimer);
+      window.removeEventListener('pointerdown', reveal as EventListener);
+      window.removeEventListener('keydown', reveal as EventListener);
+      window.removeEventListener('scroll', reveal as EventListener);
+    };
+  }, [isMounted, isTravelRoute]);
+
+  return isReady;
+}
+
 	function RootLayoutNav() {
 	    const pathname = usePathname();
 	    const colorScheme = useColorScheme();
@@ -302,7 +348,8 @@ function ThemedContent({
   const favoritesDeferMode =
     isTravelRoute ? 'interaction' : 'idle';
   const authDeferMode =
-    isTravelRoute ? 'idle' : 'idle';
+    isTravelRoute ? 'interaction' : 'idle';
+  const showRootWebDeferredChrome = useDeferredRootWebChrome(isTravelRoute, isMounted);
 
   const bottomGutter = useMemo(() => {
     if (!showFooter || !isMobile) return null;
@@ -364,7 +411,7 @@ function ThemedContent({
                                 </React.Suspense>
                               ) : null}
 
-                              {isWeb && isMounted && (
+                              {isWeb && isMounted && showRootWebDeferredChrome && (
                                 <React.Suspense fallback={null}>
                                   <RootWebDeferredChromeLazy
                                     isMobile={isMobile}

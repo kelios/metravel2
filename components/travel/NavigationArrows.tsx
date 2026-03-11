@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Feather from '@expo/vector-icons/Feather';
@@ -12,8 +12,8 @@ import type { Travel } from '@/types/types';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 
 interface NavigationArrowsProps {
@@ -28,8 +28,8 @@ function NavigationArrows({
   onNavigate,
 }: NavigationArrowsProps) {
   const router = useRouter();
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 
   // Находим текущее путешествие в списке похожих

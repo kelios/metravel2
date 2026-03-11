@@ -5,7 +5,7 @@
 import React, { Suspense } from 'react'
 import renderer, { act } from 'react-test-renderer'
 
-import { Platform } from 'react-native'
+import { Platform, StyleSheet, useWindowDimensions } from 'react-native'
 import { __testables } from '@/components/travel/details/TravelDetailsHero'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
@@ -40,14 +40,13 @@ jest.mock('@/utils/toast', () => ({
   showToast: jest.fn(),
 }))
 
-jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({
-    width: 390,
-    height: 1000,
-    isPhone: true,
-    isLargePhone: false,
-  }),
-}))
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native')
+  return {
+    ...RN,
+    useWindowDimensions: () => ({ width: 390, height: 1000 }),
+  }
+})
 
 describe('TravelHeroSection mobile image fit', () => {
   beforeEach(() => {
@@ -157,11 +156,14 @@ describe('TravelHeroSection mobile image fit', () => {
       await Promise.resolve()
     })
 
-    const heroSection = tree!.root.findByProps({ testID: 'travel-details-hero' })
-    const sliderContainer = heroSection.findAll(
-      (node) => node.props?.style && Array.isArray(node.props.style) && node.props.style.some((style: any) => style?.height === 700),
-    )[0]
-
+    const sliderContainer = tree!.root.findByProps({
+      testID: 'travel-details-hero-slider-container',
+    })
     expect(sliderContainer).toBeTruthy()
+    const flattenedStyle = StyleSheet.flatten(sliderContainer.props.style)
+    const viewport = useWindowDimensions()
+    expect(flattenedStyle.height).toBeGreaterThanOrEqual(
+      Math.round(viewport.height * 0.7),
+    )
   })
 })

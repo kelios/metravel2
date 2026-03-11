@@ -1,13 +1,17 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
 
 export const TravelDetailPageSkeleton: React.FC = () => {
   const colors = useThemedColors();
-  const { isMobile, isTablet } = useResponsive();
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
+  const isTablet =
+    width >= METRICS.breakpoints.tablet &&
+    width < METRICS.breakpoints.largeTablet;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {

@@ -46,12 +46,7 @@ interface AuthActions {
 
 export type AuthStore = AuthState & AuthActions;
 
-// Epoch counter to guard against races where an in-flight auth check
-// finishes after logout and re-applies stale authenticated state.
-let authEpoch = 0;
-
-export const useAuthStore = create<AuthStore>((set, get) => ({
-    // --- state ---
+export const INITIAL_AUTH_STATE: AuthState = {
     isAuthenticated: false,
     username: '',
     isSuperuser: false,
@@ -59,6 +54,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     userAvatar: null,
     authReady: false,
     profileRefreshToken: 0,
+};
+
+// Epoch counter to guard against races where an in-flight auth check
+// finishes after logout and re-applies stale authenticated state.
+let authEpoch = 0;
+
+export const useAuthStore = create<AuthStore>((set, get) => ({
+    // --- state ---
+    ...INITIAL_AUTH_STATE,
 
     // --- setters ---
     setIsAuthenticated: (v) => set({ isAuthenticated: v }),
@@ -324,3 +328,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return await setNewPasswordApi(token, newPassword);
     },
 }));
+
+export const resetAuthStoreForTests = () => {
+    authEpoch = 0;
+    useAuthStore.setState(INITIAL_AUTH_STATE);
+};

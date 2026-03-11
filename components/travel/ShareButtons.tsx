@@ -5,14 +5,14 @@
  */
 
 import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { Travel } from '@/types/types';
 import { ExportStage } from '@/types/pdf-export';
+import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
@@ -45,8 +45,8 @@ interface ShareButtonsProps {
 }
 
 function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
   const isSticky = variant === 'sticky';
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
 

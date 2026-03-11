@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type ToggleableMapSectionProps = {
@@ -27,9 +27,10 @@ const ToggleableMapSection = ({
 }: ToggleableMapSectionProps) => {
     const [showMap, setShowMap] = useState(initiallyOpen);
     const [hasOpened, setHasOpened] = useState(initiallyOpen);
-    const { isPhone, isDesktop } = useResponsive();
+    const { width } = useWindowDimensions();
+    const isMobile = width < METRICS.breakpoints.tablet;
+    const isDesktop = width >= METRICS.breakpoints.desktop;
     const colors = useThemedColors();
-    const isMobile = isPhone;
     // TD-04: ref для Intersection Observer (web desktop — авто-открытие при прокрутке до карты)
     const wrapperRef = useRef<View>(null);
 

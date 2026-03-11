@@ -346,7 +346,7 @@ describe('AccountMenu', () => {
     });
   });
 
-  it('updates filters when navigating to my travels', async () => {
+  it('navigates directly to my travels without filters context', async () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       username: 'testuser',
@@ -367,7 +367,8 @@ describe('AccountMenu', () => {
     fireEvent.press(getByText('Мои путешествия'));
 
     await waitFor(() => {
-      expect(mockUpdateFilters).toHaveBeenCalledWith({ user_id: 1 });
+      expect(mockUpdateFilters).not.toHaveBeenCalled();
+      expect(router.push).toHaveBeenCalledWith('/metravel');
     });
   });
 

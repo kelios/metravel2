@@ -13,14 +13,15 @@ import {
   View,
   Platform,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Title } from '@/ui/paper';
 
 import { Travel } from '@/types/types';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
+import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { useNearTravelData } from '@/hooks/useNearTravelData';
@@ -218,7 +219,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
      embedded = false,
    }) => {
     const [viewMode, setViewMode] = useState<Segment>('list');
-    const { isPhone, isLargePhone, isTablet, width } = useResponsive();
+    const { width } = useWindowDimensions();
+    const isMobile = width < METRICS.breakpoints.tablet;
+    const isTablet =
+      width >= METRICS.breakpoints.tablet &&
+      width < METRICS.breakpoints.largeTablet;
     const colors = useThemedColors();
     const scrollViewRef = useRef<ScrollView>(null);
     const segmentOptions = useMemo(
@@ -229,12 +234,14 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       []
     );
 
-    const isMobile = isPhone || isLargePhone;
-
     const mapHeight = useMemo(() => isMobile ? 320 : isTablet ? 400 : 500, [isMobile, isTablet]);
     const listHeight = useMemo(() => isMobile ? 'auto' : isTablet ? 500 : 600, [isMobile, isTablet]);
 
-    const numColumns = useMemo(() => width <= 640 ? 1 : width <= 1024 ? 2 : 3, [width]);
+    const numColumns = useMemo(() => {
+      if (width < METRICS.breakpoints.tablet) return 1;
+      if (width < METRICS.breakpoints.largeTablet) return 2;
+      return 3;
+    }, [width]);
     const loadMoreCount = useMemo(() => isMobile ? 4 : isTablet ? 6 : 8, [isMobile, isTablet]);
 
     const travelId = useMemo(() => {

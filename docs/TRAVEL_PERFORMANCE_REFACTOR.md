@@ -176,6 +176,22 @@ Critical shell должен:
 - Сделано: export UI списка путешествий вынесен из eager `ListTravel` path в lazy `ListTravelExportControls`; сам route chunk списка стал тоньше, а `BookSettingsModal`/export chrome больше не сидят в базовом `ListTravel` модуле.
 - Сделано: тяжелая runtime-логика `usePdfExport` вынесена из самого hook в отдельный lazy `usePdfExportRuntime`; eager shared path теперь держит только тонкий shell-hook, а `fetchTravel*`/preview/service orchestration загружаются только при фактическом export action.
 - Сделано: `openBookPreviewWindow`/`openPendingBookPreviewWindow` больше не импортируются eagerly из quest/pdf runtime path; helper вынесен в отдельный lazy chunk и теперь поднимается только в момент фактического открытия print preview.
+- Сделано: `TravelDetailsContainer` больше не импортирует `authStore` в eager travel route path только ради desktop sidebar; auth flags для edit/download controls теперь читаются внутри уже lazy `CompactSideBarTravel`.
+- Сделано: global `ScrollToTopButton` из `app/(tabs)/_layout` больше не монтируется на travel details route; страница использует только свой route-scoped deferred scroll-to-top control без дублирующего scroll listener из tabs layout.
+- Сделано: header account/menu chrome больше не импортирует `useMessages` top-level только ради unread badge; unread count теперь загружается через on-demand `useDeferredUnreadCount` и тянет messaging API лишь при реальном открытии account/mobile menu.
+- Сделано: header account/menu chrome больше не тянет `FiltersProvider`/`resolveExportedFunction` top-level ради пункта `Мои путешествия`; переход на `/metravel` не требует filters context, поэтому этот shared runtime убран из header path.
+- Сделано: tabs layout больше не монтирует `CustomHeader` сразу на web travel details route; для `/travels/*` остаётся только зарезервированная высота без CLS, а сам header shell поднимается после interaction/scroll или по таймауту, чтобы не конкурировать с critical travel content.
+- Сделано: `RootWebDeferredChrome` больше не монтирует `WebAppRuntimeEffects` сразу на web travel route; unhandled-rejection/history/focus runtime теперь поднимается после interaction/scroll или по таймауту, а не участвует в раннем post-hydration path travel page.
+- Сделано: `RootWebDeferredChrome` больше не импортирует `utils/consent` сразу на web travel route только ради отложенного cookie banner; consent check теперь загружается только когда баннер реально может понадобиться.
+- Сделано: root layout больше не монтирует сам `RootWebDeferredChrome` сразу на `/travels/*`; deferred root web chrome chunk теперь подключается только после interaction/scroll или по таймауту, а не входит в ранний hydration path travel route.
+- Сделано: auth bootstrap отделён от mount `AuthProvider`: `AppProviders` теперь может поднять `checkAuthentication()` заранее даже при deferred provider, а сам `AuthProvider` на travel route переведён в `interaction`-defer и больше не обязан участвовать в раннем shared path только ради первичной auth инициализации.
+- Сделано: bootstrap данных `FavoritesProvider` отделён от mount самого provider: `AppProviders` теперь может через dynamic import заранее прогреть local/server cached favorites/history/recommendations even при deferred provider, чтобы favourites-runtime не блокировал ранний shared path и не переносил всю cache warmup работу на момент mount.
+- Сделано: ранний `TravelDetailsContainer` больше не тянет широкий `useResponsive` только ради `width/isMobile`; первый экран travel route теперь использует лёгкий route-local расчёт через `useWindowDimensions`, а shell styles строятся без лишнего wrapper-hook `useTravelDetailsShellStyles`.
+- Сделано: `useTravelHeroState` больше не тянет shared `useResponsive` в hero-path только ради viewport width/height; LCP hero model переведён на локальный `useWindowDimensions`, чтобы early travel media path меньше зависел от широкого responsive runtime.
+- Сделано: travel-only модули `TravelDescription`, `TravelDetailPageSkeleton` и `useInsightsControl` больше не тянут общий `useResponsive` только ради простого width/mobile/tablet branching; для них оставлен локальный `useWindowDimensions`, чтобы content/skeleton/insights path меньше зависел от shared responsive runtime.
+- Сделано: `TravelSectionTabs`, `QuickFacts` и `NavigationArrows` тоже переведены с shared `useResponsive` на локальный `useWindowDimensions`; even в lazy/travel-only UI это убирает ещё несколько лишних responsive consumers из route-specific path.
+- Сделано: `PopularTravelList`, `NearTravelList` и lazy `CompactSideBarTravel` больше не используют shared `useResponsive` только ради width/tablet/mobile branching; related/sidebar travel UI тоже переведён на локальный `useWindowDimensions`.
+- Сделано: deferred engagement/map UI (`ToggleableMapSection`, `ShareButtons`, `CTASection`, `PersonalizedRecommendations`) тоже переведён с `useResponsive` на локальный `useWindowDimensions`; это ещё сильнее изолирует travel-specific responsive logic от общего shared hook path.
 - В работе: дальнейшее сокращение initial JS и audit того, что еще попадает в route/common chunks раньше необходимости.
 
 Последний production build после текущих shared-path правок:
@@ -187,6 +203,7 @@ Critical shell должен:
 - `BookHtmlExportService-*`: отдельный lazy chunk около `12 KB`
 - `openBookPreviewWindow-*`: отдельный lazy chunk около `1.7 KB`
 - `TravelDetailsContainer-*`: около `50 KB`
+- `CompactSideBarTravel-*`: около `20 KB`
 - `TravelDetailsDeferred-*`: около `27 KB`
 - `TravelDetailsMapSection-*`: около `73 KB`
 - `mapImageGenerator-*`: отдельный lazy chunk около `9.5 KB`
@@ -207,6 +224,22 @@ Critical shell должен:
 - `usePdfExport` переведен на two-layer схему: легкий hook-shell остается в shared path, а runtime с `fetchTravel`/`fetchTravelBySlug`/`openBookPreviewWindow`/`BookHtmlExportService` оркестрацией уезжает в отдельный lazy chunk только по export interaction.
 - production build после этого показывает отдельный `usePdfExportRuntime-*` chunk около `5.2 KB` и `BookHtmlExportService-*` около `12 KB`; `__common` остается большим, но уже без прежней полной PDF runtime-цепочки внутри hook-модуля.
 - `openBookPreviewWindow` дополнительно вынесен в собственный lazy chunk около `1.7 KB`, потому что helper больше не импортируется top-level ни из `usePdfExportRuntime`, ни из `QuestPrintable`.
+- auth/runtime flags для desktop travel sidebar вынесены из eager `TravelDetailsContainer` в lazy `CompactSideBarTravel`; это не решает проблему большого `__common` целиком, но очищает сам route path от ещё одного shared-state импорта.
+- tabs layout больше не поднимает duplicate `GlobalScrollToTop` chrome на `/travels/*`; это сокращает post-hydration runtime noise на travel page, хотя главный bundle reserve всё ещё остаётся в `entry/__common`.
+- messaging unread badge убран из eager header shell path: вместо top-level `useMessages` header использует lightweight deferred hook с dynamic import `fetchUnreadCount`, чтобы account/menu UX не удерживал messaging runtime в раннем shared path.
+- `Мои путешествия` в header/menu больше не держит filters context в eager shared path: `/metravel` сам определяет current user route-level логикой, поэтому header может навигировать напрямую без `FiltersProvider`.
+- `CustomHeader` больше не монтируется сразу из tabs layout на web travel route: reserved header slot остаётся стабильным для CLS, а сам header chunk подтягивается только после interaction/scroll либо по таймауту, что уменьшает post-hydration competition в первом экране travel page.
+- `WebAppRuntimeEffects` больше не поднимается immediately из `RootWebDeferredChrome` на `/travels/*`; route-level focus/history/unhandled-rejection runtime теперь отложен так же, как остальной deferred web chrome, чтобы не конкурировать с first-screen hydration.
+- `utils/consent` больше не импортируется на mount из `RootWebDeferredChrome` для `/travels/*`; cookie consent runtime поднимается только в момент реальной проверки/показа banner, а не заранее в post-hydration phase.
+- `RootWebDeferredChrome` chunk больше не монтируется сразу из root layout на `/travels/*`; весь deferred root web chrome теперь начинает жить только после interaction/scroll либо по таймауту, что дополнительно очищает самый ранний root path travel route.
+- `AuthProvider` больше не нужен в раннем travel shared path ради bootstrap-аутентификации: store-level `checkAuthentication()` теперь стартует отдельно из `AppProviders`, а provider listeners/runtime могут подключаться позже по `interaction`-сценарию без потери раннего auth state.
+- `FavoritesProvider` больше не обязан монтироваться рано только ради cache warmup: `AppProviders` отдельно прогревает favorites/history/recommendations stores через dynamic import, а сам provider остаётся deferred и подключается уже позже.
+- `TravelDetailsContainer` больше не держит в раннем route path тяжёлый shared hook `useResponsive` только ради базового mobile-width branching; для critical shell оставлен более дешёвый локальный responsive расчёт.
+- `useTravelHeroState` больше не удерживает `useResponsive` в hero runtime path; размеры viewport для LCP/slider handoff теперь берутся из локального `useWindowDimensions`, что сокращает зависимость first-screen media logic от общего responsive слоя.
+- `TravelDescription`, `TravelDetailPageSkeleton` и `useInsightsControl` тоже переведены на локальный `useWindowDimensions`; это не даёт большого aggregate size win, но продолжает вычищать travel-only responsive consumers из общего shared hook path.
+- `TravelSectionTabs`, `QuickFacts` и `NavigationArrows` по той же схеме перестали зависеть от `useResponsive`; это по-прежнему скорее structural cleanup, чем заметное уменьшение aggregate bundle numbers, но shared responsive слой участвует в travel UI всё меньше.
+- `PopularTravelList`, `NearTravelList` и `CompactSideBarTravel` продолжили ту же серию: даже lazy related/sidebar блоки меньше зависят от общего responsive hook path, хотя это всё ещё cleanup структуры, а не крупный size win.
+- `ToggleableMapSection`, `ShareButtons`, `CTASection` и `PersonalizedRecommendations` по той же схеме перестали тянуть `useResponsive`; это уже почти добирает безопасные travel-only/deferred consumers без захода в глобальный responsive слой.
 
 ### Этап 1. Зафиксировать baseline и бюджет
 

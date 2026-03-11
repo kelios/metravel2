@@ -299,6 +299,56 @@ describe('useTravelFormData', () => {
     expect(sentPayload2.description).not.toBe('__draft_placeholder__');
   });
 
+  it('autosave keeps current rich text in form state for existing travel to avoid editor reset loops', async () => {
+    const rawHtml = '<p class="ql-align-center">Свежий текст</p>';
+    const sanitizedHtml = '<p>Свежий текст</p>';
+
+    (fetchTravel as jest.Mock).mockResolvedValue({
+      id: 123,
+      name: 'Existing travel',
+      description: '<p>Server text</p>',
+      user: { id: 42 },
+      coordsMeTravel: [],
+      countries: [],
+      categories: [],
+    });
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({
+      ...payload,
+      description: sanitizedHtml,
+    }));
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: '123',
+          isNew: false,
+          userId: '42',
+          isSuperAdmin: true,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        name: 'Existing travel',
+        description: rawHtml,
+      });
+    });
+
+    await act(async () => {
+      await result.current.autosave.saveNow();
+    });
+
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    expect((result.current.formData as any).description).toBe(rawHtml);
+    expect((result.current.formData as any).description).not.toBe(sanitizedHtml);
+  });
+
   it('manual save merges dataOverride placeholders with current snapshot (publish override only)', async () => {
     const html = '<p>test</p>';
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload }));
@@ -1187,6 +1237,7 @@ describe('useTravelFormData', () => {
     it('rethrows manual save errors after showing toast', async () => {
       const saveError = new Error('Network error');
       (saveFormData as jest.Mock).mockRejectedValue(saveError);
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       const { result } = renderHook(
         () =>
@@ -1211,6 +1262,7 @@ describe('useTravelFormData', () => {
       });
 
       await expect(result.current.handleManualSave()).rejects.toThrow('Network error');
+      consoleErrorSpy.mockRestore();
     });
   });
 });

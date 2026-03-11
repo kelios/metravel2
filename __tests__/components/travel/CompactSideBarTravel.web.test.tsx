@@ -8,6 +8,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
+const mockAuthState = {
+  isSuperuser: false,
+  userId: null as string | null,
+};
+
+jest.mock('@/stores/authStore', () => ({
+  __esModule: true,
+  useAuthStore: (selector: (state: typeof mockAuthState) => unknown) => selector(mockAuthState),
+}));
+
 jest.mock('@/hooks/useUserProfileCached', () => ({
   __esModule: true,
   useUserProfileCached: () => ({
@@ -100,8 +110,6 @@ const defaultProps = {
   isMobile: false,
   onNavigate: jest.fn(),
   closeMenu: jest.fn(),
-  isSuperuser: false,
-  storedUserId: null,
   activeSection: '',
   links: mockLinks,
 };
@@ -114,6 +122,8 @@ describe('CompactSideBarTravel - Web', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthState.isSuperuser = false;
+    mockAuthState.userId = null;
   });
 
   describe('Рендеринг компонентов', () => {
@@ -274,7 +284,9 @@ describe('CompactSideBarTravel - Web', () => {
     });
 
     it('кнопки действий должны иметь hover эффект', () => {
-      const propsWithEdit = { ...defaultProps, isSuperuser: true, storedUserId: 'user-1' };
+      mockAuthState.isSuperuser = true;
+      mockAuthState.userId = 'user-1';
+      const propsWithEdit = { ...defaultProps };
       const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithEdit} />);
 
       const actionButtons = UNSAFE_getAllByProps({ 'data-action-btn': true });
@@ -290,7 +302,8 @@ describe('CompactSideBarTravel - Web', () => {
 
   describe('Права доступа', () => {
     it('должен показывать кнопку редактирования для владельца', async () => {
-      const propsWithEdit = { ...defaultProps, storedUserId: 'user-1' };
+      mockAuthState.userId = 'user-1';
+      const propsWithEdit = { ...defaultProps };
       render(<CompactSideBarTravel {...propsWithEdit} />);
 
       await waitFor(() => {
@@ -299,7 +312,8 @@ describe('CompactSideBarTravel - Web', () => {
     });
 
     it('должен показывать кнопку редактирования для суперпользователя', async () => {
-      const propsWithSuper = { ...defaultProps, isSuperuser: true };
+      mockAuthState.isSuperuser = true;
+      const propsWithSuper = { ...defaultProps };
       render(<CompactSideBarTravel {...propsWithSuper} />);
 
       await waitFor(() => {
@@ -308,7 +322,8 @@ describe('CompactSideBarTravel - Web', () => {
     });
 
     it('не должен показывать кнопку редактирования для чужого пользователя', () => {
-      const propsNoEdit = { ...defaultProps, storedUserId: 'other-user' };
+      mockAuthState.userId = 'other-user';
+      const propsNoEdit = { ...defaultProps };
       render(<CompactSideBarTravel {...propsNoEdit} />);
 
       const editButton = screen.queryByLabelText('Редактировать путешествие');

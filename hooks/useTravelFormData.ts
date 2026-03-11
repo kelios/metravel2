@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useContext } from 'react';
+import isEqual from 'fast-deep-equal';
 import { useRouter } from 'expo-router';
 import { QueryClientContext } from '@tanstack/react-query';
 import { fetchTravel } from '@/api/travelsApi';
@@ -314,7 +315,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, [stableTravelId]);
 
   const applySavedData = useCallback(
-    (savedData: TravelFormData, sourceData?: TravelFormData) => {
+    (
+      savedData: TravelFormData,
+      sourceData?: TravelFormData,
+      options?: { preserveEditingState?: boolean }
+    ) => {
       // ✅ FIX: Проверяем монтирование перед обновлением состояния
       if (!mountedRef.current) return;
 
@@ -336,6 +341,12 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       });
       kf('name', 'nil');
       kf('name', 'emptyString');
+
+      if (options?.preserveEditingState) {
+        (['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach((key) => {
+          normalizedSavedData[key] = currentDataSnapshot[key];
+        });
+      }
 
       // If backend returns empty arrays for filter fields, don't wipe user selections.
       (['categories', 'transports', 'complexity', 'companions', 'over_nights_stay', 'month'] as const).forEach(k => {
@@ -382,12 +393,23 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         coordsMeTravel: effectiveMarkers,
       };
 
-      pendingBaselineRef.current = finalData;
-      formState.reset(finalData);
-      formDataRef.current = finalData as TravelFormData;
-      setMarkers(effectiveMarkers);
-      updateBaselineRef.current?.(finalData);
-      pendingBaselineRef.current = null;
+      const shouldSkipFormReset =
+        options?.preserveEditingState === true &&
+        hadId &&
+        hasId &&
+        isEqual(finalData, currentDataSnapshot);
+
+      if (shouldSkipFormReset) {
+        formDataRef.current = currentDataSnapshot;
+        updateBaselineRef.current?.(currentDataSnapshot);
+      } else {
+        pendingBaselineRef.current = finalData;
+        formState.reset(finalData);
+        formDataRef.current = finalData as TravelFormData;
+        setMarkers(effectiveMarkers);
+        updateBaselineRef.current?.(finalData);
+        pendingBaselineRef.current = null;
+      }
 
       const travelIdForRefresh = normalizeTravelId((finalData as unknown)?.id) ?? stableTravelId;
       void (async () => {
@@ -410,8 +432,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         await uploadPendingMarkerImages(markersForUpload);
       })();
 
-      // ✅ FIX: Обновляем версию данных при получении с сервера
-      setDataVersion(prev => prev + 1);
+      // ✅ FIX: Обновляем версию данных при получении с сервера только когда реально меняем форму
+      if (!shouldSkipFormReset) {
+        setDataVersion(prev => prev + 1);
+      }
 
       // When a new travel is created and receives an id, invalidate "travels" lists
       // so "Мои путешествия" can show the new draft without a hard refresh.
@@ -429,7 +453,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (!mountedRef.current) return;
 
       // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
-      applySavedData(savedData);
+      applySavedData(savedData, formDataRef.current, { preserveEditingState: true });
     },
     [applySavedData]
   );

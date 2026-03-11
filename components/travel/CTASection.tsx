@@ -4,14 +4,14 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
+import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -24,8 +24,8 @@ interface CTASectionProps {
 function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
   const router = useRouter();
   const colors = useThemedColors();
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
   const { isAuthenticated } = useAuth();
   const { loginHref, requireAuth } = useRequireAuth({ intent: 'create-book' });
   const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();

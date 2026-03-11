@@ -13,6 +13,7 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,9 +21,7 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
 import Head from 'expo-router/head';
 import { METRICS } from '@/constants/layout';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelDetails } from '@/hooks/travel-details';
-import { useAuthStore } from '@/stores/authStore';
 
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import InstantSEO from "@/components/seo/LazyInstantSEO";
@@ -32,7 +31,7 @@ import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
-import { useTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
+import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
@@ -112,8 +111,8 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 /* =================================================================== */
 
 export default function TravelDetailsContainer() {
-  const { isMobile, width: responsiveWidth } = useResponsive();
-  const screenWidth = responsiveWidth;
+  const { width: screenWidth } = useWindowDimensions();
+  const isMobile = screenWidth < METRICS.breakpoints.tablet;
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const router = useRouter();
@@ -127,7 +126,7 @@ export default function TravelDetailsContainer() {
   /* ✅ PHASE 2: Accessibility Hooks */
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
   const themedColors = useThemedColors();
-  const styles = useTravelDetailsShellStyles();
+  const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors]);
 
   // Web: avoid large layout shifts when switching from page skeleton → real content.
   // Keep skeleton mounted briefly and fade it out (no layout collapse).
@@ -485,10 +484,6 @@ export default function TravelDetailsContainer() {
   //   }
   // }, [travel?.id, queryClient]);
 
-  /* ---- user flags ---- */
-  const isSuperuser = useAuthStore((state) => state.isSuperuser);
-  const userId = useAuthStore((state) => state.userId);
-
   /* -------------------- SEO (must mount before early returns) -------------------- */
   // ⚠️ CRITICAL: InstantSEO must render from the FIRST render, not after async data loads.
   // react-helmet-async has a race condition on direct page loads: if a Helmet instance
@@ -637,7 +632,7 @@ export default function TravelDetailsContainer() {
           {/* If travel isn't ready yet, we still render the stable chrome underneath */}
           {/* (side menu/progress/scroll) but keep heavy sections gated */}
 
-          {!isMobile && responsiveWidth >= METRICS.breakpoints.largeTablet && travel && (
+          {!isMobile && screenWidth >= METRICS.breakpoints.largeTablet && travel && (
             <View style={sideMenuContainerStyle}>
               <Defer when={deferAllowed}>
                 <Animated.View
@@ -647,8 +642,6 @@ export default function TravelDetailsContainer() {
                   <Suspense fallback={<SectionSkeleton lines={8} />}>
                     <CompactSideBarTravel
                       travel={travel}
-                      isSuperuser={isSuperuser}
-                      storedUserId={userId}
                       isMobile={isMobile}
                       refs={anchors}
                       links={sectionLinks}
@@ -707,7 +700,7 @@ export default function TravelDetailsContainer() {
                       />
                     </View>
 
-                    {responsiveWidth < METRICS.breakpoints.largeTablet &&
+                    {screenWidth < METRICS.breakpoints.largeTablet &&
                       sectionLinks.length > 0 &&
                       criticalChromeReady && (
                       <Defer when={deferredChromeReady}>

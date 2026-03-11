@@ -3,8 +3,18 @@ import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/types/types';
 import { useRouter } from 'expo-router';
 
+const mockAuthState = {
+  isSuperuser: false,
+  userId: null as string | null,
+};
+
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
+}));
+
+jest.mock('@/stores/authStore', () => ({
+  __esModule: true,
+  useAuthStore: (selector: (state: typeof mockAuthState) => unknown) => selector(mockAuthState),
 }));
 
 jest.mock('@/hooks/useUserProfileCached', () => ({
@@ -98,12 +108,12 @@ describe('CompactSideBarTravel', () => {
     isMobile: false,
     onNavigate: jest.fn(),
     closeMenu: jest.fn(),
-    isSuperuser: false,
-    storedUserId: null,
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthState.isSuperuser = false;
+    mockAuthState.userId = null;
     (useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
     });
@@ -216,6 +226,7 @@ describe('CompactSideBarTravel', () => {
   });
 
   it('should render edit button when user can edit', () => {
+    mockAuthState.userId = '123';
     const travel = createMockTravel({
       userId: '123',
     } as any);
@@ -224,7 +235,6 @@ describe('CompactSideBarTravel', () => {
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}
-        storedUserId="123"
       />
     );
 
@@ -240,8 +250,6 @@ describe('CompactSideBarTravel', () => {
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}
-        isSuperuser={false}
-        storedUserId={null}
       />
     );
 
@@ -249,6 +257,7 @@ describe('CompactSideBarTravel', () => {
   });
 
   it('should render edit button for superuser even if not owner', () => {
+    mockAuthState.isSuperuser = true;
     const travel = createMockTravel({
       userId: '999',
     } as any);
@@ -257,8 +266,6 @@ describe('CompactSideBarTravel', () => {
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}
-        isSuperuser={true}
-        storedUserId={null}
       />
     );
 

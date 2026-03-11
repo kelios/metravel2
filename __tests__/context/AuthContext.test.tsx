@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { resetAuthStoreForTests } from '@/stores/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/api/auth';
 import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
@@ -49,6 +50,7 @@ const TestComponent: React.FC<{ onContext?: (ctx: any) => void }> = ({ onContext
 describe('AuthContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetAuthStoreForTests();
     (AsyncStorage as any).__reset?.();
   });
 

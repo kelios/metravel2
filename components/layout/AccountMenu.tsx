@@ -8,38 +8,21 @@ import ThemeToggle from '@/components/layout/ThemeToggle';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import * as FiltersProviderModule from '@/context/FiltersProvider';
-import { resolveExportedFunction } from '@/utils/moduleInterop';
-import { useUnreadCount } from '@/hooks/useMessages';
+import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
-const useFiltersSafe = (): { updateFilters: (next: any) => void } => {
-  try {
-    const filtersAccessor = resolveExportedFunction<() => { updateFilters: (next: any) => void }>(
-      FiltersProviderModule as unknown as Record<string, unknown>,
-      'useFilters'
-    );
-    const ctx = typeof filtersAccessor === 'function' ? filtersAccessor() : null;
-    if (ctx && typeof ctx.updateFilters === 'function') return ctx as any;
-  } catch {
-    // no-op fallback to avoid runtime crashes when context hook export drifts
-  }
-  return { updateFilters: () => {} };
-};
-
 function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavorites();
-  const { updateFilters } = useFiltersSafe();
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [avatarLoadError, setAvatarLoadError] = useState(false);
-  const { count: unreadCount } = useUnreadCount(isAuthenticated && visible, visible);
+  const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible);
   const [expandedSections, setExpandedSections] = useState({
     navigation: true,
     travels: true,
@@ -475,12 +458,7 @@ function AccountMenu() {
                 titleStyle={styles.menuItemTitle}
               />
               <Menu.Item
-                onPress={() =>
-                  handleNavigate('/metravel', () => {
-                    const numericUserId = userId ? Number(userId) : undefined;
-                    updateFilters({ user_id: numericUserId });
-                  })
-                }
+                onPress={() => handleNavigate('/metravel')}
                 title="Мои путешествия"
                 leadingIcon={({ size }) => <Feather name="map" size={size} color={styles.iconMuted.color} />}
                 style={styles.menuItem}

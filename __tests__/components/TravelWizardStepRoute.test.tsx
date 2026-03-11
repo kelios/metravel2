@@ -260,42 +260,6 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         });
     });
 
-    describe('✅ Точка из фото', () => {
-        it.skip('должен сразу сохранять точку после определения адреса и страны', async () => {
-            const onManualSave = jest.fn(async () => undefined);
-            const originalPlatform = Platform.OS;
-            Object.defineProperty(Platform, 'OS', { value: 'web' });
-
-            try {
-                const { getByText } = render(
-                    <TravelWizardStepRoute
-                        {...defaultProps}
-                        onManualSave={onManualSave}
-                    />
-                );
-
-                fireEvent.press(getByText('mock-photo-marker-ready'));
-
-                await waitFor(() => {
-                    expect(onManualSave).toHaveBeenCalledWith(
-                        expect.objectContaining({
-                            countries: ['1'],
-                            coordsMeTravel: expect.arrayContaining([
-                                expect.objectContaining({
-                                    lat: 48.8566,
-                                    lng: 2.3522,
-                                    address: 'Париж, Франция',
-                                }),
-                            ]),
-                        })
-                    );
-                });
-            } finally {
-                Object.defineProperty(Platform, 'OS', { value: originalPlatform });
-            }
-        });
-    });
-
     describe('✅ Ручное добавление точки', () => {
         it('должен показать форму при нажатии кнопки', () => {
             const { getByText, getByPlaceholderText } = render(

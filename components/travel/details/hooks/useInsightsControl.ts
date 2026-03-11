@@ -4,7 +4,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useWindowDimensions } from 'react-native';
+import { METRICS } from '@/constants/layout';
 
 export type InsightKey =
   | 'recommendation'
@@ -43,7 +44,8 @@ export function useInsightsControl(
   options: UseInsightsControlOptions = {}
 ): UseInsightsControlReturn {
   const { defaultInsightKey = null, forceOpenKey = null } = options;
-  const { isMobile } = useResponsive();
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
   const shouldUseMobileInsights = isMobile;
 
   const [mobileInsightKey, setMobileInsightKey] = useState<InsightKey | null>(

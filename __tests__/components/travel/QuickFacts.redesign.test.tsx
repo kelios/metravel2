@@ -15,10 +15,13 @@ import QuickFacts from '@/components/travel/QuickFacts';
 import { ThemeProvider } from '@/hooks/useTheme';
 import type { Travel } from '@/types/types';
 
-// Mock dependencies
-jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({ isPhone: false, isLargePhone: false }),
-}));
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native');
+  return {
+    ...RN,
+    useWindowDimensions: () => ({ width: 1024, height: 768 }),
+  };
+});
 
 const mockTravel: Partial<Travel> = {
   id: 1,

@@ -53,28 +53,84 @@ export default function RootWebDeferredChrome({
 }: RootWebDeferredChromeProps) {
   const [showFooterChrome, setShowFooterChrome] = useState(!isTravelPerformanceRoute)
   const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(!isTravelPerformanceRoute)
+  const [showRuntimeEffects, setShowRuntimeEffects] = useState(!isTravelPerformanceRoute)
   const [showConsentBanner, setShowConsentBanner] = useState(false)
   const [showSkipLinks, setShowSkipLinks] = useState(false)
   const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(false)
 
   useEffect(() => {
+    if (!isTravelPerformanceRoute) {
+      setShowRuntimeEffects(true)
+      return
+    }
+
+    let revealed = false
+    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (revealed) return
+      revealed = true
+      setShowRuntimeEffects(true)
+    }, 5000)
+
+    const reveal = () => {
+      if (revealed) return
+      revealed = true
+      if (revealTimer) {
+        clearTimeout(revealTimer)
+        revealTimer = null
+      }
+      setShowRuntimeEffects(true)
+    }
+
+    window.addEventListener('pointerdown', reveal, { passive: true, once: true })
+    window.addEventListener('keydown', reveal, { once: true })
+    window.addEventListener('scroll', reveal, { passive: true, once: true })
+
+    return () => {
+      revealed = true
+      if (revealTimer) clearTimeout(revealTimer)
+      window.removeEventListener('pointerdown', reveal as EventListener)
+      window.removeEventListener('keydown', reveal as EventListener)
+      window.removeEventListener('scroll', reveal as EventListener)
+    }
+  }, [isTravelPerformanceRoute])
+
+  useEffect(() => {
     let footerTimer: ReturnType<typeof setTimeout> | null = null
     let consentTimer: ReturnType<typeof setTimeout> | null = null
     let rafId: number | null = null
+    let consentCheckTimer: ReturnType<typeof setTimeout> | null = null
+    let consentCheckRevealed = false
 
     const footerDelay = isTravelPerformanceRoute ? 6500 : 0
     footerTimer = setTimeout(() => setShowFooterChrome(true), footerDelay)
 
-    void import('@/utils/consent')
-      .then(({ readConsent }) => {
-        if (readConsent()) return
-        const consentDelay = isTravelPerformanceRoute ? 9000 : 4000
-        consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay)
-      })
-      .catch(() => {
-        const consentDelay = isTravelPerformanceRoute ? 9000 : 4000
-        consentTimer = setTimeout(() => setShowConsentBanner(true), consentDelay)
-      })
+    const maybeShowConsentBanner = () => {
+      if (consentCheckRevealed) return
+      consentCheckRevealed = true
+
+      void import('@/utils/consent')
+        .then(({ readConsent }) => {
+          if (readConsent()) return
+          setShowConsentBanner(true)
+        })
+        .catch(() => {
+          setShowConsentBanner(true)
+        })
+    }
+
+    if (isTravelPerformanceRoute) {
+      consentCheckTimer = setTimeout(() => {
+        maybeShowConsentBanner()
+      }, 9000)
+
+      window.addEventListener('pointerdown', maybeShowConsentBanner, { passive: true, once: true })
+      window.addEventListener('keydown', maybeShowConsentBanner, { once: true })
+      window.addEventListener('scroll', maybeShowConsentBanner, { passive: true, once: true })
+    } else {
+      consentTimer = setTimeout(() => {
+        maybeShowConsentBanner()
+      }, 4000)
+    }
 
     if (typeof document !== 'undefined') {
       rafId = requestAnimationFrame(() => {
@@ -85,7 +141,11 @@ export default function RootWebDeferredChrome({
     return () => {
       if (footerTimer) clearTimeout(footerTimer)
       if (consentTimer) clearTimeout(consentTimer)
+      if (consentCheckTimer) clearTimeout(consentCheckTimer)
       if (rafId != null) cancelAnimationFrame(rafId)
+      window.removeEventListener('pointerdown', maybeShowConsentBanner as EventListener)
+      window.removeEventListener('keydown', maybeShowConsentBanner as EventListener)
+      window.removeEventListener('scroll', maybeShowConsentBanner as EventListener)
     }
   }, [isTravelPerformanceRoute])
 
@@ -162,9 +222,11 @@ export default function RootWebDeferredChrome({
         </React.Suspense>
       )}
 
-      <React.Suspense fallback={null}>
-        <WebAppRuntimeEffectsLazy pathname={pathname} />
-      </React.Suspense>
+      {showRuntimeEffects && (
+        <React.Suspense fallback={null}>
+          <WebAppRuntimeEffectsLazy pathname={pathname} />
+        </React.Suspense>
+      )}
 
       {showServiceWorkerCleanup && (
         <React.Suspense fallback={null}>

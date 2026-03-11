@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   DeviceEventEmitter,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -16,8 +17,8 @@ import { Text } from "@/ui/paper";
 import type { Travel } from "@/types/types";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
 import WeatherWidget from "@/components/home/WeatherWidget";
+import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, useTheme } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Button from '@/components/ui/Button';
@@ -27,6 +28,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { buildTravelRouteDownloadPath } from '@/api/travelRoutes';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles';
+import { useAuthStore } from '@/stores/authStore';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)
 if (Platform.OS === 'web') {
@@ -60,8 +62,6 @@ type SideBarProps = {
   isMobile: boolean;
   onNavigate: (key: keyof SideBarProps["refs"]) => void;
   closeMenu: () => void;
-  isSuperuser: boolean;
-  storedUserId?: string | null;
   activeSection?: string; // ✅ УЛУЧШЕНИЕ: Активная секция при скролле
   links?: TravelSectionLink[];
 };
@@ -72,12 +72,13 @@ function CompactSideBarTravel({
                                 isMobile,
                                 onNavigate,
                                 closeMenu,
-                                isSuperuser,
-                                storedUserId,
                                 activeSection: externalActiveSection, // ✅ УЛУЧШЕНИЕ: Внешняя активная секция
                                 links,
 }: SideBarProps) {
-  const { isTablet } = useResponsive();
+  const { width } = useWindowDimensions();
+  const isTablet =
+    width >= METRICS.breakpoints.tablet &&
+    width < METRICS.breakpoints.largeTablet;
   const isWeb = Platform.OS === 'web';
   const router = useRouter();
   const { isDark } = useTheme();
@@ -85,6 +86,8 @@ function CompactSideBarTravel({
   const styles = useMemo(() => createStyles(themedColors), [themedColors]);
   const textColor = themedColors.text;
   const mutedText = isDark ? themedColors.textMuted : themedColors.textSecondary;
+  const isSuperuser = useAuthStore((state) => state.isSuperuser);
+  const storedUserId = useAuthStore((state) => state.userId);
   const travelOwnerId = useMemo(() => {
     const rawUserIds = (travel as any).userIds;
 
