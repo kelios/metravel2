@@ -225,7 +225,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(galleryAnchors.length).toBeGreaterThan(0)
   })
 
-  it('keeps hero enhancers deferred on web until user interaction', async () => {
+  it('renders hero enhancers immediately once the critical hero shell is shown', async () => {
     const travel: any = {
       id: 3,
       name: 'Enhancer test travel',
@@ -269,16 +269,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
         </Suspense>,
       )
 
-      jest.advanceTimersByTime(3000)
-      await Promise.resolve()
-    })
-
-    expect(mockHeroExtrasSpy).not.toHaveBeenCalled()
-    expect(mockHeroFavoriteToggleSpy).not.toHaveBeenCalled()
-
-    await act(async () => {
-      window.dispatchEvent(new Event('pointerdown'))
-      jest.runAllTimers()
+      jest.advanceTimersByTime(50)
       await Promise.resolve()
     })
 

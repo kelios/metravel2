@@ -200,7 +200,9 @@ export default function TravelDetailsContainer() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    if (!travel) {
+    const criticalShellReady = Boolean(travel) && lcpLoaded
+
+    if (!travel || !criticalShellReady) {
       setSkeletonPhase('loading')
       return
     }
@@ -232,7 +234,7 @@ export default function TravelDetailsContainer() {
       if (raf2 != null) cancelAnimationFrame(raf2)
       if (t) clearTimeout(t)
     }
-  }, [travel])
+  }, [travel, lcpLoaded])
 
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   // Стабильный ключ для <Head> — используем slug (доступен сразу из URL),
@@ -579,6 +581,7 @@ export default function TravelDetailsContainer() {
       <TravelDetailsCriticalShell
         travel={travel}
         isMobile={isMobile}
+        screenWidth={screenWidth}
         wrapperStyle={wrapperStyle}
         styles={styles}
         skeletonPhase={skeletonPhase}
@@ -597,6 +600,12 @@ export default function TravelDetailsContainer() {
         sectionLinks={sectionLinks}
         onQuickJump={scrollToWithMenuClose}
         deferHeroExtras={!deferAllowed}
+        activeSection={activeSection}
+        closeMenu={closeMenu}
+        onNavigate={scrollToWithMenuClose}
+        menuWidthNum={menuWidthNum}
+        animatedX={animatedX}
+        sideMenuPlatformStyles={sideMenuPlatformStyles}
         mainAriaLabel={`Детали путешествия: ${travel?.name || 'путешествие'}`}
         deferredContent={
           <Defer when={deferredChromeReady}>
@@ -607,7 +616,6 @@ export default function TravelDetailsContainer() {
                 screenWidth={screenWidth}
                 anchors={anchors}
                 sectionLinks={sectionLinks}
-                closeMenu={closeMenu}
                 onNavigate={scrollToWithMenuClose}
                 activeSection={activeSection}
                 forceOpenKey={forceOpenKey}
@@ -615,9 +623,6 @@ export default function TravelDetailsContainer() {
                 contentHeight={contentHeight}
                 viewportHeight={viewportHeight}
                 scrollViewRef={scrollRef as any}
-                menuWidthNum={menuWidthNum}
-                animatedX={animatedX}
-                sideMenuPlatformStyles={sideMenuPlatformStyles}
                 criticalChromeReady={criticalChromeReady}
                 scrollToMapSection={scrollToMapSection}
                 scrollToComments={scrollToComments}

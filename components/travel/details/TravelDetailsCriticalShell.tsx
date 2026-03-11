@@ -1,16 +1,38 @@
-import React, { Suspense } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
+import React, { Suspense, useMemo } from 'react';
+import { Animated, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { METRICS } from '@/constants/layout';
+import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 
+import { withLazy } from './TravelDetailsLazy';
 import { TravelHeroSection } from './TravelDetailsSections';
 import type { AnchorsMap } from './TravelDetailsTypes';
+
+const CompactSideBarTravel = withLazy(() => import('@/components/travel/CompactSideBarTravel'));
+const SIDEBAR_SKELETON_GAP_STYLE = { marginTop: DESIGN_TOKENS.spacing.md } as const
+
+function DesktopSidebarFallback() {
+  return (
+    <View accessibilityRole="none">
+      <SectionSkeleton lines={7} height={24} />
+      <View style={SIDEBAR_SKELETON_GAP_STYLE}>
+        <SectionSkeleton lines={9} height={20} />
+      </View>
+      <View style={SIDEBAR_SKELETON_GAP_STYLE}>
+        <SectionSkeleton lines={6} height={18} />
+      </View>
+    </View>
+  )
+}
 
 type TravelDetailsCriticalShellProps = {
   travel?: Travel;
   isMobile: boolean;
+  screenWidth: number;
   wrapperStyle: any;
   styles: any;
   skeletonPhase: 'loading' | 'fading' | 'hidden';
@@ -29,6 +51,12 @@ type TravelDetailsCriticalShellProps = {
   sectionLinks: TravelSectionLink[];
   onQuickJump: (key: string) => void;
   deferHeroExtras: boolean;
+  activeSection: string | null;
+  closeMenu: () => void;
+  onNavigate: (key: string) => void;
+  menuWidthNum: number;
+  animatedX: Animated.Value;
+  sideMenuPlatformStyles: any;
   deferredContent: React.ReactNode;
   mainAriaLabel: string;
 };
@@ -36,6 +64,7 @@ type TravelDetailsCriticalShellProps = {
 export default function TravelDetailsCriticalShell({
   travel,
   isMobile,
+  screenWidth,
   wrapperStyle,
   styles,
   skeletonPhase,
@@ -54,9 +83,66 @@ export default function TravelDetailsCriticalShell({
   sectionLinks,
   onQuickJump,
   deferHeroExtras,
+  activeSection,
+  closeMenu,
+  onNavigate,
+  menuWidthNum,
+  animatedX,
+  sideMenuPlatformStyles,
   deferredContent,
   mainAriaLabel,
 }: TravelDetailsCriticalShellProps) {
+  const showDesktopSidebar = !isMobile && screenWidth >= METRICS.breakpoints.largeTablet;
+
+  const desktopLayoutStyle = useMemo(
+    () => ({
+      width: '100%' as const,
+      flexDirection: 'row' as const,
+      alignItems: 'flex-start' as const,
+      gap: DESIGN_TOKENS.spacing.lg,
+    }),
+    []
+  );
+
+  const desktopSidebarContainerStyle = useMemo(
+    () => ({
+      width: menuWidthNum,
+      flexShrink: 0,
+      position: 'sticky' as const,
+      top: 0,
+      alignSelf: 'flex-start' as const,
+      maxHeight: '100vh',
+      overflowY: 'auto' as const,
+      overflowX: 'hidden' as const,
+    }),
+    [menuWidthNum]
+  );
+
+  const desktopSidebarAnimatedStyle = useMemo(
+    () => [
+      styles.sideMenuBase,
+      sideMenuPlatformStyles,
+      {
+        position: 'relative' as const,
+        top: 0,
+        maxHeight: 'none' as const,
+        overflowY: 'visible' as const,
+        transform: [{ translateX: animatedX }],
+        width: '100%' as any,
+        zIndex: 1000,
+      },
+    ],
+    [styles.sideMenuBase, sideMenuPlatformStyles, animatedX]
+  );
+
+  const desktopContentColumnStyle = useMemo(
+    () => ({
+      flex: 1,
+      minWidth: 0,
+    }),
+    []
+  );
+
   return (
     <View
       testID="travel-details-page"
@@ -69,6 +155,7 @@ export default function TravelDetailsCriticalShell({
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
           {Platform.OS === 'web' && (
             <View
+              testID="travel-details-skeleton-overlay"
               collapsable={false}
               style={{
                 position: 'absolute',
@@ -106,22 +193,62 @@ export default function TravelDetailsCriticalShell({
                 collapsable={false}
               >
                 {travel ? (
-                  <>
-                    <View collapsable={false}>
-                      <TravelHeroSection
-                        travel={travel}
-                        anchors={anchors}
-                        isMobile={isMobile}
-                        renderSlider={Platform.OS !== 'web' ? true : sliderReady && lcpLoaded}
-                        onFirstImageLoad={onFirstImageLoad}
-                        sectionLinks={sectionLinks}
-                        onQuickJump={onQuickJump}
-                        deferExtras={deferHeroExtras}
-                      />
-                    </View>
+                  showDesktopSidebar ? (
+                    <View style={desktopLayoutStyle} collapsable={false}>
+                      <View style={desktopSidebarContainerStyle}>
+                        <Animated.View
+                          testID="travel-details-side-menu"
+                          style={desktopSidebarAnimatedStyle}
+                        >
+                          <Suspense fallback={<DesktopSidebarFallback />}>
+                            <CompactSideBarTravel
+                              travel={travel}
+                              isMobile={isMobile}
+                              refs={anchors}
+                              links={sectionLinks}
+                              closeMenu={closeMenu}
+                              onNavigate={onNavigate}
+                              activeSection={activeSection}
+                            />
+                          </Suspense>
+                        </Animated.View>
+                      </View>
 
-                    {deferredContent}
-                  </>
+                      <View style={desktopContentColumnStyle} collapsable={false}>
+                        <View collapsable={false}>
+                          <TravelHeroSection
+                            travel={travel}
+                            anchors={anchors}
+                            isMobile={isMobile}
+                            renderSlider={Platform.OS !== 'web' ? true : sliderReady && lcpLoaded}
+                            onFirstImageLoad={onFirstImageLoad}
+                            sectionLinks={sectionLinks}
+                            onQuickJump={onQuickJump}
+                            deferExtras={deferHeroExtras}
+                          />
+                        </View>
+
+                        {deferredContent}
+                      </View>
+                    </View>
+                  ) : (
+                    <>
+                      <View collapsable={false}>
+                        <TravelHeroSection
+                          travel={travel}
+                          anchors={anchors}
+                          isMobile={isMobile}
+                          renderSlider={Platform.OS !== 'web' ? true : sliderReady && lcpLoaded}
+                          onFirstImageLoad={onFirstImageLoad}
+                          sectionLinks={sectionLinks}
+                          onQuickJump={onQuickJump}
+                          deferExtras={deferHeroExtras}
+                        />
+                      </View>
+
+                      {deferredContent}
+                    </>
+                  )
                 ) : (
                   <View />
                 )}

@@ -236,40 +236,8 @@ function useDeferredHeroExtras(deferExtras: boolean) {
       return
     }
     if (!deferExtras) {
-      if (isWebAutomation) {
-        setExtrasReady(true)
-        return
-      }
-
-      setExtrasReady(false)
-      let revealed = false
-      let fallbackTimeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-        if (revealed) return
-        revealed = true
-        setExtrasReady(true)
-      }, 3500)
-
-      const reveal = () => {
-        if (revealed) return
-        revealed = true
-        if (fallbackTimeout) {
-          clearTimeout(fallbackTimeout)
-          fallbackTimeout = null
-        }
-        setExtrasReady(true)
-      }
-
-      window.addEventListener('pointerdown', reveal, { passive: true, once: true })
-      window.addEventListener('keydown', reveal, { once: true })
-      window.addEventListener('scroll', reveal, { passive: true, once: true })
-
-      return () => {
-        revealed = true
-        if (fallbackTimeout) clearTimeout(fallbackTimeout)
-        window.removeEventListener('pointerdown', reveal as EventListener)
-        window.removeEventListener('keydown', reveal as EventListener)
-        window.removeEventListener('scroll', reveal as EventListener)
-      }
+      setExtrasReady(true)
+      return
     }
 
     setExtrasReady(false)

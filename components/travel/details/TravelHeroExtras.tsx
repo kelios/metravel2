@@ -1,15 +1,13 @@
-import React, { Suspense, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { Travel } from '@/types/types'
+import QuickFacts from '@/components/travel/QuickFacts'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
-import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
-
-const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 
 const HERO_QUICK_JUMP_KEYS = [
   'description',
@@ -18,8 +16,6 @@ const HERO_QUICK_JUMP_KEYS = [
   'comments',
   'video',
 ] as const
-
-const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
 
 function HeroQuickJumps({
   links,
@@ -90,9 +86,7 @@ export const TravelHeroExtras: React.FC<{
           styles.quickFactsContainer,
         ]}
       >
-        <Suspense fallback={<View style={QUICK_FACTS_PLACEHOLDER_STYLE} />}>
-          <QuickFacts travel={travel} />
-        </Suspense>
+        <QuickFacts travel={travel} />
       </View>
 
       {quickJumpLinks.length > 0 && (

@@ -12,6 +12,7 @@ export const TravelDetailPageSkeleton: React.FC = () => {
   const isTablet =
     width >= METRICS.breakpoints.tablet &&
     width < METRICS.breakpoints.largeTablet;
+  const isDesktop = width >= METRICS.breakpoints.largeTablet;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -21,19 +22,64 @@ export const TravelDetailPageSkeleton: React.FC = () => {
     scrollContent: {
       paddingBottom: DESIGN_TOKENS.spacing.xl,
     },
-    heroSection: {
-      width: '100%',
-      height: isMobile ? 260 : isTablet ? 400 : 500,
-      backgroundColor: colors.surfaceLight,
-    },
     contentWrapper: {
-      maxWidth: 1200,
+      maxWidth: 1600,
       width: '100%',
       alignSelf: 'center',
       paddingHorizontal: isMobile ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
     },
+    desktopShell: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: DESIGN_TOKENS.spacing.lg,
+      marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    desktopSidebar: {
+      width: 380,
+      flexShrink: 0,
+    },
+    sidebarCard: {
+      padding: DESIGN_TOKENS.spacing.lg,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      backgroundColor: colors.surface,
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
+    sidebarAuthorRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
+    sidebarAuthorMeta: {
+      flex: 1,
+      marginLeft: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    sidebarActionColumn: {
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginLeft: DESIGN_TOKENS.spacing.md,
+    },
+    sidebarSectionCard: {
+      padding: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      backgroundColor: colors.surface,
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
+    sidebarMenuLine: {
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
+    desktopMain: {
+      flex: 1,
+      minWidth: 0,
+    },
+    desktopHero: {
+      width: '100%',
+      height: 620,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      overflow: 'hidden',
+      marginBottom: DESIGN_TOKENS.spacing.md,
+    },
     headerSection: {
-      marginTop: DESIGN_TOKENS.spacing.lg,
+      marginTop: isDesktop ? 0 : DESIGN_TOKENS.spacing.lg,
       marginBottom: DESIGN_TOKENS.spacing.md,
     },
     metaRow: {
@@ -78,7 +124,87 @@ export const TravelDetailPageSkeleton: React.FC = () => {
       borderRadius: DESIGN_TOKENS.radii.lg,
       overflow: 'hidden',
     },
-  }), [colors, isMobile, isTablet]);
+  }), [colors, isDesktop, isMobile, isTablet]);
+
+  if (isDesktop) {
+    return (
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentWrapper}>
+            <View style={styles.desktopShell}>
+              <View style={styles.desktopSidebar}>
+                <View style={styles.sidebarCard}>
+                  <View style={styles.sidebarAuthorRow}>
+                    <SkeletonLoader width={56} height={56} borderRadius={28} />
+                    <View style={styles.sidebarAuthorMeta}>
+                      <SkeletonLoader width="58%" height={22} borderRadius={8} />
+                      <SkeletonLoader width="72%" height={16} borderRadius={6} />
+                    </View>
+                    <View style={styles.sidebarActionColumn}>
+                      <SkeletonLoader width={40} height={40} borderRadius={12} />
+                      <SkeletonLoader width={40} height={40} borderRadius={12} />
+                    </View>
+                  </View>
+                  <SkeletonLoader width="78%" height={44} borderRadius={22} />
+                </View>
+
+                <View style={styles.sidebarSectionCard}>
+                  {Array.from({ length: 10 }).map((_, index) => (
+                    <SkeletonLoader
+                      key={`sidebar-line-${index}`}
+                      width={index === 0 ? '100%' : index < 6 ? '72%' : '64%'}
+                      height={index === 0 ? 44 : 18}
+                      borderRadius={index === 0 ? 16 : 8}
+                      style={styles.sidebarMenuLine}
+                    />
+                  ))}
+                </View>
+
+                <View style={styles.sidebarSectionCard}>
+                  <SkeletonLoader width="88%" height={26} borderRadius={8} style={styles.sidebarMenuLine} />
+                  <View style={[styles.metaRow, { marginTop: 0 }]}>
+                    <SkeletonLoader width="28%" height={18} borderRadius={8} />
+                    <SkeletonLoader width="28%" height={18} borderRadius={8} />
+                    <SkeletonLoader width="28%" height={18} borderRadius={8} />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.desktopMain}>
+                <SkeletonLoader width="100%" height={620} borderRadius={DESIGN_TOKENS.radii.xl} />
+
+                <View style={styles.headerSection}>
+                  <View style={styles.metaRow}>
+                    <SkeletonLoader width={90} height={20} borderRadius={12} />
+                    <SkeletonLoader width={90} height={20} borderRadius={12} />
+                    <SkeletonLoader width={260} height={20} borderRadius={12} />
+                  </View>
+                  <View style={[styles.metaRow, { marginTop: DESIGN_TOKENS.spacing.md }]}>
+                    <SkeletonLoader width={110} height={18} borderRadius={12} />
+                    <SkeletonLoader width={90} height={18} borderRadius={12} />
+                    <SkeletonLoader width={140} height={18} borderRadius={12} />
+                    <SkeletonLoader width={110} height={18} borderRadius={12} />
+                  </View>
+                </View>
+
+                <View style={styles.descriptionSection}>
+                  <SkeletonLoader width="42%" height={22} borderRadius={6} style={{ marginBottom: DESIGN_TOKENS.spacing.md }} />
+                  <SkeletonLoader width="100%" height={16} borderRadius={4} style={styles.descriptionLine} />
+                  <SkeletonLoader width="96%" height={16} borderRadius={4} style={styles.descriptionLine} />
+                  <SkeletonLoader width="98%" height={16} borderRadius={4} style={styles.descriptionLine} />
+                  <SkeletonLoader width="90%" height={16} borderRadius={4} style={styles.descriptionLine} />
+                  <SkeletonLoader width="84%" height={16} borderRadius={4} />
+                </View>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -86,10 +212,9 @@ export const TravelDetailPageSkeleton: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero Image Skeleton */}
-        <SkeletonLoader 
-          width="100%" 
-          height={isMobile ? 260 : isTablet ? 400 : 500} 
+        <SkeletonLoader
+          width="100%"
+          height={isMobile ? 260 : 400}
           borderRadius={0}
         />
 

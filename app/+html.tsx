@@ -111,6 +111,7 @@ const getFontFaceSwapScript = () => String.raw`
 const getTravelHeroPreloadScript = () => String.raw`
 (function(){
   try {
+    if (${JSON.stringify(process.env.NODE_ENV)} !== 'production') return;
     var path = window.location && window.location.pathname;
     if (!path || path.indexOf('/travels/') !== 0) return;
     if (window.__metravelTravelPreloadScriptLoaded) return;

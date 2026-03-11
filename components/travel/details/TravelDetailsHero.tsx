@@ -17,19 +17,11 @@ import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
-const TravelHeroFavoriteToggle = withLazy(() =>
-  import('./TravelHeroFavoriteToggle').then((m) => ({
-    default: m.TravelHeroFavoriteToggle,
-  }))
-)
-const TravelHeroExtras = withLazy(() =>
-  import('./TravelHeroExtras').then((m) => ({
-    default: m.TravelHeroExtras,
-  }))
-)
 const TravelHeroInteractiveSlider = withLazy(() =>
   import('./TravelHeroInteractiveSlider')
 )
+import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
+import { TravelHeroExtras } from './TravelHeroExtras'
 const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
 import {
   NeutralHeroPlaceholder,
@@ -207,25 +199,21 @@ function TravelHeroSectionInner({
           ) : null}
 
           {(Platform.OS !== 'web' || extrasReady) && (
-            <Suspense fallback={null}>
-              <TravelHeroFavoriteToggle
-                travel={travel}
-                isMobile={isMobile}
-              />
-            </Suspense>
+            <TravelHeroFavoriteToggle
+              travel={travel}
+              isMobile={isMobile}
+            />
           )}
         </View>
       </View>
 
       {extrasReady ? (
-        <Suspense fallback={<View style={QUICK_FACTS_PLACEHOLDER_STYLE} />}>
-          <TravelHeroExtras
-            travel={travel}
-            isMobile={isMobile}
-            sectionLinks={sectionLinks}
-            onQuickJump={onQuickJump}
-          />
-        </Suspense>
+        <TravelHeroExtras
+          travel={travel}
+          isMobile={isMobile}
+          sectionLinks={sectionLinks}
+          onQuickJump={onQuickJump}
+        />
       ) : (
         <>
           <View
