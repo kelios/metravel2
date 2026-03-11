@@ -19,6 +19,11 @@ npm run lint
 npm run test:run
 ```
 
+- Skipped tests are not allowed in the repository:
+  - do not leave `it.skip`, `test.skip`, `describe.skip`, `xit`, or `xtest`;
+  - if a test is broken, fix it, replace it with stable coverage at the correct level, or remove the obsolete test in the same task;
+  - the green baseline is `0` skipped tests unless a documented project-level exception is explicitly added to `docs/`.
+
 - If a task changes UI, layout, styling, visual states, or interaction behavior visible on web,
   open a local browser preview and visually verify the changed scenario in the browser before
   considering the task complete.
@@ -56,6 +61,10 @@ npm run lighthouse:travel:desktop
 - If you see clear duplication or overgrown logic, refactor to a simpler structure as part of the task.
 - If you find unused code (dead imports, unused functions/components/files), remove it.
 - If you find real errors or broken behavior during the task, fix them (or explicitly document blockers if fix is impossible in current scope).
+- Write and refactor code using current 2026 practices by default:
+  - prefer up-to-date, actively supported framework and language patterns;
+  - avoid legacy or deprecated approaches when a modern project-approved alternative exists;
+  - if compatibility constraints force an older pattern, keep it local and document the reason in code or the relevant doc.
 
 ### Server path safety (mandatory)
 

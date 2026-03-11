@@ -173,9 +173,6 @@ export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
     if (apiFinale.video_url && !videoUrl) {
         console.warn('[Quest] Failed to fix video URL:', apiFinale.video_url);
     }
-    if (videoUrl) {
-        console.info('[Quest] Finale video URL:', videoUrl);
-    }
     
     return {
         text: apiFinale.text,
