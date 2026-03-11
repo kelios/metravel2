@@ -4,6 +4,7 @@ import React from 'react';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript';
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder';
+import { getRootVisibilityGateCss, getTravelRouteClassScript } from '@/utils/htmlShell';
 export { getAnalyticsInlineScript };
 
 const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 0;
@@ -269,13 +270,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: buildCriticalCSS() }} />
+      <script
+        dangerouslySetInnerHTML={{ __html: getTravelRouteClassScript() }}
+      />
       <style
         dangerouslySetInnerHTML={{
-          __html: `
-            html:not(.rnw-styles-ready) #root {
-              visibility: hidden;
-            }
-          `,
+          __html: getRootVisibilityGateCss(),
         }}
       />
       <noscript>
