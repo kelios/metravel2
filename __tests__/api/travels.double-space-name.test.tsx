@@ -17,24 +17,27 @@ import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 
-import { normalizeTravelItem } from '@/api/travelsApi';
+import { normalizeTravelItem } from '@/api/travelsNormalize';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
 }));
 
-jest.mock('@/api/travelsApi', () => {
-  const actual = jest.requireActual('@/api/travelsApi');
+jest.mock('@/api/travelDetailsQueries', () => ({
+  fetchTravel: jest.fn(),
+  fetchTravelBySlug: jest.fn(),
+}));
+
+jest.mock('@/api/travelsNormalize', () => {
+  const actual = jest.requireActual('@/api/travelsNormalize');
   return {
     ...actual,
-    fetchTravel: jest.fn(),
-    fetchTravelBySlug: jest.fn(),
   };
 });
 
 const useLocalSearchParams = jest.requireMock('expo-router').useLocalSearchParams as jest.Mock;
-const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/api/travelsApi') as {
+const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/api/travelDetailsQueries') as {
   fetchTravel: jest.Mock;
   fetchTravelBySlug: jest.Mock;
 };
@@ -165,7 +168,7 @@ describe('Travel with double spaces in name', () => {
       useLocalSearchParams.mockReturnValue({ param: '2676' });
 
       // Mock fetchTravel to return travel with double spaces
-      const { normalizeTravelItem: realNormalize } = jest.requireActual('@/api/travelsApi');
+      const { normalizeTravelItem: realNormalize } = jest.requireActual('@/api/travelsNormalize');
       fetchTravel.mockResolvedValue(realNormalize(TRAVEL_WITH_DOUBLE_SPACES));
 
       const qc = new QueryClient({
@@ -193,7 +196,7 @@ describe('Travel with double spaces in name', () => {
       setPlatformOs('web');
       useLocalSearchParams.mockReturnValue({ param: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov-1029' });
 
-      const { normalizeTravelItem: realNormalize } = jest.requireActual('@/api/travelsApi');
+      const { normalizeTravelItem: realNormalize } = jest.requireActual('@/api/travelsNormalize');
       fetchTravelBySlug.mockResolvedValue(realNormalize(TRAVEL_WITH_DOUBLE_SPACES));
 
       const qc = new QueryClient({
@@ -219,7 +222,7 @@ describe('Travel with double spaces in name', () => {
       setPlatformOs('web');
       useLocalSearchParams.mockReturnValue({ param: TRAVEL_WITH_DOUBLE_SPACES.slug });
 
-      const { normalizeTravelItem: realNormalize } = jest.requireActual('@/api/travelsApi');
+      const { normalizeTravelItem: realNormalize } = jest.requireActual('@/api/travelsNormalize');
 
       // Set up preloaded data with double spaces
       (window as any).__metravelTravelPreload = {

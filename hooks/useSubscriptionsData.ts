@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
-import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
+import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import { confirmAction } from '@/utils/confirmAction';

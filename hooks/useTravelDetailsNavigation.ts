@@ -266,6 +266,32 @@ export function useTravelDetailsNavigation({
     return () => sub.remove()
   }, [handleSectionOpen])
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return
+
+    const resolveHashSectionKey = (rawHash: string): string | null => {
+      const normalized = String(rawHash || '').replace(/^#/, '').trim().toLowerCase()
+      if (!normalized) return null
+
+      const matchedKey = Object.keys(anchors).find((key) => key.toLowerCase() === normalized)
+      return matchedKey ?? null
+    }
+
+    const openSectionFromHash = () => {
+      const nextKey = resolveHashSectionKey(window.location.hash)
+      if (!nextKey) return
+      handleSectionOpen(nextKey)
+    }
+
+    const initialTimer = setTimeout(openSectionFromHash, 0)
+    window.addEventListener('hashchange', openSectionFromHash)
+
+    return () => {
+      clearTimeout(initialTimer)
+      window.removeEventListener('hashchange', openSectionFromHash)
+    }
+  }, [anchors, handleSectionOpen, slug])
+
   // Assign data-section-key attributes for Intersection Observer wiring.
   useEffect(() => {
     if (Platform.OS !== 'web') return

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchTravels, fetchRandomTravels } from '@/api/travelsApi';
+import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
 import type { Travel } from '@/types/types';
 import {
   PER_PAGE,

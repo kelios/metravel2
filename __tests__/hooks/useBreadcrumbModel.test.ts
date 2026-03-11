@@ -9,7 +9,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
 }));
 
-jest.mock('@/api/travelsApi', () => ({
+jest.mock('@/api/travelDetailsQueries', () => ({
   fetchTravel: jest.fn(),
   fetchTravelBySlug: jest.fn(),
 }));
@@ -24,7 +24,7 @@ describe('useBreadcrumbModel', () => {
     useLocalSearchParams: jest.Mock;
   };
 
-  const { fetchTravelBySlug } = jest.requireMock('@/api/travelsApi') as {
+  const { fetchTravelBySlug } = jest.requireMock('@/api/travelDetailsQueries') as {
     fetchTravelBySlug: jest.Mock;
   };
 

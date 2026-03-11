@@ -134,7 +134,8 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
       if (!(await goToTravelDetails(page))) return;
 
       const currentUrl = new URL(page.url());
-      await page.goto(`${currentUrl.pathname}#map`);
+      currentUrl.hash = 'map';
+      await page.goto(currentUrl.toString());
 
       const mapSection = page.locator('[data-testid="travel-details-map"]');
       await mapSection.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);

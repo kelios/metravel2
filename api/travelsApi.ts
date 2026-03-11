@@ -11,12 +11,12 @@ export {
     fetchTravelFacets,
     fetchTravels,
     fetchRandomTravels,
-    fetchTravel,
-    fetchTravelBySlug,
     fetchMyTravels,
     unwrapMyTravelsPayload,
     type TravelFacetItem,
     type TravelFacetsResponse,
 } from './travelsQueries';
+
+export { fetchTravel, fetchTravelBySlug } from './travelDetailsQueries';
 
 export { deleteTravel } from './travelsMutations';

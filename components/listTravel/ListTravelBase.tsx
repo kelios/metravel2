@@ -31,7 +31,8 @@ import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { calculateColumns } from './utils/listTravelHelpers'
 import { buildSortingOptions } from './utils/sortings'
-import { deleteTravel, fetchTravelFacets } from '@/api/travelsApi'
+import { deleteTravel } from '@/api/travelsApi'
+import { fetchTravelFacets } from '@/api/travelListQueries'
 
 // ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({

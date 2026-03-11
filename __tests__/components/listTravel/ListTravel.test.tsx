@@ -88,8 +88,13 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('@/api/travelsApi', () => ({
-  fetchTravels: jest.fn(() => Promise.resolve({ data: [], total: 0, hasMore: false })),
   deleteTravel: jest.fn(() => Promise.resolve(null)),
+}));
+
+jest.mock('@/api/travelListQueries', () => ({
+  fetchTravels: jest.fn(() => Promise.resolve({ data: [], total: 0, hasMore: false })),
+  fetchRandomTravels: jest.fn(() => Promise.resolve({ data: [], total: 0, hasMore: false })),
+  fetchTravelFacets: jest.fn(() => Promise.resolve({ total: 0, facets: {} })),
 }));
 
 jest.mock('@/api/misc', () => ({
@@ -214,7 +219,8 @@ describe('ListTravel', () => {
 
   it('shows timeout error message when deleteTravel fails with timeout on web', async () => {
     const travelsApi: any = require('@/api/travelsApi');
-    travelsApi.fetchTravels.mockResolvedValueOnce({
+    const travelListQueries: any = require('@/api/travelListQueries');
+    travelListQueries.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 1, title: 'Test travel' }],
       total: 1,
       hasMore: false,
@@ -247,7 +253,8 @@ describe('ListTravel', () => {
 
   it('shows access denied error message when deleteTravel fails with 403 on web', async () => {
     const travelsApi: any = require('@/api/travelsApi');
-    travelsApi.fetchTravels.mockResolvedValueOnce({
+    const travelListQueries: any = require('@/api/travelListQueries');
+    travelListQueries.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 2, title: 'Another travel' }],
       total: 1,
       hasMore: false,
@@ -280,7 +287,8 @@ describe('ListTravel', () => {
 
   it('treats 404 on delete as already removed and does not show alert on web', async () => {
     const travelsApi: any = require('@/api/travelsApi');
-    travelsApi.fetchTravels.mockResolvedValueOnce({
+    const travelListQueries: any = require('@/api/travelListQueries');
+    travelListQueries.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 2977, title: 'Already deleted' }],
       total: 1,
       hasMore: false,
@@ -318,7 +326,8 @@ describe('ListTravel', () => {
 
   it('calls DELETE endpoint after confirming deletion on web', async () => {
     const travelsApi: any = require('@/api/travelsApi');
-    travelsApi.fetchTravels.mockResolvedValueOnce({
+    const travelListQueries: any = require('@/api/travelListQueries');
+    travelListQueries.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 10, title: 'Delete me' }],
       total: 1,
       hasMore: false,

@@ -123,35 +123,38 @@ export const TravelDeferredSections: React.FC<{
     priority: 'low',
     rootMargin: '120px',
     threshold: 0.05,
-    fallbackDelay: 5200,
+    fallbackDelay: 24000,
     enabled: canRenderHeavy,
   })
   const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '160px',
     threshold: 0.05,
-    fallbackDelay: 6200,
+    fallbackDelay: 26000,
     enabled: canRenderHeavy,
   })
   const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '160px',
     threshold: 0.05,
-    fallbackDelay: 7000,
+    fallbackDelay: 24000,
     enabled: canRenderHeavy,
   })
   const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '160px',
     threshold: 0.05,
-    fallbackDelay: 5200,
+    fallbackDelay: 24000,
     enabled: canRenderHeavy,
   })
   const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '180px',
     threshold: 0.05,
-    fallbackDelay: 2600,
+    // Keep full author/share runtime strictly below-the-fold on web unless the user
+    // actually scrolls there. This avoids warming a large social/profile block in
+    // the early no-interaction preview window.
+    fallbackDelay: 24000,
     enabled: canRenderHeavy,
   })
   const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
@@ -192,6 +195,11 @@ export const TravelDeferredSections: React.FC<{
   useEffect(() => {
     if (shouldLoadFooter) tdTrace('deferred:footer:visible')
   }, [shouldLoadFooter, tdTrace])
+
+  const shouldRenderMapSection = shouldLoadMap || forceOpenKey === 'map' || forceOpenKey === 'points'
+  const shouldRenderSidebarSection =
+    shouldLoadSidebar || forceOpenKey === 'near' || forceOpenKey === 'popular'
+  const shouldRenderCommentsSection = shouldLoadComments || forceOpenKey === 'comments'
 
   return (
     <>
@@ -242,7 +250,7 @@ export const TravelDeferredSections: React.FC<{
         }}
         collapsable={false}
       >
-        {shouldLoadMap ? (
+        {shouldRenderMapSection ? (
           <Suspense fallback={<DeferredMapPlaceholder />}>
             <TravelDetailsMapSection
               travel={travel}
@@ -263,7 +271,7 @@ export const TravelDeferredSections: React.FC<{
         }}
         collapsable={false}
       >
-        {shouldLoadSidebar ? (
+        {shouldRenderSidebarSection ? (
           <Suspense fallback={<DeferredSidebarPlaceholder />}>
             <TravelDetailsSidebarSection
               travel={travel}
@@ -287,7 +295,7 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
-        {shouldLoadComments && travel?.id ? (
+        {shouldRenderCommentsSection && travel?.id ? (
           <Suspense fallback={<DeferredCommentsPlaceholder />}>
             <CommentsSection travelId={travel.id} />
           </Suspense>

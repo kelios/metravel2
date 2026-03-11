@@ -4,12 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Home from '@/components/home/Home';
 import { useAuth } from '@/context/AuthContext';
 import { useIsFocused } from '@react-navigation/native';
-import { fetchMyTravels } from '@/api/travelsApi';
+import { fetchMyTravels } from '@/api/travelUserQueries';
 
 // Mock dependencies
 jest.mock('@/context/AuthContext');
 jest.mock('@react-navigation/native');
-jest.mock('@/api/travelsApi');
+jest.mock('@/api/travelUserQueries');
 jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
   queueAnalyticsEvent: jest.fn(),

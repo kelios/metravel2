@@ -3,7 +3,7 @@ import { render, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
-import { fetchTravels } from '@/api/travelsApi';
+import { fetchTravels } from '@/api/travelListQueries';
 
 jest.mock('@/context/AuthContext', () => ({
     useAuth: () => ({
@@ -37,8 +37,10 @@ jest.mock('expo-router', () => ({
 }));
 
 // Mock API
-jest.mock('@/api/travelsApi', () => ({
+jest.mock('@/api/travelListQueries', () => ({
     fetchTravels: jest.fn(),
+    fetchRandomTravels: jest.fn(),
+    fetchTravelFacets: jest.fn(() => Promise.resolve({ total: 0, facets: {} })),
 }));
 
 jest.mock('@/api/misc', () => ({

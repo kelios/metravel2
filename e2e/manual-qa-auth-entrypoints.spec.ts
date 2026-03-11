@@ -32,6 +32,26 @@ const gotoWithRetry = async (
 test.describe('@smoke Manual QA automation: auth entrypoints', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
+  const openGuestAccountMenu = async (page: any) => {
+    const accountButton = page.locator('[data-testid="account-menu-anchor"]:visible').first();
+    await expect(accountButton).toBeVisible({ timeout: 10_000 });
+
+    await accountButton.hover().catch(() => null);
+    await accountButton.focus().catch(() => null);
+    await accountButton.click();
+
+    const menu = page.getByTestId('web-menu-panel');
+    const loginItem = page.getByRole('menuitem', { name: 'Войти' });
+
+    const menuOpened = await Promise.race([
+      menu.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false),
+      loginItem.waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false),
+    ]);
+
+    expect(menuOpened).toBeTruthy();
+    return { menu, loginItem };
+  };
+
   test('login -> registration link works with visible cookie banner', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoWithRetry(page, '/login', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
@@ -50,22 +70,14 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
-    // Открываем меню аккаунта
-    const accountButton = page.locator('[data-testid="account-menu-anchor"]:visible').first();
-    await expect(accountButton).toBeVisible({ timeout: 10_000 });
-    await accountButton.click();
-
-    // Проверяем что меню открылось
-    const menu = page.getByTestId('web-menu-panel');
-    await expect(menu).toBeVisible({ timeout: 5_000 });
+    const { loginItem } = await openGuestAccountMenu(page);
 
     // Кликаем на "Войти" и ждем открытия новой вкладки
-    const loginButton = page.getByRole('menuitem', { name: 'Войти' });
-    await expect(loginButton).toBeVisible();
+    await expect(loginItem).toBeVisible();
     
     const [newPage] = await Promise.all([
       context.waitForEvent('page'),
-      loginButton.click(),
+      loginItem.click(),
     ]);
 
     // Проверяем что новая вкладка открылась на странице логина
@@ -78,14 +90,7 @@ test.describe('@smoke Manual QA automation: auth entrypoints', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
-    // Открываем меню аккаунта
-    const accountButton = page.locator('[data-testid="account-menu-anchor"]:visible').first();
-    await expect(accountButton).toBeVisible({ timeout: 10_000 });
-    await accountButton.click();
-
-    // Проверяем что меню открылось
-    const menu = page.getByTestId('web-menu-panel');
-    await expect(menu).toBeVisible({ timeout: 5_000 });
+    await openGuestAccountMenu(page);
 
     // Кликаем на "Зарегистрироваться" и ждем открытия новой вкладки
     const registerButton = page.getByRole('menuitem', { name: 'Зарегистрироваться' });

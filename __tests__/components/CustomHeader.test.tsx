@@ -150,6 +150,14 @@ describe('CustomHeader', () => {
             expect(utils.queryByTestId('mobile-menu-open')).toBeNull();
         });
 
+        it('renders desktop account anchor and guest login CTA without eager account menu mount', () => {
+            (usePathname as jest.Mock).mockReturnValue('/');
+            const utils = renderHeader();
+
+            expect(utils.getByTestId('account-menu-anchor')).toBeTruthy();
+            expect(utils.getByTestId('header-login-cta')).toBeTruthy();
+        });
+
         it('defers header context bar on web travel routes', async () => {
             jest.useFakeTimers();
             const restoreWindow = global.window;

@@ -6,7 +6,8 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { fetchTravel, fetchTravelBySlug, normalizeTravelItem } from '@/api/travelsApi';
+import { normalizeTravelItem } from '@/api/travelsNormalize';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
 import { queryKeys } from '@/queryKeys';

@@ -1,12 +1,14 @@
-import React, { Suspense, lazy, useMemo } from 'react';
-import { View } from 'react-native';
+import React, { Suspense, lazy, useMemo } from 'react'
+import { View } from 'react-native'
 
-const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
+const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
 
-const AccountMenuLazy = lazy(() => import('./AccountMenu'));
+const CustomHeaderDesktopAccountSectionComp = isTestEnv
+  ? (require('./CustomHeaderDesktopAccountSection').default as React.ComponentType<any>)
+  : lazy(() => import('./CustomHeaderDesktopAccountSection'))
 const CustomHeaderMobileAccountSectionComp = isTestEnv
   ? (require('./CustomHeaderMobileAccountSection').default as React.ComponentType<any>)
-  : lazy(() => import('./CustomHeaderMobileAccountSection'));
+  : lazy(() => import('./CustomHeaderMobileAccountSection'))
 
 type CustomHeaderAccountSectionProps = {
   activePath: string;
@@ -25,15 +27,15 @@ export default function CustomHeaderAccountSection({
         <Suspense fallback={null}>
           <CustomHeaderMobileAccountSectionComp activePath={activePath} styles={styles} />
         </Suspense>
-      );
+      )
     }
 
     return (
       <Suspense fallback={null}>
-        <AccountMenuLazy />
+        <CustomHeaderDesktopAccountSectionComp styles={styles} />
       </Suspense>
-    );
-  }, [activePath, isMobile, styles]);
+    )
+  }, [activePath, isMobile, styles])
 
-  return <View style={styles.rightSection}>{content}</View>;
+  return isMobile ? <View style={styles.rightSection}>{content}</View> : <>{content}</>
 }

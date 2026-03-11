@@ -14,15 +14,18 @@ jest.mock('@tanstack/react-query', () => {
   };
 });
 
-jest.mock('@/api/travelsApi', () => ({
+jest.mock('@/api/travelDetailsQueries', () => ({
   fetchTravel: jest.fn(),
   fetchTravelBySlug: jest.fn(),
+}));
+
+jest.mock('@/api/travelsNormalize', () => ({
   normalizeTravelItem: jest.fn((d: any) => d),
 }));
 
 const useLocalSearchParams = jest.requireMock('expo-router').useLocalSearchParams as jest.Mock;
 const { useQuery } = jest.requireMock('@tanstack/react-query');
-const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/api/travelsApi');
+const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/api/travelDetailsQueries');
 
 // Captures the queryFn passed to useQuery so tests can invoke it directly.
 let capturedQueryFn: ((...args: any[]) => Promise<any>) | null = null;

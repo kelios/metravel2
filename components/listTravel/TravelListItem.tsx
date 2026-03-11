@@ -6,7 +6,7 @@ import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/types/types";
 import OptimizedFavoriteButton from "@/components/travel/OptimizedFavoriteButton";
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { queryKeys } from '@/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";

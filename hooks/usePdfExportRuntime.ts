@@ -4,7 +4,7 @@ import type { MutableRefObject } from 'react';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage } from '@/types/pdf-export';
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
 
 type UpdateProgress = (

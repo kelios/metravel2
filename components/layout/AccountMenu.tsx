@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Menu } from '@/ui/paper';
 import { router } from 'expo-router';
@@ -15,7 +15,11 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
-function AccountMenu() {
+type AccountMenuProps = {
+  initialOpenKey?: number
+}
+
+function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
   const { favorites } = useFavorites();
   const colors = useThemedColors();
@@ -23,6 +27,7 @@ function AccountMenu() {
   const [hovered, setHovered] = useState(false);
   const [avatarLoadError, setAvatarLoadError] = useState(false);
   const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible);
+  const lastHandledInitialOpenKeyRef = useRef(0)
   const [expandedSections, setExpandedSections] = useState({
     navigation: true,
     travels: true,
@@ -232,6 +237,13 @@ function AccountMenu() {
 
   const openMenu = useCallback(() => setVisible(true), []);
   const closeMenu = useCallback(() => setVisible(false), []);
+
+  useEffect(() => {
+    if (initialOpenKey <= 0) return
+    if (lastHandledInitialOpenKeyRef.current === initialOpenKey) return
+    lastHandledInitialOpenKeyRef.current = initialOpenKey
+    setVisible(true)
+  }, [initialOpenKey])
 
   const toggleSection = useCallback((section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));

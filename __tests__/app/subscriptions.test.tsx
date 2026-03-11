@@ -19,7 +19,7 @@ jest.mock('@/api/user', () => ({
     unsubscribeFromUser: jest.fn(),
 }));
 
-jest.mock('@/api/travelsApi', () => ({
+jest.mock('@/api/travelUserQueries', () => ({
     fetchMyTravels: mockFetchMyTravels,
     unwrapMyTravelsPayload: mockUnwrapMyTravelsPayload,
 }));

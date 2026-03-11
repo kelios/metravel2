@@ -5,7 +5,7 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import type { Travel } from '@/types/types';
 import { queryKeys } from '@/queryKeys';
 

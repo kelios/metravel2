@@ -202,6 +202,15 @@ Critical shell должен:
 - Сделано: fallback-reveal для `CustomHeader` на web travel route дополнительно сдвинут дальше по времени; header shell по-прежнему появляется по interaction/scroll, но таймерный путь больше не забирает chunk в раннее post-hydration окно.
 - Сделано: root deferred chrome и travel performance instrumentation больше не поднимаются в раннем shared path только по короткому fallback-окну; `RootWebDeferredChrome` сдвинут глубже, а `utils/performance` на happy path ждёт interaction или очень поздний fallback.
 - Сделано: `AppProviders` больше не импортирует `useAuthStore` статически в root provider shell только ради deferred bootstrap orchestration; auth/favorites bootstrap теперь читают auth store через dynamic import в момент реального bootstrap path.
+- Сделано: travel hot path (`useTravelDetails`, `useTravelPrefetch`, `useBreadcrumbModel`, `TravelListItem`) больше не импортирует общий barrel `api/travelsApi`; route/list prefetch path переведен на прямые `travelsQueries` / `travelsNormalize` submodule imports.
+- Сделано: detail-fetch path (`fetchTravel`, `fetchTravelBySlug` и slug-fallback orchestration) вынесен из широкого `travelsQueries` в отдельный `travelDetailsQueries`; travel details/prefetch/PDF detail-load path теперь зависит от более узкого detail query graph, а не от list/facets/random query runtime.
+- Сделано: `travelsQueries` разрезан ещё глубже на `travelListQueries` и `travelUserQueries`; list/filter/home/subscriptions path больше не делят один query-модуль с detail-fetch и user-scoped queries, а сидят на более узких direct imports.
+- Сделано: web defer/bootstrap orchestration для root auth/favorites providers вынесена из eager `AppProviders` в отдельный lazy `AppProvidersDeferredRuntime`; сам provider shell больше не держит весь interaction/fallback/bootstrap runtime top-level.
+- Сделано: import самого `AppProvidersDeferredRuntime` больше не происходит сразу после route load на web travel route; lazy runtime теперь тоже ждёт interaction или поздний fallback, а не только откладывает внутренний bootstrap после ранней загрузки chunk.
+- Сделано: desktop account path в `CustomHeader` разрезан на lightweight shell и intent-driven `AccountMenu`; сам account menu chunk больше не загружается просто по timer/fallback окну и ждёт реального hover/focus/click пользователя.
+- Сделано: author/share секция в `TravelDetailsDeferred` переведена на более поздний visibility-first fallback; `AuthorCard` больше не прогревается ранним below-the-fold таймером без scroll/interaction.
+- Сделано: map/sidebar/footer секции внутри `TravelDetailsDeferred` тоже переведены на гораздо более поздний visibility-first fallback; `TravelDetailsMapSection`, `TravelDetailsSidebarSection` и `TravelDetailsFooterSection` больше не входят в раннее no-interaction окно без scroll/interaction.
+- Сделано: `CommentsSection` внутри `TravelDetailsDeferred` тоже переведена на поздний visibility-first fallback; комментарии больше не поднимают `CommentsSection-*` в раннем no-interaction окне без scroll/interaction.
 - В работе: дальнейшее сокращение initial JS и audit того, что еще попадает в route/common chunks раньше необходимости.
 
 Последний production build после текущих shared-path правок:
@@ -262,6 +271,77 @@ Production build после auth-store bootstrap decoupling:
 - `entry-*`: около `2.0 MB`
 - `__common-*`: около `2.4 MB`
 - aggregate bundle snapshot почти не меняется; текущий выигрыш структурный: root provider shell больше не держит статический import `authStore` ради defer orchestration, но в локальном prod preview `FavoritesProvider-*` всё ещё приходит примерно на `+12s`, то есть это пока import-graph cleanup без заметного timing win.
+
+Production build после direct travel api submodule imports:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- `TravelDetailsContainer-*`: около `50 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size/timing win пока не проявился; выигрыш структурный: travel route и list-prefetch path больше не завязаны на широкий `travelsApi` barrel graph.
+
+Production build после split detail query module:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- `TravelDetailsContainer-*`: около `50 KB`
+- `usePdfExportRuntime-*`: около `5.3 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size/timing win пока не проявился; выигрыш структурный: `fetchTravel` / `fetchTravelBySlug` и slug fallback больше не живут в одном модуле с `fetchTravels` / `fetchRandomTravels` / `fetchTravelFacets`.
+
+Production build после split list/user query modules:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- `ListTravel-*`: около `20 KB`
+- `ListTravelBase-*`: около `24 KB`
+- `Home-*`: около `52 KB`
+- `subscriptions-*`: около `22 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size/timing win на travel route пока не проявился; выигрыш структурный: list/filter/home/subscriptions и detail-fetch paths теперь изолированы друг от друга на уровне query modules.
+
+Production build после lazy root providers runtime split:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- `AppProvidersDeferredRuntime-*`: новый lazy chunk около `4 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size win пока не проявился; выигрыш в структуре и timing: root provider bootstrap orchestration больше не живёт внутри eager `AppProviders`, а в локальном prod preview `FavoritesProvider-*` сместился примерно к `+21s` от initial document.
+
+Production build после import-gated `AppProvidersDeferredRuntime`:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- `AppProvidersDeferredRuntime-*`: около `4.1 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size win по-прежнему не проявился, но timing улучшился ещё раз: в локальном prod preview `AppProvidersDeferredRuntime-*` больше не попадает в initial burst и приходит примерно на `+9s`, а `FavoritesProvider-*` смещается примерно к `+31s` от initial document без interaction.
+
+Production build после intent-driven desktop account menu:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.5 MB`
+- `AccountMenu-*`: около `15 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size win не появился, но timing-cleanup сильный: в локальном prod preview `AccountMenu-*` не запрашивается даже через ~30 секунд без interaction, а desktop header держит только lightweight account shell с видимой CTA/anchor.
+
+Production build после delayed author/share section fallback:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.5 MB`
+- `TravelDetailsDeferred-*`: около `27 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size win снова не появился, но timing-cleanup есть: в локальном prod preview `TravelDetailsDeferred-*` приходит как и раньше, а `AuthorCard-*` больше не запрашивается даже к `~+31s` без scroll/interaction.
+
+Production build после delayed map/sidebar/footer fallback:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.5 MB`
+- `TravelDetailsDeferred-*`: около `27 KB`
+- `TravelDetailsMapSection-*`: около `73 KB`
+- `TravelDetailsSidebarSection-*`: около `4.8 KB`
+- `TravelDetailsFooterSection-*`: около `11 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size win снова не появился, но timing-cleanup сильный: в локальном prod preview `TravelDetailsMapSection-*`, `TravelDetailsSidebarSection-*` и `TravelDetailsFooterSection-*` не запрашиваются даже к `~+31s` без scroll/interaction.
+
+Production build после delayed comments fallback:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.5 MB`
+- `TravelDetailsDeferred-*`: около `27 KB`
+- `CommentsSection-*`: около `77 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+- measurable size win снова не появился, но timing-cleanup сильный: в локальном prod preview `CommentsSection-*` не запрашивается даже к `~+31s` без scroll/interaction.
 
 Вывод:
 - локальные lazy-разрезы travel route уже работают как ожидается;
@@ -576,6 +656,7 @@ npm run lighthouse:produrl:summary
 - После дополнительного сдвига `CustomHeader` fallback до более позднего окна route-shell/header cleanup можно считать близким к локальному пределу; следующий реальный резерв уже не в travel chrome, а в shared runtime.
 - Shared runtime cleanup уже даёт только timing-выигрыш без заметного size-win; следующий логичный резерв по Stage 4 почти целиком в `entry/__common` graph, а не в оставшихся route-aware таймерах.
 - Вынос `authStore` из root provider shell подтвердил это ещё раз: часть cleanup уже улучшает структуру import graph, но не обязана сразу сдвигать route timing или aggregate chunk size.
+- То же подтверждает и прямой переход с `travelsApi` barrel на submodule imports: route graph становится чище, но instant bundle/timing win уже не гарантирован без более глубокого переписывания самих shared modules.
 - Этап 5 начат частично через hero priority и responsive-image fixes, но полноценная image delivery wave ещё не завершена.
 - Этап 6 частично закрыт: visibility-based hydration уже применена к нескольким heavy секциям, но не доведена до финального охвата и budget guard.
 
@@ -675,6 +756,24 @@ npm run lighthouse:produrl:summary
 - [x] Итерация 49: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; в локальном serve-log `RootWebDeferredChrome-*` сместился примерно на `+9s`, а `performance-*` — примерно на `+25s` от initial document.
 - [x] Итерация 50: `AppProviders` отвязан от статического `useAuthStore` import в root shell; deferred auth/favorites bootstrap теперь читают auth store через dynamic import только в bootstrap path.
 - [x] Итерация 50: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; build/timing win пока не проявился (`FavoritesProvider-*` остаётся примерно на `+12s`), но регрессии нет и import graph стал чище.
+- [x] Итерация 51: travel hot path (`useTravelDetails`, `useTravelPrefetch`, `useBreadcrumbModel`, `TravelListItem`) переведен с `api/travelsApi` barrel на прямые `travelsQueries` / `travelsNormalize` imports, чтобы route/list-prefetch path не зависел от более широкого api graph.
+- [x] Итерация 51: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; measurable size/timing win пока не проявился, но route import graph стал чище без регрессий.
+- [x] Итерация 52: detail-fetch runtime вынесен из `travelsQueries` в отдельный `travelDetailsQueries`; `useTravelDetails`, `useTravelPrefetch`, `useBreadcrumbModel`, `TravelListItem` и `usePdfExportRuntime` больше не тянут list/facets/random query graph только ради `fetchTravel` / `fetchTravelBySlug`.
+- [x] Итерация 52: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; measurable size/timing win пока не проявился, но detail query boundary стал уже и чище для следующего разреза API graph.
+- [x] Итерация 53: `travelsQueries` разрезан на `travelListQueries` и `travelUserQueries`, а consumer-path `useListTravelData`, `ListTravelBase`, `Home` и `useSubscriptionsData` переведены на прямые direct imports без общего barrel query graph.
+- [x] Итерация 53: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; measurable size/timing win на travel route пока не проявился, но list/user/detail query boundaries стали заметно чище и готовы к следующему уровню shared-graph cleanup.
+- [x] Итерация 54: web defer/bootstrap runtime для `AppProviders` вынесен в lazy `AppProvidersDeferredRuntime`, чтобы eager root provider shell не держал весь auth/favorites interaction/fallback/bootstrap orchestration в `__common`.
+- [x] Итерация 54: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; build добавил отдельный `AppProvidersDeferredRuntime-*` chunk около `4 KB`, а в локальном serve-log `FavoritesProvider-*` сместился примерно к `+21s` от initial document.
+- [x] Итерация 55: import `AppProvidersDeferredRuntime` переведен на отдельный interaction/late-fallback gate в `AppProviders`, чтобы lazy providers runtime не запрашивался сразу после route load и не оставался только формально вынесенным из eager shell.
+- [x] Итерация 55: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; size win не появился (`entry ~2.0 MB`, `__common ~2.4 MB`), но в локальном serve-log `AppProvidersDeferredRuntime-*` приходит примерно на `+9s`, а `FavoritesProvider-*` смещается примерно к `+31s` от initial document без interaction.
+- [x] Итерация 56: desktop branch `CustomHeaderAccountSection` разрезан на lightweight visible shell и отдельный intent-driven `AccountMenu`, чтобы heavy desktop account/menu runtime не загружался без реального user intent.
+- [x] Итерация 56: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; size win не появился (`entry ~2.0 MB`, `__common ~2.5 MB`), но в локальном serve-log `AccountMenu-*` не запрашивается даже через ~30 секунд без interaction.
+- [x] Итерация 57: author/share секция в `TravelDetailsDeferred` переведена на более поздний visibility-first fallback, чтобы `AuthorCard` не поднимался по раннему below-the-fold таймеру сразу после `TravelDetailsDeferred`.
+- [x] Итерация 57: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; size win не появился (`entry ~2.0 MB`, `__common ~2.5 MB`), но в локальном serve-log `AuthorCard-*` не запрашивается даже к `~+31s` без scroll/interaction.
+- [x] Итерация 58: map/sidebar/footer секции в `TravelDetailsDeferred` переведены на гораздо более поздний visibility-first fallback, чтобы `TravelDetailsMapSection`, `TravelDetailsSidebarSection` и `TravelDetailsFooterSection` не поднимались по раннему below-the-fold таймеру без scroll/interaction.
+- [x] Итерация 58: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; size win не появился (`entry ~2.0 MB`, `__common ~2.5 MB`, `/travels/[param] ~80 KB`), но в локальном serve-log `TravelDetailsMapSection-*`, `TravelDetailsSidebarSection-*` и `TravelDetailsFooterSection-*` не запрашиваются даже к `~+31s` без scroll/interaction.
+- [x] Итерация 59: `CommentsSection` в `TravelDetailsDeferred` переведена на поздний visibility-first fallback, чтобы comments runtime не поднимался по короткому below-the-fold таймеру без scroll/interaction.
+- [x] Итерация 59: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; size win не появился (`entry ~2.0 MB`, `__common ~2.5 MB`, `/travels/[param] ~80 KB`), но в локальном serve-log `CommentsSection-*` не запрашивается даже к `~+31s` без scroll/interaction.
 - [x] Этап 2: формально выделить critical shell как отдельный слой внутри travel details.
 - [ ] Этап 3: упростить hero/LCP path до более детерминированного SSR-first media flow.
 - [ ] Этап 4: сократить initial JS travel route и shared bundle pressure.

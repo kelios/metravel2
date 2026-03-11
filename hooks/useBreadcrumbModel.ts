@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { fetchQuestByQuestId } from '@/api/quests';
 import { fetchUserProfile } from '@/api/user';
 import { queryKeys } from '@/queryKeys';

@@ -152,9 +152,18 @@ test.describe('Article anchors (TOC -> section)', () => {
       await expect(page).toHaveURL(new RegExp(`#${targetId}$`));
     }
 
-    // Ensure the target is within viewport (allowing headers / layout differences)
-    await target.scrollIntoViewIfNeeded({ timeout: 20_000 });
-    await expect(target).toBeInViewport({ timeout: 20_000 });
+    // The rich text block can remount during hash navigation, so query the DOM
+    // fresh instead of holding a potentially detached locator instance.
+    await page.waitForFunction(
+      (id) => {
+        const el = document.getElementById(String(id));
+        if (!el) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.bottom > 0 && rect.top < window.innerHeight;
+      },
+      targetId,
+      { timeout: 20_000 }
+    );
 
     const scrollAfter = scrollRoot
       ? await scrollRoot.evaluate((node: Element) => Number((node as HTMLElement).scrollTop ?? 0))

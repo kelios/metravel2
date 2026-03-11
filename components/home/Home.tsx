@@ -11,7 +11,7 @@ import HomeHero from './HomeHero';
 import FadeInSection from '@/components/ui/FadeInSection';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { hapticImpact } from '@/utils/haptics';
-import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
+import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
 import { HomeInspirationSection } from './HomeInspirationSection';
 import { fetchTravelsRandom, fetchTravelsOfMonth } from '@/api/map';
 
