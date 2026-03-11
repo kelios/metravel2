@@ -136,7 +136,7 @@ function buildVersionedTravelImageUrl(rawUrl, updatedAt, id) {
   }
 }
 
-function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
+function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id, dpr } = {}) {
   const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
   if (!versioned) return '';
 
@@ -156,12 +156,31 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } 
 
     if (width) parsed.searchParams.set('w', String(Math.round(width)));
     if (quality) parsed.searchParams.set('q', String(Math.round(quality)));
+    if (dpr) parsed.searchParams.set('dpr', String(dpr));
     parsed.searchParams.set('fit', 'contain');
 
     return parsed.toString();
   } catch {
     return versioned;
   }
+}
+
+function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id, dpr } = {}) {
+  if (!rawUrl || !Array.isArray(widths) || widths.length === 0) return '';
+
+  return widths
+    .map((width) => {
+      const href = buildOptimizedTravelImageUrl(rawUrl, {
+        width,
+        quality,
+        updatedAt,
+        id,
+        dpr,
+      });
+      return href ? `${href} ${width}w` : '';
+    })
+    .filter(Boolean)
+    .join(', ');
 }
 
 function buildSeoTitle(base, maxLength = SEO_TITLE_MAX_LENGTH) {
@@ -272,19 +291,43 @@ function buildTravelHeroPreloadData(travel, detail) {
     quality: 35,
     updatedAt: source.updatedAt,
     id: source.id,
+    dpr: 1,
   });
   const desktopHref = buildOptimizedTravelImageUrl(source.url, {
     width: 720,
     quality: 45,
     updatedAt: source.updatedAt,
     id: source.id,
+    dpr: 1.5,
   });
 
   if (!mobileHref && !desktopHref) return null;
 
   return {
-    mobileHref,
-    desktopHref,
+    mobile: mobileHref
+      ? {
+          href: mobileHref,
+          srcSet: buildTravelHeroSrcSet(source.url, [320, 400], {
+            quality: 35,
+            updatedAt: source.updatedAt,
+            id: source.id,
+            dpr: 1,
+          }),
+          sizes: '100vw',
+        }
+      : null,
+    desktop: desktopHref
+      ? {
+          href: desktopHref,
+          srcSet: buildTravelHeroSrcSet(source.url, [480, 720], {
+            quality: 45,
+            updatedAt: source.updatedAt,
+            id: source.id,
+            dpr: 1.5,
+          }),
+          sizes: '(max-width: 1024px) 92vw, 720px',
+        }
+      : null,
   };
 }
 
@@ -518,14 +561,14 @@ function injectBreadcrumbJsonLd(baseHtml, breadcrumb) {
 }
 
 function injectTravelHeroPreload(baseHtml, preloadData) {
-  if (!preloadData?.mobileHref && !preloadData?.desktopHref) return baseHtml;
+  if (!preloadData?.mobile?.href && !preloadData?.desktop?.href) return baseHtml;
 
   const preloadTags = [
-    preloadData.mobileHref
-      ? `<link data-travel-hero-preload="true" data-hero-variant="mobile" rel="preload" as="image" href="${escapeAttr(preloadData.mobileHref)}" media="(max-width: 767px)" fetchpriority="high" crossorigin="anonymous"/>`
+    preloadData.mobile?.href
+      ? `<link data-travel-hero-preload="true" data-hero-variant="mobile" rel="preload" as="image" href="${escapeAttr(preloadData.mobile.href)}"${preloadData.mobile.srcSet ? ` imagesrcset="${escapeAttr(preloadData.mobile.srcSet)}"` : ''}${preloadData.mobile.sizes ? ` imagesizes="${escapeAttr(preloadData.mobile.sizes)}"` : ''} media="(max-width: 767px)" fetchpriority="high" crossorigin="anonymous"/>`
       : '',
-    preloadData.desktopHref
-      ? `<link data-travel-hero-preload="true" data-hero-variant="desktop" rel="preload" as="image" href="${escapeAttr(preloadData.desktopHref)}" media="(min-width: 768px)" fetchpriority="high" crossorigin="anonymous"/>`
+    preloadData.desktop?.href
+      ? `<link data-travel-hero-preload="true" data-hero-variant="desktop" rel="preload" as="image" href="${escapeAttr(preloadData.desktop.href)}"${preloadData.desktop.srcSet ? ` imagesrcset="${escapeAttr(preloadData.desktop.srcSet)}"` : ''}${preloadData.desktop.sizes ? ` imagesizes="${escapeAttr(preloadData.desktop.sizes)}"` : ''} media="(min-width: 768px)" fetchpriority="high" crossorigin="anonymous"/>`
       : '',
   ].filter(Boolean).join('\n');
 

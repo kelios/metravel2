@@ -52,7 +52,7 @@
       : apiOrigin + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
 
     // Must match optimizeImageUrl() + buildVersionedImageUrl() behavior.
-    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id) {
+    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, dpr) {
       try {
         var resolved = new URL(rawUrl, window.location.origin);
 
@@ -84,6 +84,7 @@
 
         if (width) resolved.searchParams.set('w', String(Math.round(width)));
         if (quality) resolved.searchParams.set('q', String(Math.round(quality)));
+        if (dpr) resolved.searchParams.set('dpr', String(dpr));
         resolved.searchParams.set('fit', 'contain');
         return resolved.toString();
       } catch (_e) {
@@ -250,9 +251,11 @@
         // Skip preload if the LCP image is already rendered and loaded
         var existingLcp = document.querySelector('img[data-lcp]');
         if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
+        if (document.querySelector('link[data-travel-hero-preload="true"][as="image"]')) return;
 
         var isMobile = (window.innerWidth || 0) < 768;
         var quality = isMobile ? 35 : 45;
+        var dpr = isMobile ? 1 : 1.5;
 
         // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [480, 720]
         var widths = isMobile ? [320, 400] : [480, 720];
@@ -260,13 +263,13 @@
         // Build srcSet entries to match buildResponsiveImageProps()
         var srcSetParts = [];
         for (var i = 0; i < widths.length; i++) {
-          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id);
+          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, dpr);
           if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
         }
 
         // The main src uses the widest breakpoint.
         var widest = widths[widths.length - 1];
-        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id);
+        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, dpr);
         if (!preloadHref) return;
 
         try {
