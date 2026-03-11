@@ -62,21 +62,33 @@ describe('useTravelDetailsPerformance', () => {
     jest.useRealTimers()
   })
 
-  it('initializes performance helpers on web', async () => {
+  it('initializes performance helpers on non-happy paths after idle delay', async () => {
     renderHook(() =>
-      useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: true })
+      useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: false })
     )
 
-    // rIC schedules via requestIdleCallback (mocked as setTimeout(cb, 0)).
-    // The callback is now async (dynamic imports), so we need to flush both
-    // timers and microtask queue. Delay is 3000ms.
     await act(async () => {
       jest.advanceTimersByTime(3000)
     })
 
-    // criticalCSS is inlined in +html.tsx at build time.
     expect(injectCriticalStyles).not.toHaveBeenCalled()
     expect(initPerformanceMonitoring).toHaveBeenCalled()
+  })
+
+  it('keeps performance helpers out of the early happy-path window', async () => {
+    renderHook(() =>
+      useTravelDetailsPerformance({
+        travel: { id: 1, name: 'Demo travel' } as any,
+        isMobile: false,
+        isLoading: false,
+      })
+    )
+
+    await act(async () => {
+      jest.advanceTimersByTime(9000)
+    })
+
+    expect(initPerformanceMonitoring).not.toHaveBeenCalled()
   })
 
   it('enables deferred loading once loading is complete', () => {
@@ -86,6 +98,7 @@ describe('useTravelDetailsPerformance', () => {
 
     act(() => {})
     expect(result.current.deferAllowed).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 
   it('marks slider ready after LCP is loaded and deferred shell is allowed', async () => {

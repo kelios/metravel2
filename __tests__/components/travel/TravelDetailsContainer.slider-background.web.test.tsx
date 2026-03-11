@@ -9,10 +9,26 @@ import { Platform } from 'react-native'
 import { __testables } from '@/components/travel/details/TravelDetailsHero'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
+const mockHeroExtrasSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
+const mockHeroFavoriteToggleSpy: jest.Mock<any, any> = jest.fn(
+  (_props: any) => null,
+)
 
 jest.mock('@/components/travel/Slider.web', () => ({
   __esModule: true,
   default: (props: any) => mockSliderSpy(props),
+}))
+
+jest.mock('@/components/travel/details/TravelHeroExtras', () => ({
+  __esModule: true,
+  TravelHeroExtras: (props: any) => mockHeroExtrasSpy(props),
+  default: (props: any) => mockHeroExtrasSpy(props),
+}))
+
+jest.mock('@/components/travel/details/TravelHeroFavoriteToggle', () => ({
+  __esModule: true,
+  TravelHeroFavoriteToggle: (props: any) => mockHeroFavoriteToggleSpy(props),
+  default: (props: any) => mockHeroFavoriteToggleSpy(props),
 }))
 
 jest.mock('@/components/travel/AuthorCard', () => ({
@@ -63,13 +79,15 @@ describe('TravelHeroSection slider background regression (web)', () => {
     Platform.OS = 'web'
     Platform.select = (obj: any) => obj.web || obj.default
     mockSliderSpy.mockClear()
+    mockHeroExtrasSpy.mockClear()
+    mockHeroFavoriteToggleSpy.mockClear()
   })
 
   afterEach(() => {
     jest.useRealTimers()
   })
 
-  it('passes blurBackground=true to Slider on web after hero image swap', async () => {
+  it('passes blurBackground=true to Slider on web only after hero image load and user interaction', async () => {
     const travel: any = {
       id: 1,
       name: 'Demo travel',
@@ -126,7 +144,8 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    // Step 2: emulate hero image load → component swaps to Slider.
+    // Step 2: emulate hero image load. The slider must still stay deferred
+    // until the user actually interacts with the page.
     const img = (tree as any).root.findAll((n: any) => n.type === 'img')?.[0]
     expect(img).toBeTruthy()
     const onLoad = img.props?.onLoad
@@ -134,6 +153,14 @@ describe('TravelHeroSection slider background regression (web)', () => {
 
     await act(async () => {
       onLoad({ currentTarget: {} })
+      jest.advanceTimersByTime(500)
+      await Promise.resolve()
+    })
+
+    expect(mockSliderSpy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pointerdown'))
       jest.runAllTimers()
       await Promise.resolve()
     })
@@ -196,5 +223,66 @@ describe('TravelHeroSection slider background regression (web)', () => {
 
     const galleryAnchors = (tree as any).root.findAllByProps({ 'data-section-key': 'gallery' })
     expect(galleryAnchors.length).toBeGreaterThan(0)
+  })
+
+  it('keeps hero enhancers deferred on web until user interaction', async () => {
+    const travel: any = {
+      id: 3,
+      name: 'Enhancer test travel',
+      gallery: [
+        {
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        },
+      ],
+      travelAddress: [],
+    }
+
+    const anchors: any = {
+      gallery: { current: null },
+      video: { current: null },
+      description: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      map: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+    await act(async () => {
+      renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' }]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+
+      jest.advanceTimersByTime(3000)
+      await Promise.resolve()
+    })
+
+    expect(mockHeroExtrasSpy).not.toHaveBeenCalled()
+    expect(mockHeroFavoriteToggleSpy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      window.dispatchEvent(new Event('pointerdown'))
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    expect(mockHeroExtrasSpy).toHaveBeenCalled()
+    expect(mockHeroFavoriteToggleSpy).toHaveBeenCalled()
   })
 })

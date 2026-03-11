@@ -131,7 +131,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
       if (revealed) return;
       revealed = true;
       setIsReady(true);
-    }, 4200);
+    }, ROOT_WEB_DEFERRED_CHROME_TIMEOUT_MS);
 
     const reveal = () => {
       if (revealed) return;
@@ -490,3 +490,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.background,
     },
 });
+const ROOT_WEB_DEFERRED_CHROME_TIMEOUT_MS = 9000;

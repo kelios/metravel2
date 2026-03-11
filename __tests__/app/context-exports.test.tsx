@@ -249,5 +249,77 @@ describe('Context module exports (prod-build regression)', () => {
       expect(result.current.isAuthenticated).toBe(false);
       expect(result.current.authReady).toBe(false);
     });
+
+    it('does not use requestIdleCallback for deferred auth in interaction mode', async () => {
+      jest.useFakeTimers();
+
+      const { default: AppProviders } = await import(
+        '@/components/layout/AppProviders'
+      );
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+
+      const originalRequestIdleCallback = (window as any).requestIdleCallback;
+      const requestIdleCallbackMock = jest.fn(() => 1);
+      (window as any).requestIdleCallback = requestIdleCallbackMock;
+
+      try {
+        const { render } = require('@testing-library/react-native');
+
+        render(
+          <AppProviders
+            queryClient={queryClient}
+            deferAuthProvider
+            authDeferMode="interaction"
+          >
+            {null}
+          </AppProviders>
+        );
+
+        expect(requestIdleCallbackMock).not.toHaveBeenCalled();
+      } finally {
+        (window as any).requestIdleCallback = originalRequestIdleCallback;
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
+      }
+    });
+
+    it('does not use requestIdleCallback for deferred favorites in interaction mode', async () => {
+      jest.useFakeTimers();
+
+      const { default: AppProviders } = await import(
+        '@/components/layout/AppProviders'
+      );
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+
+      const originalRequestIdleCallback = (window as any).requestIdleCallback;
+      const requestIdleCallbackMock = jest.fn(() => 1);
+      (window as any).requestIdleCallback = requestIdleCallbackMock;
+
+      try {
+        const { render } = require('@testing-library/react-native');
+
+        render(
+          <AppProviders
+            queryClient={queryClient}
+            deferFavoritesProvider
+            favoritesDeferMode="interaction"
+          >
+            {null}
+          </AppProviders>
+        );
+
+        expect(requestIdleCallbackMock).not.toHaveBeenCalled();
+      } finally {
+        (window as any).requestIdleCallback = originalRequestIdleCallback;
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
+      }
+    });
   });
 });

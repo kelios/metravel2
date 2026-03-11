@@ -92,6 +92,7 @@ jest.mock('@/hooks/useTravelDetailsPerformance', () => ({
     setLcpLoaded: jest.fn(),
     sliderReady: true,
     deferAllowed: true,
+    postLcpRuntimeReady: true,
   }),
 }));
 

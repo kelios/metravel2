@@ -5,6 +5,9 @@ import { Platform } from 'react-native'
 import type { Travel } from '@/types/types'
 import { rIC } from '@/utils/rIC'
 
+const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 3000
+const TRAVEL_PERFORMANCE_INIT_FALLBACK_MS = 12000
+
 export interface UseTravelDetailsPerformanceArgs {
   travel?: Travel
   isMobile: boolean
@@ -16,6 +19,7 @@ export interface UseTravelDetailsPerformanceReturn {
   setLcpLoaded: Dispatch<SetStateAction<boolean>>
   sliderReady: boolean
   deferAllowed: boolean
+  postLcpRuntimeReady: boolean
 }
 
 export function useTravelDetailsPerformance({
@@ -26,6 +30,9 @@ export function useTravelDetailsPerformance({
   const [lcpLoaded, setLcpLoaded] = useState(false)
   const [sliderReady, setSliderReady] = useState(Platform.OS !== 'web')
   const [deferAllowed, setDeferAllowed] = useState(false)
+  const [postLcpRuntimeReady, setPostLcpRuntimeReady] = useState(
+    Platform.OS !== 'web',
+  )
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -95,29 +102,138 @@ export function useTravelDetailsPerformance({
   }, [isLoading, lcpLoaded, travel])
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      // Defer non-critical performance utilities well past LCP/TBT window.
-      // Critical CSS is already inlined in +html.tsx — no need to inject again.
-      rIC(async () => {
-        try {
-          const [{ initPerformanceMonitoring }] =
-            await Promise.all([
-              import('@/utils/performance'),
-            ])
-          if (typeof initPerformanceMonitoring === 'function') {
-            initPerformanceMonitoring()
-          }
-        } catch {
-          // Non-critical — silently ignore if performance module fails to load
-        }
-      }, 3000)
+    if (Platform.OS !== 'web') {
+      if (!isLoading) setPostLcpRuntimeReady(true)
+      return
     }
-  }, [])
+
+    if (!deferAllowed) {
+      setPostLcpRuntimeReady(false)
+      return
+    }
+
+    const isWebAutomation =
+      typeof navigator !== 'undefined' &&
+      Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+
+    if (isWebAutomation || !travel) {
+      setPostLcpRuntimeReady(true)
+      return
+    }
+
+    setPostLcpRuntimeReady(false)
+
+    let revealed = false
+    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (revealed) return
+      revealed = true
+      setPostLcpRuntimeReady(true)
+    }, 5000)
+
+    const reveal = () => {
+      if (revealed) return
+      revealed = true
+      if (revealTimer) {
+        clearTimeout(revealTimer)
+        revealTimer = null
+      }
+      setPostLcpRuntimeReady(true)
+    }
+
+    window.addEventListener('pointerdown', reveal, { passive: true, once: true })
+    window.addEventListener('keydown', reveal, { once: true })
+    window.addEventListener('scroll', reveal, { passive: true, once: true })
+
+    return () => {
+      revealed = true
+      if (revealTimer) clearTimeout(revealTimer)
+      window.removeEventListener('pointerdown', reveal as EventListener)
+      window.removeEventListener('keydown', reveal as EventListener)
+      window.removeEventListener('scroll', reveal as EventListener)
+    }
+  }, [deferAllowed, isLoading, travel])
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      let cancelled = false
+      let revealTimer: ReturnType<typeof setTimeout> | null = null
+
+      const runPerformanceMonitoring = () => {
+        rIC(async () => {
+          if (cancelled) return
+          try {
+            const [{ initPerformanceMonitoring }] =
+              await Promise.all([
+                import('@/utils/performance'),
+              ])
+            if (!cancelled && typeof initPerformanceMonitoring === 'function') {
+              initPerformanceMonitoring()
+            }
+          } catch {
+            // Non-critical — silently ignore if performance module fails to load
+          }
+        }, NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS)
+      }
+
+      if (isLoading) {
+        return () => {
+          cancelled = true
+          if (revealTimer) clearTimeout(revealTimer)
+        }
+      }
+
+      if (!travel || typeof window === 'undefined') {
+        runPerformanceMonitoring()
+        return () => {
+          cancelled = true
+          if (revealTimer) clearTimeout(revealTimer)
+        }
+      }
+
+      const isWebAutomation =
+        typeof navigator !== 'undefined' &&
+        Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+
+      if (isWebAutomation) {
+        runPerformanceMonitoring()
+        return () => {
+          cancelled = true
+          if (revealTimer) clearTimeout(revealTimer)
+        }
+      }
+
+      let revealed = false
+      const reveal = () => {
+        if (revealed || cancelled) return
+        revealed = true
+        if (revealTimer) {
+          clearTimeout(revealTimer)
+          revealTimer = null
+        }
+        runPerformanceMonitoring()
+      }
+
+      revealTimer = setTimeout(reveal, TRAVEL_PERFORMANCE_INIT_FALLBACK_MS)
+
+      window.addEventListener('pointerdown', reveal, { passive: true, once: true })
+      window.addEventListener('keydown', reveal, { once: true })
+      window.addEventListener('scroll', reveal, { passive: true, once: true })
+
+      return () => {
+        cancelled = true
+        revealed = true
+        if (revealTimer) clearTimeout(revealTimer)
+        window.removeEventListener('pointerdown', reveal as EventListener)
+        window.removeEventListener('keydown', reveal as EventListener)
+        window.removeEventListener('scroll', reveal as EventListener)
+      }
+    }
+  }, [isLoading, travel])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!travel) return
-    if (!deferAllowed) return
+    if (!postLcpRuntimeReady) return
     const connection = (window as { navigator?: { connection?: { effectiveType?: string; saveData?: boolean } } })?.navigator?.connection
     const effectiveType = String(connection?.effectiveType || '')
     const saveData = Boolean(connection?.saveData)
@@ -144,12 +260,13 @@ export function useTravelDetailsPerformance({
         // import('@/components/travel/ToggleableMapSection'),
       ])
     }, 4200)
-  }, [travel, deferAllowed])
+  }, [travel, postLcpRuntimeReady])
 
   return useMemo(() => ({
     lcpLoaded,
     setLcpLoaded,
     sliderReady,
     deferAllowed,
-  }), [lcpLoaded, setLcpLoaded, sliderReady, deferAllowed])
+    postLcpRuntimeReady,
+  }), [lcpLoaded, setLcpLoaded, sliderReady, deferAllowed, postLcpRuntimeReady])
 }

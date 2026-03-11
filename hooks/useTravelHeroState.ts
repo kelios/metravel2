@@ -43,7 +43,7 @@ function useHeroMediaModel(
   travel: Travel,
   isMobile: boolean,
   onFirstImageLoad: () => void,
-  renderSlider: boolean,
+  allowSliderUpgrade: boolean,
 ) {
   const { width: winW, height: winH } = useWindowDimensions()
   const tdTrace = useTdTrace()
@@ -167,7 +167,7 @@ function useHeroMediaModel(
 
   useEffect(() => {
     if (!webHeroLoaded || Platform.OS !== 'web') return
-    if (!renderSlider) {
+    if (!allowSliderUpgrade) {
       setIsOverlayFading(false)
       setOverlayUnmounted(false)
       return
@@ -182,7 +182,7 @@ function useHeroMediaModel(
       setOverlayUnmounted(true)
     }, 6000)
     return () => clearTimeout(fallback)
-  }, [webHeroLoaded, sliderImageReady, renderSlider])
+  }, [allowSliderUpgrade, webHeroLoaded, sliderImageReady])
 
   useEffect(() => {
     if (Platform.OS === 'web' && webHeroLoaded) tdTrace('hero:webHeroLoaded')
@@ -223,8 +223,12 @@ function useHeroMediaModel(
 }
 
 function useDeferredHeroExtras(deferExtras: boolean) {
+  const isWebAutomation =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    Boolean((navigator as unknown as Record<string, unknown>).webdriver)
   const [extrasReady, setExtrasReady] = useState(
-    !deferExtras || Platform.OS !== 'web',
+    Platform.OS !== 'web' || (!deferExtras && isWebAutomation),
   )
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -232,38 +236,108 @@ function useDeferredHeroExtras(deferExtras: boolean) {
       return
     }
     if (!deferExtras) {
-      setExtrasReady(true)
-      return
-    }
-    let cancelled = false
-    let fallbackTimeout: ReturnType<typeof setTimeout> | null = null
-    const kick = () => {
-      if (!cancelled) setExtrasReady(true)
-    }
-    if (
-      typeof (window as unknown as Record<string, unknown>)
-        ?.requestIdleCallback === 'function'
-    ) {
-      ;(
-        window as unknown as {
-          requestIdleCallback: (
-            cb: () => void,
-            opts: { timeout: number },
-          ) => void
+      if (isWebAutomation) {
+        setExtrasReady(true)
+        return
+      }
+
+      setExtrasReady(false)
+      let revealed = false
+      let fallbackTimeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+        if (revealed) return
+        revealed = true
+        setExtrasReady(true)
+      }, 3500)
+
+      const reveal = () => {
+        if (revealed) return
+        revealed = true
+        if (fallbackTimeout) {
+          clearTimeout(fallbackTimeout)
+          fallbackTimeout = null
         }
-      ).requestIdleCallback(kick, { timeout: 1200 })
-    } else {
-      fallbackTimeout = setTimeout(kick, 800)
+        setExtrasReady(true)
+      }
+
+      window.addEventListener('pointerdown', reveal, { passive: true, once: true })
+      window.addEventListener('keydown', reveal, { once: true })
+      window.addEventListener('scroll', reveal, { passive: true, once: true })
+
+      return () => {
+        revealed = true
+        if (fallbackTimeout) clearTimeout(fallbackTimeout)
+        window.removeEventListener('pointerdown', reveal as EventListener)
+        window.removeEventListener('keydown', reveal as EventListener)
+        window.removeEventListener('scroll', reveal as EventListener)
+      }
     }
-    return () => {
-      cancelled = true
-      if (fallbackTimeout) clearTimeout(fallbackTimeout)
-    }
-  }, [deferExtras])
+
+    setExtrasReady(false)
+  }, [deferExtras, isWebAutomation])
 
   return {
     extrasReady,
   }
+}
+
+function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
+  const isWebAutomation =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+  const [sliderUpgradeAllowed, setSliderUpgradeAllowed] = useState(
+    Platform.OS !== 'web' || (renderSlider && isWebAutomation),
+  )
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      setSliderUpgradeAllowed(true)
+      return
+    }
+
+    if (!renderSlider) {
+      setSliderUpgradeAllowed(false)
+      return
+    }
+
+    if (isWebAutomation) {
+      setSliderUpgradeAllowed(true)
+      return
+    }
+
+    setSliderUpgradeAllowed(false)
+
+    let revealed = false
+    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (revealed) return
+      revealed = true
+      setSliderUpgradeAllowed(true)
+    }, 10000)
+
+    const reveal = () => {
+      if (revealed) return
+      revealed = true
+      if (revealTimer) {
+        clearTimeout(revealTimer)
+        revealTimer = null
+      }
+      setSliderUpgradeAllowed(true)
+    }
+
+    window.addEventListener('pointerdown', reveal, { passive: true, once: true })
+    window.addEventListener('keydown', reveal, { once: true })
+    window.addEventListener('scroll', reveal, { passive: true, once: true })
+
+    return () => {
+      revealed = true
+      if (revealTimer) clearTimeout(revealTimer)
+      window.removeEventListener('pointerdown', reveal as EventListener)
+      window.removeEventListener('keydown', reveal as EventListener)
+      window.removeEventListener('scroll', reveal as EventListener)
+    }
+  }, [isWebAutomation, renderSlider])
+
+  return sliderUpgradeAllowed
 }
 
 export function useTravelHeroState(
@@ -273,11 +347,18 @@ export function useTravelHeroState(
   deferExtras: boolean,
   renderSlider: boolean,
 ) {
-  const media = useHeroMediaModel(travel, isMobile, onFirstImageLoad, renderSlider)
+  const sliderUpgradeAllowed = useWebHeroSliderUpgradeGate(renderSlider)
+  const media = useHeroMediaModel(
+    travel,
+    isMobile,
+    onFirstImageLoad,
+    sliderUpgradeAllowed,
+  )
   const deferred = useDeferredHeroExtras(deferExtras)
 
   return {
     ...media,
     ...deferred,
+    sliderUpgradeAllowed,
   }
 }

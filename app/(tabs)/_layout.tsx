@@ -18,7 +18,7 @@ const safeLazy = <T extends React.ComponentType<any>>(
 const CustomHeaderLazy = safeLazy(() => import('@/components/layout/CustomHeader'), 'CustomHeader');
 const ScrollToTopButtonLazy = safeLazy(() => import('@/components/ui/ScrollToTopButton'), 'ScrollToTopButton');
 
-const TRAVEL_CHROME_REVEAL_TIMEOUT_MS = 2800;
+const TRAVEL_CHROME_REVEAL_TIMEOUT_MS = 8000;
 
 function useDeferredTravelChrome(isTravelDetailsRoute: boolean) {
     const [isVisible, setIsVisible] = useState(Platform.OS !== 'web' || !isTravelDetailsRoute);

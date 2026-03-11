@@ -192,6 +192,16 @@ Critical shell должен:
 - Сделано: `TravelSectionTabs`, `QuickFacts` и `NavigationArrows` тоже переведены с shared `useResponsive` на локальный `useWindowDimensions`; even в lazy/travel-only UI это убирает ещё несколько лишних responsive consumers из route-specific path.
 - Сделано: `PopularTravelList`, `NearTravelList` и lazy `CompactSideBarTravel` больше не используют shared `useResponsive` только ради width/tablet/mobile branching; related/sidebar travel UI тоже переведён на локальный `useWindowDimensions`.
 - Сделано: deferred engagement/map UI (`ToggleableMapSection`, `ShareButtons`, `CTASection`, `PersonalizedRecommendations`) тоже переведён с `useResponsive` на локальный `useWindowDimensions`; это ещё сильнее изолирует travel-specific responsive logic от общего shared hook path.
+- Сделано: post-LCP runtime travel details теперь вынесен в отдельный lazy `TravelDetailsPostLcpRuntime`; `TravelDetailsContainer` держит только critical shell, SEO/error path и lightweight orchestration первого экрана.
+- Сделано: critical shell теперь формально выделен в отдельный `TravelDetailsCriticalShell`, чтобы first-screen слой был явно отделён от container orchestration и post-LCP runtime не только логически, но и структурно.
+- Сделано: на web hero slider больше не апгрейдится автоматически сразу после LCP; slider/runtime handoff теперь ждёт реального user interaction, а SSR-first hero image остаётся стабильным first-screen media block.
+- Сделано: интерактивная часть hero формально вынесена из `TravelDetailsHero` в отдельные модули `TravelDetailsOptimizedLCPHero` и `TravelHeroInteractiveSlider`, чтобы initial hero shell и slider/lightbox runtime больше не жили в одном модуле.
+- Сделано: hero enhancers (`TravelHeroExtras`, `QuickFacts`, `TravelHeroFavoriteToggle`) на web больше не поднимаются сразу после early defer/LCP window; они теперь ждут первого interaction/scroll с fallback-таймером, чтобы не конкурировать с самым ранним hero stabilization path.
+- Сделано: весь `TravelDetailsPostLcpRuntime` на web теперь отделён от раннего `deferAllowed` и ждёт собственного `postLcpRuntimeReady` gate; description/sidebar/near/popular/post-LCP chrome больше не обязаны стартовать сразу после shell stabilization.
+- Сделано: `AppProviders` больше не использует `requestIdleCallback` для `interaction`-defer auth/favorites bootstrap на travel route; root auth/favorites runtime реально остаётся interaction-first вместо скрытого early-idle bootstrap.
+- Сделано: fallback-reveal для `CustomHeader` на web travel route дополнительно сдвинут дальше по времени; header shell по-прежнему появляется по interaction/scroll, но таймерный путь больше не забирает chunk в раннее post-hydration окно.
+- Сделано: root deferred chrome и travel performance instrumentation больше не поднимаются в раннем shared path только по короткому fallback-окну; `RootWebDeferredChrome` сдвинут глубже, а `utils/performance` на happy path ждёт interaction или очень поздний fallback.
+- Сделано: `AppProviders` больше не импортирует `useAuthStore` статически в root provider shell только ради deferred bootstrap orchestration; auth/favorites bootstrap теперь читают auth store через dynamic import в момент реального bootstrap path.
 - В работе: дальнейшее сокращение initial JS и audit того, что еще попадает в route/common chunks раньше необходимости.
 
 Последний production build после текущих shared-path правок:
@@ -207,6 +217,51 @@ Critical shell должен:
 - `TravelDetailsDeferred-*`: около `27 KB`
 - `TravelDetailsMapSection-*`: около `73 KB`
 - `mapImageGenerator-*`: отдельный lazy chunk около `9.5 KB`
+
+Production build после module-level split post-LCP runtime:
+- `TravelDetailsContainer-*`: около `46 KB` (было около `50 KB`)
+- `TravelDetailsPostLcpRuntime-*`: новый lazy chunk около `4.1 KB`
+- `travels/[param]` static route snapshot: около `80 KB`
+
+Production build после hero module split:
+- `TravelDetailsContainer-*`: около `48 KB`
+- `TravelHeroInteractiveSlider-*`: новый lazy chunk около `1.4 KB`
+- `Slider-*`: отдельный lazy chunk около `31 KB`
+- `travels/[param]` static route snapshot: остается около `80 KB`
+
+Production build после deferred hero enhancers:
+- `TravelDetailsContainer-*`: около `49 KB`
+- `TravelHeroExtras-*`: около `2.6 KB`
+- `TravelHeroFavoriteToggle-*`: около `2.7 KB`
+- route snapshot по-прежнему около `80 KB`; это в первую очередь runtime-timing cleanup, а не size win.
+
+Production build после delayed post-LCP runtime gate:
+- `TravelDetailsContainer-*`: около `49 KB`
+- `TravelDetailsPostLcpRuntime-*`: около `4.1 KB`
+- aggregate sizes почти не меняются; выигрыш в том, что сам post-LCP runtime больше не стартует в первом окне shell stabilization без interaction.
+
+Production build после root providers interaction-defer cleanup:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- aggregate bundle sizes почти не меняются; выигрыш в том, что `FavoritesProvider`/auth bootstrap больше не стартуют через hidden idle path на раннем travel preview window.
+
+Production build после delayed travel header fallback:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- `CustomHeader-*`: около `11 KB`
+- aggregate bundle sizes почти не меняются; выигрыш в том, что `CustomHeader-*` в локальном prod preview сместился примерно с `+4s` к `+8s` от initial document и перестал попадать в более раннее travel preview window.
+
+Production build после deeper root chrome/performance defer:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- `RootWebDeferredChrome-*`: около `4.4 KB`
+- `performance-*`: около `3.5 KB`
+- aggregate bundle sizes почти не меняются; выигрыш в timing: в локальном prod preview `RootWebDeferredChrome-*` приходит примерно на `+9s`, а `performance-*` только около `+25s` от initial document без interaction.
+
+Production build после auth-store bootstrap decoupling:
+- `entry-*`: около `2.0 MB`
+- `__common-*`: около `2.4 MB`
+- aggregate bundle snapshot почти не меняется; текущий выигрыш структурный: root provider shell больше не держит статический import `authStore` ради defer orchestration, но в локальном prod preview `FavoritesProvider-*` всё ещё приходит примерно на `+12s`, то есть это пока import-graph cleanup без заметного timing win.
 
 Вывод:
 - локальные lazy-разрезы travel route уже работают как ожидается;
@@ -240,6 +295,8 @@ Critical shell должен:
 - `TravelSectionTabs`, `QuickFacts` и `NavigationArrows` по той же схеме перестали зависеть от `useResponsive`; это по-прежнему скорее structural cleanup, чем заметное уменьшение aggregate bundle numbers, но shared responsive слой участвует в travel UI всё меньше.
 - `PopularTravelList`, `NearTravelList` и `CompactSideBarTravel` продолжили ту же серию: даже lazy related/sidebar блоки меньше зависят от общего responsive hook path, хотя это всё ещё cleanup структуры, а не крупный size win.
 - `ToggleableMapSection`, `ShareButtons`, `CTASection` и `PersonalizedRecommendations` по той же схеме перестали тянуть `useResponsive`; это уже почти добирает безопасные travel-only/deferred consumers без захода в глобальный responsive слой.
+- desktop account chrome в `CustomHeader` больше не тянет mobile account runtime заранее: `CustomHeaderAccountSection` разделён на desktop/mobile lazy paths, а auth/favorites/unread/menu logic уехала в отдельный `CustomHeaderMobileAccountSection` chunk.
+- `SkipToContentLink` на travel route больше не подтягивается в happy path сразу после mount: chunk грузится только на первом `Tab`, при этом keyboard skip-navigation сохраняется через auto-focus reveal.
 
 ### Этап 1. Зафиксировать baseline и бюджет
 
@@ -516,6 +573,9 @@ npm run lighthouse:produrl:summary
 - Этап 2 частично закрыт: critical shell фактически выделен серией итераций, но ещё не оформлен как отдельный явный слой на уровне структуры travel details.
 - Этап 3 частично закрыт: hero path сильно упрощён, но LCP по-прежнему нестабилен и этап нельзя считать завершённым.
 - Этап 4 в активной фазе: route-shell и header cleanup почти исчерпаны, оставшийся потенциал в `__common` и `entry`.
+- После дополнительного сдвига `CustomHeader` fallback до более позднего окна route-shell/header cleanup можно считать близким к локальному пределу; следующий реальный резерв уже не в travel chrome, а в shared runtime.
+- Shared runtime cleanup уже даёт только timing-выигрыш без заметного size-win; следующий логичный резерв по Stage 4 почти целиком в `entry/__common` graph, а не в оставшихся route-aware таймерах.
+- Вынос `authStore` из root provider shell подтвердил это ещё раз: часть cleanup уже улучшает структуру import graph, но не обязана сразу сдвигать route timing или aggregate chunk size.
 - Этап 5 начат частично через hero priority и responsive-image fixes, но полноценная image delivery wave ещё не завершена.
 - Этап 6 частично закрыт: visibility-based hydration уже применена к нескольким heavy секциям, но не доведена до финального охвата и budget guard.
 
@@ -591,7 +651,31 @@ npm run lighthouse:produrl:summary
 - [x] Итерация 37: defer для `Footer` и другого route-aware chrome на `travels/*` теперь вычисляется от эффективного пути и не должен срываться на прямом заходе.
 - [x] Итерация 38: `NetworkStatus` в `app/_layout.tsx` переведен на route-aware deferred mount для web `travels/*`, чтобы root status chrome не входил в раннее hydration/Lighthouse окно.
 - [x] Итерация 38: `ToastHost` в `app/_layout.tsx` переведен на route-aware deferred mount для web `travels/*` с ранним reveal по interaction и таймерным fallback.
-- [ ] Этап 2: формально выделить critical shell как отдельный слой внутри travel details.
+- [x] Итерация 39: `CustomHeaderAccountSection` разделен на lightweight desktop shell и отдельный lazy `CustomHeaderMobileAccountSection`, чтобы desktop header path не импортировал auth/favorites/unread/mobile-menu runtime заранее.
+- [x] Итерация 39: подтвержден регрессионный сценарий мобильного меню через `e2e/mobile-menu-closes-on-nav.spec.ts` после account-path split.
+- [x] Итерация 40: `SkipToContentLink` переведен с eager lazy-mount на first-Tab reveal, чтобы travel happy path не загружал accessibility chunk без реальной keyboard interaction.
+- [x] Итерация 40: keyboard accessibility regression подтвержден через `e2e/travels.spec.ts --grep "should be keyboard navigable"` после deferred skip-link reveal.
+- [x] Итерация 41: `TravelDetailsContainer` разрезан по module boundary на critical shell и отдельный lazy `TravelDetailsPostLcpRuntime`, чтобы route chunk не держал post-LCP orchestration/chrome/render logic.
+- [x] Итерация 41: полный прогон `npm run lint`, `npm run test:run` и production build прошел успешно; build подтвердил новый `TravelDetailsPostLcpRuntime-*` chunk около `4.1 KB`.
+- [x] Итерация 42: first-screen слой формально выделен в отдельный `TravelDetailsCriticalShell`, чтобы структура travel details прямо отражала модель `critical shell -> deferred runtime`.
+- [x] Итерация 42: после extraction `TravelDetailsContainer` regression-suite и полный `npm run lint` / `npm run test:run` прошли без падений.
+- [x] Итерация 43: web hero slider upgrade переведен с automatic post-LCP handoff на interaction-gated handoff, чтобы first-screen оставался простым SSR-first image shell до реального действия пользователя.
+- [x] Итерация 43: targeted hero regressions и полный `npm run lint` / `npm run test:run` прошли после смены hero interaction contract.
+- [x] Итерация 44: `TravelDetailsHero` разрезан на SSR-first media shell (`TravelDetailsOptimizedLCPHero`) и отдельный interactive slider/fullscreen runtime (`TravelHeroInteractiveSlider`), чтобы hero module сам соответствовал границе `LCP shell -> interaction runtime`.
+- [x] Итерация 44: полный `npm run lint`, `npm run test:run`, production export c post-build SEO/static checks и browser preview на локальном prod export прошли; build подтвердил новый `TravelHeroInteractiveSlider-*` chunk около `1.4 KB`.
+- [x] Итерация 45: web hero enhancers переведены с early-idle reveal на interaction/scroll gate с fallback, чтобы `TravelHeroExtras` и `TravelHeroFavoriteToggle` не конкурировали с самым ранним hero/LCP окном.
+- [x] Итерация 45: добавлен regression на deferred hero enhancers; полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли.
+- [x] Итерация 46: `TravelDetailsPostLcpRuntime` переведен на отдельный `postLcpRuntimeReady` gate, чтобы `TravelDescription` / sidebar / related / post-LCP chrome не монтировались автоматически сразу после `deferAllowed`.
+- [x] Итерация 46: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; в локальном serve-log `TravelDetailsPostLcpRuntime-*` не запрашивался в первые ~7 секунд preview окна.
+- [x] Итерация 47: `AppProviders` очищен от hidden idle-bootstrap в `interaction`-режиме; travel route больше не запускает auth/favorites defer через `requestIdleCallback`, а использует только interaction и существенно более поздний fallback.
+- [x] Итерация 47: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; в раннем serve-log travel preview больше не видно `FavoritesProvider-*` в первые ~4 секунды окна.
+- [x] Итерация 48: `app/(tabs)/_layout` получил более поздний fallback-reveal для `CustomHeader` на web travel route; header chunk по-прежнему открывается по interaction/scroll, но таймерный path больше не поднимает `CustomHeader-*` в раннее post-hydration окно.
+- [x] Итерация 48: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; в локальном serve-log `CustomHeader-*` сместился примерно с `+4s` до `+8s` от initial document.
+- [x] Итерация 49: `app/_layout` получил более поздний fallback для `RootWebDeferredChrome` на web travel route, а `useTravelDetailsPerformance` перестал грузить `utils/performance` в раннем happy path без interaction.
+- [x] Итерация 49: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; в локальном serve-log `RootWebDeferredChrome-*` сместился примерно на `+9s`, а `performance-*` — примерно на `+25s` от initial document.
+- [x] Итерация 50: `AppProviders` отвязан от статического `useAuthStore` import в root shell; deferred auth/favorites bootstrap теперь читают auth store через dynamic import только в bootstrap path.
+- [x] Итерация 50: полный `npm run lint`, `npm run test:run`, production export c SEO/static checks и browser preview на локальном prod export прошли; build/timing win пока не проявился (`FavoritesProvider-*` остаётся примерно на `+12s`), но регрессии нет и import graph стал чище.
+- [x] Этап 2: формально выделить critical shell как отдельный слой внутри travel details.
 - [ ] Этап 3: упростить hero/LCP path до более детерминированного SSR-first media flow.
 - [ ] Этап 4: сократить initial JS travel route и shared bundle pressure.
 - [ ] Этап 5: пересобрать responsive image delivery для hero/avatar/content images.

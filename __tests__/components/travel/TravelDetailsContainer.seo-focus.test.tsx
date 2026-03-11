@@ -87,6 +87,7 @@ jest.mock('@/hooks/travel-details', () => ({
       setLcpLoaded: jest.fn(),
       sliderReady: true,
       deferAllowed: false,
+      postLcpRuntimeReady: false,
     },
     menu: {
       closeMenu: jest.fn(),

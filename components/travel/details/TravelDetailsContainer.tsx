@@ -10,7 +10,6 @@ import React, {
 import {
   Animated,
   Platform,
-  ScrollView,
   Text,
   TouchableOpacity,
   useWindowDimensions,
@@ -28,9 +27,7 @@ import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from "@/utils/seo";
 import { createTravelArticleJsonLd, stripHtmlForSeo } from "@/utils/travelSeo";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
-import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
-
-import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
+import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetailsCriticalShell";
 import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
@@ -42,20 +39,13 @@ import { rIC } from '@/utils/rIC';
 
 const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
 const AccessibilityAnnouncer = withLazy(() => import("@/components/accessibility/AccessibilityAnnouncer"));
-const ScrollToTopButton = withLazy(() => import("@/components/ui/ScrollToTopButton"));
-const ReadingProgressBar = withLazy(() => import("@/components/ui/ReadingProgressBar"));
-const TravelSectionsSheet = withLazy(() => import("@/components/travel/TravelSectionsSheet"));
-const TravelStickyActions = withLazy(() => import("@/components/travel/details/TravelStickyActions"));
-const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
 const TravelDetailPageSkeleton = withLazy(() =>
   import('@/components/travel/TravelDetailPageSkeleton').then((m) => ({
     default: m.TravelDetailPageSkeleton,
   }))
 );
-const TravelDeferredSections = withLazy(() =>
-  import("@/components/travel/details/TravelDetailsDeferred").then((m) => ({
-    default: m.TravelDeferredSections,
-  }))
+const TravelDetailsPostLcpRuntime = withLazy(() =>
+  import('@/components/travel/details/TravelDetailsPostLcpRuntime')
 );
 
 /* -------------------- utils (используются из импортов) -------------------- */
@@ -127,6 +117,7 @@ export default function TravelDetailsContainer() {
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
   const themedColors = useThemedColors();
   const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors]);
+  const [showSkipToContentLink, setShowSkipToContentLink] = useState(Platform.OS !== 'web');
 
   // Web: avoid large layout shifts when switching from page skeleton → real content.
   // Keep skeleton mounted briefly and fade it out (no layout collapse).
@@ -145,7 +136,8 @@ export default function TravelDetailsContainer() {
   const { contentHorizontalPadding, sideMenuPlatformStyles } = travelDetails.layout
   const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
     travelDetails.navigation
-  const { lcpLoaded, setLcpLoaded, sliderReady, deferAllowed } = travelDetails.performance
+  const { lcpLoaded, setLcpLoaded, sliderReady, deferAllowed, postLcpRuntimeReady } =
+    travelDetails.performance
   const { closeMenu, animatedX, menuWidthNum } = travelDetails.menu
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
     travelDetails.scroll
@@ -191,6 +183,20 @@ export default function TravelDetailsContainer() {
     if (Platform.OS !== 'web') return
     tdTrace(lcpLoaded ? 'hero:lcpLoaded' : 'hero:lcpPending')
   }, [lcpLoaded, tdTrace])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return undefined;
+
+    const revealSkipLink = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || event.shiftKey) return;
+      setShowSkipToContentLink(true);
+    };
+
+    window.addEventListener('keydown', revealSkipLink, { passive: true, once: true });
+    return () => {
+      window.removeEventListener('keydown', revealSkipLink);
+    };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -382,7 +388,8 @@ export default function TravelDetailsContainer() {
   const forceDeferMount = !!forceOpenKey;
   const criticalChromeReady =
     Platform.OS !== 'web' || lcpLoaded || forceDeferMount || isWebAutomation
-  const deferredChromeReady = deferAllowed || forceDeferMount || isWebAutomation
+  const deferredChromeReady =
+    postLcpRuntimeReady || forceDeferMount || isWebAutomation
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
   // Расширяем scrollTo для добавления логики закрытия меню на мобильных
@@ -430,39 +437,6 @@ export default function TravelDetailsContainer() {
         } as any),
     ],
     [styles.wrapper, themedColors.background, themedColors.backgroundSecondary]
-  );
-
-  const sideMenuContainerStyle = useMemo(
-    () => ({
-      width: menuWidthNum,
-      // TD-05: sticky sidebar на desktop — прилипает к верху при скролле
-      ...Platform.select({
-        web: {
-          position: 'sticky',
-          top: 80, // высота хедера
-          alignSelf: 'flex-start',
-          maxHeight: 'calc(100vh - 100px)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        } as any,
-      }),
-    }),
-    [menuWidthNum]
-  );
-
-  const sideMenuAnimatedStyle = useMemo(
-    () => [
-      styles.sideMenuBase,
-      sideMenuPlatformStyles,
-      {
-        transform: [{ translateX: animatedX }],
-        width: '100%' as any,
-        zIndex: 1000,
-        backgroundColor: themedColors.surface,
-        borderRightColor: themedColors.border,
-      },
-    ],
-    [styles.sideMenuBase, sideMenuPlatformStyles, animatedX, themedColors.surface, themedColors.border]
   );
 
   const scrollViewStyle = useMemo(
@@ -586,184 +560,72 @@ export default function TravelDetailsContainer() {
       {seoBlock}
 
       {/* ✅ PHASE 2: Accessibility Components */}
-      <Suspense fallback={null}>
-        <SkipToContentLink targetId="travel-main-content" label="Skip to main content" />
-      </Suspense>
+      {showSkipToContentLink ? (
+        <Suspense fallback={null}>
+          <SkipToContentLink
+            targetId="travel-main-content"
+            label="Skip to main content"
+            initiallyVisible={Platform.OS === 'web'}
+            autoFocusOnMount={Platform.OS === 'web'}
+          />
+        </Suspense>
+      ) : null}
       {announcement ? (
         <Suspense fallback={null}>
           <AccessibilityAnnouncer message={announcement} priority={announcementPriority} id="travel-announcer" />
         </Suspense>
       ) : null}
 
-    <View
-      testID="travel-details-page"
-      id="travel-main-content"
-      role="main"
-      aria-label={`Детали путешествия: ${travel?.name || 'путешествие'}`}
-      style={wrapperStyle}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
-          {/* Skeleton overlay inside stable layout (web only).
-              Never unmount — use visibility/opacity to avoid CLS from DOM removal. */}
-          {Platform.OS === 'web' && (
-            <View
-              collapsable={false}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: skeletonPhase === 'hidden' ? -1 : 50,
-                opacity: skeletonPhase === 'loading' ? 1 : 0,
-                visibility: skeletonPhase === 'hidden' ? 'hidden' : 'visible',
-                transition: 'opacity 200ms ease-out',
-                contain: 'strict',
-                pointerEvents: 'none',
-              } as any}
-              aria-hidden={skeletonPhase !== 'loading'}
-            >
-              {skeletonPhase !== 'hidden' && (
-                <Suspense fallback={<View style={SKELETON_OVERLAY_FALLBACK_STYLE} />}>
-                  <TravelDetailPageSkeleton />
-                </Suspense>
-              )}
-            </View>
-          )}
-
-          {/* If travel isn't ready yet, we still render the stable chrome underneath */}
-          {/* (side menu/progress/scroll) but keep heavy sections gated */}
-
-          {!isMobile && screenWidth >= METRICS.breakpoints.largeTablet && travel && (
-            <View style={sideMenuContainerStyle}>
-              <Defer when={deferAllowed}>
-                <Animated.View
-                  testID="travel-details-side-menu"
-                  style={sideMenuAnimatedStyle}
-                >
-                  <Suspense fallback={<SectionSkeleton lines={8} />}>
-                    <CompactSideBarTravel
-                      travel={travel}
-                      isMobile={isMobile}
-                      refs={anchors}
-                      links={sectionLinks}
-                      closeMenu={closeMenu}
-                      onNavigate={scrollToWithMenuClose}
-                      activeSection={activeSection}
-                    />
-                  </Suspense>
-                </Animated.View>
-              </Defer>
-            </View>
-          )}
-
-          {/* Прогресс-бар чтения */}
-          {travel && contentHeight > viewportHeight && criticalChromeReady && (
-            <Defer when={deferredChromeReady}>
-              <Suspense fallback={null}>
-                <ReadingProgressBar
-                  scrollY={scrollY}
-                  contentHeight={contentHeight}
-                  viewportHeight={viewportHeight}
-                />
-              </Suspense>
-            </Defer>
-          )}
-
-          <ScrollView
-            testID="travel-details-scroll"
-            ref={scrollRef as any}
-            contentContainerStyle={[styles.scrollContent]}
-            keyboardShouldPersistTaps="handled"
-            onScroll={scrollEventHandler}
-            scrollEventThrottle={Platform.OS === 'web' ? 64 : 48}
-            style={scrollViewStyle}
-            nestedScrollEnabled
-            onContentSizeChange={handleContentSizeChange}
-            onLayout={handleLayout}
-          >
-            <View style={styles.contentOuter} collapsable={false}>
-              <View
-                style={[styles.contentWrapper, { paddingHorizontal: contentHorizontalPadding }]}
-                collapsable={false}
-              >
-                {travel ? (
-                  <>
-                    <View collapsable={false}>
-                      <TravelHeroSection
-                        travel={travel}
-                        anchors={anchors}
-                        isMobile={isMobile}
-                        renderSlider={Platform.OS !== "web" ? true : sliderReady && lcpLoaded}
-                        onFirstImageLoad={handleFirstImageLoad}
-                        sectionLinks={sectionLinks}
-                        onQuickJump={scrollToWithMenuClose}
-                        deferExtras={!deferAllowed}
-                      />
-                    </View>
-
-                    {screenWidth < METRICS.breakpoints.largeTablet &&
-                      sectionLinks.length > 0 &&
-                      criticalChromeReady && (
-                      <Defer when={deferredChromeReady}>
-                        <View style={styles.sectionTabsContainer}>
-                          <Suspense fallback={null}>
-                            <TravelSectionsSheet
-                              links={sectionLinks}
-                              activeSection={activeSection}
-                              onNavigate={scrollToWithMenuClose}
-                              testID="travel-sections-sheet-wrapper"
-                            />
-                          </Suspense>
-                        </View>
-                      </Defer>
-                    )}
-
-                    {/* -------- deferred heavy content -------- */}
-                    <Defer when={deferAllowed || forceDeferMount || isWebAutomation}>
-                      <Suspense fallback={<SectionSkeleton />}>
-                        <TravelDeferredSections
-                          travel={travel}
-                          isMobile={isMobile}
-                          forceOpenKey={forceOpenKey}
-                          anchors={anchors}
-                          scrollY={scrollY}
-                          viewportHeight={viewportHeight}
-                          scrollToMapSection={scrollToMapSection}
-                        />
-                      </Suspense>
-                    </Defer>
-                  </>
-                ) : (
-                  // Underlay can be empty; skeleton overlay above provides the visual.
-                  <View />
-                )}
-              </View>
-            </View>
-          </ScrollView>
-
-          {/* ✅ Кнопка "Наверх" */}
-          {travel && criticalChromeReady && (
-            <Defer when={deferredChromeReady}>
-              <Suspense fallback={null}>
-                <ScrollToTopButton scrollViewRef={scrollRef} scrollY={scrollY} threshold={300} />
-              </Suspense>
-            </Defer>
-          )}
-
-          {/* 3.6: Sticky-bar действий на мобильном */}
-          {isMobile && travel && (
-            <Defer when={deferredChromeReady}>
-              <Suspense fallback={null}>
-                <TravelStickyActions
-                  travel={travel}
-                  scrollY={scrollY}
-                  scrollToComments={scrollToComments}
-                />
-              </Suspense>
-            </Defer>
-          )}
-         </View>
-       </SafeAreaView>
-     </View>
+      <TravelDetailsCriticalShell
+        travel={travel}
+        isMobile={isMobile}
+        wrapperStyle={wrapperStyle}
+        styles={styles}
+        skeletonPhase={skeletonPhase}
+        skeletonFallback={<View style={SKELETON_OVERLAY_FALLBACK_STYLE} />}
+        travelDetailSkeleton={<TravelDetailPageSkeleton />}
+        scrollRef={scrollRef as any}
+        scrollViewStyle={scrollViewStyle}
+        scrollEventHandler={scrollEventHandler}
+        handleContentSizeChange={handleContentSizeChange}
+        handleLayout={handleLayout}
+        contentHorizontalPadding={contentHorizontalPadding}
+        anchors={anchors}
+        sliderReady={sliderReady}
+        lcpLoaded={lcpLoaded}
+        onFirstImageLoad={handleFirstImageLoad}
+        sectionLinks={sectionLinks}
+        onQuickJump={scrollToWithMenuClose}
+        deferHeroExtras={!deferAllowed}
+        mainAriaLabel={`Детали путешествия: ${travel?.name || 'путешествие'}`}
+        deferredContent={
+          <Defer when={deferredChromeReady}>
+            <Suspense fallback={null}>
+              <TravelDetailsPostLcpRuntime
+                travel={travel!}
+                isMobile={isMobile}
+                screenWidth={screenWidth}
+                anchors={anchors}
+                sectionLinks={sectionLinks}
+                closeMenu={closeMenu}
+                onNavigate={scrollToWithMenuClose}
+                activeSection={activeSection}
+                forceOpenKey={forceOpenKey}
+                scrollY={scrollY}
+                contentHeight={contentHeight}
+                viewportHeight={viewportHeight}
+                scrollViewRef={scrollRef as any}
+                menuWidthNum={menuWidthNum}
+                animatedX={animatedX}
+                sideMenuPlatformStyles={sideMenuPlatformStyles}
+                criticalChromeReady={criticalChromeReady}
+                scrollToMapSection={scrollToMapSection}
+                scrollToComments={scrollToComments}
+              />
+            </Suspense>
+          </Defer>
+        }
+      />
      </>
    );
 }
