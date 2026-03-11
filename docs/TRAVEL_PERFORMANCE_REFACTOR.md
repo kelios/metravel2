@@ -416,6 +416,61 @@ npm run lighthouse:produrl:travel:desktop
 npm run lighthouse:produrl:summary
 ```
 
+### 10.1 Post-deploy чек для travel page
+
+Порядок post-deploy проверки после выкладки на `prod`:
+
+1. Проверить SEO на реальном URL:
+
+```bash
+npm run test:seo:postdeploy
+```
+
+Ожидание:
+- travel page проходит SSR SEO check без регрессий по `title`, `description`, `canonical`, `og:*`, `twitter:*`, `H1`, `Article` JSON-LD.
+
+2. Проверить mobile performance на реальном prod URL:
+
+```bash
+npm run lighthouse:produrl:travel:mobile
+```
+
+Ожидание:
+- score для canonical travel URL не ниже `60`;
+- LCP element указывает на hero/LCP image, а не на соседний slide, comments, footer или другой below-the-fold блок.
+
+3. Проверить desktop performance на реальном prod URL:
+
+```bash
+npm run lighthouse:produrl:travel:desktop
+```
+
+Ожидание:
+- score для canonical travel URL не ниже `70`;
+- нет явного regress по `bootup-time`, `main-thread-work-breakdown`, `unused-javascript` относительно последнего принятого baseline.
+
+4. Снять сводку и зафиксировать результат:
+
+```bash
+npm run lighthouse:produrl:summary
+```
+
+Зафиксировать:
+- дату проверки;
+- точный travel URL;
+- mobile score;
+- desktop score;
+- LCP;
+- основные regressions/opportunities, если они появились.
+
+5. Ручная sanity-проверка в браузере:
+- открыть реальный prod travel URL;
+- убедиться, что first screen рендерится без визуального скачка hero;
+- убедиться, что gallery/map/comments не мешают первому экрану;
+- убедиться, что нет UX-сценариев вида "очистите кэш" или runtime reload workaround.
+
+Если любой из пунктов выше не проходит, деплой нельзя считать закрытым до повторной проверки после фикса.
+
 ## 11. Definition of done
 
 Рефакторинг можно считать завершенным, когда одновременно выполнено все ниже:
