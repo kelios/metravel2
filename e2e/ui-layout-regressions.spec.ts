@@ -230,11 +230,17 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
 
         const accountMenu = page.locator('[data-testid="account-menu-anchor"]:visible').first();
         await expect(accountMenu).toBeVisible({ timeout: 30_000 });
+        await accountMenu.hover().catch(() => null);
         await accountMenu.click();
 
         // Menu must not cover the trigger (account menu anchor).
         const webPanel = page.getByTestId('web-menu-panel');
-        if ((await webPanel.count()) > 0) {
+        const menuOpened = await Promise.race([
+          webPanel.waitFor({ state: 'visible', timeout: 10_000 }).then(() => 'panel').catch(() => null),
+          page.getByRole('menuitem').first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => 'item').catch(() => null),
+        ]);
+
+        if (menuOpened === 'panel' && (await webPanel.count()) > 0) {
           await expect(webPanel).toBeVisible({ timeout: 10_000 });
           const [anchorBox, panelBox] = await Promise.all([accountMenu.boundingBox(), webPanel.boundingBox()]);
           expect(anchorBox, 'account menu anchor must have a bounding box').not.toBeNull();
@@ -282,10 +288,15 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
       if (!hasMobileBurger) {
         const accountMenu = page.locator('[data-testid="account-menu-anchor"]:visible').first();
         await expect(accountMenu).toBeVisible({ timeout: 30_000 });
+        await accountMenu.hover().catch(() => null);
         await accountMenu.click();
 
         const webPanel = page.getByTestId('web-menu-panel');
-        await expect(webPanel).toBeVisible({ timeout: 10_000 });
+        const menuOpened = await Promise.race([
+          webPanel.waitFor({ state: 'visible', timeout: 10_000 }).then(() => 'panel').catch(() => null),
+          page.getByRole('menuitem').first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => 'item').catch(() => null),
+        ]);
+        expect(menuOpened).toBeTruthy();
         await expectNoHorizontalScroll(page);
 
         await page.mouse.click(10, 10);

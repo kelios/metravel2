@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test } from './fixtures';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
@@ -18,12 +18,5 @@ test.describe('@smoke Auth smoke', () => {
       page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
       page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
     ]);
-
-    const cards = await page.locator('[data-testid="travel-card-link"]').count();
-    const skeletons = await page.locator('[data-testid="travel-card-skeleton"]').count();
-
-    // If data is present we should see cards or skeletons.
-    // If data is empty, the page still counts as "loaded" (handled by the waits above).
-    expect(cards + skeletons).toBeGreaterThanOrEqual(0);
   });
 });
