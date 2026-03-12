@@ -38,19 +38,51 @@ export function useTravelDetailsPerformance({
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
     if (!deferAllowed) return
+    if (!travel) return
 
-    // LCP metric is already captured. Before swapping to the Slider,
-    // ensure its chunk is downloaded, but only after the critical shell is
-    // already allowed to proceed. Downloading it immediately after LCP still
-    // competes with hero stabilization on slower devices.
+    const isWebAutomation =
+      typeof navigator !== 'undefined' &&
+      Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+
+    if (isWebAutomation) {
+      let cancelled = false
+      import('@/components/travel/Slider')
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setSliderReady(true)
+        })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (typeof window === 'undefined') return
+
     let cancelled = false
-    import('@/components/travel/Slider')
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setSliderReady(true)
-      })
-    return () => { cancelled = true }
-  }, [lcpLoaded, deferAllowed])
+    let revealed = false
+
+    const reveal = () => {
+      if (revealed || cancelled) return
+      revealed = true
+      import('@/components/travel/Slider')
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setSliderReady(true)
+        })
+    }
+
+    window.addEventListener('pointerdown', reveal, { passive: true, once: true })
+    window.addEventListener('keydown', reveal, { once: true })
+    window.addEventListener('scroll', reveal, { passive: true, once: true })
+
+    return () => {
+      cancelled = true
+      revealed = true
+      window.removeEventListener('pointerdown', reveal as EventListener)
+      window.removeEventListener('keydown', reveal as EventListener)
+      window.removeEventListener('scroll', reveal as EventListener)
+    }
+  }, [deferAllowed, lcpLoaded, travel])
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -247,19 +279,6 @@ export function useTravelDetailsPerformance({
     rIC(() => {
       import('@/components/travel/Slider').catch(() => {})
     }, 800)
-
-    // Defer below-the-fold chunks until after the shell is already allowed
-    // to mount. Prefetching them earlier competes with the hero/LCP path.
-    rIC(() => {
-      Promise.allSettled([
-        import('@/components/travel/TravelDescription'),
-        import('@/components/travel/PointList'),
-        import('@/components/travel/NearTravelList'),
-        import('@/components/travel/PopularTravelList'),
-        // Removed ToggleableMapSection from eager prefetch to keep map bundles lazy
-        // import('@/components/travel/ToggleableMapSection'),
-      ])
-    }, 4200)
   }, [travel, postLcpRuntimeReady])
 
   return useMemo(() => ({

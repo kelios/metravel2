@@ -101,7 +101,25 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 
-  it('marks slider ready after LCP is loaded and deferred shell is allowed', async () => {
+  it('keeps slider deferred and waits for interaction listeners after LCP', async () => {
+    const listeners = new Map<string, EventListener>()
+    const originalAddEventListener = window.addEventListener.bind(window)
+    const originalRemoveEventListener = window.removeEventListener.bind(window)
+
+    jest.spyOn(window, 'addEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+      if (typeof listener === 'function') {
+        listeners.set(type, listener)
+      }
+      return originalAddEventListener(type, listener, options)
+    }) as typeof window.addEventListener)
+
+    jest.spyOn(window, 'removeEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) => {
+      if (listeners.get(type) === listener) {
+        listeners.delete(type)
+      }
+      return originalRemoveEventListener(type, listener, options)
+    }) as typeof window.removeEventListener)
+
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 1, name: 'Demo travel' } as any,
@@ -117,11 +135,21 @@ describe('useTravelDetailsPerformance', () => {
       result.current.setLcpLoaded(true)
     })
 
-    // Flush any remaining timers
+    expect(result.current.sliderReady).toBe(false)
+
     await act(async () => {
       jest.advanceTimersByTime(100)
     })
 
-    expect(result.current.sliderReady).toBe(true)
+    expect(result.current.deferAllowed).toBe(true)
+    expect(result.current.sliderReady).toBe(false)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(listeners.get('pointerdown')).toBeDefined()
+    expect(listeners.get('keydown')).toBeDefined()
+    expect(listeners.get('scroll')).toBeDefined()
   })
 })

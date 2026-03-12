@@ -2,9 +2,11 @@ import { Link, Stack, router } from 'expo-router'
 import { Platform, Pressable, StyleSheet } from 'react-native'
 import { useMemo } from 'react'
 
+import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import { buildCanonicalUrl } from '@/utils/seo'
 
 export default function NotFoundScreen() {
   const colors = useThemedColors()
@@ -12,6 +14,13 @@ export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
+      <InstantSEO
+        headKey="not-found"
+        title="Страница не найдена | Metravel"
+        description="Страница не найдена. Перейдите на главную или откройте один из доступных разделов Metravel."
+        canonical={buildCanonicalUrl('/')}
+        robots="noindex, nofollow"
+      />
       <View style={styles.container}>
         <Text style={styles.title}>Страница не найдена</Text>
 
