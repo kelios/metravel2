@@ -12,7 +12,7 @@ const mockImageCardMedia: jest.Mock<any, any> = jest.fn(() => null)
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
   default: (props: any) => mockImageCardMedia(props),
-  prefetchImage: jest.fn(),
+  prefetchImage: jest.fn(() => Promise.resolve()),
 }))
 
 describe('UnifiedTravelCard blur background (web)', () => {

@@ -1,7 +1,7 @@
 import React from 'react'
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
-import OptimizedImage, { generateSizes, generateSrcSet } from '@/components/ui/OptimizedImage'
+import OptimizedImage, { generateSizes, generateSrcSet, prefetchImage } from '@/components/ui/OptimizedImage'
 
 jest.mock('expo-image', () => {
   const React = require('react')
@@ -169,5 +169,32 @@ describe('OptimizedImage', () => {
     expect(overridden).toContain('90vw')
     expect(overridden).toContain('60vw')
     expect(overridden).toContain('20vw')
+  })
+
+  it('uses browser image preloading on web for prefetchImage', async () => {
+    const originalImage = global.Image
+    const srcValues: string[] = []
+
+    class MockImage {
+      onload: null | (() => void) = null
+      onerror: null | (() => void) = null
+      decoding = ''
+      crossOrigin: string | null = null
+      complete = false
+
+      set src(value: string) {
+        srcValues.push(value)
+        this.complete = true
+        this.onload?.()
+      }
+    }
+
+    ;(global as any).Image = MockImage
+
+    await prefetchImage('https://example.com/prefetch-photo.jpg')
+
+    expect(srcValues).toEqual(['https://example.com/prefetch-photo.jpg'])
+
+    ;(global as any).Image = originalImage
   })
 })

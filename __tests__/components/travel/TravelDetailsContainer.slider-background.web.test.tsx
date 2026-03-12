@@ -187,6 +187,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     const lastProps = (lastArgs as any)?.[0]
     expect(lastProps).toBeTruthy()
     expect(lastProps.blurBackground).toBe(true)
+    expect(lastProps.preloadCount).toBe(1)
   })
 
   it('keeps the first hero click pending until slider runtime becomes ready', async () => {

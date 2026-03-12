@@ -463,11 +463,53 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
 
 export default memo(OptimizedImage);
 
+const prefetchedImageUris = new Set<string>();
+
 export async function prefetchImage(uri: string): Promise<void> {
   if (!uri) return;
+  if (prefetchedImageUris.has(uri)) return;
+  prefetchedImageUris.add(uri);
+
+  if (Platform.OS === 'web' && typeof Image !== 'undefined') {
+    await new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      const cleanup = () => {
+        img.onload = null;
+        img.onerror = null;
+      };
+
+      img.decoding = 'async';
+      if (/^https?:\/\//i.test(uri)) {
+        img.crossOrigin = 'anonymous';
+      }
+
+      img.onload = () => {
+        cleanup();
+        resolve();
+      };
+      img.onerror = () => {
+        cleanup();
+        prefetchedImageUris.delete(uri);
+        reject(new Error(`Failed to preload image: ${uri}`));
+      };
+      img.src = uri;
+
+      if (img.complete) {
+        cleanup();
+        resolve();
+      }
+    });
+    return;
+  }
+
   const fn = (ExpoImage as any)?.prefetch;
   if (typeof fn === 'function') {
-    await fn(uri);
+    try {
+      await fn(uri);
+    } catch (error) {
+      prefetchedImageUris.delete(uri);
+      throw error;
+    }
   }
 }
 

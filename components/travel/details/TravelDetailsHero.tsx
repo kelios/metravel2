@@ -153,7 +153,7 @@ function TravelHeroSectionInner({
                     galleryImages={galleryImages}
                     isMobile={isMobile}
                     aspectRatio={aspectRatio as number}
-                    preloadCount={0}
+                    preloadCount={1}
                     onFirstImageLoad={handleSliderImageLoad}
                     firstImagePreloaded={webHeroLoaded}
                     onImagePress={handleImagePress}

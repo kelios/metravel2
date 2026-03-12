@@ -1,11 +1,11 @@
-import { memo, useMemo, useState, useCallback, useEffect } from 'react';
+import { memo, useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 
 import Feather from '@expo/vector-icons/Feather';
 
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -69,6 +69,20 @@ type Props = {
 };
 
 const loadedCardImageCache = new Set<string>();
+const prefetchedCardImageCache = new Set<string>();
+
+const resolveWebDomNode = (target: unknown): HTMLElement | null => {
+  if (!target) return null;
+  if (target instanceof HTMLElement) return target;
+  const anyTarget = target as Record<string, unknown>;
+  if (anyTarget._nativeNode instanceof HTMLElement) return anyTarget._nativeNode;
+  if (anyTarget._domNode instanceof HTMLElement) return anyTarget._domNode;
+  if (typeof anyTarget.getNode === 'function') {
+    const node = (anyTarget.getNode as () => unknown)();
+    if (node instanceof HTMLElement) return node;
+  }
+  return null;
+};
 
 function UnifiedTravelCard({
   title,
@@ -113,6 +127,7 @@ function UnifiedTravelCard({
   const isMobileDevice = isPhone || isLargePhone;
   const cardActionLabel = `Открыть маршрут «${title}»`;
   const mediaActionLabel = `Открыть фото маршрута «${title}»`;
+  const mediaViewportRef = useRef<any>(null);
 
   // AND-13: Long press handler with haptic feedback for share action
   const handleLongPress = useCallback(() => {
@@ -161,7 +176,10 @@ function UnifiedTravelCard({
   }, [optimizedImageUrl]);
   // CARD-04: Отслеживаем загрузку изображения для показа shimmer
   const [imageLoaded, setImageLoaded] = useState(() => {
-    return !!cardImageCacheKey && loadedCardImageCache.has(cardImageCacheKey);
+    return (
+      !!cardImageCacheKey &&
+      (loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey))
+    );
   });
   const handleImageLoad = useCallback(() => {
     if (cardImageCacheKey) {
@@ -174,8 +192,60 @@ function UnifiedTravelCard({
       setImageLoaded(false);
       return;
     }
-    setImageLoaded(loadedCardImageCache.has(cardImageCacheKey));
+    setImageLoaded(
+      loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey)
+    );
   }, [cardImageCacheKey]);
+
+  useEffect(() => {
+    if (!isWeb) return;
+    if (!cardImageCacheKey) return;
+    if (loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey)) return;
+    if (typeof window === 'undefined') return;
+
+    let cancelled = false;
+    let observer: IntersectionObserver | null = null;
+
+    const warmCardImage = () => {
+      if (cancelled) return;
+      prefetchImage(cardImageCacheKey)
+        .then(() => {
+          if (cancelled) return;
+          prefetchedCardImageCache.add(cardImageCacheKey);
+          loadedCardImageCache.add(cardImageCacheKey);
+          setImageLoaded(true);
+        })
+        .catch(() => undefined);
+    };
+
+    const node = resolveWebDomNode(mediaViewportRef.current);
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      warmCardImage();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        observer?.disconnect();
+        warmCardImage();
+      },
+      {
+        rootMargin: '700px 0px',
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+    };
+  }, [cardImageCacheKey, isWeb]);
 
   const styles = useMemo(
     () =>
@@ -465,6 +535,7 @@ function UnifiedTravelCard({
     >
       {[
         <View
+          ref={mediaViewportRef}
           key="media"
           style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null, imageHeight === 0 && { display: 'none' }]}
           accessible={false}

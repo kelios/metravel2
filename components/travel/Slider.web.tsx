@@ -234,6 +234,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const sliderInstanceId = useId();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobileDevice = isPhone || isLargePhone;
+  const effectivePreloadCount = isMobileDevice ? Math.max(preloadCountProp, 2) : preloadCountProp;
   const {
     containerW,
     containerH: coreContainerH,
@@ -258,11 +259,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     aspectRatio,
     autoPlay,
     autoPlayInterval,
-    preloadCount: isMobileDevice ? Math.max(preloadCountProp, 2) : preloadCountProp,
+    preloadCount: effectivePreloadCount,
     mobileHeightPercent,
     onIndexChanged,
     buildUri: (img, w, h, isFirst) => buildUriWeb(img, w, h, fit, isFirst),
-    deferWebPrefetchUntilInteraction: true,
+    deferWebPrefetchUntilInteraction: effectivePreloadCount < 1,
     handleAppState: false,
     includeUriMap: false,
   });
@@ -582,14 +583,16 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [dismissSwipeHint, enablePrefetch, imagesLen, maxIndex, scrollTo]);
 
   const onPrev = useCallback(() => {
+    enablePrefetch();
     const target = Math.max(0, currentIndexRef.current - 1);
     if (target !== currentIndexRef.current) scrollTo(target);
-  }, [scrollTo]);
+  }, [enablePrefetch, scrollTo]);
 
   const onNext = useCallback(() => {
+    enablePrefetch();
     const target = Math.min(maxIndex, currentIndexRef.current + 1);
     if (target !== currentIndexRef.current) scrollTo(target);
-  }, [maxIndex, scrollTo]);
+  }, [enablePrefetch, maxIndex, scrollTo]);
 
   if (!images.length) return null;
 
