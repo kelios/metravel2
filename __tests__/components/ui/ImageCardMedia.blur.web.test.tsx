@@ -41,13 +41,15 @@ describe('ImageCardMedia blur background (web)', () => {
 
     const blurLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
-      const ariaHidden = node?.props?.['aria-hidden']
-      if (ariaHidden !== true && ariaHidden !== 'true') return false
       return node?.props?.['data-blur-backdrop'] === 'true'
     })
 
     expect(blurLayers.length).toBeGreaterThan(0)
     expect(typeof blurLayers[0].props.style?.opacity).toBe('number')
+    expect(blurLayers[0].props.style?.objectFit).toBe('cover')
+    expect(blurLayers[0].props.style?.minWidth).toBe('100%')
+    expect(blurLayers[0].props.style?.maxWidth).toBe('none')
+    expect(String(blurLayers[0].props.src || '')).toContain('photo.jpg')
 
     const mainLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
@@ -78,8 +80,6 @@ describe('ImageCardMedia blur background (web)', () => {
 
     const blurLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
-      const ariaHidden = node?.props?.['aria-hidden']
-      if (ariaHidden !== true && ariaHidden !== 'true') return false
       return node?.props?.['data-blur-backdrop'] === 'true'
     })
     const mainLayers = tree!.root.findAll((node: any) => node?.type === 'img')

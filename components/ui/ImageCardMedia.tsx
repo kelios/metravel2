@@ -107,8 +107,6 @@ type WebBlurBackdropProps = {
   width: number;
   height: number;
   borderRadius: number;
-  srcSet?: string;
-  sizes?: string;
 };
 
 const WebBlurBackdrop = memo(function WebBlurBackdrop({
@@ -117,30 +115,31 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
   width,
   height,
   borderRadius,
-  srcSet,
-  sizes,
 }: WebBlurBackdropProps) {
   return (
     <img
       aria-hidden="true"
       data-blur-backdrop="true"
       src={src}
-      srcSet={srcSet}
-      sizes={sizes}
       alt={alt}
       width={width}
       height={height}
       style={{
         position: 'absolute',
-        inset: 0,
+        top: '50%',
+        left: '50%',
         width: '100%',
         height: '100%',
+        minWidth: '100%',
+        minHeight: '100%',
+        maxWidth: 'none',
+        maxHeight: 'none',
         display: 'block',
         objectFit: 'cover',
         objectPosition: 'center',
         zIndex: 0,
         borderRadius,
-        transform: 'scale(1.08)',
+        transform: 'translate(-50%, -50%) scale(1.12)',
         filter: 'blur(24px) saturate(1.15)',
         opacity: 1,
         contain: 'paint',
@@ -485,8 +484,6 @@ function ImageCardMedia({
           {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
             <WebBlurBackdrop
               src={webBlurSrc}
-              srcSet={webSrcSet}
-              sizes={webSizes}
               alt={alt || ''}
               width={typeof width === 'number' ? width : 400}
               height={typeof height === 'number' ? height : 300}
