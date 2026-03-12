@@ -371,14 +371,12 @@ function ListTravelBase({
 
     const {
       width: rawWidth,
-      isHydrated,
       isPhone,
       isLargePhone,
       isTablet: isTabletSize,
       isDesktop: isDesktopSize,
       isPortrait,
     } = useResponsive();
-    const shouldDeferResponsiveShell = Platform.OS === 'web' && !isTestEnv && !isHydrated;
 
     // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
     useListTravelVisibility({
@@ -1280,9 +1278,7 @@ function ListTravelBase({
       ]
     );
     
-  return shouldDeferResponsiveShell ? (
-    <View style={[styles.root, styles.rootMobile]} testID="travels-list-loading-shell" />
-  ) : (
+  return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
       <SidebarFilters
         isMobile={isMobileDevice}

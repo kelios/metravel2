@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, memo, useEffect, useMemo } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -24,18 +24,12 @@ function SearchScreen() {
     const colors = useThemedColors();
     const { isAuthenticated } = useAuth();
     const { isHydrated: isResponsiveHydrated = true } = useResponsive();
-    const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
-    const canMountContent = hydrated && isResponsiveHydrated;
-
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        setHydrated(true);
-    }, []);
+    const canRunPrefetch = Platform.OS === 'web' ? true : isResponsiveHydrated;
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         if (!isFocused) return;
-        if (!canMountContent) return;
+        if (!canRunPrefetch) return;
         if (typeof window === 'undefined') return;
 
         const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
@@ -91,7 +85,7 @@ function SearchScreen() {
                 (window as any).cancelIdleCallback(idleId);
             }
         };
-    }, [canMountContent, isFocused]);
+    }, [canRunPrefetch, isFocused]);
 
     const title = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel';
     const description = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.';
@@ -154,13 +148,9 @@ function SearchScreen() {
                         </View>
                     }
                 >
-                    {canMountContent ? (
-                        <Suspense fallback={<SearchPageSkeleton />}>
-                            <ListTravel />
-                        </Suspense>
-                    ) : (
-                        <SearchPageSkeleton />
-                    )}
+                    <Suspense fallback={<SearchPageSkeleton />}>
+                        <ListTravel />
+                    </Suspense>
                 </ErrorBoundary>
 
                 {/* AND-27: FAB «Создать маршрут» для авторизованных (native only) */}

@@ -307,4 +307,87 @@ describe('TravelDeferredSections (web author defer)', () => {
       ]),
     )
   })
+
+  it('renders sidebar and comments immediately when opened via section navigation', async () => {
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
+
+    const travel: any = {
+      id: 4,
+      name: 'Deferred force-open travel',
+      description: '<p>Test description</p>',
+      gallery: [],
+      youtube_link: null,
+      recommendation: '',
+      plus: '',
+      minus: '',
+      rating: 0,
+      rating_count: 0,
+      user_rating: null,
+    }
+
+    const anchors: any = {
+      description: { current: null },
+      video: { current: null },
+      comments: { current: null },
+      map: { current: null },
+      gallery: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    await act(async () => {
+      renderer.create(
+        <Suspense fallback={null}>
+          <TravelDeferredSections
+            travel={travel}
+            isMobile={false}
+            forceOpenKey="near"
+            anchors={anchors}
+            scrollY={new Animated.Value(0)}
+            viewportHeight={900}
+            scrollToMapSection={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    expect(mockSidebarSectionSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        [
+          expect.objectContaining({
+            forceOpenKey: 'near',
+          }),
+          undefined,
+        ],
+      ]),
+    )
+
+    mockSidebarSectionSpy.mockClear()
+    mockCommentsSectionSpy.mockClear()
+
+    await act(async () => {
+      renderer.create(
+        <Suspense fallback={null}>
+          <TravelDeferredSections
+            travel={travel}
+            isMobile={false}
+            forceOpenKey="comments"
+            anchors={anchors}
+            scrollY={new Animated.Value(0)}
+            viewportHeight={900}
+            scrollToMapSection={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    expect(mockCommentsSectionSpy).toHaveBeenCalled()
+  })
 })

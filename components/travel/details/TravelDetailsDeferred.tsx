@@ -259,6 +259,7 @@ export const TravelDeferredSections: React.FC<{
             anchors={anchors}
             canRenderHeavy={canRenderHeavy}
             scrollToMapSection={scrollToMapSection}
+            forceOpenKey={forceOpenKey}
           />
         </Suspense>
       </View>
@@ -278,6 +279,7 @@ export const TravelDeferredSections: React.FC<{
               scrollY={scrollY}
               viewportHeight={viewportHeight}
               canRenderHeavy={canRenderHeavy}
+              forceOpenKey={forceOpenKey}
             />
           </Suspense>
         ) : (

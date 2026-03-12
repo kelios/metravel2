@@ -38,8 +38,72 @@ export function getQuillModulesForVariant(variant: ArticleEditorVariant) {
   };
 }
 
+const INSTAGRAM_POST_URL_RE =
+  /https?:\/\/(?:www\.)?instagram\.com\/(?:(?:p|reel|tv)\/[A-Za-z0-9_-]+)(?:\/)?(?:\?[^\s"'<>]*)?/i;
+
+function normalizeInstagramPostUrl(url: string): string | null {
+  const raw = String(url ?? '').trim();
+  if (!raw) return null;
+
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== 'instagram.com' && host !== 'www.instagram.com') return null;
+
+    const match = parsed.pathname.match(/^\/(p|reel|tv)\/([A-Za-z0-9_-]+)\/?$/i);
+    if (!match) return null;
+
+    return `https://www.instagram.com/${match[1].toLowerCase()}/${match[2]}/`;
+  } catch {
+    return null;
+  }
+}
+
+export function buildInstagramEmbedHtmlFromUrl(url: string): string | null {
+  const normalizedUrl = normalizeInstagramPostUrl(url);
+  if (!normalizedUrl) return null;
+
+  return [
+    '<iframe',
+    ' class="ql-video"',
+    ' frameborder="0"',
+    ' allowfullscreen="true"',
+    ` src="${normalizedUrl}embed/captioned/"`,
+    ' width="540"',
+    ' height="680"',
+    ' title="Instagram post"',
+    '></iframe>',
+  ].join('');
+}
+
+function replaceStandaloneInstagramLinksWithEmbeds(html: string): string {
+  let next = String(html ?? '');
+  if (!next.trim()) return next;
+
+  next = next.replace(
+    /<(p|div)>\s*(?:<a\b[^>]*href="([^"]+)"[^>]*>[\s\S]*?<\/a>|(https?:\/\/[^\s<]+))\s*<\/\1>/gi,
+    (full, _tagName, href, rawUrl) => {
+      const embed = buildInstagramEmbedHtmlFromUrl(String(href || rawUrl || '').trim());
+      return embed ?? full;
+    },
+  );
+
+  next = next.replace(
+    /<a\b[^>]*href="([^"]+)"[^>]*>\s*\1\s*<\/a>/gi,
+    (full, href) => buildInstagramEmbedHtmlFromUrl(String(href || '')) ?? full,
+  );
+
+  if (!/<iframe\b/i.test(next) && INSTAGRAM_POST_URL_RE.test(next.trim())) {
+    return buildInstagramEmbedHtmlFromUrl(next.trim()) ?? next;
+  }
+
+  return next;
+}
+
 export function normalizeArticleEditorHtmlForInput(html: string): string {
-  return stripBase64Images(normalizeHtmlForQuill(String(html ?? '')));
+  return replaceStandaloneInstagramLinksWithEmbeds(
+    stripBase64Images(normalizeHtmlForQuill(String(html ?? ''))),
+  );
 }
 
 export function normalizeArticleEditorHtmlForOutput(html: string): string {

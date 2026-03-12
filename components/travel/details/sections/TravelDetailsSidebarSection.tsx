@@ -30,12 +30,14 @@ export const TravelDetailsSidebarSection: React.FC<{
   scrollY: any
   viewportHeight: number
   canRenderHeavy: boolean
+  forceOpenKey?: string | null
 }> = ({
   travel,
   anchors,
   scrollY: _scrollY, // Unused in simplified version
   viewportHeight: _viewportHeight, // Unused in simplified version
   canRenderHeavy,
+  forceOpenKey = null,
 }) => {
   const styles = useTravelDetailsStyles()
   const isWeb = Platform.OS === 'web'
@@ -74,8 +76,8 @@ export const TravelDetailsSidebarSection: React.FC<{
     if (shouldLoadPopular && !hasLoadedPopular) setHasLoadedPopular(true)
   }, [shouldLoadPopular, hasLoadedPopular])
 
-  const shouldRenderNear = shouldLoadNear || hasLoadedNear
-  const shouldRenderPopular = shouldLoadPopular || hasLoadedPopular
+  const shouldRenderNear = shouldLoadNear || hasLoadedNear || forceOpenKey === 'near'
+  const shouldRenderPopular = shouldLoadPopular || hasLoadedPopular || forceOpenKey === 'popular'
 
   return (
     <>

@@ -246,7 +246,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   resultsInline: {
     paddingHorizontal: spacing.sm,
     height: Platform.select({ default: 40, web: 52 }),
-    minWidth: Platform.select({ default: 0, web: 184 }),
+    minWidth: Platform.select({ default: 0, web: 216 }),
+    ...(Platform.OS === 'web' ? ({ width: 216 } as any) : null),
     alignItems: 'flex-start',
     justifyContent: 'center',
     backgroundColor: colors.surface,
@@ -342,6 +343,15 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     fontSize: 15,
     color: colors.text,
     fontWeight: '600',
+    ...(Platform.OS === 'web'
+      ? ({
+          width: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontVariantNumeric: 'tabular-nums',
+        } as any)
+      : null),
   },
   resultsLabel: {
     fontSize: 10,
@@ -367,6 +377,20 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     justifyContent: 'center',
     borderRadius: 12,
     backgroundColor: colors.surfaceMuted,
+  },
+  inlineIconSlot: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  actionIconSlot: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   shortcutHintDesktop: {
     backgroundColor: colors.surfaceElevated,
@@ -466,11 +490,13 @@ function StickySearchBar({
               isMobile && styles.searchBoxMobile,
             ]}
           >
-          <Feather
-            name="search"
-            size={searchIconSize}
-            color={isFocused ? colors.primary : colors.textMuted}
-          />
+          <View style={styles.inlineIconSlot}>
+            <Feather
+              name="search"
+              size={searchIconSize}
+              color={isFocused ? colors.primary : colors.textMuted}
+            />
+          </View>
           <TextInput
             ref={inputRef}
             value={search}
@@ -541,11 +567,13 @@ function StickySearchBar({
               accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
               accessibilityState={{ selected: !!isRecommendationsVisible }}
             >
-              <Feather
-                name="zap"
-                size={actionIconSize}
-                color={isRecommendationsVisible ? colors.primary : colors.textMuted}
-              />
+              <View style={styles.actionIconSlot}>
+                <Feather
+                  name="zap"
+                  size={actionIconSize}
+                  color={isRecommendationsVisible ? colors.primary : colors.textMuted}
+                />
+              </View>
               {isRecommendationsVisible && <View style={styles.recommendationAccent} />}
             </Pressable>
           )}
@@ -566,11 +594,13 @@ function StickySearchBar({
               accessibilityLabel="Открыть фильтры"
               accessibilityHint={hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined}
             >
-              <Feather
-                name="filter"
-                size={filterIconSize}
-                color={hasActiveFilters ? colors.primary : colors.textMuted}
-              />
+              <View style={styles.actionIconSlot}>
+                <Feather
+                  name="filter"
+                  size={filterIconSize}
+                  color={hasActiveFilters ? colors.primary : colors.textMuted}
+                />
+              </View>
               {hasActiveFilters && activeFiltersCount != null && activeFiltersCount > 0 && (
                 <View style={styles.badge} testID="filters-badge">
                   <Text style={styles.badgeCount}>{activeFiltersCount > 99 ? '99+' : activeFiltersCount}</Text>
@@ -593,7 +623,9 @@ function StickySearchBar({
               ]}
               accessibilityLabel="Сбросить все фильтры и поиск"
             >
-              <Feather name="x-circle" size={14} color={colors.textMuted} />
+              <View style={styles.inlineIconSlot}>
+                <Feather name="x-circle" size={14} color={colors.textMuted} />
+              </View>
               {!isMobile && <Text style={styles.clearAllText}>Сбросить</Text>}
             </Pressable>
           )}
@@ -613,7 +645,9 @@ function StickySearchBar({
               accessibilityState={{ selected: !!chip.active }}
             >
               {chip.active && (
-                <Feather name="check" size={11} color={colors.primaryText} />
+                <View style={styles.inlineIconSlot}>
+                  <Feather name="check" size={11} color={colors.primaryText} />
+                </View>
               )}
               <Text style={[styles.quickChipText, chip.active && styles.quickChipTextActive]}>
                 {chip.label}

@@ -75,11 +75,19 @@ const PointListFallback = () => {
   )
 }
 
-const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ExcursionsLazySection: React.FC<{ children: React.ReactNode; forceVisible?: boolean }> = ({
+  children,
+  forceVisible = false,
+}) => {
   const containerRef = useRef<any>(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
+    if (forceVisible) {
+      setVisible(true)
+      return
+    }
+
     if (Platform.OS !== 'web') {
       setVisible(true)
       return
@@ -131,7 +139,7 @@ const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ childr
       clearTimeout(fallback)
       observer.disconnect()
     }
-  }, [visible])
+  }, [forceVisible, visible])
 
   if (Platform.OS !== 'web') {
     return <>{children}</>
@@ -149,7 +157,8 @@ export const TravelDetailsMapSection: React.FC<{
   anchors: AnchorsMap
   canRenderHeavy: boolean
   scrollToMapSection: () => void
-}> = ({ travel, anchors, canRenderHeavy, scrollToMapSection }) => {
+  forceOpenKey?: string | null
+}> = ({ travel, anchors, canRenderHeavy, scrollToMapSection, forceOpenKey = null }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
@@ -174,6 +183,8 @@ export const TravelDetailsMapSection: React.FC<{
   const hasMapData =
     hasEmbeddedCoords ||
     routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
+  const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points'
+  const shouldForceRenderExcursions = forceOpenKey === 'excursions'
 
   const colors = useThemedColors()
   const routeColorPalette = useMemo(
@@ -218,7 +229,7 @@ export const TravelDetailsMapSection: React.FC<{
 
     const loadRouteFiles = async () => {
       if (!canRenderHeavy) return
-      if (Platform.OS === 'web' && !shouldRender && !isWebAutomation) return
+      if (Platform.OS === 'web' && !shouldRender && !shouldForceRenderMap && !isWebAutomation) return
       if (!travel?.id) {
         if (active) {
           setRoutePreviewItems([])
@@ -278,7 +289,7 @@ export const TravelDetailsMapSection: React.FC<{
     return () => {
       active = false
     }
-  }, [canRenderHeavy, routeColorPalette, routeFiles, shouldRender, travel?.id])
+  }, [canRenderHeavy, routeColorPalette, routeFiles, shouldForceRenderMap, shouldRender, travel?.id])
 
   const notifyDownloadUnavailable = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -489,7 +500,7 @@ export const TravelDetailsMapSection: React.FC<{
     <>
       {Platform.OS === 'web' && (travel.travelAddress?.length ?? 0) > 0 && (
         <Suspense fallback={<Fallback />}>
-          <ExcursionsLazySection>
+          <ExcursionsLazySection forceVisible={shouldForceRenderExcursions}>
             <View
               ref={anchors.excursions}
               style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
@@ -553,7 +564,7 @@ export const TravelDetailsMapSection: React.FC<{
                   }
                 }}
               >
-                {shouldRender ? (
+                {shouldRender || shouldForceRenderMap ? (
                   <Suspense fallback={<MapFallback />}>
                     <TravelMap
                       travelData={travel.travelAddress as any}

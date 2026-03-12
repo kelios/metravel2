@@ -47,6 +47,13 @@ export default function CustomHeaderDesktopAccountSection({
               } as any)
             : null),
         },
+        ctaLoginIconSlot: {
+          width: 16,
+          height: 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        },
         ctaLoginButtonHover: {
           backgroundColor: colors.primaryDark,
           ...(Platform.OS === 'web' ? ({ transform: 'translateY(-1px)' } as any) : null),
@@ -188,7 +195,9 @@ export default function CustomHeaderDesktopAccountSection({
             ]}
             testID="header-login-cta"
           >
-            <Feather name="log-in" size={14} color={colors.textOnPrimary} />
+            <View style={shellStyles.ctaLoginIconSlot}>
+              <Feather name="log-in" size={14} color={colors.textOnPrimary} />
+            </View>
             <Text style={shellStyles.ctaLoginText}>Войти</Text>
           </Pressable>
         )}
