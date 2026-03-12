@@ -174,7 +174,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    expect(mockSliderSpy).not.toHaveBeenCalled()
+    expect(mockSliderSpy).toHaveBeenCalled()
 
     const heroSliderContainer = (tree as any).root.findByProps({
       testID: 'travel-details-hero-slider-container',
@@ -193,6 +193,140 @@ describe('TravelHeroSection slider background regression (web)', () => {
     const lastProps = (lastArgs as any)?.[0]
     expect(lastProps).toBeTruthy()
     expect(lastProps.blurBackground).toBe(true)
+  })
+
+  it('keeps the first hero click pending until slider runtime becomes ready', async () => {
+    const travel: any = {
+      id: 11,
+      name: 'Deferred activation travel',
+      gallery: [
+        {
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        },
+        {
+          url: 'https://cdn.example.com/img-2.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-02',
+          id: 2,
+        },
+      ],
+      travelAddress: [],
+    }
+
+    const anchors: any = {
+      gallery: { current: null },
+      video: { current: null },
+      description: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      map: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    mockUseTravelHeroState
+      .mockReturnValueOnce({
+        firstImg: {
+          src: 'https://cdn.example.com/img.jpg',
+          blurhash: null,
+        },
+        heroHeight: 720,
+        galleryImages: [
+          { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+          { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        ],
+        heroAlt: 'Demo travel',
+        aspectRatio: 1200 / 800,
+        setHeroContainerWidth: jest.fn(),
+        heroContainerWidth: 960,
+        webHeroLoaded: true,
+        overlayUnmounted: false,
+        isOverlayFading: false,
+        handleWebHeroLoad: jest.fn(),
+        handleSliderImageLoad: jest.fn(),
+        extrasReady: true,
+        sliderUpgradeAllowed: false,
+      } as any)
+      .mockReturnValueOnce({
+        firstImg: {
+          src: 'https://cdn.example.com/img.jpg',
+          blurhash: null,
+        },
+        heroHeight: 720,
+        galleryImages: [
+          { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+          { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        ],
+        heroAlt: 'Demo travel',
+        aspectRatio: 1200 / 800,
+        setHeroContainerWidth: jest.fn(),
+        heroContainerWidth: 960,
+        webHeroLoaded: true,
+        overlayUnmounted: false,
+        isOverlayFading: false,
+        handleWebHeroLoad: jest.fn(),
+        handleSliderImageLoad: jest.fn(),
+        extrasReady: true,
+        sliderUpgradeAllowed: true,
+      } as any)
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider={false}
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    const heroSliderContainer = (tree as any).root.findByProps({
+      testID: 'travel-details-hero-slider-container',
+    })
+
+    await act(async () => {
+      heroSliderContainer.props.onClick()
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      ;(tree as any).update(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    expect(mockSliderSpy.mock.calls.length).toBeGreaterThan(0)
   })
 
   it('marks hero section as gallery anchor on web', async () => {

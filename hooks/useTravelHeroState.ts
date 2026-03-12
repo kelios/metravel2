@@ -251,27 +251,20 @@ function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
     Boolean((navigator as unknown as Record<string, unknown>).webdriver)
-  const [sliderUpgradeAllowed, setSliderUpgradeAllowed] = useState(
-    Platform.OS !== 'web' || (renderSlider && isWebAutomation),
+  const [heroInteractionSeen, setHeroInteractionSeen] = useState(
+    Platform.OS !== 'web' || isWebAutomation,
   )
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
-      setSliderUpgradeAllowed(true)
-      return
-    }
-
-    if (!renderSlider) {
-      setSliderUpgradeAllowed(false)
+      setHeroInteractionSeen(true)
       return
     }
 
     if (isWebAutomation) {
-      setSliderUpgradeAllowed(true)
+      setHeroInteractionSeen(true)
       return
     }
-
-    setSliderUpgradeAllowed(false)
 
     const isHeroInteraction = (target: EventTarget | null) => {
       if (typeof document === 'undefined') return false
@@ -285,14 +278,14 @@ function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
 
     const revealFromPointer = (event: Event) => {
       if (!isHeroInteraction(event.target)) return
-      setSliderUpgradeAllowed(true)
+      setHeroInteractionSeen(true)
     }
 
     const revealFromKeyboard = () => {
       if (typeof document === 'undefined') return
       const active = document.activeElement
       if (!isHeroInteraction(active)) return
-      setSliderUpgradeAllowed(true)
+      setHeroInteractionSeen(true)
     }
 
     window.addEventListener('pointerdown', revealFromPointer, {
@@ -308,9 +301,9 @@ function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
       )
       window.removeEventListener('keydown', revealFromKeyboard as EventListener)
     }
-  }, [isWebAutomation, renderSlider])
+  }, [isWebAutomation])
 
-  return sliderUpgradeAllowed
+  return renderSlider || heroInteractionSeen
 }
 
 export function useTravelHeroState(

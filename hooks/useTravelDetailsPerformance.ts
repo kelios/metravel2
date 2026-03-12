@@ -40,75 +40,19 @@ export function useTravelDetailsPerformance({
     if (!deferAllowed) return
     if (!travel) return
 
-    const isWebAutomation =
-      typeof navigator !== 'undefined' &&
-      Boolean((navigator as unknown as Record<string, unknown>).webdriver)
-
-    if (isWebAutomation) {
-      let cancelled = false
-      import('@/components/travel/Slider')
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled) setSliderReady(true)
-        })
-      return () => {
-        cancelled = true
-      }
-    }
-
-    if (typeof window === 'undefined') return
-
     let cancelled = false
-    let revealed = false
 
-    const isHeroInteraction = (target: EventTarget | null) => {
-      if (typeof document === 'undefined') return false
-      if (!(target instanceof Node)) return false
-
-      const heroRoot = document.querySelector(
-        '[data-testid="travel-details-hero-slider-container"]',
-      )
-      return Boolean(heroRoot && heroRoot.contains(target))
-    }
-
-    const revealFromPointer = (event: Event) => {
-      if (!isHeroInteraction(event.target)) return
-      if (revealed || cancelled) return
-      revealed = true
+    const preloadSlider = () => {
       import('@/components/travel/Slider')
         .catch(() => {})
         .finally(() => {
           if (!cancelled) setSliderReady(true)
         })
     }
-
-    const revealFromKeyboard = () => {
-      if (typeof document === 'undefined') return
-      const active = document.activeElement
-      if (!isHeroInteraction(active)) return
-      if (revealed || cancelled) return
-      revealed = true
-      import('@/components/travel/Slider')
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled) setSliderReady(true)
-        })
-    }
-
-    window.addEventListener('pointerdown', revealFromPointer, {
-      passive: true,
-      once: true,
-    })
-    window.addEventListener('keydown', revealFromKeyboard, { once: true })
+    rIC(preloadSlider, 300)
 
     return () => {
       cancelled = true
-      revealed = true
-      window.removeEventListener(
-        'pointerdown',
-        revealFromPointer as EventListener,
-      )
-      window.removeEventListener('keydown', revealFromKeyboard as EventListener)
     }
   }, [deferAllowed, lcpLoaded, travel])
 

@@ -109,42 +109,11 @@ export default function RootLayout() {
 }
 
 function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
-  const [isReady, setIsReady] = useState(!isWeb || !isTravelRoute);
+  const [isReady, setIsReady] = useState(true);
 
   useEffect(() => {
     if (!isWeb || !isMounted) return;
-
-    if (!isTravelRoute) {
-      setIsReady(true);
-      return;
-    }
-
-    setIsReady(false);
-
-    let revealed = false;
-    let revealTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const reveal = () => {
-      if (revealed) return;
-      revealed = true;
-      if (revealTimer) {
-        clearTimeout(revealTimer);
-        revealTimer = null;
-      }
-      setIsReady(true);
-    };
-
-    window.addEventListener('pointerdown', reveal, { passive: true, once: true });
-    window.addEventListener('keydown', reveal, { once: true });
-    window.addEventListener('wheel', reveal, { passive: true, once: true });
-
-    return () => {
-      revealed = true;
-      if (revealTimer) clearTimeout(revealTimer);
-      window.removeEventListener('pointerdown', reveal as EventListener);
-      window.removeEventListener('keydown', reveal as EventListener);
-      window.removeEventListener('wheel', reveal as EventListener);
-    };
+    setIsReady(true);
   }, [isMounted, isTravelRoute]);
 
   return isReady;
@@ -332,10 +301,12 @@ function ThemedContent({
     Platform.OS === 'web' &&
     typeof pathname === 'string' &&
     /^\/travels\/[^/]+$/.test(pathname);
-  const shouldDeferFavoritesProvider =
-    isTravelRoute;
-  const shouldDeferAuthProvider =
-    isTravelRoute;
+  // Travel details defer several below-the-fold/runtime widgets already.
+  // Deferring the root auth/favorites providers swaps fallback contexts for
+  // real providers after first interaction, which remounts the entire route
+  // subtree and visibly replays the page skeleton on travel pages.
+  const shouldDeferFavoritesProvider = false;
+  const shouldDeferAuthProvider = false;
   const favoritesDeferMode =
     isTravelRoute ? 'interaction' : 'idle';
   const authDeferMode =

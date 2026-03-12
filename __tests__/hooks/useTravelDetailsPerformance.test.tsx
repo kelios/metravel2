@@ -102,28 +102,7 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 
-  it('keeps slider deferred and waits for interaction listeners after LCP', async () => {
-    const listeners = new Map<string, EventListener[]>()
-    const hero = document.createElement('div')
-    hero.setAttribute('data-testid', 'travel-details-hero-slider-container')
-    document.body.appendChild(hero)
-
-    jest.spyOn(window, 'addEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, _options?: boolean | AddEventListenerOptions) => {
-      if (typeof listener === 'function') {
-        listeners.set(type, [...(listeners.get(type) || []), listener])
-      }
-      return undefined
-    }) as typeof window.addEventListener)
-
-    jest.spyOn(window, 'removeEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, _options?: boolean | EventListenerOptions) => {
-      if (typeof listener === 'function') {
-        const next = (listeners.get(type) || []).filter((item) => item !== listener)
-        if (next.length > 0) listeners.set(type, next)
-        else listeners.delete(type)
-      }
-      return undefined
-    }) as typeof window.removeEventListener)
-
+  it('preloads slider runtime automatically after LCP', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 1, name: 'Demo travel' } as any,
@@ -142,17 +121,14 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.sliderReady).toBe(false)
 
     await act(async () => {
-      jest.advanceTimersByTime(100)
+      jest.advanceTimersByTime(400)
     })
 
     expect(result.current.deferAllowed).toBe(true)
-    expect(result.current.sliderReady).toBe(false)
-
     await act(async () => {
       await Promise.resolve()
     })
 
-    expect(listeners.get('pointerdown')?.length).toBeGreaterThan(0)
-    expect(listeners.get('keydown')?.length).toBeGreaterThan(0)
+    expect(result.current.sliderReady).toBe(true)
   })
 })

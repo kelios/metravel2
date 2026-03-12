@@ -2,6 +2,7 @@
 import React, {
   Suspense,
   useCallback,
+  useEffect,
   useState,
 } from 'react'
 import {
@@ -86,8 +87,8 @@ function TravelHeroSectionInner({
 
   const shouldRenderWebOptimizedHero =
     Platform.OS === 'web' && shouldShowOptimizedHero
-  const canActivateWebSlider =
-    Platform.OS === 'web' && galleryImages.length > 1 && renderSlider
+  const hasInteractiveWebGallery =
+    Platform.OS === 'web' && galleryImages.length > 1
   const shouldRenderWebSlider =
     shouldRenderWebOptimizedHero &&
     webHeroLoaded &&
@@ -96,9 +97,16 @@ function TravelHeroSectionInner({
   const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2
 
   const activateWebSlider = useCallback(() => {
-    if (!canActivateWebSlider) return
+    if (!hasInteractiveWebGallery) return
     setWebSliderActivated(true)
-  }, [canActivateWebSlider])
+  }, [hasInteractiveWebGallery])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!hasInteractiveWebGallery) return
+    if (!renderSlider) return
+    setWebSliderActivated(true)
+  }, [hasInteractiveWebGallery, renderSlider])
 
   const handleWebHeroKeyDown = useCallback((event: any) => {
     const key = event?.key
@@ -128,7 +136,7 @@ function TravelHeroSectionInner({
             { height: heroHeight },
             Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
           ]}
-          {...(Platform.OS === 'web' && canActivateWebSlider
+          {...(Platform.OS === 'web' && hasInteractiveWebGallery
             ? {
                 tabIndex: 0,
                 'aria-label': 'Открыть интерактивную галерею',

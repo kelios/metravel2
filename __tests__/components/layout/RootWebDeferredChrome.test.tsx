@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, render, waitFor } from '@testing-library/react-native'
+import { render, waitFor } from '@testing-library/react-native'
 
 import RootWebDeferredChrome from '@/components/layout/RootWebDeferredChrome'
 
@@ -76,10 +76,8 @@ describe('RootWebDeferredChrome', () => {
     document.documentElement.classList.remove('app-hydrated')
   })
 
-  it('keeps travel deferred chrome hidden without interaction even after previous fallback window', async () => {
-    jest.useFakeTimers()
-
-    const { queryByTestId } = render(
+  it('renders travel deferred chrome without waiting for interaction', async () => {
+    const { getByTestId } = render(
       <RootWebDeferredChrome
         isMobile={false}
         pathname="/travels/test-route"
@@ -88,39 +86,14 @@ describe('RootWebDeferredChrome', () => {
         setDockHeight={jest.fn()}
       />
     )
-
-    await act(async () => {
-      jest.advanceTimersByTime(12000)
-    })
-
-    expect(queryByTestId('footer')).toBeNull()
-    expect(queryByTestId('runtime-effects')).toBeNull()
-    expect(queryByTestId('consent-banner')).toBeNull()
-  })
-
-  it('reveals travel deferred chrome on first interaction', async () => {
-    const { queryByTestId, getByTestId } = render(
-      <RootWebDeferredChrome
-        isMobile={false}
-        pathname="/travels/test-route"
-        showFooter
-        isTravelPerformanceRoute
-        setDockHeight={jest.fn()}
-      />
-    )
-
-    expect(queryByTestId('footer')).toBeNull()
-    expect(queryByTestId('runtime-effects')).toBeNull()
-    expect(queryByTestId('consent-banner')).toBeNull()
-
-    await act(async () => {
-      window.dispatchEvent(new Event('pointerdown'))
-    })
 
     await waitFor(() => {
       expect(getByTestId('footer')).toBeTruthy()
       expect(getByTestId('runtime-effects')).toBeTruthy()
-      expect(getByTestId('consent-banner')).toBeTruthy()
     })
+
+    expect(getByTestId('footer')).toBeTruthy()
+    expect(getByTestId('runtime-effects')).toBeTruthy()
   })
+
 })

@@ -20,21 +20,21 @@ describe('useWebHeroSliderUpgradeGate', () => {
     jest.useRealTimers()
   })
 
-  it('does not auto-allow the web hero slider without interaction', () => {
+  it('allows the web hero slider as soon as runtime is ready', () => {
     const { result } = renderHook(() =>
       __testables.useWebHeroSliderUpgradeGate(true),
     )
 
-    expect(result.current).toBe(false)
+    expect(result.current).toBe(true)
 
     act(() => {
       jest.advanceTimersByTime(5000)
     })
 
-    expect(result.current).toBe(false)
+    expect(result.current).toBe(true)
   })
 
-  it('allows the web hero slider immediately on pointer interaction', () => {
+  it('keeps allowing the web hero slider after pointer interaction', () => {
     const hero = document.createElement('div')
     hero.setAttribute('data-testid', 'travel-details-hero-slider-container')
     document.body.appendChild(hero)
@@ -43,7 +43,7 @@ describe('useWebHeroSliderUpgradeGate', () => {
       __testables.useWebHeroSliderUpgradeGate(true),
     )
 
-    expect(result.current).toBe(false)
+    expect(result.current).toBe(true)
 
     act(() => {
       hero.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))

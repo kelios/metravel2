@@ -43,8 +43,6 @@ interface RootWebDeferredChromeProps {
 }
 
 const WEB_FOOTER_RESERVE_HEIGHT = 56
-const TRAVEL_DEFERRED_CHROME_EVENTS: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel']
-
 export default function RootWebDeferredChrome({
   isMobile,
   pathname,
@@ -52,42 +50,21 @@ export default function RootWebDeferredChrome({
   isTravelPerformanceRoute,
   setDockHeight,
 }: RootWebDeferredChromeProps) {
-  const [showFooterChrome, setShowFooterChrome] = useState(!isTravelPerformanceRoute)
-  const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(!isTravelPerformanceRoute)
-  const [showRuntimeEffects, setShowRuntimeEffects] = useState(!isTravelPerformanceRoute)
+  const [showFooterChrome, setShowFooterChrome] = useState(true)
+  const [showNetworkStatusChrome, setShowNetworkStatusChrome] = useState(true)
+  const [showRuntimeEffects, setShowRuntimeEffects] = useState(true)
   const [showConsentBanner, setShowConsentBanner] = useState(false)
   const [showSkipLinks, setShowSkipLinks] = useState(false)
   const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(false)
 
   useEffect(() => {
-    if (!isTravelPerformanceRoute) return
-
-    const revealDeferredChrome = () => {
-      setShowRuntimeEffects(true)
-      setShowFooterChrome(true)
-    }
-
-    TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
-      const options =
-        eventName === 'pointerdown' || eventName === 'wheel'
-          ? ({ passive: true, once: true } as AddEventListenerOptions)
-          : ({ once: true } as AddEventListenerOptions)
-      window.addEventListener(eventName, revealDeferredChrome as EventListener, options)
-    })
-
-    return () => {
-      TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
-        window.removeEventListener(eventName, revealDeferredChrome as EventListener)
-      })
-    }
+    setShowRuntimeEffects(true)
+    setShowFooterChrome(true)
   }, [isTravelPerformanceRoute])
 
   useEffect(() => {
-    if (!isTravelPerformanceRoute) {
-      setShowRuntimeEffects(true)
-      setShowFooterChrome(true)
-      return
-    }
+    setShowRuntimeEffects(true)
+    setShowFooterChrome(true)
   }, [isTravelPerformanceRoute])
 
   useEffect(() => {
@@ -115,31 +92,9 @@ export default function RootWebDeferredChrome({
       })
     }
 
-    if (isTravelPerformanceRoute) {
-      const revealConsentOnInteraction = () => {
-        void maybeShowConsentBanner()
-      }
-
-      TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
-        const options =
-          eventName === 'pointerdown' || eventName === 'wheel'
-            ? ({ passive: true, once: true } as AddEventListenerOptions)
-            : ({ once: true } as AddEventListenerOptions)
-        window.addEventListener(eventName, revealConsentOnInteraction as EventListener, options)
-      })
-
-      return () => {
-        if (consentTimer) clearTimeout(consentTimer)
-        if (rafId != null) cancelAnimationFrame(rafId)
-        TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
-          window.removeEventListener(eventName, revealConsentOnInteraction as EventListener)
-        })
-      }
-    } else {
-      consentTimer = setTimeout(() => {
-        maybeShowConsentBanner()
-      }, 1000)
-    }
+    consentTimer = setTimeout(() => {
+      maybeShowConsentBanner()
+    }, 1000)
 
     return () => {
       if (consentTimer) clearTimeout(consentTimer)
@@ -160,8 +115,6 @@ export default function RootWebDeferredChrome({
   }, [])
 
   useEffect(() => {
-    if (!isTravelPerformanceRoute) return
-
     const revealNetworkStatus = () => {
       setShowNetworkStatusChrome(true)
     }

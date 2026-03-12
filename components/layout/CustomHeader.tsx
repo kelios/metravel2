@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo, useRef, useState, lazy, useEffect } from 'react';
+import React, { Suspense, useMemo, useRef, lazy } from 'react';
 import { View, StyleSheet, Platform, StatusBar, useWindowDimensions } from 'react-native';
 import { usePathname } from 'expo-router';
 import Logo from './Logo';
@@ -15,8 +15,6 @@ const CustomHeaderNavSectionComp = isTestEnv
 const CustomHeaderAccountSectionComp = isTestEnv
   ? (require('./CustomHeaderAccountSection').default as React.ComponentType<any>)
   : lazy(() => import('./CustomHeaderAccountSection'));
-const TRAVEL_HEADER_REVEAL_EVENTS: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel'];
-
 type CustomHeaderProps = {
     onHeightChange?: (height: number) => void;
 };
@@ -41,45 +39,9 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         return width < METRICS.breakpoints.largeTablet;
     }, [effectiveWebWidth, width]);
     const lastHeightRef = useRef(0);
-    const isTravelPerformanceRoute = Platform.OS === 'web' && typeof pathname === 'string' && pathname.startsWith('/travels/');
-    const [showHeaderContextBar, setShowHeaderContextBar] = useState(!isTravelPerformanceRoute);
-    const [showNavSection, setShowNavSection] = useState(!isTravelPerformanceRoute);
-    const [showAccountSection, setShowAccountSection] = useState(!isTravelPerformanceRoute);
-
-    useEffect(() => {
-        if (!isTravelPerformanceRoute) {
-            setShowHeaderContextBar(true);
-            setShowNavSection(true);
-            setShowAccountSection(true);
-            return;
-        }
-
-        setShowHeaderContextBar(false);
-        setShowNavSection(false);
-        setShowAccountSection(false);
-
-        if (typeof window === 'undefined') return;
-
-        const reveal = () => {
-            setShowAccountSection(true);
-            setShowNavSection(true);
-            setShowHeaderContextBar(true);
-        };
-
-        TRAVEL_HEADER_REVEAL_EVENTS.forEach((eventName) => {
-            const options =
-              eventName === 'pointerdown' || eventName === 'wheel'
-                ? ({ passive: true, once: true } as AddEventListenerOptions)
-                : ({ once: true } as AddEventListenerOptions);
-            window.addEventListener(eventName, reveal as EventListener, options);
-        });
-
-        return () => {
-            TRAVEL_HEADER_REVEAL_EVENTS.forEach((eventName) => {
-                window.removeEventListener(eventName, reveal as EventListener);
-            });
-        };
-    }, [isTravelPerformanceRoute]);
+    const showHeaderContextBar = true;
+    const showNavSection = true;
+    const showAccountSection = true;
 
     // Определяем активную страницу
     const activePath = useMemo(() => {
