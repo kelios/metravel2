@@ -4,9 +4,9 @@ import { Platform } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import { rIC } from '@/utils/rIC'
+import { initPerformanceMonitoring } from '@/utils/performance'
 
-const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 3000
-const TRAVEL_PERFORMANCE_INIT_FALLBACK_MS = 12000
+const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
 
 export interface UseTravelDetailsPerformanceArgs {
   travel?: Travel
@@ -133,32 +133,12 @@ export function useTravelDetailsPerformance({
       return
     }
 
-    // If travel is loaded but LCP callback is delayed (slow image/network),
-    // don't block forever.
     if (travel && !lcpLoaded) {
       setDeferAllowed(false)
-      let cancelled = false
-      const t = setTimeout(() => {
-        if (!cancelled) setDeferAllowed(true)
-      }, 2500)
-      return () => {
-        cancelled = true
-        clearTimeout(t)
-      }
+      return
     }
 
-    if (typeof window === 'undefined') return
-
-    // Safety net: do not block forever if data never arrives.
-    let cancelled = false
-    const t = setTimeout(() => {
-      if (!cancelled) setDeferAllowed(true)
-    }, 1200)
-
-    return () => {
-      cancelled = true
-      clearTimeout(t)
-    }
+    setDeferAllowed(false)
   }, [isLoading, lcpLoaded, travel])
 
   useEffect(() => {
@@ -184,48 +164,33 @@ export function useTravelDetailsPerformance({
     setPostLcpRuntimeReady(false)
 
     let revealed = false
-    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-      if (revealed) return
-      revealed = true
-      setPostLcpRuntimeReady(true)
-    }, 5000)
 
     const reveal = () => {
       if (revealed) return
       revealed = true
-      if (revealTimer) {
-        clearTimeout(revealTimer)
-        revealTimer = null
-      }
       setPostLcpRuntimeReady(true)
     }
 
     window.addEventListener('pointerdown', reveal, { passive: true, once: true })
     window.addEventListener('keydown', reveal, { once: true })
-    window.addEventListener('scroll', reveal, { passive: true, once: true })
+    window.addEventListener('wheel', reveal, { passive: true, once: true })
 
     return () => {
       revealed = true
-      if (revealTimer) clearTimeout(revealTimer)
       window.removeEventListener('pointerdown', reveal as EventListener)
       window.removeEventListener('keydown', reveal as EventListener)
-      window.removeEventListener('scroll', reveal as EventListener)
+      window.removeEventListener('wheel', reveal as EventListener)
     }
   }, [deferAllowed, isLoading, travel])
 
   useEffect(() => {
     if (Platform.OS === 'web') {
       let cancelled = false
-      let revealTimer: ReturnType<typeof setTimeout> | null = null
 
       const runPerformanceMonitoring = () => {
         rIC(async () => {
           if (cancelled) return
           try {
-            const [{ initPerformanceMonitoring }] =
-              await Promise.all([
-                import('@/utils/performance'),
-              ])
             if (!cancelled && typeof initPerformanceMonitoring === 'function') {
               initPerformanceMonitoring()
             }
@@ -238,7 +203,6 @@ export function useTravelDetailsPerformance({
       if (isLoading) {
         return () => {
           cancelled = true
-          if (revealTimer) clearTimeout(revealTimer)
         }
       }
 
@@ -246,7 +210,6 @@ export function useTravelDetailsPerformance({
         runPerformanceMonitoring()
         return () => {
           cancelled = true
-          if (revealTimer) clearTimeout(revealTimer)
         }
       }
 
@@ -258,7 +221,6 @@ export function useTravelDetailsPerformance({
         runPerformanceMonitoring()
         return () => {
           cancelled = true
-          if (revealTimer) clearTimeout(revealTimer)
         }
       }
 
@@ -266,26 +228,19 @@ export function useTravelDetailsPerformance({
       const reveal = () => {
         if (revealed || cancelled) return
         revealed = true
-        if (revealTimer) {
-          clearTimeout(revealTimer)
-          revealTimer = null
-        }
         runPerformanceMonitoring()
       }
 
-      revealTimer = setTimeout(reveal, TRAVEL_PERFORMANCE_INIT_FALLBACK_MS)
-
       window.addEventListener('pointerdown', reveal, { passive: true, once: true })
       window.addEventListener('keydown', reveal, { once: true })
-      window.addEventListener('scroll', reveal, { passive: true, once: true })
+      window.addEventListener('wheel', reveal, { passive: true, once: true })
 
       return () => {
         cancelled = true
         revealed = true
-        if (revealTimer) clearTimeout(revealTimer)
         window.removeEventListener('pointerdown', reveal as EventListener)
         window.removeEventListener('keydown', reveal as EventListener)
-        window.removeEventListener('scroll', reveal as EventListener)
+        window.removeEventListener('wheel', reveal as EventListener)
       }
     }
   }, [isLoading, travel])

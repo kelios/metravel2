@@ -154,7 +154,7 @@ export function useAddressListItemActions(travel: TravelCoords) {
       setPointAdded(true);
       void showToast({ type: 'success', text1: 'Точка добавлена в «Мои точки»', position: 'bottom' });
       void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
-      setTimeout(() => setPointAdded(false), 2000);
+      setTimeout(() => setPointAdded(false), 1000);
     } catch {
       void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });
     } finally { setIsAddingPoint(false); }
@@ -165,4 +165,3 @@ export function useAddressListItemActions(travel: TravelCoords) {
     copyCoords, openTelegram, openMap, openArticle, handleAddPoint,
   };
 }
-

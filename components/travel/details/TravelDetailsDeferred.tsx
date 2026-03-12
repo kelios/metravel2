@@ -7,6 +7,9 @@ import {
   TravelListSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
+import TravelRatingSection from '@/components/travel/TravelRatingSection'
+import AuthorCard from '@/components/travel/AuthorCard'
+import ShareButtons from '@/components/travel/ShareButtons'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
@@ -14,15 +17,12 @@ import { withLazy } from './TravelDetailsLazy'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
+import { TravelDetailsSidebarSection } from './sections/TravelDetailsSidebarSection'
+import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
 
 const TravelDetailsMapSection = withLazy(() =>
   import('./sections/TravelDetailsMapSection').then((m) => ({
     default: m.TravelDetailsMapSection,
-  }))
-)
-const TravelDetailsSidebarSection = withLazy(() =>
-  import('./sections/TravelDetailsSidebarSection').then((m) => ({
-    default: m.TravelDetailsSidebarSection,
   }))
 )
 const CommentsSection = withLazy(() =>
@@ -30,18 +30,6 @@ const CommentsSection = withLazy(() =>
     default: m.CommentsSection,
   }))
 )
-
-const TravelRatingSection = withLazy(() =>
-  import('@/components/travel/TravelRatingSection')
-)
-const TravelDetailsFooterSection = withLazy(() =>
-  import('./sections/TravelDetailsFooterSection').then((m) => ({
-    default: m.TravelDetailsFooterSection,
-  }))
-)
-
-const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
-const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 
 const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
 const PLACEHOLDER_MT_8 = { marginTop: 8 } as const
@@ -121,10 +109,13 @@ export const TravelDeferredSections: React.FC<{
   const tdTrace = useTdTrace()
   const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useProgressiveLoad({
     priority: 'low',
-    rootMargin: '120px',
-    threshold: 0.05,
+    // Keep the map truly below-the-fold on desktop web. A generous preload window
+    // was enough to pull the map chunk on the initial viewport in production.
+    rootMargin: '0px',
+    threshold: 0.15,
     fallbackDelay: 24000,
     enabled: canRenderHeavy,
+    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useProgressiveLoad({
     priority: 'low',
@@ -132,6 +123,7 @@ export const TravelDeferredSections: React.FC<{
     threshold: 0.05,
     fallbackDelay: 26000,
     enabled: canRenderHeavy,
+    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useProgressiveLoad({
     priority: 'low',
@@ -139,6 +131,7 @@ export const TravelDeferredSections: React.FC<{
     threshold: 0.05,
     fallbackDelay: 24000,
     enabled: canRenderHeavy,
+    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useProgressiveLoad({
     priority: 'low',
@@ -146,6 +139,7 @@ export const TravelDeferredSections: React.FC<{
     threshold: 0.05,
     fallbackDelay: 24000,
     enabled: canRenderHeavy,
+    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useProgressiveLoad({
     priority: 'low',
@@ -156,6 +150,7 @@ export const TravelDeferredSections: React.FC<{
     // the early no-interaction preview window.
     fallbackDelay: 24000,
     enabled: canRenderHeavy,
+    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
     priority: 'low',
@@ -163,6 +158,7 @@ export const TravelDeferredSections: React.FC<{
     threshold: 0.05,
     fallbackDelay: 3000,
     enabled: canRenderHeavy,
+    disableFallbackOnWeb: true,
   })
 
   useEffect(() => {
@@ -346,9 +342,7 @@ const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(({ travel }) => 
       <Text style={styles.sectionHeaderText}>Автор</Text>
       <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
       <View style={PLACEHOLDER_MT_12}>
-        <Suspense fallback={<View style={PLACEHOLDER_MIN_H_160} />}>
-          <AuthorCard travel={travel} />
-        </Suspense>
+        <AuthorCard travel={travel} />
       </View>
     </View>
   )
@@ -367,9 +361,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
         <Text style={styles.sectionHeaderText}>Автор</Text>
         <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
         <View style={PLACEHOLDER_MT_12}>
-          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_160} />}>
-            <AuthorCard travel={travel} />
-          </Suspense>
+          <AuthorCard travel={travel} />
         </View>
       </View>
 
@@ -379,9 +371,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
         accessibilityLabel="Поделиться маршрутом"
         style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
       >
-        <Suspense fallback={<View style={PLACEHOLDER_MIN_H_56} />}>
-          <ShareButtons travel={travel} />
-        </Suspense>
+        <ShareButtons travel={travel} />
       </View>
     </>
   )
@@ -399,14 +389,12 @@ const TravelRatingWrapper: React.FC<{ travel: Travel }> = memo(({ travel }) => {
       accessibilityLabel="Рейтинг путешествия"
       style={[styles.sectionContainer, styles.contentStable]}
     >
-      <Suspense fallback={<View style={PLACEHOLDER_MIN_H_56} />}>
-        <TravelRatingSection
-          travelId={travel.id}
-          initialRating={travel.rating}
-          initialCount={travel.rating_count}
-          initialUserRating={travel.user_rating}
-        />
-      </Suspense>
+      <TravelRatingSection
+        travelId={travel.id}
+        initialRating={travel.rating}
+        initialCount={travel.rating_count}
+        initialUserRating={travel.user_rating}
+      />
     </View>
   )
 })

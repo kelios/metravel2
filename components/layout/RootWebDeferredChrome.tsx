@@ -138,7 +138,7 @@ export default function RootWebDeferredChrome({
     } else {
       consentTimer = setTimeout(() => {
         maybeShowConsentBanner()
-      }, 4000)
+      }, 1000)
     }
 
     return () => {
@@ -179,7 +179,7 @@ export default function RootWebDeferredChrome({
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let idleId: number | null = null
-    const delay = isTravelPerformanceRoute ? 15000 : 6000
+    const delay = 1000
 
     timeoutId = setTimeout(() => {
       setShowServiceWorkerCleanup(true)
@@ -190,7 +190,7 @@ export default function RootWebDeferredChrome({
         () => {
           setShowServiceWorkerCleanup(true)
         },
-        { timeout: isTravelPerformanceRoute ? 12000 : 5000 }
+        { timeout: 1000 }
       )
     }
 

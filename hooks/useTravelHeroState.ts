@@ -161,7 +161,7 @@ function useHeroMediaModel(
         setWebHeroLoaded(true)
         notifyHeroReadyInEffect('hero:lcpImg:fallbackTimeout')
       }
-    }, 8000)
+    }, 1000)
     return () => clearTimeout(fallback)
   }, [webHeroLoaded, firstImg])
 

@@ -11,6 +11,11 @@ const mockMapSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockSidebarSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockFooterSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockCommentsSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
+type ObserverEntry = {
+  callback: IntersectionObserverCallback
+  observe: jest.Mock
+  disconnect: jest.Mock
+}
 
 jest.mock('@/components/travel/AuthorCard', () => ({
   __esModule: true,
@@ -64,10 +69,26 @@ jest.mock('@/hooks/useTdTrace', () => ({
 }))
 
 describe('TravelDeferredSections (web author defer)', () => {
+  const originalIntersectionObserver = global.IntersectionObserver
+  let observers: ObserverEntry[] = []
+
   beforeEach(() => {
     jest.useFakeTimers()
     Platform.OS = 'web'
     Platform.select = (obj: any) => obj.web || obj.default
+    observers = []
+    class MockIntersectionObserver {
+      callback: IntersectionObserverCallback
+      observe = jest.fn()
+      disconnect = jest.fn()
+
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback
+        observers.push(this as unknown as ObserverEntry)
+      }
+    }
+    ;(global as any).IntersectionObserver = MockIntersectionObserver
+    ;(window as any).IntersectionObserver = MockIntersectionObserver
     mockAuthorCardSpy.mockClear()
     mockMapSectionSpy.mockClear()
     mockSidebarSectionSpy.mockClear()
@@ -77,6 +98,8 @@ describe('TravelDeferredSections (web author defer)', () => {
 
   afterEach(() => {
     jest.useRealTimers()
+    ;(global as any).IntersectionObserver = originalIntersectionObserver
+    ;(window as any).IntersectionObserver = originalIntersectionObserver
   })
 
   it('keeps author card deferred during the early no-interaction window', async () => {
@@ -131,9 +154,15 @@ describe('TravelDeferredSections (web author defer)', () => {
 
     expect(mockAuthorCardSpy).not.toHaveBeenCalled()
 
+    expect(observers.length).toBeGreaterThan(0)
+
     await act(async () => {
-      jest.advanceTimersByTime(15000)
-      jest.runOnlyPendingTimers()
+      observers.forEach((observer) => {
+        observer.callback(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        )
+      })
       await Promise.resolve()
       await Promise.resolve()
     })
@@ -196,9 +225,15 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(mockCommentsSectionSpy).not.toHaveBeenCalled()
     expect(mockFooterSectionSpy).not.toHaveBeenCalled()
 
+    expect(observers.length).toBeGreaterThanOrEqual(6)
+
     await act(async () => {
-      jest.advanceTimersByTime(17000)
-      jest.runOnlyPendingTimers()
+      observers.forEach((observer) => {
+        observer.callback(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        )
+      })
       await Promise.resolve()
       await Promise.resolve()
     })

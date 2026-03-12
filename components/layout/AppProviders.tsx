@@ -82,7 +82,7 @@ export default function AppProviders({
           revealed = true;
           setDeferredRuntimeActivationReason('fallback');
           setDeferredRuntimeReady(true);
-        }, 1200);
+        }, 1000);
     let idleId: number | null = null;
 
     const revealFromInteraction = () => {
@@ -114,7 +114,7 @@ export default function AppProviders({
         }
         setDeferredRuntimeActivationReason('fallback');
         setDeferredRuntimeReady(true);
-      }, { timeout: 1200 });
+      }, { timeout: 1000 });
     }
 
     window.addEventListener('pointerdown', revealFromInteraction, { passive: true, once: true });

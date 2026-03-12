@@ -129,6 +129,43 @@ npx serve dist/prod -l 3000 -s
 - Add `--output=json --output-path=/tmp/lh-report.json` to save reports for analysis
 - If you find unused code during work, remove it.
 
+### Timeout policy
+
+- Do not use forced runtime/UI timeouts longer than `1000ms` to reveal content, hide skeletons, upgrade widgets, or "wait out" hydration/loading issues.
+- If rendering or loading is unstable, fix the root cause:
+  - remove duplicate requests
+  - stabilize layout geometry
+  - gate work on real events (`load`, `onLoad`, `IntersectionObserver`, user interaction, `requestIdleCallback`)
+  - reserve space instead of delaying UI with timers
+- Existing fallbacks in loading/hydration/render paths must stay at `<= 1000ms`.
+- Network/request timeouts and explicit debounce/retry logic may exceed `1000ms` only when they are not used to mask UI readiness or visual instability.
+
+### Web loading and hydration policy
+
+- Do not treat Expo/Metro dev-network counts as production truth.
+  - `localhost:8081/8082` may show extra `*.bundle?platform=web&dev=true...` requests that do not exist in `dist/prod`.
+  - Real request-count, chunk-count, and Lighthouse decisions must be made from `npm run build:web:prod` or from the real production URL.
+- Do not “fix” visual instability by adding delayed auto-reveal timers for:
+  - headers
+  - root chrome
+  - hero upgrades
+  - below-the-fold sections
+  - post-LCP runtime widgets
+- Above-the-fold UI must render from the critical shell on first paint.
+  - Do not lazy-load desktop header, hero shell, or other first-screen chrome if that creates a second visual frame after the skeleton.
+- Below-the-fold code must stay truly lazy on web.
+  - Do not prefetch or auto-import deferred sections by timer alone.
+  - Use only real triggers: intersection, explicit user interaction, or automation/test mode when required.
+- On travel pages, interaction-free web upgrades must stay opt-in.
+  - Do not auto-upgrade the static hero into the interactive slider before explicit interaction unless a production-verified reason is documented.
+  - Prefer `pointerdown`, `keydown`, or `wheel` to unlock non-critical runtime.
+  - Do not use plain `scroll` listeners as broad auto-reveal triggers for heavy travel UI.
+- When using preload scripts and React Query together, avoid duplicate first-load API requests.
+  - Reuse the in-flight preload promise or preloaded payload instead of firing a second request for the same travel route.
+- If a bug is visible only on web, verify it in a real browser flow.
+  - Prefer Playwright or a headed browser capture over reasoning from code alone.
+  - For visual loading bugs, inspect both DOM state and network state before changing timing logic.
+
 ## UI rules
 
 ### Component reuse
@@ -164,9 +201,16 @@ npx serve dist/prod -l 3000 -s
   - no icons
   - no text like “нет изображения”
   - no emoji
-  - no bright accent colors
+- no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`) and any unused area should be filled by a blurred version of the same image.
+- For critical web hero/slider media, the blurred surround must reuse the same effective image source as the visible image whenever possible.
+  - Do not create a second “blur-only” URL for first-paint hero/slider backdrops if the same source image can be reused.
+  - The goal is to avoid a separate background request arriving after the main image and causing a visible second-stage backdrop reveal.
+- Blur backdrops must be present in the DOM from the first relevant frame.
+  - Fix missing backdrop rendering by correcting source selection or component structure, not by delaying the main image or adding reveal timers.
+- Keep image geometry stable across skeleton, static hero, and slider handoff.
+  - Do not let the slider/background path introduce a different aspect-ratio box or a late background mount.
 
 ### Icons
 

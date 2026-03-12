@@ -30,6 +30,7 @@ import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetailsCriticalShell";
 import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
+import TravelDetailsPostLcpRuntime from '@/components/travel/details/TravelDetailsPostLcpRuntime'
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import { useAccessibilityAnnounce } from "@/hooks/useAccessibilityAnnounce";
@@ -44,10 +45,6 @@ const TravelDetailPageSkeleton = withLazy(() =>
     default: m.TravelDetailPageSkeleton,
   }))
 );
-const TravelDetailsPostLcpRuntime = withLazy(() =>
-  import('@/components/travel/details/TravelDetailsPostLcpRuntime')
-);
-
 /* -------------------- utils (используются из импортов) -------------------- */
 // ✅ SECURITY: Функции перемещены в utils/travelDetailsSecure.ts:
 // - stripHtml: защита от XSS

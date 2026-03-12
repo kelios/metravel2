@@ -132,6 +132,45 @@ describe('useTravelDetails', () => {
     expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
+  it('waits briefly for preload bootstrap before falling back to fetchTravelBySlug', async () => {
+    jest.useFakeTimers();
+    (Platform.OS as any) = 'web';
+
+    // @ts-expect-error - test-only global
+    (global as any).window = {
+      __metravelTravelPreloadScriptLoaded: true,
+      location: { pathname: '/travels/awesome-trip' },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
+
+    renderHook(() => useTravelDetails());
+
+    const queryPromise = capturedQueryFn!();
+
+    setTimeout(() => {
+      // @ts-expect-error - test-only global
+      (global as any).window.__metravelTravelPreload = {
+        data: { id: 503, slug: 'awesome-trip', name: 'Trip' },
+        slug: 'awesome-trip',
+        isId: false,
+      };
+    }, 100);
+
+    await act(async () => {
+      jest.advanceTimersByTime(120);
+      await Promise.resolve();
+    });
+
+    const data = await queryPromise;
+    expect(data).toEqual({ id: 503, slug: 'awesome-trip', name: 'Trip' });
+    expect(fetchTravelBySlug).not.toHaveBeenCalled();
+
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
   it('exposes refetch function from react-query result', () => {
     const mockRefetch = jest.fn();
     useLocalSearchParams.mockReturnValue({ param: '456' });

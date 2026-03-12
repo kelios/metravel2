@@ -46,7 +46,7 @@ export default function AppProvidersDeferredRuntime({
     };
 
     const bootstrapDelay =
-      activationReason === 'interaction' ? 0 : authDeferMode === 'interaction' ? 4500 : 0;
+      activationReason === 'interaction' ? 0 : authDeferMode === 'interaction' ? 1000 : 0;
     timeoutId = setTimeout(() => {
       void bootstrap();
     }, bootstrapDelay);
@@ -83,8 +83,7 @@ export default function AppProvidersDeferredRuntime({
   useEffect(() => {
     if (!deferAuthProvider || typeof window === 'undefined') return;
 
-    const fallbackDelay =
-      activationReason === 'interaction' ? 0 : authDeferMode === 'interaction' ? 9000 : 1400;
+    const fallbackDelay = activationReason === 'interaction' ? 0 : 1000;
     let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       setAuthProviderReady(true);
     }, fallbackDelay);
@@ -122,8 +121,7 @@ export default function AppProvidersDeferredRuntime({
   useEffect(() => {
     if (!deferFavoritesProvider || typeof window === 'undefined') return;
 
-    const fallbackDelay =
-      activationReason === 'interaction' ? 0 : favoritesDeferMode === 'interaction' ? 12000 : 1800;
+    const fallbackDelay = activationReason === 'interaction' ? 0 : 1000;
     let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
       setFavoritesReady(true);
     }, fallbackDelay);
@@ -134,7 +132,7 @@ export default function AppProvidersDeferredRuntime({
     };
 
     if (favoritesDeferMode === 'idle' && 'requestIdleCallback' in window) {
-      idleId = (window as any).requestIdleCallback(enable, { timeout: 1200 });
+      idleId = (window as any).requestIdleCallback(enable, { timeout: 1000 });
     }
 
     const onInteraction = () => enable();
@@ -210,7 +208,7 @@ export default function AppProvidersDeferredRuntime({
     };
 
     const bootstrapDelay =
-      activationReason === 'interaction' ? 0 : favoritesDeferMode === 'interaction' ? 6500 : 0;
+      activationReason === 'interaction' ? 0 : favoritesDeferMode === 'interaction' ? 1000 : 0;
     timeoutId = setTimeout(() => {
       void bootstrap();
     }, bootstrapDelay);
@@ -218,7 +216,7 @@ export default function AppProvidersDeferredRuntime({
     if (favoritesDeferMode === 'idle' && 'requestIdleCallback' in window) {
       idleId = (window as any).requestIdleCallback(() => {
         void bootstrap();
-      }, { timeout: 1200 });
+      }, { timeout: 1000 });
     }
 
     const onInteraction = () => {

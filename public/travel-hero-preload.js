@@ -197,7 +197,7 @@
               }
             });
             canObs.observe(document.head, { childList: true });
-            setTimeout(function() { try { canObs.disconnect(); } catch (_e5) {} }, 5000);
+            setTimeout(function() { try { canObs.disconnect(); } catch (_e5) {} }, 1000);
           }
 
           // og:type for travel pages

@@ -152,21 +152,28 @@ export const TravelDetailsMapSection: React.FC<{
 }> = ({ travel, anchors, canRenderHeavy, scrollToMapSection }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
-  const { data: routeFiles = [] } = useTravelRouteFiles(travel?.id)
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
   const primaryRoutePreview = routePreviewItems[0]?.preview ?? null
-  const hasMapData =
-    (travel.coordsMeTravel?.length ?? 0) > 0 ||
-    routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
+  const hasEmbeddedCoords = (travel.coordsMeTravel?.length ?? 0) > 0
 
   // Simplified lazy loading (replaces 30+ lines with 5 lines!)
-  const { shouldRender, elementRef, isLoading } = useMapLazyLoad({
+  const { shouldRender, elementRef, isLoading, isVisible } = useMapLazyLoad({
     enabled: true,
-    hasData: hasMapData,
+    hasData: true,
     canRenderHeavy,
     rootMargin: isWebAutomation ? '800px 0px 800px 0px' : '400px 0px 400px 0px',
     threshold: isWebAutomation ? 0 : 0.1,
   })
+  const routeFilesEnabled =
+    Boolean(travel?.id) &&
+    canRenderHeavy &&
+    (Platform.OS !== 'web' || isVisible || isWebAutomation)
+  const { data: routeFiles = [] } = useTravelRouteFiles(travel?.id, {
+    enabled: routeFilesEnabled,
+  })
+  const hasMapData =
+    hasEmbeddedCoords ||
+    routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
 
   const colors = useThemedColors()
   const routeColorPalette = useMemo(

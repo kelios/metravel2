@@ -18,6 +18,6 @@ describe('getAnalyticsInlineScript', () => {
   it('schedules analytics bootstrap shortly after page load', () => {
     const script = getAnalyticsInlineScript(12345678, 'G-TEST123456')
     expect(script).toContain("window.addEventListener('load', scheduleAfterLoad, { once: true })")
-    expect(script).toContain('loadTimer = setTimeout(trigger, 1500);')
+    expect(script).toContain('loadTimer = setTimeout(trigger, 1000);')
   })
 })

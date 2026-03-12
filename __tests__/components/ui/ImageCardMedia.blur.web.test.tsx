@@ -40,10 +40,10 @@ describe('ImageCardMedia blur background (web)', () => {
     })
 
     const blurLayers = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
       const ariaHidden = node?.props?.['aria-hidden']
       if (ariaHidden !== true && ariaHidden !== 'true') return false
-      const filter = String(node?.props?.style?.filter || '')
-      return filter.includes('blur')
+      return node?.props?.['data-blur-backdrop'] === 'true'
     })
 
     expect(blurLayers.length).toBeGreaterThan(0)
@@ -77,12 +77,17 @@ describe('ImageCardMedia blur background (web)', () => {
     })
 
     const blurLayers = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
       const ariaHidden = node?.props?.['aria-hidden']
       if (ariaHidden !== true && ariaHidden !== 'true') return false
-      const filter = String(node?.props?.style?.filter || '')
-      return filter.includes('blur')
+      return node?.props?.['data-blur-backdrop'] === 'true'
     })
+    const mainLayers = tree!.root.findAll((node: any) => node?.type === 'img')
 
     expect(blurLayers.length).toBeGreaterThan(0)
+    expect(mainLayers.length).toBeGreaterThan(0)
+    expect(String(blurLayers[0].props.style?.filter || '')).toContain('saturate')
+    expect(blurLayers[0].props.style?.objectFit).toBe('cover')
+    expect(blurLayers[0].props.src).toBe(mainLayers[0].props.src)
   })
 })

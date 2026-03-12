@@ -540,9 +540,9 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     const schedule = () => {
       try {
         if ((window as any).requestIdleCallback) {
-          ;(window as any).requestIdleCallback(mount, { timeout: 2500 });
+          ;(window as any).requestIdleCallback(mount, { timeout: 1000 });
         } else {
-          setTimeout(mount, 1800);
+          setTimeout(mount, 1000);
         }
       } catch {
         mount();

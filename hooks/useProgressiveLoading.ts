@@ -20,7 +20,15 @@ export interface ProgressiveLoadConfig {
   rootMargin?: string;  // Root margin for Intersection Observer
   fallbackDelay?: number; // Fallback delay for non-supporting browsers
   enabled?: boolean;
+  disableFallbackOnWeb?: boolean;
 }
+
+const MAX_UI_FALLBACK_DELAY_MS = 1000;
+
+const resolveFallbackDelay = (value: number | undefined, defaultMs: number): number => {
+  const numeric = Number.isFinite(value) ? Number(value) : defaultMs;
+  return Math.min(MAX_UI_FALLBACK_DELAY_MS, Math.max(0, numeric));
+};
 
 // Hook for progressive component loading
 export function useProgressiveLoad(config: ProgressiveLoadConfig) {
@@ -29,6 +37,7 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
   const rootMargin = config.rootMargin;
   const fallbackDelay = config.fallbackDelay;
   const enabled = config.enabled !== false;
+  const disableFallbackOnWeb = config.disableFallbackOnWeb === true;
 
   const [shouldLoad, setShouldLoad] = useState(
     enabled && (priority === 'immediate' || priority === 'high')
@@ -72,16 +81,20 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
       // Fallback for native - load after interaction
       const timer = setTimeout(() => {
         setShouldLoad(true);
-      }, fallbackDelay || 1000);
+      }, resolveFallbackDelay(fallbackDelay, 1000));
       return () => clearTimeout(timer);
     }
 
     // Web: Use Intersection Observer
     if (!window.IntersectionObserver) {
+      if (disableFallbackOnWeb) {
+        setShouldLoad(true);
+        return;
+      }
       // Fallback for browsers without Intersection Observer
       const timer = setTimeout(() => {
         setShouldLoad(true);
-      }, fallbackDelay || 2000);
+      }, resolveFallbackDelay(fallbackDelay, 1000));
       return () => clearTimeout(timer);
     }
 
@@ -107,24 +120,25 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
       const domElement = element._nativeNode || element._domNode || element;
       if (domElement) {
         observerRef.current.observe(domElement);
-        // Safety-net: if IO is observing but the element never intersects
-        // (e.g., clipped inside a ScrollView with overflow), force load
-        // after a reasonable timeout to prevent content deadlock.
-        fallbackTimer = setTimeout(() => {
-          setShouldLoad(true);
-          if (observerRef.current) {
-            observerRef.current.disconnect();
-          }
-        }, fallbackDelay || 4000);
+        if (!disableFallbackOnWeb) {
+          fallbackTimer = setTimeout(() => {
+            setShouldLoad(true);
+            if (observerRef.current) {
+              observerRef.current.disconnect();
+            }
+          }, resolveFallbackDelay(fallbackDelay, 1000));
+        }
       } else {
-        fallbackTimer = setTimeout(() => {
-          setShouldLoad(true);
-        }, fallbackDelay || 2000);
+        if (!disableFallbackOnWeb) {
+          fallbackTimer = setTimeout(() => {
+            setShouldLoad(true);
+          }, resolveFallbackDelay(fallbackDelay, 1000));
+        }
       }
-    } else {
+    } else if (!disableFallbackOnWeb) {
       fallbackTimer = setTimeout(() => {
         setShouldLoad(true);
-      }, fallbackDelay || 2000);
+      }, resolveFallbackDelay(fallbackDelay, 1000));
     }
 
     return () => {
@@ -135,7 +149,7 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
         clearTimeout(fallbackTimer);
       }
     };
-  }, [enabled, fallbackDelay, priority, rootMargin, threshold]);
+  }, [disableFallbackOnWeb, enabled, fallbackDelay, priority, rootMargin, threshold]);
 
   return { shouldLoad, elementRef, setElementRef };
 }
@@ -268,4 +282,3 @@ export function optimizeFontLoading(fonts: Array<{
   void fonts;
   return;
 }
-

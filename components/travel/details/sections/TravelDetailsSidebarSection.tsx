@@ -50,6 +50,7 @@ export const TravelDetailsSidebarSection: React.FC<{
     threshold: 0.1,
     fallbackDelay: 1000,
     enabled: progressiveEnabled,
+    disableFallbackOnWeb: true,
   })
 
   const { shouldLoad: shouldLoadPopular, setElementRef: setPopularRef } = useProgressiveLoad({
@@ -58,6 +59,7 @@ export const TravelDetailsSidebarSection: React.FC<{
     threshold: 0.1,
     fallbackDelay: 1200,
     enabled: progressiveEnabled,
+    disableFallbackOnWeb: true,
   })
 
   const [hasLoadedNear, setHasLoadedNear] = useState(false)

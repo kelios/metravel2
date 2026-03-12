@@ -185,7 +185,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
 
     function runDeferred() {
       if (window.requestIdleCallback) {
-        window.requestIdleCallback(loadAnalytics, { timeout: 5000 });
+        window.requestIdleCallback(loadAnalytics, { timeout: 1000 });
       } else {
         setTimeout(loadAnalytics, 0);
       }
@@ -217,7 +217,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     }
 
     function scheduleAfterLoad() {
-      loadTimer = setTimeout(trigger, 1500);
+      loadTimer = setTimeout(trigger, 1000);
     }
 
     if (document.readyState === 'complete') {
@@ -226,9 +226,6 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       window.addEventListener('load', scheduleAfterLoad, { once: true });
     }
 
-    // Safety net for long passive sessions without interaction.
-    // Keep it for background tabs / unusual browsers even if load-based bootstrap misses.
-    fallbackTimer = setTimeout(trigger, 30000);
   }
 
   // Автозагрузка:

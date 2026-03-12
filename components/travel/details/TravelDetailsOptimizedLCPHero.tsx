@@ -7,7 +7,6 @@ import { createSafeImageUrl } from '@/utils/travelMedia';
 import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
-  optimizeImageUrl,
 } from '@/utils/imageOptimization';
 
 type ImgLike = {
@@ -81,7 +80,6 @@ function OptimizedLCPHeroInner({
   const [loadError, setLoadError] = useState(false);
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null);
   const [didTryApiPrefix, setDidTryApiPrefix] = useState(false);
-  const [backdropVisible, setBackdropVisible] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const colors = useThemedColors();
 
@@ -120,25 +118,10 @@ function OptimizedLCPHeroInner({
     }
   }, []);
 
-  useEffect(() => {
-    setBackdropVisible(false);
-  }, [img.id, img.updated_at, img.url]);
-
   const srcWithRetry = overrideSrc || responsive.src || baseSrc;
   const blurBackdropSrc = useMemo(() => {
-    return buildVersionedImageUrl(
-      optimizeImageUrl(srcWithRetry, {
-        width: isMobile ? 140 : 180,
-        height: isMobile ? 140 : 180,
-        quality: 20,
-        format: 'jpg',
-        fit: 'cover',
-        blur: 12,
-      }) ?? srcWithRetry,
-      img.updated_at ?? null,
-      img.id,
-    );
-  }, [img.id, img.updated_at, isMobile, srcWithRetry]);
+    return srcWithRetry;
+  }, [srcWithRetry]);
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
 
   if (!srcWithRetry) return <NeutralHeroPlaceholder height={height} />;
@@ -201,21 +184,28 @@ function OptimizedLCPHeroInner({
             backgroundColor: colors.backgroundSecondary,
           }}
         >
-          {backdropVisible && (
-            <div
+          {blurBackdropSrc && (
+            <img
               aria-hidden="true"
               data-hero-backdrop="true"
+              src={blurBackdropSrc}
+              srcSet={responsive.srcSet}
+              sizes={responsive.sizes}
+              alt=""
+              width={img.width || 1200}
+              height={img.height || Math.round(1200 / ratio)}
               style={{
                 position: 'absolute',
-                inset: '-5%',
-                width: '110%',
-                height: '110%',
-                backgroundImage: `url("${blurBackdropSrc}")`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(22px)',
-                transform: 'scale(1.04)',
-                opacity: 0.9,
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                display: 'block',
+                objectFit: 'cover',
+                objectPosition: 'center',
+                filter: 'blur(28px) saturate(1.12)',
+                transform: 'scale(1.08)',
+                opacity: 0.98,
+                pointerEvents: 'none',
               }}
             />
           )}
@@ -243,7 +233,6 @@ function OptimizedLCPHeroInner({
             referrerPolicy="no-referrer-when-downgrade"
             data-lcp
             onLoad={() => {
-              setBackdropVisible(true);
               onLoad?.();
             }}
             onError={() => {

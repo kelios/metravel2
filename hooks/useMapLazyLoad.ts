@@ -54,6 +54,7 @@ interface UseMapLazyLoadResult {
    * Is currently loading
    */
   isLoading: boolean;
+  isVisible: boolean;
 }
 
 /**
@@ -147,21 +148,9 @@ export function useMapLazyLoad(options: UseMapLazyLoadOptions = {}): UseMapLazyL
     if (!canRenderHeavy) return;
     if (isVisible) return;
 
-    // Re-observe if we have element ref
     if (elementRef.current) {
       setElementRef(elementRef.current);
     }
-
-    // Fallback: if IntersectionObserver doesn't trigger within 3 seconds, show map anyway
-    const fallbackTimer = setTimeout(() => {
-      if (!isVisible) {
-        setIsVisible(true);
-      }
-    }, 3000);
-
-    return () => {
-      clearTimeout(fallbackTimer);
-    };
   }, [canRenderHeavy, isVisible, setElementRef]);
 
   // Track if map has been mounted
@@ -192,5 +181,6 @@ export function useMapLazyLoad(options: UseMapLazyLoadOptions = {}): UseMapLazyL
     elementRef: setElementRef,
     hasMounted,
     isLoading,
-  }), [shouldMount, setElementRef, hasMounted, isLoading]);
+    isVisible,
+  }), [shouldMount, setElementRef, hasMounted, isLoading, isVisible]);
 }

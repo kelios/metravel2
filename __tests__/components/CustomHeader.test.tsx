@@ -158,7 +158,7 @@ describe('CustomHeader', () => {
             expect(utils.getByTestId('header-login-cta')).toBeTruthy();
         });
 
-        it('defers header context bar on web travel routes', async () => {
+        it('keeps header context bar hidden on web travel routes without interaction', async () => {
             jest.useFakeTimers();
             const restoreWindow = global.window;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
@@ -179,11 +179,11 @@ describe('CustomHeader', () => {
                 expect(queryByTestId('mock-header-context-bar')).toBeNull();
 
                 await act(async () => {
-                    jest.advanceTimersByTime(4000);
+                    jest.advanceTimersByTime(12000);
                     await Promise.resolve();
                 });
 
-                expect(queryByTestId('mock-header-context-bar')).toBeTruthy();
+                expect(queryByTestId('mock-header-context-bar')).toBeNull();
             } finally {
                 jest.runOnlyPendingTimers();
                 jest.useRealTimers();

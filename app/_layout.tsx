@@ -46,6 +46,7 @@ import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+import { shouldRunRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
 
 if (__DEV__) {
   require("@expo/metro-runtime");
@@ -80,18 +81,12 @@ if (!isWeb) {
 export default function RootLayout() {
     useEffect(() => {
         if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') return;
-        // On production web, Expo's bundler inlines individual process.env.EXPO_PUBLIC_*
-        // references but does NOT populate the process.env object. The diagnostics
-        // function reads env vars from the object, producing false positives
-        // (e.g. API_URL_MISSING) even though the app works correctly.
-        // Only run diagnostics in dev where process.env is fully available.
-        // NOTE: __DEV__ alone is not sufficient — the bundler may strip the guard
-        // but keep the body. Use a runtime hostname check as defense-in-depth.
-        if (!__DEV__) return;
-        if (isWeb && typeof window !== 'undefined') {
-            const h = window.location?.hostname;
-            if (h === 'metravel.by' || h === 'www.metravel.by') return;
-        }
+        if (!shouldRunRuntimeConfigDiagnostics({
+          isDev: __DEV__,
+          isWeb,
+          hostname: isWeb && typeof window !== 'undefined' ? window.location?.hostname : null,
+          pathname: isWeb && typeof window !== 'undefined' ? window.location?.pathname : null,
+        })) return;
         void import('@/utils/runtimeConfigDiagnostics')
           .then(async ({ getRuntimeConfigDiagnostics }) => {
             const diagnostics = getRuntimeConfigDiagnostics();
@@ -401,7 +396,7 @@ function ThemedContent({
                                   {bottomGutter}
                               </View>
 
-                              {Platform.OS === 'web' && __DEV__ && ReactQueryDevtoolsLazy ? (
+                              {Platform.OS === 'web' && __DEV__ && !isTravelRoute && ReactQueryDevtoolsLazy ? (
                                 <React.Suspense fallback={null}>
                                   <ReactQueryDevtoolsLazy initialIsOpen={false} />
                                 </React.Suspense>

@@ -223,7 +223,7 @@ describe('analytics inline script', () => {
 
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
 
-    jest.advanceTimersByTime(1499)
+    jest.advanceTimersByTime(999)
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
 
     jest.advanceTimersByTime(1)

@@ -74,7 +74,7 @@ export function loadScriptDeferred(src: string, id?: string): Promise<void> {
     if ('requestIdleCallback' in window) {
       ;(window as any).requestIdleCallback(append)
     } else {
-      setTimeout(append, 2000)
+      setTimeout(append, 1000)
     }
   })
 
@@ -132,7 +132,7 @@ export function loadStylesheetDeferred(href: string, id?: string): Promise<void>
     if ('requestIdleCallback' in window) {
       ;(window as any).requestIdleCallback(append)
     } else {
-      setTimeout(append, 2000)
+      setTimeout(append, 1000)
     }
   })
 
@@ -187,7 +187,7 @@ export function prefetchResource(href: string, as: 'image' | 'script' | 'style' 
 /**
  * Отложенная инициализация функции
  */
-export function deferExecution(fn: () => void, delay = 2000): void {
+export function deferExecution(fn: () => void, delay = 1000): void {
   if (typeof window === 'undefined') {
     fn()
     return
@@ -297,6 +297,5 @@ export function measurePerformance(name: string, fn: () => void): void {
     }
   }
 }
-
 
 

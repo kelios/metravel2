@@ -15,6 +15,7 @@ const CustomHeaderNavSectionComp = isTestEnv
 const CustomHeaderAccountSectionComp = isTestEnv
   ? (require('./CustomHeaderAccountSection').default as React.ComponentType<any>)
   : lazy(() => import('./CustomHeaderAccountSection'));
+const TRAVEL_HEADER_REVEAL_EVENTS: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel'];
 
 type CustomHeaderProps = {
     onHeightChange?: (height: number) => void;
@@ -48,117 +49,35 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     useEffect(() => {
         if (!isTravelPerformanceRoute) {
             setShowHeaderContextBar(true);
+            setShowNavSection(true);
+            setShowAccountSection(true);
             return;
         }
 
         setShowHeaderContextBar(false);
-
-        if (typeof window === 'undefined') return;
-
-        let cleared = false;
-        let contextBarTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-            if (cleared) return;
-            setShowHeaderContextBar(true);
-        }, 4000);
-
-        const reveal = () => {
-            if (cleared) return;
-            cleared = true;
-            if (contextBarTimer) {
-                clearTimeout(contextBarTimer);
-                contextBarTimer = null;
-            }
-            setShowHeaderContextBar(true);
-        };
-
-        window.addEventListener('pointerdown', reveal, { passive: true, once: true });
-        window.addEventListener('keydown', reveal, { once: true });
-        window.addEventListener('scroll', reveal, { passive: true, once: true });
-
-        return () => {
-            cleared = true;
-            if (contextBarTimer) clearTimeout(contextBarTimer);
-            window.removeEventListener('pointerdown', reveal as EventListener);
-            window.removeEventListener('keydown', reveal as EventListener);
-            window.removeEventListener('scroll', reveal as EventListener);
-        };
-    }, [isTravelPerformanceRoute]);
-
-    useEffect(() => {
-        if (!isTravelPerformanceRoute) {
-            setShowNavSection(true);
-            return;
-        }
-
         setShowNavSection(false);
-
-        if (typeof window === 'undefined') return;
-
-        let cleared = false;
-        let navTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-            if (cleared) return;
-            setShowNavSection(true);
-        }, 2600);
-
-        const reveal = () => {
-            if (cleared) return;
-            cleared = true;
-            if (navTimer) {
-                clearTimeout(navTimer);
-                navTimer = null;
-            }
-            setShowNavSection(true);
-        };
-
-        window.addEventListener('pointerdown', reveal, { passive: true, once: true });
-        window.addEventListener('keydown', reveal, { once: true });
-        window.addEventListener('scroll', reveal, { passive: true, once: true });
-
-        return () => {
-            cleared = true;
-            if (navTimer) clearTimeout(navTimer);
-            window.removeEventListener('pointerdown', reveal as EventListener);
-            window.removeEventListener('keydown', reveal as EventListener);
-            window.removeEventListener('scroll', reveal as EventListener);
-        };
-    }, [isTravelPerformanceRoute]);
-
-    useEffect(() => {
-        if (!isTravelPerformanceRoute) {
-            setShowAccountSection(true);
-            return;
-        }
-
         setShowAccountSection(false);
 
         if (typeof window === 'undefined') return;
 
-        let cleared = false;
-        let accountTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-            if (cleared) return;
-            setShowAccountSection(true);
-        }, 3200);
-
         const reveal = () => {
-            if (cleared) return;
-            cleared = true;
-            if (accountTimer) {
-                clearTimeout(accountTimer);
-                accountTimer = null;
-            }
             setShowAccountSection(true);
+            setShowNavSection(true);
+            setShowHeaderContextBar(true);
         };
 
-        window.addEventListener('pointerdown', reveal, { passive: true, once: true });
-        window.addEventListener('keydown', reveal, { once: true });
-        window.addEventListener('scroll', reveal, { passive: true, once: true });
+        TRAVEL_HEADER_REVEAL_EVENTS.forEach((eventName) => {
+            const options =
+              eventName === 'pointerdown' || eventName === 'wheel'
+                ? ({ passive: true, once: true } as AddEventListenerOptions)
+                : ({ once: true } as AddEventListenerOptions);
+            window.addEventListener(eventName, reveal as EventListener, options);
+        });
 
         return () => {
-            cleared = true;
-            if (accountTimer) clearTimeout(accountTimer);
-            window.removeEventListener('pointerdown', reveal as EventListener);
-            window.removeEventListener('keydown', reveal as EventListener);
-            window.removeEventListener('scroll', reveal as EventListener);
+            TRAVEL_HEADER_REVEAL_EVENTS.forEach((eventName) => {
+                window.removeEventListener(eventName, reveal as EventListener);
+            });
         };
     }, [isTravelPerformanceRoute]);
 

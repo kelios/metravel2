@@ -123,23 +123,22 @@ function TravelHeroSectionInner({
       >
         <View
           testID="travel-details-hero-slider-container"
-        style={[
-          styles.sliderContainer,
-          { height: heroHeight },
-          Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
-        ]}
-        {...(Platform.OS === 'web' && canActivateWebSlider
-          ? {
-              role: 'button',
-              tabIndex: 0,
-              'aria-label': 'Открыть интерактивную галерею',
-              onClick: activateWebSlider,
-              onKeyDown: handleWebHeroKeyDown,
-            }
-          : {})}
-        collapsable={false}
-        onLayout={
-          Platform.OS === 'web'
+          style={[
+            styles.sliderContainer,
+            { height: heroHeight },
+            Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
+          ]}
+          {...(Platform.OS === 'web' && canActivateWebSlider
+            ? {
+                tabIndex: 0,
+                'aria-label': 'Открыть интерактивную галерею',
+                onClick: activateWebSlider,
+                onKeyDown: handleWebHeroKeyDown,
+              }
+            : {})}
+          collapsable={false}
+          onLayout={
+            Platform.OS === 'web'
               ? undefined
               : (e: LayoutChangeEvent) => {
                   const w = e.nativeEvent.layout.width

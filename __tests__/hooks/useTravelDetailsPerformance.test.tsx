@@ -60,6 +60,7 @@ describe('useTravelDetailsPerformance', () => {
   afterEach(() => {
     Platform.OS = originalOS
     jest.useRealTimers()
+    jest.restoreAllMocks()
   })
 
   it('initializes performance helpers on non-happy paths after idle delay', async () => {
@@ -68,7 +69,7 @@ describe('useTravelDetailsPerformance', () => {
     )
 
     await act(async () => {
-      jest.advanceTimersByTime(3000)
+      jest.advanceTimersByTime(1000)
     })
 
     expect(injectCriticalStyles).not.toHaveBeenCalled()
@@ -85,7 +86,7 @@ describe('useTravelDetailsPerformance', () => {
     )
 
     await act(async () => {
-      jest.advanceTimersByTime(9000)
+      jest.advanceTimersByTime(1000)
     })
 
     expect(initPerformanceMonitoring).not.toHaveBeenCalled()
@@ -102,25 +103,25 @@ describe('useTravelDetailsPerformance', () => {
   })
 
   it('keeps slider deferred and waits for interaction listeners after LCP', async () => {
-    const listeners = new Map<string, EventListener>()
-    const originalAddEventListener = window.addEventListener.bind(window)
-    const originalRemoveEventListener = window.removeEventListener.bind(window)
+    const listeners = new Map<string, EventListener[]>()
     const hero = document.createElement('div')
     hero.setAttribute('data-testid', 'travel-details-hero-slider-container')
     document.body.appendChild(hero)
 
-    jest.spyOn(window, 'addEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+    jest.spyOn(window, 'addEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, _options?: boolean | AddEventListenerOptions) => {
       if (typeof listener === 'function') {
-        listeners.set(type, listener)
+        listeners.set(type, [...(listeners.get(type) || []), listener])
       }
-      return originalAddEventListener(type, listener, options)
+      return undefined
     }) as typeof window.addEventListener)
 
-    jest.spyOn(window, 'removeEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) => {
-      if (listeners.get(type) === listener) {
-        listeners.delete(type)
+    jest.spyOn(window, 'removeEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, _options?: boolean | EventListenerOptions) => {
+      if (typeof listener === 'function') {
+        const next = (listeners.get(type) || []).filter((item) => item !== listener)
+        if (next.length > 0) listeners.set(type, next)
+        else listeners.delete(type)
       }
-      return originalRemoveEventListener(type, listener, options)
+      return undefined
     }) as typeof window.removeEventListener)
 
     const { result } = renderHook(() =>
@@ -151,7 +152,7 @@ describe('useTravelDetailsPerformance', () => {
       await Promise.resolve()
     })
 
-    expect(listeners.get('pointerdown')).toBeDefined()
-    expect(listeners.get('keydown')).toBeDefined()
+    expect(listeners.get('pointerdown')?.length).toBeGreaterThan(0)
+    expect(listeners.get('keydown')?.length).toBeGreaterThan(0)
   })
 })

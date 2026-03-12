@@ -59,7 +59,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.getAttribute('alt')).toBe('Hero image')
   })
 
-  it('does not render the blur backdrop before the hero image has loaded', () => {
+  it('renders the blur backdrop immediately so contain hero has stable blurred surround before slider activation', () => {
     const { container } = render(
       <__testables.OptimizedLCPHero
         img={{
@@ -74,10 +74,12 @@ describe('TravelDetailsContainer performance (web)', () => {
       />,
     )
 
-    expect(container.querySelector('[data-hero-backdrop="true"]')).toBeNull()
-
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
+    const heroBackdrop = container.querySelector('[data-hero-backdrop="true"]') as HTMLImageElement | null
+
+    expect(heroBackdrop).toBeTruthy()
     expect(lcpImg).toBeTruthy()
+    expect(heroBackdrop?.getAttribute('src')).toBe(lcpImg?.getAttribute('src'))
 
     if (lcpImg) {
       fireEvent.load(lcpImg)

@@ -2,6 +2,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { Platform, View, Animated } from 'react-native';
 import { Tabs, usePathname } from 'expo-router';
+import CustomHeader from '@/components/layout/CustomHeader';
 
 // Defensive lazy imports: fallback to empty component if module resolution fails
 const EmptyFallback = () => null;
@@ -15,61 +16,7 @@ const safeLazy = <T extends React.ComponentType<any>>(
   })
 );
 
-const CustomHeaderLazy = safeLazy(() => import('@/components/layout/CustomHeader'), 'CustomHeader');
 const ScrollToTopButtonLazy = safeLazy(() => import('@/components/ui/ScrollToTopButton'), 'ScrollToTopButton');
-
-const TRAVEL_CHROME_REVEAL_TIMEOUT_MS = 8000;
-
-function useDeferredTravelChrome(isTravelDetailsRoute: boolean) {
-    const [isVisible, setIsVisible] = useState(Platform.OS !== 'web' || !isTravelDetailsRoute);
-
-    useEffect(() => {
-        if (Platform.OS !== 'web') {
-            setIsVisible(true);
-            return;
-        }
-
-        if (!isTravelDetailsRoute) {
-            setIsVisible(true);
-            return;
-        }
-
-        setIsVisible(false);
-
-        if (typeof window === 'undefined') return;
-
-        let revealed = false;
-        let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-            if (revealed) return;
-            revealed = true;
-            setIsVisible(true);
-        }, TRAVEL_CHROME_REVEAL_TIMEOUT_MS);
-
-        const reveal = () => {
-            if (revealed) return;
-            revealed = true;
-            if (revealTimer) {
-                clearTimeout(revealTimer);
-                revealTimer = null;
-            }
-            setIsVisible(true);
-        };
-
-        window.addEventListener('pointerdown', reveal, { passive: true, once: true });
-        window.addEventListener('keydown', reveal, { once: true });
-        window.addEventListener('scroll', reveal, { passive: true, once: true });
-
-        return () => {
-            revealed = true;
-            if (revealTimer) clearTimeout(revealTimer);
-            window.removeEventListener('pointerdown', reveal as EventListener);
-            window.removeEventListener('keydown', reveal as EventListener);
-            window.removeEventListener('scroll', reveal as EventListener);
-        };
-    }, [isTravelDetailsRoute]);
-
-    return isVisible;
-}
 
 const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
     const pathname = usePathname();
@@ -100,12 +47,8 @@ const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
 });
 
 const Header = React.memo(function Header() {
-    const pathname = usePathname();
     const [mounted, setMounted] = useState(Platform.OS !== 'web');
     const [measuredHeight, setMeasuredHeight] = useState<number>(0);
-    const isTravelDetailsRoute =
-      typeof pathname === 'string' && pathname.startsWith('/travels/');
-    const showHeader = useDeferredTravelChrome(isTravelDetailsRoute);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -121,19 +64,15 @@ const Header = React.memo(function Header() {
     if (Platform.OS === 'web') {
         return (
             <View style={{ height: measuredHeight > 0 ? measuredHeight : reservedHeight }}>
-                {mounted && showHeader ? (
-                  <React.Suspense fallback={null}>
-                    <CustomHeaderLazy onHeightChange={handleHeaderHeight} />
-                  </React.Suspense>
+                {mounted ? (
+                  <CustomHeader onHeightChange={handleHeaderHeight} />
                 ) : null}
             </View>
         );
     }
 
     return (
-      <React.Suspense fallback={null}>
-        <CustomHeaderLazy />
-      </React.Suspense>
+      <CustomHeader />
     );
 });
 

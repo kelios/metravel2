@@ -101,6 +101,61 @@ const WebMainImage = memo(function WebMainImage({
   );
 });
 
+type WebBlurBackdropProps = {
+  src: string;
+  alt?: string;
+  width: number;
+  height: number;
+  borderRadius: number;
+  srcSet?: string;
+  sizes?: string;
+};
+
+const WebBlurBackdrop = memo(function WebBlurBackdrop({
+  src,
+  alt = '',
+  width,
+  height,
+  borderRadius,
+  srcSet,
+  sizes,
+}: WebBlurBackdropProps) {
+  return (
+    <img
+      aria-hidden="true"
+      data-blur-backdrop="true"
+      src={src}
+      srcSet={srcSet}
+      sizes={sizes}
+      alt={alt}
+      width={width}
+      height={height}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        display: 'block',
+        objectFit: 'cover',
+        objectPosition: 'center',
+        zIndex: 0,
+        borderRadius,
+        transform: 'scale(1.08)',
+        filter: 'blur(24px) saturate(1.15)',
+        opacity: 1,
+        contain: 'paint',
+        willChange: 'transform',
+        backfaceVisibility: 'hidden',
+        pointerEvents: 'none',
+      }}
+      loading="eager"
+      decoding="async"
+      // @ts-ignore -- fetchPriority is a valid HTML attribute not yet in React types
+      fetchPriority="high"
+    />
+  );
+});
+
 type Props = {
   src?: string | null;
   source?: { uri: string } | number | null;
@@ -251,6 +306,10 @@ function ImageCardMedia({
   const webBlurSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    // For critical web media (hero/slider), reuse the already selected main image URL
+    // so the blurred surround appears from the same fetched resource instead of a
+    // second optimized background request that can arrive later.
+    if (allowCriticalWebBlur && webMainSrc) return webMainSrc;
     if (typeof resolvedSource === 'string') return resolvedSource;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
@@ -259,18 +318,18 @@ function ImageCardMedia({
     // Use stable dimensions to prevent URL changes on scroll
     const numericWidth = stableWidth ?? 160;
     const numericHeight = stableHeight ?? 160;
-    const blurWidth = Math.max(64, Math.min(192, Math.round(numericWidth / 2)));
-    const blurHeight = Math.max(64, Math.min(192, Math.round(numericHeight / 2)));
+    const blurWidth = Math.max(96, Math.min(320, Math.round(numericWidth * 0.42)));
+    const blurHeight = Math.max(96, Math.min(320, Math.round(numericHeight * 0.42)));
 
     return optimizeImageUrl(uri, {
       width: blurWidth,
       height: blurHeight,
-      quality: 24,
+      quality: 32,
       format: 'jpg',
       fit: 'cover',
-      blur: Math.max(4, Math.round(blurRadius / 2)),
+      blur: Math.max(3, Math.round(blurRadius / 2.6)),
     }) ?? uri;
-  }, [resolvedSource, stableWidth, stableHeight, blurRadius]);
+  }, [allowCriticalWebBlur, resolvedSource, stableWidth, stableHeight, blurRadius, webMainSrc]);
 
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -423,31 +482,17 @@ function ImageCardMedia({
     >
       {resolvedSource && !shouldDisableNetwork ? (
         <>
-          {Platform.OS === 'web' &&
-            shouldRenderWebBlurBackground && (
-              <div
-                aria-hidden="true"
-                style={{
-                  position: 'absolute',
-                  inset: '-5%',
-                  width: '110%',
-                  height: '110%',
-                  backgroundImage:
-                    webBlurSrc
-                      ? `url("${webBlurSrc}")`
-                      : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  filter: 'blur(16px)',
-                  zIndex: 0,
-                  borderRadius: resolvedBorderRadius,
-                  opacity: webLoaded || !!webBlurSrc ? 1 : 0,
-                  contain: 'strict',
-                  willChange: 'opacity',
-                  backfaceVisibility: 'hidden',
-                }}
-              />
-            )}
+          {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
+            <WebBlurBackdrop
+              src={webBlurSrc}
+              srcSet={webSrcSet}
+              sizes={webSizes}
+              alt={alt || ''}
+              width={typeof width === 'number' ? width : 400}
+              height={typeof height === 'number' ? height : 300}
+              borderRadius={resolvedBorderRadius}
+            />
+          ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
             <WebMainImage
               src={webMainSrc}

@@ -51,6 +51,24 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
   const immediate = consumePreloadedTravel(slug, isId, idNum);
   if (immediate) return immediate;
 
+  const scriptLoaded = Boolean((window as unknown).__metravelTravelPreloadScriptLoaded);
+  if (scriptLoaded) {
+    const bootstrapDeadline = Date.now() + 350;
+    while (Date.now() < bootstrapDeadline) {
+      const retry = consumePreloadedTravel(slug, isId, idNum);
+      if (retry) return retry;
+
+      const pendingBootstrap = Boolean((window as unknown).__metravelTravelPreloadPending);
+      const bootstrapPromise: Promise<unknown> | undefined =
+        (window as unknown).__metravelTravelPreloadPromise;
+      if (pendingBootstrap || (bootstrapPromise && typeof bootstrapPromise.then === 'function')) {
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+
   const pending = Boolean((window as unknown).__metravelTravelPreloadPending);
   const promise: Promise<unknown> | undefined = (window as unknown).__metravelTravelPreloadPromise;
   if (!pending && !promise) return undefined;

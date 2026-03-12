@@ -110,6 +110,9 @@ function CompactSideBarTravel({
   const mutedText = isDark ? themedColors.textMuted : themedColors.textSecondary;
   const isSuperuser = useAuthStore((state) => state.isSuperuser);
   const storedUserId = useAuthStore((state) => state.userId);
+  const [sidebarDeferredDataEnabled, setSidebarDeferredDataEnabled] = useState(
+    Platform.OS !== 'web' || isMobile,
+  );
   const travelOwnerId = useMemo(() => {
     const rawUserIds = (travel as any).userIds;
 
@@ -147,8 +150,15 @@ function CompactSideBarTravel({
 
     return null;
   }, [travel]);
-  const { profile: authorProfile } = useUserProfileCached(travelOwnerId, { enabled: !!travelOwnerId });
-  const { data: routeFiles = [] } = useTravelRouteFiles((travel as any)?.id);
+  const enableSidebarDeferredData = useCallback(() => {
+    setSidebarDeferredDataEnabled(true);
+  }, []);
+  const { profile: authorProfile } = useUserProfileCached(travelOwnerId, {
+    enabled: !!travelOwnerId && sidebarDeferredDataEnabled,
+  });
+  const { data: routeFiles = [] } = useTravelRouteFiles((travel as any)?.id, {
+    enabled: sidebarDeferredDataEnabled && !!(travel as any)?.id,
+  });
   const avatar =
     (authorProfile as any)?.avatar ??
     (travel as any).user?.avatar ??
@@ -181,6 +191,10 @@ function CompactSideBarTravel({
     if (Platform.OS !== 'web') return;
     setWeatherSettled(false);
   }, [travel?.id]);
+
+  useEffect(() => {
+    setSidebarDeferredDataEnabled(Platform.OS !== 'web' || isMobile);
+  }, [isMobile, travel?.id]);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
@@ -697,7 +711,13 @@ function CompactSideBarTravel({
   const menuPaddingHorizontal = 10;
 
   return (
-    <View style={[styles.root, { backgroundColor: themedColors.background }]}>
+    <View
+      style={[styles.root, { backgroundColor: themedColors.background }]}
+      onPointerEnter={Platform.OS === 'web' ? enableSidebarDeferredData : undefined}
+      onTouchStart={enableSidebarDeferredData}
+      onFocus={Platform.OS === 'web' ? enableSidebarDeferredData : undefined}
+      {...(Platform.OS === 'web' ? { 'data-sidebar-deferred-ready': sidebarDeferredDataEnabled } : {})}
+    >
       <View
         style={{ flex: 1, minHeight: 0 }}
         {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}

@@ -145,7 +145,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
 
   useEffect(() => {
     if (!showSwipeHint) return;
-    const timer = setTimeout(() => setShowSwipeHint(false), 6500);
+    const timer = setTimeout(() => setShowSwipeHint(false), 1000);
     return () => clearTimeout(timer);
   }, [showSwipeHint]);
 

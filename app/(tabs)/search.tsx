@@ -79,9 +79,9 @@ function SearchScreen() {
         };
 
         if ('requestIdleCallback' in window) {
-            idleId = (window as any).requestIdleCallback(doPrefetch, { timeout: 6000 });
+            idleId = (window as any).requestIdleCallback(doPrefetch, { timeout: 1000 });
         } else {
-            timer = setTimeout(doPrefetch, 1200);
+            timer = setTimeout(doPrefetch, 1000);
         }
 
         return () => {

@@ -108,6 +108,7 @@ export const TravelDetailsContentSection: React.FC<{
     threshold: 0.05,
     fallbackDelay: 2600,
     enabled: Boolean(travel.youtube_link),
+    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadInsights, setElementRef: setInsightsRef } = useProgressiveLoad({
     priority: 'low',
@@ -115,6 +116,7 @@ export const TravelDetailsContentSection: React.FC<{
     threshold: 0.05,
     fallbackDelay: 3200,
     enabled: hasInsights,
+    disableFallbackOnWeb: true,
   })
 
   const defaultInsightKey = shouldUseMobileInsights ? insightConfigs[0]?.key ?? null : null

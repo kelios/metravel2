@@ -1,4 +1,7 @@
-import { getRuntimeConfigDiagnostics } from '@/utils/runtimeConfigDiagnostics';
+import {
+  getRuntimeConfigDiagnostics,
+  shouldRunRuntimeConfigDiagnostics,
+} from '@/utils/runtimeConfigDiagnostics';
 
 describe('getRuntimeConfigDiagnostics', () => {
   it('reports missing API URL', () => {
@@ -117,3 +120,37 @@ describe('getRuntimeConfigDiagnostics', () => {
   });
 });
 
+describe('shouldRunRuntimeConfigDiagnostics', () => {
+  it('skips diagnostics outside dev', () => {
+    expect(
+      shouldRunRuntimeConfigDiagnostics({
+        isDev: false,
+        isWeb: true,
+        hostname: 'localhost',
+        pathname: '/',
+      })
+    ).toBe(false);
+  });
+
+  it('skips diagnostics on travel routes in web dev', () => {
+    expect(
+      shouldRunRuntimeConfigDiagnostics({
+        isDev: true,
+        isWeb: true,
+        hostname: 'localhost',
+        pathname: '/travels/demo-route',
+      })
+    ).toBe(false);
+  });
+
+  it('keeps diagnostics enabled on non-travel web routes in dev', () => {
+    expect(
+      shouldRunRuntimeConfigDiagnostics({
+        isDev: true,
+        isWeb: true,
+        hostname: 'localhost',
+        pathname: '/search',
+      })
+    ).toBe(true);
+  });
+});

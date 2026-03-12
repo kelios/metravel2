@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { METRICS } from '@/constants/layout';
@@ -6,20 +6,13 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
+import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
+import ReadingProgressBar from '@/components/ui/ReadingProgressBar';
+import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet';
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import { getTravelDetailsShellStyles } from './TravelDetailsShellStyles';
-import { withLazy } from './TravelDetailsLazy';
-
-const ScrollToTopButton = withLazy(() => import('@/components/ui/ScrollToTopButton'));
-const ReadingProgressBar = withLazy(() => import('@/components/ui/ReadingProgressBar'));
-const TravelSectionsSheet = withLazy(() => import('@/components/travel/TravelSectionsSheet'));
-const TravelStickyActions = withLazy(() => import('@/components/travel/details/TravelStickyActions'));
-const TravelDeferredSections = withLazy(() =>
-  import('@/components/travel/details/TravelDetailsDeferred').then((m) => ({
-    default: m.TravelDeferredSections,
-  }))
-);
+import TravelStickyActions from './TravelStickyActions';
 
 type TravelDetailsPostLcpRuntimeProps = {
   travel: Travel;
@@ -40,6 +33,29 @@ type TravelDetailsPostLcpRuntimeProps = {
 };
 
 const PLACEHOLDER_STYLE = { flex: 1 } as const;
+const isTestEnv =
+  typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
+
+type DeferredSectionsComponentType = React.ComponentType<{
+  travel: Travel;
+  isMobile: boolean;
+  forceOpenKey: string | null;
+  anchors: AnchorsMap;
+  scrollY: any;
+  viewportHeight: number;
+  scrollToMapSection: () => void;
+}>;
+
+let deferredSectionsLoader: Promise<DeferredSectionsComponentType> | null = null;
+
+const loadDeferredSections = async (): Promise<DeferredSectionsComponentType> => {
+  if (!deferredSectionsLoader) {
+    deferredSectionsLoader = import('@/components/travel/details/TravelDetailsDeferred').then(
+      (m) => m.TravelDeferredSections,
+    );
+  }
+  return deferredSectionsLoader;
+};
 
 export default function TravelDetailsPostLcpRuntime({
   travel,
@@ -60,10 +76,32 @@ export default function TravelDetailsPostLcpRuntime({
 }: TravelDetailsPostLcpRuntimeProps) {
   const themedColors = useThemedColors();
   const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors]);
+  const [DeferredSectionsComponent, setDeferredSectionsComponent] =
+    useState<DeferredSectionsComponentType | null>(() => {
+      if (!isTestEnv) return null;
+      const mod = require('@/components/travel/details/TravelDetailsDeferred');
+      return mod.TravelDeferredSections as DeferredSectionsComponentType;
+    });
+
+  useEffect(() => {
+    if (DeferredSectionsComponent) return;
+
+    let cancelled = false;
+
+    void loadDeferredSections()
+      .then((component) => {
+        if (!cancelled) setDeferredSectionsComponent(() => component);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [DeferredSectionsComponent]);
 
   const deferredSectionsContent = (
-    <Suspense fallback={<SectionSkeleton style={PLACEHOLDER_STYLE} />}>
-      <TravelDeferredSections
+    DeferredSectionsComponent ? (
+      <DeferredSectionsComponent
         travel={travel}
         isMobile={isMobile}
         forceOpenKey={forceOpenKey}
@@ -72,50 +110,44 @@ export default function TravelDetailsPostLcpRuntime({
         viewportHeight={viewportHeight}
         scrollToMapSection={scrollToMapSection}
       />
-    </Suspense>
+    ) : (
+      <SectionSkeleton style={PLACEHOLDER_STYLE} />
+    )
   );
 
   return (
     <>
       {contentHeight > viewportHeight && criticalChromeReady && (
-        <Suspense fallback={null}>
-          <ReadingProgressBar
-            scrollY={scrollY}
-            contentHeight={contentHeight}
-            viewportHeight={viewportHeight}
-          />
-        </Suspense>
+        <ReadingProgressBar
+          scrollY={scrollY}
+          contentHeight={contentHeight}
+          viewportHeight={viewportHeight}
+        />
       )}
 
       {screenWidth < METRICS.breakpoints.largeTablet && sectionLinks.length > 0 && criticalChromeReady && (
         <View style={styles.sectionTabsContainer}>
-          <Suspense fallback={null}>
-            <TravelSectionsSheet
-              links={sectionLinks}
-              activeSection={activeSection}
-              onNavigate={onNavigate}
-              testID="travel-sections-sheet-wrapper"
-            />
-          </Suspense>
+          <TravelSectionsSheet
+            links={sectionLinks}
+            activeSection={activeSection}
+            onNavigate={onNavigate}
+            testID="travel-sections-sheet-wrapper"
+          />
         </View>
       )}
 
       {deferredSectionsContent}
 
       {criticalChromeReady && (
-        <Suspense fallback={null}>
-          <ScrollToTopButton scrollViewRef={scrollViewRef} scrollY={scrollY} threshold={300} />
-        </Suspense>
+        <ScrollToTopButton scrollViewRef={scrollViewRef} scrollY={scrollY} threshold={300} />
       )}
 
       {isMobile && (
-        <Suspense fallback={null}>
-          <TravelStickyActions
-            travel={travel}
-            scrollY={scrollY}
-            scrollToComments={scrollToComments}
-          />
-        </Suspense>
+        <TravelStickyActions
+          travel={travel}
+          scrollY={scrollY}
+          scrollToComments={scrollToComments}
+        />
       )}
     </>
   );

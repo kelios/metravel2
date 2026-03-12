@@ -158,7 +158,7 @@ const preloadWebImage = async (uri: string): Promise<boolean> => {
       return
     }
 
-    setTimeout(() => settle(false), 10000)
+    setTimeout(() => settle(false), 1000)
   })
 }
 

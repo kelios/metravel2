@@ -93,7 +93,7 @@ export default function CookieSettingsScreen() {
     }
 
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), 1000);
   };
 
   const title = 'Настройки cookies и аналитики | Metravel';
