@@ -1,8 +1,6 @@
 import React, { Suspense } from 'react';
 import { Platform, View } from 'react-native';
 
-import { withLazy } from './TravelDetailsLazy';
-
 type GalleryImage = Record<string, any>;
 
 const FullscreenGallery =
@@ -10,12 +8,10 @@ const FullscreenGallery =
     ? React.lazy(() => import('@/components/travel/FullscreenGallery'))
     : () => null;
 
-const Slider: React.FC<any> = withLazy(
-  () =>
-    Platform.OS === 'web'
-      ? import('@/components/travel/Slider.web')
-      : import('@/components/travel/Slider'),
-);
+const Slider: React.FC<any> =
+  Platform.OS === 'web'
+    ? (require('@/components/travel/Slider.web').default as React.ComponentType<any>)
+    : require('@/components/travel/Slider').default;
 
 const ABSOLUTE_FILL_STYLE = { position: 'absolute', inset: 0 } as any;
 

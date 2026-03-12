@@ -102,8 +102,8 @@ function useHeroMediaModel(
     })
 
     if (hasSameAsCover) return mapped
-    return [{ url: coverUrl, id: `cover-${travel.id}` }, ...mapped]
-  }, [travel.gallery, travel.travel_image_thumb_url, travel.id])
+    return [{ url: coverUrl }, ...mapped]
+  }, [travel.gallery, travel.travel_image_thumb_url])
 
   const heroAlt = travel?.name
     ? `Фотография маршрута «${travel.name}»`

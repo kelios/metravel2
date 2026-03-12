@@ -16,11 +16,8 @@ import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
-import { withLazy } from './TravelDetailsLazy'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
-const TravelHeroInteractiveSlider = withLazy(() =>
-  import('./TravelHeroInteractiveSlider')
-)
+import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
 import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
 import { TravelHeroExtras } from './TravelHeroExtras'
 const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
