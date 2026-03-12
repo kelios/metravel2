@@ -41,6 +41,8 @@ type AuditEntry = {
 
 const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 
+test.use({ trace: 'off' });
+
 const PUBLIC_SCENARIOS: Scenario[] = [
   { id: 'home', route: '/', expectedAny: ['text=MeTravel', 'text=Идеи поездок', '[data-testid="home-screen"]'] },
   { id: 'travelsby', route: getTravelsListPath(), expectedAny: ['#search-input', '[data-testid="travels-list"]', 'text=Найдено'] },
@@ -122,6 +124,14 @@ async function auditScenario(page: any, scenario: Scenario, scope: 'public' | 'a
       const text = msg.text();
       // Benign in screenshot audit: missing optional media assets on list pages.
       if (/Failed to load resource: the server responded with a status of 404/i.test(text)) {
+        return;
+      }
+      // Benign in local screenshot audit: backend image hosts are cross-origin from the local web server
+      // and can emit paired CORS/ERR_FAILED noise without breaking the page shell or layout.
+      if (
+        /Access to image at .* has been blocked by CORS policy/i.test(text) ||
+        /Failed to load resource: net::ERR_FAILED/i.test(text)
+      ) {
         return;
       }
       consoleErrors.push(text);

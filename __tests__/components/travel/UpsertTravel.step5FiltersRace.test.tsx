@@ -66,6 +66,7 @@ jest.mock('expo-router', () => ({
     back: mockBack,
   }),
   useLocalSearchParams: () => ({}),
+  usePathname: () => '/travel/new',
   useNavigation: () => ({
     addListener: mockAddListener,
     dispatch: jest.fn(),

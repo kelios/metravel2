@@ -183,7 +183,7 @@ export const TravelDetailsMapSection: React.FC<{
   const hasMapData =
     hasEmbeddedCoords ||
     routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
-  const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points'
+  const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points' || mapOpenTrigger > 0
   const shouldForceRenderExcursions = forceOpenKey === 'excursions'
 
   const colors = useThemedColors()
@@ -554,7 +554,7 @@ export const TravelDetailsMapSection: React.FC<{
               <ToggleableMap
                 initiallyOpen={!isMobileWeb}
                 keepMounted={Platform.OS === 'web'}
-                isLoading={isLoading && !shouldRender}
+                isLoading={isLoading && !shouldRender && !shouldForceRenderMap}
                 loadingLabel="Подгружаем карту маршрута..."
                 forceOpenTrigger={mapOpenTrigger || undefined}
                 onOpenChange={(open) => {

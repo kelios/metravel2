@@ -132,6 +132,21 @@ async function selectAllEditorText(page: Page) {
   await page.keyboard.press('ControlOrMeta+A');
 }
 
+async function clickQuillToolbarButton(page: Page, selector: string) {
+  const button = page.locator(`.ql-toolbar button${selector}`).last();
+  await expect(button).toBeAttached({ timeout: 10_000 });
+
+  try {
+    await button.click({ force: true });
+    return;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('outside of the viewport')) throw error;
+  }
+
+  await button.evaluate((node: HTMLElement) => node.click());
+}
+
 test.describe('ArticleEditor browser actions', () => {
   test.beforeEach(async ({ page }) => {
     await openWizard(page);
@@ -181,7 +196,7 @@ test.describe('ArticleEditor browser actions', () => {
     await typeInEditor(page, 'Link target text');
     await selectAllEditorText(page);
 
-    await page.locator('.ql-toolbar button.ql-link').first().click({ force: true });
+    await clickQuillToolbarButton(page, '.ql-link');
     const linkInput = page.getByPlaceholder('https://...').first();
     await expect(linkInput).toBeVisible({ timeout: 10_000 });
     await linkInput.fill('https://example.com/editor-link');
@@ -194,7 +209,7 @@ test.describe('ArticleEditor browser actions', () => {
     const editor = await typeInEditor(page, 'Bold me please');
     await selectAllEditorText(page);
 
-    await page.locator('.ql-toolbar button.ql-bold').first().click({ force: true });
+    await clickQuillToolbarButton(page, '.ql-bold');
     await page.getByRole('button', { name: 'Очистить форматирование' }).first().click({ force: true });
     await page.getByRole('button', { name: 'Отменить последнее действие' }).first().click({ force: true });
     await page.getByRole('button', { name: 'Повторить действие' }).first().click({ force: true });
