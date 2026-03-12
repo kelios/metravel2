@@ -117,7 +117,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     jest.useRealTimers()
   })
 
-  it('passes blurBackground=true to Slider on web once hero state allows interactive slider rendering', async () => {
+  it('passes blurBackground=true to Slider on web immediately after hero runtime is ready', async () => {
     const travel: any = {
       id: 1,
       name: 'Demo travel',
@@ -181,12 +181,6 @@ describe('TravelHeroSection slider background regression (web)', () => {
     })
     expect(heroSliderContainer).toBeTruthy()
     expect(typeof heroSliderContainer.props?.onClick).toBe('function')
-
-    await act(async () => {
-      heroSliderContainer.props.onClick()
-      jest.runAllTimers()
-      await Promise.resolve()
-    })
 
     expect(mockSliderSpy.mock.calls.length).toBeGreaterThan(0)
     const lastArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]

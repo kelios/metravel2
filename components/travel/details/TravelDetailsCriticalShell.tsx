@@ -75,6 +75,7 @@ export default function TravelDetailsCriticalShell({
   mainAriaLabel,
 }: TravelDetailsCriticalShellProps) {
   const showDesktopSidebar = !isMobile && screenWidth >= METRICS.breakpoints.largeTablet;
+  const showSkeletonOverlay = Platform.OS === 'web' && Boolean(travel);
 
   const desktopLayoutStyle = useMemo(
     () => ({
@@ -135,7 +136,7 @@ export default function TravelDetailsCriticalShell({
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
-          {Platform.OS === 'web' && (
+          {showSkeletonOverlay && (
             <View
               testID="travel-details-skeleton-overlay"
               collapsable={false}
@@ -230,7 +231,7 @@ export default function TravelDetailsCriticalShell({
                     </>
                   )
                 ) : (
-                  <View />
+                  <Suspense fallback={skeletonFallback}>{travelDetailSkeleton}</Suspense>
                 )}
               </View>
             </View>

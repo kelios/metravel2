@@ -5,14 +5,18 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
 export const TravelDetailPageSkeleton: React.FC = () => {
   const colors = useThemedColors();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isMobile = width < METRICS.breakpoints.tablet;
   const isTablet =
     width >= METRICS.breakpoints.tablet &&
     width < METRICS.breakpoints.largeTablet;
   const isDesktop = width >= METRICS.breakpoints.largeTablet;
+  const desktopSidebarWidth = clamp(Math.round(width * 0.28), 320, 480);
+  const desktopHeroHeight = clamp(Math.round(height * 0.7), 360, 750);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -35,7 +39,7 @@ export const TravelDetailPageSkeleton: React.FC = () => {
       marginTop: DESIGN_TOKENS.spacing.md,
     },
     desktopSidebar: {
-      width: 380,
+      width: desktopSidebarWidth,
       flexShrink: 0,
     },
     sidebarCard: {
@@ -73,7 +77,7 @@ export const TravelDetailPageSkeleton: React.FC = () => {
     },
     desktopHero: {
       width: '100%',
-      height: 620,
+      height: desktopHeroHeight,
       borderRadius: DESIGN_TOKENS.radii.xl,
       overflow: 'hidden',
       marginBottom: DESIGN_TOKENS.spacing.md,
@@ -124,7 +128,7 @@ export const TravelDetailPageSkeleton: React.FC = () => {
       borderRadius: DESIGN_TOKENS.radii.lg,
       overflow: 'hidden',
     },
-  }), [colors, isDesktop, isMobile, isTablet]);
+  }), [colors, desktopHeroHeight, desktopSidebarWidth, isDesktop, isMobile, isTablet]);
 
   if (isDesktop) {
     return (
@@ -174,7 +178,11 @@ export const TravelDetailPageSkeleton: React.FC = () => {
               </View>
 
               <View style={styles.desktopMain}>
-                <SkeletonLoader width="100%" height={620} borderRadius={DESIGN_TOKENS.radii.xl} />
+                <SkeletonLoader
+                  width="100%"
+                  height={desktopHeroHeight}
+                  borderRadius={DESIGN_TOKENS.radii.xl}
+                />
 
                 <View style={styles.headerSection}>
                   <View style={styles.metaRow}>

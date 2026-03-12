@@ -63,14 +63,13 @@ function TravelHeroSectionInner({
     handleSliderImageLoad,
     extrasReady,
     sliderUpgradeAllowed,
-  } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras, renderSlider)
+  } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras)
 
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
 
   // AND-28: Fullscreen gallery state (native only)
   const [fullscreenVisible, setFullscreenVisible] = useState(false)
   const [fullscreenIndex, setFullscreenIndex] = useState(0)
-  const [webSliderActivated, setWebSliderActivated] = useState(false)
   const handleImagePress = useCallback((index: number) => {
     if (Platform.OS === 'web') return
     setFullscreenIndex(index)
@@ -88,13 +87,12 @@ function TravelHeroSectionInner({
   const shouldRenderWebSlider =
     shouldRenderWebOptimizedHero &&
     webHeroLoaded &&
-    sliderUpgradeAllowed &&
-    (renderSlider || webSliderActivated)
+    renderSlider &&
+    sliderUpgradeAllowed
   const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2
 
   const activateWebSlider = useCallback(() => {
     if (!hasInteractiveWebGallery) return
-    setWebSliderActivated(true)
   }, [hasInteractiveWebGallery])
 
   const handleWebHeroKeyDown = useCallback((event: any) => {

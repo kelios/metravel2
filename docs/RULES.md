@@ -156,10 +156,12 @@ npx serve dist/prod -l 3000 -s
 - Below-the-fold code must stay truly lazy on web.
   - Do not prefetch or auto-import deferred sections by timer alone.
   - Use only real triggers: intersection, explicit user interaction, or automation/test mode when required.
-- On travel pages, interaction-free web upgrades must stay opt-in.
-  - Do not auto-upgrade the static hero into the interactive slider before explicit interaction unless a production-verified reason is documented.
-  - Prefer `pointerdown`, `keydown`, or `wheel` to unlock non-critical runtime.
-  - Do not use plain `scroll` listeners as broad auto-reveal triggers for heavy travel UI.
+- On travel pages, the web hero slider/background must appear immediately with the hero once runtime is ready.
+  - Do not gate the slider/background on explicit click, pointer interaction, keyboard interaction, or scroll.
+  - Keep the first rendered web hero visually complete from the start: main image, blurred side background, and slider chrome must arrive together.
+  - This is the canonical behavior, not a temporary optimization.
+  - If a test expects the web hero slider/background to appear only after user interaction, the test is wrong and must be updated to assert the immediate-mount contract instead.
+  - Do not re-introduce interaction-gated hero slider activation on web.
 - When using preload scripts and React Query together, avoid duplicate first-load API requests.
   - Reuse the in-flight preload promise or preloaded payload instead of firing a second request for the same travel route.
 - If a bug is visible only on web, verify it in a real browser flow.

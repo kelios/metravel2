@@ -246,64 +246,8 @@ function useDeferredHeroExtras(deferExtras: boolean) {
   }
 }
 
-function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
-  const isWebAutomation =
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    Boolean((navigator as unknown as Record<string, unknown>).webdriver)
-  const [heroInteractionSeen, setHeroInteractionSeen] = useState(
-    Platform.OS !== 'web' || isWebAutomation,
-  )
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') {
-      setHeroInteractionSeen(true)
-      return
-    }
-
-    if (isWebAutomation) {
-      setHeroInteractionSeen(true)
-      return
-    }
-
-    const isHeroInteraction = (target: EventTarget | null) => {
-      if (typeof document === 'undefined') return false
-      if (!(target instanceof Node)) return false
-
-      const heroRoot = document.querySelector(
-        '[data-testid="travel-details-hero-slider-container"]',
-      )
-      return Boolean(heroRoot && heroRoot.contains(target))
-    }
-
-    const revealFromPointer = (event: Event) => {
-      if (!isHeroInteraction(event.target)) return
-      setHeroInteractionSeen(true)
-    }
-
-    const revealFromKeyboard = () => {
-      if (typeof document === 'undefined') return
-      const active = document.activeElement
-      if (!isHeroInteraction(active)) return
-      setHeroInteractionSeen(true)
-    }
-
-    window.addEventListener('pointerdown', revealFromPointer, {
-      passive: true,
-      once: true,
-    })
-    window.addEventListener('keydown', revealFromKeyboard, { once: true })
-
-    return () => {
-      window.removeEventListener(
-        'pointerdown',
-        revealFromPointer as EventListener,
-      )
-      window.removeEventListener('keydown', revealFromKeyboard as EventListener)
-    }
-  }, [isWebAutomation])
-
-  return renderSlider || heroInteractionSeen
+function useWebHeroSliderUpgradeGate() {
+  return true
 }
 
 export function useTravelHeroState(
@@ -311,9 +255,8 @@ export function useTravelHeroState(
   isMobile: boolean,
   onFirstImageLoad: () => void,
   deferExtras: boolean,
-  renderSlider: boolean,
 ) {
-  const sliderUpgradeAllowed = useWebHeroSliderUpgradeGate(renderSlider)
+  const sliderUpgradeAllowed = useWebHeroSliderUpgradeGate()
   const media = useHeroMediaModel(
     travel,
     isMobile,

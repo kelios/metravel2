@@ -20,9 +20,9 @@ describe('useWebHeroSliderUpgradeGate', () => {
     jest.useRealTimers()
   })
 
-  it('allows the web hero slider as soon as runtime is ready', () => {
+  it('keeps the web hero slider disabled until the user interacts with the hero', () => {
     const { result } = renderHook(() =>
-      __testables.useWebHeroSliderUpgradeGate(true),
+      __testables.useWebHeroSliderUpgradeGate(),
     )
 
     expect(result.current).toBe(true)
@@ -34,13 +34,13 @@ describe('useWebHeroSliderUpgradeGate', () => {
     expect(result.current).toBe(true)
   })
 
-  it('keeps allowing the web hero slider after pointer interaction', () => {
+  it('keeps the web hero slider enabled even when pointer interaction happens later', () => {
     const hero = document.createElement('div')
     hero.setAttribute('data-testid', 'travel-details-hero-slider-container')
     document.body.appendChild(hero)
 
     const { result } = renderHook(() =>
-      __testables.useWebHeroSliderUpgradeGate(true),
+      __testables.useWebHeroSliderUpgradeGate(),
     )
 
     expect(result.current).toBe(true)
@@ -50,17 +50,19 @@ describe('useWebHeroSliderUpgradeGate', () => {
     })
 
     expect(result.current).toBe(true)
+    hero.remove()
   })
 
-  it('stays disabled while the slider runtime is not ready', () => {
-    const { result } = renderHook(() =>
-      __testables.useWebHeroSliderUpgradeGate(false),
-    )
-
-    act(() => {
-      jest.advanceTimersByTime(5000)
+  it('stays enabled in automation mode', () => {
+    Object.defineProperty(window.navigator, 'webdriver', {
+      value: true,
+      configurable: true,
     })
 
-    expect(result.current).toBe(false)
+    const { result } = renderHook(() =>
+      __testables.useWebHeroSliderUpgradeGate(),
+    )
+
+    expect(result.current).toBe(true)
   })
 })

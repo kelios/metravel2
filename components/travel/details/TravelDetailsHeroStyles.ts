@@ -96,7 +96,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       borderRadius: DESIGN_TOKENS.radii.xl,
       overflow: 'hidden',
       marginBottom: 0,
-      backgroundColor: colors.surfaceMuted,
+      backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.surfaceMuted,
       position: 'relative' as any,
     },
     heroOverlay: {

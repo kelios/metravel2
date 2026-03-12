@@ -662,6 +662,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       uri={getUri(index)}
                       containerW={renderedSlideWidth}
                       slideHeight={slideHeight}
+                      slideHeightPx={computedH}
                       imagesLength={imagesLen}
                       styles={styles}
                       blurBackground={blurBackground}

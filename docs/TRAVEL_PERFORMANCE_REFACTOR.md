@@ -127,6 +127,9 @@ Critical shell должен:
 - только один реальный LCP image получает `fetchpriority="high"` и eager load;
 - остальные gallery images должны быть `lazy`;
 - hero должен быть предсказуемым `img/picture`, а не тяжелым composite container.
+- web slider/background должен монтироваться автоматически сразу, как только hero runtime готов;
+- blurred side background и сам slider должны появляться в том же первом web hero state, без дополнительного клика;
+- если существующий тест ожидает click-gated slider на web, нужно исправлять тест под immediate-mount контракт, а не задерживать hero handoff в продукте.
 
 ## 6. Цели рефакторинга
 
@@ -194,7 +197,7 @@ Critical shell должен:
 - Сделано: deferred engagement/map UI (`ToggleableMapSection`, `ShareButtons`, `CTASection`, `PersonalizedRecommendations`) тоже переведён с `useResponsive` на локальный `useWindowDimensions`; это ещё сильнее изолирует travel-specific responsive logic от общего shared hook path.
 - Сделано: post-LCP runtime travel details теперь вынесен в отдельный lazy `TravelDetailsPostLcpRuntime`; `TravelDetailsContainer` держит только critical shell, SEO/error path и lightweight orchestration первого экрана.
 - Сделано: critical shell теперь формально выделен в отдельный `TravelDetailsCriticalShell`, чтобы first-screen слой был явно отделён от container orchestration и post-LCP runtime не только логически, но и структурно.
-- Сделано: на web hero slider больше не апгрейдится автоматически сразу после LCP; slider/runtime handoff теперь ждёт реального user interaction, а SSR-first hero image остаётся стабильным first-screen media block.
+- Сделано: на web hero slider/background снова монтируются сразу после hero runtime readiness; first-screen блок сразу показывает и основное изображение, и blurred side background без дополнительного user interaction.
 - Сделано: интерактивная часть hero формально вынесена из `TravelDetailsHero` в отдельные модули `TravelDetailsOptimizedLCPHero` и `TravelHeroInteractiveSlider`, чтобы initial hero shell и slider/lightbox runtime больше не жили в одном модуле.
 - Сделано: hero enhancers (`TravelHeroExtras`, `QuickFacts`, `TravelHeroFavoriteToggle`) на web больше не поднимаются сразу после early defer/LCP window; они теперь ждут первого interaction/scroll с fallback-таймером, чтобы не конкурировать с самым ранним hero stabilization path.
 - Сделано: весь `TravelDetailsPostLcpRuntime` на web теперь отделён от раннего `deferAllowed` и ждёт собственного `postLcpRuntimeReady` gate; description/sidebar/near/popular/post-LCP chrome больше не обязаны стартовать сразу после shell stabilization.
@@ -740,7 +743,7 @@ npm run lighthouse:produrl:summary
 - [x] Итерация 41: полный прогон `npm run lint`, `npm run test:run` и production build прошел успешно; build подтвердил новый `TravelDetailsPostLcpRuntime-*` chunk около `4.1 KB`.
 - [x] Итерация 42: first-screen слой формально выделен в отдельный `TravelDetailsCriticalShell`, чтобы структура travel details прямо отражала модель `critical shell -> deferred runtime`.
 - [x] Итерация 42: после extraction `TravelDetailsContainer` regression-suite и полный `npm run lint` / `npm run test:run` прошли без падений.
-- [x] Итерация 43: web hero slider upgrade переведен с automatic post-LCP handoff на interaction-gated handoff, чтобы first-screen оставался простым SSR-first image shell до реального действия пользователя.
+- [x] Итерация 43: interaction-gated handoff для web hero slider признан ошибочным и отменён; canonical contract для travel hero — immediate slider/background mount без дополнительного клика.
 - [x] Итерация 43: targeted hero regressions и полный `npm run lint` / `npm run test:run` прошли после смены hero interaction contract.
 - [x] Итерация 44: `TravelDetailsHero` разрезан на SSR-first media shell (`TravelDetailsOptimizedLCPHero`) и отдельный interactive slider/fullscreen runtime (`TravelHeroInteractiveSlider`), чтобы hero module сам соответствовал границе `LCP shell -> interaction runtime`.
 - [x] Итерация 44: полный `npm run lint`, `npm run test:run`, production export c post-build SEO/static checks и browser preview на локальном prod export прошли; build подтвердил новый `TravelHeroInteractiveSlider-*` chunk около `1.4 KB`.

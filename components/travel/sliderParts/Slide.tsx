@@ -57,6 +57,7 @@ interface SlideProps {
   uri: string;
   containerW: number;
   slideHeight: number | string;
+  slideHeightPx?: number;
   imagesLength: number;
   styles: Record<string, any>;
   blurBackground: boolean;
@@ -79,6 +80,7 @@ const Slide = memo(function Slide({
   uri,
   containerW,
   slideHeight,
+  slideHeightPx,
   imagesLength,
   styles,
   blurBackground,
@@ -205,6 +207,8 @@ const Slide = memo(function Slide({
           )}
           <ImageCardMedia
             src={resolvedUri}
+            width={containerW}
+            height={slideHeightPx}
             fit={mainFit}
             blurBackground={shouldBlur}
             blurRadius={12}
