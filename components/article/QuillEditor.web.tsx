@@ -29,16 +29,11 @@ const isTestEnv =
   (process as any)?.env &&
   ((process as any).env.NODE_ENV === 'test' || (process as any).env.JEST_WORKER_ID !== undefined)
 
-if (typeof window !== 'undefined' && !isTestEnv) {
-  try {
-    require('quill/dist/quill.snow.css')
-  } catch {
-    // noop
-  }
-}
-
 let quillLoadPromise: Promise<any> | null = null
+let quillCssLoadPromise: Promise<void> | null = null
 const QUILL_EDITOR_WEB_STYLES_ID = 'article-editor-quill-web-styles'
+const QUILL_EDITOR_THEME_LINK_ID = 'article-editor-quill-theme-link'
+const QUILL_EDITOR_THEME_HREF = '/quill.snow.css'
 export const ARTICLE_EDITOR_QUILL_WEB_CSS = `
 [data-editor-chrome="article-editor"] {
   display: flex;
@@ -189,6 +184,64 @@ export const ARTICLE_EDITOR_QUILL_WEB_CSS = `
 }
 `
 
+const ensureQuillThemeCss = () => {
+  if (typeof document === 'undefined' || isTestEnv) return Promise.resolve()
+
+  const existing = document.getElementById(QUILL_EDITOR_THEME_LINK_ID) as HTMLLinkElement | null
+  if (existing) {
+    if ((existing as any).dataset?.loaded === 'true') return Promise.resolve()
+    if (quillCssLoadPromise) return quillCssLoadPromise
+  }
+
+  const link =
+    existing ??
+    (() => {
+      const next = document.createElement('link')
+      next.id = QUILL_EDITOR_THEME_LINK_ID
+      next.rel = 'stylesheet'
+      next.href = QUILL_EDITOR_THEME_HREF
+      document.head.appendChild(next)
+      return next
+    })()
+
+  quillCssLoadPromise = new Promise<void>((resolve, reject) => {
+    const cleanup = () => {
+      link.removeEventListener('load', handleLoad)
+      link.removeEventListener('error', handleError)
+    }
+    const handleLoad = () => {
+      cleanup()
+      ;(link as any).dataset.loaded = 'true'
+      quillCssLoadPromise = null
+      resolve()
+    }
+    const handleError = () => {
+      cleanup()
+      quillCssLoadPromise = null
+      reject(new Error('Failed to load Quill theme CSS'))
+    }
+
+    link.addEventListener('load', handleLoad, { once: true })
+    link.addEventListener('error', handleError, { once: true })
+
+    try {
+      if ((link.sheet && (link.sheet as CSSStyleSheet).cssRules) || (link as any).dataset?.loaded === 'true') {
+        cleanup()
+        ;(link as any).dataset.loaded = 'true'
+        quillCssLoadPromise = null
+        resolve()
+      }
+    } catch {
+      cleanup()
+      ;(link as any).dataset.loaded = 'true'
+      quillCssLoadPromise = null
+      resolve()
+    }
+  })
+
+  return quillCssLoadPromise
+}
+
 const loadQuill = () => {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Quill is only available in the browser'))
@@ -198,8 +251,8 @@ const loadQuill = () => {
   if (w.Quill) return Promise.resolve(w.Quill)
   if (quillLoadPromise) return quillLoadPromise
 
-  quillLoadPromise = import('quill')
-    .then((mod) => {
+  quillLoadPromise = Promise.all([ensureQuillThemeCss(), import('quill')])
+    .then(([, mod]) => {
       const Quill = (mod as any)?.default ?? (mod as any)
       if (!Quill) throw new Error('Failed to load Quill module')
       try {

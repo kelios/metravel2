@@ -160,6 +160,7 @@ npx serve dist/prod -l 3000 -s
   - Do not gate the slider/background on explicit click, pointer interaction, keyboard interaction, or scroll.
   - Keep the first rendered web hero visually complete from the start: main image, blurred side background, and slider chrome must arrive together.
   - This is the canonical behavior, not a temporary optimization.
+  - Do not remove, downgrade, or defer the hero/slider blur backdrop just to improve Lighthouse or LCP metrics.
   - If a test expects the web hero slider/background to appear only after user interaction, the test is wrong and must be updated to assert the immediate-mount contract instead.
   - Do not re-introduce interaction-gated hero slider activation on web.
 - When using preload scripts and React Query together, avoid duplicate first-load API requests.
@@ -211,6 +212,7 @@ npx serve dist/prod -l 3000 -s
   - The goal is to avoid a separate background request arriving after the main image and causing a visible second-stage backdrop reveal.
 - Blur backdrops must be present in the DOM from the first relevant frame.
   - Fix missing backdrop rendering by correcting source selection or component structure, not by delaying the main image or adding reveal timers.
+  - Do not disable slider/hero blur backdrops as a performance optimization; preserve the visual contract and optimize requests/structure instead.
 - Keep image geometry stable across skeleton, static hero, and slider handoff.
   - Do not let the slider/background path introduce a different aspect-ratio box or a late background mount.
 

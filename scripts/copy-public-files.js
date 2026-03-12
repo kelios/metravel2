@@ -30,6 +30,13 @@ const filesToCopy = [
   'assets/fonts/Roboto-Medium.ttf',
 ];
 
+const externalFilesToCopy = [
+  {
+    source: path.join(__dirname, '..', 'node_modules', 'quill', 'dist', 'quill.snow.css'),
+    destination: 'quill.snow.css',
+  },
+];
+
 if (!fs.existsSync(buildDir)) {
   console.error(`❌ Build directory not found: ${buildDir}`);
   process.exit(1);
@@ -63,6 +70,27 @@ for (const file of filesToCopy) {
     copiedCount++;
   } catch (err) {
     console.error(`❌ Failed to copy ${file}:`, err.message);
+  }
+}
+
+for (const file of externalFilesToCopy) {
+  if (!fs.existsSync(file.source)) {
+    console.log(`⚠️  Source file not found, skipping: ${file.destination}`);
+    skippedCount++;
+    continue;
+  }
+
+  try {
+    const destPath = path.join(buildDir, file.destination);
+    const destDir = path.dirname(destPath);
+    if (!fs.existsSync(destDir)) {
+      fs.mkdirSync(destDir, { recursive: true });
+    }
+    fs.copyFileSync(file.source, destPath);
+    console.log(`✅ Copied: ${file.destination}`);
+    copiedCount++;
+  } catch (err) {
+    console.error(`❌ Failed to copy ${file.destination}:`, err.message);
   }
 }
 
