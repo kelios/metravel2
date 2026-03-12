@@ -23,6 +23,7 @@ const SAFE_DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|avif);base64,/i
 const PDF_IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url='
 const PDF_IMAGE_DEFAULT_PARAMS = 'w=1600&fit=inside'
 const IMAGE_OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
+const FIRST_PARTY_MEDIA_ROUTE_RE = /^\/(gallery|travel-image|travel-description-image|address-image)(\/|$)/i
 
 const allowedTags = Array.from(
   new Set([
@@ -81,8 +82,39 @@ function isSafeDataImage(value: string) {
   return SAFE_DATA_IMAGE_RE.test(value)
 }
 
-function rewriteLocalImageUrl(value: string) {
+function getConfiguredFirstPartyOrigin() {
+  const baseRaw = String(process.env.EXPO_PUBLIC_API_URL || '').trim()
+  if (!baseRaw) return null
+
   try {
+    const parsed = new URL(baseRaw)
+    parsed.pathname = parsed.pathname.replace(/\/api\/?$/i, '')
+    parsed.search = ''
+    parsed.hash = ''
+    return parsed.toString().replace(/\/$/, '')
+  } catch {
+    return null
+  }
+}
+
+function getConfiguredFirstPartyHost() {
+  const origin = getConfiguredFirstPartyOrigin()
+  if (!origin) return null
+
+  try {
+    return new URL(origin).host.toLowerCase()
+  } catch {
+    return null
+  }
+}
+
+function isDynamicFirstPartyMediaPath(pathname: string) {
+  return FIRST_PARTY_MEDIA_ROUTE_RE.test(String(pathname || ''))
+}
+
+function rewriteLocalImageUrl(value: string, options?: { preferConfiguredFirstPartyOrigin?: boolean }) {
+  try {
+    const preferConfiguredFirstPartyOrigin = options?.preferConfiguredFirstPartyOrigin !== false
     const parsed = new URL(value)
     const host = parsed.hostname.toLowerCase()
     const isLocalhost = host === 'localhost' || host === '127.0.0.1'
@@ -98,6 +130,13 @@ function rewriteLocalImageUrl(value: string) {
     }
 
     if (isLocalhost || isPrivateV4) {
+      const preferredOrigin = preferConfiguredFirstPartyOrigin ? getConfiguredFirstPartyOrigin() : null
+      if (preferredOrigin && isDynamicFirstPartyMediaPath(parsed.pathname)) {
+        const target = new URL(preferredOrigin)
+        parsed.protocol = target.protocol
+        parsed.host = target.host
+        return parsed.toString()
+      }
       parsed.protocol = 'https:'
       parsed.host = 'metravel.by'
       return parsed.toString()
@@ -109,13 +148,16 @@ function rewriteLocalImageUrl(value: string) {
   return value
 }
 
-function normalizePdfImageSrc(value?: string) {
+function normalizeRichImageSrc(value?: string, options?: { preferConfiguredFirstPartyOrigin?: boolean }) {
   if (!value) return undefined
+  const preferConfiguredFirstPartyOrigin = options?.preferConfiguredFirstPartyOrigin !== false
   const trimmed = value.trim()
   if (!trimmed) return undefined
   if (trimmed.startsWith('data:')) return isSafeDataImage(trimmed) ? trimmed : undefined
   if (trimmed.startsWith('blob:')) return trimmed
-  if (trimmed.startsWith('//')) return normalizePdfImageSrc(`https:${trimmed}`)
+  if (trimmed.startsWith('//')) {
+    return normalizeRichImageSrc(`https:${trimmed}`, { preferConfiguredFirstPartyOrigin })
+  }
   if (trimmed.startsWith('/')) {
     try {
       if (typeof window !== 'undefined' && window.location?.origin) {
@@ -130,7 +172,7 @@ function normalizePdfImageSrc(value?: string) {
   const normalized = normalizeUrl(trimmed)
   if (!normalized) return undefined
   try {
-    const rewritten = rewriteLocalImageUrl(normalized)
+    const rewritten = rewriteLocalImageUrl(normalized, { preferConfiguredFirstPartyOrigin })
     // Strip backend optimization params the origin server doesn't understand
     // (e.g. ?w=1200&h=675&q=75&f=webp&fit=cover&auto=compress on /travel-description-image/ paths).
     const rewrittenUrl = new URL(rewritten)
@@ -140,7 +182,14 @@ function normalizePdfImageSrc(value?: string) {
     // Don't proxy metravel.by's own images through weserv.nl — they are dynamic
     // backend routes (e.g. /travel-description-image/) that weserv.nl can't reach.
     const host = rewrittenUrl.hostname.toLowerCase()
-    if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
+    const hostWithPort = rewrittenUrl.host.toLowerCase()
+    const configuredFirstPartyHost = getConfiguredFirstPartyHost()
+    if (
+      host === 'metravel.by' ||
+      host === 'cdn.metravel.by' ||
+      host === 'api.metravel.by' ||
+      (configuredFirstPartyHost && hostWithPort === configuredFirstPartyHost)
+    ) {
       return cleanRewritten
     }
 
@@ -258,6 +307,13 @@ function injectAutoHeadingAnchors(html: string): string {
 }
 
 export function sanitizeRichText(html?: string | null): string {
+  return sanitizeRichTextInternal(html, { preferConfiguredFirstPartyOrigin: true })
+}
+
+function sanitizeRichTextInternal(
+  html?: string | null,
+  options?: { preferConfiguredFirstPartyOrigin?: boolean },
+): string {
   if (!html) return ''
 
   // ✅ КРИТИЧНО: Удаляем React Native компоненты перед санитизацией
@@ -310,7 +366,7 @@ export function sanitizeRichText(html?: string | null): string {
       },
       img: (_tag: string, attribs: Attributes) => {
         const candidate = attribs.src || attribs['data-src'] || attribs['data-original'] || attribs['data-lazy-src']
-        const src = normalizePdfImageSrc(candidate)
+        const src = normalizeRichImageSrc(candidate, options)
         const result: Record<string, string> = {}
         if (src) result.src = src
         if (attribs.alt) result.alt = attribs.alt
@@ -365,8 +421,8 @@ export function sanitizeRichText(html?: string | null): string {
 export function sanitizeRichTextForPdf(html?: string | null): string {
   if (!html) return ''
   
-  // Сначала санитизируем
-  const sanitized = sanitizeRichText(html);
+  // Для PDF держим prod-safe rewrite локальных IP на публичный домен.
+  const sanitized = sanitizeRichTextInternal(html, { preferConfiguredFirstPartyOrigin: false });
   
   // Для PDF важно сохранить разметку (абзацы, списки, изображения)
   return sanitized;

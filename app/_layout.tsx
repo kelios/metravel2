@@ -127,11 +127,7 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     setIsReady(false);
 
     let revealed = false;
-    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-      if (revealed) return;
-      revealed = true;
-      setIsReady(true);
-    }, ROOT_WEB_DEFERRED_CHROME_TIMEOUT_MS);
+    let revealTimer: ReturnType<typeof setTimeout> | null = null;
 
     const reveal = () => {
       if (revealed) return;
@@ -145,14 +141,14 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
 
     window.addEventListener('pointerdown', reveal, { passive: true, once: true });
     window.addEventListener('keydown', reveal, { once: true });
-    window.addEventListener('scroll', reveal, { passive: true, once: true });
+    window.addEventListener('wheel', reveal, { passive: true, once: true });
 
     return () => {
       revealed = true;
       if (revealTimer) clearTimeout(revealTimer);
       window.removeEventListener('pointerdown', reveal as EventListener);
       window.removeEventListener('keydown', reveal as EventListener);
-      window.removeEventListener('scroll', reveal as EventListener);
+      window.removeEventListener('wheel', reveal as EventListener);
     };
   }, [isMounted, isTravelRoute]);
 
@@ -490,4 +486,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.background,
     },
 });
-const ROOT_WEB_DEFERRED_CHROME_TIMEOUT_MS = 9000;

@@ -1,5 +1,5 @@
 // components/travel/StableContent.tsx
-import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
+import React, { memo, Suspense, useEffect, useInsertionEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Platform, Text, Pressable } from "react-native";
 import type { TDefaultRendererProps } from "react-native-render-html";
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
@@ -829,7 +829,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
     }
   };
 
-  useEffect(() => {
+  useInsertionEffect(() => {
     if (Platform.OS !== "web") return;
     if (typeof document === "undefined") return;
     const existing = document.getElementById(WEB_RICH_TEXT_STYLES_ID) as HTMLStyleElement | null;

@@ -1,6 +1,12 @@
 import { sanitizeRichText, sanitizeRichTextForPdf } from '@/utils/sanitizeRichText'
 
 describe('sanitizeRichText', () => {
+  const originalApiUrl = process.env.EXPO_PUBLIC_API_URL
+
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_API_URL = originalApiUrl
+  })
+
   it('keeps instagram embeds intact', () => {
     const html = [
       '<p>Follow us on Instagram</p>',
@@ -73,6 +79,21 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('https://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp')
     expect(sanitized).toContain('href="https://metravel.by/gallery/123/conversions/cover.webp"')
     expect(sanitized).toContain('https://images.weserv.nl/?url=example.com%2Fplain-http.jpg')
+  })
+
+  it('rewrites private rich-text media urls to configured first-party origin', () => {
+    process.env.EXPO_PUBLIC_API_URL = 'http://192.168.50.36/api'
+
+    const html = [
+      '<p><img src="http://10.0.0.15/travel-description-image/503/description/example.JPG?w=1200&amp;h=675"></p>',
+      '<p><img src="http://10.0.0.15/gallery/321/original/example.webp"></p>',
+    ].join('')
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).toContain('src="http://192.168.50.36/travel-description-image/503/description/example.JPG"')
+    expect(sanitized).toContain('src="http://192.168.50.36/gallery/321/original/example.webp"')
+    expect(sanitized).not.toContain('10.0.0.15')
   })
 
   it('sanitizeRichTextForPdf preserves formatting and images', () => {

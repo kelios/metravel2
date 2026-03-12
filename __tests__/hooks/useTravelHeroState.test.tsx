@@ -35,6 +35,10 @@ describe('useWebHeroSliderUpgradeGate', () => {
   })
 
   it('allows the web hero slider immediately on pointer interaction', () => {
+    const hero = document.createElement('div')
+    hero.setAttribute('data-testid', 'travel-details-hero-slider-container')
+    document.body.appendChild(hero)
+
     const { result } = renderHook(() =>
       __testables.useWebHeroSliderUpgradeGate(true),
     )
@@ -42,7 +46,7 @@ describe('useWebHeroSliderUpgradeGate', () => {
     expect(result.current).toBe(false)
 
     act(() => {
-      window.dispatchEvent(new Event('pointerdown'))
+      hero.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
     })
 
     expect(result.current).toBe(true)

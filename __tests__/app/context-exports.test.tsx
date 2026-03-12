@@ -11,7 +11,7 @@
  *   2. Providers compose without crashing and hooks return valid values.
  */
 import React from 'react';
-import { renderHook } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ── Real imports (no jest.mock for these) ──────────────────────────
@@ -320,6 +320,43 @@ describe('Context module exports (prod-build regression)', () => {
         jest.runOnlyPendingTimers();
         jest.useRealTimers();
       }
+    });
+
+    it('keeps deferred providers unresolved without interaction in interaction mode even after fallback window', async () => {
+      jest.useFakeTimers();
+
+      const { default: AppProviders } = await import(
+        '@/components/layout/AppProviders'
+      );
+
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+
+      function wrapper({ children }: { children: React.ReactNode }) {
+        return (
+          <AppProviders
+            queryClient={queryClient}
+            deferAuthProvider
+            authDeferMode="interaction"
+            deferFavoritesProvider
+            favoritesDeferMode="interaction"
+          >
+            {children}
+          </AppProviders>
+        );
+      }
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await act(async () => {
+        jest.advanceTimersByTime(15000);
+      });
+
+      expect(result.current.authReady).toBe(false);
+
+      jest.runOnlyPendingTimers();
+      jest.useRealTimers();
     });
   });
 });

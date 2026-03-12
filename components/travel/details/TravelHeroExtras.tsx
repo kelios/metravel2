@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -7,7 +8,6 @@ import type { Travel } from '@/types/types'
 import QuickFacts from '@/components/travel/QuickFacts'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
-import { Icon } from './TravelDetailsIcons'
 
 const HERO_QUICK_JUMP_KEYS = [
   'description',
@@ -40,7 +40,7 @@ function HeroQuickJumps({
       accessibilityRole="button"
       accessibilityLabel={`Перейти к разделу ${link.label}`}
     >
-      <Icon name={link.icon} size={16} color={colors.primary} />
+      <Feather name={link.icon as any} size={16} color={colors.primary} />
       <Text style={styles.quickJumpLabel}>{link.label}</Text>
     </Pressable>
   ))

@@ -105,6 +105,9 @@ describe('useTravelDetailsPerformance', () => {
     const listeners = new Map<string, EventListener>()
     const originalAddEventListener = window.addEventListener.bind(window)
     const originalRemoveEventListener = window.removeEventListener.bind(window)
+    const hero = document.createElement('div')
+    hero.setAttribute('data-testid', 'travel-details-hero-slider-container')
+    document.body.appendChild(hero)
 
     jest.spyOn(window, 'addEventListener').mockImplementation(((type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
       if (typeof listener === 'function') {
@@ -150,6 +153,5 @@ describe('useTravelDetailsPerformance', () => {
 
     expect(listeners.get('pointerdown')).toBeDefined()
     expect(listeners.get('keydown')).toBeDefined()
-    expect(listeners.get('scroll')).toBeDefined()
   })
 })

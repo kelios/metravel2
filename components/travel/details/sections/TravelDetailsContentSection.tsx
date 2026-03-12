@@ -13,6 +13,7 @@ import { withLazy } from '../TravelDetailsLazy'
 import { CollapsibleSection } from './CollapsibleSection'
 import { LazyYouTube } from './LazyYouTubeSection'
 import { getDayLabel } from '@/services/pdf-export/utils/pluralize'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const WEB_SR_ONLY_HEADING_STYLE = {
@@ -27,7 +28,12 @@ const WEB_SR_ONLY_HEADING_STYLE = {
   borderWidth: 0,
 } as const
 const DEFERRED_SECTION_PLACEHOLDER_STYLE = { minHeight: 160 } as const
-const VIDEO_PLACEHOLDER_STYLE = { minHeight: 220 } as const
+const VIDEO_PLACEHOLDER_STYLE = {
+  width: '100%',
+  aspectRatio: 16 / 9,
+  borderRadius: DESIGN_TOKENS.radii.md,
+  overflow: 'hidden',
+} as const
 
 const TravelDescription = withLazy(() => import('@/components/travel/TravelDescription'))
 

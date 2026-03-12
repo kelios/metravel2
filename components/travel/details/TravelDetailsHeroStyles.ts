@@ -36,6 +36,10 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     quickJumpChip: {
       flexDirection: 'row',
       alignItems: 'center',
+      minHeight: Platform.select({
+        default: 34,
+        web: 34,
+      }),
       paddingVertical: 8,
       paddingHorizontal: Platform.select({
         default: 14,
@@ -62,6 +66,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       fontWeight: '500' as any,
       color: colors.textMuted,
       letterSpacing: 0,
+      lineHeight: 16,
     },
     authorCardContainer: {
       marginBottom: DESIGN_TOKENS.spacing.md,

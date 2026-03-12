@@ -273,18 +273,40 @@ function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
 
     setSliderUpgradeAllowed(false)
 
-    const reveal = () => {
+    const isHeroInteraction = (target: EventTarget | null) => {
+      if (typeof document === 'undefined') return false
+      if (!(target instanceof Node)) return false
+
+      const heroRoot = document.querySelector(
+        '[data-testid="travel-details-hero-slider-container"]',
+      )
+      return Boolean(heroRoot && heroRoot.contains(target))
+    }
+
+    const revealFromPointer = (event: Event) => {
+      if (!isHeroInteraction(event.target)) return
       setSliderUpgradeAllowed(true)
     }
 
-    window.addEventListener('pointerdown', reveal, { passive: true, once: true })
-    window.addEventListener('keydown', reveal, { once: true })
-    window.addEventListener('scroll', reveal, { passive: true, once: true })
+    const revealFromKeyboard = () => {
+      if (typeof document === 'undefined') return
+      const active = document.activeElement
+      if (!isHeroInteraction(active)) return
+      setSliderUpgradeAllowed(true)
+    }
+
+    window.addEventListener('pointerdown', revealFromPointer, {
+      passive: true,
+      once: true,
+    })
+    window.addEventListener('keydown', revealFromKeyboard, { once: true })
 
     return () => {
-      window.removeEventListener('pointerdown', reveal as EventListener)
-      window.removeEventListener('keydown', reveal as EventListener)
-      window.removeEventListener('scroll', reveal as EventListener)
+      window.removeEventListener(
+        'pointerdown',
+        revealFromPointer as EventListener,
+      )
+      window.removeEventListener('keydown', revealFromKeyboard as EventListener)
     }
   }, [isWebAutomation, renderSlider])
 

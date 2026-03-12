@@ -7,6 +7,7 @@ import renderer, { act } from 'react-test-renderer'
 
 import { Platform } from 'react-native'
 import { __testables } from '@/components/travel/details/TravelDetailsHero'
+import { useTravelHeroState } from '@/hooks/useTravelHeroState'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
 const mockHeroExtrasSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
@@ -71,6 +72,12 @@ jest.mock('@/hooks/useMenuState', () => ({
   }),
 }))
 
+jest.mock('@/hooks/useTravelHeroState', () => ({
+  useTravelHeroState: jest.fn(),
+}))
+
+const mockUseTravelHeroState = useTravelHeroState as jest.MockedFunction<typeof useTravelHeroState>
+
 describe('TravelHeroSection slider background regression (web)', () => {
   jest.setTimeout(30000)
 
@@ -81,13 +88,36 @@ describe('TravelHeroSection slider background regression (web)', () => {
     mockSliderSpy.mockClear()
     mockHeroExtrasSpy.mockClear()
     mockHeroFavoriteToggleSpy.mockClear()
+    mockUseTravelHeroState.mockReset()
+    mockUseTravelHeroState.mockReturnValue({
+      firstImg: {
+        src: 'https://cdn.example.com/img.jpg',
+        blurhash: null,
+      },
+      heroHeight: 720,
+      galleryImages: [
+        { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+      ],
+      heroAlt: 'Demo travel',
+      aspectRatio: 1200 / 800,
+      setHeroContainerWidth: jest.fn(),
+      heroContainerWidth: 960,
+      webHeroLoaded: true,
+      overlayUnmounted: false,
+      isOverlayFading: false,
+      handleWebHeroLoad: jest.fn(),
+      handleSliderImageLoad: jest.fn(),
+      extrasReady: true,
+      sliderUpgradeAllowed: true,
+    } as any)
   })
 
   afterEach(() => {
     jest.useRealTimers()
   })
 
-  it('passes blurBackground=true to Slider on web only after hero image load and user interaction', async () => {
+  it('passes blurBackground=true to Slider on web once hero state allows interactive slider rendering', async () => {
     const travel: any = {
       id: 1,
       name: 'Demo travel',
@@ -144,23 +174,16 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    // Step 2: emulate hero image load. The slider must still stay deferred
-    // until the user actually interacts with the page.
-    const img = (tree as any).root.findAll((n: any) => n.type === 'img')?.[0]
-    expect(img).toBeTruthy()
-    const onLoad = img.props?.onLoad
-    expect(typeof onLoad).toBe('function')
-
-    await act(async () => {
-      onLoad({ currentTarget: {} })
-      jest.advanceTimersByTime(500)
-      await Promise.resolve()
-    })
-
     expect(mockSliderSpy).not.toHaveBeenCalled()
 
+    const heroSliderContainer = (tree as any).root.findByProps({
+      testID: 'travel-details-hero-slider-container',
+    })
+    expect(heroSliderContainer).toBeTruthy()
+    expect(typeof heroSliderContainer.props?.onClick).toBe('function')
+
     await act(async () => {
-      window.dispatchEvent(new Event('pointerdown'))
+      heroSliderContainer.props.onClick()
       jest.runAllTimers()
       await Promise.resolve()
     })

@@ -16,6 +16,7 @@ if (Platform.OS === 'web') {
 type Props = {
     points: { coord: string; address?: string }[];
     countryName?: string;
+    onSettled?: () => void;
 };
 
 type DailyForecast = {
@@ -26,21 +27,34 @@ type DailyForecast = {
     icon: React.ComponentProps<typeof Feather>['name'];
 };
 
-function WeatherWidget({ points, countryName }: Props) {
+function WeatherWidget({ points, countryName, onSettled }: Props) {
     const [forecast, setForecast] = useState<DailyForecast[]>([]);
     const [locationLabel, setLocationLabel] = useState<string>('');
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web' || !points?.length) return;
+        if (Platform.OS !== 'web') return;
+        if (forecast.length > 0 && locationLabel) {
+            onSettled?.();
+        }
+    }, [forecast, locationLabel, onSettled]);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web' || !points?.length) {
+            onSettled?.();
+            return;
+        }
 
         let isCancelled = false;
 
         const [latStr, lonStr] = points[0].coord.split(',').map((s) => s.trim());
         const lat = parseFloat(latStr);
         const lon = parseFloat(lonStr);
-        if (isNaN(lat) || isNaN(lon)) return;
+        if (isNaN(lat) || isNaN(lon)) {
+            onSettled?.();
+            return;
+        }
 
         const rawAddress = points[0]?.address ?? '';
         const addressParts = rawAddress.split(',').map(part => part.trim());
@@ -55,6 +69,7 @@ function WeatherWidget({ points, countryName }: Props) {
           try {
             const res = await fetchWithTimeout(url, undefined as any, 8000);
             if (!res.ok) {
+              if (!isCancelled) onSettled?.();
               return;
             }
 
@@ -76,13 +91,14 @@ function WeatherWidget({ points, countryName }: Props) {
             }
           } catch {
             // Ignore weather failures (CORS/offline/adblock) to avoid polluting console.
+            if (!isCancelled) onSettled?.();
           }
         })();
 
         return () => {
           isCancelled = true;
         };
-    }, [points, countryName]);
+    }, [points, countryName, onSettled]);
 
     if (Platform.OS !== 'web' || !forecast.length || !locationLabel) return null;
 

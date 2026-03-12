@@ -42,7 +42,7 @@ describe('StableContent (web) link styles', () => {
     }
   });
 
-  it('injects CSS styles for anchors and keeps <a> tag in rendered HTML', async () => {
+  it('injects CSS styles synchronously and keeps <a> tag in rendered HTML', async () => {
     const StableContent = (await import('@/components/travel/StableContent')).default;
 
     const html = '<p>See <a href="https://example.com">Example</a></p>';
@@ -50,6 +50,10 @@ describe('StableContent (web) link styles', () => {
     const { UNSAFE_getAllByProps } = render(
       <StableContent html={html} contentWidth={700} />
     );
+
+    const styleElImmediate = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;
+    expect(styleElImmediate).toBeTruthy();
+    expect(String(styleElImmediate?.textContent || '')).toContain('.travel-rich-text a');
 
     await waitFor(() => {
       const styleEl = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;

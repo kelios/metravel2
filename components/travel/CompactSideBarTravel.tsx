@@ -1,5 +1,5 @@
 // components/travel/CompactSideBarTravel.tsx
-import React, { memo, Suspense, useCallback, useEffect, useMemo, useState, lazy } from "react";
+import React, { memo, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -23,12 +23,14 @@ import { useThemedColors, useTheme } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Button from '@/components/ui/Button';
 import SubscribeButton from '@/components/ui/SubscribeButton';
+import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { buildTravelRouteDownloadPath } from '@/api/travelRoutes';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles';
 import { useAuthStore } from '@/stores/authStore';
+import TravelPdfExportControl from '@/components/travel/TravelPdfExportControl';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)
 if (Platform.OS === 'web') {
@@ -45,7 +47,27 @@ const Fallback = () => {
   );
 };
 
-const TravelPdfExportControlLazy = lazy(() => import('@/components/travel/TravelPdfExportControl'));
+const SIDEBAR_WEATHER_RESERVE_HEIGHT = 188;
+
+const WeatherPlaceholder = memo(function WeatherPlaceholder() {
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        inset: 0,
+        minHeight: SIDEBAR_WEATHER_RESERVE_HEIGHT,
+        width: '100%',
+        paddingTop: 10,
+        pointerEvents: 'none',
+      }}
+      {...(Platform.OS === 'web' ? { 'data-sidebar-weather-placeholder': true } : {})}
+    >
+      <SectionSkeleton lines={2} height={18} />
+      <View style={{ height: 14 }} />
+      <SectionSkeleton lines={3} height={56} />
+    </View>
+  );
+});
 
 // универсальный эмиттер "открой секцию"
 const emitOpenSection = (key: string) => {
@@ -140,6 +162,10 @@ function CompactSideBarTravel({
   const [active, setActive] = useState<string>("");
   const [isRouteDownloading, setIsRouteDownloading] = useState(false);
   const [hasDownloadableRoute, setHasDownloadableRoute] = useState(false);
+  const [weatherSettled, setWeatherSettled] = useState(Platform.OS !== 'web');
+  const handleWeatherSettled = useCallback(() => {
+    setWeatherSettled(true);
+  }, []);
 
   useEffect(() => {
     const hasSupported = routeFiles.some((file) => {
@@ -150,6 +176,11 @@ function CompactSideBarTravel({
     });
     setHasDownloadableRoute(hasSupported);
   }, [routeFiles]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    setWeatherSettled(false);
+  }, [travel?.id]);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
@@ -430,15 +461,13 @@ function CompactSideBarTravel({
               )}
 
               {Platform.OS === 'web' && (
-                <Suspense fallback={null}>
-                  <TravelPdfExportControlLazy
-                    travel={travel}
-                    mutedText={mutedText}
-                    actionBtnStyle={styles.actionBtn}
-                    actionBtnPressedStyle={styles.actionBtnPressed}
-                    actionBtnDisabledStyle={styles.actionBtnDisabled}
-                  />
-                </Suspense>
+                <TravelPdfExportControl
+                  travel={travel}
+                  mutedText={mutedText}
+                  actionBtnStyle={styles.actionBtn}
+                  actionBtnPressedStyle={styles.actionBtnPressed}
+                  actionBtnDisabledStyle={styles.actionBtnDisabled}
+                />
               )}
 
               {!isOwnTravel && authorUserId && (
@@ -644,9 +673,24 @@ function CompactSideBarTravel({
       </Pressable>
     ) : null,
 
-    <Suspense key="weather" fallback={<Fallback />}>
-      <WeatherWidget points={travel.travelAddress as any} countryName={travel.countryName} />
-    </Suspense>,
+    <View
+      key="weather-shell"
+      style={[
+        Platform.OS === 'web' && !isMobile
+          ? { minHeight: SIDEBAR_WEATHER_RESERVE_HEIGHT, width: '100%', position: 'relative' as const }
+          : null,
+      ]}
+      {...(Platform.OS === 'web' ? { 'data-sidebar-weather-shell': true } : {})}
+    >
+      {!weatherSettled && Platform.OS === 'web' && !isMobile ? <WeatherPlaceholder /> : null}
+      <Suspense fallback={<Fallback />}>
+        <WeatherWidget
+          points={travel.travelAddress as any}
+          countryName={travel.countryName}
+          onSettled={handleWeatherSettled}
+        />
+      </Suspense>
+    </View>,
   ];
   
   const menuPaddingBottom = isMobile ? 80 : isWeb ? 20 : 32;
@@ -980,6 +1024,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     position: "relative",
     flexDirection: "row", 
     alignItems: "center", 
+    minHeight: Platform.select({
+      default: 40,
+      web: 38,
+    }),
     paddingVertical: Platform.select({
       default: 10,
       web: 8,
@@ -1000,7 +1048,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: "transparent",
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer' as any,
-      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: 'background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
     } : {}),
   },
   linkLeft: {
@@ -1045,7 +1093,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: "500",
     lineHeight: Platform.select({ default: 22, web: 20 }),
     ...(Platform.OS === 'web' ? {
-      transition: 'all 0.2s ease',
+      transition: 'color 0.2s ease',
     } as any : {}),
   },
   linkTxtActive: {

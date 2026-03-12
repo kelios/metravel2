@@ -4,7 +4,11 @@ import { Platform } from 'react-native'
 const tdTraceEnabled =
   Platform.OS === 'web' &&
   typeof window !== 'undefined' &&
-  (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as unknown).__METRAVEL_TD_TRACE === true)
+  (
+    process.env.EXPO_PUBLIC_TD_TRACE === '1' ||
+    (window as unknown).__METRAVEL_TD_TRACE === true ||
+    (typeof window.location?.search === 'string' && /(?:\?|&)tdtrace=1(?:&|$)/.test(window.location.search))
+  )
 
 export function useTdTrace() {
   return useCallback(

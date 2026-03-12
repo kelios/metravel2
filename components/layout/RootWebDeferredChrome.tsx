@@ -43,6 +43,7 @@ interface RootWebDeferredChromeProps {
 }
 
 const WEB_FOOTER_RESERVE_HEIGHT = 56
+const TRAVEL_DEFERRED_CHROME_EVENTS: Array<keyof WindowEventMap> = ['pointerdown', 'keydown', 'wheel']
 
 export default function RootWebDeferredChrome({
   isMobile,
@@ -59,50 +60,40 @@ export default function RootWebDeferredChrome({
   const [showServiceWorkerCleanup, setShowServiceWorkerCleanup] = useState(false)
 
   useEffect(() => {
-    if (!isTravelPerformanceRoute) {
+    if (!isTravelPerformanceRoute) return
+
+    const revealDeferredChrome = () => {
       setShowRuntimeEffects(true)
-      return
+      setShowFooterChrome(true)
     }
 
-    let revealed = false
-    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-      if (revealed) return
-      revealed = true
-      setShowRuntimeEffects(true)
-    }, 5000)
-
-    const reveal = () => {
-      if (revealed) return
-      revealed = true
-      if (revealTimer) {
-        clearTimeout(revealTimer)
-        revealTimer = null
-      }
-      setShowRuntimeEffects(true)
-    }
-
-    window.addEventListener('pointerdown', reveal, { passive: true, once: true })
-    window.addEventListener('keydown', reveal, { once: true })
-    window.addEventListener('scroll', reveal, { passive: true, once: true })
+    TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
+      const options =
+        eventName === 'pointerdown' || eventName === 'wheel'
+          ? ({ passive: true, once: true } as AddEventListenerOptions)
+          : ({ once: true } as AddEventListenerOptions)
+      window.addEventListener(eventName, revealDeferredChrome as EventListener, options)
+    })
 
     return () => {
-      revealed = true
-      if (revealTimer) clearTimeout(revealTimer)
-      window.removeEventListener('pointerdown', reveal as EventListener)
-      window.removeEventListener('keydown', reveal as EventListener)
-      window.removeEventListener('scroll', reveal as EventListener)
+      TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
+        window.removeEventListener(eventName, revealDeferredChrome as EventListener)
+      })
     }
   }, [isTravelPerformanceRoute])
 
   useEffect(() => {
-    let footerTimer: ReturnType<typeof setTimeout> | null = null
+    if (!isTravelPerformanceRoute) {
+      setShowRuntimeEffects(true)
+      setShowFooterChrome(true)
+      return
+    }
+  }, [isTravelPerformanceRoute])
+
+  useEffect(() => {
     let consentTimer: ReturnType<typeof setTimeout> | null = null
     let rafId: number | null = null
-    let consentCheckTimer: ReturnType<typeof setTimeout> | null = null
     let consentCheckRevealed = false
-
-    const footerDelay = isTravelPerformanceRoute ? 6500 : 0
-    footerTimer = setTimeout(() => setShowFooterChrome(true), footerDelay)
 
     const maybeShowConsentBanner = () => {
       if (consentCheckRevealed) return
@@ -118,34 +109,41 @@ export default function RootWebDeferredChrome({
         })
     }
 
-    if (isTravelPerformanceRoute) {
-      consentCheckTimer = setTimeout(() => {
-        maybeShowConsentBanner()
-      }, 9000)
-
-      window.addEventListener('pointerdown', maybeShowConsentBanner, { passive: true, once: true })
-      window.addEventListener('keydown', maybeShowConsentBanner, { once: true })
-      window.addEventListener('scroll', maybeShowConsentBanner, { passive: true, once: true })
-    } else {
-      consentTimer = setTimeout(() => {
-        maybeShowConsentBanner()
-      }, 4000)
-    }
-
     if (typeof document !== 'undefined') {
       rafId = requestAnimationFrame(() => {
         document.documentElement.classList.add('app-hydrated')
       })
     }
 
+    if (isTravelPerformanceRoute) {
+      const revealConsentOnInteraction = () => {
+        void maybeShowConsentBanner()
+      }
+
+      TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
+        const options =
+          eventName === 'pointerdown' || eventName === 'wheel'
+            ? ({ passive: true, once: true } as AddEventListenerOptions)
+            : ({ once: true } as AddEventListenerOptions)
+        window.addEventListener(eventName, revealConsentOnInteraction as EventListener, options)
+      })
+
+      return () => {
+        if (consentTimer) clearTimeout(consentTimer)
+        if (rafId != null) cancelAnimationFrame(rafId)
+        TRAVEL_DEFERRED_CHROME_EVENTS.forEach((eventName) => {
+          window.removeEventListener(eventName, revealConsentOnInteraction as EventListener)
+        })
+      }
+    } else {
+      consentTimer = setTimeout(() => {
+        maybeShowConsentBanner()
+      }, 4000)
+    }
+
     return () => {
-      if (footerTimer) clearTimeout(footerTimer)
       if (consentTimer) clearTimeout(consentTimer)
-      if (consentCheckTimer) clearTimeout(consentCheckTimer)
       if (rafId != null) cancelAnimationFrame(rafId)
-      window.removeEventListener('pointerdown', maybeShowConsentBanner as EventListener)
-      window.removeEventListener('keydown', maybeShowConsentBanner as EventListener)
-      window.removeEventListener('scroll', maybeShowConsentBanner as EventListener)
     }
   }, [isTravelPerformanceRoute])
 

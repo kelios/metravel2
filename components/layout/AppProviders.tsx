@@ -72,13 +72,17 @@ export default function AppProviders({
     setDeferredRuntimeReady(false);
     setDeferredRuntimeActivationReason('fallback');
 
+    const interactionOnlyMode =
+      authDeferMode === 'interaction' || favoritesDeferMode === 'interaction';
     let revealed = false;
-    let revealTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-      if (revealed) return;
-      revealed = true;
-      setDeferredRuntimeActivationReason('fallback');
-      setDeferredRuntimeReady(true);
-    }, authDeferMode === 'interaction' || favoritesDeferMode === 'interaction' ? 9000 : 1200);
+    let revealTimer: ReturnType<typeof setTimeout> | null = interactionOnlyMode
+      ? null
+      : setTimeout(() => {
+          if (revealed) return;
+          revealed = true;
+          setDeferredRuntimeActivationReason('fallback');
+          setDeferredRuntimeReady(true);
+        }, 1200);
     let idleId: number | null = null;
 
     const revealFromInteraction = () => {
@@ -100,7 +104,7 @@ export default function AppProviders({
       setDeferredRuntimeReady(true);
     };
 
-    if (authDeferMode === 'idle' && favoritesDeferMode === 'idle' && 'requestIdleCallback' in window) {
+    if (!interactionOnlyMode && authDeferMode === 'idle' && favoritesDeferMode === 'idle' && 'requestIdleCallback' in window) {
       idleId = (window as any).requestIdleCallback(() => {
         if (revealed) return;
         revealed = true;
@@ -115,7 +119,7 @@ export default function AppProviders({
 
     window.addEventListener('pointerdown', revealFromInteraction, { passive: true, once: true });
     window.addEventListener('keydown', revealFromInteraction, { once: true });
-    window.addEventListener('scroll', revealFromInteraction, { passive: true, once: true });
+    window.addEventListener('wheel', revealFromInteraction, { passive: true, once: true });
 
     return () => {
       revealed = true;
@@ -129,7 +133,7 @@ export default function AppProviders({
       }
       window.removeEventListener('pointerdown', revealFromInteraction);
       window.removeEventListener('keydown', revealFromInteraction);
-      window.removeEventListener('scroll', revealFromInteraction);
+      window.removeEventListener('wheel', revealFromInteraction);
     };
   }, [authDeferMode, favoritesDeferMode, shouldLoadDeferredRuntime]);
 

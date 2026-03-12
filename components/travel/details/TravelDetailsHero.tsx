@@ -73,6 +73,7 @@ function TravelHeroSectionInner({
   // AND-28: Fullscreen gallery state (native only)
   const [fullscreenVisible, setFullscreenVisible] = useState(false)
   const [fullscreenIndex, setFullscreenIndex] = useState(0)
+  const [webSliderActivated, setWebSliderActivated] = useState(false)
   const handleImagePress = useCallback((index: number) => {
     if (Platform.OS === 'web') return
     setFullscreenIndex(index)
@@ -85,7 +86,26 @@ function TravelHeroSectionInner({
 
   const shouldRenderWebOptimizedHero =
     Platform.OS === 'web' && shouldShowOptimizedHero
+  const canActivateWebSlider =
+    Platform.OS === 'web' && galleryImages.length > 1 && renderSlider
+  const shouldRenderWebSlider =
+    shouldRenderWebOptimizedHero &&
+    webHeroLoaded &&
+    sliderUpgradeAllowed &&
+    webSliderActivated
   const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2
+
+  const activateWebSlider = useCallback(() => {
+    if (!canActivateWebSlider) return
+    setWebSliderActivated(true)
+  }, [canActivateWebSlider])
+
+  const handleWebHeroKeyDown = useCallback((event: any) => {
+    const key = event?.key
+    if (key !== 'Enter' && key !== ' ') return
+    event?.preventDefault?.()
+    activateWebSlider()
+  }, [activateWebSlider])
 
   return (
     <>
@@ -103,14 +123,23 @@ function TravelHeroSectionInner({
       >
         <View
           testID="travel-details-hero-slider-container"
-          style={[
-            styles.sliderContainer,
-            { height: heroHeight },
-            Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
-          ]}
-          collapsable={false}
-          onLayout={
-            Platform.OS === 'web'
+        style={[
+          styles.sliderContainer,
+          { height: heroHeight },
+          Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
+        ]}
+        {...(Platform.OS === 'web' && canActivateWebSlider
+          ? {
+              role: 'button',
+              tabIndex: 0,
+              'aria-label': 'Открыть интерактивную галерею',
+              onClick: activateWebSlider,
+              onKeyDown: handleWebHeroKeyDown,
+            }
+          : {})}
+        collapsable={false}
+        onLayout={
+          Platform.OS === 'web'
               ? undefined
               : (e: LayoutChangeEvent) => {
                   const w = e.nativeEvent.layout.width
@@ -123,7 +152,7 @@ function TravelHeroSectionInner({
             <NeutralHeroPlaceholder height={heroHeight} />
           ) : shouldRenderWebOptimizedHero ? (
             <>
-              {webHeroLoaded && sliderUpgradeAllowed ? (
+              {shouldRenderWebSlider ? (
                 <Suspense fallback={null}>
                   <TravelHeroInteractiveSlider
                     visible

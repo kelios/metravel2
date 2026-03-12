@@ -62,7 +62,7 @@ export default function AppProvidersDeferredRuntime({
     };
     window.addEventListener('pointerdown', onInteraction, { passive: true, once: true });
     window.addEventListener('keydown', onInteraction, { passive: true, once: true });
-    window.addEventListener('scroll', onInteraction, { passive: true, once: true });
+    window.addEventListener('wheel', onInteraction, { passive: true, once: true });
 
     return () => {
       cancelled = true;
@@ -76,7 +76,7 @@ export default function AppProvidersDeferredRuntime({
       }
       window.removeEventListener('pointerdown', onInteraction);
       window.removeEventListener('keydown', onInteraction);
-      window.removeEventListener('scroll', onInteraction);
+      window.removeEventListener('wheel', onInteraction);
     };
   }, [activationReason, authDeferMode, deferAuthProvider]);
 
@@ -101,7 +101,7 @@ export default function AppProvidersDeferredRuntime({
     const onInteraction = () => enable();
     window.addEventListener('pointerdown', onInteraction, { passive: true, once: true });
     window.addEventListener('keydown', onInteraction, { passive: true, once: true });
-    window.addEventListener('scroll', onInteraction, { passive: true, once: true });
+    window.addEventListener('wheel', onInteraction, { passive: true, once: true });
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -115,7 +115,7 @@ export default function AppProvidersDeferredRuntime({
       }
       window.removeEventListener('pointerdown', onInteraction);
       window.removeEventListener('keydown', onInteraction);
-      window.removeEventListener('scroll', onInteraction);
+      window.removeEventListener('wheel', onInteraction);
     };
   }, [activationReason, authDeferMode, deferAuthProvider, setAuthProviderReady]);
 
@@ -140,7 +140,7 @@ export default function AppProvidersDeferredRuntime({
     const onInteraction = () => enable();
     window.addEventListener('pointerdown', onInteraction, { passive: true, once: true });
     window.addEventListener('keydown', onInteraction, { passive: true, once: true });
-    window.addEventListener('scroll', onInteraction, { passive: true, once: true });
+    window.addEventListener('wheel', onInteraction, { passive: true, once: true });
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -154,7 +154,7 @@ export default function AppProvidersDeferredRuntime({
       }
       window.removeEventListener('pointerdown', onInteraction);
       window.removeEventListener('keydown', onInteraction);
-      window.removeEventListener('scroll', onInteraction);
+      window.removeEventListener('wheel', onInteraction);
     };
   }, [activationReason, deferFavoritesProvider, favoritesDeferMode, setFavoritesReady]);
 
@@ -226,7 +226,7 @@ export default function AppProvidersDeferredRuntime({
     };
     window.addEventListener('pointerdown', onInteraction, { passive: true, once: true });
     window.addEventListener('keydown', onInteraction, { passive: true, once: true });
-    window.addEventListener('scroll', onInteraction, { passive: true, once: true });
+    window.addEventListener('wheel', onInteraction, { passive: true, once: true });
 
     return () => {
       cancelled = true;
@@ -240,7 +240,7 @@ export default function AppProvidersDeferredRuntime({
       }
       window.removeEventListener('pointerdown', onInteraction);
       window.removeEventListener('keydown', onInteraction);
-      window.removeEventListener('scroll', onInteraction);
+      window.removeEventListener('wheel', onInteraction);
     };
   }, [activationReason, deferFavoritesProvider, favoritesDeferMode]);
 
