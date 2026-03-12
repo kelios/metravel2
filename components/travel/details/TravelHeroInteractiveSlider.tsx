@@ -3,12 +3,12 @@ import { Platform, View } from 'react-native';
 
 type GalleryImage = Record<string, any>;
 
-const FullscreenGallery =
+const getFullscreenGallery = () =>
   Platform.OS !== 'web'
     ? React.lazy(() => import('@/components/travel/FullscreenGallery'))
-    : () => null;
+    : (() => null);
 
-const Slider: React.FC<any> =
+const getSliderComponent = (): React.ComponentType<any> =>
   Platform.OS === 'web'
     ? (require('@/components/travel/Slider.web').default as React.ComponentType<any>)
     : require('@/components/travel/Slider').default;
@@ -44,6 +44,9 @@ export default function TravelHeroInteractiveSlider({
   fullscreenIndex?: number;
   onCloseFullscreen?: () => void;
 }) {
+  const Slider = getSliderComponent();
+  const FullscreenGallery = getFullscreenGallery();
+
   return (
     <>
       {visible ? (

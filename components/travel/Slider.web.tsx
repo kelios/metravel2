@@ -680,7 +680,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           </View>
         </View>
 
-        {showArrows && (
+        {showArrows && imagesLen > 1 && (
           <NavArrows
             imagesLen={imagesLen}
             isMobile={isMobile}
@@ -703,7 +703,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           </View>
         )}
 
-        {showDots && (
+        {showDots && imagesLen > 1 && (
           <PaginationDots total={imagesLen} currentIndex={currentIndex} isMobile={isMobile} styles={styles} />
         )}
       </View>

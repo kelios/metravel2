@@ -39,7 +39,9 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         return width < METRICS.breakpoints.largeTablet;
     }, [effectiveWebWidth, width]);
     const lastHeightRef = useRef(0);
-    const showHeaderContextBar = true;
+    const isTravelRoute =
+        pathname.startsWith('/travels/') || pathname.startsWith('/travel/');
+    const showHeaderContextBar = !(Platform.OS === 'web' && !isMobile && isTravelRoute);
     const showNavSection = true;
     const showAccountSection = true;
 

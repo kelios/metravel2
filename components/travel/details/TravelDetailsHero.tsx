@@ -2,7 +2,6 @@
 import React, {
   Suspense,
   useCallback,
-  useEffect,
   useState,
 } from 'react'
 import {
@@ -90,20 +89,13 @@ function TravelHeroSectionInner({
     shouldRenderWebOptimizedHero &&
     webHeroLoaded &&
     sliderUpgradeAllowed &&
-    webSliderActivated
+    (renderSlider || webSliderActivated)
   const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2
 
   const activateWebSlider = useCallback(() => {
     if (!hasInteractiveWebGallery) return
     setWebSliderActivated(true)
   }, [hasInteractiveWebGallery])
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!hasInteractiveWebGallery) return
-    if (!renderSlider) return
-    setWebSliderActivated(true)
-  }, [hasInteractiveWebGallery, renderSlider])
 
   const handleWebHeroKeyDown = useCallback((event: any) => {
     const key = event?.key

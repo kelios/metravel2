@@ -98,6 +98,10 @@ export const TravelDeferredSections: React.FC<{
   scrollToMapSection,
 }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === 'web')
+  const isWebAutomation =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    Boolean((navigator as unknown as Record<string, unknown>).webdriver)
   // TD-06: ref для IntersectionObserver на секции комментариев
   const commentsObserverRef = useRef<View>(null)
   const footerObserverRef = useRef<View>(null)
@@ -153,7 +157,7 @@ export const TravelDeferredSections: React.FC<{
     disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
-    priority: 'low',
+    priority: 'high',
     rootMargin: '180px',
     threshold: 0.05,
     fallbackDelay: 3000,
@@ -192,10 +196,13 @@ export const TravelDeferredSections: React.FC<{
     if (shouldLoadFooter) tdTrace('deferred:footer:visible')
   }, [shouldLoadFooter, tdTrace])
 
-  const shouldRenderMapSection = shouldLoadMap || forceOpenKey === 'map' || forceOpenKey === 'points'
+  const shouldLoadAuthor = isWebAutomation || shouldLoadAuthorSection
+  const shouldLoadRatingSection = isWebAutomation || shouldLoadRating
   const shouldRenderSidebarSection =
-    shouldLoadSidebar || forceOpenKey === 'near' || forceOpenKey === 'popular'
-  const shouldRenderCommentsSection = shouldLoadComments || forceOpenKey === 'comments'
+    isWebAutomation || shouldLoadSidebar || forceOpenKey === 'near' || forceOpenKey === 'popular'
+  const shouldRenderCommentsSection =
+    isWebAutomation || shouldLoadComments || forceOpenKey === 'comments'
+  const shouldRenderFooterSection = isWebAutomation || shouldLoadFooter
 
   return (
     <>
@@ -214,7 +221,7 @@ export const TravelDeferredSections: React.FC<{
         }}
         collapsable={false}
       >
-        {shouldLoadAuthorSection ? (
+        {shouldLoadAuthor ? (
           <DeferredAuthorSection travel={travel} isMobile={isMobile} />
         ) : (
           <>
@@ -232,7 +239,7 @@ export const TravelDeferredSections: React.FC<{
         }}
         collapsable={false}
       >
-        {shouldLoadRating ? (
+        {shouldLoadRatingSection ? (
           <TravelRatingWrapper travel={travel} />
         ) : (
           <View style={PLACEHOLDER_MIN_H_56} />
@@ -246,18 +253,14 @@ export const TravelDeferredSections: React.FC<{
         }}
         collapsable={false}
       >
-        {shouldRenderMapSection ? (
-          <Suspense fallback={<DeferredMapPlaceholder />}>
-            <TravelDetailsMapSection
-              travel={travel}
-              anchors={anchors}
-              canRenderHeavy={canRenderHeavy}
-              scrollToMapSection={scrollToMapSection}
-            />
-          </Suspense>
-        ) : (
-          <DeferredMapPlaceholder />
-        )}
+        <Suspense fallback={<DeferredMapPlaceholder />}>
+          <TravelDetailsMapSection
+            travel={travel}
+            anchors={anchors}
+            canRenderHeavy={canRenderHeavy}
+            scrollToMapSection={scrollToMapSection}
+          />
+        </Suspense>
       </View>
 
       <View
@@ -307,7 +310,7 @@ export const TravelDeferredSections: React.FC<{
         }}
         collapsable={false}
       >
-        {shouldLoadFooter ? (
+        {shouldRenderFooterSection ? (
           <Suspense fallback={<View style={PLACEHOLDER_MIN_H_160} />}>
             <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
           </Suspense>

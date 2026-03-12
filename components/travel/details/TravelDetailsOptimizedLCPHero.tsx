@@ -81,6 +81,7 @@ function OptimizedLCPHeroInner({
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null);
   const [didTryApiPrefix, setDidTryApiPrefix] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const didNotifyLoadRef = useRef(false);
   const colors = useThemedColors();
 
   const baseSrc = buildVersionedImageUrl(
@@ -120,6 +121,15 @@ function OptimizedLCPHeroInner({
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc;
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = imgRef.current;
+    if (!el || !el.complete || el.naturalWidth <= 0) return;
+    if (didNotifyLoadRef.current) return;
+    didNotifyLoadRef.current = true;
+    onLoad?.();
+  }, [onLoad, srcWithRetry]);
 
   if (!srcWithRetry) return <NeutralHeroPlaceholder height={height} />;
 
@@ -183,6 +193,24 @@ function OptimizedLCPHeroInner({
         >
           <img
             src={srcWithRetry}
+            alt=""
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              display: 'block',
+              objectFit: 'cover',
+              objectPosition: 'center',
+              filter: 'blur(18px)',
+              transform: 'scale(1.08)',
+              opacity: 0.9,
+            }}
+            data-hero-backdrop="true"
+          />
+          <img
+            src={srcWithRetry}
             srcSet={responsive.srcSet}
             sizes={responsive.sizes}
             alt={alt || 'Фотография маршрута путешествия'}
@@ -205,6 +233,7 @@ function OptimizedLCPHeroInner({
             referrerPolicy="no-referrer-when-downgrade"
             data-lcp
             onLoad={() => {
+              didNotifyLoadRef.current = true;
               onLoad?.();
             }}
             onError={() => {

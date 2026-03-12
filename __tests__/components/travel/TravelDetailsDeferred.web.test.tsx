@@ -220,12 +220,12 @@ describe('TravelDeferredSections (web author defer)', () => {
       await Promise.resolve()
     })
 
-    expect(mockMapSectionSpy).not.toHaveBeenCalled()
+    expect(mockMapSectionSpy).toHaveBeenCalled()
     expect(mockSidebarSectionSpy).not.toHaveBeenCalled()
     expect(mockCommentsSectionSpy).not.toHaveBeenCalled()
     expect(mockFooterSectionSpy).not.toHaveBeenCalled()
 
-    expect(observers.length).toBeGreaterThanOrEqual(6)
+    expect(observers.length).toBeGreaterThanOrEqual(5)
 
     await act(async () => {
       observers.forEach((observer) => {
