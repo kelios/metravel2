@@ -58,6 +58,7 @@ const TravelDetailsPostLcpRuntime = withLazy(() =>
 const stripToDescription = (html?: string) => stripHtmlForSeo(html).slice(0, 160);
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
+const WEB_SKELETON_SETTLE_MS = 180
 
 const buildSeoTitle = (base: string): string => {
   const normalized = String(base || '').replace(/\s+/g, ' ').trim();
@@ -214,10 +215,13 @@ export default function TravelDetailsContainer() {
 
     const fade = () => {
       if (cancelled) return
-      setSkeletonPhase('fading')
       t = setTimeout(() => {
-        if (!cancelled) setSkeletonPhase('hidden')
-      }, 220)
+        if (cancelled) return
+        setSkeletonPhase('fading')
+        t = setTimeout(() => {
+          if (!cancelled) setSkeletonPhase('hidden')
+        }, 220)
+      }, WEB_SKELETON_SETTLE_MS)
     }
 
     if (typeof requestAnimationFrame === 'function') {

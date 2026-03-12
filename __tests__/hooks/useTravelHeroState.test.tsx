@@ -20,7 +20,7 @@ describe('useWebHeroSliderUpgradeGate', () => {
     jest.useRealTimers()
   })
 
-  it('auto-allows the web hero slider after a short fallback timeout', () => {
+  it('does not auto-allow the web hero slider without interaction', () => {
     const { result } = renderHook(() =>
       __testables.useWebHeroSliderUpgradeGate(true),
     )
@@ -28,14 +28,10 @@ describe('useWebHeroSliderUpgradeGate', () => {
     expect(result.current).toBe(false)
 
     act(() => {
-      jest.advanceTimersByTime(__testables.HERO_SLIDER_AUTO_UPGRADE_MS - 1)
+      jest.advanceTimersByTime(5000)
     })
-    expect(result.current).toBe(false)
 
-    act(() => {
-      jest.advanceTimersByTime(1)
-    })
-    expect(result.current).toBe(true)
+    expect(result.current).toBe(false)
   })
 
   it('allows the web hero slider immediately on pointer interaction', () => {
@@ -58,7 +54,7 @@ describe('useWebHeroSliderUpgradeGate', () => {
     )
 
     act(() => {
-      jest.advanceTimersByTime(__testables.HERO_SLIDER_AUTO_UPGRADE_MS + 50)
+      jest.advanceTimersByTime(5000)
     })
 
     expect(result.current).toBe(false)

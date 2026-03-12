@@ -20,8 +20,6 @@ type ImgLike = {
 }
 type GalleryImage = ImgLike & Record<string, unknown>
 
-const HERO_SLIDER_AUTO_UPGRADE_MS = 1500
-
 const HERO_HEIGHT = {
   desktopMin: 360,
   desktopMax: 750,
@@ -279,13 +277,11 @@ function useWebHeroSliderUpgradeGate(renderSlider: boolean) {
       setSliderUpgradeAllowed(true)
     }
 
-    const fallbackTimer = setTimeout(reveal, HERO_SLIDER_AUTO_UPGRADE_MS)
     window.addEventListener('pointerdown', reveal, { passive: true, once: true })
     window.addEventListener('keydown', reveal, { once: true })
     window.addEventListener('scroll', reveal, { passive: true, once: true })
 
     return () => {
-      clearTimeout(fallbackTimer)
       window.removeEventListener('pointerdown', reveal as EventListener)
       window.removeEventListener('keydown', reveal as EventListener)
       window.removeEventListener('scroll', reveal as EventListener)
@@ -319,6 +315,5 @@ export function useTravelHeroState(
 }
 
 export const __testables = {
-  HERO_SLIDER_AUTO_UPGRADE_MS,
   useWebHeroSliderUpgradeGate,
 }

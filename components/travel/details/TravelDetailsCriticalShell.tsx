@@ -4,30 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
-import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
+import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 
-import { withLazy } from './TravelDetailsLazy';
 import { TravelHeroSection } from './TravelDetailsSections';
 import type { AnchorsMap } from './TravelDetailsTypes';
-
-const CompactSideBarTravel = withLazy(() => import('@/components/travel/CompactSideBarTravel'));
-const SIDEBAR_SKELETON_GAP_STYLE = { marginTop: DESIGN_TOKENS.spacing.md } as const
-
-function DesktopSidebarFallback() {
-  return (
-    <View accessibilityRole="none">
-      <SectionSkeleton lines={7} height={24} />
-      <View style={SIDEBAR_SKELETON_GAP_STYLE}>
-        <SectionSkeleton lines={9} height={20} />
-      </View>
-      <View style={SIDEBAR_SKELETON_GAP_STYLE}>
-        <SectionSkeleton lines={6} height={18} />
-      </View>
-    </View>
-  )
-}
 
 type TravelDetailsCriticalShellProps = {
   travel?: Travel;
@@ -200,17 +182,15 @@ export default function TravelDetailsCriticalShell({
                           testID="travel-details-side-menu"
                           style={desktopSidebarAnimatedStyle}
                         >
-                          <Suspense fallback={<DesktopSidebarFallback />}>
-                            <CompactSideBarTravel
-                              travel={travel}
-                              isMobile={isMobile}
-                              refs={anchors}
-                              links={sectionLinks}
-                              closeMenu={closeMenu}
-                              onNavigate={onNavigate}
-                              activeSection={activeSection}
-                            />
-                          </Suspense>
+                          <CompactSideBarTravel
+                            travel={travel}
+                            isMobile={isMobile}
+                            refs={anchors}
+                            links={sectionLinks}
+                            closeMenu={closeMenu}
+                            onNavigate={onNavigate}
+                            activeSection={activeSection}
+                          />
                         </Animated.View>
                       </View>
 
