@@ -118,6 +118,9 @@ export const TravelDetailsContentSection: React.FC<{
     enabled: hasInsights,
     disableFallbackOnWeb: true,
   })
+  const shouldForceLoadInsights =
+    forceOpenKey === 'recommendation' || forceOpenKey === 'plus' || forceOpenKey === 'minus'
+  const shouldRenderInsightsContent = shouldLoadInsights || shouldForceLoadInsights
 
   const defaultInsightKey = shouldUseMobileInsights ? insightConfigs[0]?.key ?? null : null
 
@@ -265,7 +268,7 @@ export const TravelDetailsContentSection: React.FC<{
       {hasInsights && (
         <View ref={setInsightsRef as any} collapsable={false}>
           {travel.recommendation &&
-            (shouldLoadInsights ? (
+            (shouldRenderInsightsContent ? (
               <Suspense key="recommendation" fallback={<DescriptionFallback />}>
                 <View
                   ref={anchors.recommendation}
@@ -293,7 +296,7 @@ export const TravelDetailsContentSection: React.FC<{
             ))}
 
           {travel.plus &&
-            (shouldLoadInsights ? (
+            (shouldRenderInsightsContent ? (
               <Suspense key="plus" fallback={<DescriptionFallback />}>
                 <View
                   ref={anchors.plus}
@@ -321,7 +324,7 @@ export const TravelDetailsContentSection: React.FC<{
             ))}
 
           {travel.minus &&
-            (shouldLoadInsights ? (
+            (shouldRenderInsightsContent ? (
               <Suspense key="minus" fallback={<DescriptionFallback />}>
                 <View
                   ref={anchors.minus}

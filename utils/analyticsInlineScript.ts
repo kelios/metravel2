@@ -5,6 +5,9 @@
  * that confuse babel's TypeScript parser).
  */
 export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
+  const metrikaWebvisorEnabled =
+    String(process.env.EXPO_PUBLIC_YANDEX_WEBVISOR || '').toLowerCase() ===
+    'true';
   if (!metrikaId && !gaId) {
     return String.raw`(function(){
   // Analytics disabled: missing both EXPO_PUBLIC_METRIKA_ID and EXPO_PUBLIC_GOOGLE_GA4
@@ -20,6 +23,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   var HAS_METRIKA = ${metrikaId ? 'true' : 'false'};
   var HAS_GA = ${gaId ? 'true' : 'false'};
   var GA_ID = '${gaId || ''}';
+  var METRIKA_WEBVISOR_ENABLED = ${metrikaWebvisorEnabled ? 'true' : 'false'};
   
   if (HAS_METRIKA) window.__metravelMetrikaId = ${metrikaId || 0};
   if (HAS_GA) window.__metravelGaId = GA_ID;
@@ -75,12 +79,81 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     document.head.appendChild(ga);
   }
 
+  function ensureYmStub(){
+    if (typeof window.ym === 'function' && window.ym.a) return;
+    var existingYm = window.ym;
+    window.ym = function(){
+      (window.ym.a = window.ym.a || []).push(arguments);
+      if (typeof existingYm === 'function' && !existingYm.a) {
+        try { existingYm.apply(window, arguments); } catch(_e) {}
+      }
+    };
+    window.ym.a = window.ym.a || [];
+    window.ym.l = 1 * new Date();
+  }
+
+  function initMetrika(){
+    if (!HAS_METRIKA || !window.ym || window.__metravelMetrikaInited) return;
+    window.__metravelMetrikaInited = true;
+    window.__metravelMetrikaReady = true;
+    window.__metravelMetrikaFailed = false;
+    window.ym(${metrikaId || 0}, "init", {
+      clickmap: true,
+      trackLinks: true,
+      accurateTrackBounce: true,
+      webvisor: METRIKA_WEBVISOR_ENABLED,
+      defer: true,
+      triggerEvent: true,
+    });
+  }
+
+  function bootstrapMetrika(){
+    if (!HAS_METRIKA) return;
+    if (window.__metravelMetrikaInited) return;
+    if (window.__metravelMetrikaLoading) return;
+    if (window.__metravelMetrikaFailed) return;
+
+    window.__metravelMetrikaLoading = true;
+    ensureYmStub();
+
+    var existingScript = document.querySelector && document.querySelector('script[data-metravel-metrika]');
+    if (existingScript) {
+      return;
+    }
+
+    var metrikaScript = document.createElement('script');
+    metrikaScript.async = true;
+    metrikaScript.defer = true;
+    metrikaScript.src = 'https://mc.yandex.ru/metrika/tag.js';
+    try { metrikaScript.setAttribute('data-metravel-metrika', '1'); } catch(_e) {}
+
+    metrikaScript.onload = function(){
+      window.__metravelMetrikaLoading = false;
+      initMetrika();
+      trackPage();
+    };
+
+    metrikaScript.onerror = function(){
+      window.__metravelMetrikaLoading = false;
+      window.__metravelMetrikaFailed = true;
+    };
+
+    if (document.head) {
+      document.head.appendChild(metrikaScript);
+    } else if (document.documentElement) {
+      document.documentElement.appendChild(metrikaScript);
+    } else {
+      window.__metravelMetrikaLoading = false;
+      window.__metravelMetrikaFailed = true;
+    }
+  }
+
   function trackPage(){
     try {
       var url = window.location.href;
       if (window.__metravelLastTrackedUrl === url) return;
       window.__metravelLastTrackedUrl = url;
-      if (HAS_METRIKA && window.ym) {
+      if (HAS_METRIKA && window.__metravelMetrikaReady && window.ym) {
         window.ym(${metrikaId || 0}, 'hit', url, {
           title: document.title,
           referer: document.referrer
@@ -117,32 +190,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     // GA bootstrap (may be skipped if explicitly disabled)
     bootstrapGa();
 
-    // ---------- Yandex Metrika (официальный сниппет) ----------
-    if (HAS_METRIKA && isAnalyticsAllowed()) {
-      (function(m,e,t,r,i,k,a){
-          m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-          m[i].l=1*new Date();
-          k=e.createElement(t),a=e.getElementsByTagName(t)[0],
-          k.async=1;k.src=r;
-          if (a && a.parentNode) {
-            a.parentNode.insertBefore(k,a);
-          } else if (e.head) {
-            e.head.appendChild(k);
-          } else if (e.documentElement) {
-            e.documentElement.appendChild(k);
-          }
-      })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
-
-      if (window.ym) {
-          window.ym(${metrikaId || 0}, "init", {
-              clickmap:true,
-              trackLinks:true,
-              accurateTrackBounce:true,
-              webvisor:true,
-              defer:true
-          });
-      }
-    }
+    if (HAS_METRIKA) bootstrapMetrika();
 
     // Первичный хит после загрузки / после принятия баннера
     try {

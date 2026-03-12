@@ -20,6 +20,8 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
     appendChild: jest.fn(),
   }
 
+  const createdScripts: Array<Record<string, any>> = []
+
   const documentMock = {
     readyState: 'complete',
     title: 'Test title',
@@ -30,18 +32,23 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
     },
     createElement: jest.fn((tag: string) => {
       if (tag === 'script') {
-        return {
+        const script = {
           tagName: 'script',
           async: false,
           defer: false,
           src: '',
           setAttribute: jest.fn(),
+          onload: null,
+          onerror: null,
         }
+        createdScripts.push(script)
+        return script
       }
       return { tagName: tag }
     }),
     getElementsByTagName: jest.fn(() => [{ parentNode: { insertBefore: jest.fn() } }]),
     addEventListener: jest.fn(),
+    querySelector: jest.fn(() => null),
   }
 
   const historyMock = {
@@ -53,6 +60,8 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
     }),
   }
 
+  const ymSpy = jest.fn()
+
   const windowMock: Record<string, any> = {
     location: { hostname: host, href: `https://${host}` },
     document: documentMock,
@@ -63,7 +72,7 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
     addEventListener: jest.fn(),
     requestIdleCallback: jest.fn((cb: any) => cb()),
     dataLayer: [],
-    ym: jest.fn(),
+    ym: ymSpy,
   }
 
   windowMock.window = windowMock
@@ -75,20 +84,18 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
   ;(global as any).navigator = windowMock.navigator
   ;(global as any).localStorage = windowMock.localStorage
 
-  return { windowMock, documentMock, headMock }
+  return { windowMock, documentMock, headMock, createdScripts, ymSpy }
 }
 
-const runAnalyticsSnippet = () => {
+const runAnalyticsSnippet = (windowMock: Record<string, any>, documentMock: Record<string, any>) => {
   process.env.EXPO_PUBLIC_METRIKA_ID = TEST_METRIKA_ID
   const snippet = getAnalyticsInlineScript(parseInt(TEST_METRIKA_ID, 10), TEST_GA_ID)
-   
-  // ✅ ИСПРАВЛЕНИЕ: Вместо eval() создаём и выполняем script в изолированной области
-  // eval() опасна - создаём функцию из кода и вызываем её в нужном контексте
+
   try {
-    const analyticsFunction = new Function(snippet);
-    analyticsFunction.call(global);
+    const analyticsFunction = new Function('window', 'document', 'navigator', snippet)
+    analyticsFunction(windowMock, documentMock, windowMock.navigator || {})
   } catch (error) {
-    console.error('[Analytics Test] Ошибка выполнения аналитики:', error);
+    console.error('[Analytics Test] Ошибка выполнения аналитики:', error)
   }
 }
 
@@ -104,9 +111,9 @@ describe('analytics inline script', () => {
   })
 
   it('initializes Yandex Metrica and GA when consent is granted on production host', () => {
-    const { windowMock } = setupDomEnv()
+    const { windowMock, createdScripts, ymSpy } = setupDomEnv()
 
-    runAnalyticsSnippet()
+    runAnalyticsSnippet(windowMock, windowMock.document)
 
     expect(typeof windowMock.metravelLoadAnalytics).toBe('function')
     expect(windowMock.__metravelMetrikaId).toBe(parseInt(TEST_METRIKA_ID, 10))
@@ -116,10 +123,15 @@ describe('analytics inline script', () => {
     windowMock.metravelLoadAnalytics()
 
     expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
-    expect(windowMock.ym).toHaveBeenCalledWith(
+    expect(createdScripts).toHaveLength(2)
+    const metrikaScript = createdScripts.find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')
+    expect(metrikaScript).toBeTruthy()
+    metrikaScript?.onload?.()
+
+    expect(ymSpy).toHaveBeenCalledWith(
       parseInt(TEST_METRIKA_ID, 10),
       'init',
-      expect.objectContaining({ webvisor: true })
+      expect.objectContaining({ webvisor: false, triggerEvent: true })
     )
     expect(windowMock.gtag).toBeDefined()
     expect(windowMock.dataLayer.length).toBeGreaterThan(0)
@@ -130,7 +142,7 @@ describe('analytics inline script', () => {
       consent: { necessary: true, analytics: false },
     })
 
-    runAnalyticsSnippet()
+    runAnalyticsSnippet(windowMock, windowMock.document)
 
     expect(typeof windowMock.metravelLoadAnalytics).toBe('function')
     expect(windowMock.__metravelMetrikaId).toBe(parseInt(TEST_METRIKA_ID, 10))
@@ -160,7 +172,7 @@ describe('analytics inline script', () => {
       consent: { necessary: true } as any,
     })
 
-    runAnalyticsSnippet()
+    runAnalyticsSnippet(windowMock, windowMock.document)
 
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
     expect(windowMock.gtag).toBeUndefined()
@@ -170,7 +182,7 @@ describe('analytics inline script', () => {
   it('skips analytics injection on non-production hosts', () => {
     const { windowMock } = setupDomEnv({ host: 'localhost' })
 
-    runAnalyticsSnippet()
+    runAnalyticsSnippet(windowMock, windowMock.document)
 
     expect(windowMock.metravelLoadAnalytics).toBeUndefined()
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
@@ -178,15 +190,18 @@ describe('analytics inline script', () => {
 
   it('tracks pageviews for Metrika and GA on SPA navigation', () => {
     jest.useFakeTimers()
-    const { windowMock } = setupDomEnv()
+    const { windowMock, createdScripts, ymSpy } = setupDomEnv()
 
-    runAnalyticsSnippet()
+    runAnalyticsSnippet(windowMock, windowMock.document)
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
     windowMock.metravelLoadAnalytics()
+    createdScripts
+      .find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')
+      ?.onload?.()
     jest.runOnlyPendingTimers()
 
     const ymHitCalls = () =>
-      (windowMock.ym as jest.Mock).mock.calls.filter((call) => call[1] === 'hit')
+      ymSpy.mock.calls.filter((call) => call[1] === 'hit')
 
     expect(ymHitCalls().length).toBeGreaterThanOrEqual(1)
     expect(ymHitCalls()[0][2]).toBe(`https://${windowMock.location.hostname}`)
@@ -217,9 +232,9 @@ describe('analytics inline script', () => {
 
   it('autoloads analytics shortly after page load for short passive sessions', () => {
     jest.useFakeTimers()
-    const { windowMock } = setupDomEnv()
+    const { windowMock, createdScripts, ymSpy } = setupDomEnv()
 
-    runAnalyticsSnippet()
+    runAnalyticsSnippet(windowMock, windowMock.document)
 
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
 
@@ -228,12 +243,31 @@ describe('analytics inline script', () => {
 
     jest.advanceTimersByTime(1)
     expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
-    expect(windowMock.ym).toHaveBeenCalledWith(
+    createdScripts
+      .find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')
+      ?.onload?.()
+    expect(ymSpy).toHaveBeenCalledWith(
       parseInt(TEST_METRIKA_ID, 10),
       'init',
-      expect.objectContaining({ trackLinks: true })
+      expect.objectContaining({ trackLinks: true, webvisor: false })
     )
 
     jest.useRealTimers()
+  })
+
+  it('marks metrika bootstrap as failed when the external script cannot be loaded', () => {
+    const { windowMock, createdScripts, ymSpy } = setupDomEnv()
+
+    runAnalyticsSnippet(windowMock, windowMock.document)
+    windowMock.metravelLoadAnalytics()
+
+    const metrikaScript = createdScripts.find((entry) => entry.src === 'https://mc.yandex.ru/metrika/tag.js')
+    expect(metrikaScript).toBeTruthy()
+
+    metrikaScript?.onerror?.()
+
+    expect(windowMock.__metravelMetrikaFailed).toBe(true)
+    expect(windowMock.__metravelMetrikaLoading).toBe(false)
+    expect(ymSpy.mock.calls.some((call) => call[1] === 'init')).toBe(false)
   })
 })

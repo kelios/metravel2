@@ -3,6 +3,8 @@ import { render } from '@testing-library/react-native';
 
 import UpsertTravel from '@/components/travel/UpsertTravel';
 
+const mockSeo = jest.fn(() => null);
+
 let mockAuthState = {
   isAuthenticated: true,
   isSuperuser: false,
@@ -11,6 +13,7 @@ let mockAuthState = {
 };
 
 let mockLocalParams: Record<string, string> = {};
+let mockPathname = '/travel/new';
 let capturedFormArgs: any = null;
 
 let mockFormState: any = {
@@ -49,6 +52,7 @@ let mockWizardState: any = {
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockLocalParams,
+  usePathname: () => mockPathname,
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
@@ -76,6 +80,11 @@ jest.mock('@/hooks/useTravelFilters', () => ({
     filters: { categoryTravelAddress: [], countries: [] },
     isLoading: false,
   }),
+}));
+
+jest.mock('@/components/seo/LazyInstantSEO', () => ({
+  __esModule: true,
+  default: (props: any) => mockSeo(props),
 }));
 
 jest.mock('@/components/travel/TravelWizardStepBasic', () => {
@@ -128,6 +137,7 @@ describe('UpsertTravel create/edit flow', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLocalParams = {};
+    mockPathname = '/travel/new';
     capturedFormArgs = null;
     mockAuthState = {
       isAuthenticated: true,
@@ -162,6 +172,7 @@ describe('UpsertTravel create/edit flow', () => {
 
   it('shows access error when editing without access', () => {
     mockLocalParams = { id: '123' };
+    mockPathname = '/travel/123';
     mockFormState = {
       ...mockFormState,
       hasAccess: false,
@@ -176,11 +187,43 @@ describe('UpsertTravel create/edit flow', () => {
 
   it('renders step 1 for editing when access is granted', () => {
     mockLocalParams = { id: '321' };
+    mockPathname = '/travel/321';
 
     const { getByText } = render(<UpsertTravel />);
 
     expect(getByText('Step1')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(false);
     expect(capturedFormArgs?.travelId).toBe('321');
+  });
+
+  it('sets explicit SEO title for the edit page', () => {
+    mockLocalParams = { id: '321' };
+    mockPathname = '/travel/321';
+    mockFormState = {
+      ...mockFormState,
+      formData: { id: 321, name: 'Energylandia', countries: [] },
+    };
+
+    render(<UpsertTravel />);
+
+    expect(mockSeo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Редактировать путешествие: Energylandia | Metravel',
+        canonical: 'https://metravel.by/travel/321',
+        robots: 'noindex, nofollow',
+      })
+    );
+  });
+
+  it('sets explicit SEO title for the create page', () => {
+    render(<UpsertTravel />);
+
+    expect(mockSeo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Создать путешествие | Metravel',
+        canonical: 'https://metravel.by/travel/new',
+        robots: 'noindex, nofollow',
+      })
+    );
   });
 });

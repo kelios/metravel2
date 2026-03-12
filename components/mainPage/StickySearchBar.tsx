@@ -46,9 +46,9 @@ const radii = DESIGN_TOKENS.radii;
 
 const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
     borderRadius: radii.lg,
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
     paddingVertical: Platform.select({ default: spacing.sm, web: spacing.sm }),
@@ -56,7 +56,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     minHeight: Platform.select({ default: 52, web: 60 }),
     ...Platform.select({
       web: {
-        boxShadow: 'none',
+        boxShadow: colors.boxShadows.card,
       },
     }),
   },
@@ -97,7 +97,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderColor: colors.primary,
     ...Platform.select({
       web: {
-        boxShadow: 'none',
+        boxShadow: colors.boxShadows.hover,
       },
     }),
   },
@@ -105,6 +105,11 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     flexDirection: 'row',
     alignItems: 'center',
     gap: Platform.select({ default: spacing.xs, web: spacing.sm }),
+    ...Platform.select({
+      web: {
+        justifyContent: 'space-between',
+      } as any,
+    }),
   },
   contentRowMobile: {
     flexDirection: 'row',
@@ -116,10 +121,10 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
     paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
     gap: spacing.xs,
@@ -127,6 +132,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     ...Platform.select({
       web: {
         transition: 'all 0.2s ease',
+        boxShadow: colors.boxShadows.light,
       } as any,
     }),
   },
@@ -226,17 +232,27 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   actionsDesktop: {
     flexShrink: 0,
     flexWrap: 'nowrap',
+    padding: 4,
+    borderRadius: radii.full,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.light,
+      } as any,
+    }),
   },
   resultsInline: {
-    paddingHorizontal: 10,
+    paddingHorizontal: spacing.sm,
     height: Platform.select({ default: 40, web: 52 }),
-    minWidth: Platform.select({ default: 0, web: 160 }),
-    alignItems: 'center',
+    minWidth: Platform.select({ default: 0, web: 184 }),
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surface,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
   },
   actionsMobile: {
     flexShrink: 0,
@@ -247,10 +263,10 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     height: Platform.select({ default: 46, web: 52 }),
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
     position: 'relative',
     ...Platform.select({
       web: {
@@ -260,8 +276,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     }),
   },
   actionButtonHovered: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderStrong,
   },
   actionButtonMobile: {
     width: 40,
@@ -275,7 +291,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   },
   actionButtonActive: {
     backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
+    borderColor: colors.primaryAlpha40,
   },
   badge: {
     position: 'absolute',
@@ -308,7 +324,9 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     paddingHorizontal: spacing.sm,
     height: Platform.select({ default: 46, web: 52 }),
     borderRadius: radii.pill,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer',
@@ -317,13 +335,53 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   },
   clearAllText: {
     fontSize: 13,
-    color: colors.textMuted,
-    fontWeight: '500',
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   resultsText: {
-    fontSize: 11,
+    fontSize: 15,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  resultsLabel: {
+    fontSize: 10,
     color: colors.textMuted,
-    fontWeight: '500',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+  searchBoxFocused: {
+    borderColor: colors.primaryAlpha40,
+    backgroundColor: colors.surfaceElevated,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.hover,
+      } as any,
+    }),
+  },
+  clearButtonIconWrap: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: colors.surfaceMuted,
+  },
+  shortcutHintDesktop: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+  },
+  recommendationAccent: {
+    position: 'absolute',
+    bottom: 6,
+    width: 16,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
   },
 }), [colors]);
 
@@ -404,6 +462,7 @@ function StickySearchBar({
           <View
             style={[
               styles.searchBox,
+              isFocused && styles.searchBoxFocused,
               isMobile && styles.searchBoxMobile,
             ]}
           >
@@ -436,11 +495,13 @@ function StickySearchBar({
               accessibilityLabel="Очистить поиск"
               style={[styles.clearButton, { pointerEvents: 'box-only' }, globalFocusStyles.focusable]}
             >
-              <Feather name="x" size={16} color={colors.textMuted} style={{ pointerEvents: 'none' }} />
+              <View style={styles.clearButtonIconWrap}>
+                <Feather name="x" size={14} color={colors.textMuted} style={{ pointerEvents: 'none' }} />
+              </View>
             </Pressable>
           )}
           {!isMobile && Platform.OS === 'web' && (
-            <View style={styles.shortcutHint}>
+            <View style={[styles.shortcutHint, styles.shortcutHintDesktop]}>
               <Text style={styles.shortcutText}>{shortcutLabel}</Text>
             </View>
           )}
@@ -457,9 +518,9 @@ function StickySearchBar({
               ]}
               testID="results-count-wrapper"
             >
+              <Text style={styles.resultsLabel}>Результаты</Text>
               <Text style={styles.resultsText} testID="results-count-text">
-                Найдено: {resultsCount ?? 0}{' '}
-                {getTravelLabel(resultsCount ?? 0)}
+                {resultsCount ?? 0} {getTravelLabel(resultsCount ?? 0)}
               </Text>
             </View>
           )}
@@ -485,6 +546,7 @@ function StickySearchBar({
                 size={actionIconSize}
                 color={isRecommendationsVisible ? colors.primary : colors.textMuted}
               />
+              {isRecommendationsVisible && <View style={styles.recommendationAccent} />}
             </Pressable>
           )}
 

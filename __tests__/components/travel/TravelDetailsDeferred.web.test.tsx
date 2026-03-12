@@ -11,6 +11,7 @@ const mockMapSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockSidebarSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockFooterSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockCommentsSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
+const mockTravelDescriptionSpy: jest.Mock<any, any> = jest.fn(() => null)
 type ObserverEntry = {
   callback: IntersectionObserverCallback
   observe: jest.Mock
@@ -39,7 +40,7 @@ jest.mock('@/components/travel/TravelRatingSection', () => ({
 
 jest.mock('@/components/travel/TravelDescription', () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: any) => mockTravelDescriptionSpy(props),
 }))
 
 jest.mock('@/components/travel/TravelDetailSkeletons', () => ({
@@ -94,6 +95,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     mockSidebarSectionSpy.mockClear()
     mockFooterSectionSpy.mockClear()
     mockCommentsSectionSpy.mockClear()
+    mockTravelDescriptionSpy.mockClear()
   })
 
   afterEach(() => {
@@ -242,5 +244,67 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(mockSidebarSectionSpy).toHaveBeenCalled()
     expect(mockCommentsSectionSpy).toHaveBeenCalled()
     expect(mockFooterSectionSpy).toHaveBeenCalled()
+  })
+
+  it('renders recommendations immediately when opened via section navigation', async () => {
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
+
+    const travel: any = {
+      id: 3,
+      name: 'Deferred insights travel',
+      description: '<p>Test description</p>',
+      gallery: [],
+      youtube_link: null,
+      recommendation: '<p>Open this section now</p>',
+      plus: '',
+      minus: '',
+      rating: 0,
+      rating_count: 0,
+      user_rating: null,
+    }
+
+    const anchors: any = {
+      description: { current: null },
+      video: { current: null },
+      comments: { current: null },
+      map: { current: null },
+      gallery: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    await act(async () => {
+      renderer.create(
+        <Suspense fallback={null}>
+          <TravelDeferredSections
+            travel={travel}
+            isMobile={false}
+            forceOpenKey="recommendation"
+            anchors={anchors}
+            scrollY={new Animated.Value(0)}
+            viewportHeight={900}
+            scrollToMapSection={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    expect(mockTravelDescriptionSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        [
+          expect.objectContaining({
+            title: 'Рекомендации',
+            htmlContent: '<p>Open this section now</p>',
+          }),
+          undefined,
+        ],
+      ]),
+    )
   })
 })
