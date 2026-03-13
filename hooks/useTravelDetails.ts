@@ -24,6 +24,17 @@ export interface UseTravelDetailsReturn {
   isMissingParam: boolean;
 }
 
+function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is Travel {
+  if (!travel) return false;
+
+  const hasIdentity =
+    (typeof travel.id === 'number' && Number.isFinite(travel.id) && travel.id > 0) ||
+    (typeof travel.slug === 'string' && travel.slug.trim().length > 0);
+  const hasName = typeof travel.name === 'string' && travel.name.trim().length > 0;
+
+  return hasIdentity && hasName;
+}
+
 /**
  * Consume preloaded travel data from the inline script in +html.tsx.
  * Returns normalized Travel if the preload matches the current slug/id, otherwise undefined.
@@ -39,7 +50,8 @@ function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Tra
   if (!matches) return undefined;
   delete (window as unknown).__metravelTravelPreload;
   try {
-    return normalizeTravelItem(preload.data);
+    const normalized = normalizeTravelItem(preload.data);
+    return hasSufficientPreloadedTravelData(normalized) ? normalized : undefined;
   } catch {
     return undefined;
   }

@@ -726,11 +726,16 @@ test.describe('Messages — Mobile Layout', () => {
     await gotoWithRetry(page, '/messages');
     await waitForMessagesPage(page);
 
+    const threadListReady = await Promise.all([
+      page.getByLabel(/Диалог с/).first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false),
+      page.getByText('Нет сообщений').waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false),
+      page.getByLabel('Поиск диалогов').waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false),
+    ]);
+    expect(threadListReady.some(Boolean)).toBeTruthy();
+
     // Should show thread list or empty state, NOT the empty chat placeholder
     const emptyChatText = page.getByText('Выберите диалог или начните новый');
-    const emptyChatVisible = await emptyChatText.waitFor({ state: 'visible', timeout: 3_000 }).then(() => true).catch(() => false);
-    // On mobile, the two-panel placeholder should NOT be visible
-    expect(emptyChatVisible).toBeFalsy();
+    await expect(emptyChatText).toBeHidden({ timeout: 10_000 });
   });
 
   test('mobile: clicking thread navigates to chat (replaces list)', async ({ page }) => {

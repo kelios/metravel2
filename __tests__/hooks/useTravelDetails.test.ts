@@ -132,6 +132,43 @@ describe('useTravelDetails', () => {
     expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
+  it('ignores sparse preloaded travel payloads and falls back to fetchTravelBySlug', async () => {
+    (Platform.OS as any) = 'web';
+    // @ts-expect-error - test-only global
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          description: '<p>Only detail payload</p>',
+          gallery: [{ url: 'https://metravel.by/media/test.jpg' }],
+        },
+        slug: 'awesome-trip',
+        isId: false,
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({
+      id: 498,
+      slug: 'awesome-trip',
+      name: 'Awesome Trip',
+      userName: 'Julia',
+    });
+
+    renderHook(() => useTravelDetails());
+
+    const data = await capturedQueryFn!();
+    expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
+    expect(data).toEqual({
+      id: 498,
+      slug: 'awesome-trip',
+      name: 'Awesome Trip',
+      userName: 'Julia',
+    });
+    // Sparse preload is still consumed so it cannot poison future navigations.
+    // @ts-expect-error - test-only global
+    expect((global as any).window.__metravelTravelPreload).toBeUndefined();
+  });
+
   it('waits briefly for preload bootstrap before falling back to fetchTravelBySlug', async () => {
     jest.useFakeTimers();
     (Platform.OS as any) = 'web';
