@@ -579,6 +579,30 @@ function injectTravelHeroPreload(baseHtml, preloadData) {
   );
 }
 
+function injectTravelBootstrapData(baseHtml, travel, routeKey) {
+  if (!travel || typeof travel !== 'object') return baseHtml;
+
+  const serialized = JSON.stringify({
+    data: travel,
+    slug: String(routeKey || '').trim(),
+    isId: false,
+  }).replace(/<\/script/gi, '<\\/script');
+
+  const bootstrapScript =
+    `<script data-travel-preload-bootstrap="true">` +
+    `window.__metravelTravelPreload=${serialized};` +
+    `</script>`;
+
+  if (/<script[^>]*data-travel-preload-bootstrap="true"[^>]*>[\s\S]*?<\/script>/i.test(baseHtml)) {
+    return baseHtml.replace(
+      /<script[^>]*data-travel-preload-bootstrap="true"[^>]*>[\s\S]*?<\/script>/i,
+      bootstrapScript
+    );
+  }
+
+  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${bootstrapScript}`);
+}
+
 function injectHiddenH1(baseHtml, headingText) {
   const text = String(headingText || '').trim();
   if (!text) return baseHtml;
@@ -946,7 +970,8 @@ async function main() {
 
       const travelHeroPreload = buildTravelHeroPreloadData(travel, detail);
       const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithArticleJsonLd, travelHeroPreload);
-      const finalTravelHtml = injectHiddenH1(htmlWithTravelPreload, name || routeKey);
+      const htmlWithTravelBootstrap = injectTravelBootstrapData(htmlWithTravelPreload, detail, routeKey);
+      const finalTravelHtml = injectHiddenH1(htmlWithTravelBootstrap, name || routeKey);
 
       // Write both explicit-file and directory-index variants.
       // NOTE: we intentionally avoid writing an extensionless file because
@@ -1080,6 +1105,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildOptimizedTravelImageUrl,
     buildTravelHeroPreloadData,
     injectTravelHeroPreload,
+    injectTravelBootstrapData,
     injectHiddenH1,
     injectJsonLd,
     buildTravelArticleJsonLd,

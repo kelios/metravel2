@@ -16,6 +16,7 @@ const {
   buildOptimizedTravelImageUrl,
   buildTravelHeroPreloadData,
   injectTravelHeroPreload,
+  injectTravelBootstrapData,
   injectHiddenH1,
   injectJsonLd,
   buildTravelArticleJsonLd,
@@ -94,6 +95,27 @@ describe('replaceOrInsert', () => {
     );
     const count = (result.match(/og:title/g) || []).length;
     expect(count).toBe(1);
+  });
+});
+
+describe('injectTravelBootstrapData', () => {
+  it('injects travel preload data into the body before the app root', () => {
+    const html = injectTravelBootstrapData(MINIMAL_BASE, { id: 42, name: 'Hexenstieg' }, 'hexenstieg');
+
+    expect(html).toContain('data-travel-preload-bootstrap="true"');
+    expect(html).toContain('"slug":"hexenstieg"');
+    expect(html).toContain('"id":42');
+    expect(html.indexOf('data-travel-preload-bootstrap="true"')).toBeLessThan(html.indexOf('<div id="root">'));
+  });
+
+  it('replaces an existing bootstrap script instead of duplicating it', () => {
+    const first = injectTravelBootstrapData(MINIMAL_BASE, { id: 1, name: 'Old' }, 'old');
+    const second = injectTravelBootstrapData(first, { id: 2, name: 'New' }, 'new');
+
+    expect((second.match(/data-travel-preload-bootstrap="true"/g) || []).length).toBe(1);
+    expect(second).toContain('"slug":"new"');
+    expect(second).toContain('"id":2');
+    expect(second).not.toContain('"slug":"old"');
   });
 });
 

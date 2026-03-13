@@ -115,6 +115,7 @@ const getTravelHeroPreloadScript = () => String.raw`
     if (${JSON.stringify(process.env.NODE_ENV)} !== 'production') return;
     var path = window.location && window.location.pathname;
     if (!path || path.indexOf('/travels/') !== 0) return;
+    if (window.__metravelTravelPreload && window.__metravelTravelPreload.data) return;
     if (window.__metravelTravelPreloadScriptLoaded) return;
     window.__metravelTravelPreloadScriptLoaded = true;
     window.__METRAVEL_API_URL__ = ${JSON.stringify(process.env.EXPO_PUBLIC_API_URL || '')};

@@ -75,11 +75,12 @@ describe('TravelDetailsContainer performance (web)', () => {
     )
 
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
-    const heroBackdrop = container.querySelector('[data-hero-backdrop="true"]') as HTMLImageElement | null
+    const heroBackdrop = container.querySelector('[data-hero-backdrop="true"]') as HTMLDivElement | null
 
     expect(heroBackdrop).toBeTruthy()
     expect(lcpImg).toBeTruthy()
-    expect(heroBackdrop?.getAttribute('src')).toBe(lcpImg?.getAttribute('src'))
+    expect(heroBackdrop?.tagName).toBe('DIV')
+    expect(heroBackdrop?.style.backgroundImage).toContain(lcpImg?.getAttribute('src') || '')
 
     if (lcpImg) {
       fireEvent.load(lcpImg)

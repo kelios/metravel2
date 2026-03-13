@@ -191,18 +191,15 @@ function OptimizedLCPHeroInner({
             backgroundColor: colors.backgroundSecondary,
           }}
         >
-          <img
-            src={srcWithRetry}
-            alt=""
+          <div
             aria-hidden="true"
             style={{
               position: 'absolute',
               inset: 0,
-              width: '100%',
-              height: '100%',
-              display: 'block',
-              objectFit: 'cover',
-              objectPosition: 'center',
+              backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundSize: 'cover',
               filter: 'blur(18px)',
               transform: 'scale(1.08)',
               opacity: 0.9,
