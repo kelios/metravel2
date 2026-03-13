@@ -68,12 +68,53 @@ function getDynamicRouteFallbackCandidates(pathname, resolvedPath) {
   return candidates
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function applyDynamicReplacements(html, replacements) {
   let next = html
+
   for (const [token, value] of Object.entries(replacements || {})) {
     if (!token) continue
-    next = next.split(token).join(value)
+
+    const escapedToken = escapeRegExp(token)
+    const escapedValue = String(value)
+
+    // Only patch user-visible SEO placeholders and route-like values.
+    // Do not touch asset paths such as `/_expo/static/js/web/[param]-hash.js`,
+    // otherwise the browser requests a non-existent slug-specific bundle and
+    // receives HTML instead of JavaScript.
+    next = next.replace(
+      new RegExp(`(["'])\\/travels\\/${escapedToken}(?=(["'#?]|\\/|$))`, 'g'),
+      `$1/travels/${escapedValue}`
+    )
+    next = next.replace(
+      new RegExp(`(["'])\\/article\\/${escapedToken}(?=(["'#?]|\\/|$))`, 'g'),
+      `$1/article/${escapedValue}`
+    )
+    next = next.replace(
+      new RegExp(`(["'])\\/user\\/${escapedToken}(?=(["'#?]|\\/|$))`, 'g'),
+      `$1/user/${escapedValue}`
+    )
+    next = next.replace(
+      new RegExp(`(https:\\/\\/metravel\\.by\\/(?:travels|article|user)\\/)${escapedToken}(?=(["'#?]|\\/|$))`, 'g'),
+      `$1${escapedValue}`
+    )
+    next = next.replace(
+      new RegExp(`(<title[^>]*>)${escapedToken}(?=(?:\\s*\\|\\s*Metravel)?<\\/title>)`, 'g'),
+      `$1${escapedValue}`
+    )
+    next = next.replace(
+      new RegExp(`(<h1[^>]*>)${escapedToken}(?=<\\/h1>)`, 'g'),
+      `$1${escapedValue}`
+    )
+    next = next.replace(
+      new RegExp(`(<meta[^>]+(?:content|href)=["'])${escapedToken}(?=(?:["']))`, 'g'),
+      `$1${escapedValue}`
+    )
   }
+
   return next
 }
 

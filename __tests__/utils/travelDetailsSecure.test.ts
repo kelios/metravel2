@@ -164,7 +164,8 @@ describe('travelDetailsSecure', () => {
     it('should only allow http/https protocols', () => {
       expect(createSafeImageUrl('ftp://example.com/image.jpg')).toBe('');
       expect(createSafeImageUrl('javascript:alert(1)')).toBe('');
-      expect(createSafeImageUrl('data:image/jpeg,base64')).toBe('');
+      expect(createSafeImageUrl('data:image/jpeg,base64')).toBe('data:image/jpeg,base64');
+      expect(createSafeImageUrl('blob:https://metravel.by/123')).toBe('blob:https://metravel.by/123');
     });
 
     it('should handle invalid URLs gracefully', () => {
@@ -342,4 +343,3 @@ describe('travelDetailsSecure', () => {
     });
   });
 });
-

@@ -161,8 +161,13 @@ export function buildVersionedImageUrl(
   id?: string | number | null
 ): string {
   if (!rawUrl) return rawUrl;
+  const trimmed = String(rawUrl).trim();
+  if (!trimmed) return rawUrl;
+  if (/^(data:|blob:)/i.test(trimmed)) {
+    return trimmed;
+  }
   try {
-    const url = new URL(rawUrl, getPublicApiOrigin() || 'https://placeholder.invalid');
+    const url = new URL(trimmed, getPublicApiOrigin() || 'https://placeholder.invalid');
     if (updatedAt) {
       const ts = new Date(updatedAt).getTime();
       if (Number.isFinite(ts)) url.searchParams.set('v', String(ts));

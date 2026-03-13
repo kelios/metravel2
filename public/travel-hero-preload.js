@@ -54,6 +54,9 @@
     // Must match optimizeImageUrl() + buildVersionedImageUrl() behavior.
     function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, dpr) {
       try {
+        if (!rawUrl || /^(data:|blob:)/i.test(String(rawUrl))) {
+          return rawUrl || null;
+        }
         var resolved = new URL(rawUrl, window.location.origin);
 
         // Force HTTPS for non-local hosts (matches optimizeImageUrl)

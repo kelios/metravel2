@@ -161,6 +161,16 @@ export const TravelDetailsMapSection: React.FC<{
 }> = ({ travel, anchors, canRenderHeavy, scrollToMapSection, forceOpenKey = null }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
+  const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
+  const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
+  const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
+  const [weatherVisible, setWeatherVisible] = useState(false)
+  const [downloadingRouteId, setDownloadingRouteId] = useState<number | null>(null)
+  const [keyPointLabels, setKeyPointLabels] = useState<{
+    startName?: string | null
+    peakName?: string | null
+    finishName?: string | null
+  }>({})
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
   const primaryRoutePreview = routePreviewItems[0]?.preview ?? null
   const hasEmbeddedCoords = (travel.coordsMeTravel?.length ?? 0) > 0
@@ -213,17 +223,6 @@ export const TravelDetailsMapSection: React.FC<{
       colors.warningDark,
     ],
   )
-  const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
-  const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
-  const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
-  const [weatherVisible, setWeatherVisible] = useState(false)
-  const [downloadingRouteId, setDownloadingRouteId] = useState<number | null>(null)
-  const [keyPointLabels, setKeyPointLabels] = useState<{
-    startName?: string | null
-    peakName?: string | null
-    finishName?: string | null
-  }>({})
-
   useEffect(() => {
     let active = true
 

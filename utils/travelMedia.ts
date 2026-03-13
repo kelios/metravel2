@@ -50,12 +50,21 @@ export function createSafeImageUrl(
     return "";
   }
 
-  if (baseUrl.includes('..') || baseUrl.includes('//..')) {
+  const trimmed = String(baseUrl).trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^(data:|blob:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (trimmed.includes('..') || trimmed.includes('//..')) {
     return "";
   }
 
   try {
-    const url = new URL(baseUrl);
+    const url = new URL(trimmed);
     try {
       const isLocalhost =
         typeof window !== 'undefined' &&

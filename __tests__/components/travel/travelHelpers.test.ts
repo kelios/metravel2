@@ -64,6 +64,8 @@ describe('travelHelpers', () => {
     expect(buildVersionedUrl('http://example.com/a', '2024-01-02T00:00:00Z')).toContain('https://example.com/a?v=')
     expect(buildVersionedUrl('https://example.com/a', null, 10)).toBe('https://example.com/a?v=10')
     expect(buildVersionedUrl('https://example.com/a', null, null)).toBe('https://example.com/a')
+    expect(buildVersionedUrl('data:image/png;base64,abc', null, 10)).toBe('data:image/png;base64,abc')
+    expect(buildVersionedUrl('blob:https://metravel.by/123', '2024-01-02T00:00:00Z')).toBe('blob:https://metravel.by/123')
   })
 
   it('detects empty html correctly', () => {

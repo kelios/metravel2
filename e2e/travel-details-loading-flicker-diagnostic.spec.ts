@@ -4,9 +4,12 @@ import { test, expect } from '@playwright/test';
 
 import { preacceptCookies } from './helpers/navigation';
 
+const DEFAULT_TRAVEL_DIAGNOSTIC_PATH =
+  '/travels/marshrut-v-beskidakh-ot-parkovki-do-smotrovoi-cherez-vodopad';
+const DEFAULT_BASE_URL = process.env.BASE_URL || 'http://localhost:8081';
 const TARGET_URL =
   process.env.E2E_TRAVEL_DIAGNOSTIC_URL ||
-  'http://localhost:8081/travels/marshrut-v-beskidakh-ot-parkovki-do-smotrovoi-cherez-vodopad';
+  new URL(DEFAULT_TRAVEL_DIAGNOSTIC_PATH, DEFAULT_BASE_URL).toString();
 
 const SCREENSHOT_TIMELINE_MS = [0, 300, 700, 1200, 2000, 3200];
 const CPU_THROTTLE_RATE = Number(process.env.E2E_CPU_THROTTLE_RATE || 4);

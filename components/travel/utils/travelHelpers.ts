@@ -96,7 +96,8 @@ export function buildVersionedUrl(
   id?: any
 ): string {
   if (!url) return '';
-  
+  if (/^(data:|blob:)/i.test(String(url).trim())) return String(url).trim();
+
   const base = url.replace(/^http:\/\//i, 'https://');
   const ver = updated_at ? Date.parse(updated_at) : id ? Number(id) : 0;
   

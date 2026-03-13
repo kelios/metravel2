@@ -4,7 +4,10 @@ import { test, expect } from '@playwright/test';
 
 import { preacceptCookies } from './helpers/navigation';
 
-const TARGET_URL = process.env.E2E_SEARCH_DIAGNOSTIC_URL || 'https://metravel.by/search';
+const DEFAULT_BASE_URL = process.env.BASE_URL || 'https://metravel.by';
+const TARGET_URL =
+  process.env.E2E_SEARCH_DIAGNOSTIC_URL ||
+  new URL('/search', DEFAULT_BASE_URL).toString();
 const SCREENSHOT_TIMELINE_MS = [0, 250, 500, 900, 1400, 2200, 3200, 4500];
 const CPU_THROTTLE_RATE = Number(process.env.E2E_CPU_THROTTLE_RATE || 4);
 const SLOW_3G = {
