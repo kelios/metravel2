@@ -221,17 +221,22 @@ function upgradeThumbToDetailUrl(input) {
 
 function buildTravelSeoDescription(travel, detailDescription) {
   const primary = stripHtml(detailDescription || travel?.description || '', 160);
-  if (primary) return primary;
-
   const travelName = String(travel?.name || '').trim();
   const countryName = String(travel?.countryName || '').trim();
   const fallbackParts = [travelName, countryName].filter(Boolean);
-  if (fallbackParts.length > 0) {
-    const contextual = `${fallbackParts.join(' — ')}. Маршрут, советы и впечатления путешественников в MeTravel.`;
-    return contextual.slice(0, 160);
+  const contextual =
+    fallbackParts.length > 0
+      ? `${fallbackParts.join(' — ')}. Маршрут, советы и впечатления путешественников в MeTravel.`
+      : FALLBACK_DESC;
+
+  if (primary.length >= 80) return primary;
+
+  if (primary) {
+    const combined = `${primary.replace(/[.!?\s]+$/g, '')}. ${contextual}`.replace(/\s+/g, ' ').trim();
+    return combined.slice(0, 160);
   }
 
-  return FALLBACK_DESC;
+  return contextual.slice(0, 160);
 }
 
 function pickTravelSeoImage(travel, detail) {
@@ -586,7 +591,13 @@ function injectTravelBootstrapData(baseHtml, travel, routeKey) {
     data: travel,
     slug: String(routeKey || '').trim(),
     isId: false,
-  }).replace(/<\/script/gi, '<\\/script');
+  })
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
+    .replace(/<\/script/gi, '<\\/script');
 
   const bootstrapScript =
     `<script data-travel-preload-bootstrap="true">` +

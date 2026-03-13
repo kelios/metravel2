@@ -117,6 +117,18 @@ describe('injectTravelBootstrapData', () => {
     expect(second).toContain('"id":2');
     expect(second).not.toContain('"slug":"old"');
   });
+
+  it('escapes embedded HTML so bootstrap data does not add raw markup to the page source', () => {
+    const html = injectTravelBootstrapData(
+      MINIMAL_BASE,
+      { id: 42, description: '<h1>Nested heading</h1><p>Body</p>' },
+      'hexenstieg',
+    );
+
+    expect(html).toContain('\\u003ch1\\u003eNested heading\\u003c/h1\\u003e');
+    expect(html).not.toContain('<h1>Nested heading</h1>');
+    expect((html.match(/<h1\b/gi) || []).length).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -378,7 +390,7 @@ describe('stripHtml', () => {
 });
 
 describe('travel SEO fallback helpers', () => {
-  it('buildTravelSeoDescription prefers detailed description when available', () => {
+  it('buildTravelSeoDescription keeps detailed description first when available', () => {
     const result = buildTravelSeoDescription(
       {
         name: 'Испания',
@@ -387,7 +399,9 @@ describe('travel SEO fallback helpers', () => {
       '<p>Подробный гид по маршруту в Андалусии</p>'
     );
 
-    expect(result).toBe('Подробный гид по маршруту в Андалусии');
+    expect(result).toContain('Подробный гид по маршруту в Андалусии');
+    expect(result.length).toBeGreaterThanOrEqual(80);
+    expect(result.length).toBeLessThanOrEqual(160);
   });
 
   it('buildTravelSeoDescription uses contextual fallback from travel name/country instead of generic text', () => {
@@ -506,6 +520,17 @@ describe('travel SSR SEO helpers', () => {
 
     expect(result).toMatch(/<h1[^>]*data-ssg-travel-h1="true"[^>]*>Тропа ведьм<\/h1>/)
     expect((result.match(/<h1\b/gi) || []).length).toBe(1)
+  })
+
+  it('buildTravelSeoDescription expands too-short content with contextual fallback', () => {
+    const description = buildTravelSeoDescription(
+      { name: 'Гришаны', countryName: 'Беларусь' },
+      '<p>Короткий анонс.</p>',
+    )
+
+    expect(description.length).toBeGreaterThanOrEqual(80)
+    expect(description.length).toBeLessThanOrEqual(160)
+    expect(description).toContain('Гришаны')
   })
 
   it('buildTravelArticleJsonLd builds page-level Article schema for travel pages', () => {
