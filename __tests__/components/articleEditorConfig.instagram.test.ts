@@ -34,7 +34,23 @@ describe('articleEditorConfig instagram embeds', () => {
     const output = normalizeArticleEditorHtmlForOutput('https://www.instagram.com/p/CScU4bJI2Ud/')
 
     expect(output).toContain('<iframe')
+    expect(output).toContain('class="ql-video"')
     expect(output).toContain('title="Instagram post"')
+  })
+
+  it('keeps ql-video class when sanitizing a pasted instagram iframe', () => {
+    const output = normalizeArticleEditorHtmlForOutput(
+      `<iframe
+        class="ql-video"
+        frameborder="0"
+        allowfullscreen="true"
+        src="https://www.instagram.com/p/DPebCAMDdCv/embed/captioned/"
+        width="540"
+        height="680"></iframe>`,
+    )
+
+    expect(output).toContain('class="ql-video"')
+    expect(output).toContain('https://www.instagram.com/p/DPebCAMDdCv/embed/captioned/')
   })
 
   it('does not convert instagram profile links', () => {

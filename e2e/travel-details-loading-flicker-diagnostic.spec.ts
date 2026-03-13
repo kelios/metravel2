@@ -6,10 +6,6 @@ import { preacceptCookies } from './helpers/navigation';
 
 const DEFAULT_TRAVEL_DIAGNOSTIC_PATH =
   '/travels/marshrut-v-beskidakh-ot-parkovki-do-smotrovoi-cherez-vodopad';
-const DEFAULT_BASE_URL = process.env.BASE_URL || 'http://localhost:8081';
-const TARGET_URL =
-  process.env.E2E_TRAVEL_DIAGNOSTIC_URL ||
-  new URL(DEFAULT_TRAVEL_DIAGNOSTIC_PATH, DEFAULT_BASE_URL).toString();
 
 const SCREENSHOT_TIMELINE_MS = [0, 300, 700, 1200, 2000, 3200];
 const CPU_THROTTLE_RATE = Number(process.env.E2E_CPU_THROTTLE_RATE || 4);
@@ -37,6 +33,14 @@ type LayoutShiftRecord = {
   viewport: { width: number; height: number };
   scrollY: number;
 };
+
+function resolveTargetUrl(baseURL?: string): string {
+  if (process.env.E2E_TRAVEL_DIAGNOSTIC_URL) {
+    return process.env.E2E_TRAVEL_DIAGNOSTIC_URL;
+  }
+
+  return new URL(DEFAULT_TRAVEL_DIAGNOSTIC_PATH, baseURL || 'http://127.0.0.1:8085').toString();
+}
 
 async function captureTimelineScreenshots(page: any, testInfo: any) {
   const startedAt = Date.now();
@@ -206,8 +210,9 @@ test.describe('@perf travel details loading flicker diagnostic', () => {
     });
 
     const timelinePromise = captureTimelineScreenshots(page, testInfo);
+    const targetUrl = resolveTargetUrl(testInfo.project.use?.baseURL);
 
-    await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 90_000 });
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 90_000 });
     await Promise.race([
       page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 45_000 }),
       page.waitForSelector('[data-testid="travel-details-hero"]', { timeout: 45_000 }),

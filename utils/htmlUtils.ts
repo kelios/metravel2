@@ -4,10 +4,27 @@
 export function sanitizeHtml(html: string): string {
     if (!html) return '';
     let result = String(html);
+    const IFRAME_QL_VIDEO_SENTINEL_ATTR = 'data-metravel-keep-class="ql-video"';
+    // Keep editor-critical embed classes that Quill relies on for iframe video blocks.
+    result = result.replace(
+        /<iframe\b([^>]*)\sclass="([^"]*)"([^>]*)>/gi,
+        (full, beforeAttrs, classValue, afterAttrs) => {
+            const safeClasses = String(classValue)
+                .split(/\s+/)
+                .map((token) => token.trim())
+                .filter((token) => token === 'ql-video');
+
+            const normalizedAttrs = `${beforeAttrs ?? ''}${afterAttrs ?? ''}`;
+            const classAttr = safeClasses.length > 0 ? ` ${IFRAME_QL_VIDEO_SENTINEL_ATTR}` : '';
+            return `<iframe${normalizedAttrs}${classAttr}>`;
+        },
+    );
     // Remove inline styles and presentation attributes from Word/Google Docs
     result = result.replace(/ style="[^"]*"/gi, '');
     result = result.replace(/ (color|face|size)="[^"]*"/gi, '');
     result = result.replace(/ class="[^"]*"/gi, '');
+    result = result.replace(/<iframe\b([^>]*)\s+>/gi, '<iframe$1>');
+    result = result.replace(/\sdata-metravel-keep-class="ql-video"/gi, ' class="ql-video"');
     // Remove HTML comments
     result = result.replace(/<!--[\s\S]*?-->/g, '');
     return result;

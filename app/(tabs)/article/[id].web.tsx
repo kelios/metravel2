@@ -6,7 +6,6 @@ import {
   ScrollView,
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
-import { useIsFocused } from '@react-navigation/native'
 import { Article } from '@/types/types'
 import { Card, Title } from '@/ui/paper'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
@@ -19,7 +18,6 @@ import { stripToDescription } from '@/components/travel/utils/travelHelpers'
 export default function ArticleDetails() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const isFocused = useIsFocused()
 
   const params = useLocalSearchParams()
   const routeParam = Array.isArray(params.id) ? String(params.id[0] ?? '') : String(params.id ?? '')
@@ -116,7 +114,7 @@ export default function ArticleDetails() {
   // ⚠️ CRITICAL: InstantSEO must render from the FIRST render, not after async data loads.
   // react-helmet-async has a race condition on direct page loads: if a Helmet instance
   // mounts late (after requestAnimationFrame), meta tags are committed as empty.
-  const seoBlock = isFocused ? (
+  const seoBlock = (
     <InstantSEO
       headKey={`article-${routeKey || 'unknown'}`}
       title={seo.title}
@@ -133,7 +131,7 @@ export default function ArticleDetails() {
         ) : undefined
       }
     />
-  ) : null
+  )
 
   if (isLoading) {
     return <>{seoBlock}<ActivityIndicator /></>

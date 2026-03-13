@@ -129,6 +129,23 @@ describe('injectTravelBootstrapData', () => {
     expect(html).not.toContain('<h1>Nested heading</h1>');
     expect((html.match(/<h1\b/gi) || []).length).toBe(0);
   });
+
+  it('preserves title-critical travel fields when detail data is merged into bootstrap payload', () => {
+    const bootstrapTravel = {
+      id: 42,
+      slug: 'hexenstieg',
+      name: 'Тропа ведьм (Harzer Hexenstieg)',
+      countryName: 'Германия',
+      description: 'Полный текст маршрута',
+      gallery: [{ url: 'https://metravel.by/gallery/42/detail_hd.jpg' }],
+    };
+    const html = injectTravelBootstrapData(MINIMAL_BASE, bootstrapTravel, 'hexenstieg');
+
+    expect(html).toContain('"name":"Тропа ведьм (Harzer Hexenstieg)"');
+    expect(html).toContain('"countryName":"Германия"');
+    expect(html).toContain('"description":"Полный текст маршрута"');
+    expect(html).toContain('"url":"https://metravel.by/gallery/42/detail_hd.jpg"');
+  });
 });
 
 // ---------------------------------------------------------------------------

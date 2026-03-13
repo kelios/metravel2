@@ -981,7 +981,17 @@ async function main() {
 
       const travelHeroPreload = buildTravelHeroPreloadData(travel, detail);
       const htmlWithTravelPreload = injectTravelHeroPreload(htmlWithArticleJsonLd, travelHeroPreload);
-      const htmlWithTravelBootstrap = injectTravelBootstrapData(htmlWithTravelPreload, detail, routeKey);
+      const bootstrapTravel = {
+        ...travel,
+        ...detail,
+        gallery: Array.isArray(detail.gallery) ? detail.gallery : travel.gallery,
+        description: detail.description || travel.description || '',
+      };
+      const htmlWithTravelBootstrap = injectTravelBootstrapData(
+        htmlWithTravelPreload,
+        bootstrapTravel,
+        routeKey
+      );
       const finalTravelHtml = injectHiddenH1(htmlWithTravelBootstrap, name || routeKey);
 
       // Write both explicit-file and directory-index variants.
