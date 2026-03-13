@@ -24,6 +24,10 @@ jest.mock('@/api/miscOptimized', () => ({
   fetchAllCountries: jest.fn(),
 }));
 
+jest.mock('@/api/travelListQueries', () => ({
+  fetchTravelFacets: jest.fn(),
+}));
+
 const useQuery = jest.requireMock('@tanstack/react-query').useQuery as jest.Mock;
 const { useListTravelFilters } = jest.requireMock('@/components/listTravel/hooks/useListTravelFilters') as {
   useListTravelFilters: jest.Mock;
@@ -34,6 +38,9 @@ const { useRandomTravelData } = jest.requireMock('@/components/listTravel/hooks/
 const { fetchAllFiltersOptimized, fetchAllCountries } = jest.requireMock('@/api/miscOptimized') as {
   fetchAllFiltersOptimized: jest.Mock;
   fetchAllCountries: jest.Mock;
+};
+const { fetchTravelFacets } = jest.requireMock('@/api/travelListQueries') as {
+  fetchTravelFacets: jest.Mock;
 };
 
 describe('useRouletteLogic', () => {
@@ -70,6 +77,13 @@ describe('useRouletteLogic', () => {
       { id: 2, name: 'Польша' },
     ]);
 
+    fetchTravelFacets.mockReturnValue({
+      total: 2,
+      facets: {
+        countries: [{ id: 1, count: 3 }, { id: 2, count: 2 }],
+      },
+    });
+
     useListTravelFilters.mockReturnValue({
       filter: { countries: [], year: undefined },
       queryParams: {},
@@ -97,6 +111,37 @@ describe('useRouletteLogic', () => {
 
     expect(result.current.filterGroups.length).toBeGreaterThan(0);
     expect(result.current.activeFiltersCount).toBeGreaterThan(0);
+    expect(result.current.filterGroups[0]?.options[0]).toMatchObject({
+      id: '1',
+      name: 'Беларусь',
+      count: 3,
+    });
+  });
+
+  it('hides facet options with zero count unless they are selected', () => {
+    fetchAllFiltersOptimized.mockReturnValueOnce({
+      countries: [{ id: 1, name: 'Беларусь', title_ru: 'Беларусь' }],
+      categories: [
+        { id: 'food', name: 'Еда' },
+        { id: 'hike', name: 'Поход' },
+      ],
+    });
+    fetchTravelFacets.mockReturnValueOnce({
+      total: 1,
+      facets: {
+        categories: [
+          { id: 'food', count: 0 },
+          { id: 'hike', count: 4 },
+        ],
+      },
+    });
+
+    const { result } = renderHook(() => useRouletteLogic());
+
+    const categories = result.current.filterGroups.find((group) => group.key === 'categories');
+    expect(categories?.options).toEqual([
+      expect.objectContaining({ id: 'hike', count: 4 }),
+    ]);
   });
 
   it('spins and returns up to 3 shuffled travels', async () => {

@@ -6,7 +6,9 @@ import ModernFilters from '@/components/listTravel/ModernFilters';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { deduplicateTravels, normalizeApiResponse } from '@/components/listTravel/utils/listTravelHelpers';
+import { buildFacetCounts, buildTravelFilterGroups } from '@/components/listTravel/utils/filterGroups';
 import { fetchAllCountries, fetchAllFiltersOptimized } from '@/api/miscOptimized';
+import { fetchTravelFacets } from '@/api/travelListQueries';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import type { Travel } from '@/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
@@ -116,90 +118,6 @@ export function useRoulette() {
     userId: null,
   });
 
-  const filterGroups = useMemo<FilterGroup[]>(() => [
-    {
-      key: 'countries',
-      title: 'Страны',
-      options: (options?.countries || []).map((country: any) => ({
-        id: String(country.country_id ?? country.id),
-        name: country.title_ru || country.name,
-      })),
-      multiSelect: true,
-      icon: 'globe',
-    },
-    {
-      key: 'categories',
-      title: 'Категории',
-      options: (options?.categories || []).map((cat: any) => ({
-        id: String(cat.id),
-        name: cat.name,
-        count: undefined,
-      })),
-      multiSelect: true,
-      icon: 'tag',
-    },
-    {
-      key: 'transports',
-      title: 'Транспорт',
-      options: (options?.transports || []).map((t: any) => ({
-        id: String(t.id),
-        name: t.name,
-      })),
-      multiSelect: true,
-      icon: 'truck',
-    },
-    {
-      key: 'categoryTravelAddress',
-      title: 'Объекты',
-      options: (options?.categoryTravelAddress || []).map((obj: any) => ({
-        id: String(obj.id),
-        name: obj.name,
-      })),
-      multiSelect: true,
-      icon: 'map-pin',
-    },
-    {
-      key: 'companions',
-      title: 'Спутники',
-      options: (options?.companions || []).map((c: any) => ({
-        id: String(c.id),
-        name: c.name,
-      })),
-      multiSelect: true,
-      icon: 'users',
-    },
-    {
-      key: 'complexity',
-      title: 'Сложность',
-      options: (options?.complexity || []).map((item: any) => ({
-        id: String(item.id),
-        name: item.name,
-      })),
-      multiSelect: true,
-      icon: 'activity',
-    },
-    {
-      key: 'month',
-      title: 'Месяц',
-      options: (options?.month || []).map((item: any) => ({
-        id: String(item.id),
-        name: item.name,
-      })),
-      multiSelect: true,
-      icon: 'calendar',
-    },
-    {
-      key: 'over_nights_stay',
-      title: 'Ночлег',
-      options: (options?.over_nights_stay || []).map((item: any) => ({
-        id: String(item.id),
-        name: item.name,
-      })),
-      multiSelect: true,
-      icon: 'moon',
-    },
-  ], [options]);
-
   const rouletteQueryParams = useMemo(() => {
     const base = { ...queryParams };
     if (!base.countries || !Array.isArray(base.countries) || base.countries.length === 0) {
@@ -209,6 +127,29 @@ export function useRoulette() {
     }
     return base;
   }, [queryParams, defaultCountries]);
+
+  const { data: facetsData } = useQuery({
+    queryKey: ['roulette-travel-facets', rouletteQueryParams],
+    queryFn: ({ signal } = {} as any) => fetchTravelFacets('', rouletteQueryParams, { signal }),
+    enabled: Boolean(options),
+    staleTime: 30 * 1000,
+  });
+
+  const facetCounts = useMemo(
+    () => buildFacetCounts(facetsData?.facets),
+    [facetsData?.facets]
+  );
+
+  const filterGroups = useMemo<FilterGroup[]>(
+    () => buildTravelFilterGroups({
+      options,
+      facetCounts,
+      selectedFilters: filter,
+      includeSort: false,
+      hideCountries: false,
+    }),
+    [options, facetCounts, filter]
+  );
 
   const activeFiltersCount = useMemo(() => {
     const technicalKeys = new Set(['publish', 'moderation']);

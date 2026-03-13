@@ -3,7 +3,7 @@
 import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import ListTravel from '@/components/listTravel/ListTravel';
+import ListTravel from '@/components/listTravel/ListTravelBase';
 
 const mockExportSave = jest.fn();
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ListTravel from '@/components/listTravel/ListTravel';
+import ListTravel from '@/components/listTravel/ListTravelBase';
 
 // Базовый мок для AuthContext и маршрута, который можно перенастраивать в тестах
 const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({
@@ -97,9 +97,19 @@ jest.mock('@/api/travelListQueries', () => ({
   fetchTravelFacets: jest.fn(() => Promise.resolve({ total: 0, facets: {} })),
 }));
 
-jest.mock('@/api/misc', () => ({
-  fetchFilters: jest.fn(() => Promise.resolve({})),
-  fetchFiltersCountry: jest.fn(() => Promise.resolve([])),
+jest.mock('@/api/miscOptimized', () => ({
+  fetchAllFiltersOptimized: jest.fn(() => Promise.resolve({
+    countries: [],
+    categories: [],
+    transports: [],
+    categoryTravelAddress: [],
+    companions: [],
+    complexity: [],
+    month: [],
+    over_nights_stay: [],
+    sortings: [],
+  })),
+  fetchAllCountries: jest.fn(() => Promise.resolve([])),
 }));
 
 const createTestQueryClient = () => new QueryClient({

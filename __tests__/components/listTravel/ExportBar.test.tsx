@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import { ExportBar } from '@/components/listTravel/ListTravel';
+import { ExportBar } from '@/components/listTravel/ExportBar';
 
 describe('ExportBar', () => {
   const baseProps = {

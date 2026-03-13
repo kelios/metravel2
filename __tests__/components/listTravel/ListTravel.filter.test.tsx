@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ListTravel from '@/components/listTravel/ListTravel';
+import ListTravel from '@/components/listTravel/ListTravelBase';
 import { FavoritesProvider } from '@/context/FavoritesProvider';
 import { fetchTravels } from '@/api/travelListQueries';
 
@@ -43,9 +43,19 @@ jest.mock('@/api/travelListQueries', () => ({
     fetchTravelFacets: jest.fn(() => Promise.resolve({ total: 0, facets: {} })),
 }));
 
-jest.mock('@/api/misc', () => ({
-    fetchFilters: jest.fn(() => Promise.resolve({ categories: [] })),
-    fetchFiltersCountry: jest.fn(() => Promise.resolve([])),
+jest.mock('@/api/miscOptimized', () => ({
+    fetchAllFiltersOptimized: jest.fn(() => Promise.resolve({
+        countries: [],
+        categories: [],
+        transports: [],
+        categoryTravelAddress: [],
+        companions: [],
+        complexity: [],
+        month: [],
+        over_nights_stay: [],
+        sortings: [],
+    })),
+    fetchAllCountries: jest.fn(() => Promise.resolve([])),
 }));
 
 describe('ListTravel - Filter Management', () => {

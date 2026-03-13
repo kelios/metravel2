@@ -22,7 +22,7 @@ export interface FilterState {
 
 // ✅ АРХИТЕКТУРА: Опции фильтров из API
 export interface FilterOptions {
-  countries?: Array<{ country_id: number; title_ru: string }>;
+  countries?: Array<{ country_id?: number; id?: string | number; title_ru?: string; name?: string }>;
   categories?: Array<{ id: string; name: string }>;
   categoryTravelAddress?: Array<{ id: string; name: string }>;
   transports?: Array<{ id: string; name: string }>;

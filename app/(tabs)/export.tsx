@@ -15,7 +15,7 @@ import { buildLoginHref } from '@/utils/authNavigation';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 const ListTravel = lazy(async () => {
-    const mod: any = await import('@/components/listTravel/ListTravel');
+    const mod: any = await import('@/components/listTravel/ListTravelBase');
     const Comp = mod?.default ?? mod;
     return { default: Comp };
 });

@@ -30,7 +30,7 @@ jest.mock('@/components/seo/InstantSEO', () => {
   return () => null;
 });
 
-jest.mock('@/components/listTravel/ListTravel', () => {
+jest.mock('@/components/listTravel/ListTravelBase', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
   return function MockListTravel() {

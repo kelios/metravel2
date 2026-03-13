@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { ExportBar } from '@/components/listTravel/ListTravel';
+import { ExportBar } from '@/components/listTravel/ExportBar';
 
 describe('ExportBar', () => {
   const setup = (overrides: Partial<React.ComponentProps<typeof ExportBar>> = {}) => {

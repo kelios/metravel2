@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
-import ListTravel from '@/components/listTravel/ListTravel';
+import ListTravel from '@/components/listTravel/ListTravelBase';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import { RECOMMENDATIONS_VISIBLE_KEY } from '@/components/listTravel/utils/listTravelConstants';
@@ -469,6 +469,7 @@ describe('ListTravel Integration Tests', () => {
 
     renderWithProviders(<ListTravel />);
 
+    fireEvent.press(screen.getByLabelText('Открыть фильтры'));
     expect(screen.getByLabelText('Закрыть фильтры')).toBeTruthy();
     expect(screen.getByText('Показать результаты')).toBeTruthy();
   });
@@ -613,6 +614,7 @@ describe('ListTravel Integration Tests', () => {
       </QueryClientProvider>
     );
 
+    fireEvent.press(screen.getByLabelText('Открыть фильтры'));
     expect(screen.getByLabelText('Закрыть фильтры')).toBeTruthy();
     expect(screen.getByText('Показать результаты')).toBeTruthy();
   });

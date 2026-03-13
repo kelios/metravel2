@@ -1,5 +1,5 @@
 // ✅ УЛУЧШЕНИЕ: ListTravel.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Platform,
@@ -29,8 +29,9 @@ import { LAYOUT } from '@/constants/layout'
 import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
+import { useListTravelExport } from './hooks/useListTravelExport'
 import { calculateColumns } from './utils/listTravelHelpers'
-import { buildSortingOptions } from './utils/sortings'
+import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { deleteTravel } from '@/api/travelsApi'
 import { fetchTravelFacets } from '@/api/travelListQueries'
 
@@ -289,6 +290,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 });
 
 const MemoizedTravelItem = memo(RenderTravelItem);
+const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
 
 const removeTravelFromInfiniteTravelsCache = (queryClient: ReturnType<typeof useQueryClient>, travelId: number) => {
   queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: any) => {
@@ -735,55 +737,9 @@ function ListTravelBase({
       staleTime: 30 * 1000,
     });
 
-    const facetCounts = useMemo(() => {
-      const rawFacets = facetsData?.facets ?? {};
-      return Object.entries(rawFacets).reduce<Record<string, Map<string, number>>>((acc, [facetKey, items]) => {
-        const map = new Map<string, number>();
-        if (Array.isArray(items)) {
-          items.forEach((item) => {
-            map.set(String(item.id), Number(item.count) || 0);
-          });
-        }
-        acc[facetKey] = map;
-        return acc;
-      }, {});
-    }, [facetsData?.facets]);
-
-    const getFacetCount = useCallback(
-      (facetKey: string, id: string | number) => {
-        const facetMap = facetCounts[facetKey];
-        if (!facetMap) {
-          return undefined;
-        }
-        const value = facetMap.get(String(id));
-        return typeof value === 'number' ? value : undefined;
-      },
-      [facetCounts]
-    );
-
-    const isOptionSelected = useCallback(
-      (filterKey: string, id: string | number) => {
-        const currentValue = (filter as any)?.[filterKey];
-        if (Array.isArray(currentValue)) {
-          return currentValue.some((value: any) => String(value) === String(id));
-        }
-        return currentValue !== undefined && currentValue !== null && String(currentValue) === String(id);
-      },
-      [filter]
-    );
-
-    const shouldIncludeFacetOption = useCallback(
-      (facetKey: string, filterKey: string, id: string | number) => {
-        const count = getFacetCount(facetKey, id);
-        if (count === undefined) {
-          return true;
-        }
-        if (count > 0) {
-          return true;
-        }
-        return isOptionSelected(filterKey, id);
-      },
-      [getFacetCount, isOptionSelected]
+    const facetCounts = useMemo(
+      () => buildFacetCounts(facetsData?.facets),
+      [facetsData?.facets]
     );
 
     const baseQueryEnabled = useMemo(
@@ -928,6 +884,20 @@ function ListTravelBase({
         ]);
     }, [deleteId, handleDelete]);
 
+    const exportState = useListTravelExport(travels, { ownerName: userId });
+    const {
+      toggleSelect,
+      toggleSelectAll,
+      clearSelection,
+      isSelected,
+      hasSelection,
+      selectionCount,
+      baseSettings,
+      lastSettings,
+      settingsSummary,
+      setLastSettings,
+    } = exportState;
+
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
         <MemoizedTravelItem
@@ -939,15 +909,20 @@ function ListTravelBase({
           isMetravel={isMeTravel}
           onDeletePress={handleDeletePress}
           isFirst={index === 0}
-          selectable={false}
+          selectable={isExport}
+          isSelected={isSelected(travel.id)}
+          onToggle={() => toggleSelect(travel)}
           viewportWidth={width}
         />
       ),
       [
         handleDeletePress,
+        isExport,
+        isSelected,
         isMeTravel,
         isMobileDevice,
         isSuper,
+        toggleSelect,
         userId,
         width,
       ]
@@ -1064,12 +1039,9 @@ function ListTravelBase({
 
       const activeFilters: string[] = [];
 
-      // ✅ ОПТИМИЗАЦИЯ: Предварительная проверка наличия опций
-      if (!options?.categories) return null;
-
       // Определяем активные фильтры - оптимизированная версия с проверками типов
       if (Array.isArray(filter.categories) && filter.categories.length > 0) {
-        const categoryNames = options.categories
+        const categoryNames = (options?.categories || [])
           .filter((cat: any) => cat?.name && filter.categories?.includes(cat.id))
           .map((cat: any) => cat.name)
           .slice(0, 2);
@@ -1146,136 +1118,14 @@ function ListTravelBase({
 
     // ✅ АРХИТЕКТУРА: Централизованная конфигурация групп фильтров для переиспользования в десктоп и мобильной версии
     const filterGroups = useMemo(
-      () => [
-      // На странице travelsby страна всегда Беларуси, поэтому отдельный фильтр по странам прячем
-      ...(!isTravelBy ? [
-        {
-          key: 'countries',
-          title: 'Страны',
-          options: (options?.countries || [])
-            .filter((country: any) => shouldIncludeFacetOption('countries', 'countries', country.country_id ?? country.id))
-            .map((country: any) => ({
-              id: String(country.country_id ?? country.id),
-              name: country.title_ru || country.name,
-              count: getFacetCount('countries', country.country_id ?? country.id),
-            })),
-          multiSelect: true,
-          icon: 'globe',
-        },
-      ] : []),
-      {
-        key: 'sort',
-        title: 'Сортировка',
-        options: buildSortingOptions(options?.sortings || []),
-        multiSelect: false,
-        icon: 'sliders',
-      },
-      {
-        key: 'categories',
-        title: 'Категории',
-        options: (options?.categories || [])
-          .filter((cat: any) => shouldIncludeFacetOption('categories', 'categories', cat.id))
-          .map((cat: any) => ({
-            id: String(cat.id),
-            name: cat.name,
-            count: getFacetCount('categories', cat.id),
-          })),
-        multiSelect: true,
-        icon: 'tag',
-      },
-      {
-        key: 'transports',
-        title: 'Транспорт',
-        options: (options?.transports || [])
-          .filter((t: any) => shouldIncludeFacetOption('transports', 'transports', t.id))
-          .map((t: any) => ({
-            id: String(t.id),
-            name: t.name,
-            count: getFacetCount('transports', t.id),
-          })),
-        multiSelect: true,
-        icon: 'truck',
-      },
-      {
-        key: 'categoryTravelAddress',
-        title: 'Объекты',
-        options: (options?.categoryTravelAddress || [])
-          .filter((obj: any) => shouldIncludeFacetOption('categoryTravelAddress', 'categoryTravelAddress', obj.id))
-          .map((obj: any) => ({
-            id: String(obj.id),
-            name: obj.name,
-            count: getFacetCount('categoryTravelAddress', obj.id),
-          })),
-        multiSelect: true,
-        icon: 'map-pin',
-      },
-      {
-        key: 'companions',
-        title: 'Спутники',
-        options: (options?.companions || [])
-          .filter((c: any) => shouldIncludeFacetOption('companions', 'companions', c.id))
-          .map((c: any) => ({
-            id: String(c.id),
-            name: c.name,
-            count: getFacetCount('companions', c.id),
-          })),
-        multiSelect: true,
-        icon: 'users',
-      },
-      {
-        key: 'complexity',
-        title: 'Сложность',
-        options: (options?.complexity || [])
-          .filter((item: any) => shouldIncludeFacetOption('complexity', 'complexity', item.id))
-          .map((item: any) => ({
-            id: String(item.id),
-            name: item.name,
-            count: getFacetCount('complexity', item.id),
-          })),
-        multiSelect: true,
-        icon: 'activity',
-      },
-      {
-        key: 'month',
-        title: 'Месяц',
-        options: (options?.month || [])
-          .filter((item: any) => shouldIncludeFacetOption('month', 'month', item.id))
-          .map((item: any) => ({
-            id: String(item.id),
-            name: item.name,
-            count: getFacetCount('month', item.id),
-          })),
-        multiSelect: true,
-        icon: 'calendar',
-      },
-      {
-        key: 'over_nights_stay',
-        title: 'Ночлег',
-        options: (options?.over_nights_stay || [])
-          .filter((item: any) => shouldIncludeFacetOption('over_nights_stay', 'over_nights_stay', item.id))
-          .map((item: any) => ({
-            id: String(item.id),
-            name: item.name,
-            count: getFacetCount('over_nights_stay', item.id),
-          })),
-        multiSelect: true,
-        icon: 'moon',
-      },
-    ],
-      [
-        isTravelBy,
-        options?.countries,
-        options?.categories,
-        options?.sortings,
-        options?.transports,
-        options?.categoryTravelAddress,
-        options?.companions,
-        options?.complexity,
-        options?.month,
-        options?.over_nights_stay,
-        getFacetCount,
-        shouldIncludeFacetOption,
-      ]
+      () => buildTravelFilterGroups({
+        options,
+        facetCounts,
+        selectedFilters: filter,
+        includeSort: true,
+        hideCountries: isTravelBy,
+      }),
+      [options, filter, isTravelBy, facetCounts]
     );
     
   return (
@@ -1299,7 +1149,27 @@ function ListTravelBase({
         search={search}
         setSearch={setSearch}
         onClearAll={handleClearAll}
-        topContent={null}
+        topContent={
+          isExport ? (
+            <Suspense fallback={null}>
+              <ListTravelExportControlsLazy
+                isMobile={isMobileDevice}
+                travels={travels}
+                selected={exportState.selected}
+                ownerName={userId}
+                toggleSelectAll={toggleSelectAll}
+                clearSelection={clearSelection}
+                hasSelection={hasSelection}
+                selectionCount={selectionCount}
+                baseSettings={baseSettings}
+                lastSettings={lastSettings}
+                settingsSummary={settingsSummary}
+                setLastSettings={setLastSettings}
+                styles={styles}
+              />
+            </Suspense>
+          ) : null
+        }
         isRecommendationsVisible={isRecommendationsVisible}
         handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
         activeFiltersCount={activeFiltersCount}
