@@ -475,8 +475,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         autoPan
         keepInView
         autoPanPadding={[16, 16] as any}
-        autoPanPaddingTopLeft={[16, 120] as any}
-        autoPanPaddingBottomRight={[16, 280] as any}
+        autoPanPaddingTopLeft={[16, 60] as any}
+        autoPanPaddingBottomRight={[16, 60] as any}
         closeButton
       >
         <MapPopup
