@@ -198,6 +198,17 @@ export const TravelDetailsMapSection: React.FC<{
   const shouldRenderMapContent = shouldRender || shouldForceRenderMap || mapOpened
   const shouldForceRenderExcursions = forceOpenKey === 'excursions'
 
+  useEffect(() => {
+    setHighlightedPoint(null)
+    setMapOpenTrigger(0)
+    setMapOpened(false)
+    setMapResizeTrigger(0)
+    setWeatherVisible(false)
+    setDownloadingRouteId(null)
+    setKeyPointLabels({})
+    setRoutePreviewItems([])
+  }, [travel.id, travel.slug])
+
   const colors = useThemedColors()
   const routeColorPalette = useMemo(
     () => [

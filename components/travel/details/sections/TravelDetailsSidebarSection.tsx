@@ -67,6 +67,10 @@ export const TravelDetailsSidebarSection: React.FC<{
   const [hasLoadedNear, setHasLoadedNear] = useState(false)
   const [hasLoadedPopular, setHasLoadedPopular] = useState(false)
 
+  useEffect(() => {
+    setRelatedTravels([])
+  }, [travel.id, travel.slug])
+
   // Keep content visible once loaded
   useEffect(() => {
     if (shouldLoadNear && !hasLoadedNear) setHasLoadedNear(true)
