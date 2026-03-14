@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useEffect, useMemo } from 'react';
+import { Suspense, lazy, memo, useMemo } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -9,11 +9,9 @@ import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useAuth } from '@/context/AuthContext';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton';
-import { fetchTravels } from '@/api/travelsApi';
 
 const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
@@ -23,14 +21,40 @@ function SearchScreen() {
     const isFocused = useIsFocused();
     const colors = useThemedColors();
     const { isAuthenticated } = useAuth();
-    const { isHydrated: isResponsiveHydrated = true } = useResponsive();
-    const canRunPrefetch = Platform.OS === 'web' ? true : isResponsiveHydrated;
+
+    const title = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel';
+    const description = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.';
+
+    const styles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        errorContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: DESIGN_TOKENS.spacing.lg,
+        },
+        srOnly: Platform.select({
+            web: {
+                position: 'absolute' as const,
+                width: 1,
+                height: 1,
+                padding: 0,
+                margin: -1,
+                overflow: 'hidden' as const,
+                clip: 'rect(0,0,0,0)',
+                whiteSpace: 'nowrap',
+                borderWidth: 0,
+            },
+            default: { display: 'none' as const },
+        }) as any,
+    }), [colors]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
         if (!isFocused) return;
-        if (!canRunPrefetch) return;
-        if (typeof window === 'undefined') return;
 
         const nav = typeof navigator !== 'undefined' ? (navigator as any) : null;
         const conn = nav?.connection;
@@ -43,8 +67,6 @@ function SearchScreen() {
         const lowMemoryDevice =
             typeof nav?.deviceMemory === 'number' && nav.deviceMemory <= 4;
 
-        // Speculative prefetch is useful on fast networks, but on constrained
-        // devices it can compete with critical resources and hurt LCP/TBT.
         if (saveData || isSlowConnection || lowMemoryDevice) return;
 
         let cancelled = false;
@@ -85,13 +107,7 @@ function SearchScreen() {
                 (window as any).cancelIdleCallback(idleId);
             }
         };
-    }, [canRunPrefetch, isFocused]);
-
-    const title = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel';
-    const description = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.';
-
-    const styles = useMemo(() => StyleSheet.create({
-        container: {
+    }, [isFocused]);
             flex: 1,
             backgroundColor: colors.background,
         },
@@ -138,11 +154,7 @@ function SearchScreen() {
                         <View style={styles.errorContainer}>
                             <ErrorDisplay
                                 message="Не удалось загрузить поиск путешествий"
-                                onRetry={() => {
-                                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                                        window.location.reload();
-                                    }
-                                }}
+                                onRetry={() => router.replace((pathname || '/search') as any)}
                                 variant="error"
                             />
                         </View>
