@@ -106,56 +106,45 @@ export const TravelDeferredSections: React.FC<{
   const tdTrace = useTdTrace()
   const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useProgressiveLoad({
     priority: 'low',
-    // Keep the map truly below-the-fold on desktop web. A generous preload window
-    // was enough to pull the map chunk on the initial viewport in production.
-    rootMargin: '0px',
-    threshold: 0.15,
-    fallbackDelay: 24000,
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 800,
     enabled: canRenderHeavy,
-    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useProgressiveLoad({
     priority: 'low',
-    rootMargin: '160px',
-    threshold: 0.05,
-    fallbackDelay: 26000,
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 900,
     enabled: canRenderHeavy,
-    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useProgressiveLoad({
     priority: 'low',
-    rootMargin: '160px',
-    threshold: 0.05,
-    fallbackDelay: 24000,
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 950,
     enabled: canRenderHeavy,
-    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useProgressiveLoad({
     priority: 'low',
-    rootMargin: '160px',
-    threshold: 0.05,
-    fallbackDelay: 24000,
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 1000,
     enabled: canRenderHeavy,
-    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '180px',
-    threshold: 0.05,
-    // Keep full author/share runtime strictly below-the-fold on web unless the user
-    // actually scrolls there. This avoids warming a large social/profile block in
-    // the early no-interaction preview window.
-    fallbackDelay: 24000,
+    priority: 'high',
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 500,
     enabled: canRenderHeavy,
-    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
     priority: 'high',
-    rootMargin: '180px',
-    threshold: 0.05,
-    fallbackDelay: 3000,
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 600,
     enabled: canRenderHeavy,
-    disableFallbackOnWeb: true,
   })
 
   useEffect(() => {

@@ -8,11 +8,12 @@ import { Platform } from 'react-native'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
 
 const mockImageCardMedia: jest.Mock<any, any> = jest.fn(() => null)
+const mockPrefetchImage = jest.fn(() => Promise.resolve())
 
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
   default: (props: any) => mockImageCardMedia(props),
-  prefetchImage: jest.fn(() => Promise.resolve()),
+  prefetchImage: (...args: any[]) => mockPrefetchImage(...args),
 }))
 
 describe('UnifiedTravelCard blur background (web)', () => {
@@ -21,6 +22,7 @@ describe('UnifiedTravelCard blur background (web)', () => {
   beforeEach(() => {
     Platform.OS = 'web'
     mockImageCardMedia.mockClear()
+    mockPrefetchImage.mockClear()
   })
 
   afterEach(() => {
@@ -60,5 +62,19 @@ describe('UnifiedTravelCard blur background (web)', () => {
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
     expect(props).toBeTruthy()
     expect(props.allowCriticalWebBlur).toBe(true)
+  })
+
+  it('does not prefetch cross-origin card images on web', () => {
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Test travel"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+        />
+      )
+    })
+
+    expect(mockPrefetchImage).not.toHaveBeenCalled()
   })
 })

@@ -5,6 +5,7 @@ import type { TDefaultRendererProps } from "react-native-render-html";
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { useThemedColors } from '@/hooks/useTheme';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { groupConsecutiveImages } from '@/utils/richTextImageLayout';
 
 type LazyInstagramProps = { url: string };
 
@@ -274,109 +275,236 @@ const prepareHtml = (html: string) => {
   const demoted = normalized
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>');
-  return truncateInstagramCaptions(demoted);
+  const truncated = truncateInstagramCaptions(demoted);
+  return groupConsecutiveImages(truncated);
 };
 
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
 const WEB_RICH_TEXT_STYLES_ID = "travel-rich-text-styles";
+
+/* Apple-style Clean Color Palette */
+const EDITORIAL_COLORS = {
+  textPrimary: '#1d1d1f',
+  textSecondary: '#424245',
+  textMuted: '#86868b',
+  accent: '#0071e3',
+  accentLight: 'rgba(0, 113, 227, 0.08)',
+};
+
 const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} {
-  font-family: "Georgia", "Times New Roman", serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 17px;
-  line-height: 1.7;
-  color: ${colors.text};
-  text-align: justify;
-  hyphens: auto;
+  line-height: 1.58;
+  letter-spacing: -0.003em;
+  color: ${EDITORIAL_COLORS.textSecondary};
   width: 100%;
-  max-width: 900px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: ${DESIGN_TOKENS.spacing.sm}px 0 24px;
+  padding: 0 ${DESIGN_TOKENS.spacing.md}px 48px;
 }
+
+/* ===== APPLE-STYLE PARAGRAPHS ===== */
 .${WEB_RICH_TEXT_CLASS} p {
-  margin: 0 0 1.25em;
+  margin: 0 0 1.4em;
 }
-.${WEB_RICH_TEXT_CLASS} a {
-  color: ${colors.primary};
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
-  word-break: break-word;
-}
-.${WEB_RICH_TEXT_CLASS} a:hover {
-  text-decoration-thickness: 2px;
-}
-.${WEB_RICH_TEXT_CLASS} a:focus-visible {
-  outline: 2px solid ${colors.focus};
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+
+/* ===== APPLE-STYLE HEADINGS ===== */
 .${WEB_RICH_TEXT_CLASS} h1,
 .${WEB_RICH_TEXT_CLASS} h2,
 .${WEB_RICH_TEXT_CLASS} h3 {
-  color: ${colors.text};
-  line-height: 1.3;
-  margin: 1.6em 0 0.7em;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: ${EDITORIAL_COLORS.textPrimary};
+  font-weight: 600;
+  letter-spacing: -0.022em;
 }
-.${WEB_RICH_TEXT_CLASS} h1 { font-size: clamp(1.8rem, 2vw, 2.6rem); }
-.${WEB_RICH_TEXT_CLASS} h2 { font-size: clamp(1.5rem, 1.6vw, 2.1rem); }
-.${WEB_RICH_TEXT_CLASS} h3 { font-size: clamp(1.25rem, 1.2vw, 1.6rem); }
-.${WEB_RICH_TEXT_CLASS} ul,
-.${WEB_RICH_TEXT_CLASS} ol {
-  margin: 0 0 1.3em 1.6em;
-  padding: 0;
+.${WEB_RICH_TEXT_CLASS} h2 {
+  font-size: 28px;
+  line-height: 1.14;
+  margin: 1.8em 0 0.6em;
 }
-.${WEB_RICH_TEXT_CLASS} li { margin-bottom: 0.4em; }
+.${WEB_RICH_TEXT_CLASS} h3 {
+  font-size: 21px;
+  line-height: 1.19;
+  margin: 1.6em 0 0.5em;
+}
+
+/* ===== BASE IMAGES ===== */
 .${WEB_RICH_TEXT_CLASS} img {
   display: block;
-  width: 100%;
   max-width: 100%;
-  max-height: 55vh;
+  height: auto;
   object-fit: contain;
   object-position: center;
-  border-radius: 16px;
-  margin: ${DESIGN_TOKENS.spacing.xxs + 2}px 0 26px;
-  border: 1px solid ${colors.borderLight};
-  background: ${colors.surfaceMuted};
+  border-radius: 12px;
+  background: #f5f5f7;
 }
-.${WEB_RICH_TEXT_CLASS} img + img,
-.${WEB_RICH_TEXT_CLASS} figure + figure {
-  margin-top: 28px;
+
+/* ===== SINGLE IMAGE WITH FLOAT (desktop) ===== */
+@media (min-width: 769px) {
+  .${WEB_RICH_TEXT_CLASS} .img-float-right {
+    float: right;
+    max-width: 45%;
+    margin: 0.5em 0 1em 1.5em;
+    clear: right;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-float-right img {
+    width: 100%;
+    margin: 0;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-float-left {
+    float: left;
+    max-width: 45%;
+    margin: 0.5em 1.5em 1em 0;
+    clear: left;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-float-left img {
+    width: 100%;
+    margin: 0;
+  }
 }
-.${WEB_RICH_TEXT_CLASS} img + p,
-.${WEB_RICH_TEXT_CLASS} p + img,
-.${WEB_RICH_TEXT_CLASS} figure + p,
-.${WEB_RICH_TEXT_CLASS} p + figure {
-  margin-top: 24px;
+
+/* ===== TWO IMAGES SIDE BY SIDE ===== */
+.${WEB_RICH_TEXT_CLASS} .img-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 1.5em 0;
+  clear: both;
 }
+.${WEB_RICH_TEXT_CLASS} .img-row-2 p {
+  margin: 0;
+}
+.${WEB_RICH_TEXT_CLASS} .img-row-2 img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  margin: 0;
+  border-radius: 12px;
+}
+
+/* ===== THREE+ IMAGES GRID ===== */
+.${WEB_RICH_TEXT_CLASS} .img-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 1.5em 0;
+  clear: both;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid p {
+  margin: 0;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  margin: 0;
+  border-radius: 8px;
+}
+
+/* ===== CLEARFIX ===== */
+.${WEB_RICH_TEXT_CLASS}::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+.${WEB_RICH_TEXT_CLASS} h2,
+.${WEB_RICH_TEXT_CLASS} h3 {
+  clear: both;
+}
+
+/* ===== FIGURE IMAGES ===== */
+.${WEB_RICH_TEXT_CLASS} figure img {
+  float: none !important;
+  max-width: 100%;
+  width: 100%;
+  margin: 0.5em auto;
+}
+
+/* ===== APPLE-STYLE LINKS ===== */
+.${WEB_RICH_TEXT_CLASS} a {
+  color: ${EDITORIAL_COLORS.accent};
+  text-decoration: none;
+  word-break: break-word;
+  transition: opacity 0.2s;
+}
+.${WEB_RICH_TEXT_CLASS} a:hover {
+  text-decoration: underline;
+}
+.${WEB_RICH_TEXT_CLASS} a:focus-visible {
+  outline: 2px solid ${EDITORIAL_COLORS.accent};
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ===== LISTS ===== */
+.${WEB_RICH_TEXT_CLASS} ul,
+.${WEB_RICH_TEXT_CLASS} ol {
+  margin: 1.2em 0 1.5em 2em;
+  padding: 0;
+  clear: both;
+}
+.${WEB_RICH_TEXT_CLASS} li {
+  margin-bottom: 0.5em;
+  line-height: 1.7;
+}
+.${WEB_RICH_TEXT_CLASS} li::marker {
+  color: ${colors.primary};
+}
+
+/* ===== APPLE-STYLE BLOCKQUOTES ===== */
+.${WEB_RICH_TEXT_CLASS} blockquote {
+  margin: 1.8em 0;
+  padding: 0 0 0 1.5em;
+  border-left: 3px solid #d2d2d7;
+  font-size: 17px;
+  line-height: 1.58;
+  color: ${EDITORIAL_COLORS.textMuted};
+  clear: both;
+}
+.${WEB_RICH_TEXT_CLASS} blockquote p {
+  margin-bottom: 0.75em;
+}
+.${WEB_RICH_TEXT_CLASS} blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* ===== PREMIUM FIGURES & CAPTIONS ===== */
 .${WEB_RICH_TEXT_CLASS} figure {
-  margin: 30px auto;
-  width: min(660px, 100%);
+  margin: 2.5em 0;
   text-align: center;
+  clear: both;
 }
 .${WEB_RICH_TEXT_CLASS} figure img {
-  margin-bottom: 12px;
-}
-.${WEB_RICH_TEXT_CLASS} .image-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${DESIGN_TOKENS.spacing.xs}px;
-  margin: ${DESIGN_TOKENS.spacing.xs + 8}px 0;
-}
-.${WEB_RICH_TEXT_CLASS} .image-strip img {
-  width: 100%;
-  margin: 0;
-}
-.${WEB_RICH_TEXT_CLASS} figure {
-  margin: 0;
+  margin-bottom: 1em;
 }
 .${WEB_RICH_TEXT_CLASS} figcaption {
   text-align: center;
-  font-size: 0.9rem;
-  color: ${colors.textMuted};
-  margin-top: 8px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 0.85rem;
+  color: ${EDITORIAL_COLORS.textMuted};
+  font-style: italic;
+  margin-top: 0.75em;
+  padding: 0 2em;
+  line-height: 1.5;
 }
+
+/* ===== IMAGE STRIPS ===== */
+.${WEB_RICH_TEXT_CLASS} .image-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: ${DESIGN_TOKENS.spacing.sm}px;
+  margin: 1.5em 0;
+  clear: both;
+}
+.${WEB_RICH_TEXT_CLASS} .image-strip img {
+  float: none;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  border-radius: 8px;
+}
+
+/* ===== MEDIA EMBEDS ===== */
 .${WEB_RICH_TEXT_CLASS} iframe,
 .${WEB_RICH_TEXT_CLASS} .yt-lite {
   display: block;
@@ -384,8 +512,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   border-radius: ${DESIGN_TOKENS.radii.md}px;
   padding: 0;
   overflow: hidden;
-  margin: ${DESIGN_TOKENS.spacing.xs + 4}px 0;
+  margin: 1.5em 0;
+  clear: both;
 }
+
+/* ===== CLEARFIX ===== */
 .${WEB_RICH_TEXT_CLASS}::after {
   content: "";
   display: block;
@@ -444,16 +575,49 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   padding: 0 !important;
 }
 
-/* Дополнительные стили для мобильных устройств */
-@media (max-width: 900px) {
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 768px) {
   .${WEB_RICH_TEXT_CLASS} {
-    text-align: left;
-    hyphens: unset;
+    font-size: 17px;
+    line-height: 1.52;
+    padding: 0 ${DESIGN_TOKENS.spacing.sm}px 32px;
   }
   .${WEB_RICH_TEXT_CLASS} img {
-    border-width: 4px;
-    margin: ${DESIGN_TOKENS.spacing.lg}px 0 22px;
-    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
+    border-radius: 10px;
+  }
+  .${WEB_RICH_TEXT_CLASS} h2 {
+    font-size: 24px;
+    margin: 1.5em 0 0.5em;
+  }
+  .${WEB_RICH_TEXT_CLASS} h3 {
+    font-size: 19px;
+    margin: 1.4em 0 0.4em;
+  }
+  .${WEB_RICH_TEXT_CLASS} blockquote {
+    margin: 1.5em 0;
+    padding: 0 0 0 1em;
+  }
+  /* Mobile: no float, stack images */
+  .${WEB_RICH_TEXT_CLASS} .img-float-right,
+  .${WEB_RICH_TEXT_CLASS} .img-float-left {
+    float: none;
+    max-width: 100%;
+    margin: 1em 0;
+  }
+  /* Mobile: 2 images still side by side but smaller */
+  .${WEB_RICH_TEXT_CLASS} .img-row-2 {
+    gap: 8px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-row-2 img {
+    height: 140px;
+  }
+  /* Mobile: grid becomes 2 columns */
+  .${WEB_RICH_TEXT_CLASS} .img-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid img {
+    height: 120px;
   }
   .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
   .${WEB_RICH_TEXT_CLASS} .instagram-media {

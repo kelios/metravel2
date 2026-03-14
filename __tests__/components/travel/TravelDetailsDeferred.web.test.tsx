@@ -104,12 +104,12 @@ describe('TravelDeferredSections (web author defer)', () => {
     ;(window as any).IntersectionObserver = originalIntersectionObserver
   })
 
-  it('keeps author card deferred during the early no-interaction window', async () => {
+  it('renders author card immediately on web (high priority)', async () => {
     const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
 
     const travel: any = {
       id: 1,
-      name: 'Deferred author travel',
+      name: 'Immediate author travel',
       description: '<p>Test description</p>',
       gallery: [],
       youtube_link: null,
@@ -150,25 +150,10 @@ describe('TravelDeferredSections (web author defer)', () => {
           />
         </Suspense>,
       )
-      jest.advanceTimersByTime(10000)
       await Promise.resolve()
     })
 
-    expect(mockAuthorCardSpy).not.toHaveBeenCalled()
-
-    expect(observers.length).toBeGreaterThan(0)
-
-    await act(async () => {
-      observers.forEach((observer) => {
-        observer.callback(
-          [{ isIntersecting: true } as IntersectionObserverEntry],
-          {} as IntersectionObserver,
-        )
-      })
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
+    // High-priority author section renders immediately on web
     expect(mockAuthorCardSpy).toHaveBeenCalled()
   })
 

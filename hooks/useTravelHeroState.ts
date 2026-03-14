@@ -87,22 +87,16 @@ function useHeroMediaModel(
     const mapped = gallery.map((item: unknown, index: number) =>
       normalizeGalleryImage(item, index),
     )
-    const coverUrl =
-      typeof travel.travel_image_thumb_url === 'string'
-        ? travel.travel_image_thumb_url.trim()
-        : ''
-
-    if (!coverUrl) return mapped
-    if (mapped.length === 0) return [{ url: coverUrl, id: 0 }]
-
-    const normalizedCover = coverUrl.replace(/[?#].*$/, '')
-    const hasSameAsCover = mapped.some((item) => {
-      const raw = typeof item?.url === 'string' ? item.url.trim() : ''
-      return raw.replace(/[?#].*$/, '') === normalizedCover
-    })
-
-    if (hasSameAsCover) return mapped
-    return [{ url: coverUrl }, ...mapped]
+    // If gallery is empty, use cover as fallback for slider
+    if (mapped.length === 0) {
+      const coverUrl =
+        typeof travel.travel_image_thumb_url === 'string'
+          ? travel.travel_image_thumb_url.trim()
+          : ''
+      if (coverUrl) return [{ url: coverUrl, id: 0 }]
+    }
+    // Otherwise use only gallery images (cover is shown in OptimizedLCPHero)
+    return mapped
   }, [travel.gallery, travel.travel_image_thumb_url])
 
   const heroAlt = travel?.name

@@ -181,17 +181,38 @@ function UnifiedTravelCard({
       (loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey))
     );
   });
+  const [imageFailed, setImageFailed] = useState(false);
   const handleImageLoad = useCallback(() => {
     if (cardImageCacheKey) {
       loadedCardImageCache.add(cardImageCacheKey);
     }
+    setImageFailed(false);
     setImageLoaded(true);
   }, [cardImageCacheKey]);
+  const handleImageError = useCallback(() => {
+    setImageFailed(true);
+    setImageLoaded(true);
+  }, []);
+  const canPrefetchCardImage = useMemo(() => {
+    if (!isWeb) return false;
+    if (!cardImageCacheKey) return false;
+    if (/^(data:|blob:)/i.test(cardImageCacheKey)) return true;
+    if (typeof window === 'undefined' || !window.location?.origin) return false;
+
+    try {
+      const parsedUrl = new URL(cardImageCacheKey, window.location.origin);
+      return parsedUrl.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }, [cardImageCacheKey, isWeb]);
   useEffect(() => {
     if (!cardImageCacheKey) {
+      setImageFailed(false);
       setImageLoaded(false);
       return;
     }
+    setImageFailed(false);
     setImageLoaded(
       loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey)
     );
@@ -200,6 +221,8 @@ function UnifiedTravelCard({
   useEffect(() => {
     if (!isWeb) return;
     if (!cardImageCacheKey) return;
+    if (!canPrefetchCardImage) return;
+    if (imageFailed) return;
     if (loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey)) return;
     if (typeof window === 'undefined') return;
 
@@ -245,7 +268,7 @@ function UnifiedTravelCard({
       cancelled = true;
       observer?.disconnect();
     };
-  }, [cardImageCacheKey, isWeb]);
+  }, [canPrefetchCardImage, cardImageCacheKey, imageFailed, isWeb]);
 
   const styles = useMemo(
     () =>
@@ -541,7 +564,7 @@ function UnifiedTravelCard({
           accessible={false}
           importantForAccessibility="no"
         >
-          {optimizedImageUrl ? (
+          {optimizedImageUrl && !imageFailed ? (
             <>
               {/* CARD-04: Shimmer placeholder пока изображение грузится */}
               {!imageLoaded && (
@@ -563,6 +586,7 @@ function UnifiedTravelCard({
                 prefetch={mediaProps?.prefetch ?? false}
                 showImmediately={mediaProps?.showImmediately ?? imageLoaded}
                 onLoad={handleImageLoad}
+                onError={handleImageError}
               />
             </>
           ) : (

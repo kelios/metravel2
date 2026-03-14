@@ -12,6 +12,7 @@ import { pickRandomQuote } from '../quotes/travelQuotes';
 import { CoverPageGenerator } from './pages/CoverPageGenerator';
 import { escapeHtml as sharedEscapeHtml } from '../utils/htmlUtils';
 import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../utils/pluralize';
+import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 import { V1FinalRenderer } from './v1/V1FinalRenderer';
 import { V1GalleryRenderer } from './v1/V1GalleryRenderer';
 import { V1MapRenderer } from './v1/V1MapRenderer';
@@ -822,9 +823,12 @@ export class EnhancedPdfGenerator {
     const { colors, typography, spacing } = this.theme;
     const parser = this.getParserSync();
     
-    // Парсим контент
-    const descriptionBlocks = travel.description
-      ? parser.parse(travel.description)
+    // Применяем умную раскладку изображений и парсим контент
+    const formattedDescription = travel.description
+      ? applySmartImageLayout(travel.description)
+      : '';
+    const descriptionBlocks = formattedDescription
+      ? parser.parse(formattedDescription)
       : [];
     const recommendationBlocks = travel.recommendation
       ? parser.parse(travel.recommendation)
@@ -1460,6 +1464,52 @@ export class EnhancedPdfGenerator {
         font-weight: 700;
         color: ${colors.accent};
         font-family: ${typography.headingFont};
+      }
+      /* Smart image layouts for PDF */
+      .img-row-2 {
+        display: flex;
+        gap: 8pt;
+        margin: 12pt 0;
+        page-break-inside: avoid;
+      }
+      .img-row-2 p {
+        flex: 1;
+        margin: 0;
+      }
+      .img-row-2 img {
+        width: 100%;
+        height: auto;
+        max-height: 180pt;
+        object-fit: cover;
+        border-radius: 6pt;
+      }
+      .img-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6pt;
+        margin: 12pt 0;
+        page-break-inside: avoid;
+      }
+      .img-grid p {
+        flex: 1 1 30%;
+        margin: 0;
+      }
+      .img-grid img {
+        width: 100%;
+        height: auto;
+        max-height: 120pt;
+        object-fit: cover;
+        border-radius: 4pt;
+      }
+      .img-float-right,
+      .img-float-left {
+        margin: 8pt 0;
+      }
+      .img-float-right img,
+      .img-float-left img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 6pt;
       }
       @media print {
         html, body {

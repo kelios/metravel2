@@ -5,6 +5,7 @@ import { BasePageGenerator } from './PageGenerator';
 import type { PageContext } from '../types';
 import { ContentParser } from '@/services/pdf-export/parsers/ContentParser';
 import { BlockRenderer } from '@/services/pdf-export/renderers/BlockRenderer';
+import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
 /**
  * Генератор страницы путешествия с контентом
@@ -151,9 +152,12 @@ export class TravelPageGenerator extends BasePageGenerator {
     const { colors, typography, spacing } = theme;
     const qrCode = metadata?.qrCode || '';
 
-    // Парсим контент
-    const descriptionBlocks = travel.description
-      ? this.parser.parse(travel.description)
+    // Применяем умную раскладку изображений и парсим контент
+    const formattedDescription = travel.description
+      ? applySmartImageLayout(travel.description)
+      : '';
+    const descriptionBlocks = formattedDescription
+      ? this.parser.parse(formattedDescription)
       : [];
     const recommendationBlocks = travel.recommendation
       ? this.parser.parse(travel.recommendation)

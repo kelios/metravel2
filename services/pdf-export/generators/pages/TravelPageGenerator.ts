@@ -4,6 +4,7 @@
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
 import { escapeHtml } from '../../utils/htmlUtils';
 import type { TravelForBook } from '@/types/pdf-export';
+import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
 export type PhotoPageLayout = 'full-bleed' | 'framed' | 'split';
 
@@ -380,6 +381,9 @@ export class TravelPageGenerator {
 
     if (!travel.description) return '';
 
+    // Apply smart image layout before formatting
+    const formattedDescription = applySmartImageLayout(travel.description);
+
     return `
       <div style="
         margin-bottom: 16mm;
@@ -388,7 +392,7 @@ export class TravelPageGenerator {
         color: ${colors.text};
         font-family: ${typography.bodyFont};
       ">
-        ${this.formatDescription(travel.description)}
+        ${this.formatDescription(formattedDescription)}
       </div>
     `;
   }

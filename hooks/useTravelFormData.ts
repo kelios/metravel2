@@ -34,6 +34,7 @@ import {
 } from '@/utils/travelFormNormalization';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
+import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
 async function showToastMessage(payload: unknown) {
   await showToast(payload);
@@ -267,9 +268,15 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       );
       const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
 
+      // Apply smart image layout to description before saving
+      const formattedDescription = mergedData.description
+        ? applySmartImageLayout(mergedData.description)
+        : mergedData.description;
+
       const cleanedData = cleanEmptyFields({
         ...mergedData,
         id: resolvedId,
+        description: formattedDescription,
         coordsMeTravel: normalizedMarkers,
         ...(normalizedGallery ? { gallery: normalizedGallery } : {}),
         // IMPORTANT: use independent array instances for each field.
