@@ -130,7 +130,8 @@ const MapContainer = memo(({
     mapContainer: {
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.md,
-      overflow: 'hidden',
+      // overflow: visible to allow popup to extend beyond container
+      overflow: 'visible',
       borderWidth: 1,
       borderColor: colors.border,
       shadowColor: colors.text,
@@ -155,6 +156,7 @@ const MapContainer = memo(({
     mapWrapper: {
       flex: 1,
       minHeight: 300,
+      overflow: 'visible',
     },
     mapFooter: {
       paddingHorizontal: DESIGN_TOKENS.spacing.lg,
@@ -268,6 +270,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         width: '100%',
         maxWidth: 1400,
         alignSelf: 'center',
+        overflow: 'visible',
       },
       embeddedSection: {
         marginTop: 0,
@@ -279,6 +282,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         width: '100%',
         maxWidth: '100%',
         alignSelf: 'stretch',
+        overflow: 'visible',
       },
       header: {
         alignItems: 'center',
@@ -315,6 +319,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       mobileMapColumn: {
         width: '100%',
         minHeight: 300,
+        overflow: 'visible',
       },
       scrollView: {
         flex: 1,
@@ -376,7 +381,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       mapContainer: {
         backgroundColor: colors.surface,
         borderRadius: DESIGN_TOKENS.radii.md,
-        overflow: 'hidden',
+        // overflow: visible to allow popup to extend beyond container
+        overflow: 'visible',
         borderWidth: 1,
         borderColor: colors.border,
         shadowColor: colors.text,
@@ -401,6 +407,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       mapWrapper: {
         flex: 1,
         minHeight: 300,
+        overflow: 'visible',
       },
       mapFooter: {
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
