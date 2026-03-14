@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useEffect, useRef, useState } from 'react'
+import React, { Suspense, memo, useEffect, useState } from 'react'
 import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import {
@@ -102,13 +102,6 @@ export const TravelDeferredSections: React.FC<{
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
     Boolean((navigator as unknown as Record<string, unknown>).webdriver)
-  // TD-06: ref для IntersectionObserver на секции комментариев
-  const commentsObserverRef = useRef<View>(null)
-  const footerObserverRef = useRef<View>(null)
-  const authorSectionObserverRef = useRef<View>(null)
-  const ratingObserverRef = useRef<View>(null)
-  const mapObserverRef = useRef<View>(null)
-  const sidebarObserverRef = useRef<View>(null)
 
   const tdTrace = useTdTrace()
   const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useProgressiveLoad({
@@ -215,10 +208,7 @@ export const TravelDeferredSections: React.FC<{
 
       {/* Full author details stay below the hero shell on every platform. */}
       <View
-        ref={(el) => {
-          ;(authorSectionObserverRef as any).current = el
-          setAuthorSectionRef(el)
-        }}
+        ref={setAuthorSectionRef}
         collapsable={false}
       >
         {shouldLoadAuthor ? (
@@ -233,10 +223,7 @@ export const TravelDeferredSections: React.FC<{
 
       {/* Рейтинг и интерактивные блоки остаются после контентного слоя. */}
       <View
-        ref={(el) => {
-          ;(ratingObserverRef as any).current = el
-          setRatingRef(el)
-        }}
+        ref={setRatingRef}
         collapsable={false}
       >
         {shouldLoadRatingSection ? (
@@ -247,10 +234,7 @@ export const TravelDeferredSections: React.FC<{
       </View>
 
       <View
-        ref={(el) => {
-          ;(mapObserverRef as any).current = el
-          setMapRef(el)
-        }}
+        ref={setMapRef}
         collapsable={false}
       >
         <Suspense fallback={<DeferredMapPlaceholder />}>
@@ -265,10 +249,7 @@ export const TravelDeferredSections: React.FC<{
       </View>
 
       <View
-        ref={(el) => {
-          ;(sidebarObserverRef as any).current = el
-          setSidebarRef(el)
-        }}
+        ref={setSidebarRef}
         collapsable={false}
       >
         {shouldRenderSidebarSection ? (
@@ -290,7 +271,6 @@ export const TravelDeferredSections: React.FC<{
       <View 
         ref={(el) => {
           (anchors.comments as any).current = el;
-          (commentsObserverRef as any).current = el;
           setCommentsRef(el)
         }}
         collapsable={false}
@@ -306,10 +286,7 @@ export const TravelDeferredSections: React.FC<{
       </View>
 
       <View
-        ref={(el) => {
-          (footerObserverRef as any).current = el
-          setFooterRef(el)
-        }}
+        ref={setFooterRef}
         collapsable={false}
       >
         {shouldRenderFooterSection ? (
@@ -324,23 +301,22 @@ export const TravelDeferredSections: React.FC<{
   )
 })
 
-const DeferredAuthorSection: React.FC<{ travel: Travel; isMobile: boolean }> = memo(({
-  travel,
-  isMobile,
-}) => {
-  if (isMobile) {
-    return <MobileAuthorShareSection travel={travel} />
+const DeferredAuthorSection: React.FC<{ travel: Travel; isMobile: boolean }> = memo(
+  function DeferredAuthorSection({ travel, isMobile }) {
+    if (isMobile) {
+      return <MobileAuthorShareSection travel={travel} />
+    }
+
+    return <DesktopAuthorSection travel={travel} />
   }
+)
 
-  return <DesktopAuthorSection travel={travel} />
-})
-
-const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(({ travel }) => {
+const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function DesktopAuthorSection({ travel }) {
   const styles = useTravelDetailsStyles()
   return (
     <View
       testID="travel-details-author"
-      accessibilityRole="none"
+      accessibilityRole="region"
       accessibilityLabel="Автор маршрута"
       style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
     >
@@ -353,13 +329,13 @@ const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(({ travel }) => 
   )
 })
 
-const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel }) => {
+const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function MobileAuthorShareSection({ travel }) {
   const styles = useTravelDetailsStyles()
   return (
     <>
       <View
         testID="travel-details-author-mobile"
-        accessibilityRole="none"
+        accessibilityRole="region"
         accessibilityLabel="Автор маршрута"
         style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
       >
@@ -372,7 +348,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
 
       <View
         testID="travel-details-share-mobile"
-        accessibilityRole="none"
+        accessibilityRole="region"
         accessibilityLabel="Поделиться маршрутом"
         style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
       >
@@ -382,7 +358,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
   )
 })
 
-const TravelRatingWrapper: React.FC<{ travel: Travel }> = memo(({ travel }) => {
+const TravelRatingWrapper: React.FC<{ travel: Travel }> = memo(function TravelRatingWrapper({ travel }) {
   const styles = useTravelDetailsStyles()
 
   if (!travel?.id) return null
@@ -390,7 +366,7 @@ const TravelRatingWrapper: React.FC<{ travel: Travel }> = memo(({ travel }) => {
   return (
     <View
       testID="travel-details-rating"
-      accessibilityRole="none"
+      accessibilityRole="region"
       accessibilityLabel="Рейтинг путешествия"
       style={[styles.sectionContainer, styles.contentStable]}
     >

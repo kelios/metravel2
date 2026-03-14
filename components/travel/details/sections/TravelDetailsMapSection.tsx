@@ -223,18 +223,7 @@ export const TravelDetailsMapSection: React.FC<{
       colors.warningDark,
       colors.accentDark,
     ],
-    [
-      colors.accent,
-      colors.accentDark,
-      colors.info,
-      colors.infoDark,
-      colors.primary,
-      colors.primaryDark,
-      colors.success,
-      colors.successDark,
-      colors.warning,
-      colors.warningDark,
-    ],
+    [colors],
   )
   useEffect(() => {
     let active = true
