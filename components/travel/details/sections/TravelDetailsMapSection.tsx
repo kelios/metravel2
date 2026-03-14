@@ -163,6 +163,7 @@ export const TravelDetailsMapSection: React.FC<{
   const { width } = useWindowDimensions()
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
   const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
+  const [mapOpened, setMapOpened] = useState(false)
   const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
   const [weatherVisible, setWeatherVisible] = useState(false)
   const [downloadingRouteId, setDownloadingRouteId] = useState<number | null>(null)
@@ -194,6 +195,7 @@ export const TravelDetailsMapSection: React.FC<{
     hasEmbeddedCoords ||
     routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
   const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points' || mapOpenTrigger > 0
+  const shouldRenderMapContent = shouldRender || shouldForceRenderMap || mapOpened
   const shouldForceRenderExcursions = forceOpenKey === 'excursions'
 
   const colors = useThemedColors()
@@ -559,12 +561,12 @@ export const TravelDetailsMapSection: React.FC<{
                 onOpenChange={(open) => {
                   if (Platform.OS !== 'web') return
                   if (open) {
-                    setMapOpenTrigger((prev) => prev + 1)
+                    setMapOpened(true)
                     setMapResizeTrigger((prev) => prev + 1)
                   }
                 }}
               >
-                {shouldRender || shouldForceRenderMap ? (
+                {shouldRenderMapContent ? (
                   <Suspense fallback={<MapFallback />}>
                     <TravelMap
                       travelData={travel.travelAddress as any}
