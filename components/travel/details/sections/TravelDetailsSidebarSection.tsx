@@ -1,7 +1,6 @@
-import React, { Suspense, useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Platform, Text, View } from 'react-native'
 
-import { TravelListSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import type { Travel } from '@/types/types'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
@@ -13,14 +12,6 @@ import PopularTravelList from '@/components/travel/PopularTravelList'
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
 
-const TravelListFallback = () => {
-  const styles = useTravelDetailsStyles()
-  return (
-    <View style={styles.travelListFallback}>
-      <TravelListSkeleton count={3} />
-    </View>
-  )
-}
 
 export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
@@ -33,7 +24,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   travel,
   anchors,
   canRenderHeavy,
-  forceOpenKey = null,
+  forceOpenKey: _forceOpenKey = null,
 }) => {
   const styles = useTravelDetailsStyles()
   const isWeb = Platform.OS === 'web'
@@ -42,7 +33,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   const handleTravelsLoaded = useCallback((travels: Travel[]) => setRelatedTravels(travels), [])
 
   // Unified progressive loading for both platforms
-  const { shouldLoad: shouldLoadNear, setElementRef: setNearRef } = useProgressiveLoad({
+  const { setElementRef: setNearRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '200px',
     threshold: 0.1,
@@ -50,7 +41,7 @@ export const TravelDetailsSidebarSection: React.FC<{
     enabled: progressiveEnabled,
   })
 
-  const { shouldLoad: shouldLoadPopular, setElementRef: setPopularRef } = useProgressiveLoad({
+  const { setElementRef: setPopularRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '200px',
     threshold: 0.1,
@@ -62,9 +53,6 @@ export const TravelDetailsSidebarSection: React.FC<{
     setRelatedTravels([])
   }, [travel.id, travel.slug])
 
-  // All sections load immediately — no tracking needed
-  const shouldRenderNear = shouldLoadNear || forceOpenKey === 'near'
-  const shouldRenderPopular = shouldLoadPopular || forceOpenKey === 'popular'
 
   return (
     <>
@@ -84,23 +72,16 @@ export const TravelDetailsSidebarSection: React.FC<{
         <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
         <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
-          {travel.travelAddress &&
-            (shouldRenderNear ? (
-              <View testID="travel-details-near-loaded">
-                <Suspense fallback={<TravelListFallback />}>
-                  <NearTravelList
-                    travel={travel}
-                    onTravelsLoaded={handleTravelsLoaded}
-                    showHeader={false}
-                    embedded
-                  />
-                </Suspense>
-              </View>
-            ) : (
-              <View testID="travel-details-near-placeholder" style={styles.lazySectionReserved}>
-                <TravelListFallback />
-              </View>
-            ))}
+          {travel.travelAddress && (
+            <View testID="travel-details-near-loaded">
+              <NearTravelList
+                travel={travel}
+                onTravelsLoaded={handleTravelsLoaded}
+                showHeader={false}
+                embedded
+              />
+            </View>
+          )}
         </View>
       </View>
 
@@ -111,9 +92,7 @@ export const TravelDetailsSidebarSection: React.FC<{
           accessibilityRole="none"
           role="navigation"
         >
-          <Suspense fallback={null}>
-            <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
-          </Suspense>
+          <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
         </View>
       )}
 
@@ -132,17 +111,9 @@ export const TravelDetailsSidebarSection: React.FC<{
         <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
         <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
-          {shouldRenderPopular ? (
-            <View testID="travel-details-popular-loaded">
-              <Suspense fallback={<TravelListFallback />}>
-                <PopularTravelList title={null} showHeader={false} embedded />
-              </Suspense>
-            </View>
-          ) : (
-            <View testID="travel-details-popular-placeholder" style={styles.lazySectionReserved}>
-              <TravelListFallback />
-            </View>
-          )}
+          <View testID="travel-details-popular-loaded">
+            <PopularTravelList title={null} showHeader={false} embedded />
+          </View>
         </View>
       </View>
     </>

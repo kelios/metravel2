@@ -55,7 +55,7 @@ const TravelDetailPageSkeleton = withLazy(() =>
 const stripToDescription = (html?: string) => stripHtmlForSeo(html).slice(0, 160);
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
-const WEB_SKELETON_SETTLE_MS = 180
+const _WEB_SKELETON_SETTLE_MS = 180
 
 const buildSeoTitle = (base: string): string => {
   const normalized = String(base || '').replace(/\s+/g, ' ').trim();
@@ -300,44 +300,31 @@ export default function TravelDetailsContainer() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    const criticalShellReady = Boolean(travel) && lcpLoaded
 
-    if (!travel || !criticalShellReady) {
+    // Show skeleton until travel data is loaded
+    if (!travel) {
       setSkeletonPhase('loading')
       return
     }
 
+    // Travel loaded — hide skeleton immediately (no delays)
     let cancelled = false
-    let raf1: number | null = null
-    let raf2: number | null = null
-    let t: any = null
-
-    const fade = () => {
-      if (cancelled) return
-      t = setTimeout(() => {
-        if (cancelled) return
-        setSkeletonPhase('fading')
-        t = setTimeout(() => {
-          if (!cancelled) setSkeletonPhase('hidden')
-        }, 220)
-      }, WEB_SKELETON_SETTLE_MS)
+    const hide = () => {
+      if (!cancelled) setSkeletonPhase('hidden')
     }
 
+    // Use rAF to ensure paint completes before hiding
     if (typeof requestAnimationFrame === 'function') {
-      raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(fade)
-      })
+      const raf = requestAnimationFrame(hide)
+      return () => {
+        cancelled = true
+        cancelAnimationFrame(raf)
+      }
     } else {
-      fade()
+      hide()
+      return () => { cancelled = true }
     }
-
-    return () => {
-      cancelled = true
-      if (raf1 != null) cancelAnimationFrame(raf1)
-      if (raf2 != null) cancelAnimationFrame(raf2)
-      if (t) clearTimeout(t)
-    }
-  }, [travel, lcpLoaded])
+  }, [travel])
 
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   // Стабильный ключ для <Head> — используем slug (доступен сразу из URL),

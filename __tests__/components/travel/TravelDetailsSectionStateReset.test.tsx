@@ -3,7 +3,7 @@
  */
 
 import { Platform } from 'react-native'
-import { act, fireEvent, render } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 jest.mock('@/hooks/useProgressiveLoading', () => ({
   useProgressiveLoad: () => ({
@@ -107,15 +107,23 @@ jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({
 jest.mock('@/components/travel/NearTravelList', () => ({
   __esModule: true,
   default: function MockNearTravelList({ travel, onTravelsLoaded }: any) {
-    const { useEffect } = require('react')
+    const { useEffect, useRef } = require('react')
     const { View } = require('react-native')
 
+    // Use ref to track if we've already called onTravelsLoaded for this travel
+    const calledRef = useRef<number | null>(null)
+
     useEffect(() => {
-      if (travel?.id === 1) {
-        onTravelsLoaded?.([
-          { id: 1, slug: 'first-travel', name: 'First travel' },
-          { id: 2, slug: 'nearby-travel', name: 'Nearby travel' },
-        ])
+      // Only call onTravelsLoaded once per travel.id
+      if (travel?.id === 1 && calledRef.current !== travel.id) {
+        calledRef.current = travel.id
+        // Use setTimeout to ensure state update happens in next tick
+        setTimeout(() => {
+          onTravelsLoaded?.([
+            { id: 1, slug: 'first-travel', name: 'First travel' },
+            { id: 2, slug: 'nearby-travel', name: 'Nearby travel' },
+          ])
+        }, 0)
       }
     }, [travel?.id, onTravelsLoaded])
 
@@ -215,12 +223,11 @@ describe('Travel detail section state resets', () => {
       />
     )
 
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+    // Wait for NearTravelList mock to call onTravelsLoaded and set relatedTravels
+    // NavigationArrows only renders when relatedTravels.length > 0
+    await waitFor(() => {
+      expect(view.getByTestId('navigation-arrows')).toBeTruthy()
     })
-
-    expect(view.getByTestId('navigation-arrows')).toBeTruthy()
 
     view.rerender(
       <TravelDetailsSidebarSection
@@ -232,12 +239,10 @@ describe('Travel detail section state resets', () => {
       />
     )
 
-    await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
+    // After travel change, relatedTravels should be reset to []
+    await waitFor(() => {
+      expect(view.queryByTestId('navigation-arrows')).toBeNull()
     })
-
-    expect(view.queryByTestId('navigation-arrows')).toBeNull()
   })
 
   it('resets map open state when navigating to another travel', async () => {

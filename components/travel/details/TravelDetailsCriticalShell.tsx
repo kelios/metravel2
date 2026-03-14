@@ -175,7 +175,7 @@ export default function TravelDetailsCriticalShell({
                 style={[styles.contentWrapper, { paddingHorizontal: contentHorizontalPadding }]}
                 collapsable={false}
               >
-                {travel && skeletonPhase === 'hidden' ? (
+                {travel ? (
                   showDesktopSidebar ? (
                     <View style={desktopLayoutStyle} collapsable={false}>
                       <View style={desktopSidebarContainerStyle}>

@@ -1,11 +1,6 @@
-import React, { Suspense, memo, useEffect, useState } from 'react'
+import React, { memo, useEffect, useState } from 'react'
 import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
-import {
-  CommentsSkeleton,
-  MapSkeleton,
-  TravelListSkeleton,
-} from '@/components/travel/TravelDetailSkeletons'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import TravelRatingSection from '@/components/travel/TravelRatingSection'
 import AuthorCard from '@/components/travel/AuthorCard'
@@ -22,53 +17,9 @@ import { TravelDetailsMapSection } from './sections/TravelDetailsMapSection'
 import { CommentsSection } from '@/components/travel/CommentsSection'
 
 const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
-const PLACEHOLDER_MT_8 = { marginTop: 8 } as const
 const PLACEHOLDER_MIN_H_160 = { minHeight: 160 } as const
 const PLACEHOLDER_MIN_H_56 = { minHeight: 56 } as const
 
-const DeferredMapPlaceholder = () => {
-  const styles = useTravelDetailsStyles()
-  return (
-    <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
-      <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
-      <View style={PLACEHOLDER_MT_12}>
-        <MapSkeleton />
-      </View>
-    </View>
-  )
-}
-
-const DeferredSidebarPlaceholder = () => {
-  const styles = useTravelDetailsStyles()
-  return (
-    <>
-      <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
-        <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
-        <View style={PLACEHOLDER_MT_8}>
-          <TravelListSkeleton count={3} />
-        </View>
-      </View>
-      <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
-        <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
-        <View style={PLACEHOLDER_MT_8}>
-          <TravelListSkeleton count={3} />
-        </View>
-      </View>
-    </>
-  )
-}
-
-const DeferredCommentsPlaceholder = () => {
-  const styles = useTravelDetailsStyles()
-  return (
-    <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
-      <Text style={styles.sectionHeaderText}>Комментарии</Text>
-      <View style={PLACEHOLDER_MT_8}>
-        <CommentsSkeleton />
-      </View>
-    </View>
-  )
-}
 
 export const TravelDeferredSections: React.FC<{
   travel: Travel
@@ -170,11 +121,6 @@ export const TravelDeferredSections: React.FC<{
 
   const shouldLoadAuthor = isWebAutomation || shouldLoadAuthorSection
   const shouldLoadRatingSection = isWebAutomation || shouldLoadRating
-  const shouldRenderSidebarSection =
-    isWebAutomation || shouldLoadSidebar || forceOpenKey === 'near' || forceOpenKey === 'popular'
-  const shouldRenderCommentsSection =
-    isWebAutomation || shouldLoadComments || forceOpenKey === 'comments'
-  const shouldRenderFooterSection = isWebAutomation || shouldLoadFooter
 
   return (
     <>
@@ -216,35 +162,27 @@ export const TravelDeferredSections: React.FC<{
         ref={setMapRef}
         collapsable={false}
       >
-        <Suspense fallback={<DeferredMapPlaceholder />}>
-          <TravelDetailsMapSection
-            travel={travel}
-            anchors={anchors}
-            canRenderHeavy={canRenderHeavy}
-            scrollToMapSection={scrollToMapSection}
-            forceOpenKey={forceOpenKey}
-          />
-        </Suspense>
+        <TravelDetailsMapSection
+          travel={travel}
+          anchors={anchors}
+          canRenderHeavy={canRenderHeavy}
+          scrollToMapSection={scrollToMapSection}
+          forceOpenKey={forceOpenKey}
+        />
       </View>
 
       <View
         ref={setSidebarRef}
         collapsable={false}
       >
-        {shouldRenderSidebarSection ? (
-          <Suspense fallback={<DeferredSidebarPlaceholder />}>
-            <TravelDetailsSidebarSection
-              travel={travel}
-              anchors={anchors}
-              scrollY={scrollY}
-              viewportHeight={viewportHeight}
-              canRenderHeavy={canRenderHeavy}
-              forceOpenKey={forceOpenKey}
-            />
-          </Suspense>
-        ) : (
-          <DeferredSidebarPlaceholder />
-        )}
+        <TravelDetailsSidebarSection
+          travel={travel}
+          anchors={anchors}
+          scrollY={scrollY}
+          viewportHeight={viewportHeight}
+          canRenderHeavy={canRenderHeavy}
+          forceOpenKey={forceOpenKey}
+        />
       </View>
 
       <View 
@@ -255,26 +193,14 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
-        {shouldRenderCommentsSection && travel?.id ? (
-          <Suspense fallback={<DeferredCommentsPlaceholder />}>
-            <CommentsSection travelId={travel.id} />
-          </Suspense>
-        ) : (
-          <DeferredCommentsPlaceholder />
-        )}
+        {travel?.id && <CommentsSection travelId={travel.id} />}
       </View>
 
       <View
         ref={setFooterRef}
         collapsable={false}
       >
-        {shouldRenderFooterSection ? (
-          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_160} />}>
-            <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
-          </Suspense>
-        ) : (
-          <View style={PLACEHOLDER_MIN_H_160} />
-        )}
+        <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
       </View>
     </>
   )

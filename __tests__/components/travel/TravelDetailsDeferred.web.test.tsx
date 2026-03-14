@@ -207,24 +207,7 @@ describe('TravelDeferredSections (web author defer)', () => {
       await Promise.resolve()
     })
 
-    expect(mockMapSectionSpy).toHaveBeenCalled()
-    expect(mockSidebarSectionSpy).not.toHaveBeenCalled()
-    expect(mockCommentsSectionSpy).not.toHaveBeenCalled()
-    expect(mockFooterSectionSpy).not.toHaveBeenCalled()
-
-    expect(observers.length).toBeGreaterThanOrEqual(5)
-
-    await act(async () => {
-      observers.forEach((observer) => {
-        observer.callback(
-          [{ isIntersecting: true } as IntersectionObserverEntry],
-          {} as IntersectionObserver,
-        )
-      })
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
+    // All sections now load immediately — no intersection observer gating
     expect(mockMapSectionSpy).toHaveBeenCalled()
     expect(mockSidebarSectionSpy).toHaveBeenCalled()
     expect(mockCommentsSectionSpy).toHaveBeenCalled()

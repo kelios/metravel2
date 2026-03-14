@@ -24,8 +24,8 @@ import { createTravelListItemStyles } from './travelListItemStyles';
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
 const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
-/** На странице поиска не делаем prefetch деталей карточек, чтобы не грузить сеть. */
-const ENABLE_HOVER_PREFETCH = false;
+/** Hover-prefetch: предзагружаем данные путешествия при наведении мыши для мгновенного title */
+const ENABLE_HOVER_PREFETCH = true;
 const EMPTY_STYLE = {} as const;
 
 // Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
