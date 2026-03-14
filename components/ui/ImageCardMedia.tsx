@@ -11,6 +11,20 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 type Priority = 'low' | 'normal' | 'high';
 
 const isRootRelativeUrl = (value: string): boolean => /^\/(?!\/)/.test(value);
+const loadedWebImageBaseCache = new Set<string>();
+
+const resolveBaseImageKey = (value: string | null | undefined): string | null => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return null;
+  if (/^(data:|blob:)/i.test(raw)) return raw;
+
+  try {
+    const url = new URL(raw, 'https://metravel.by');
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return raw.split('?')[0] || raw;
+  }
+};
 
 
 type WebMainImageProps = {
@@ -219,18 +233,28 @@ function ImageCardMedia({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
-  const [webLoaded, setWebLoaded] = useState(false);
+  const resolvedSource = useMemo(() => {
+    if (source) return source;
+    if (src) return { uri: src };
+    return null;
+  }, [source, src]);
+  const currentBaseImageKey = useMemo(() => {
+    if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    if (typeof resolvedSource === 'string') {
+      return resolveBaseImageKey(resolvedSource);
+    }
+    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
+    return resolveBaseImageKey(uri);
+  }, [resolvedSource]);
+  const [webLoaded, setWebLoaded] = useState(() => {
+    return !!(currentBaseImageKey && loadedWebImageBaseCache.has(currentBaseImageKey));
+  });
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
     const override = flattened?.borderRadius;
     return typeof override === 'number' ? override : borderRadius;
   }, [borderRadius, style]);
-  const resolvedSource = useMemo(() => {
-    if (source) return source;
-    if (src) return { uri: src };
-    return null;
-  }, [source, src]);
 
   // For require() sources (numbers), we use OptimizedImage with ExpoImage
   // which handles them natively. No need to resolve URI manually.
@@ -384,33 +408,23 @@ function ImageCardMedia({
 
   // Track the base URI (without optimization params) to avoid resetting loaded state
   // when only width/quality changes but the source image is the same
-  const baseUriRef = useRef<string | null>(null);
+  const baseUriRef = useRef<string | null>(currentBaseImageKey);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    // Extract base URI without query params for comparison
-    let currentBaseUri: string | null = null;
-    if (resolvedSource && typeof resolvedSource !== 'number') {
-      const uri = typeof (resolvedSource as any)?.uri === 'string' 
-        ? String((resolvedSource as any).uri).trim() 
-        : '';
-      try {
-        const url = new URL(uri, 'https://metravel.by');
-        currentBaseUri = url.origin + url.pathname;
-      } catch {
-        currentBaseUri = uri.split('?')[0];
-      }
-    }
     // Only reset loaded state if the actual image source changed
-    if (currentBaseUri !== baseUriRef.current) {
-      baseUriRef.current = currentBaseUri;
-      setWebLoaded(false);
+    if (currentBaseImageKey !== baseUriRef.current) {
+      baseUriRef.current = currentBaseImageKey;
+      setWebLoaded(Boolean(currentBaseImageKey && loadedWebImageBaseCache.has(currentBaseImageKey)));
     }
-  }, [resolvedSource]);
+  }, [currentBaseImageKey]);
 
   const handleWebLoad = useCallback((_resolvedSrc: string) => {
+    if (currentBaseImageKey) {
+      loadedWebImageBaseCache.add(currentBaseImageKey);
+    }
     setWebLoaded(true);
     onLoad?.();
-  }, [onLoad]);
+  }, [currentBaseImageKey, onLoad]);
 
   const prefetchHref = useMemo(() => {
     if (Platform.OS !== 'web') return null;

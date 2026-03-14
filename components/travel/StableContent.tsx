@@ -394,10 +394,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 /* Instagram wrapper - обёртка для всех Instagram embed'ов */
 .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
 .${WEB_RICH_TEXT_CLASS} .instagram-media {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: min(100%, 360px) !important;
+  max-width: 360px !important;
   min-width: 0 !important;
-  margin: ${DESIGN_TOKENS.spacing.xs + 4}px auto !important;
+  margin: ${DESIGN_TOKENS.spacing.xs + 8}px 0 ${DESIGN_TOKENS.spacing.sm}px !important;
   border-radius: ${DESIGN_TOKENS.radii.md}px !important;
   overflow: hidden !important;
   position: relative;
@@ -454,6 +454,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     border-width: 4px;
     margin: ${DESIGN_TOKENS.spacing.lg}px 0 22px;
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
+  }
+  .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
+  .${WEB_RICH_TEXT_CLASS} .instagram-media {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 }
 
@@ -1020,12 +1025,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   instagramEmbedWrapper: {
     marginVertical: 14,
     width: '100%',
-    maxWidth: '100%',
-    alignSelf: 'stretch',
+    maxWidth: 360,
+    alignSelf: 'flex-start',
     overflow: 'hidden'
   },
   instagramEmbedWrapperWeb: {
     width: '100%',
-    maxWidth: '100%',
+    maxWidth: 360,
   }
 })

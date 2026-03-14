@@ -559,6 +559,7 @@ export const TravelDetailsMapSection: React.FC<{
                 onOpenChange={(open) => {
                   if (Platform.OS !== 'web') return
                   if (open) {
+                    setMapOpenTrigger((prev) => prev + 1)
                     setMapResizeTrigger((prev) => prev + 1)
                   }
                 }}

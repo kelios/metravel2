@@ -90,4 +90,54 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(blurLayers[0].props.style?.objectFit).toBe('cover')
     expect(blurLayers[0].props.src).toBe(mainLayers[0].props.src)
   })
+
+  it('keeps a previously loaded web image visible after remount', () => {
+    const src = 'https://example.com/photo-remount.jpg'
+
+    let firstTree: renderer.ReactTestRenderer
+    renderer.act(() => {
+      firstTree = renderer.create(
+        <ImageCardMedia
+          src={src}
+          height={200}
+          blurBackground
+          fit="contain"
+        />
+      )
+    })
+
+    const firstMainImage = firstTree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    renderer.act(() => {
+      firstMainImage.props.onLoad()
+    })
+
+    renderer.act(() => {
+      firstTree!.unmount()
+    })
+
+    let secondTree: renderer.ReactTestRenderer
+    renderer.act(() => {
+      secondTree = renderer.create(
+        <ImageCardMedia
+          src={`${src}?w=480&q=60`}
+          height={200}
+          blurBackground
+          fit="contain"
+        />
+      )
+    })
+
+    const secondMainImage = secondTree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(secondMainImage.props.style?.opacity).toBe(1)
+  })
 })

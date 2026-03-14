@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Animated,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -226,6 +227,11 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       };
     }, [numColumns, width, styles.webGrid]);
 
+    const mobileWebCardWidth = useMemo(() => {
+      if (width >= METRICS.breakpoints.tablet) return null;
+      return Math.max(248, Math.min(320, width - 56));
+    }, [width]);
+
     // Оптимизированный рендер элемента с предотвращением лишних ререндеров
     const renderItem = useCallback(
       ({ item }: { item: any; index: number }) => (
@@ -316,28 +322,49 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
 
         <Animated.View style={{ opacity: fadeAnim }}>
           {Platform.OS === 'web' ? (
-            <View
-              style={
-                width < METRICS.breakpoints.tablet
-                  ? styles.webScrollContainer
-                  : undefined
-              }
-            >
-              <View
-                accessibilityRole="list"
-                style={[styles.flatListContent, styles.webGrid, webGridStyle]}
+            width < METRICS.breakpoints.tablet ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[
+                  styles.flatListContent,
+                  { paddingRight: DESIGN_TOKENS.spacing.sm },
+                ]}
+                nestedScrollEnabled={!embedded}
+                scrollEventThrottle={16}
+                keyboardShouldPersistTaps="handled"
               >
                 {popularList.map((item) => (
                   <View
                     key={keyExtractor(item)}
                     accessibilityRole="listitem"
-                    style={styles.webGridItem}
+                    style={[
+                      styles.webGridItem,
+                      { width: mobileWebCardWidth ?? undefined, marginRight: DESIGN_TOKENS.spacing.sm },
+                    ]}
                   >
                     <TravelTmlRound travel={item as any} />
                   </View>
                 ))}
+              </ScrollView>
+            ) : (
+              <View>
+                <View
+                  accessibilityRole="list"
+                  style={[styles.flatListContent, styles.webGrid, webGridStyle]}
+                >
+                  {popularList.map((item) => (
+                    <View
+                      key={keyExtractor(item)}
+                      accessibilityRole="listitem"
+                      style={styles.webGridItem}
+                    >
+                      <TravelTmlRound travel={item as any} />
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
+            )
           ) : (
             <Animated.FlatList
               key={`cols-${numColumns}`}

@@ -58,8 +58,7 @@ const ToggleableMapSection = ({
         if (forceOpenTrigger === undefined) return;
         setShowMap(true);
         setHasOpened(true);
-        onOpenChange?.(true);
-    }, [forceOpenTrigger, onOpenChange]);
+    }, [forceOpenTrigger]);
 
     // TD-04: IntersectionObserver — на desktop карта авто-монтируется когда доходит до viewport
     useEffect(() => {
@@ -79,7 +78,6 @@ const ToggleableMapSection = ({
                 if (entries[0]?.isIntersecting) {
                     setShowMap(true);
                     setHasOpened(true);
-                    onOpenChange?.(true);
                     observer.disconnect();
                 }
             },
@@ -87,7 +85,7 @@ const ToggleableMapSection = ({
         );
         observer.observe(node);
         return () => observer.disconnect();
-    }, [isDesktop, hasOpened, onOpenChange]);
+    }, [isDesktop, hasOpened]);
 
     return (
         <View ref={wrapperRef} style={styles.wrapper}>
