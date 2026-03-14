@@ -220,18 +220,13 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             flexShrink: 0,
             ...Platform.select({
                 web: {
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' as any,
+                    transition: 'background-color 0.15s ease-out' as any,
                     cursor: 'pointer' as any,
                 },
             }),
         },
         navItemHover: {
             backgroundColor: colors.primarySoft,
-            ...Platform.select({
-                web: {
-                    transform: 'translateY(-1px)' as any,
-                },
-            }),
         },
         navItemActive: {
             backgroundColor: colors.brandLight,

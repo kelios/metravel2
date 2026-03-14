@@ -4,8 +4,7 @@
  * @module hooks/useMapLazyLoad
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Platform } from 'react-native';
+import { useCallback, useMemo } from 'react';
 
 interface UseMapLazyLoadOptions {
   /**
@@ -86,101 +85,23 @@ export function useMapLazyLoad(options: UseMapLazyLoadOptions = {}): UseMapLazyL
     enabled = true,
     hasData = true,
     canRenderHeavy = true,
-    rootMargin = '0px',
-    threshold = 0.2,
   } = options;
 
-  const [isVisible, setIsVisible] = useState(Platform.OS !== 'web');
-  const [hasMounted, setHasMounted] = useState(false);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const elementRef = useRef<Element | null>(null);
+  // All sections load immediately — no delays, no IntersectionObserver
+  const isVisible = true;
+  const isLoading = false;
+  const hasMounted = enabled && canRenderHeavy && hasData;
+  const shouldRender = enabled && canRenderHeavy && hasData;
 
-  // Set element ref callback
-  const setElementRef = useCallback((node: unknown) => {
-    if (Platform.OS !== 'web') return;
-
-    // Get actual DOM node
-    const target = node?._nativeNode || node?._domNode || node || null;
-    elementRef.current = target;
-
-    // If not enabled, don't observe
-    if (!enabled || !canRenderHeavy) return;
-
-    // If already visible, don't need to observe
-    if (isVisible) return;
-
-    // Clean up previous observer
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-
-    // Create new observer
-    if (target && typeof IntersectionObserver !== 'undefined') {
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          const entry = entries[0];
-          if (entry && entry.isIntersecting) {
-            setIsVisible(true);
-            if (observerRef.current) {
-              observerRef.current.disconnect();
-              observerRef.current = null;
-            }
-          }
-        },
-        {
-          root: null,
-          rootMargin,
-          threshold,
-        }
-      );
-
-      observerRef.current.observe(target);
-    } else if (target && typeof IntersectionObserver === 'undefined') {
-      // Fallback: IntersectionObserver not supported, show immediately
-      setIsVisible(true);
-    }
-  }, [enabled, canRenderHeavy, isVisible, rootMargin, threshold]);
-
-  // Enable lazy loading when canRenderHeavy becomes true
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!canRenderHeavy) return;
-    if (isVisible) return;
-
-    if (elementRef.current) {
-      setElementRef(elementRef.current);
-    }
-  }, [canRenderHeavy, isVisible, setElementRef]);
-
-  // Track if map has been mounted
-  const shouldRender = enabled && canRenderHeavy && hasData && isVisible;
-
-  useEffect(() => {
-    if (shouldRender && !hasMounted) {
-      setHasMounted(true);
-    }
-  }, [shouldRender, hasMounted]);
-
-  // Cleanup observer
-  useEffect(() => {
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-        observerRef.current = null;
-      }
-    };
+  const setElementRef = useCallback((_node: unknown) => {
+    // No-op: immediate loading, no observer needed
   }, []);
 
-  const isLoading = enabled && hasData && !isVisible;
-
-  const shouldMount = hasData && (hasMounted || shouldRender);
-
   return useMemo(() => ({
-    shouldRender: shouldMount,
+    shouldRender,
     elementRef: setElementRef,
     hasMounted,
     isLoading,
     isVisible,
-  }), [shouldMount, setElementRef, hasMounted, isLoading, isVisible]);
+  }), [shouldRender, setElementRef, hasMounted, isLoading, isVisible]);
 }

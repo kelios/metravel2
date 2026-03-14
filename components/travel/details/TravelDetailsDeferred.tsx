@@ -13,23 +13,13 @@ import ShareButtons from '@/components/travel/ShareButtons'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
-import { withLazy } from './TravelDetailsLazy'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
 import { TravelDetailsSidebarSection } from './sections/TravelDetailsSidebarSection'
 import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
-
-const TravelDetailsMapSection = withLazy(() =>
-  import('./sections/TravelDetailsMapSection').then((m) => ({
-    default: m.TravelDetailsMapSection,
-  }))
-)
-const CommentsSection = withLazy(() =>
-  import('@/components/travel/CommentsSection').then((m) => ({
-    default: m.CommentsSection,
-  }))
-)
+import { TravelDetailsMapSection } from './sections/TravelDetailsMapSection'
+import { CommentsSection } from '@/components/travel/CommentsSection'
 
 const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
 const PLACEHOLDER_MT_8 = { marginTop: 8 } as const

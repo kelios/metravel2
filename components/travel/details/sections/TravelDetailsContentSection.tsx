@@ -9,11 +9,11 @@ import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
-import { withLazy } from '../TravelDetailsLazy'
 import { CollapsibleSection } from './CollapsibleSection'
 import { LazyYouTube } from './LazyYouTubeSection'
 import { getDayLabel } from '@/services/pdf-export/utils/pluralize'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import TravelDescription from '@/components/travel/TravelDescription'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const WEB_SR_ONLY_HEADING_STYLE = {
@@ -34,8 +34,6 @@ const VIDEO_PLACEHOLDER_STYLE = {
   borderRadius: DESIGN_TOKENS.radii.md,
   overflow: 'hidden',
 } as const
-
-const TravelDescription = withLazy(() => import('@/components/travel/TravelDescription'))
 
 const DescriptionFallback = () => {
   const styles = useTravelDetailsStyles()
@@ -106,17 +104,15 @@ export const TravelDetailsContentSection: React.FC<{
     priority: 'low',
     rootMargin: '220px',
     threshold: 0.05,
-    fallbackDelay: 2600,
+    fallbackDelay: 1000,
     enabled: Boolean(travel.youtube_link),
-    disableFallbackOnWeb: true,
   })
   const { shouldLoad: shouldLoadInsights, setElementRef: setInsightsRef } = useProgressiveLoad({
     priority: 'low',
     rootMargin: '260px',
     threshold: 0.05,
-    fallbackDelay: 3200,
+    fallbackDelay: 1000,
     enabled: hasInsights,
-    disableFallbackOnWeb: true,
   })
   const shouldForceLoadInsights =
     forceOpenKey === 'recommendation' || forceOpenKey === 'plus' || forceOpenKey === 'minus'

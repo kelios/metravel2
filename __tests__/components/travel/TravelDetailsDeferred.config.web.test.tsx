@@ -73,7 +73,7 @@ describe('TravelDeferredSections map loading config', () => {
     mockUseProgressiveLoad.mockClear()
   })
 
-  it('keeps the map observer strict enough to avoid first-frame preload', async () => {
+  it('uses progressive loading with fallback delay for automatic content loading', async () => {
     const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
 
     const travel: any = {
@@ -123,13 +123,14 @@ describe('TravelDeferredSections map loading config', () => {
     })
 
     expect(mockUseProgressiveLoad).toHaveBeenCalled()
+    // Map section uses progressive loading with fallback delay for automatic loading
     expect(mockUseProgressiveLoad).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
         priority: 'low',
-        rootMargin: '0px',
-        threshold: 0.15,
-        disableFallbackOnWeb: true,
+        rootMargin: '200px',
+        threshold: 0.1,
+        fallbackDelay: 800,
       }),
     )
   })

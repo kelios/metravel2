@@ -153,9 +153,9 @@ npx serve dist/prod -l 3000 -s
   - post-LCP runtime widgets
 - Above-the-fold UI must render from the critical shell on first paint.
   - Do not lazy-load desktop header, hero shell, or other first-screen chrome if that creates a second visual frame after the skeleton.
-- Below-the-fold code must stay truly lazy on web.
-  - Do not prefetch or auto-import deferred sections by timer alone.
-  - Use only real triggers: intersection, explicit user interaction, or automation/test mode when required.
+- All sections load immediately on page load — no delays, no waiting for scroll or interaction.
+  - Show skeleton placeholders while content loads — page is never blocked.
+  - No fallback timers, no IntersectionObserver gating — content starts loading right away.
 - On travel pages, the web hero slider/background must appear immediately with the hero once runtime is ready.
   - Do not gate the slider/background on explicit click, pointer interaction, keyboard interaction, or scroll.
   - Keep the first rendered web hero visually complete from the start: main image, blurred side background, and slider chrome must arrive together.

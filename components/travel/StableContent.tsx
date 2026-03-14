@@ -340,7 +340,25 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   background: #f5f5f7;
 }
 
-/* ===== SINGLE IMAGE WITH FLOAT (desktop) ===== */
+/* ===== SINGLE WIDE IMAGE (horizontal/landscape) ===== */
+.${WEB_RICH_TEXT_CLASS} .img-single-wide {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 1.5em 0;
+  clear: both;
+  text-align: center;
+}
+.${WEB_RICH_TEXT_CLASS} .img-single-wide img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+/* ===== SINGLE IMAGE WITH FLOAT (desktop, vertical/square images only) ===== */
 @media (min-width: 769px) {
   .${WEB_RICH_TEXT_CLASS} .img-float-right {
     float: right;

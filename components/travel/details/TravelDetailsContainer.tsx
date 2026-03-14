@@ -356,24 +356,13 @@ export default function TravelDetailsContainer() {
     readyImage,
     jsonLd,
   } = useMemo(() => {
-    const slugTitle =
-      slug.trim().length > 0
-        ? slug
-            .split('-')
-            .map((part) => part.trim())
-            .filter(Boolean)
-            .join(' ')
-        : '';
-    const title = buildSeoTitle(
-      travel?.name
-        ? travel.name
-        : slugTitle || 'Путешествие'
-    );
+    // Пока travel не загружен — показываем нейтральный title на русском,
+    // а не slug (транслитерация на латинице)
+    const title = travel?.name
+      ? buildSeoTitle(travel.name)
+      : 'Загрузка... | Metravel';
     const desc =
-      stripToDescription(travel?.description) ||
-      (slugTitle
-        ? `Путешествие ${slugTitle} на Metravel.`
-        : 'Путешествие на Metravel.');
+      stripToDescription(travel?.description) || 'Путешествие на Metravel.';
     const canonical =
       typeof travel?.slug === "string" && travel.slug
         ? buildCanonicalUrl(`/travels/${travel.slug}`)

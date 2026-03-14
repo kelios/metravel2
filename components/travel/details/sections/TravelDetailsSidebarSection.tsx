@@ -7,13 +7,11 @@ import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
-import { withLazy } from '../TravelDetailsLazy'
+import NavigationArrows from '@/components/travel/NavigationArrows'
+import NearTravelList from '@/components/travel/NearTravelList'
+import PopularTravelList from '@/components/travel/PopularTravelList'
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
-
-const NavigationArrows = withLazy(() => import('@/components/travel/NavigationArrows'))
-const NearTravelList = withLazy(() => import('@/components/travel/NearTravelList'))
-const PopularTravelList = withLazy(() => import('@/components/travel/PopularTravelList'))
 
 const TravelListFallback = () => {
   const styles = useTravelDetailsStyles()
@@ -60,24 +58,13 @@ export const TravelDetailsSidebarSection: React.FC<{
     enabled: progressiveEnabled,
   })
 
-  const [hasLoadedNear, setHasLoadedNear] = useState(false)
-  const [hasLoadedPopular, setHasLoadedPopular] = useState(false)
-
   useEffect(() => {
     setRelatedTravels([])
   }, [travel.id, travel.slug])
 
-  // Keep content visible once loaded
-  useEffect(() => {
-    if (shouldLoadNear && !hasLoadedNear) setHasLoadedNear(true)
-  }, [shouldLoadNear, hasLoadedNear])
-
-  useEffect(() => {
-    if (shouldLoadPopular && !hasLoadedPopular) setHasLoadedPopular(true)
-  }, [shouldLoadPopular, hasLoadedPopular])
-
-  const shouldRenderNear = shouldLoadNear || hasLoadedNear || forceOpenKey === 'near'
-  const shouldRenderPopular = shouldLoadPopular || hasLoadedPopular || forceOpenKey === 'popular'
+  // All sections load immediately — no tracking needed
+  const shouldRenderNear = shouldLoadNear || forceOpenKey === 'near'
+  const shouldRenderPopular = shouldLoadPopular || forceOpenKey === 'popular'
 
   return (
     <>

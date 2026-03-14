@@ -398,26 +398,23 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
             };
 
             const padding = 16;
-            const targetCenterX = mapRect.width / 2;
-            // небольшое смещение вверх, чтобы “хвостик” попапа и маркер оставались видимыми
-            const targetCenterY = mapRect.height * 0.45;
 
-            const currentCenterX = popupRect.left + popupRect.width / 2;
-            const currentCenterY = popupRect.top + popupRect.height / 2;
+            // Приоритет: убедиться, что попап полностью виден внутри карты.
+            // panBy([dx, dy]) сдвигает карту, т.е. чтобы попап поднялся вверх,
+            // нужно сдвинуть карту вниз (положительный dy).
+            let dx = 0;
+            let dy = 0;
 
-            let dx = targetCenterX - currentCenterX;
-            let dy = targetCenterY - currentCenterY;
-
-            // Если попап выходит за пределы, приоритет — вернуть его внутрь safe-area.
             const overflowLeft = padding - popupRect.left;
             const overflowRight = popupRect.right - (mapRect.width - padding);
             const overflowTop = padding - popupRect.top;
             const overflowBottom = popupRect.bottom - (mapRect.height - padding);
 
-            if (overflowLeft > 0) dx = Math.max(dx, overflowLeft);
-            if (overflowRight > 0) dx = Math.min(dx, -overflowRight);
-            if (overflowTop > 0) dy = Math.max(dy, overflowTop);
-            if (overflowBottom > 0) dy = Math.min(dy, -overflowBottom);
+            // Сдвигаем карту, чтобы попап вошёл в видимую область
+            if (overflowLeft > 0) dx = -overflowLeft;
+            if (overflowRight > 0) dx = overflowRight;
+            if (overflowTop > 0) dy = -overflowTop;
+            if (overflowBottom > 0) dy = overflowBottom;
 
             // Избегаем микродвижений (дергания)
             if (Math.abs(dx) < 6) dx = 0;

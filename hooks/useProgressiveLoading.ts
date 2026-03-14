@@ -3,7 +3,7 @@
  * Implements critical rendering path optimization
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Platform, View } from 'react-native';
 
 // Types for progressive loading
@@ -23,135 +23,19 @@ export interface ProgressiveLoadConfig {
   disableFallbackOnWeb?: boolean;
 }
 
-const MAX_UI_FALLBACK_DELAY_MS = 1000;
-
-const resolveFallbackDelay = (value: number | undefined, defaultMs: number): number => {
-  const numeric = Number.isFinite(value) ? Number(value) : defaultMs;
-  return Math.min(MAX_UI_FALLBACK_DELAY_MS, Math.max(0, numeric));
-};
-
 // Hook for progressive component loading
+// All sections load immediately when enabled — no delays.
+// Skeleton placeholders are shown while content loads, page is never blocked.
 export function useProgressiveLoad(config: ProgressiveLoadConfig) {
-  const priority = config.priority;
-  const threshold = config.threshold;
-  const rootMargin = config.rootMargin;
-  const fallbackDelay = config.fallbackDelay;
   const enabled = config.enabled !== false;
-  const disableFallbackOnWeb = config.disableFallbackOnWeb === true;
-
-  const [shouldLoad, setShouldLoad] = useState(
-    enabled && (priority === 'immediate' || priority === 'high')
-  );
   const elementRef = useRef<unknown>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
 
   const setElementRef = useCallback((node: unknown) => {
     elementRef.current = node;
-
-    if (Platform.OS !== 'web') return;
-    if (!observerRef.current) return;
-    if (!node) return;
-    const domElement = node._nativeNode || node._domNode || node;
-    if (!domElement) return;
-    try {
-      observerRef.current.observe(domElement);
-    } catch {
-      // noop
-    }
   }, []);
 
-  useEffect(() => {
-    if (!enabled) {
-      setShouldLoad(false);
-      return;
-    }
-
-    if (priority === 'immediate') {
-      setShouldLoad(true);
-      return;
-    }
-
-    if (priority === 'high' && Platform.OS !== 'web') {
-      // On native, high priority loads immediately
-      setShouldLoad(true);
-      return;
-    }
-
-    if (Platform.OS !== 'web') {
-      // Fallback for native - load after interaction
-      const timer = setTimeout(() => {
-        setShouldLoad(true);
-      }, resolveFallbackDelay(fallbackDelay, 1000));
-      return () => clearTimeout(timer);
-    }
-
-    // Web: Use Intersection Observer
-    if (!window.IntersectionObserver) {
-      if (disableFallbackOnWeb) {
-        setShouldLoad(true);
-        return;
-      }
-      // Fallback for browsers without Intersection Observer
-      const timer = setTimeout(() => {
-        setShouldLoad(true);
-      }, resolveFallbackDelay(fallbackDelay, 1000));
-      return () => clearTimeout(timer);
-    }
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting) {
-          setShouldLoad(true);
-          if (observerRef.current) {
-            observerRef.current.disconnect();
-          }
-        }
-      },
-      {
-        threshold: threshold || 0.1,
-        rootMargin: rootMargin || '50px',
-      }
-    );
-
-    const element = elementRef.current;
-    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-    if (element) {
-      const domElement = element._nativeNode || element._domNode || element;
-      if (domElement) {
-        observerRef.current.observe(domElement);
-        if (!disableFallbackOnWeb) {
-          fallbackTimer = setTimeout(() => {
-            setShouldLoad(true);
-            if (observerRef.current) {
-              observerRef.current.disconnect();
-            }
-          }, resolveFallbackDelay(fallbackDelay, 1000));
-        }
-      } else {
-        if (!disableFallbackOnWeb) {
-          fallbackTimer = setTimeout(() => {
-            setShouldLoad(true);
-          }, resolveFallbackDelay(fallbackDelay, 1000));
-        }
-      }
-    } else if (!disableFallbackOnWeb) {
-      fallbackTimer = setTimeout(() => {
-        setShouldLoad(true);
-      }, resolveFallbackDelay(fallbackDelay, 1000));
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-      if (fallbackTimer) {
-        clearTimeout(fallbackTimer);
-      }
-    };
-  }, [disableFallbackOnWeb, enabled, fallbackDelay, priority, rootMargin, threshold]);
-
-  return { shouldLoad, elementRef, setElementRef };
+  // Load immediately when enabled — no intersection observer, no delays
+  return { shouldLoad: enabled, elementRef, setElementRef };
 }
 
 // Component wrapper for progressive loading

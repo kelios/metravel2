@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
@@ -11,7 +11,6 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
-import { withLazy } from '../TravelDetailsLazy'
 import { isWebAutomation } from '@/utils/isWebAutomation'
 import type { ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes'
 import RouteElevationProfile from '@/components/travel/details/sections/RouteElevationProfile'
@@ -22,6 +21,11 @@ import {
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { parseRouteFilePreviews } from '@/utils/routeFileParser'
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
+import PointList from '@/components/travel/PointList'
+import ToggleableMap from '@/components/travel/ToggleableMapSection'
+import { TravelMap } from '@/components/MapPage/TravelMap'
+import WeatherWidget from '@/components/home/WeatherWidget'
+import BelkrajWidget from '@/components/belkraj/BelkrajWidget'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
@@ -35,18 +39,7 @@ type RoutePreviewItem = {
   label: string
 }
 
-const PointList = withLazy(() => import('@/components/travel/PointList'))
-const ToggleableMap = withLazy(() => import('@/components/travel/ToggleableMapSection'))
-const TravelMap = withLazy(() =>
-  import('@/components/MapPage/TravelMap').then((m) => ({ default: m.TravelMap }))
-)
-
-const WeatherWidget = withLazy(() => import('@/components/home/WeatherWidget'))
-
-const BelkrajWidgetComponent =
-  Platform.OS === 'web'
-    ? withLazy(() => import('@/components/belkraj/BelkrajWidget'))
-    : (() => null) as React.ComponentType<any>
+const BelkrajWidgetComponent = Platform.OS === 'web' ? BelkrajWidget : (() => null) as React.ComponentType<any>
 
 const Fallback = () => {
   const styles = useTravelDetailsStyles()
@@ -77,79 +70,9 @@ const PointListFallback = () => {
 
 const ExcursionsLazySection: React.FC<{ children: React.ReactNode; forceVisible?: boolean }> = ({
   children,
-  forceVisible = false,
 }) => {
-  const containerRef = useRef<any>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    if (forceVisible) {
-      setVisible(true)
-      return
-    }
-
-    if (Platform.OS !== 'web') {
-      setVisible(true)
-      return
-    }
-
-    if (visible) return
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      setVisible(true)
-      return
-    }
-
-    if (!('IntersectionObserver' in window)) {
-      setVisible(true)
-      return
-    }
-
-    const rawNode = containerRef.current as any
-    const targetNode = rawNode?._nativeNode || rawNode?._domNode || rawNode || null
-    if (!targetNode) {
-      setVisible(true)
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]
-        if (entry && entry.isIntersecting) {
-          setVisible(true)
-          observer.disconnect()
-        }
-      },
-      {
-        root: null,
-        rootMargin: '200px 0px 0px 0px',
-        threshold: 0.1,
-      }
-    )
-
-    observer.observe(targetNode as Element)
-
-    // Safety-net: if IO never triggers (e.g., element clipped inside ScrollView),
-    // force visibility after timeout to prevent content deadlock.
-    const fallback = setTimeout(() => {
-      setVisible(true)
-      observer.disconnect()
-    }, 4000)
-
-    return () => {
-      clearTimeout(fallback)
-      observer.disconnect()
-    }
-  }, [forceVisible, visible])
-
-  if (Platform.OS !== 'web') {
-    return <>{children}</>
-  }
-
-  return (
-    <View ref={containerRef} collapsable={false}>
-      {visible ? children : null}
-    </View>
-  )
+  // All sections load immediately — no delays, no IntersectionObserver
+  return <>{children}</>
 }
 
 export const TravelDetailsMapSection: React.FC<{

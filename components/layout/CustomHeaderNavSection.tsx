@@ -46,8 +46,9 @@ export default function CustomHeaderNavSection({
           <Pressable
             key={item.path}
             onPress={() => handleNavPress(item.path, item.external)}
-            style={[
+            style={({ hovered, pressed }) => [
               styles.navItem,
+              (hovered || pressed) && !isActive && styles.navItemHover,
               isActive && styles.navItemActive,
               globalFocusStyles.focusable,
             ]}

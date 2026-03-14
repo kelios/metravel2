@@ -15,18 +15,27 @@ describe('richTextImageLayout', () => {
       expect(groupConsecutiveImages(html)).toBe(html);
     });
 
-    it('adds float class to single image between text', () => {
-      const html = '<p>Text before</p><p><img src="test.jpg"></p><p>Text after</p>';
+    it('adds float class to single vertical image between text', () => {
+      // Vertical image (600x800) should get float class
+      const html = '<p>Text before</p><p><img src="test.jpg" width="600" height="800"></p><p>Text after</p>';
       const result = groupConsecutiveImages(html);
       expect(result).toContain('class="img-float-right"');
     });
 
-    it('alternates float direction for multiple single images', () => {
+    it('adds single-wide class to horizontal image', () => {
+      // Horizontal image (800x600) should get single-wide class
+      const html = '<p>Text before</p><p><img src="test.jpg" width="800" height="600"></p><p>Text after</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('class="img-single-wide"');
+    });
+
+    it('alternates float direction for multiple single vertical images', () => {
+      // Vertical images should alternate float direction
       const html = `
         <p>Text</p>
-        <p><img src="1.jpg"></p>
+        <p><img src="1.jpg" width="600" height="800"></p>
         <p>Text</p>
-        <p><img src="2.jpg"></p>
+        <p><img src="2.jpg" width="600" height="800"></p>
         <p>Text</p>
       `;
       const result = groupConsecutiveImages(html);
@@ -47,14 +56,22 @@ describe('richTextImageLayout', () => {
       expect(result).toContain('<div class="img-grid">');
     });
 
-    it('handles images with br tags', () => {
-      const html = '<p><img src="test.jpg"><br></p>';
+    it('handles vertical images with br tags', () => {
+      const html = '<p><img src="test.jpg" width="600" height="800"><br></p>';
       const result = groupConsecutiveImages(html);
       expect(result).toContain('class="img-float-right"');
     });
 
-    it('handles images with attributes', () => {
+    it('handles horizontal images with attributes', () => {
+      // 800x600 is landscape, should get single-wide
       const html = '<p><img src="test.jpg" width="800" height="600" alt="Test"></p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('class="img-single-wide"');
+    });
+
+    it('handles images without dimensions as float (fallback)', () => {
+      // No dimensions = can't determine orientation, treated as non-landscape
+      const html = '<p><img src="test.jpg"></p>';
       const result = groupConsecutiveImages(html);
       expect(result).toContain('class="img-float-right"');
     });
@@ -78,6 +95,13 @@ describe('richTextImageLayout', () => {
       const html = '<p class="img-float-right"><img src="test.jpg"></p>';
       const result = removeImageLayoutClasses(html);
       expect(result).not.toContain('img-float-right');
+      expect(result).toContain('<p><img src="test.jpg"></p>');
+    });
+
+    it('removes single-wide class from paragraphs', () => {
+      const html = '<p class="img-single-wide"><img src="test.jpg"></p>';
+      const result = removeImageLayoutClasses(html);
+      expect(result).not.toContain('img-single-wide');
       expect(result).toContain('<p><img src="test.jpg"></p>');
     });
   });

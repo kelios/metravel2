@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { act, renderHook } from '@testing-library/react-native';
+import { renderHook } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading';
@@ -45,33 +45,29 @@ describe('useProgressiveLoad', () => {
     (window as any).IntersectionObserver = originalIntersectionObserver;
   });
 
-  it('does not auto-load below-the-fold content on web when fallback is disabled', () => {
+  it('loads immediately when enabled — no delays, no intersection observer', () => {
     const { result } = renderHook(() =>
       useProgressiveLoad({
         priority: 'low',
         threshold: 0.05,
         rootMargin: '200px',
         fallbackDelay: 24000,
-        disableFallbackOnWeb: true,
+        enabled: true,
       }),
     );
 
-    const node = document.createElement('div');
-    act(() => {
-      result.current.setElementRef(node as any);
-      jest.advanceTimersByTime(5000);
-    });
+    // shouldLoad is true immediately — no waiting for intersection or timer
+    expect(result.current.shouldLoad).toBe(true);
+  });
+
+  it('does not load when disabled', () => {
+    const { result } = renderHook(() =>
+      useProgressiveLoad({
+        priority: 'low',
+        enabled: false,
+      }),
+    );
 
     expect(result.current.shouldLoad).toBe(false);
-    expect(observers.length).toBeGreaterThan(0);
-
-    act(() => {
-      observers[0].callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        {} as IntersectionObserver,
-      );
-    });
-
-    expect(result.current.shouldLoad).toBe(true);
   });
 });
