@@ -79,38 +79,39 @@ export const TravelDetailsMapSection: React.FC<{
   const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
   const [weatherVisible, setWeatherVisible] = useState(false)
   const [downloadingRouteId, setDownloadingRouteId] = useState<number | null>(null)
-  const [keyPointLabels, setKeyPointLabels] = useState<{
-    startName?: string | null
-    peakName?: string | null
-    finishName?: string | null
-  }>({})
-  const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
-  const primaryRoutePreview = routePreviewItems[0]?.preview ?? null
   const hasEmbeddedCoords = (travel.coordsMeTravel?.length ?? 0) > 0
   const hasTravelAddressPoints = (travel.travelAddress?.length ?? 0) > 0
 
-  // Simplified lazy loading (replaces 30+ lines with 5 lines!)
-  const { shouldRender, elementRef, isLoading, isVisible } = useMapLazyLoad({
+  // Simplified lazy loading
+  const { shouldRender, elementRef, isLoading } = useMapLazyLoad({
     enabled: true,
     hasData: true,
     canRenderHeavy,
     rootMargin: isWebAutomation ? '800px 0px 800px 0px' : '400px 0px 400px 0px',
     threshold: isWebAutomation ? 0 : 0.1,
   })
-  const routeFilesEnabled =
-    Boolean(travel?.id) &&
-    canRenderHeavy &&
-    (Platform.OS !== 'web' || isVisible || isWebAutomation)
-  const { data: routeFiles = [] } = useTravelRouteFiles(travel?.id, {
-    enabled: routeFilesEnabled,
+
+  const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points' || mapOpenTrigger > 0
+  const shouldRenderMapContent = shouldRender || shouldForceRenderMap || mapOpened
+  const shouldForceRenderExcursions = forceOpenKey === 'excursions'
+
+  // ✅ REFACTORED: Route file parsing extracted to useRouteFilePreviews hook
+  const { routePreviewItems, resetRoutePreviewItems, primaryRoutePreview } = useRouteFilePreviews({
+    travelId: travel?.id,
+    canRenderHeavy,
+    shouldRender,
+    shouldForceRenderMap,
   })
+
+  // ✅ REFACTORED: Key point labels extracted to useKeyPointLabels hook
+  const { keyPointLabels, resetKeyPointLabels } = useKeyPointLabels(primaryRoutePreview)
+
   const hasMapData =
     hasEmbeddedCoords ||
     hasTravelAddressPoints ||
     routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
-  const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points' || mapOpenTrigger > 0
-  const shouldRenderMapContent = shouldRender || shouldForceRenderMap || mapOpened
-  const shouldForceRenderExcursions = forceOpenKey === 'excursions'
+
+  const colors = useThemedColors()
 
   useEffect(() => {
     setHighlightedPoint(null)
@@ -119,92 +120,9 @@ export const TravelDetailsMapSection: React.FC<{
     setMapResizeTrigger(0)
     setWeatherVisible(false)
     setDownloadingRouteId(null)
-    setKeyPointLabels({})
-    setRoutePreviewItems([])
-  }, [travel.id, travel.slug])
-
-  const colors = useThemedColors()
-  const routeColorPalette = useMemo(
-    () => [
-      colors.primary,
-      colors.info,
-      colors.success,
-      colors.warning,
-      colors.accent,
-      colors.primaryDark,
-      colors.infoDark,
-      colors.successDark,
-      colors.warningDark,
-      colors.accentDark,
-    ],
-    [colors],
-  )
-  useEffect(() => {
-    let active = true
-
-    const loadRouteFiles = async () => {
-      if (!canRenderHeavy) return
-      if (Platform.OS === 'web' && !shouldRender && !shouldForceRenderMap && !isWebAutomation) return
-      if (!travel?.id) {
-        if (active) {
-          setRoutePreviewItems([])
-        }
-        return
-      }
-      try {
-        const supportedFiles = routeFiles.filter((file) => {
-          const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
-            .toLowerCase()
-            .replace(/^\./, '')
-          return SUPPORTED_ROUTE_EXTENSIONS.has(ext)
-        })
-
-        if (supportedFiles.length === 0) {
-          setRoutePreviewItems([])
-          return
-        }
-
-        const parsedResults = await Promise.allSettled(
-          supportedFiles.map(async (file, index) => {
-            const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
-              .toLowerCase()
-              .replace(/^\./, '')
-            const downloaded = await downloadTravelRouteFileBlob(travel.id, file.id)
-            const previews = parseRouteFilePreviews(downloaded.text, ext)
-            const validPreviews = previews.filter((preview) => (preview?.linePoints?.length ?? 0) >= 2)
-            if (validPreviews.length === 0) return [] as RoutePreviewItem[]
-
-            return validPreviews.map((preview, previewIndex) => ({
-              file,
-              preview,
-              color: routeColorPalette[(index + previewIndex) % routeColorPalette.length],
-              label:
-                validPreviews.length > 1
-                  ? `${file.original_name || 'Маршрут'} • трек ${previewIndex + 1}`
-                  : file.original_name || 'Маршрут',
-            }))
-          }),
-        )
-
-        if (!active) return
-
-        const readyItems = parsedResults
-          .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-          .filter((item): item is RoutePreviewItem => Boolean(item))
-
-        setRoutePreviewItems(readyItems)
-      } catch {
-        if (active) {
-          setRoutePreviewItems([])
-        }
-      }
-    }
-
-    void loadRouteFiles()
-    return () => {
-      active = false
-    }
-  }, [canRenderHeavy, routeColorPalette, routeFiles, shouldForceRenderMap, shouldRender, travel?.id])
+    resetRoutePreviewItems()
+    resetKeyPointLabels()
+  }, [travel.id, travel.slug, resetRoutePreviewItems, resetKeyPointLabels])
 
   const notifyDownloadUnavailable = useCallback(() => {
     if (Platform.OS === 'web') {
@@ -282,134 +200,6 @@ export const TravelDetailsMapSection: React.FC<{
       .filter(Boolean)
     return Array.from(new Set(labels))
   }, [travel])
-
-  useEffect(() => {
-    let active = true
-    const linePoints = Array.isArray(primaryRoutePreview?.linePoints) ? primaryRoutePreview?.linePoints : []
-    if (!linePoints || linePoints.length < 2) {
-      setKeyPointLabels({})
-      return () => {
-        active = false
-      }
-    }
-
-    const parseCoord = (coord: string): { lat: number; lng: number } | null => {
-      const [latStr, lngStr] = String(coord ?? '').replace(/;/g, ',').split(',');
-      const lat = Number(latStr);
-      const lng = Number(lngStr);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      return { lat, lng };
-    }
-
-    const startCoord = parseCoord(String(linePoints[0]?.coord ?? ''))
-    const finishCoord = parseCoord(String(linePoints[linePoints.length - 1]?.coord ?? ''))
-
-    let peakPoint = linePoints[0] ?? null
-    for (const p of linePoints) {
-      if (
-        Number.isFinite((p as any)?.elevation as number) &&
-        (!Number.isFinite((peakPoint as any)?.elevation as number) || Number((p as any).elevation) > Number((peakPoint as any).elevation))
-      ) {
-        peakPoint = p
-      }
-    }
-    const peakCoord = parseCoord(String((peakPoint as any)?.coord ?? ''))
-
-    const fetchReverseName = async (lat: number, lng: number): Promise<string | null> => {
-      try {
-        const nominatim = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru`
-        )
-        if (nominatim.ok) {
-          const data = await nominatim.json()
-          const addr = data?.address ?? {}
-          const locality = (
-            addr.city ||
-            addr.town ||
-            addr.village ||
-            addr.municipality ||
-            addr.suburb ||
-            addr.hamlet ||
-            data?.name ||
-            (typeof data?.display_name === 'string' ? String(data.display_name).split(',')[0]?.trim() : null) ||
-            null
-          )
-          if (locality) return String(locality)
-        }
-      } catch {
-        // fallback below
-      }
-
-      // bigdatacloud.net is intentionally blocked by CSP on web.
-      if (Platform.OS === 'web') return null
-
-      try {
-        const primary = await fetch(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
-        )
-        if (!primary.ok) return null
-        const data = await primary.json()
-        return (
-          data?.city ||
-          data?.locality ||
-          data?.principalSubdivision ||
-          data?.address?.city ||
-          data?.address?.town ||
-          data?.address?.village ||
-          data?.address?.municipality ||
-          null
-        )
-      } catch {
-        return null
-      }
-    }
-
-    const fetchNearestPeakName = async (lat: number, lng: number): Promise<string | null> => {
-      // Overpass intermittently returns 504 on web and logs console errors.
-      // Keep UX stable by using reverse-geocoding fallback there.
-      if (Platform.OS === 'web') return null
-      const endpoint = process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter'
-      const query = `[out:json][timeout:20];node(around:5000,${lat},${lng})["natural"="peak"]["name"];out body 1;`
-      try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          body: `data=${encodeURIComponent(query)}`,
-        })
-        if (!response.ok) return null
-        const data = await response.json()
-        const first = Array.isArray(data?.elements) ? data.elements[0] : null
-        const rawName = first?.tags?.name
-        if (!rawName) return null
-        return String(rawName)
-      } catch {
-        return null
-      }
-    }
-
-    const loadLabels = async () => {
-      const [startName, finishName] = await Promise.all([
-        startCoord ? fetchReverseName(startCoord.lat, startCoord.lng) : Promise.resolve(null),
-        finishCoord ? fetchReverseName(finishCoord.lat, finishCoord.lng) : Promise.resolve(null),
-      ])
-
-      let peakName: string | null = null
-      if (peakCoord) {
-        peakName = await fetchNearestPeakName(peakCoord.lat, peakCoord.lng)
-        if (!peakName) {
-          peakName = await fetchReverseName(peakCoord.lat, peakCoord.lng)
-        }
-      }
-
-      if (!active) return
-      setKeyPointLabels({ startName, peakName, finishName })
-    }
-
-    void loadLabels()
-    return () => {
-      active = false
-    }
-  }, [primaryRoutePreview])
 
   return (
     <>

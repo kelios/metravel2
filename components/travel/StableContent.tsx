@@ -350,8 +350,9 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   text-align: center;
 }
 .${WEB_RICH_TEXT_CLASS} .img-single-wide img {
-  width: 100%;
+  width: auto;
   max-width: 100%;
+  max-height: 70vh;
   height: auto;
   margin: 0 auto;
   border-radius: 12px;
@@ -368,6 +369,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   }
   .${WEB_RICH_TEXT_CLASS} .img-float-right img {
     width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
     margin: 0;
   }
   .${WEB_RICH_TEXT_CLASS} .img-float-left {
@@ -378,6 +381,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   }
   .${WEB_RICH_TEXT_CLASS} .img-float-left img {
     width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
     margin: 0;
   }
 }
@@ -401,6 +406,21 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   border-radius: 12px;
 }
 
+/* ===== TWO IMAGES ROW VARIANTS ===== */
+/* Portrait pair - taller images */
+.${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
+  height: 280px;
+}
+/* Mixed pair - portrait + landscape, auto height to respect aspect ratios */
+.${WEB_RICH_TEXT_CLASS} .img-row-2-mixed {
+  align-items: start;
+}
+.${WEB_RICH_TEXT_CLASS} .img-row-2-mixed img {
+  height: auto;
+  max-height: 300px;
+  object-fit: contain;
+}
+
 /* ===== THREE+ IMAGES GRID ===== */
 .${WEB_RICH_TEXT_CLASS} .img-grid {
   display: grid;
@@ -408,16 +428,66 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   gap: 8px;
   margin: 1.5em 0;
   clear: both;
+  align-items: end;
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid p {
   margin: 0;
+  display: flex;
+  align-items: flex-end;
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid img {
   width: 100%;
-  height: 150px;
-  object-fit: cover;
+  height: auto;
+  max-height: 300px;
+  object-fit: contain;
+  object-position: bottom;
   margin: 0;
   border-radius: 8px;
+  background: #f5f5f7;
+}
+
+/* ===== MIXED GRID: 2 landscape + 1 portrait ===== */
+/* Layout: [landscape stack] [portrait] side by side */
+.${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 1.5em 0;
+  clear: both;
+  align-items: stretch;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack p {
+  margin: 0;
+  flex: 1;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p {
+  margin: 0;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* ===== PORTRAIT-HEAVY GRID ===== */
+/* Multiple portraits - use 2 columns with taller cells */
+.${WEB_RICH_TEXT_CLASS} .img-grid-portrait {
+  grid-template-columns: repeat(2, 1fr);
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
+  height: 220px;
 }
 
 /* ===== CLEARFIX ===== */
@@ -635,7 +705,31 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     gap: 6px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid img {
+    max-height: 200px;
+  }
+  /* Mobile: mixed grid stacks vertically */
+  .${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack img {
     height: 120px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p img {
+    height: auto;
+    max-height: 200px;
+    object-fit: contain;
+  }
+  /* Mobile: portrait row heights */
+  .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
+    height: 200px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
+    height: 160px;
   }
   .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
   .${WEB_RICH_TEXT_CLASS} .instagram-media {

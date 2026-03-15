@@ -33,6 +33,47 @@ function isLandscapeImage(imgTag: string): boolean {
 }
 
 /**
+ * Checks if image is portrait (vertical) orientation.
+ * Returns true if height > width * 1.2 (clearly vertical)
+ */
+function isPortraitImage(imgTag: string): boolean {
+  const dims = extractImageDimensions(imgTag);
+  if (!dims) return false;
+  // Consider portrait if height is at least 20% greater than width
+  return dims.height > dims.width * 1.2;
+}
+
+/**
+ * Analyzes orientation composition of image group.
+ * Returns counts of landscape, portrait, and square images.
+ */
+function analyzeImageGroup(images: string[]): { landscape: number; portrait: number; square: number } {
+  let landscape = 0;
+  let portrait = 0;
+  let square = 0;
+  
+  for (const img of images) {
+    if (isLandscapeImage(img)) {
+      landscape++;
+    } else if (isPortraitImage(img)) {
+      portrait++;
+    } else {
+      square++;
+    }
+  }
+  
+  return { landscape, portrait, square };
+}
+
+/**
+ * Finds the index of the portrait image in a group.
+ * Returns -1 if no portrait found.
+ */
+function findPortraitIndex(images: string[]): number {
+  return images.findIndex(img => isPortraitImage(img));
+}
+
+/**
  * Groups consecutive image paragraphs into smart layouts:
  * - 2 images → side-by-side row (.img-row-2)
  * - 3+ images → grid layout (.img-grid)
@@ -66,11 +107,40 @@ export function groupConsecutiveImages(html: string): string {
         floatDirection++;
       }
     } else if (imageBuffer.length === 2) {
-      // Two images - side by side
-      result.push(`<div class="img-row-2">${imageBuffer.join('')}</div>`);
+      // Two images - analyze orientation for better layout
+      const composition = analyzeImageGroup(imageBuffer);
+      if (composition.portrait === 2) {
+        // Both portrait - use taller row
+        result.push(`<div class="img-row-2 img-row-2-portrait">${imageBuffer.join('')}</div>`);
+      } else if (composition.portrait === 1) {
+        // Mixed - portrait + landscape/square
+        const portraitIdx = findPortraitIndex(imageBuffer);
+        const reordered = portraitIdx === 0 
+          ? imageBuffer 
+          : [imageBuffer[1], imageBuffer[0]];
+        result.push(`<div class="img-row-2 img-row-2-mixed">${reordered.join('')}</div>`);
+      } else {
+        // Both landscape or square - standard row
+        result.push(`<div class="img-row-2">${imageBuffer.join('')}</div>`);
+      }
     } else {
-      // 3+ images - grid
-      result.push(`<div class="img-grid">${imageBuffer.join('')}</div>`);
+      // 3+ images - analyze composition for smart grid layout
+      const composition = analyzeImageGroup(imageBuffer);
+      
+      if (composition.portrait === 1 && imageBuffer.length === 3) {
+        // Special case: 2 landscape/square + 1 portrait
+        // Put portrait on the side, landscapes stacked
+        const portraitIdx = findPortraitIndex(imageBuffer);
+        const portrait = imageBuffer[portraitIdx];
+        const others = imageBuffer.filter((_, i) => i !== portraitIdx);
+        result.push(`<div class="img-grid-mixed"><div class="img-grid-mixed-stack">${others.join('')}</div>${portrait}</div>`);
+      } else if (composition.portrait >= 2) {
+        // Multiple portraits - use portrait-optimized grid
+        result.push(`<div class="img-grid img-grid-portrait">${imageBuffer.join('')}</div>`);
+      } else {
+        // All landscape/square - standard grid
+        result.push(`<div class="img-grid">${imageBuffer.join('')}</div>`);
+      }
     }
     imageBuffer = [];
   };
@@ -100,9 +170,11 @@ export function removeImageLayoutClasses(html: string): string {
 
   let result = html;
 
-  // Remove wrapper divs for img-row-2 and img-grid, keeping inner content
-  result = result.replace(/<div\s+class="img-row-2">([\s\S]*?)<\/div>/gi, '$1');
-  result = result.replace(/<div\s+class="img-grid">([\s\S]*?)<\/div>/gi, '$1');
+  // Remove wrapper divs for img-row-2 and img-grid variants, keeping inner content
+  result = result.replace(/<div\s+class="img-row-2(?:\s+img-row-2-(?:portrait|mixed))?">([\s\S]*?)<\/div>/gi, '$1');
+  result = result.replace(/<div\s+class="img-grid(?:\s+img-grid-portrait)?">([\s\S]*?)<\/div>/gi, '$1');
+  // Remove img-grid-mixed wrapper and inner stack div
+  result = result.replace(/<div\s+class="img-grid-mixed"><div\s+class="img-grid-mixed-stack">([\s\S]*?)<\/div>([\s\S]*?)<\/div>/gi, '$1$2');
 
   // Remove float and single-wide classes from paragraphs
   result = result.replace(/(<p[^>]*)\s+class="img-float-(?:right|left)"([^>]*>)/gi, '$1$2');

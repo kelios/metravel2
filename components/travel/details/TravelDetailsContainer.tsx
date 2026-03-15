@@ -10,12 +10,9 @@ import React, {
 import {
   Animated,
   Platform,
-  Text,
-  TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
 import Head from 'expo-router/head';
@@ -31,11 +28,13 @@ import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetail
 import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 import TravelDetailsPostLcpRuntime from '@/components/travel/details/TravelDetailsPostLcpRuntime'
+import { MissingParamError, LoadError } from '@/components/travel/details/TravelDetailsErrorStates'
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import { useAccessibilityAnnounce } from "@/hooks/useAccessibilityAnnounce";
 import { useThemedColors } from "@/hooks/useTheme";
 import { useTravelDetailsTrace } from '@/hooks/useTravelDetailsTrace';
+import { useSkeletonPhase } from '@/hooks/useSkeletonPhase';
 import { rIC } from '@/utils/rIC';
 
 const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
@@ -117,9 +116,7 @@ export default function TravelDetailsContainer() {
   const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors]);
   const [showSkipToContentLink, setShowSkipToContentLink] = useState(Platform.OS !== 'web');
 
-  // Web: avoid large layout shifts when switching from page skeleton → real content.
-  // Keep skeleton mounted briefly and fade it out (no layout collapse).
-  const [skeletonPhase, setSkeletonPhase] = useState<'loading' | 'fading' | 'hidden'>('loading')
+  // ✅ REFACTORED: Skeleton phase extracted to useSkeletonPhase hook
 
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const travelDetails = useTravelDetails({
@@ -184,33 +181,7 @@ export default function TravelDetailsContainer() {
     };
   }, []);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-
-    // Show skeleton until travel data is loaded
-    if (!travel) {
-      setSkeletonPhase('loading')
-      return
-    }
-
-    // Travel loaded — hide skeleton immediately (no delays)
-    let cancelled = false
-    const hide = () => {
-      if (!cancelled) setSkeletonPhase('hidden')
-    }
-
-    // Use rAF to ensure paint completes before hiding
-    if (typeof requestAnimationFrame === 'function') {
-      const raf = requestAnimationFrame(hide)
-      return () => {
-        cancelled = true
-        cancelAnimationFrame(raf)
-      }
-    } else {
-      hide()
-      return () => { cancelled = true }
-    }
-  }, [travel])
+  const skeletonPhase = useSkeletonPhase({ isDataReady: Boolean(travel) })
 
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   // Стабильный ключ для <Head> — используем slug (доступен сразу из URL),
@@ -470,55 +441,25 @@ export default function TravelDetailsContainer() {
 
   // Пока данные путешествия не загружены — показываем простой лоадер,
   // но делаем это после инициализации всех хуков, чтобы не нарушать порядок.
+  // ✅ REFACTORED: Error states extracted to TravelDetailsErrorStates
   if (isMissingParam) {
     return (
-      <>
-        {seoBlock}
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.errorContainer} role="alert">
-            <Text style={styles.errorTitle}>
-              Путешествие не найдено
-            </Text>
-            <Text style={styles.errorText}>
-              В ссылке отсутствует идентификатор путешествия.
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.replace('/')}
-              style={styles.errorButton}
-              accessibilityRole="button"
-              accessibilityLabel="На главную"
-            >
-              <Text style={styles.errorButtonText}>На главную</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </>
+      <MissingParamError
+        styles={styles}
+        seoBlock={seoBlock}
+        onGoHome={() => router.replace('/')}
+      />
     );
   }
 
   if (isError) {
     return (
-      <>
-        {seoBlock}
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.errorContainer} role="alert">
-            <Text style={styles.errorTitle}>
-              Не удалось загрузить путешествие
-            </Text>
-            <Text style={styles.errorText}>
-              {error?.message || 'Попробуйте обновить страницу.'}
-            </Text>
-            <TouchableOpacity
-              onPress={() => refetch()}
-              style={styles.errorButton}
-              accessibilityRole="button"
-              accessibilityLabel="Повторить"
-            >
-              <Text style={styles.errorButtonText}>Повторить</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </>
+      <LoadError
+        styles={styles}
+        seoBlock={seoBlock}
+        errorMessage={error?.message}
+        onRetry={() => refetch()}
+      />
     );
   }
 

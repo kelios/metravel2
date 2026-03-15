@@ -1,17 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Menu } from '@/ui/paper';
 import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import ThemeToggle from '@/components/layout/ThemeToggle';
+import UserAvatar from './UserAvatar';
+import {
+  createAnchorStyles,
+  createAvatarStyles,
+  createCtaLoginStyles,
+  createMenuStyles,
+} from './headerStyles';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount';
+import { useAvatarUri } from '@/hooks/useAvatarUri';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
@@ -25,9 +32,9 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const [avatarLoadError, setAvatarLoadError] = useState(false);
+  const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken });
   const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible);
-  const lastHandledInitialOpenKeyRef = useRef(0)
+  const lastHandledInitialOpenKeyRef = useRef(0);
   const [expandedSections, setExpandedSections] = useState({
     navigation: true,
     travels: true,
@@ -36,160 +43,16 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     documents: false,
   });
 
-  const styles = useMemo(
+  // Use shared styles from headerStyles.ts
+  const anchorStyles = useMemo(() => createAnchorStyles(colors), [colors]);
+  const avatarStyles = useMemo(() => createAvatarStyles(colors), [colors]);
+  const ctaStyles = useMemo(() => createCtaLoginStyles(colors), [colors]);
+  const menuStyles = useMemo(() => createMenuStyles(colors), [colors]);
+
+  // Local styles for wrapper and icon colors
+  const localStyles = useMemo(
     () =>
       StyleSheet.create({
-        anchor: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: colors.surface,
-          paddingVertical: 7,
-          paddingHorizontal: 12,
-          borderRadius: 20,
-          maxWidth: 220,
-          minHeight: 44,
-          minWidth: 44,
-          gap: 6,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          ...(Platform.OS === 'web'
-            ? ({
-                cursor: 'pointer',
-                transition: 'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease' as any,
-              } as any)
-            : null),
-        },
-        anchorHover: {
-          backgroundColor: colors.surfaceMuted,
-          borderColor: colors.border,
-          ...(Platform.OS === 'web'
-            ? ({
-                boxShadow: (colors.boxShadows as any)?.hover ?? '0 8px 16px rgba(17, 24, 39, 0.12)',
-              } as any)
-            : null),
-        },
-        avatarSlot: {
-          width: 24,
-          height: 24,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        },
-        avatar: {
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-        },
-        anchorText: {
-          fontSize: 16,
-          color: colors.text,
-          flexShrink: 1,
-        },
-        chevronSlot: {
-          width: 18,
-          height: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        },
-        menuContent: {
-          backgroundColor: colors.surface,
-          borderRadius: 12,
-          paddingVertical: 6,
-          minWidth: 260,
-          maxWidth: 320,
-          borderColor: colors.borderLight,
-          borderWidth: 1,
-          ...(Platform.OS === 'web'
-            ? ({
-                marginTop: 4,
-                boxShadow: (colors.boxShadows as any)?.medium ?? '0 18px 40px rgba(17, 24, 39, 0.16), 0 6px 14px rgba(17, 24, 39, 0.10)',
-              } as any)
-            : DESIGN_TOKENS.shadowsNative.light),
-        },
-        sectionTitle: {
-          paddingHorizontal: 12,
-          paddingTop: 8,
-          paddingBottom: 4,
-          fontSize: 11,
-          letterSpacing: 0.5,
-          // TYPO-04: capitalize вместо uppercase
-          textTransform: 'capitalize',
-          color: colors.textMuted,
-          fontWeight: '600',
-        },
-        sectionHeader: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          ...(Platform.OS === 'web' ? { cursor: 'pointer' } as any : null),
-        },
-        sectionHeaderText: {
-          fontSize: 11,
-          letterSpacing: 0.5,
-          // TYPO-04: capitalize вместо uppercase
-          textTransform: 'capitalize',
-          color: colors.textMuted,
-          fontWeight: '600',
-          flex: 1,
-          textAlign: 'left',
-        },
-        sectionDivider: {
-          height: 1,
-          backgroundColor: colors.border,
-          marginVertical: 4,
-          marginHorizontal: 8,
-        },
-        themeSection: {
-          paddingHorizontal: 8,
-          paddingVertical: 2,
-        },
-        menuItem: {
-          borderRadius: 8,
-          marginHorizontal: 6,
-          minHeight: 40,
-          justifyContent: 'center',
-        },
-        menuItemTitle: {
-          fontSize: 15,
-          color: colors.text,
-          fontWeight: '500',
-        },
-        menuItemTitleStrong: {
-          fontSize: 15,
-          color: colors.text,
-          fontWeight: '600',
-        },
-        // NAV-12: CTA кнопка Войти для гостей
-        ctaLoginButton: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          paddingVertical: 8,
-          paddingHorizontal: 16,
-          borderRadius: 20,
-          backgroundColor: colors.primary,
-          minHeight: 36,
-          ...(Platform.OS === 'web'
-            ? ({
-                cursor: 'pointer',
-                transition: 'background-color 160ms ease, transform 120ms ease',
-              } as any)
-            : null),
-        },
-        ctaLoginButtonHover: {
-          backgroundColor: colors.primaryDark,
-          ...(Platform.OS === 'web' ? ({ transform: 'translateY(-1px)' } as any) : null),
-        },
-        ctaLoginText: {
-          fontSize: 14,
-          fontWeight: '700',
-          color: colors.textOnPrimary,
-        },
         ctaWrapper: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -202,38 +65,8 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           color: colors.primaryText,
         },
       }),
-    [colors],
+    [colors]
   );
-
-  const avatarUri = useMemo(() => {
-    if (avatarLoadError) return null;
-    const raw = String(userAvatar ?? '').trim();
-    if (!raw) return null;
-    const lower = raw.toLowerCase();
-    if (lower === 'null' || lower === 'undefined') return null;
-
-    let normalized = raw;
-
-    if (raw.startsWith('/')) {
-      const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
-      if (base) {
-        normalized = `${base}${raw}`;
-      } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        normalized = `${window.location.origin}${raw}`;
-      }
-    }
-
-    if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
-      return normalized;
-    }
-
-    const separator = normalized.includes('?') ? '&' : '?';
-    return `${normalized}${separator}v=${profileRefreshToken}`;
-  }, [avatarLoadError, userAvatar, profileRefreshToken]);
-
-  React.useEffect(() => {
-    setAvatarLoadError(false);
-  }, [profileRefreshToken, userAvatar]);
 
   const openMenu = useCallback(() => setVisible(true), []);
   const closeMenu = useCallback(() => setVisible(false), []);
@@ -298,7 +131,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   );
 
   return (
-    <View style={styles.ctaWrapper}>
+    <View style={localStyles.ctaWrapper}>
       {/* NAV-12: Отдельная CTA кнопка «Войти» для гостей — видна сразу, без открытия меню */}
       {!isAuthenticated && (
         <Pressable
@@ -306,20 +139,20 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           accessibilityRole="link"
           accessibilityLabel="Войти в аккаунт"
           style={({ pressed }) => [
-            styles.ctaLoginButton,
-            pressed && styles.ctaLoginButtonHover,
+            ctaStyles.ctaLoginButton,
+            pressed && ctaStyles.ctaLoginButtonHover,
           ]}
           testID="header-login-cta"
         >
           <Feather name="log-in" size={14} color={colors.textOnPrimary} />
-          <Text style={styles.ctaLoginText}>Войти</Text>
+          <Text style={ctaStyles.ctaLoginText}>Войти</Text>
         </Pressable>
       )}
     <Menu
       visible={visible}
       onDismiss={closeMenu}
       contentStyle={[
-        styles.menuContent,
+        menuStyles.menuContent,
         {
           backgroundColor: colors.surface,
           borderColor: colors.borderLight,
@@ -335,46 +168,28 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           accessibilityHint="Открыть меню аккаунта"
           accessibilityState={{ expanded: visible }}
           style={({ pressed }) => [
-            styles.anchor,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderLight,
-            },
-            (hovered || pressed || visible) && [
-              styles.anchorHover,
-              {
-                backgroundColor: colors.surfaceMuted,
-                borderColor: colors.border,
-              },
-            ],
+            anchorStyles.anchor,
+            (hovered || pressed || visible) && anchorStyles.anchorHover,
           ]}
           testID="account-menu-anchor"
           {...(Platform.OS === 'web'
             ? ({
-                // @ts-ignore -- aria-haspopup is a web-only ARIA attribute not in RN Pressable types
                 'aria-haspopup': 'menu',
-                // @ts-ignore -- aria-expanded is a web-only ARIA attribute not in RN Pressable types
                 'aria-expanded': visible,
               } as any)
             : {})}
         >
-          <View style={styles.avatarSlot}>
-            {isAuthenticated && avatarUri ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={styles.avatar}
-                onError={() => setAvatarLoadError(true)}
-              />
-            ) : (
-              <Feather name="user" size={24} color={colors.text} />
-            )}
-          </View>
+          <UserAvatar
+            uri={isAuthenticated ? avatarUri : null}
+            size="md"
+            onError={() => setAvatarLoadError(true)}
+          />
 
-          <Text style={[styles.anchorText, { color: colors.text }]} numberOfLines={1}>
+          <Text style={avatarStyles.anchorText} numberOfLines={1}>
             {displayName}
           </Text>
 
-          <View style={styles.chevronSlot}>
+          <View style={avatarStyles.chevronSlot}>
             <Feather
               name={visible ? 'chevron-up' : 'chevron-down'}
               size={18}
@@ -389,55 +204,55 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           <Menu.Item
             onPress={() => handleNavigate(buildLoginHref({ intent: 'menu' }))}
             title="Войти"
-            leadingIcon={({ size }) => <Feather name="log-in" size={size} color={styles.iconMuted.color} />}
-            style={styles.menuItem}
-            titleStyle={styles.menuItemTitle}
+            leadingIcon={({ size }) => <Feather name="log-in" size={size} color={localStyles.iconMuted.color} />}
+            style={menuStyles.menuItem}
+            titleStyle={menuStyles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/registration')}
             title="Зарегистрироваться"
-            leadingIcon={({ size }) => <Feather name="user-plus" size={size} color={styles.iconMuted.color} />}
-            style={styles.menuItem}
-            titleStyle={styles.menuItemTitle}
+            leadingIcon={({ size }) => <Feather name="user-plus" size={size} color={localStyles.iconMuted.color} />}
+            style={menuStyles.menuItem}
+            titleStyle={menuStyles.menuItemTitle}
           />
 
-          <View style={styles.sectionDivider} />
-          <Text style={styles.sectionTitle}>Навигация</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Text style={menuStyles.sectionTitle}>Навигация</Text>
 
           {navLinks.map((item) => (
             <Menu.Item
               key={item.key}
               onPress={() => handleNavigate(item.path)}
               title={item.title}
-              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={styles.iconMuted.color} />}
-              style={styles.menuItem}
-              titleStyle={styles.menuItemTitle}
+              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={localStyles.iconMuted.color} />}
+              style={menuStyles.menuItem}
+              titleStyle={menuStyles.menuItemTitle}
             />
           ))}
 
-          <View style={styles.sectionDivider} />
-          <Text style={styles.sectionTitle}>Тема оформления</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Text style={menuStyles.sectionTitle}>Тема оформления</Text>
 
-          <View style={styles.themeSection}>
+          <View style={menuStyles.themeSection}>
             <ThemeToggle compact />
           </View>
 
-          <View style={styles.sectionDivider} />
-          <Text style={styles.sectionTitle}>Документы</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Text style={menuStyles.sectionTitle}>Документы</Text>
 
           <Menu.Item
             onPress={() => handleNavigate('/privacy')}
             title="Политика конфиденциальности"
-            leadingIcon={({ size }) => <Feather name="shield" size={size} color={styles.iconMuted.color} />}
-            style={styles.menuItem}
-            titleStyle={styles.menuItemTitle}
+            leadingIcon={({ size }) => <Feather name="shield" size={size} color={localStyles.iconMuted.color} />}
+            style={menuStyles.menuItem}
+            titleStyle={menuStyles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/cookies')}
             title="Настройки cookies"
-            leadingIcon={({ size }) => <Feather name="settings" size={size} color={styles.iconMuted.color} />}
-            style={styles.menuItem}
-            titleStyle={styles.menuItemTitle}
+            leadingIcon={({ size }) => <Feather name="settings" size={size} color={localStyles.iconMuted.color} />}
+            style={menuStyles.menuItem}
+            titleStyle={menuStyles.menuItemTitle}
           />
         </>
       ) : (
@@ -445,14 +260,14 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           <Menu.Item
             onPress={() => handleNavigate('/profile')}
             title={`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
-            leadingIcon={({ size }) => <Feather name="user" size={size} color={styles.iconPrimary.color} />}
-            style={styles.menuItem}
-            titleStyle={styles.menuItemTitleStrong}
+            leadingIcon={({ size }) => <Feather name="user" size={size} color={localStyles.iconPrimary.color} />}
+            style={menuStyles.menuItem}
+            titleStyle={menuStyles.menuItemTitleStrong}
           />
 
-          <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('travels')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Путешествия" accessibilityState={{ expanded: expandedSections.travels }}>
-            <Text style={styles.sectionHeaderText}>Путешествия</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Pressable onPress={() => toggleSection('travels')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Путешествия" accessibilityState={{ expanded: expandedSections.travels }}>
+            <Text style={menuStyles.sectionHeaderText}>Путешествия</Text>
             <Feather 
               name={expandedSections.travels ? 'chevron-up' : 'chevron-down'} 
               size={14} 
@@ -465,30 +280,30 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
               <Menu.Item
                 onPress={() => handleNavigate('/travel/new')}
                 title="Добавить путешествие"
-                leadingIcon={({ size }) => <Feather name="plus-circle" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="plus-circle" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
               <Menu.Item
                 onPress={() => handleNavigate('/metravel')}
                 title="Мои путешествия"
-                leadingIcon={({ size }) => <Feather name="map" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="map" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
               <Menu.Item
                 onPress={() => handleNavigate('/userpoints')}
                 title="Мои точки"
-                leadingIcon={({ size }) => <Feather name="map-pin" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="map-pin" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
             </>
           )}
 
-          <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('account')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Аккаунт" accessibilityState={{ expanded: expandedSections.account }}>
-            <Text style={styles.sectionHeaderText}>Аккаунт</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Pressable onPress={() => toggleSection('account')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Аккаунт" accessibilityState={{ expanded: expandedSections.account }}>
+            <Text style={menuStyles.sectionHeaderText}>Аккаунт</Text>
             <Feather 
               name={expandedSections.account ? 'chevron-up' : 'chevron-down'} 
               size={14} 
@@ -503,7 +318,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
                 title={unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения'}
                 leadingIcon={({ size }) => (
                   <View style={{ position: 'relative' }}>
-                    <Feather name="mail" size={size} color={unreadCount > 0 ? colors.primary : styles.iconMuted.color} />
+                    <Feather name="mail" size={size} color={unreadCount > 0 ? colors.primary : localStyles.iconMuted.color} />
                     {unreadCount > 0 && (
                       <View style={{
                         position: 'absolute',
@@ -524,43 +339,43 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
                     )}
                   </View>
                 )}
-                style={styles.menuItem}
-                titleStyle={unreadCount > 0 ? styles.menuItemTitleStrong : styles.menuItemTitle}
+                style={menuStyles.menuItem}
+                titleStyle={unreadCount > 0 ? menuStyles.menuItemTitleStrong : menuStyles.menuItemTitle}
               />
               <Menu.Item
                 onPress={() => handleNavigate('/subscriptions')}
                 title="Подписки"
-                leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="users" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
               <Menu.Item
                 onPress={() => handleNavigate('/export')}
                 title="Экспорт в PDF"
-                leadingIcon={({ size }) => <Feather name="file-text" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="file-text" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
               <Menu.Item
                 onPress={handleOpenPublicProfile}
                 title="Публичный профиль"
-                leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="users" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
               <Menu.Item
                 onPress={handleLogout}
                 title="Выход"
-                leadingIcon={({ size }) => <Feather name="log-out" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="log-out" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
             </>
           )}
 
-          <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('navigation')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Навигация" accessibilityState={{ expanded: expandedSections.navigation }}>
-            <Text style={styles.sectionHeaderText}>Навигация</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Pressable onPress={() => toggleSection('navigation')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Навигация" accessibilityState={{ expanded: expandedSections.navigation }}>
+            <Text style={menuStyles.sectionHeaderText}>Навигация</Text>
             <Feather 
               name={expandedSections.navigation ? 'chevron-up' : 'chevron-down'} 
               size={14} 
@@ -573,15 +388,15 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
               key={item.key}
               onPress={() => handleNavigate(item.path)}
               title={item.title}
-              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={styles.iconMuted.color} />}
-              style={styles.menuItem}
-              titleStyle={styles.menuItemTitle}
+              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={localStyles.iconMuted.color} />}
+              style={menuStyles.menuItem}
+              titleStyle={menuStyles.menuItemTitle}
             />
           ))}
 
-          <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('theme')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Тема оформления" accessibilityState={{ expanded: expandedSections.theme }}>
-            <Text style={styles.sectionHeaderText}>Тема оформления</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Pressable onPress={() => toggleSection('theme')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Тема оформления" accessibilityState={{ expanded: expandedSections.theme }}>
+            <Text style={menuStyles.sectionHeaderText}>Тема оформления</Text>
             <Feather 
               name={expandedSections.theme ? 'chevron-up' : 'chevron-down'} 
               size={14} 
@@ -590,14 +405,14 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           </Pressable>
 
           {expandedSections.theme && (
-            <View style={styles.themeSection}>
+            <View style={menuStyles.themeSection}>
               <ThemeToggle compact />
             </View>
           )}
 
-          <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('documents')} style={styles.sectionHeader} accessibilityRole="button" accessibilityLabel="Документы" accessibilityState={{ expanded: expandedSections.documents }}>
-            <Text style={styles.sectionHeaderText}>Документы</Text>
+          <View style={menuStyles.sectionDivider} />
+          <Pressable onPress={() => toggleSection('documents')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Документы" accessibilityState={{ expanded: expandedSections.documents }}>
+            <Text style={menuStyles.sectionHeaderText}>Документы</Text>
             <Feather 
               name={expandedSections.documents ? 'chevron-up' : 'chevron-down'} 
               size={14} 
@@ -610,16 +425,16 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
               <Menu.Item
                 onPress={() => handleNavigate('/privacy')}
                 title="Политика конфиденциальности"
-                leadingIcon={({ size }) => <Feather name="shield" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="shield" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
               <Menu.Item
                 onPress={() => handleNavigate('/cookies')}
                 title="Настройки cookies"
-                leadingIcon={({ size }) => <Feather name="settings" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
+                leadingIcon={({ size }) => <Feather name="settings" size={size} color={localStyles.iconMuted.color} />}
+                style={menuStyles.menuItem}
+                titleStyle={menuStyles.menuItemTitle}
               />
             </>
           )}

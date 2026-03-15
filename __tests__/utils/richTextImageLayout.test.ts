@@ -50,10 +50,37 @@ describe('richTextImageLayout', () => {
       expect(result).toContain('</div>');
     });
 
+    it('wraps 2 portrait images in img-row-2-portrait', () => {
+      const html = '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="600" height="800"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-row-2-portrait');
+    });
+
+    it('wraps mixed pair (portrait + landscape) in img-row-2-mixed', () => {
+      const html = '<p>Text</p><p><img src="1.jpg" width="800" height="600"></p><p><img src="2.jpg" width="600" height="800"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-row-2-mixed');
+    });
+
     it('wraps 3+ consecutive images in img-grid', () => {
       const html = '<p>Text</p><p><img src="1.jpg"></p><p><img src="2.jpg"></p><p><img src="3.jpg"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
       expect(result).toContain('<div class="img-grid">');
+    });
+
+    it('wraps 3 images with 1 portrait in img-grid-mixed', () => {
+      // 2 landscape + 1 portrait should use mixed layout
+      const html = '<p>Text</p><p><img src="1.jpg" width="800" height="600"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="800" height="600"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-grid-mixed');
+      expect(result).toContain('img-grid-mixed-stack');
+    });
+
+    it('wraps 3 images with 2+ portraits in img-grid-portrait', () => {
+      // Multiple portraits should use portrait-optimized grid
+      const html = '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="800" height="600"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-grid-portrait');
     });
 
     it('handles vertical images with br tags', () => {

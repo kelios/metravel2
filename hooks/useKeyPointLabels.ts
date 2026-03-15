@@ -87,12 +87,19 @@ const fetchNearestPeakName = async (lat: number, lng: number): Promise<string | 
   }
 }
 
+interface RoutePoint {
+  coord?: string
+  elevation?: number
+}
+
 export function useKeyPointLabels(primaryRoutePreview: ParsedRoutePreview | null) {
   const [keyPointLabels, setKeyPointLabels] = useState<KeyPointLabels>({})
 
   useEffect(() => {
     let active = true
-    const linePoints = Array.isArray(primaryRoutePreview?.linePoints) ? primaryRoutePreview?.linePoints : []
+    const linePoints = Array.isArray(primaryRoutePreview?.linePoints)
+      ? (primaryRoutePreview?.linePoints as RoutePoint[])
+      : []
     if (!linePoints || linePoints.length < 2) {
       setKeyPointLabels({})
       return () => {
@@ -103,17 +110,16 @@ export function useKeyPointLabels(primaryRoutePreview: ParsedRoutePreview | null
     const startCoord = parseCoord(String(linePoints[0]?.coord ?? ''))
     const finishCoord = parseCoord(String(linePoints[linePoints.length - 1]?.coord ?? ''))
 
-    let peakPoint = linePoints[0] ?? null
+    let peakPoint: RoutePoint | null = linePoints[0] ?? null
     for (const p of linePoints) {
       if (
-        Number.isFinite((p as any)?.elevation as number) &&
-        (!Number.isFinite((peakPoint as any)?.elevation as number) ||
-          Number((p as any).elevation) > Number((peakPoint as any).elevation))
+        Number.isFinite(p?.elevation) &&
+        (!Number.isFinite(peakPoint?.elevation) || Number(p.elevation) > Number(peakPoint?.elevation))
       ) {
         peakPoint = p
       }
     }
-    const peakCoord = parseCoord(String((peakPoint as any)?.coord ?? ''))
+    const peakCoord = parseCoord(String(peakPoint?.coord ?? ''))
 
     const loadLabels = async () => {
       const [startName, finishName] = await Promise.all([

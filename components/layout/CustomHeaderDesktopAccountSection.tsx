@@ -1,11 +1,14 @@
 import Feather from '@expo/vector-icons/Feather'
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useAvatarUri } from '@/hooks/useAvatarUri'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
+import UserAvatar from './UserAvatar'
+import { createAnchorStyles, createAvatarStyles, createCtaLoginStyles } from './headerStyles'
 
 const AccountMenuLazy = lazy(() => import('./AccountMenu'))
 
@@ -18,11 +21,14 @@ export default function CustomHeaderDesktopAccountSection({
 }: CustomHeaderDesktopAccountSectionProps) {
   const colors = useThemedColors()
   const { isAuthenticated, username, userAvatar, profileRefreshToken } = useAuth()
-  const [avatarLoadError, setAvatarLoadError] = useState(false)
+  const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken })
   const [menuRequested, setMenuRequested] = useState(false)
   const [openOnLoadKey, setOpenOnLoadKey] = useState(0)
   const displayName = isAuthenticated && username ? username : 'Гость'
 
+  const anchorStyles = useMemo(() => createAnchorStyles(colors), [colors])
+  const avatarStyles = useMemo(() => createAvatarStyles(colors), [colors])
+  const ctaStyles = useMemo(() => createCtaLoginStyles(colors), [colors])
   const shellStyles = useMemo(
     () =>
       StyleSheet.create({
@@ -31,125 +37,9 @@ export default function CustomHeaderDesktopAccountSection({
           alignItems: 'center',
           gap: 8,
         },
-        ctaLoginButton: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          paddingVertical: 8,
-          paddingHorizontal: 16,
-          borderRadius: 20,
-          backgroundColor: colors.primary,
-          minHeight: 36,
-          ...(Platform.OS === 'web'
-            ? ({
-                cursor: 'pointer',
-                transition: 'background-color 160ms ease, transform 120ms ease',
-              } as any)
-            : null),
-        },
-        ctaLoginIconSlot: {
-          width: 16,
-          height: 16,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        },
-        ctaLoginButtonHover: {
-          backgroundColor: colors.primaryDark,
-          ...(Platform.OS === 'web' ? ({ transform: 'translateY(-1px)' } as any) : null),
-        },
-        ctaLoginText: {
-          fontSize: 14,
-          fontWeight: '700',
-          color: colors.textOnPrimary,
-        },
-        anchor: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: colors.surface,
-          paddingVertical: 7,
-          paddingHorizontal: 12,
-          borderRadius: 20,
-          maxWidth: 220,
-          minHeight: 44,
-          minWidth: 44,
-          gap: 6,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          ...(Platform.OS === 'web'
-            ? ({
-                cursor: 'pointer',
-                transition: 'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease',
-              } as any)
-            : null),
-        },
-        anchorPressed: {
-          backgroundColor: colors.surfaceMuted,
-          borderColor: colors.border,
-          ...(Platform.OS === 'web'
-            ? ({
-                boxShadow: (colors.boxShadows as any)?.hover ?? '0 8px 16px rgba(17, 24, 39, 0.12)',
-              } as any)
-            : null),
-        },
-        avatarSlot: {
-          width: 24,
-          height: 24,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        },
-        avatar: {
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-        },
-        anchorText: {
-          fontSize: 16,
-          color: colors.text,
-          flexShrink: 1,
-        },
-        chevronSlot: {
-          width: 18,
-          height: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        },
       }),
-    [colors]
+    []
   )
-
-  const avatarUri = useMemo(() => {
-    if (avatarLoadError) return null
-    const raw = String(userAvatar ?? '').trim()
-    if (!raw) return null
-    const lower = raw.toLowerCase()
-    if (lower === 'null' || lower === 'undefined') return null
-
-    let normalized = raw
-    if (raw.startsWith('/')) {
-      const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '')
-      if (base) {
-        normalized = `${base}${raw}`
-      } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        normalized = `${window.location.origin}${raw}`
-      }
-    }
-
-    if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
-      return normalized
-    }
-
-    const separator = normalized.includes('?') ? '&' : '?'
-    return `${normalized}${separator}v=${profileRefreshToken}`
-  }, [avatarLoadError, profileRefreshToken, userAvatar])
-
-  useEffect(() => {
-    setAvatarLoadError(false)
-  }, [profileRefreshToken, userAvatar])
 
   const preloadMenu = useCallback(() => {
     setMenuRequested(true)
@@ -190,15 +80,15 @@ export default function CustomHeaderDesktopAccountSection({
             accessibilityRole="link"
             accessibilityLabel="Войти в аккаунт"
             style={({ pressed }) => [
-              shellStyles.ctaLoginButton,
-              pressed && shellStyles.ctaLoginButtonHover,
+              ctaStyles.ctaLoginButton,
+              pressed && ctaStyles.ctaLoginButtonHover,
             ]}
             testID="header-login-cta"
           >
-            <View style={shellStyles.ctaLoginIconSlot}>
+            <View style={ctaStyles.ctaLoginIconSlot}>
               <Feather name="log-in" size={14} color={colors.textOnPrimary} />
             </View>
-            <Text style={shellStyles.ctaLoginText}>Войти</Text>
+            <Text style={ctaStyles.ctaLoginText}>Войти</Text>
           </Pressable>
         )}
 
@@ -209,7 +99,7 @@ export default function CustomHeaderDesktopAccountSection({
           accessibilityRole="button"
           accessibilityLabel={`Открыть меню аккаунта ${displayName}`}
           accessibilityHint="Открыть меню аккаунта"
-          style={({ pressed }) => [shellStyles.anchor, pressed && shellStyles.anchorPressed]}
+          style={({ pressed }) => [anchorStyles.anchor, pressed && anchorStyles.anchorHover]}
           testID="account-menu-anchor"
           {...(Platform.OS === 'web'
             ? ({
@@ -218,23 +108,17 @@ export default function CustomHeaderDesktopAccountSection({
               } as any)
             : {})}
         >
-          <View style={shellStyles.avatarSlot}>
-            {isAuthenticated && avatarUri ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={shellStyles.avatar}
-                onError={() => setAvatarLoadError(true)}
-              />
-            ) : (
-              <Feather name="user" size={24} color={colors.text} />
-            )}
-          </View>
+          <UserAvatar
+            uri={isAuthenticated ? avatarUri : null}
+            size="md"
+            onError={() => setAvatarLoadError(true)}
+          />
 
-          <Text style={shellStyles.anchorText} numberOfLines={1}>
+          <Text style={avatarStyles.anchorText} numberOfLines={1}>
             {displayName}
           </Text>
 
-          <View style={shellStyles.chevronSlot}>
+          <View style={avatarStyles.chevronSlot}>
             <Feather name="chevron-down" size={18} color={colors.textMuted} />
           </View>
         </Pressable>

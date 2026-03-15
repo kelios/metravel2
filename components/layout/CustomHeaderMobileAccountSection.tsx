@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Platform, Pressable, Text, View } from 'react-native';
+import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
@@ -7,8 +7,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites as _useFavorites } from '@/context/FavoritesContext';
 import { useDeferredUnreadCount } from '@/hooks/useDeferredUnreadCount';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useAvatarUri } from '@/hooks/useAvatarUri';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
+import UserAvatar from './UserAvatar';
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
 
@@ -38,8 +40,8 @@ export default function CustomHeaderMobileAccountSection({
   const router = useRouter();
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const mobileMenuOpenedAtRef = useRef(0);
-  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const { isAuthenticated, username, logout, userAvatar, profileRefreshToken } = useAuth();
+  const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken });
   const { favorites } = useFavoritesSafe();
   const { count: unreadCount } = useDeferredUnreadCount(
     isAuthenticated && mobileMenuVisible,
@@ -59,35 +61,6 @@ export default function CustomHeaderMobileAccountSection({
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [mobileMenuVisible]);
-
-  const avatarUri = useMemo(() => {
-    if (avatarLoadError) return null;
-    const raw = String(userAvatar ?? '').trim();
-    if (!raw) return null;
-    const lower = raw.toLowerCase();
-    if (lower === 'null' || lower === 'undefined') return null;
-
-    let normalized = raw;
-    if (raw.startsWith('/')) {
-      const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
-      if (base) {
-        normalized = `${base}${raw}`;
-      } else if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        normalized = `${window.location.origin}${raw}`;
-      }
-    }
-
-    if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
-      return normalized;
-    }
-
-    const separator = normalized.includes('?') ? '&' : '?';
-    return `${normalized}${separator}v=${profileRefreshToken}`;
-  }, [avatarLoadError, userAvatar, profileRefreshToken]);
-
-  useEffect(() => {
-    setAvatarLoadError(false);
-  }, [profileRefreshToken, userAvatar]);
 
   const handleUserAction = useCallback(
     (path: string, extraAction?: () => void) => {
@@ -150,26 +123,18 @@ export default function CustomHeaderMobileAccountSection({
           accessibilityRole="button"
           accessibilityLabel={`Открыть профиль ${username}`}
         >
-          <View style={styles.mobileUserAvatarContainer}>
-            {avatarUri ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={styles.mobileUserAvatar}
-                onError={() => setAvatarLoadError(true)}
-              />
-            ) : (
-              <Feather name="user" size={24} color={colors.text} />
-            )}
-          </View>
+          <UserAvatar
+            uri={avatarUri}
+            size="md"
+            onError={() => setAvatarLoadError(true)}
+          />
           <Text style={styles.mobileUserName} numberOfLines={1}>
             {username}
           </Text>
         </Pressable>
       ) : (
         <View style={[styles.mobileUserPillPlaceholder, { pointerEvents: 'none' } as any]}>
-          <View style={styles.mobileUserAvatarContainer}>
-            <Feather name="user" size={24} color={colors.text} />
-          </View>
+          <UserAvatar uri={null} size="md" />
           <Text style={styles.mobileUserName} numberOfLines={1}>
             {' '}
           </Text>
