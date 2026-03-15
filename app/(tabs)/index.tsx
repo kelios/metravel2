@@ -1,17 +1,34 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+/**
+ * HomeScreen - Optimized for instant perceived performance
+ * 
+ * Pattern: YouTube-style skeleton → content transition
+ * - Skeleton renders instantly on first paint (no delays)
+ * - Data loads in background while skeleton is visible
+ * - Web navigation sections remain accessible during loading
+ * - Smooth fade transition when content is ready
+ * - No empty screens or heavy first render
+ */
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, View, Animated } from 'react-native';
 import { usePathname } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
-import { ProgressiveContent } from '@/components/ui/ProgressiveContent';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton';
 
+/** Lazy load main content - data fetching starts immediately inside Home */
 const Home = lazy(() => import('@/components/home/Home'));
+
+/** SEO metadata */
+const SEO_TITLE = 'Идеи поездок на выходные и книга путешествий | Metravel';
+const SEO_DESCRIPTION = 'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.';
+
+/** Transition duration for skeleton → content fade */
+const TRANSITION_MS = 200;
 
 function HomeScreen() {
     const pathname = usePathname();
@@ -56,8 +73,44 @@ function HomeScreen() {
         return !hydrated && (pathname === '/' || pathname === '/index' || pathname === '');
     }, [hydrated, isHomePath, pathname]);
 
-    const title = 'Идеи поездок на выходные и книга путешествий | Metravel';
-    const description = 'Подбирайте маршруты по расстоянию и формату отдыха, сохраняйте поездки с фото и заметками и собирайте личную книгу путешествий в PDF.';
+    // Track content ready state for smooth transition
+    const [contentReady, setContentReady] = useState(false);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    // Handle sidebar section navigation (scroll to section when clicked in skeleton)
+    const handleSectionPress = useCallback((sectionKey: string) => {
+        if (Platform.OS === 'web' && typeof document !== 'undefined') {
+            const element = document.querySelector(`[data-section="${sectionKey}"]`);
+            element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, []);
+
+    // Animate content fade-in when ready
+    useEffect(() => {
+        if (contentReady) {
+            if (Platform.OS === 'web') {
+                // CSS handles transition on web
+                return;
+            }
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: TRANSITION_MS,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [contentReady, fadeAnim]);
+
+    // Web-specific styles for CSS transitions
+    const webSkeletonStyle = Platform.OS === 'web' ? {
+        opacity: contentReady ? 0 : 1,
+        pointerEvents: contentReady ? 'none' as const : 'auto' as const,
+        transition: `opacity ${TRANSITION_MS}ms ease-out`,
+    } : {};
+
+    const webContentStyle = Platform.OS === 'web' ? {
+        opacity: contentReady ? 1 : 0,
+        transition: `opacity ${TRANSITION_MS}ms ease-out`,
+    } : {};
 
     // Before hydration or when URL is not home: avoid rendering home content.
     // Keep SEO tags when shouldRenderSeo=true so crawlers still see meta tags.
@@ -65,8 +118,8 @@ function HomeScreen() {
         return shouldRenderSeo ? (
             <InstantSEO
                 headKey="home"
-                title={title}
-                description={description}
+                title={SEO_TITLE}
+                description={SEO_DESCRIPTION}
                 canonical={canonical}
                 image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                 ogType="website"
@@ -79,8 +132,8 @@ function HomeScreen() {
             {shouldRenderSeo && (
                 <InstantSEO
                     headKey="home"
-                    title={title}
-                    description={description}
+                    title={SEO_TITLE}
+                    description={SEO_DESCRIPTION}
                     canonical={canonical}
                     image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                     ogType="website"
@@ -88,7 +141,7 @@ function HomeScreen() {
             )}
             <View style={styles.container}>
                 {Platform.OS === 'web' && (
-                    React.createElement('h1', { style: styles.srOnly as any }, title)
+                    React.createElement('h1', { style: styles.srOnly as any }, SEO_TITLE)
                 )}
                 <ErrorBoundary
                     fallback={
@@ -105,20 +158,59 @@ function HomeScreen() {
                         </View>
                     }
                 >
-                    <ProgressiveContent
-                        isReady={canMountContent}
-                        skeleton={<HomePageSkeleton />}
-                        testID="home-progressive"
-                    >
-                        <Suspense fallback={<HomePageSkeleton />}>
-                            <Home />
-                        </Suspense>
-                    </ProgressiveContent>
+                    <View style={styles.contentWrapper}>
+                        {/* Skeleton layer - visible instantly, fades out when content ready */}
+                        {!contentReady && (
+                            <View 
+                                style={[styles.skeletonLayer, webSkeletonStyle as any]}
+                                testID="home-skeleton-layer"
+                            >
+                                <HomePageSkeleton 
+                                    showSidebarNavigation={Platform.OS === 'web'}
+                                    onSectionPress={handleSectionPress}
+                                />
+                            </View>
+                        )}
+
+                        {/* Content layer - renders behind skeleton, fades in when ready */}
+                        {canMountContent && (
+                            Platform.OS === 'web' ? (
+                                <View style={[styles.contentLayer, webContentStyle as any]}>
+                                    <Suspense fallback={<HomePageSkeleton showSidebarNavigation={false} />}>
+                                        <HomeWithReadyCallback onReady={() => setContentReady(true)} />
+                                    </Suspense>
+                                </View>
+                            ) : (
+                                <Animated.View style={[styles.contentLayer, { opacity: fadeAnim }]}>
+                                    <Suspense fallback={<HomePageSkeleton />}>
+                                        <HomeWithReadyCallback onReady={() => setContentReady(true)} />
+                                    </Suspense>
+                                </Animated.View>
+                            )
+                        )}
+                    </View>
                 </ErrorBoundary>
             </View>
         </>
     );
 }
+
+/** Wrapper that signals when Home has mounted and is ready */
+const HomeWithReadyCallback = React.memo<{ onReady: () => void }>(({ onReady }) => {
+    const hasSignaled = useRef(false);
+    
+    useEffect(() => {
+        if (!hasSignaled.current) {
+            hasSignaled.current = true;
+            // Signal ready on next frame to ensure render is complete
+            requestAnimationFrame(() => onReady());
+        }
+    }, [onReady]);
+
+    return <Home />;
+});
+
+HomeWithReadyCallback.displayName = 'HomeWithReadyCallback';
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {
@@ -144,6 +236,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
+    },
+    contentWrapper: {
+        flex: 1,
+        position: 'relative' as const,
+    },
+    skeletonLayer: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 1,
+    },
+    contentLayer: {
+        flex: 1,
     },
 });
 
