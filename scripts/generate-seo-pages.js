@@ -364,7 +364,8 @@ async function batchAsync(items, concurrency, fn) {
 }
 
 /** Fetch a single travel detail (description + gallery). */
-async function fetchTravelDetail(id) {
+async function fetchTravelDetail(id, slug) {
+  // Try /api/travels/{id}/ first
   try {
     const url = `${API_BASE}/api/travels/${id}/`;
     const detail = await fetchJson(url);
@@ -373,6 +374,19 @@ async function fetchTravelDetail(id) {
       gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
     };
   } catch {
+    // Fallback to /api/travels/by-slug/{slug}/ if id-based fetch fails
+    if (slug) {
+      try {
+        const slugUrl = `${API_BASE}/api/travels/by-slug/${encodeURIComponent(slug)}/`;
+        const detail = await fetchJson(slugUrl);
+        return {
+          description: detail.description || '',
+          gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
+        };
+      } catch {
+        // Both endpoints failed
+      }
+    }
     return { description: '', gallery: [] };
   }
 }
@@ -898,12 +912,12 @@ async function main() {
   if (travels.length > 0) {
     // Fetch detail for each travel (description + gallery) with concurrency limit
     const travelsWithId = travels.filter((t) => t.id);
-    console.log(`\n� Fetching details for ${travelsWithId.length} travels (concurrency: 10)...`);
+    console.log(`\n📥 Fetching details for ${travelsWithId.length} travels (concurrency: 10)...`);
     const details = await batchAsync(travelsWithId, 10, async (travel, i) => {
       if ((i + 1) % 50 === 0 || i === travelsWithId.length - 1) {
         console.log(`  📡 Fetched ${i + 1}/${travelsWithId.length} details...`);
       }
-      return fetchTravelDetail(travel.id);
+      return fetchTravelDetail(travel.id, travel.slug);
     });
     const detailMap = new Map();
     travelsWithId.forEach((t, i) => detailMap.set(t.id, details[i]));

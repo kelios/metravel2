@@ -98,6 +98,7 @@ export const TravelDetailsMapSection: React.FC<{
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
   const primaryRoutePreview = routePreviewItems[0]?.preview ?? null
   const hasEmbeddedCoords = (travel.coordsMeTravel?.length ?? 0) > 0
+  const hasTravelAddressPoints = (travel.travelAddress?.length ?? 0) > 0
 
   // Simplified lazy loading (replaces 30+ lines with 5 lines!)
   const { shouldRender, elementRef, isLoading, isVisible } = useMapLazyLoad({
@@ -116,6 +117,7 @@ export const TravelDetailsMapSection: React.FC<{
   })
   const hasMapData =
     hasEmbeddedCoords ||
+    hasTravelAddressPoints ||
     routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
   const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points' || mapOpenTrigger > 0
   const shouldRenderMapContent = shouldRender || shouldForceRenderMap || mapOpened
