@@ -5,6 +5,7 @@ import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
+import UnreadBadge from './UnreadBadge'
 
 type Props = {
   visible: boolean
@@ -170,24 +171,7 @@ export default function CustomHeaderMobileMenu({
                 >
                   <View style={[styles.iconSlot20, { position: 'relative' }]}>
                     <Feather name="mail" size={20} color={unreadCount > 0 ? colors.primary : colors.textMuted} />
-                    {unreadCount > 0 && (
-                      <View style={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -6,
-                        backgroundColor: colors.primary,
-                        borderRadius: 8,
-                        minWidth: 16,
-                        height: 16,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 4,
-                      }}>
-                        <Text style={{ color: colors.textOnPrimary, fontSize: 10, fontWeight: '700' }}>
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </Text>
-                      </View>
-                    )}
+                    <UnreadBadge count={unreadCount} />
                   </View>
                   <Text style={[styles.modalNavLabel, unreadCount > 0 && { fontWeight: '600', color: colors.text }]}>
                     {unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения'}
