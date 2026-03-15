@@ -12,15 +12,12 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { isWebAutomation } from '@/utils/isWebAutomation'
-import type { ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes'
+import type { TravelRouteFile } from '@/types/travelRoutes'
 import RouteElevationProfile from '@/components/travel/details/sections/RouteElevationProfile'
-import {
-  buildTravelRouteDownloadPath,
-  downloadTravelRouteFileBlob,
-} from '@/api/travelRoutes'
+import { buildTravelRouteDownloadPath } from '@/api/travelRoutes'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
-import { parseRouteFilePreviews } from '@/utils/routeFileParser'
-import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles'
+import { useRouteFilePreviews } from '@/hooks/useRouteFilePreviews'
+import { useKeyPointLabels } from '@/hooks/useKeyPointLabels'
 import PointList from '@/components/travel/PointList'
 import ToggleableMap from '@/components/travel/ToggleableMapSection'
 import { TravelMap } from '@/components/MapPage/TravelMap'
@@ -30,14 +27,6 @@ import BelkrajWidget from '@/components/belkraj/BelkrajWidget'
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12 } as const
 const WEATHER_PLACEHOLDER_STYLE = { minHeight: 120 } as const
-const SUPPORTED_ROUTE_EXTENSIONS = new Set(['gpx', 'kml'])
-
-type RoutePreviewItem = {
-  file: TravelRouteFile
-  preview: ParsedRoutePreview
-  color: string
-  label: string
-}
 
 const BelkrajWidgetComponent = Platform.OS === 'web' ? BelkrajWidget : (() => null) as React.ComponentType<any>
 
