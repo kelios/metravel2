@@ -5,6 +5,7 @@ import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
+import { ProgressiveContent } from '@/components/ui/ProgressiveContent';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
@@ -104,13 +105,15 @@ function HomeScreen() {
                         </View>
                     }
                 >
-                    {canMountContent ? (
-                      <Suspense fallback={<HomePageSkeleton />}>
-                          <Home />
-                      </Suspense>
-                    ) : (
-                      <HomePageSkeleton />
-                    )}
+                    <ProgressiveContent
+                        isReady={canMountContent}
+                        skeleton={<HomePageSkeleton />}
+                        testID="home-progressive"
+                    >
+                        <Suspense fallback={<HomePageSkeleton />}>
+                            <Home />
+                        </Suspense>
+                    </ProgressiveContent>
                 </ErrorBoundary>
             </View>
         </>

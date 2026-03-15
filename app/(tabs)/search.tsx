@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useMemo } from 'react'
+import { Suspense, lazy, memo, useMemo, useState, useEffect } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from '@react-navigation/native'
@@ -7,6 +7,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import ErrorBoundary from '@/components/ui/ErrorBoundary'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import FloatingActionButton from '@/components/ui/FloatingActionButton'
+import { ProgressiveContent } from '@/components/ui/ProgressiveContent'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
@@ -21,6 +22,12 @@ function SearchScreen() {
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth()
+
+  // Hydration state for progressive content
+  const [hydrated, setHydrated] = useState(Platform.OS !== 'web')
+  useEffect(() => {
+    if (Platform.OS === 'web') setHydrated(true)
+  }, [])
 
   const title = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel'
   const description =
@@ -82,9 +89,15 @@ function SearchScreen() {
             </View>
           }
         >
-          <Suspense fallback={<SearchPageSkeleton />}>
-            <ListTravel />
-          </Suspense>
+          <ProgressiveContent
+            isReady={hydrated}
+            skeleton={<SearchPageSkeleton />}
+            testID="search-progressive"
+          >
+            <Suspense fallback={<SearchPageSkeleton />}>
+              <ListTravel />
+            </Suspense>
+          </ProgressiveContent>
         </ErrorBoundary>
 
         {isAuthenticated && Platform.OS !== 'web' && (
