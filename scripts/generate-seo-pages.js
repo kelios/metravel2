@@ -787,6 +787,18 @@ const STATIC_PAGES = [
     robots: 'noindex, nofollow',
   },
   {
+    route: '/accountconfirmation',
+    title: 'Подтверждение аккаунта | Metravel',
+    description: 'Подтверждение учётной записи Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/set-password',
+    title: 'Смена пароля | Metravel',
+    description: 'Смена пароля в аккаунте Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
     route: '/travelsby',
     title: 'Маршруты по Беларуси и идеи путешествий | Metravel',
     description:
@@ -801,6 +813,48 @@ const STATIC_PAGES = [
     route: '/history',
     title: 'История просмотров маршрутов | Metravel',
     description: 'Хронология твоих путешествий и поездок.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/messages',
+    title: 'Сообщения | Metravel',
+    description: 'Личные сообщения Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/export',
+    title: 'Экспорт | Metravel',
+    description: 'Экспорт данных и материалов Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/metravel',
+    title: 'Мои путешествия | Metravel',
+    description: 'Раздел управления вашими путешествиями.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/profile',
+    title: 'Профиль | Metravel',
+    description: 'Профиль пользователя Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/settings',
+    title: 'Настройки | Metravel',
+    description: 'Настройки аккаунта Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/subscriptions',
+    title: 'Подписки | Metravel',
+    description: 'Ваши подписки и подписчики в Metravel.',
+    robots: 'noindex, nofollow',
+  },
+  {
+    route: '/quests/map',
+    title: 'Карта квестов | Metravel',
+    description: 'Карта всех квестов Metravel.',
     robots: 'noindex, nofollow',
   },
   {

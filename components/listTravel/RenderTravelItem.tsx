@@ -1,8 +1,7 @@
 // src/components/listTravel/RenderTravelItem.tsx
 import React, { memo, useMemo } from "react";
-import { Platform, ViewStyle } from "react-native";
+import { Platform, View, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
-import AnimatedCard from "@/components/ui/AnimatedCard";
 import type { Travel } from "@/types/types";
  
 
@@ -32,7 +31,7 @@ type RenderTravelItemProps = {
 
 function RenderTravelItem({
                               item,
-                              index = 0,
+                              index: _index = 0,
                               isMobile = false,
                               isSuperuser,
                               currentUserId,
@@ -73,12 +72,8 @@ function RenderTravelItem({
 
     if (!item) return null;
 
-    // Всегда используем TravelListItem
     return (
-        <AnimatedCard 
-            index={index || 0} 
-            style={containerStyle}
-        >
+        <View style={containerStyle}>
             <TravelListItem
                 travel={item}
                 currentUserId={currentUserId}
@@ -96,7 +91,7 @@ function RenderTravelItem({
                 hideAuthor={hideAuthor}
                 visualVariant={visualVariant}
             />
-        </AnimatedCard>
+        </View>
     );
 }
 

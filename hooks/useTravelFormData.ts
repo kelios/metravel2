@@ -41,6 +41,7 @@ async function showToastMessage(payload: unknown) {
 }
 
 type ToastAwareError = Error & { toastShown?: boolean };
+const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
 
 interface UseTravelFormDataOptions {
   travelId: string | null;
@@ -261,7 +262,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       const markerFallbackImage =
         sanitizeCoverUrl(mergedData.travel_image_thumb_url) ??
         ((normalizedGallery?.[0] as Record<string, unknown> | undefined)?.url as string | undefined) ??
-        null;
+        normalizeMediaUrl(DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE);
       const normalizedMarkers = normalizeMarkersForSave(
         (mergedData as unknown).coordsMeTravel as Record<string, unknown>[],
         markerFallbackImage,

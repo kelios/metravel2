@@ -559,7 +559,7 @@ function ImageCardMedia({
     >
       {resolvedSource && !shouldDisableNetwork ? (
         <>
-          {Platform.OS === 'web' && shouldRenderWebBlurBackground && shouldRevealWebMedia && webBlurSrc ? (
+          {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
             <WebBlurBackdrop
               src={webBlurSrc}
               alt={alt || ''}

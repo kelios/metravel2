@@ -9,6 +9,7 @@ import { ApiError } from '@/api/client';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
 import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 jest.mock('@/api/travelsApi', () => ({
   fetchTravel: jest.fn(),
@@ -718,7 +719,7 @@ describe('useTravelFormData', () => {
     expect(saveFormData).toHaveBeenCalledTimes(1);
     const sentPayload = (saveFormData as jest.Mock).mock.calls[0][0];
     expect(sentPayload.coordsMeTravel[0].id).toBeNull();
-    expect(sentPayload.coordsMeTravel[0].image).toBeUndefined();
+    expect(sentPayload.coordsMeTravel[0].image).toBe(normalizeMediaUrl('/og-default.png'));
   });
 
   it('uploads pending point photo after save response assigns marker id', async () => {

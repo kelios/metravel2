@@ -212,6 +212,9 @@ npx serve dist/prod -l 3000 -s
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`) and any unused area should be filled by a blurred version of the same image.
+- On web, travel hero/gallery media and description images must not exceed `70vh`.
+  - Apply the limit at the authoritative container/layout level, not via ad-hoc per-page overrides.
+  - Keep `contain` rendering and blurred surround inside that bounded area.
 - For critical web hero/slider media, the blurred surround must reuse the same effective image source as the visible image whenever possible.
   - Do not create a second “blur-only” URL for first-paint hero/slider backdrops if the same source image can be reused.
   - The goal is to avoid a separate background request arriving after the main image and causing a visible second-stage backdrop reveal.

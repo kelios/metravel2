@@ -90,11 +90,18 @@ export default function ArticleDetails() {
   }, [numericId, normalizedSlug])
 
   const seo = useMemo(() => {
-    const title = article?.name ? `${article.name} | MeTravel` : 'MeTravel'
-    const description = stripToDescription(article?.description)
+    const hasResolvedArticle = Boolean(article?.id) && !errorMessage
+    const title = hasResolvedArticle && article?.name
+      ? `${article.name} | MeTravel`
+      : 'Статья не найдена | Metravel'
+    const description = hasResolvedArticle
+      ? stripToDescription(article?.description)
+      : 'Статья не найдена. Проверьте ссылку или вернитесь к списку статей Metravel.'
     const canonicalKey = article?.id || routeKey
-    const canonical = canonicalKey ? buildCanonicalUrl(`/article/${canonicalKey}`) : buildCanonicalUrl('/articles')
-    const image = article?.article_image_thumb_url || undefined
+    const canonical = hasResolvedArticle && canonicalKey
+      ? buildCanonicalUrl(`/article/${canonicalKey}`)
+      : buildCanonicalUrl('/articles')
+    const image = hasResolvedArticle ? article?.article_image_thumb_url || undefined : undefined
     const jsonLd = article ? {
       '@context': 'https://schema.org',
       '@type': 'Article',
@@ -108,8 +115,9 @@ export default function ArticleDetails() {
         url: 'https://metravel.by',
       },
     } : null
-    return { title, description, canonical, image, jsonLd }
-  }, [article, routeKey])
+    const robots = hasResolvedArticle ? undefined : 'noindex, nofollow'
+    return { title, description, canonical, image, jsonLd, robots }
+  }, [article, errorMessage, routeKey])
 
   // ⚠️ CRITICAL: InstantSEO must render from the FIRST render, not after async data loads.
   // react-helmet-async has a race condition on direct page loads: if a Helmet instance
@@ -122,6 +130,7 @@ export default function ArticleDetails() {
       canonical={seo.canonical}
       image={seo.image}
       ogType="article"
+      robots={seo.robots}
       additionalTags={
         seo.jsonLd ? (
           <script

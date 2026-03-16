@@ -3,6 +3,10 @@ Disallow: /api/
 Disallow: /admin/
 Disallow: /_expo/
 Disallow: /metro/
+Disallow: /chat
+Disallow: /password/
+Disallow: /articles/
+Disallow: /map.optimized.example
 Disallow: /assets/icons/
 Disallow: /*?debug=*
 

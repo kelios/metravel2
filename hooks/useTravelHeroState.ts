@@ -26,6 +26,7 @@ const HERO_HEIGHT = {
   mobileMin: 280,
   mobileViewportRatio: 0.7,
   mobileMaxViewportRatio: 0.85,
+  webViewportCapRatio: 0.7,
 } as const
 
 const normalizeGalleryImage = (
@@ -64,12 +65,19 @@ function useHeroMediaModel(
       : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    if (Platform.OS === 'web' && !isMobile) {
-      const target = winH * HERO_HEIGHT.mobileViewportRatio
-      return Math.max(
-        HERO_HEIGHT.desktopMin,
-        Math.min(target, HERO_HEIGHT.desktopMax),
+    if (Platform.OS === 'web') {
+      const viewportCap = Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
+      const minHeight = Math.min(
+        isMobile ? HERO_HEIGHT.mobileMin : HERO_HEIGHT.desktopMin,
+        viewportCap,
       )
+      const arHeight = resolvedWidth
+        ? Math.round(resolvedWidth / aspectRatio)
+        : viewportCap
+      const maxHeight = isMobile
+        ? viewportCap
+        : Math.min(HERO_HEIGHT.desktopMax, viewportCap)
+      return Math.max(minHeight, Math.min(arHeight, maxHeight))
     }
     const minViewportHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
     const arHeight = resolvedWidth

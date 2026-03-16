@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native'
+import * as ReactNative from 'react-native'
 import { Platform } from 'react-native'
 
 import { __testables, useTravelHeroState } from '@/hooks/useTravelHeroState'
@@ -73,15 +74,20 @@ describe('useWebHeroSliderUpgradeGate', () => {
 
 describe('useTravelHeroState', () => {
   const originalPlatformOS = Platform.OS
+  let useWindowDimensionsSpy: jest.SpyInstance
 
   beforeEach(() => {
     Platform.OS = 'web' as any
     jest.useFakeTimers()
+    useWindowDimensionsSpy = jest
+      .spyOn(ReactNative, 'useWindowDimensions')
+      .mockReturnValue({ width: 1440, height: 1000, scale: 1, fontScale: 1 } as any)
   })
 
   afterEach(() => {
     Platform.OS = originalPlatformOS as any
     jest.useRealTimers()
+    useWindowDimensionsSpy.mockRestore()
   })
 
   it('uses the first gallery image as the initial web hero media when gallery exists', () => {
@@ -144,5 +150,27 @@ describe('useTravelHeroState', () => {
 
     expect(result.current.heroSliderImages).toHaveLength(1)
     expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
+  })
+
+  it('caps web hero height to 70 percent of the viewport', () => {
+    const onFirstImageLoad = jest.fn()
+    const travel = {
+      id: 45,
+      name: 'Capped web hero',
+      gallery: [
+        {
+          id: 1,
+          url: 'https://example.com/tall-gallery.jpg',
+          width: 900,
+          height: 1600,
+        },
+      ],
+    } as any
+
+    const { result } = renderHook(() =>
+      useTravelHeroState(travel, false, onFirstImageLoad, false),
+    )
+
+    expect(result.current.heroHeight).toBeLessThanOrEqual(Math.round(1000 * 0.7))
   })
 })

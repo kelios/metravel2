@@ -620,6 +620,28 @@ describe('fallback template canonical stripping', () => {
   });
 });
 
+describe('static noindex route coverage', () => {
+  it('keeps private and auth-like static routes in SEO generator with noindex', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), 'scripts/generate-seo-pages.js'),
+      'utf8',
+    );
+
+    expect(source).toContain("route: '/accountconfirmation'");
+    expect(source).toContain("route: '/set-password'");
+    expect(source).toContain("route: '/messages'");
+    expect(source).toContain("route: '/export'");
+    expect(source).toContain("route: '/metravel'");
+    expect(source).toContain("route: '/profile'");
+    expect(source).toContain("route: '/settings'");
+    expect(source).toContain("route: '/subscriptions'");
+    expect(source).toContain("route: '/quests/map'");
+    expect(source).toContain("robots: 'noindex, nofollow'");
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Full SEO tag count contract (the exact regression that was fixed)
 // ---------------------------------------------------------------------------

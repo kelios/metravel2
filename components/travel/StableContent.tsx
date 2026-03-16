@@ -192,6 +192,48 @@ const normalizeImgTags = (html: string): string => {
   });
 };
 
+const appendInlineStyle = (attrs: string, declaration: string) => {
+  if (!attrs) return ` style="${declaration}"`;
+  const styleMatch = attrs.match(/\bstyle="([^"]*)"/i);
+  if (!styleMatch) {
+    return `${attrs} style="${declaration}"`;
+  }
+  const current = styleMatch[1] || '';
+  if (current.includes(declaration)) {
+    return attrs;
+  }
+  const nextStyle = current.trim().replace(/;$/, '');
+  const merged = nextStyle ? `${nextStyle};${declaration}` : declaration;
+  return attrs.replace(styleMatch[0], `style="${merged}"`);
+};
+
+const buildRichImageBackdropDeclaration = (src: string) => {
+  const safeSrc = String(src || '').trim().replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return safeSrc ? `--travel-rich-image:url('${safeSrc}')` : '';
+};
+
+const decorateRichImageFrames = (html: string) => {
+  if (!html) return html;
+
+  const decorateAttrs = (attrs: string, src: string) => {
+    const nextClassAttrs = appendClass(attrs, 'rich-image-frame');
+    const backdropDeclaration = buildRichImageBackdropDeclaration(src);
+    return backdropDeclaration
+      ? appendInlineStyle(nextClassAttrs, backdropDeclaration)
+      : nextClassAttrs;
+  };
+
+  return html
+    .replace(
+      /<p([^>]*)>(\s*<img\b[^>]*\bsrc="([^"]+)"[^>]*>\s*(?:<br\s*\/?>\s*)?)<\/p>/gi,
+      (match, attrs = '', inner = '', src = '') => `<p${decorateAttrs(attrs, src)}>${inner}</p>`
+    )
+    .replace(
+      /<figure([^>]*)>([\s\S]*?<img\b[^>]*\bsrc="([^"]+)"[^>]*>[\s\S]*?)<\/figure>/gi,
+      (match, attrs = '', inner = '', src = '') => `<figure${decorateAttrs(attrs, src)}>${inner}</figure>`
+    );
+};
+
 const replaceYouTubeIframes = (html: string): string =>
   html.replace(/<iframe\b[^>]*src="([^"]+)"[^>]*><\/iframe>/gi, (full, src: string) => {
     if (!isYouTube(src)) return full;
@@ -286,7 +328,7 @@ const prepareHtml = (html: string) => {
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>');
   const truncated = truncateInstagramCaptions(demoted);
-  return groupConsecutiveImages(truncated);
+  return decorateRichImageFrames(groupConsecutiveImages(truncated));
 };
 
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
@@ -348,8 +390,39 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   object-fit: contain;
   object-position: center;
   border-radius: 12px;
-  background: #f5f5f7;
+  background: transparent;
   cursor: zoom-in;
+}
+
+.${WEB_RICH_TEXT_CLASS} .rich-image-frame {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: ${colors.backgroundSecondary};
+}
+
+.${WEB_RICH_TEXT_CLASS} .rich-image-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--travel-rich-image);
+  background-size: cover;
+  background-position: center;
+  filter: blur(18px) saturate(1.06);
+  transform: scale(1.08);
+  opacity: 0.9;
+  z-index: 0;
+}
+
+.${WEB_RICH_TEXT_CLASS} .rich-image-frame > img,
+.${WEB_RICH_TEXT_CLASS} .rich-image-frame > a,
+.${WEB_RICH_TEXT_CLASS} .rich-image-frame > figcaption {
+  position: relative;
+  z-index: 1;
+}
+
+.${WEB_RICH_TEXT_CLASS} .rich-image-frame > img {
+  background: transparent;
 }
 
 /* ===== SINGLE WIDE IMAGE (horizontal/landscape) ===== */
@@ -410,7 +483,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 .${WEB_RICH_TEXT_CLASS} .img-row-2 p {
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
+  position: relative;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid ${colors.borderLight};
@@ -421,7 +498,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   height: 220px !important;
   max-height: 220px !important;
   aspect-ratio: auto !important;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   margin: 0;
   border-radius: 16px;
 }
@@ -456,8 +534,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} .img-grid p {
   margin: 0;
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
+  position: relative;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid ${colors.borderLight};
@@ -469,11 +549,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   min-height: 200px !important;
   max-height: 320px !important;
   aspect-ratio: auto !important;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   margin: 0;
   border-radius: 16px;
-  background: ${colors.backgroundSecondary};
+  background: transparent;
 }
 
 /* ===== MIXED GRID: 2 landscape + 1 portrait ===== */
@@ -493,8 +573,12 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack p {
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   min-width: 0;
+  position: relative;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid ${colors.borderLight};
@@ -505,12 +589,16 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   height: 100% !important;
   min-height: 154px !important;
   aspect-ratio: auto !important;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 16px;
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p {
   margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
+  position: relative;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid ${colors.borderLight};
@@ -521,7 +609,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   height: 100% !important;
   min-height: 320px !important;
   aspect-ratio: auto !important;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 16px;
 }
 
@@ -608,6 +696,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 /* ===== PREMIUM FIGURES & CAPTIONS ===== */
 .${WEB_RICH_TEXT_CLASS} figure {
   margin: 2.5em 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   clear: both;
 }
@@ -774,7 +866,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p img {
     min-height: 200px !important;
     max-height: 240px !important;
-    object-fit: cover;
+    object-fit: contain;
   }
   /* Mobile: portrait row heights */
   .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {

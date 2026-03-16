@@ -99,7 +99,7 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(renderedNodes.map((node: any) => node.type)).toEqual(['mock-image-card-media'])
   })
 
-  it('shows already loaded card image immediately on subsequent renders', () => {
+  it('delegates showImmediately to ImageCardMedia (no card-level image cache)', () => {
     const imageUrl = '/travel-image/already-loaded-card.jpg'
 
     renderer.act(() => {
@@ -129,7 +129,9 @@ describe('UnifiedTravelCard blur background (web)', () => {
       )
     })
 
+    // UnifiedTravelCard no longer maintains its own image cache;
+    // ImageCardMedia handles cached-image detection internally.
     const secondProps = mockImageCardMedia.mock.calls.at(-1)?.[0]
-    expect(secondProps?.showImmediately).toBe(true)
+    expect(secondProps?.showImmediately).toBe(false)
   })
 })

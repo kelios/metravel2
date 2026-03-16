@@ -105,4 +105,32 @@ describe('StableContent (web) link styles', () => {
       expect(document.querySelector('[data-testid="travel-rich-text-lightbox"]')).toBeNull();
     });
   });
+
+  it('renders description image containers with blur backdrop styles and contain fit', async () => {
+    const StableContent = (await import('@/components/travel/StableContent')).default;
+
+    const { container } = render(
+      <StableContent
+        html={[
+          '<p><img src="https://example.com/one.jpg" width="800" height="600" alt="One" /></p>',
+          '<p><img src="https://example.com/two.jpg" width="600" height="900" alt="Two" /></p>',
+        ].join('')}
+        contentWidth={700}
+      />
+    );
+
+    await waitFor(() => {
+      const richText = container.querySelector('.travel-rich-text');
+      expect(richText).toBeTruthy();
+      expect(richText?.innerHTML).toContain('class="rich-image-frame');
+      expect(richText?.innerHTML).toContain("--travel-rich-image:url('https://images.weserv.nl/?url=example.com%2Fone.jpg");
+    });
+
+    const styleEl = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;
+    expect(styleEl).toBeTruthy();
+    const css = String(styleEl?.textContent || '');
+    expect(css).toContain('.travel-rich-text .rich-image-frame::before');
+    expect(css).toContain('object-fit: contain;');
+    expect(css).not.toContain('object-fit: cover;');
+  });
 });

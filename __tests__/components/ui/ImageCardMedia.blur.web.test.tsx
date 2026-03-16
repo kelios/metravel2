@@ -26,7 +26,7 @@ describe('ImageCardMedia blur background (web)', () => {
     }
   })
 
-  it('keeps blur background hidden until lazy web media is fully loaded', () => {
+  it('shows blur background immediately for lazy web media (before image load)', () => {
     let tree: renderer.ReactTestRenderer
     renderer.act(() => {
       tree = renderer.create(
@@ -39,12 +39,13 @@ describe('ImageCardMedia blur background (web)', () => {
       )
     })
 
+    // Blur backdrop should be visible immediately to provide a stable visual base
     const blurLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
       return node?.props?.['data-blur-backdrop'] === 'true'
     })
 
-    expect(blurLayers.length).toBe(0)
+    expect(blurLayers.length).toBeGreaterThan(0)
 
     const mainLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
@@ -55,6 +56,7 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainLayers.length).toBeGreaterThan(0)
     expect(mainLayers[0].props.style?.maxWidth).toBe('none')
     expect(mainLayers[0].props.style?.maxHeight).toBe('none')
+    // Main image starts hidden; blur provides visual base until image loads
     expect(mainLayers[0].props.style?.opacity).toBe(0)
   })
 
