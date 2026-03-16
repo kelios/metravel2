@@ -18,9 +18,29 @@ jest.mock('@/components/MapPage/Map/createMapPopupComponent', () => ({
   createMapPopupComponent: jest.fn(() => () => null),
 }));
 
+const mockMapMarkers = jest.fn(() => null);
+const mockClusterLayer = jest.fn(() => null);
+
+jest.mock('@/components/MapPage/Map/MapMarkers', () => ({
+  __esModule: true,
+  default: (props: any) => {
+    mockMapMarkers(props);
+    return <div data-testid="mock-map-markers" />;
+  },
+}));
+
+jest.mock('@/components/MapPage/Map/ClusterLayer', () => ({
+  __esModule: true,
+  default: (props: any) => {
+    mockClusterLayer(props);
+    return <div data-testid="mock-cluster-layer" />;
+  },
+}));
+
 const { useLeafletLoader } = require('@/hooks/useLeafletLoader');
 const { useMapMarkers } = require('@/hooks/useMapMarkers');
 const { useLeafletIcons } = require('@/components/MapPage/Map/useLeafletIcons');
+const { createMapPopupComponent } = require('@/components/MapPage/Map/createMapPopupComponent');
 
 describe('TravelMap (web)', () => {
   beforeEach(() => {
@@ -136,5 +156,42 @@ describe('TravelMap (web)', () => {
     );
 
     expect(getByTestId('travel-map')).toBeTruthy();
+  });
+
+  it('passes responsive metravel popup props to travel map markers', () => {
+    render(
+      <TravelMap
+        travelData={[{ coord: '53.9, 27.56' }]}
+        compact
+        height={400}
+      />
+    );
+
+    expect(createMapPopupComponent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        useMap: expect.any(Function),
+        userLocation: null,
+      })
+    );
+
+    expect(mockMapMarkers).toHaveBeenCalled();
+    const props = mockMapMarkers.mock.calls[0]?.[0];
+    expect(props).toBeTruthy();
+    expect(props.popupProps).toEqual(
+      expect.objectContaining({
+        autoPan: true,
+        keepInView: true,
+        className: 'metravel-place-popup',
+        maxWidth: 436,
+        minWidth: 336,
+        autoPanPaddingTopLeft: [24, 140],
+        autoPanPaddingBottomRight: [24, 140],
+      })
+    );
+    expect(props.popupProps.eventHandlers).toEqual(
+      expect.objectContaining({
+        popupopen: expect.any(Function),
+      })
+    );
   });
 });
