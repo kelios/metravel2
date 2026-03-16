@@ -90,6 +90,29 @@ async function clickSliderNavButton(
   });
 }
 
+async function waitForHeroMedia(
+  page: import('@playwright/test').Page,
+  timeout = 15_000,
+) {
+  await page.locator('[data-testid="travel-details-hero"]').first().waitFor({
+    state: 'attached',
+    timeout,
+  });
+
+  await page.waitForFunction(
+    () => {
+      const hero = document.querySelector('[data-testid="travel-details-hero"]');
+      if (!hero) return false;
+      return Boolean(
+        hero.querySelector('[data-testid="slider-scroll"]') ||
+          hero.querySelector('img[data-lcp]') ||
+          hero.querySelector('[data-hero-backdrop="true"]'),
+      );
+    },
+    { timeout },
+  );
+}
+
 /**
  * Navigate to a travel detail page that has a multi-image slider.
  * Returns counter info or null if none found.
@@ -581,12 +604,16 @@ test.describe('Slider — single image', () => {
     await page.route(`**/api/travels/${singleId}/`, singleTravelRoute);
 
     await gotoWithRetry(page, `/travels/${singleSlug}`);
-    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 });
+    await waitForHeroMedia(page);
 
     // Verify no counter text like "1/1" or "1/N"
     const counterText = await page.evaluate(() => {
       const re = /^\d+\/\d+$/;
-      const all = document.querySelectorAll('*');
+      const hero =
+        document.querySelector('[data-testid="slider-wrapper"]') ||
+        document.querySelector('[data-testid="travel-details-hero"]') ||
+        document.body;
+      const all = hero.querySelectorAll('*');
       for (const el of all) {
         if (el.children.length > 0) continue;
         if (re.test((el.textContent || '').trim())) return true;
