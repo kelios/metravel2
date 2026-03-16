@@ -20,6 +20,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Title } from "@/ui/paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
+import TravelListItem from "@/components/listTravel/TravelListItem";
 import { fetchTravelsPopular } from "@/api/map";
 import type { TravelsMap } from "@/types/types";
 import { METRICS } from '@/constants/layout';
@@ -244,6 +245,27 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
 
     const keyExtractor = useCallback((item: any) => `${item.id}-${item.updated_at || ''}`, []);
 
+    const renderWebSearchLikeTravelItem = useCallback((item: any, index: number) => (
+      <View
+        key={keyExtractor(item)}
+        style={[
+          styles.webGridItem,
+          width < METRICS.breakpoints.tablet
+            ? { width: mobileWebCardWidth ?? undefined, marginRight: DESIGN_TOKENS.spacing.sm }
+            : null,
+        ]}
+        {...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}
+      >
+        <TravelListItem
+          travel={item as any}
+          isFirst={index === 0}
+          isMobile={false}
+          viewportWidth={width}
+          cardWidth={mobileWebCardWidth ?? undefined}
+        />
+      </View>
+    ), [keyExtractor, mobileWebCardWidth, styles.webGridItem, width]);
+
     const handleContentChange = useCallback(() => {
       scrollToAnchor?.();
     }, [scrollToAnchor]);
@@ -334,18 +356,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
                 scrollEventThrottle={16}
                 keyboardShouldPersistTaps="handled"
               >
-                {popularList.map((item) => (
-                  <View
-                    key={keyExtractor(item)}
-                    accessibilityRole="listitem"
-                    style={[
-                      styles.webGridItem,
-                      { width: mobileWebCardWidth ?? undefined, marginRight: DESIGN_TOKENS.spacing.sm },
-                    ]}
-                  >
-                    <TravelTmlRound travel={item as any} />
-                  </View>
-                ))}
+                {popularList.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
               </ScrollView>
             ) : (
               <View>
@@ -353,15 +364,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
                   accessibilityRole="list"
                   style={[styles.flatListContent, styles.webGrid, webGridStyle]}
                 >
-                  {popularList.map((item) => (
-                    <View
-                      key={keyExtractor(item)}
-                      accessibilityRole="listitem"
-                      style={styles.webGridItem}
-                    >
-                      <TravelTmlRound travel={item as any} />
-                    </View>
-                  ))}
+                  {popularList.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
                 </View>
               </View>
             )

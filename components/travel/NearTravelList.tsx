@@ -20,6 +20,7 @@ import { Title } from '@/ui/paper';
 
 import { Travel } from '@/types/types';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
+import TravelListItem from '@/components/listTravel/TravelListItem';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -541,6 +542,25 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     ), [styles.travelItem, styles.travelItemOdd]);
 
     const keyExtractor = useCallback((item: Travel) => `travel-${item.id}`, []);
+
+    const renderWebSearchLikeTravelItem = useCallback((item: Travel, index: number) => (
+      <View
+        key={keyExtractor(item)}
+        style={[
+          styles.travelItem,
+          styles.webGridItem,
+          index % 2 !== 0 && styles.travelItemOdd,
+        ]}
+      >
+        <TravelListItem
+          travel={item}
+          isFirst={index === 0}
+          isMobile={false}
+          viewportWidth={width}
+        />
+      </View>
+    ), [keyExtractor, styles.travelItem, styles.travelItemOdd, styles.webGridItem, width]);
+
     const webGridStyle = useMemo(() => {
       if (Platform.OS !== 'web') return undefined;
       if (width <= 640) {
@@ -621,18 +641,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 >
                   <View style={width <= 640 ? styles.webScrollContainer : undefined}>
                     <View style={[styles.travelsGrid, webGridStyle]}>
-                      {displayedTravels.map((item, index) => (
-                        <View
-                          key={keyExtractor(item)}
-                          style={[
-                            styles.travelItem,
-                            Platform.OS === 'web' && styles.webGridItem,
-                            index % 2 !== 0 && styles.travelItemOdd,
-                          ]}
-                        >
-                          <TravelTmlRound travel={item} />
-                        </View>
-                      ))}
+                      {displayedTravels.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
                     </View>
                   </View>
 
