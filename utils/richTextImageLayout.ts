@@ -155,7 +155,6 @@ export function removeImageLayoutClasses(html: string): string {
   // Remove wrapper divs for img-row-2 and img-grid variants, keeping inner content
   result = result.replace(/<div\s+class="img-row-2(?:\s+img-row-2-(?:portrait|mixed))?">([\s\S]*?)<\/div>/gi, '$1');
   result = result.replace(/<div\s+class="img-grid(?:\s+img-grid-portrait)?">([\s\S]*?)<\/div>/gi, '$1');
-  // Remove img-grid-mixed wrapper and inner stack div
   result = result.replace(/<div\s+class="img-grid-mixed"><div\s+class="img-grid-mixed-stack">([\s\S]*?)<\/div>([\s\S]*?)<\/div>/gi, '$1$2');
 
   // Remove float and single-wide classes from paragraphs

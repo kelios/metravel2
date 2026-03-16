@@ -84,6 +84,45 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage.props.style?.opacity).toBe(1)
   })
 
+  it('can keep eager critical web media hidden until load when revealOnLoadOnly is enabled', () => {
+    let tree: renderer.ReactTestRenderer
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/photo-visible-after-load.jpg"
+          height={200}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="high"
+          allowCriticalWebBlur
+          revealOnLoadOnly
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.style?.opacity).toBe(0)
+
+    renderer.act(() => {
+      mainImage.props.onLoad()
+    })
+
+    const loadedMainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(loadedMainImage.props.style?.opacity).toBe(1)
+  })
+
   it('keeps blur background for eager high-priority image when explicitly allowed', () => {
     let tree: renderer.ReactTestRenderer
     renderer.act(() => {

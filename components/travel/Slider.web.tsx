@@ -283,6 +283,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const viewportRef = useRef<any>(null);
   const trackRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const overlayRevealFrameRef = useRef<number | null>(null);
   const overlayFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStateRef = useRef<DragState>(initialDragState());
   const visualOffsetRef = useRef(0);
@@ -326,6 +327,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     if (animationFrameRef.current != null && typeof window !== 'undefined') {
       window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
+    }
+  }, []);
+
+  const clearOverlayRevealFrame = useCallback(() => {
+    if (overlayRevealFrameRef.current != null && typeof window !== 'undefined') {
+      window.cancelAnimationFrame(overlayRevealFrameRef.current);
+      overlayRevealFrameRef.current = null;
     }
   }, []);
 
@@ -604,11 +612,12 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   useEffect(() => {
     return () => {
       stopAnimation();
+      clearOverlayRevealFrame();
       if (overlayFadeTimerRef.current) {
         clearTimeout(overlayFadeTimerRef.current);
       }
     };
-  }, [stopAnimation]);
+  }, [clearOverlayRevealFrame, stopAnimation]);
 
   const handleSlideLoad = useCallback((index: number) => {
     setLoadedSlideIndices((prev) => {
@@ -620,17 +629,32 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     });
 
     if (index === currentIndexRef.current && transitionOverlayUri) {
-      setTransitionOverlayFading(true);
       if (overlayFadeTimerRef.current) {
         clearTimeout(overlayFadeTimerRef.current);
       }
-      overlayFadeTimerRef.current = setTimeout(() => {
-        setTransitionOverlayUri(null);
-        setTransitionOverlayFading(false);
-        overlayFadeTimerRef.current = null;
-      }, 140);
+      clearOverlayRevealFrame();
+
+      const startOverlayFade = () => {
+        setTransitionOverlayFading(true);
+        overlayFadeTimerRef.current = setTimeout(() => {
+          setTransitionOverlayUri(null);
+          setTransitionOverlayFading(false);
+          overlayFadeTimerRef.current = null;
+        }, 140);
+      };
+
+      if (typeof window === 'undefined') {
+        startOverlayFade();
+      } else {
+        overlayRevealFrameRef.current = window.requestAnimationFrame(() => {
+          overlayRevealFrameRef.current = window.requestAnimationFrame(() => {
+            overlayRevealFrameRef.current = null;
+            startOverlayFade();
+          });
+        });
+      }
     }
-  }, [transitionOverlayUri]);
+  }, [clearOverlayRevealFrame, transitionOverlayUri]);
 
   const viewportTouchAction = isMobile ? 'pan-y pinch-zoom' : 'pan-x';
 

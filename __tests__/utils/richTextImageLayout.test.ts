@@ -78,7 +78,6 @@ describe('richTextImageLayout', () => {
     });
 
     it('wraps 3 images with 2+ portraits in img-grid-portrait', () => {
-      // Multiple portraits should use portrait-optimized grid
       const html = '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="800" height="600"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
       expect(result).toContain('img-grid-portrait');

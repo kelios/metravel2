@@ -104,7 +104,7 @@ const Slide = memo(function Slide({
   const isFirstSlide = index === 0;
   const shouldEagerLoad =
     Platform.OS === 'web'
-      ? isFirstSlide && !firstImagePreloaded
+      ? isFirstSlide || isActive || !!preloadPriority
       : isFirstSlide || isActive || !!preloadPriority;
   const mainPriority =
     Platform.OS === 'web'
@@ -214,7 +214,7 @@ const Slide = memo(function Slide({
         />
       ) : (
         <>
-          {!isLoaded && (
+          {!isLoaded && Platform.OS !== 'web' && (
             <View
               style={[
                 styles.neutralPlaceholder,
@@ -253,6 +253,7 @@ const Slide = memo(function Slide({
             onError={handleError}
             showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={shouldBlur}
+            revealOnLoadOnly={Platform.OS === 'web' && shouldBlur}
           />
         </>
       )}

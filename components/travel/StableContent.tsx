@@ -418,7 +418,9 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 .${WEB_RICH_TEXT_CLASS} .img-row-2 img {
   width: 100%;
-  height: 220px;
+  height: 220px !important;
+  max-height: 220px !important;
+  aspect-ratio: auto !important;
   object-fit: cover;
   margin: 0;
   border-radius: 16px;
@@ -427,15 +429,18 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 /* ===== TWO IMAGES ROW VARIANTS ===== */
 /* Portrait pair - taller images */
 .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
-  height: 280px;
+  height: 280px !important;
+  max-height: 280px !important;
+  aspect-ratio: auto !important;
 }
 /* Mixed pair - portrait + landscape, auto height to respect aspect ratios */
 .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed {
   align-items: start;
 }
 .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed img {
-  height: auto;
-  max-height: 300px;
+  height: 260px !important;
+  max-height: 260px !important;
+  aspect-ratio: auto !important;
   object-fit: contain;
 }
 
@@ -460,9 +465,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid img {
   width: 100%;
-  height: 100%;
-  min-height: 200px;
-  max-height: 320px;
+  height: 100% !important;
+  min-height: 200px !important;
+  max-height: 320px !important;
+  aspect-ratio: auto !important;
   object-fit: cover;
   object-position: center;
   margin: 0;
@@ -496,8 +502,9 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack img {
   width: 100%;
-  height: 100%;
-  min-height: 154px;
+  height: 100% !important;
+  min-height: 154px !important;
+  aspect-ratio: auto !important;
   object-fit: cover;
   border-radius: 16px;
 }
@@ -511,8 +518,9 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p img {
   width: 100%;
-  height: 100%;
-  min-height: 320px;
+  height: 100% !important;
+  min-height: 320px !important;
+  aspect-ratio: auto !important;
   object-fit: cover;
   border-radius: 16px;
 }
@@ -737,7 +745,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-row-2 img {
-    height: 150px;
+    height: 150px !important;
+    max-height: 150px !important;
   }
   /* Mobile: grid becomes 2 columns */
   .${WEB_RICH_TEXT_CLASS} .img-grid {
@@ -745,8 +754,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid img {
-    min-height: 140px;
-    max-height: 220px;
+    min-height: 140px !important;
+    max-height: 220px !important;
   }
   /* Mobile: mixed grid stacks vertically */
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
@@ -758,17 +767,19 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack img {
-    min-height: 120px;
-    height: 120px;
+    min-height: 120px !important;
+    height: 120px !important;
+    max-height: 120px !important;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p img {
-    min-height: 200px;
-    max-height: 240px;
+    min-height: 200px !important;
+    max-height: 240px !important;
     object-fit: cover;
   }
   /* Mobile: portrait row heights */
   .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
-    height: 210px;
+    height: 210px !important;
+    max-height: 210px !important;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
     min-height: 180px;

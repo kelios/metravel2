@@ -245,6 +245,8 @@ type Props = {
   showImmediately?: boolean;
   /** Allow blurred web backdrop even for eager/high-priority images. */
   allowCriticalWebBlur?: boolean;
+  /** On web, keep main image hidden until onLoad even for eager/high-priority media. */
+  revealOnLoadOnly?: boolean;
 };
 
 function ImageCardMedia({
@@ -273,6 +275,7 @@ function ImageCardMedia({
   onError,
   showImmediately = false,
   allowCriticalWebBlur = false,
+  revealOnLoadOnly = false,
 }: Props) {
   const isJest =
     typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
@@ -446,8 +449,9 @@ function ImageCardMedia({
 
   const shouldShowWebImageImmediately = useMemo(() => {
     if (Platform.OS !== 'web') return showImmediately;
+    if (revealOnLoadOnly) return showImmediately;
     return showImmediately || loading === 'eager' || priority === 'high';
-  }, [showImmediately, loading, priority]);
+  }, [showImmediately, loading, priority, revealOnLoadOnly]);
 
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;
@@ -563,7 +567,7 @@ function ImageCardMedia({
               height={typeof height === 'number' ? height : 300}
               borderRadius={resolvedBorderRadius}
               fit={fit}
-              useCssBackdrop={allowCriticalWebBlur}
+              useCssBackdrop={allowCriticalWebBlur && !revealOnLoadOnly}
             />
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
