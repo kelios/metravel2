@@ -51,7 +51,6 @@ function TravelHeroSectionInner({
   const {
     firstImg,
     heroHeight,
-    galleryImages,
     heroSliderImages,
     heroAlt,
     aspectRatio,
@@ -253,7 +252,7 @@ function TravelHeroSectionInner({
           >
             <View style={QUICK_FACTS_PLACEHOLDER_STYLE} />
           </View>
-          {sectionLinks.length > 0 && (
+          {Platform.OS !== 'web' && sectionLinks.length > 0 && (
             <View
               style={[
                 styles.sectionContainer,

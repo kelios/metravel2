@@ -422,6 +422,20 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
+    sectionHeaderCover: {
+      width: Platform.select({ default: 52, web: 56 }),
+      height: Platform.select({ default: 52, web: 56 }),
+      borderRadius: 10,
+      overflow: 'hidden',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      flexShrink: 0,
+    },
+    sectionHeaderCoverImage: {
+      width: '100%',
+      height: '100%',
+    },
     sectionHeaderRight: {
       flexDirection: 'row',
       alignItems: 'center',

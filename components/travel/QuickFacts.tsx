@@ -141,16 +141,19 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
       ]}
       accessibilityLabel="Ключевая информация о путешествии"
     >
-      {factItems.map((item, i) => (
-        <React.Fragment key={i}>
-          {i > 0 && <Text style={styles.factDivider}>·</Text>}
-          {item}
-        </React.Fragment>
-      ))}
+      <SafeView style={styles.factsRow}>
+        {factItems.map((item, i) => (
+          <React.Fragment key={i}>
+            {item}
+          </React.Fragment>
+        ))}
+      </SafeView>
 
       {categories.length > 0 && (
-        <SafeView style={[styles.factItem, styles.categoriesContainer]}>
-          <Feather name="tag" size={iconSize} color={iconColor} />
+        <SafeView style={styles.categoriesContainer}>
+          <SafeView style={styles.categoriesHeader}>
+            <Feather name="tag" size={iconSize} color={iconColor} />
+          </SafeView>
           <SafeView style={styles.categoriesWrap}>
             {categories.map((cat, index) => {
               const categoryRole = onCategoryPress ? 'button' : 'text';
@@ -180,12 +183,9 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
     gap: Platform.select({
-      default: 6,
-      web: 8,
+      default: 10,
+      web: 12,
     }),
     paddingVertical: Platform.select({
       default: 12,
@@ -200,35 +200,62 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   containerMobile: {
     paddingVertical: 10,
     paddingHorizontal: 0,
-    gap: 6,
+    gap: 8,
+  },
+  factsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: Platform.select({
+      default: 6,
+      web: 8,
+    }),
   },
   factItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 0,
+    paddingVertical: Platform.select({
+      default: 7,
+      web: 8,
+    }),
+    paddingHorizontal: Platform.select({
+      default: 10,
+      web: 12,
+    }),
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    minHeight: Platform.select({
+      default: 34,
+      web: 36,
+    }),
   },
   factText: {
     fontSize: Platform.select({
       default: 14,
-      web: 15,
+      web: 14,
     }),
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.text,
     letterSpacing: 0,
   },
-  factDivider: {
-    fontSize: Platform.select({ default: 16, web: 18 }),
-    color: colors.borderStrong,
-    marginHorizontal: Platform.select({ default: 4, web: 6 }),
-    lineHeight: Platform.select({ default: 18, web: 20 }),
-  },
   categoriesContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    minWidth: '100%',
-    marginTop: 2,
+    gap: DESIGN_TOKENS.spacing.xs,
+    width: '100%',
+  },
+  categoriesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: Platform.select({
+      default: 30,
+      web: 32,
+    }),
+    paddingHorizontal: 2,
   },
   categoriesWrap: {
     flexDirection: 'row',
@@ -237,28 +264,34 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
   },
   categoryTag: {
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.surface,
     paddingHorizontal: Platform.select({
-      default: 10,
+      default: 11,
       web: 12,
     }),
     paddingVertical: Platform.select({
-      default: 4,
-      web: 5,
+      default: 6,
+      web: 6,
     }),
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    minHeight: Platform.select({
+      default: 30,
+      web: 32,
+    }),
+    alignItems: 'center',
+    justifyContent: 'center',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
+        transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease' as any,
       },
     }),
   },
   categoryText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.textMuted,
     letterSpacing: 0.1,
   },

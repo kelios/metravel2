@@ -10,6 +10,7 @@ import { getAccessibilityLabel } from '@/utils/a11y';
 import { useTravelDetailsStyles } from '../TravelDetailsStyles';
 import { Icon } from '../TravelDetailsIcons';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const CONTENT_MARGIN_STYLE = { marginTop: 12 } as const;
 
@@ -20,6 +21,7 @@ export interface CollapsibleSectionProps {
   initiallyOpen?: boolean;
   forceOpen?: boolean;
   iconName?: string;
+  coverImageUrl?: string | null;
   highlight?: HighlightType;
   badgeLabel?: string;
   open?: boolean;
@@ -33,6 +35,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
     initiallyOpen = false,
     forceOpen = false,
     iconName,
+    coverImageUrl,
     highlight = 'default',
     badgeLabel,
     open: controlledOpen,
@@ -79,11 +82,26 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
           accessibilityLabel={getAccessibilityLabel(title, `${open ? 'Expanded' : 'Collapsed'}`)}
         >
           <View style={styles.sectionHeaderTitleWrap}>
-            {iconName && (
+            {coverImageUrl ? (
+              <View style={styles.sectionHeaderCover}>
+                <ImageCardMedia
+                  src={coverImageUrl}
+                  alt={title}
+                  width={56}
+                  height={56}
+                  fit="cover"
+                  blurBackground={false}
+                  loading="lazy"
+                  priority="low"
+                  borderRadius={10}
+                  style={styles.sectionHeaderCoverImage}
+                />
+              </View>
+            ) : iconName ? (
               <View style={styles.sectionHeaderIcon}>
                 <Icon name={iconName} size={18} color={colors.primary} />
               </View>
-            )}
+            ) : null}
             <Text style={styles.sectionHeaderText}>{title}</Text>
           </View>
           <View style={styles.sectionHeaderRight}>

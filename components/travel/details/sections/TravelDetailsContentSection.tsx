@@ -148,6 +148,7 @@ export const TravelDetailsContentSection: React.FC<{
             initiallyOpen
             forceOpen={forceOpenKey === 'description'}
             iconName="menu-book"
+            coverImageUrl={travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || null}
             highlight="info"
           >
             <View style={styles.descriptionContainer}>

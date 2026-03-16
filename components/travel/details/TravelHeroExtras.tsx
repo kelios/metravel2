@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -66,6 +66,7 @@ export const TravelHeroExtras: React.FC<{
   onQuickJump: (key: string) => void
 }> = ({ travel, isMobile, sectionLinks, onQuickJump }) => {
   const styles = useTravelDetailsHeroStyles()
+  const showQuickJumps = Platform.OS !== 'web'
 
   const quickJumpLinks = useMemo(() => {
     const linksByKey = new Map(sectionLinks.map((link) => [link.key, link]))
@@ -89,7 +90,7 @@ export const TravelHeroExtras: React.FC<{
         <QuickFacts travel={travel} />
       </View>
 
-      {quickJumpLinks.length > 0 && (
+      {showQuickJumps && quickJumpLinks.length > 0 && (
         <View
           style={[
             styles.sectionContainer,
