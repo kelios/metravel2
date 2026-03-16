@@ -2,12 +2,21 @@
 import React, { memo, Suspense, useEffect, useInsertionEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Platform, Text, Pressable } from "react-native";
 import type { TDefaultRendererProps } from "react-native-render-html";
+import CustomImageRenderer from "@/components/ui/CustomImageRenderer";
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { useThemedColors } from '@/hooks/useTheme';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { groupConsecutiveImages } from '@/utils/richTextImageLayout';
 
 type LazyInstagramProps = { url: string };
+type LightboxImage = { src: string; alt: string };
+type FullscreenGalleryProps = {
+  visible: boolean;
+  images: { url: string; thumbUrl?: string }[];
+  initialIndex?: number;
+  onClose: () => void;
+};
 
 const LazyRenderHTML = React.lazy(() =>
   import("react-native-render-html").then((m: any) => ({ default: m.default as React.ComponentType<any> }))
@@ -15,8 +24,9 @@ const LazyRenderHTML = React.lazy(() =>
 const LazyInstagram = React.lazy<React.ComponentType<LazyInstagramProps>>(() =>
   import("@/components/iframe/InstagramEmbed").then((m: any) => ({ default: m.default }))
 );
-import CustomImageRenderer from "@/components/ui/CustomImageRenderer";
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+const LazyFullscreenGallery = React.lazy<React.ComponentType<FullscreenGalleryProps>>(() =>
+  import("@/components/travel/FullscreenGallery").then((m: any) => ({ default: m.default }))
+);
 
 interface StableContentProps {
   html: string;
@@ -332,12 +342,14 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 /* ===== BASE IMAGES ===== */
 .${WEB_RICH_TEXT_CLASS} img {
   display: block;
-  max-width: 100%;
+  max-width: min(100%, 70vw);
+  max-height: 70vh;
   height: auto;
   object-fit: contain;
   object-position: center;
   border-radius: 12px;
   background: #f5f5f7;
+  cursor: zoom-in;
 }
 
 /* ===== SINGLE WIDE IMAGE (horizontal/landscape) ===== */
@@ -350,8 +362,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   text-align: center;
 }
 .${WEB_RICH_TEXT_CLASS} .img-single-wide img {
-  width: auto;
-  max-width: 100%;
+  width: min(100%, 70vw);
+  max-width: min(100%, 70vw);
   max-height: 70vh;
   height: auto;
   margin: 0 auto;
@@ -391,19 +403,25 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} .img-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 1.5em 0;
+  gap: 14px;
+  margin: 1.75em 0;
   clear: both;
+  align-items: stretch;
 }
 .${WEB_RICH_TEXT_CLASS} .img-row-2 p {
   margin: 0;
+  min-width: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid ${colors.borderLight};
+  background: ${colors.backgroundSecondary};
 }
 .${WEB_RICH_TEXT_CLASS} .img-row-2 img {
   width: 100%;
-  height: 200px;
+  height: 220px;
   object-fit: cover;
   margin: 0;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 /* ===== TWO IMAGES ROW VARIANTS ===== */
@@ -424,26 +442,32 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 /* ===== THREE+ IMAGES GRID ===== */
 .${WEB_RICH_TEXT_CLASS} .img-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin: 1.5em 0;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 1.75em 0;
   clear: both;
-  align-items: end;
+  align-items: stretch;
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid p {
   margin: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
+  min-width: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid ${colors.borderLight};
+  background: ${colors.backgroundSecondary};
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid img {
   width: 100%;
-  height: auto;
-  max-height: 300px;
-  object-fit: contain;
-  object-position: bottom;
+  height: 100%;
+  min-height: 200px;
+  max-height: 320px;
+  object-fit: cover;
+  object-position: center;
   margin: 0;
-  border-radius: 8px;
-  background: #f5f5f7;
+  border-radius: 16px;
+  background: ${colors.backgroundSecondary};
 }
 
 /* ===== MIXED GRID: 2 landscape + 1 portrait ===== */
@@ -451,43 +475,56 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 1.5em 0;
+  gap: 12px;
+  margin: 1.75em 0;
   clear: both;
   align-items: stretch;
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack p {
   margin: 0;
   flex: 1;
+  min-width: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid ${colors.borderLight};
+  background: ${colors.backgroundSecondary};
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack img {
   width: 100%;
   height: 100%;
+  min-height: 154px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 16px;
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p {
   margin: 0;
+  min-width: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid ${colors.borderLight};
+  background: ${colors.backgroundSecondary};
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p img {
   width: 100%;
   height: 100%;
+  min-height: 320px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 16px;
 }
 
 /* ===== PORTRAIT-HEAVY GRID ===== */
 /* Multiple portraits - use 2 columns with taller cells */
 .${WEB_RICH_TEXT_CLASS} .img-grid-portrait {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
-  height: 220px;
+  min-height: 240px;
+  max-height: 360px;
 }
 
 /* ===== CLEARFIX ===== */
@@ -518,6 +555,9 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 .${WEB_RICH_TEXT_CLASS} a:hover {
   text-decoration: underline;
+}
+.${WEB_RICH_TEXT_CLASS} a img {
+  cursor: pointer;
 }
 .${WEB_RICH_TEXT_CLASS} a:focus-visible {
   outline: 2px solid ${EDITORIAL_COLORS.accent};
@@ -697,39 +737,42 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-row-2 img {
-    height: 140px;
+    height: 150px;
   }
   /* Mobile: grid becomes 2 columns */
   .${WEB_RICH_TEXT_CLASS} .img-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid img {
-    max-height: 200px;
+    min-height: 140px;
+    max-height: 220px;
   }
   /* Mobile: mixed grid stacks vertically */
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
     grid-template-columns: 1fr;
-    gap: 6px;
+    gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack {
     flex-direction: row;
-    gap: 6px;
+    gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack img {
+    min-height: 120px;
     height: 120px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed > p img {
-    height: auto;
-    max-height: 200px;
-    object-fit: contain;
+    min-height: 200px;
+    max-height: 240px;
+    object-fit: cover;
   }
   /* Mobile: portrait row heights */
   .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
-    height: 200px;
+    height: 210px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
-    height: 160px;
+    min-height: 180px;
+    max-height: 240px;
   }
   .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
   .${WEB_RICH_TEXT_CLASS} .instagram-media {
@@ -757,6 +800,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
   const styles = useMemo(() => createStyles(colors), [colors]);
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<LightboxImage | null>(null);
   const prepared = useMemo(() => prepareHtml(html), [html]);
 
   const scrollToHashTarget = (hash: string) => {
@@ -909,6 +953,53 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const image = target.closest?.(`.${WEB_RICH_TEXT_CLASS} img`) as HTMLImageElement | null;
+      if (!image) return;
+      const parentLink = image.closest('a[href]') as HTMLAnchorElement | null;
+      const href = parentLink?.getAttribute('href') || '';
+      if (href && !href.startsWith('#')) {
+        return;
+      }
+      e.preventDefault();
+      const src = image.currentSrc || image.getAttribute('src') || '';
+      if (!src) return;
+      setLightboxImage({
+        src,
+        alt: image.getAttribute('alt') || 'Изображение маршрута',
+      });
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLightboxImage(null);
+      }
+    };
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+    const originalOverflow = document.body.style.overflow;
+    if (lightboxImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = originalOverflow || '';
+    }
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [lightboxImage]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
     if (typeof window === "undefined") return;
     const hash = window.location.hash;
     if (!hash) return;
@@ -937,7 +1028,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
       img: (props: TDefaultRendererProps<any>) => {
         try {
           // @ts-expect-error CustomImageRenderer accepts extended props beyond TDefaultRendererProps
-          return <CustomImageRenderer {...props} contentWidth={contentWidth} />;
+          return <CustomImageRenderer {...props} contentWidth={contentWidth} onPressImage={setLightboxImage} />;
         } catch {
           const DefaultRenderer = (props as any).TDefaultRenderer;
           return DefaultRenderer ? <DefaultRenderer {...props} /> : null;
@@ -1248,30 +1339,105 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
   if (isWeb) {
     return (
-      <div
-        className={WEB_RICH_TEXT_CLASS}
-        dangerouslySetInnerHTML={{ __html: prepared }}
-      />
+      <>
+        <div
+          className={WEB_RICH_TEXT_CLASS}
+          dangerouslySetInnerHTML={{ __html: prepared }}
+        />
+        {lightboxImage ? (
+          <div
+            data-testid="travel-rich-text-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label={lightboxImage.alt}
+            onClick={() => setLightboxImage(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: DESIGN_TOKENS.colors.overlay,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+              zIndex: 1000,
+              cursor: 'zoom-out',
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Закрыть изображение"
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightboxImage(null);
+              }}
+              style={{
+                position: 'fixed',
+                top: '20px',
+                right: '20px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '999px',
+                border: `1px solid ${DESIGN_TOKENS.colors.surfaceAlpha40}`,
+                background: DESIGN_TOKENS.colors.overlayLight,
+                color: DESIGN_TOKENS.colors.textOnDark,
+                fontSize: '28px',
+                lineHeight: '1',
+                cursor: 'pointer',
+              }}
+            >
+              ×
+            </button>
+            <img
+              src={lightboxImage.src}
+              alt={lightboxImage.alt}
+              onClick={(event) => event.stopPropagation()}
+              style={{
+                maxWidth: '92vw',
+                maxHeight: '92vh',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: '16px',
+                background: 'transparent',
+                boxShadow: '0 12px 48px rgba(0, 0, 0, 0.32)',
+                cursor: 'default',
+              }}
+            />
+          </div>
+        ) : null}
+      </>
     )
   }
 
   return (
-    <View style={isWeb ? [styles.htmlWrapper, styles.htmlWrapperWeb] : styles.htmlWrapper}>
-      <Suspense fallback={null}>
-        <LazyRenderHTML
-          key={prepared.length}
-          source={{ html: prepared }}
-          contentWidth={contentWidth}
-          customHTMLElementModels={customHTMLElementModels}
-          renderers={renderers}
-          defaultTextProps={{ selectable: !isWeb }}
-          onLinkPress={handleLinkPress}
-          baseStyle={baseStyle as any}
-          tagsStyles={tagsStyles as any}
-          ignoredDomTags={['script', 'style']}
-        />
-      </Suspense>
-    </View>
+    <>
+      <View style={isWeb ? [styles.htmlWrapper, styles.htmlWrapperWeb] : styles.htmlWrapper}>
+        <Suspense fallback={null}>
+          <LazyRenderHTML
+            key={prepared.length}
+            source={{ html: prepared }}
+            contentWidth={contentWidth}
+            customHTMLElementModels={customHTMLElementModels}
+            renderers={renderers}
+            defaultTextProps={{ selectable: !isWeb }}
+            onLinkPress={handleLinkPress}
+            baseStyle={baseStyle as any}
+            tagsStyles={tagsStyles as any}
+            ignoredDomTags={['script', 'style']}
+          />
+        </Suspense>
+      </View>
+      {!isWeb && lightboxImage ? (
+        <Suspense fallback={null}>
+          <LazyFullscreenGallery
+            visible={Boolean(lightboxImage)}
+            images={[{ url: lightboxImage.src }]}
+            initialIndex={0}
+            onClose={() => setLightboxImage(null)}
+          />
+        </Suspense>
+      ) : null}
+    </>
   )
 });
 

@@ -375,17 +375,15 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
     const handlePopupOpen = useCallback(
       (e: any) => {
-        // Leaflet сам умеет autoPan, но на мобильных хочется, чтобы карточка была ближе к центру.
-        // Делаем мягкий panBy по фактическому DOM-положению попапа относительно контейнера карты.
         if (!hasMapPane(map)) return;
+
+        const popup = e?.popup;
+        const popupEl: HTMLElement | null = popup?.getElement ? popup.getElement() : null;
+        const mapEl: HTMLElement | null = map?.getContainer ? map.getContainer() : null;
+        if (!popupEl || !mapEl) return;
 
         const run = () => {
           try {
-            const popup = e?.popup;
-            const popupEl: HTMLElement | null = popup?.getElement ? popup.getElement() : null;
-            const mapEl: HTMLElement | null = map?.getContainer ? map.getContainer() : null;
-            if (!popupEl || !mapEl) return;
-
             const mapRect = mapEl.getBoundingClientRect();
             const popupRectAbs = popupEl.getBoundingClientRect();
             const popupRect = {
@@ -429,10 +427,55 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           }
         };
 
-        // Ждём, пока Leaflet вставит попап в DOM и посчитает размеры
-        if (typeof window !== 'undefined') {
-          requestAnimationFrame(() => requestAnimationFrame(run));
+        let rafId = 0;
+        const scheduleRun = () => {
+          if (typeof window === 'undefined') return;
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+          }
+          rafId = requestAnimationFrame(() => {
+            rafId = requestAnimationFrame(run);
+          });
+        };
+
+        scheduleRun();
+
+        let resizeObserver: ResizeObserver | null = null;
+        let cleanupTimer: ReturnType<typeof setTimeout> | null = null;
+        const cleanup = () => {
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = 0;
+          }
+          if (resizeObserver) {
+            resizeObserver.disconnect();
+            resizeObserver = null;
+          }
+          if (cleanupTimer) {
+            clearTimeout(cleanupTimer);
+            cleanupTimer = null;
+          }
+          if (typeof map?.off === 'function') {
+            map.off('popupclose', cleanup);
+          }
+        };
+
+        if (typeof ResizeObserver !== 'undefined') {
+          resizeObserver = new ResizeObserver(() => {
+            scheduleRun();
+          });
+          resizeObserver.observe(popupEl);
+          const popupContentEl = popupEl.querySelector('.leaflet-popup-content');
+          if (popupContentEl instanceof HTMLElement) {
+            resizeObserver.observe(popupContentEl);
+          }
         }
+
+        if (typeof map?.on === 'function') {
+          map.on('popupclose', cleanup);
+        }
+
+        cleanupTimer = setTimeout(cleanup, 1000);
       },
       [map]
     );
@@ -474,9 +517,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       <PopupC
         autoPan
         keepInView
-        autoPanPadding={[16, 16] as any}
-        autoPanPaddingTopLeft={[16, 60] as any}
-        autoPanPaddingBottomRight={[16, 60] as any}
+        maxWidth={320}
+        minWidth={220}
+        autoPanPadding={[24, 24] as any}
+        autoPanPaddingTopLeft={[24, 72] as any}
+        autoPanPaddingBottomRight={[24, 72] as any}
         closeButton
       >
         <MapPopup

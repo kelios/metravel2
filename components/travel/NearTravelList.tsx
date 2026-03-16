@@ -236,7 +236,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       []
     );
 
-    const mapHeight = useMemo(() => isMobile ? 320 : isTablet ? 400 : 500, [isMobile, isTablet]);
+    const mapHeight = useMemo(() => {
+      if (isMobile) return 320;
+      if (isTablet) return embedded ? 440 : 400;
+      return embedded ? 580 : 500;
+    }, [embedded, isMobile, isTablet]);
     const listHeight = useMemo(() => isMobile ? 'auto' : isTablet ? 500 : 600, [isMobile, isTablet]);
 
     const numColumns = useMemo(() => {

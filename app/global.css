@@ -340,7 +340,7 @@ select {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline-color: var(--color-primary) !important;
+  outline-color: var(--color-borderStrong) !important;
 }
 
 /* Ensure cards don't overflow */

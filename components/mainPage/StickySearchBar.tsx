@@ -94,12 +94,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     }),
   },
   containerFocused: {
-    borderColor: colors.primary,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.hover,
-      },
-    }),
+    borderColor: colors.borderStrong,
   },
   contentRow: {
     flexDirection: 'row',
@@ -362,13 +357,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     marginBottom: 2,
   },
   searchBoxFocused: {
-    borderColor: colors.primaryAlpha40,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.surfaceElevated,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.hover,
-      } as any,
-    }),
   },
   clearButtonIconWrap: {
     width: 24,

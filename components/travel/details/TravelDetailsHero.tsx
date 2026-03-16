@@ -52,6 +52,7 @@ function TravelHeroSectionInner({
     firstImg,
     heroHeight,
     galleryImages,
+    heroSliderImages,
     heroAlt,
     aspectRatio,
     setHeroContainerWidth,
@@ -83,9 +84,10 @@ function TravelHeroSectionInner({
   const shouldRenderWebOptimizedHero =
     Platform.OS === 'web' && shouldShowOptimizedHero
   const hasInteractiveWebGallery =
-    Platform.OS === 'web' && galleryImages.length > 1
+    Platform.OS === 'web' && heroSliderImages.length > 1
   const shouldRenderWebSlider =
     shouldRenderWebOptimizedHero &&
+    hasInteractiveWebGallery &&
     webHeroLoaded &&
     renderSlider &&
     sliderUpgradeAllowed
@@ -150,7 +152,7 @@ function TravelHeroSectionInner({
                 <Suspense fallback={null}>
                   <TravelHeroInteractiveSlider
                     visible
-                    galleryImages={galleryImages}
+                    galleryImages={heroSliderImages}
                     isMobile={isMobile}
                     aspectRatio={aspectRatio as number}
                     preloadCount={1}
@@ -193,7 +195,7 @@ function TravelHeroSectionInner({
             <Suspense fallback={null}>
               <TravelHeroInteractiveSlider
                 visible
-                galleryImages={galleryImages}
+                galleryImages={heroSliderImages}
                 isMobile={isMobile}
                 aspectRatio={aspectRatio as number}
                 preloadCount={sliderPreloadCount}

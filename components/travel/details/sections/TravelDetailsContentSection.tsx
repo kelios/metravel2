@@ -107,9 +107,7 @@ export const TravelDetailsContentSection: React.FC<{
 
   useEffect(() => {
     if (!shouldUseMobileInsights) {
-      if (mobileInsightKey !== null) {
-        setMobileInsightKey(null)
-      }
+      setMobileInsightKey(null)
       return
     }
 
@@ -117,16 +115,12 @@ export const TravelDetailsContentSection: React.FC<{
       forceOpenKey &&
       (forceOpenKey === 'recommendation' || forceOpenKey === 'plus' || forceOpenKey === 'minus')
     ) {
-      if (mobileInsightKey !== forceOpenKey) {
-        setMobileInsightKey(forceOpenKey as InsightKey)
-      }
+      setMobileInsightKey(forceOpenKey as InsightKey)
       return
     }
 
-    if (!mobileInsightKey && defaultInsightKey) {
-      setMobileInsightKey(defaultInsightKey)
-    }
-  }, [defaultInsightKey, forceOpenKey, mobileInsightKey, shouldUseMobileInsights])
+    setMobileInsightKey((prev) => prev ?? defaultInsightKey)
+  }, [defaultInsightKey, forceOpenKey, shouldUseMobileInsights])
 
   const buildInsightControl = useCallback(
     (key: InsightKey) =>

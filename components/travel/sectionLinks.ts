@@ -38,17 +38,17 @@ export const buildTravelSectionLinks = (
   const links: TravelSectionLink[] = []
 
   pushIf(hasGallery, links, { key: "gallery", icon: "image", label: "Галерея" })
-  pushIf(hasVideo, links, { key: "video", icon: "video", label: "Видео" })
   pushIf(hasDescription, links, { key: "description", icon: "file-text", label: "Описание" })
+  pushIf(hasVideo, links, { key: "video", icon: "video", label: "Видео" })
   pushIf(hasRecommendation, links, { key: "recommendation", icon: "thumbs-up", label: "Рекомендации" })
   pushIf(hasPlus, links, { key: "plus", icon: "plus", label: "Плюсы" })
   pushIf(hasMinus, links, { key: "minus", icon: "minus", label: "Минусы" })
   pushIf(hasTravelAddress, links, { key: "excursions", icon: "compass", label: "Экскурсии" })
 
-  links.push({ key: "map", icon: "map", label: "Карта" })
-  pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: "Координаты" })
-  links.push({ key: "near", icon: "map-pin", label: "Рядом", meta: "~60км" })
-  links.push({ key: "popular", icon: "star", label: "Популярное" })
+  links.push({ key: "map", icon: "map", label: "Карта маршрута" })
+  pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: "Координаты мест" })
+  links.push({ key: "near", icon: "map-pin", label: "Рядом можно посмотреть", meta: "~60км" })
+  links.push({ key: "popular", icon: "star", label: "Популярные маршруты" })
   links.push({ key: "comments", icon: "message-circle", label: "Комментарии" })
 
   return links

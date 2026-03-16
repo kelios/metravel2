@@ -98,10 +98,10 @@ const mockLinks = [
   { key: 'gallery', label: 'Галерея', icon: 'photo-library', meta: '10' },
   { key: 'description', label: 'Описание', icon: 'description' },
   { key: 'excursions', label: 'Экскурсии', icon: 'tour' },
-  { key: 'map', label: 'Карта', icon: 'map' },
-  { key: 'coordinates', label: 'Координаты', icon: 'place' },
-  { key: 'nearby', label: 'Рядом', icon: 'near_me', meta: '~60км' },
-  { key: 'popular', label: 'Популярное', icon: 'star' },
+  { key: 'map', label: 'Карта маршрута', icon: 'map' },
+  { key: 'coordinates', label: 'Координаты мест', icon: 'place' },
+  { key: 'nearby', label: 'Рядом можно посмотреть', icon: 'near_me', meta: '~60км' },
+  { key: 'popular', label: 'Популярные маршруты', icon: 'star' },
 ];
 
 const defaultProps = {
@@ -140,10 +140,10 @@ describe('CompactSideBarTravel - Web', () => {
       expect(screen.getByText('Галерея')).toBeTruthy();
       expect(screen.getByText('Описание')).toBeTruthy();
       expect(screen.getByText('Экскурсии')).toBeTruthy();
-      expect(screen.getByText('Карта')).toBeTruthy();
-      expect(screen.getByText('Координаты')).toBeTruthy();
-      expect(screen.getByText(/Рядом/i)).toBeTruthy();
-      expect(screen.getByText('Популярное')).toBeTruthy();
+      expect(screen.getByText('Карта маршрута')).toBeTruthy();
+      expect(screen.getByText('Координаты мест')).toBeTruthy();
+      expect(screen.getByText('Рядом можно посмотреть')).toBeTruthy();
+      expect(screen.getByText('Популярные маршруты')).toBeTruthy();
     });
 
     it('должен показывать метаинформацию путешествия', () => {

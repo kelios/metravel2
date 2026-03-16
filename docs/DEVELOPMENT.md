@@ -24,6 +24,13 @@ npm run start
 npm run web
 ```
 
+Dev note:
+
+- Local web dev can show content loaded from production while related media files still depend on production storage/CDN access.
+- Because of that, some article/travel images may fail in dev even when frontend code is correct.
+- Do not patch app code only to silence this environment-specific limitation.
+- Treat it as a bug only when frontend code generated an invalid URL or regressed existing media normalization.
+
 ### iOS / Android
 
 ```bash

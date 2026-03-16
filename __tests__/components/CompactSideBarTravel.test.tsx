@@ -156,7 +156,7 @@ describe('CompactSideBarTravel', () => {
     expect(getByText('Галерея')).toBeTruthy();
     expect(getByText('Видео')).toBeTruthy();
     expect(getByText('Описание')).toBeTruthy();
-    expect(getByText('Карта')).toBeTruthy();
+    expect(getByText('Карта маршрута')).toBeTruthy();
   });
 
   it('should call onNavigate when link is pressed', () => {

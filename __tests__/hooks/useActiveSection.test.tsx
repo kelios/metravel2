@@ -121,4 +121,33 @@ describe('useActiveSection', () => {
 
     expect(result.current.activeSection).toBe('section-2')
   })
+
+  it('falls back to document scroll when provided scrollRoot is not an actual scroll container (regression)', () => {
+    const anchors = {
+      'section-1': { current: null },
+      'section-2': { current: null },
+    }
+
+    const fakeRoot = document.createElement('div') as any
+    fakeRoot.scrollHeight = 1000
+    fakeRoot.clientHeight = 200
+    fakeRoot.getBoundingClientRect = jest.fn(() => ({ top: 300, bottom: 500, height: 200 } as any))
+    document.body.appendChild(fakeRoot)
+
+    const getComputedStyleSpy = jest.spyOn(window, 'getComputedStyle').mockImplementation((el: Element) => {
+      if (el === fakeRoot) {
+        return { overflowY: 'visible' } as CSSStyleDeclaration
+      }
+      return { overflowY: 'auto' } as CSSStyleDeclaration
+    })
+
+    const observerMock = (global as any).IntersectionObserver as jest.Mock
+
+    renderHook(() => useActiveSection(anchors, 72, fakeRoot))
+
+    expect(observerMock).toHaveBeenCalled()
+    expect(observerMock.mock.calls[0]?.[1]?.root).toBeNull()
+
+    getComputedStyleSpy.mockRestore()
+  })
 })

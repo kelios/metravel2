@@ -213,7 +213,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     var fallbackTimer = null;
     var loadTimer = null;
     var events = ['pointerdown', 'keydown', 'touchstart', 'click'];
-    var visibilityEvents = ['visibilitychange', 'pagehide', 'beforeunload'];
+    var visibilityEvents = ['visibilitychange', 'pagehide'];
     var disableAutoBootstrap = !!(window.navigator && window.navigator.webdriver);
 
     function cleanup() {
@@ -279,7 +279,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   // Автозагрузка:
   // - После первого взаимодействия пользователя.
   // - Вскоре после полной загрузки страницы.
-  // - Либо при уходе со страницы (visibility/pagehide) для коротких сессий без кликов.
+  // - Либо при уходе со страницы (visibilitychange/pagehide) для коротких сессий без кликов.
   // Это снижает влияние аналитики на LCP/TBT в initial render.
   if (isAnalyticsAllowed()) {
     scheduleAnalyticsBootstrap();

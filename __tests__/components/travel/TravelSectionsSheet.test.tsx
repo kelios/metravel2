@@ -6,7 +6,7 @@ import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet'
 describe('TravelSectionsSheet', () => {
   const links = [
     { key: 'gallery', label: 'Галерея', icon: 'photo' },
-    { key: 'map', label: 'Карта', icon: 'map', meta: '3' },
+    { key: 'map', label: 'Карта маршрута', icon: 'map', meta: '3' },
   ]
 
   it('opens the sheet and navigates to a section', async () => {

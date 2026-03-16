@@ -56,44 +56,53 @@ function ScrollToTopButton({
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const lastScrollValue = useRef(0);
+  const isVisibleRef = useRef(false);
 
-	  useEffect(() => {
-	    if (typeof forceVisible === 'boolean') {
-	      setIsVisible(forceVisible);
-	      return;
-	    }
-	
-	    if (!scrollY) return;
-	    const listener = scrollY.addListener(({ value }) => {
-	        // Debounce scroll events to improve performance
-	        if (Math.abs(value - lastScrollValue.current) < 5) {
-	          return;
-	        }
-        lastScrollValue.current = value;
-        
-        const visible = value > threshold;
-        if (visible !== isVisible) {
-          setIsVisible(visible);
-          Animated.parallel([
-            Animated.timing(fadeAnim, {
-              toValue: visible ? 1 : 0,
-              duration: 200,
-              useNativeDriver: shouldUseNativeDriver,
-            }),
-            Animated.spring(scaleAnim, {
-              toValue: visible ? 1 : 0.8,
-              useNativeDriver: shouldUseNativeDriver,
-              tension: 100,
-              friction: 8,
-            }),
-	          ]).start();
-	        }
-	      });
-	
-	    return () => {
-	      scrollY.removeListener(listener);
-	    };
-	  }, [scrollY, threshold, isVisible, fadeAnim, scaleAnim, forceVisible, shouldUseNativeDriver]);
+  useEffect(() => {
+    isVisibleRef.current = isVisible;
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (typeof forceVisible === 'boolean') {
+      setIsVisible(forceVisible);
+      return;
+    }
+
+    if (!scrollY) return;
+
+    const listener = scrollY.addListener(({ value }) => {
+      if (Math.abs(value - lastScrollValue.current) < 5) {
+        return;
+      }
+
+      lastScrollValue.current = value;
+      const nextVisible = value > threshold;
+
+      if (nextVisible !== isVisibleRef.current) {
+        setIsVisible(nextVisible);
+      }
+    });
+
+    return () => {
+      scrollY.removeListener(listener);
+    };
+  }, [forceVisible, scrollY, threshold]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: isVisible ? 1 : 0,
+        duration: 200,
+        useNativeDriver: shouldUseNativeDriver,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: isVisible ? 1 : 0.8,
+        useNativeDriver: shouldUseNativeDriver,
+        tension: 100,
+        friction: 8,
+      }),
+    ]).start();
+  }, [fadeAnim, isVisible, scaleAnim, shouldUseNativeDriver]);
 
   const scrollToTop = () => {
     if (scrollViewRef?.current) {

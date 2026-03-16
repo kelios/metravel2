@@ -247,6 +247,8 @@ const HomeHero = memo(function HomeHero({
     isMobile || (isWeb && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH)
   const showSideSlider =
     isWeb && width >= HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && isDesktop
+  // Tablet layout: 770-1279px — side-by-side hero with featured image
+  const isTabletLayout = isWeb && width >= 770 && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH && !isMobile
   const sliderIconColor = colors.textOnDark ?? DESIGN_TOKENS.colors.textOnDark
   const sliderHeight = isDesktop ? (width < 1480 ? 360 : 420) : 360
   const sliderMediaWidth = isDesktop ? (width < 1480 ? 480 : 500) : 380
@@ -488,6 +490,7 @@ const HomeHero = memo(function HomeHero({
         isLandscape,
         bookHeight,
         stackHeroButtons: useStackedCtas,
+        isTabletLayout,
       }),
     [
       colors,
@@ -502,6 +505,7 @@ const HomeHero = memo(function HomeHero({
       isLandscape,
       bookHeight,
       useStackedCtas,
+      isTabletLayout,
     ],
   )
 
@@ -666,102 +670,34 @@ const HomeHero = memo(function HomeHero({
                     </View>
                   )}
 
-                  {/* Inner mini-book feature highlights widget */}
-                  {!showSideSlider && !useInlineBookmarkRail && !isMobile && (
-                    <View style={styles.openBookContainer}>
-                      <View style={styles.openBook}>
-                        {isWeb && <View style={styles.bookCover} />}
-                        {/* Left Page */}
-                        <View style={[styles.bookPage, styles.bookPageLeft]}>
-                          {isWeb && <View style={styles.bookPageGoldLine} />}
-                          <View style={styles.bookSpineShadowLeft} />
-                          {HERO_HIGHLIGHTS.slice(0, 2).map((item) => (
-                            <Pressable
-                              key={item.title}
-                              style={({ hovered }) => [
-                                styles.bookHighlightItem,
-                                hovered && styles.bookHighlightItemHover,
-                              ]}
-                            >
-                              <View style={styles.bookHighlightIconWrap}>
-                                <Feather
-                                  name={item.icon as any}
-                                  size={isMobile ? 13 : 15}
-                                  color={colors.textOnPrimary}
-                                />
-                              </View>
-                              <View style={styles.bookHighlightTextWrap}>
-                                <Text style={styles.bookHighlightTitle}>
-                                  {item.title}
-                                </Text>
-                                <Text style={styles.bookHighlightSubtitle}>
-                                  {item.subtitle}
-                                </Text>
-                              </View>
-                            </Pressable>
-                          ))}
-                          <View
-                            style={[
-                              styles.bookPageCurl,
-                              styles.bookPageCurlLeft,
-                            ]}
-                          />
-                          <Text
-                            style={[
-                              styles.bookPageNumber,
-                              styles.bookPageNumberLeft,
-                            ]}
-                          >
-                            1
-                          </Text>
-                        </View>
-                        {/* Center Spine */}
-                        <View style={styles.bookSpine} />
-                        {/* Right Page */}
-                        <View style={[styles.bookPage, styles.bookPageRight]}>
-                          {isWeb && <View style={styles.bookPageGoldLine} />}
-                          <View style={styles.bookSpineShadowRight} />
-                          {HERO_HIGHLIGHTS.slice(2).map((item) => (
-                            <Pressable
-                              key={item.title}
-                              style={({ hovered }) => [
-                                styles.bookHighlightItem,
-                                hovered && styles.bookHighlightItemHover,
-                              ]}
-                            >
-                              <View style={styles.bookHighlightIconWrap}>
-                                <Feather
-                                  name={item.icon as any}
-                                  size={isMobile ? 13 : 15}
-                                  color={colors.textOnPrimary}
-                                />
-                              </View>
-                              <View style={styles.bookHighlightTextWrap}>
-                                <Text style={styles.bookHighlightTitle}>
-                                  {item.title}
-                                </Text>
-                                <Text style={styles.bookHighlightSubtitle}>
-                                  {item.subtitle}
-                                </Text>
-                              </View>
-                            </Pressable>
-                          ))}
-                          <View
-                            style={[
-                              styles.bookPageCurl,
-                              styles.bookPageCurlRight,
-                            ]}
-                          />
-                          <Text
-                            style={[
-                              styles.bookPageNumber,
-                              styles.bookPageNumberRight,
-                            ]}
-                          >
-                            2
-                          </Text>
-                        </View>
-                      </View>
+                  {/* Tablet layout: compact 2x2 feature grid */}
+                  {isTabletLayout && (
+                    <View style={styles.tabletFeatureGrid}>
+                      {HERO_HIGHLIGHTS.map((item) => (
+                        <Pressable
+                          key={item.title}
+                          style={({ hovered }) => [
+                            styles.tabletFeatureCard,
+                            hovered && styles.tabletFeatureCardHover,
+                          ]}
+                        >
+                          <View style={styles.tabletFeatureIconWrap}>
+                            <Feather
+                              name={item.icon as any}
+                              size={16}
+                              color={colors.textOnPrimary}
+                            />
+                          </View>
+                          <View style={styles.tabletFeatureTextWrap}>
+                            <Text style={styles.tabletFeatureTitle}>
+                              {item.title}
+                            </Text>
+                            <Text style={styles.tabletFeatureSubtitle}>
+                              {item.subtitle}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      ))}
                     </View>
                   )}
 
@@ -797,6 +733,42 @@ const HomeHero = memo(function HomeHero({
                   </Text>
                 )}
               </View>
+
+              {/* Tablet layout: Featured image on the right */}
+              {isTabletLayout && (
+                <Pressable
+                  onPress={() => handleOpenArticles(BOOK_IMAGES[0].href)}
+                  style={styles.tabletHeroRight}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Открыть маршрут: ${BOOK_IMAGES[0].title}`}
+                >
+                  <ImageCardMedia
+                    source={BOOK_IMAGES[0].source}
+                    width={width * 0.45}
+                    height={340}
+                    borderRadius={0}
+                    fit="cover"
+                    blurBackground
+                    allowCriticalWebBlur
+                    quality={85}
+                    alt={BOOK_IMAGES[0].alt}
+                    loading="eager"
+                    style={styles.tabletFeaturedImage}
+                  />
+                  <View style={styles.tabletFeaturedOverlay}>
+                    <View style={styles.slideEyebrow}>
+                      <Feather name="map-pin" size={11} color="#FFFFFF" />
+                      <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+                    </View>
+                    <Text style={styles.tabletFeaturedTitle}>
+                      {BOOK_IMAGES[0].title}
+                    </Text>
+                    <Text style={styles.tabletFeaturedSubtitle}>
+                      {BOOK_IMAGES[0].subtitle}
+                    </Text>
+                  </View>
+                </Pressable>
+              )}
 
               {/* Right Page - Slider Section */}
               {showSideSlider && (
@@ -1022,8 +994,8 @@ const HomeHero = memo(function HomeHero({
           )}
         </View>
 
-        {/* Popular Routes Section - only on mobile */}
-        {!showSideSlider && (
+        {/* Popular Routes Section - only on mobile (not tablet) */}
+        {!showSideSlider && !isTabletLayout && (
           <View style={styles.popularSection}>
             {/* Featured изображение маршрута — даёт визуальный контекст сразу без скролла */}
             <Pressable

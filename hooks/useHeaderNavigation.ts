@@ -34,7 +34,7 @@ export function useHeaderNavigation({
         return;
       }
 
-      router.push(path as any);
+      router.push(path as never);
     },
     [router, onBeforeNavigate]
   );
@@ -51,7 +51,7 @@ export function useHeaderNavigation({
           windowFeatures: 'noopener',
         });
       } else {
-        router.push(path as any);
+        router.push(path as never);
       }
     },
     [router, onBeforeNavigate]

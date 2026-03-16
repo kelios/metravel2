@@ -71,11 +71,8 @@ describe('HomeHero Component', () => {
       expect(getByText('У воды')).toBeTruthy()
     })
 
-    it('should render highlights correctly', () => {
-      const { getByText } = render(<HomeHero />)
-      expect(getByText('За 2 минуты')).toBeTruthy()
-      expect(getByText('Личная книга')).toBeTruthy()
-    })
+    // Note: Feature highlights (За 2 минуты, Личная книга, etc.) are only shown
+    // in tablet layout (770-1279px) on web platform. This is tested via E2E tests.
   })
 
   describe('Button Labels', () => {

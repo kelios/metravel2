@@ -4,6 +4,7 @@ import {
   Platform,
   StyleSheet,
   Image as RNImage,
+  Pressable,
 } from "react-native";
 import { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
@@ -13,6 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 interface CustomImageRendererProps extends CustomRendererProps<any> {
   contentWidth: number;
   tnode: any;
+  onPressImage?: (image: { src: string; alt: string }) => void;
 }
 
 const MAX_WIDTH = 800;
@@ -53,7 +55,7 @@ const normalizeUrl = (url: string) => {
 };
 
 /* ─ component ─ */
-const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) => {
+const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageRendererProps) => {
   const colors = useThemedColors();
   const raw = pickSrc(tnode);
   const attW = tnode.attributes?.width ? Number(tnode.attributes.width) : undefined;
@@ -132,45 +134,60 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
 
   if (!raw || isSmallIcon) return null;
 
+  const alt = tnode.attributes?.alt || 'Изображение маршрута';
+  const isPressable = Boolean(onPressImage && src);
+
+  const imageContent = (
+    <View style={{ width: boxWidth, height: boxHeight, position: 'relative' }}>
+      {!imageLoaded && !err && (
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            styles.skeleton,
+            { backgroundColor: colors.mutedBackground },
+            { pointerEvents: 'none' } as any,
+          ]}
+        >
+          <View style={[styles.placeholder, { width: boxWidth, height: boxHeight, backgroundColor: colors.backgroundSecondary }]} />
+        </View>
+      )}
+
+      <ImageCardMedia
+        src={src}
+        alt={alt}
+        fit="contain"
+        blurBackground
+        blurRadius={16}
+        priority={Platform.OS === 'web' ? 'low' : 'normal'}
+        loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
+        style={[StyleSheet.absoluteFillObject, styles.image]}
+        onLoad={() => { setImageLoaded(true); }}
+        onError={() => { setErr(true); }}
+      />
+
+      {err && (
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            styles.errorContainer,
+            { backgroundColor: colors.backgroundSecondary },
+          ]}
+        />
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.container, { width: boxWidth }]}> 
-      <View style={{ width: boxWidth, height: boxHeight, position: 'relative' }}>
-        {!imageLoaded && !err && (
-          <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              styles.skeleton,
-              { backgroundColor: colors.mutedBackground },
-              { pointerEvents: 'none' } as any,
-            ]}
-          >
-            <View style={[styles.placeholder, { width: boxWidth, height: boxHeight, backgroundColor: colors.backgroundSecondary }]} />
-          </View>
-        )}
-
-        <ImageCardMedia
-          src={src}
-          alt=""
-          fit="contain"
-          blurBackground
-          blurRadius={16}
-          priority={Platform.OS === 'web' ? 'low' : 'normal'}
-          loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
-          style={[StyleSheet.absoluteFillObject, styles.image]}
-          onLoad={() => { setImageLoaded(true); }}
-          onError={() => { setErr(true); }}
-        />
-
-        {err && (
-          <View
-            style={[
-              StyleSheet.absoluteFillObject,
-              styles.errorContainer,
-              { backgroundColor: colors.backgroundSecondary },
-            ]}
-          />
-        )}
-      </View>
+      {isPressable ? (
+        <Pressable
+          onPress={() => onPressImage?.({ src, alt })}
+          accessibilityRole="button"
+          accessibilityLabel={`Открыть изображение: ${alt}`}
+        >
+          {imageContent}
+        </Pressable>
+      ) : imageContent}
     </View>
   );
 };

@@ -23,6 +23,8 @@ interface HeroStyleParams {
   /** Measured height of book wrapper (width * 765/1040), 0 before first layout */
   bookHeight?: number
   stackHeroButtons?: boolean
+  /** Tablet layout mode (770-1279px) with side-by-side hero */
+  isTabletLayout?: boolean
 }
 
 export const createHomeHeroStyles = ({
@@ -38,6 +40,7 @@ export const createHomeHeroStyles = ({
   isLandscape = false,
   bookHeight = 0,
   stackHeroButtons = false,
+  isTabletLayout = false,
 }: HeroStyleParams) => {
   const hasBookLayout = showSideSlider && bookHeight > 0
   const isUltraWideBook = showSideSlider && viewportWidth >= 2560
@@ -209,10 +212,10 @@ export const createHomeHeroStyles = ({
     },
     // -- Two-page layout --
     heroRow: {
-      flexDirection: showSideSlider ? 'row' : 'column',
+      flexDirection: showSideSlider || isTabletLayout ? 'row' : 'column',
       alignItems: 'stretch',
       justifyContent: 'flex-start',
-      gap: 0,
+      gap: isTabletLayout ? 32 : 0,
       width: '100%',
       position: 'relative' as const,
       ...(showSideSlider && bookHeight > 0 ? { height: bookHeight } : {}),
@@ -223,11 +226,15 @@ export const createHomeHeroStyles = ({
               overflow: 'hidden',
               flex: 1,
               flexWrap: 'nowrap',
-              // Строго ограничиваем ширину контейнера
               maxWidth: '100%',
               boxSizing: 'border-box',
             } as any)
-          : {},
+          : isTabletLayout
+            ? ({
+                alignItems: 'stretch',
+                minHeight: 340,
+              } as any)
+            : {},
       }),
     },
     heroBookSpine: {
@@ -244,15 +251,16 @@ export const createHomeHeroStyles = ({
     // No double-padding: heroSection owns all padding, leftPageFrame is zero-overhead.
     heroSection: {
       alignItems: isMobile ? 'stretch' : 'flex-start',
-      gap: showSideSlider ? 0 : isMobile ? 16 : 20,
-      width: leftPageWidth,
-      maxWidth: showSideSlider ? leftPageWidth : isMobile ? '100%' : 720,
-      flexShrink: 0,
-      flexGrow: 0,
-      paddingLeft: isMobile ? 20 : 48,
-      paddingRight: isMobile ? 20 : 48,
-      paddingTop: isMobile ? 28 : 36,
-      paddingBottom: isMobile ? 28 : 36,
+      gap: showSideSlider ? 0 : isMobile ? 16 : isTabletLayout ? 16 : 20,
+      width: isTabletLayout ? undefined : leftPageWidth,
+      maxWidth: showSideSlider ? leftPageWidth : isMobile ? '100%' : isTabletLayout ? undefined : 720,
+      flexShrink: isTabletLayout ? 1 : 0,
+      flexGrow: isTabletLayout ? 1 : 0,
+      flex: isTabletLayout ? 1 : undefined,
+      paddingLeft: isMobile ? 20 : isTabletLayout ? 0 : 48,
+      paddingRight: isMobile ? 20 : isTabletLayout ? 0 : 48,
+      paddingTop: isMobile ? 28 : isTabletLayout ? 0 : 36,
+      paddingBottom: isMobile ? 28 : isTabletLayout ? 0 : 36,
       position: 'relative' as const,
       ...Platform.select({
         web: showSideSlider
@@ -265,22 +273,25 @@ export const createHomeHeroStyles = ({
               paddingBottom: leftPagePaddingBottom,
               boxSizing: 'border-box',
               overflow: 'hidden',
-              // CSS grid: top-group auto, flexible space, cta auto pinned to bottom
-              // Works with or without chips row — CTA always lands at bottom via align-self
               display: 'grid',
               gridTemplateRows: 'auto 1fr auto',
               alignSelf: 'stretch',
               height: '100%',
               maxHeight: '100%',
-              // Строго ограничиваем ширину левой страницы
               minWidth: 0,
             } as any)
-          : ({
-              backgroundColor: isMobile
-                ? 'rgba(255,255,255,0.85)'
-                : 'transparent',
-              borderRadius: isMobile ? 8 : 0,
-            } as any),
+          : isTabletLayout
+            ? ({
+                backgroundColor: 'transparent',
+                justifyContent: 'center',
+                minWidth: 0,
+              } as any)
+            : ({
+                backgroundColor: isMobile
+                  ? 'rgba(255,255,255,0.85)'
+                  : 'transparent',
+                borderRadius: isMobile ? 8 : 0,
+              } as any),
       }),
     },
     leftPageFrame: {
@@ -1010,7 +1021,7 @@ export const createHomeHeroStyles = ({
     // -- Open book mini widget (tablet non-slider layout) --
     openBookContainer: {
       width: '100%',
-      marginTop: isMobile ? 8 : 12,
+      marginTop: isMobile ? 8 : isTabletLayout ? 16 : 12,
       position: 'relative' as const,
     },
     openBook: {
@@ -1025,6 +1036,136 @@ export const createHomeHeroStyles = ({
           boxShadow: `0 4px 24px ${warmShadow}`,
         } as any,
       }),
+    },
+    // -- Tablet layout (770-1279px): side-by-side hero --
+    tabletHeroRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'stretch' as const,
+      gap: 32,
+      width: '100%',
+    },
+    tabletHeroLeft: {
+      flex: 1,
+      minWidth: 0,
+      justifyContent: 'center' as const,
+      gap: 20,
+    },
+    tabletHeroRight: {
+      width: viewportWidth >= 1000 ? '45%' : '42%',
+      flexShrink: 0,
+      borderRadius: 20,
+      overflow: 'hidden' as const,
+      ...Platform.select({
+        web: {
+          boxShadow: `0 8px 32px ${warmShadow}, 0 2px 8px rgba(120,90,50,0.08)`,
+        } as any,
+      }),
+    },
+    tabletFeaturedImage: {
+      width: '100%',
+      height: '100%',
+      minHeight: viewportWidth >= 1000 ? 340 : 280,
+    },
+    tabletFeaturedOverlay: {
+      position: 'absolute' as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 20,
+      paddingVertical: 18,
+      paddingTop: 48,
+      ...Platform.select({
+        web: {
+          backgroundImage:
+            'linear-gradient(to top, rgba(12,10,8,0.92) 0%, rgba(12,10,8,0.55) 50%, rgba(12,10,8,0.15) 75%, transparent 100%)',
+        },
+      }),
+    },
+    tabletFeaturedTitle: {
+      fontSize: 22,
+      fontWeight: '700' as const,
+      color: '#FFFFFF',
+      marginBottom: 4,
+      letterSpacing: -0.3,
+      ...Platform.select({
+        web: {
+          fontFamily: editorialSerif,
+          textShadow: '0 2px 10px rgba(0,0,0,0.35)',
+        } as any,
+      }),
+    },
+    tabletFeaturedSubtitle: {
+      fontSize: 13,
+      fontWeight: '400' as const,
+      color: 'rgba(255,255,255,0.85)',
+      letterSpacing: 0.2,
+      ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
+    },
+    // Compact feature grid for tablet (2x2 grid)
+    tabletFeatureGrid: {
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      gap: 10,
+      marginTop: 8,
+    },
+    tabletFeatureCard: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 10,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      backgroundColor: cardSurface,
+      borderWidth: 1,
+      borderColor: warmBorder,
+      width: viewportWidth >= 900 ? 'calc(50% - 5px)' : '100%',
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          boxShadow: '0 1px 4px rgba(120,96,62,0.06)',
+          cursor: 'pointer',
+        } as any,
+      }),
+    },
+    tabletFeatureCardHover: {
+      backgroundColor: warmBgSoft,
+      borderColor: 'rgba(180,160,130,0.3)',
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-1px)',
+          boxShadow: '0 4px 12px rgba(120,96,62,0.1)',
+        } as any,
+      }),
+    },
+    tabletFeatureIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: colors.primary,
+      ...Platform.select({
+        web: {
+          boxShadow: `0 2px 6px ${colors.primary}20`,
+        },
+      }),
+    },
+    tabletFeatureTextWrap: {
+      flex: 1,
+      gap: 2,
+    },
+    tabletFeatureTitle: {
+      fontSize: 14,
+      fontWeight: '600' as const,
+      color: inkStrong,
+      letterSpacing: -0.1,
+      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
+    },
+    tabletFeatureSubtitle: {
+      fontSize: 12,
+      fontWeight: '400' as const,
+      color: inkMuted,
+      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
     bookCover: {
       position: 'absolute' as const,

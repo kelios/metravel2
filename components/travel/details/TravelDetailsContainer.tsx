@@ -153,6 +153,8 @@ export default function TravelDetailsContainer() {
     };
   }, [travel, isLoading, isError]);
 
+  const skeletonPhase = useSkeletonPhase({ isDataReady: Boolean(travel) });
+
   // ✅ REFACTORED: Trace logic extracted to useTravelDetailsTrace hook
   useTravelDetailsTrace({
     travel,
@@ -180,8 +182,6 @@ export default function TravelDetailsContainer() {
       window.removeEventListener('keydown', revealSkipLink);
     };
   }, []);
-
-  const skeletonPhase = useSkeletonPhase({ isDataReady: Boolean(travel) })
 
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   // Стабильный ключ для <Head> — используем slug (доступен сразу из URL),

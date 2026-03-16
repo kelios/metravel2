@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
 
@@ -145,7 +145,7 @@ export function useKeyPointLabels(primaryRoutePreview: ParsedRoutePreview | null
     }
   }, [primaryRoutePreview])
 
-  const resetKeyPointLabels = () => setKeyPointLabels({})
+  const resetKeyPointLabels = useCallback(() => setKeyPointLabels({}), [])
 
   return { keyPointLabels, resetKeyPointLabels }
 }

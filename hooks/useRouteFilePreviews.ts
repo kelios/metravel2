@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform } from 'react-native'
 
 import { useThemedColors } from '@/hooks/useTheme'
@@ -125,7 +125,7 @@ export function useRouteFilePreviews({
     }
   }, [canRenderHeavy, routeColorPalette, routeFiles, shouldForceRenderMap, shouldRender, travelId])
 
-  const resetRoutePreviewItems = () => setRoutePreviewItems([])
+  const resetRoutePreviewItems = useCallback(() => setRoutePreviewItems([]), [])
 
   return {
     routePreviewItems,

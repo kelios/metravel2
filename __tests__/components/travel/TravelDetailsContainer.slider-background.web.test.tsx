@@ -99,6 +99,10 @@ describe('TravelHeroSection slider background regression (web)', () => {
         { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
         { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
       ],
+      heroSliderImages: [
+        { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+      ],
       heroAlt: 'Demo travel',
       aspectRatio: 1200 / 800,
       setHeroContainerWidth: jest.fn(),
@@ -415,7 +419,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
             isMobile={false}
             renderSlider
             onFirstImageLoad={() => {}}
-            sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' }]}
+            sectionLinks={[{ key: 'map', label: 'Карта маршрута', icon: 'map' }]}
             onQuickJump={() => {}}
           />
         </Suspense>,
@@ -427,5 +431,85 @@ describe('TravelHeroSection slider background regression (web)', () => {
 
     expect(mockHeroExtrasSpy).toHaveBeenCalled()
     expect(mockHeroFavoriteToggleSpy).toHaveBeenCalled()
+  })
+
+  it('does not mount Slider on web when hero has only one image', async () => {
+    mockUseTravelHeroState.mockReturnValueOnce({
+      firstImg: {
+        url: 'https://cdn.example.com/img.jpg',
+        width: 1200,
+        height: 800,
+        updated_at: '2025-01-01',
+        id: '1',
+      },
+      heroHeight: 720,
+      galleryImages: [
+        { id: '1', url: 'https://cdn.example.com/img.jpg', width: 1200, height: 800 },
+      ],
+      heroSliderImages: [
+        { id: '1', url: 'https://cdn.example.com/img.jpg', width: 1200, height: 800 },
+      ],
+      heroAlt: 'Single image travel',
+      aspectRatio: 1200 / 800,
+      setHeroContainerWidth: jest.fn(),
+      heroContainerWidth: 960,
+      webHeroLoaded: true,
+      overlayUnmounted: false,
+      isOverlayFading: false,
+      handleWebHeroLoad: jest.fn(),
+      handleSliderImageLoad: jest.fn(),
+      extrasReady: true,
+      sliderUpgradeAllowed: true,
+    } as any)
+
+    const travel: any = {
+      id: 4,
+      name: 'Single image travel',
+      gallery: [
+        {
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        },
+      ],
+      travelAddress: [],
+    }
+
+    const anchors: any = {
+      gallery: { current: null },
+      video: { current: null },
+      description: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      map: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    await act(async () => {
+      renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    expect(mockSliderSpy).not.toHaveBeenCalled()
   })
 })

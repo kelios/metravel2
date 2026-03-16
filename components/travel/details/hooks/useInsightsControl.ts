@@ -54,16 +54,18 @@ export function useInsightsControl(
 
   // Принудительно открыть секцию
   useEffect(() => {
-    if (!shouldUseMobileInsights) return;
+    if (!shouldUseMobileInsights) {
+      setMobileInsightKey(null);
+      return;
+    }
 
     if (forceOpenKey) {
       setMobileInsightKey(forceOpenKey);
+      return;
     }
 
-    if (!mobileInsightKey && defaultInsightKey) {
-      setMobileInsightKey(defaultInsightKey);
-    }
-  }, [defaultInsightKey, forceOpenKey, mobileInsightKey, shouldUseMobileInsights]);
+    setMobileInsightKey((prev) => prev ?? defaultInsightKey);
+  }, [defaultInsightKey, forceOpenKey, shouldUseMobileInsights]);
 
   const buildInsightControl = useCallback(
     (key: InsightKey): InsightControl =>

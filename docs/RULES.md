@@ -24,9 +24,14 @@ npm run test:run
   - if a test is broken, fix it, replace it with stable coverage at the correct level, or remove the obsolete test in the same task;
   - the green baseline is `0` skipped tests unless a documented project-level exception is explicitly added to `docs/`.
 
-- If a task changes UI, layout, styling, visual states, or interaction behavior visible on web,
-  open a local browser preview and visually verify the changed scenario in the browser before
-  considering the task complete.
+- If a task changes UI, layout, styling, visual states, or interaction behavior visible on web:
+  - open a local browser preview and visually verify the changed scenario in the browser before considering the task complete;
+  - take a screenshot of the result to confirm visual correctness;
+  - check the browser console for errors (no new errors should appear after the change).
+- Dev media caveat:
+  - in local dev, article/travel images may fail to load because content can come from production data while media files remain tied to production storage/CDN access;
+  - do not treat this alone as a frontend bug and do not change app code only to “fix” dev-only missing production media;
+  - fix real frontend regressions instead, such as broken navigation, scrollspy/highlight logic, rendering bugs, or invalid URL normalization introduced by frontend code.
  
 - Always run `npm run lint` and `npm run test:run` at the end of a task to verify nothing broke.
 - For performance checks (Lighthouse), run against a production web export:

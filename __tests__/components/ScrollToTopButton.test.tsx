@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
 import { Animated, Platform } from 'react-native';
 
@@ -193,5 +193,29 @@ describe('ScrollToTopButton', () => {
     );
     const tree = toJSON();
     expect(tree).toBeTruthy();
+  });
+
+  it('does not resubscribe scroll listener after visibility toggle', () => {
+    const scrollY = {
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+    } as any;
+    scrollY.addListener.mockImplementation((listener: (payload: { value: number }) => void) => {
+      scrollY.__listener = listener;
+      return 'listener-id';
+    });
+
+    render(<ScrollToTopButton scrollY={scrollY} threshold={300} />);
+
+    expect(scrollY.addListener).toHaveBeenCalledTimes(1);
+
+    const listener = scrollY.__listener;
+    expect(typeof listener).toBe('function');
+
+    act(() => {
+      listener({ value: 400 });
+    });
+
+    expect(scrollY.addListener).toHaveBeenCalledTimes(1);
   });
 });

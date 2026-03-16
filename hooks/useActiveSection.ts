@@ -9,7 +9,7 @@ import type { RefObject } from 'react';
 
 const isTestEnv =
   (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined) ||
-  (typeof navigator !== 'undefined' && Boolean((navigator as unknown).webdriver));
+  (typeof navigator !== 'undefined' && Boolean((navigator as Navigator & { webdriver?: boolean }).webdriver));
 
 const scheduleObserverCallback = (cb: () => void) => {
   if (isTestEnv) {
@@ -19,7 +19,8 @@ const scheduleObserverCallback = (cb: () => void) => {
 
   const raf =
     (typeof window !== 'undefined' && window.requestAnimationFrame) ||
-    (typeof globalThis !== 'undefined' && (globalThis as unknown).requestAnimationFrame);
+    (typeof globalThis !== 'undefined' &&
+      (globalThis as typeof globalThis & { requestAnimationFrame?: typeof requestAnimationFrame }).requestAnimationFrame);
 
   if (typeof raf === 'function') {
     raf(cb);
@@ -55,9 +56,11 @@ export function useActiveSection(
       return;
     }
 
-    const globalObj: unknown = typeof globalThis !== 'undefined' ? globalThis : global;
+    const globalObj = (typeof globalThis !== 'undefined' ? globalThis : global) as typeof globalThis & {
+      IntersectionObserver?: typeof IntersectionObserver;
+    };
     const doc: Document | undefined =
-      (typeof window !== 'undefined' && (window as unknown).document) ||
+      (typeof window !== 'undefined' && window.document) ||
       (typeof document !== 'undefined' ? document : undefined);
     const IntersectionObserverCtor: typeof IntersectionObserver | undefined =
       (typeof window !== 'undefined' && window.IntersectionObserver) || globalObj?.IntersectionObserver;
@@ -66,22 +69,48 @@ export function useActiveSection(
       return;
     }
 
+    const isUsableScrollRoot = (node: unknown): node is HTMLElement => {
+      if (!node || typeof window === 'undefined') return false;
+      if (node === window || node === doc || node === doc.body || node === doc.documentElement || node === doc.scrollingElement) {
+        return false;
+      }
+      if (typeof (node as HTMLElement).getBoundingClientRect !== 'function') return false;
+
+      try {
+        const el = node as HTMLElement;
+        const style = window.getComputedStyle(el);
+        const overflowY = String(style?.overflowY ?? '').toLowerCase();
+        const canScrollByStyle = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+        const canScrollBySize = (el.scrollHeight || 0) > (el.clientHeight || 0) + 1;
+        return canScrollByStyle && canScrollBySize;
+      } catch {
+        return false;
+      }
+    };
+
+    const effectiveScrollRoot = isUsableScrollRoot(scrollRoot) ? scrollRoot : null;
+    const eventScrollRoot =
+      scrollRoot &&
+      typeof (scrollRoot as HTMLElement).addEventListener === 'function' &&
+      typeof (scrollRoot as HTMLElement).getBoundingClientRect === 'function'
+        ? scrollRoot
+        : null;
+
     const isDocumentRoot = (node: unknown): boolean => {
       if (!node) return true;
-      const docAny = doc as unknown;
-      const scrollingEl = (doc.scrollingElement || docAny.documentElement || docAny.body) as unknown;
-      return node === window || node === doc || node === docAny.body || node === docAny.documentElement || node === scrollingEl;
+      const scrollingEl = (doc.scrollingElement || doc.documentElement || doc.body) as unknown;
+      return node === window || node === doc || node === doc.body || node === doc.documentElement || node === scrollingEl;
     };
 
     const safeHeaderOffsetRaw = typeof headerOffset === 'number' && !isNaN(headerOffset) ? headerOffset : 0;
     const safeHeaderOffset = (() => {
       // If we are observing the document scroll, header always overlaps viewport.
-      if (isDocumentRoot(scrollRoot)) return safeHeaderOffsetRaw;
+      if (isDocumentRoot(effectiveScrollRoot)) return safeHeaderOffsetRaw;
 
       // For nested scroll containers, apply header offset only when container is under the sticky header.
       try {
-        if (scrollRoot && typeof scrollRoot.getBoundingClientRect === 'function') {
-          const rect = scrollRoot.getBoundingClientRect();
+        if (effectiveScrollRoot && typeof effectiveScrollRoot.getBoundingClientRect === 'function') {
+          const rect = effectiveScrollRoot.getBoundingClientRect();
           const top = Number(rect?.top ?? 0);
           if (top < safeHeaderOffsetRaw - 4) return safeHeaderOffsetRaw;
         }
@@ -99,8 +128,10 @@ export function useActiveSection(
       const TOP_BUFFER_PX = 24;
 
       const rootRect =
-        scrollRoot && !isDocumentRoot(scrollRoot) && typeof scrollRoot.getBoundingClientRect === 'function'
-          ? scrollRoot.getBoundingClientRect()
+        effectiveScrollRoot &&
+        !isDocumentRoot(effectiveScrollRoot) &&
+        typeof effectiveScrollRoot.getBoundingClientRect === 'function'
+          ? effectiveScrollRoot.getBoundingClientRect()
           : null;
 
       const keys = Object.keys(anchors);
@@ -219,7 +250,7 @@ export function useActiveSection(
               scheduleObserverCallback(computeAndSetActive);
             },
             {
-              root: scrollRoot ?? null,
+              root: effectiveScrollRoot,
               rootMargin: `-${safeHeaderOffset}px 0px -60% 0px`,
               threshold: [0, 0.1, 0.25, 0.5, 0.75, 1.0],
             }
@@ -265,7 +296,11 @@ export function useActiveSection(
     // Первая попытка — сразу.
     tryRegister();
 
-    const scrollTarget: unknown = scrollRoot && !isDocumentRoot(scrollRoot) ? scrollRoot : window;
+    const scrollTarget: Window | HTMLElement =
+      eventScrollRoot && !isDocumentRoot(eventScrollRoot) ? eventScrollRoot : window;
+    const passiveOptions: AddEventListenerOptions = { passive: true };
+    const captureOptions: AddEventListenerOptions = { passive: true, capture: true };
+    const removeCaptureOptions: EventListenerOptions = { capture: true };
     // Throttle scroll handler to reduce expensive DOM queries (getBoundingClientRect + sort)
     // from 60fps to ~10fps — sufficient for scrollspy accuracy.
     let scrollThrottleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -278,10 +313,10 @@ export function useActiveSection(
       }, SCROLL_THROTTLE_MS);
     };
     try {
-      scrollTarget?.addEventListener?.('scroll', onScroll, { passive: true } as unknown);
-      window.addEventListener?.('resize', onScroll, { passive: true } as unknown);
+      scrollTarget.addEventListener('scroll', onScroll, passiveOptions);
+      window.addEventListener('resize', onScroll, passiveOptions);
       // Capture scroll events from any element (scroll doesn't bubble) to avoid missing container scrolls.
-      doc.addEventListener?.('scroll', onScroll as unknown, { passive: true, capture: true } as unknown);
+      doc.addEventListener('scroll', onScroll, captureOptions);
     } catch {
       // noop
     }
@@ -303,9 +338,9 @@ export function useActiveSection(
       if (timeoutId) clearTimeout(timeoutId);
       if (scrollThrottleTimer) clearTimeout(scrollThrottleTimer);
       try {
-        scrollTarget?.removeEventListener?.('scroll', onScroll as unknown);
-        window.removeEventListener?.('resize', onScroll as unknown);
-        doc.removeEventListener?.('scroll', onScroll as unknown, { capture: true } as unknown);
+        scrollTarget.removeEventListener('scroll', onScroll);
+        window.removeEventListener('resize', onScroll);
+        doc.removeEventListener('scroll', onScroll, removeCaptureOptions);
       } catch {
         // noop
       }

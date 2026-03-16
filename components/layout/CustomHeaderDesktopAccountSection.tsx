@@ -61,10 +61,43 @@ export default function CustomHeaderDesktopAccountSection({
     }
   }, [])
 
+  // Shell fallback for Suspense — prevents flash of empty space during lazy load
+  const shellFallback = (
+    <View style={shellStyles.wrapper}>
+      {!isAuthenticated && (
+        <Pressable
+          onPress={handleLoginPress}
+          accessibilityRole="link"
+          accessibilityLabel="Войти в аккаунт"
+          style={ctaStyles.ctaLoginButton}
+          testID="header-login-cta-fallback"
+        >
+          <View style={ctaStyles.ctaLoginIconSlot}>
+            <Feather name="log-in" size={14} color={colors.textOnPrimary} />
+          </View>
+          <Text style={ctaStyles.ctaLoginText}>Войти</Text>
+        </Pressable>
+      )}
+      <View style={anchorStyles.anchor}>
+        <UserAvatar
+          uri={isAuthenticated ? avatarUri : null}
+          size="md"
+          onError={() => setAvatarLoadError(true)}
+        />
+        <Text style={avatarStyles.anchorText} numberOfLines={1}>
+          {displayName}
+        </Text>
+        <View style={avatarStyles.chevronSlot}>
+          <Feather name="chevron-down" size={18} color={colors.textMuted} />
+        </View>
+      </View>
+    </View>
+  );
+
   if (menuRequested) {
     return (
       <View style={styles.rightSection}>
-        <Suspense fallback={null}>
+        <Suspense fallback={shellFallback}>
           <AccountMenuLazy initialOpenKey={openOnLoadKey} />
         </Suspense>
       </View>

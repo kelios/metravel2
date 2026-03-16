@@ -96,36 +96,8 @@ export function useTravelDetailsPerformance({
       return
     }
 
-    const isWebAutomation =
-      typeof navigator !== 'undefined' &&
-      Boolean((navigator as unknown as Record<string, unknown>).webdriver)
-
-    if (isWebAutomation || !travel) {
-      setPostLcpRuntimeReady(true)
-      return
-    }
-
-    setPostLcpRuntimeReady(false)
-
-    let revealed = false
-
-    const reveal = () => {
-      if (revealed) return
-      revealed = true
-      setPostLcpRuntimeReady(true)
-    }
-
-    window.addEventListener('pointerdown', reveal, { passive: true, once: true })
-    window.addEventListener('keydown', reveal, { once: true })
-    window.addEventListener('wheel', reveal, { passive: true, once: true })
-
-    return () => {
-      revealed = true
-      window.removeEventListener('pointerdown', reveal as EventListener)
-      window.removeEventListener('keydown', reveal as EventListener)
-      window.removeEventListener('wheel', reveal as EventListener)
-    }
-  }, [deferAllowed, isLoading, travel])
+    setPostLcpRuntimeReady(true)
+  }, [deferAllowed, isLoading])
 
   useEffect(() => {
     if (Platform.OS === 'web') {
