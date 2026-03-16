@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { render, waitFor } from '@testing-library/react-native';
+import { act, render, waitFor } from '@testing-library/react-native';
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
@@ -69,5 +69,44 @@ describe('StableContent (web) link styles', () => {
       /href="https:\/\/example\.com\/?"/
     );
     expect(container.props.dangerouslySetInnerHTML?.__html).toContain('>Example<');
+  });
+
+  it('opens inline image in a lightbox on click and closes it', async () => {
+    const StableContent = (await import('@/components/travel/StableContent')).default;
+
+    render(
+      <StableContent
+        html={'<p><img src="https://example.com/photo.jpg" width="800" height="600" alt="Горы" /></p>'}
+        contentWidth={700}
+      />
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector(`.${'travel-rich-text'} img`)).toBeTruthy();
+    });
+
+    const inlineImage = document.querySelector('.travel-rich-text img') as HTMLImageElement | null;
+    expect(inlineImage).toBeTruthy();
+
+    act(() => {
+      inlineImage?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    await waitFor(() => {
+      const lightbox = document.querySelector('[data-testid="travel-rich-text-lightbox"]');
+      expect(lightbox).toBeTruthy();
+      expect(lightbox?.getAttribute('aria-label')).toBe('Горы');
+    });
+
+    const closeButton = document.querySelector('button[aria-label="Закрыть изображение"]') as HTMLButtonElement | null;
+    expect(closeButton).toBeTruthy();
+
+    act(() => {
+      closeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="travel-rich-text-lightbox"]')).toBeNull();
+    });
   });
 });
