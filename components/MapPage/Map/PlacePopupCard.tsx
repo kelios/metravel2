@@ -253,9 +253,9 @@ const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
 };
 
 const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 196,
-  compact: 236,
-  default: 360,
+  narrow: 164,
+  compact: 212,
+  default: 320,
 };
 
 const PlacePopupCard: React.FC<Props> = ({
@@ -501,7 +501,6 @@ const PlacePopupCard: React.FC<Props> = ({
               alt={title}
               fit="contain"
               blurBackground
-              allowCriticalWebBlur={Platform.OS === 'web'}
               blurRadius={16}
               priority="low"
               loading="lazy"

@@ -111,6 +111,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset());
 
   useEffect(() => {
     if (isTestEnv) return;
@@ -998,6 +999,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
         const isNarrowMap = mapRect.width <= 640;
         const horizontalPadding = mapRect.width <= 420 ? 12 : isNarrowMap ? 16 : 24;
         const verticalPadding = isNarrowMap ? 18 : 24;
+        const bottomSafePadding = isNarrowMap
+          ? Math.min(
+              Math.max(verticalPadding, popupBottomOffset + 20),
+              Math.max(verticalPadding, Math.round(mapRect.height * 0.4))
+            )
+          : verticalPadding;
         let dx = 0;
         let dy = 0;
 
@@ -1006,13 +1013,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
         const safeLeft = horizontalPadding;
         const safeRight = mapRect.width - horizontalPadding;
         const safeTop = verticalPadding;
-        const safeBottom = mapRect.height - verticalPadding;
+        const safeBottom = mapRect.height - bottomSafePadding;
         const safeCenterX = (safeLeft + safeRight) / 2;
         const safeCenterY = (safeTop + safeBottom) / 2;
         const overflowLeft = horizontalPadding - popupRect.left;
         const overflowRight = popupRect.right - (mapRect.width - horizontalPadding);
         const overflowTop = verticalPadding - popupRect.top;
-        const overflowBottom = popupRect.bottom - (mapRect.height - verticalPadding);
+        const overflowBottom = popupRect.bottom - safeBottom;
 
         if (overflowLeft > 0 && overflowRight > 0) {
           dx = popupCenterX - safeCenterX;
@@ -1091,7 +1098,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
     map?.on?.('popupclose', cleanup);
     cleanupTimer = setTimeout(cleanup, 1000);
-  }, []);
+  }, [popupBottomOffset]);
 
   const popupAutoPanPadding = useMemo(() => {
     const effectiveWidth = mapPaneWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
@@ -1107,6 +1114,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
       : isNarrowViewport
         ? Math.min(280, Math.max(240, maxWidth - 56))
         : Math.min(336, Math.max(280, maxWidth - 88));
+    const bottomPadding = isNarrowViewport
+      ? Math.min(
+          Math.max(72, popupBottomOffset + 20),
+          Math.max(72, Math.round((typeof window !== 'undefined' ? window.innerHeight : 844) * 0.32))
+        )
+      : 140;
     return {
       autoPan: true,
       keepInView: true,
@@ -1114,12 +1127,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
       minWidth,
       className: 'metravel-place-popup',
       autoPanPaddingTopLeft: isNarrowViewport ? [12, 72] : [24, 140],
-      autoPanPaddingBottomRight: isNarrowViewport ? [12, 72] : [24, 140],
+      autoPanPaddingBottomRight: isNarrowViewport ? [12, bottomPadding] : [24, 140],
       eventHandlers: {
         popupopen: handlePopupOpen,
       },
     };
-  }, [handlePopupOpen, mapPaneWidth]);
+  }, [handlePopupOpen, mapPaneWidth, popupBottomOffset]);
 
   const fitBoundsPadding = useMemo(() => {
     // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.

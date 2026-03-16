@@ -65,9 +65,9 @@ describe('PlacePopupCard', () => {
     expect(props).toBeTruthy();
     expect(props.fit).toBe('contain');
     expect(props.width).toBe(436);
-    expect(props.height).toBe(Math.round(436 / 1.35));
+    expect(props.height).toBe(320);
     expect(props.blurBackground).toBe(true);
-    expect(props.allowCriticalWebBlur).toBe(true);
+    expect(props.allowCriticalWebBlur).toBeUndefined();
   });
 
   it('shrinks popup hero on narrow viewport to keep the card visible', () => {
@@ -87,6 +87,6 @@ describe('PlacePopupCard', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
     expect(props.width).toBe(300);
-    expect(props.height).toBe(196);
+    expect(props.height).toBe(164);
   });
 });

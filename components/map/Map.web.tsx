@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 
 import { useLeafletIcons } from '@/components/MapPage/Map/useLeafletIcons';
 import { fetchFilters } from '@/api/misc';
@@ -103,6 +104,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                                                               }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset());
 
   const [L, setL] = useState<LeafletNS | null>(null);
   const [rl, setRl] = useState<ReactLeafletNS | null>(null);
@@ -441,6 +443,12 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
             const isNarrowMap = mapRect.width <= 640;
             const horizontalPadding = mapRect.width <= 420 ? 12 : isNarrowMap ? 16 : 24;
             const verticalPadding = isNarrowMap ? 18 : 24;
+            const bottomSafePadding = isNarrowMap
+              ? Math.min(
+                  Math.max(verticalPadding, popupBottomOffset + 20),
+                  Math.max(verticalPadding, Math.round(mapRect.height * 0.4))
+                )
+              : verticalPadding;
             let dx = 0;
             let dy = 0;
 
@@ -449,13 +457,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
             const safeLeft = horizontalPadding;
             const safeRight = mapRect.width - horizontalPadding;
             const safeTop = verticalPadding;
-            const safeBottom = mapRect.height - verticalPadding;
+            const safeBottom = mapRect.height - bottomSafePadding;
             const safeCenterX = (safeLeft + safeRight) / 2;
             const safeCenterY = (safeTop + safeBottom) / 2;
             const overflowLeft = horizontalPadding - popupRect.left;
             const overflowRight = popupRect.right - (mapRect.width - horizontalPadding);
             const overflowTop = verticalPadding - popupRect.top;
-            const overflowBottom = popupRect.bottom - (mapRect.height - verticalPadding);
+            const overflowBottom = popupRect.bottom - safeBottom;
 
             if (overflowLeft > 0 && overflowRight > 0) {
               dx = popupCenterX - safeCenterX;
