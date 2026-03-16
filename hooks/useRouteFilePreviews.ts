@@ -17,6 +17,48 @@ export type RoutePreviewItem = {
   label: string
 }
 
+const areLinePointsEqual = (
+  prevPoints: ParsedRoutePreview['linePoints'] | undefined,
+  nextPoints: ParsedRoutePreview['linePoints'] | undefined
+) => {
+  const prev = Array.isArray(prevPoints) ? prevPoints : []
+  const next = Array.isArray(nextPoints) ? nextPoints : []
+  if (prev.length !== next.length) return false
+
+  for (let i = 0; i < prev.length; i += 1) {
+    const prevPoint = prev[i]
+    const nextPoint = next[i]
+    if (
+      String(prevPoint?.coord ?? '') !== String(nextPoint?.coord ?? '') ||
+      Number(prevPoint?.elevation ?? NaN) !== Number(nextPoint?.elevation ?? NaN)
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
+const areRoutePreviewItemsEqual = (prevItems: RoutePreviewItem[], nextItems: RoutePreviewItem[]) => {
+  if (prevItems.length !== nextItems.length) return false
+
+  for (let i = 0; i < prevItems.length; i += 1) {
+    const prev = prevItems[i]
+    const next = nextItems[i]
+
+    if (
+      prev?.file?.id !== next?.file?.id ||
+      prev?.color !== next?.color ||
+      prev?.label !== next?.label ||
+      !areLinePointsEqual(prev?.preview?.linePoints, next?.preview?.linePoints)
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
 interface UseRouteFilePreviewsArgs {
   travelId: number | undefined
   canRenderHeavy: boolean
@@ -66,7 +108,7 @@ export function useRouteFilePreviews({
       if (Platform.OS === 'web' && !shouldRender && !shouldForceRenderMap && !isWebAutomation) return
       if (!travelId) {
         if (active) {
-          setRoutePreviewItems([])
+          setRoutePreviewItems((prev) => (prev.length > 0 ? [] : prev))
         }
         return
       }
@@ -79,7 +121,7 @@ export function useRouteFilePreviews({
         })
 
         if (supportedFiles.length === 0) {
-          setRoutePreviewItems([])
+          setRoutePreviewItems((prev) => (prev.length > 0 ? [] : prev))
           return
         }
 
@@ -111,10 +153,10 @@ export function useRouteFilePreviews({
           .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
           .filter((item): item is RoutePreviewItem => Boolean(item))
 
-        setRoutePreviewItems(readyItems)
+        setRoutePreviewItems((prev) => (areRoutePreviewItemsEqual(prev, readyItems) ? prev : readyItems))
       } catch {
         if (active) {
-          setRoutePreviewItems([])
+          setRoutePreviewItems((prev) => (prev.length > 0 ? [] : prev))
         }
       }
     }

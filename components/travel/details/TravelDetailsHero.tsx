@@ -133,15 +133,11 @@ function TravelHeroSectionInner({
               }
             : {})}
           collapsable={false}
-          onLayout={
-            Platform.OS === 'web'
-              ? undefined
-              : (e: LayoutChangeEvent) => {
-                  const w = e.nativeEvent.layout.width
-                  if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2)
-                    setHeroContainerWidth(w)
-                }
-          }
+          onLayout={(e: LayoutChangeEvent) => {
+            const w = e.nativeEvent.layout.width
+            if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2)
+              setHeroContainerWidth(w)
+          }}
         >
           {!firstImg ? (
             <NeutralHeroPlaceholder height={heroHeight} />

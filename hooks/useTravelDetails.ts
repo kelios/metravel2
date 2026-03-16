@@ -38,17 +38,26 @@ type TravelPreloadWindow = Window & typeof globalThis & {
 function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is Travel {
   if (!travel) return false;
 
+  const travelRecord = travel as unknown as Record<string, unknown>;
   const hasIdentity =
     (typeof travel.id === 'number' && Number.isFinite(travel.id) && travel.id > 0) ||
     (typeof travel.slug === 'string' && travel.slug.trim().length > 0);
   const hasName = typeof travel.name === 'string' && travel.name.trim().length > 0;
+  const hasAnyDetailField =
+    Object.prototype.hasOwnProperty.call(travelRecord, 'description') ||
+    Object.prototype.hasOwnProperty.call(travelRecord, 'gallery') ||
+    Object.prototype.hasOwnProperty.call(travelRecord, 'travelAddress') ||
+    Object.prototype.hasOwnProperty.call(travelRecord, 'coordsMeTravel');
   const hasRenderableDetailContract =
     (typeof travel.description === 'string' && travel.description.trim().length > 0) ||
-    Array.isArray(travel.gallery) ||
-    Array.isArray(travel.travelAddress) ||
-    Array.isArray(travel.coordsMeTravel);
+    (Array.isArray(travel.gallery) && travel.gallery.length > 0) ||
+    (Array.isArray(travel.travelAddress) && travel.travelAddress.length > 0) ||
+    (Array.isArray(travel.coordsMeTravel) && travel.coordsMeTravel.length > 0);
 
-  return hasIdentity && hasName && hasRenderableDetailContract;
+  return hasIdentity && hasName && hasAnyDetailField && (
+    hasRenderableDetailContract ||
+    (Array.isArray(travel.gallery) && Array.isArray(travel.travelAddress))
+  );
 }
 
 /**

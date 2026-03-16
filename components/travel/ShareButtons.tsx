@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Share, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { Travel } from '@/types/types';
@@ -71,6 +71,10 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
   const shareTitle = travel.name || 'Путешествие на MeTravel';
   const shareText = `Посмотрите это путешествие: ${shareTitle}`;
   const sharePostText = `${shareText} ${shareUrl}`;
+  const canUseWebShareApi =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function';
 
   // Базовая функция копирования в буфер обмена
   const copyToClipboard = useCallback(async (text: string, showSuccessAlert: boolean) => {
@@ -142,23 +146,34 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
 
   // Нативный Share API (для мобильных)
   const handleNativeShare = useCallback(async () => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web') {
+      if (!canUseWebShareApi) return;
 
-    try {
-      if (navigator.share) {
+      try {
         await navigator.share({
           title: shareTitle,
           text: shareText,
           url: shareUrl,
         });
+      } catch (error: any) {
+        if (error?.name !== 'AbortError') {
+          console.error('Error sharing:', error);
+        }
       }
+      return;
+    }
+
+    try {
+      await Share.share({
+        message: `${shareText}\n${shareUrl}`,
+        title: shareTitle,
+      });
     } catch (error: any) {
-      // Пользователь отменил - игнорируем
-      if (error.name !== 'AbortError') {
+      if (error?.name !== 'AbortError') {
         console.error('Error sharing:', error);
       }
     }
-  }, [shareUrl, shareTitle, shareText]);
+  }, [canUseWebShareApi, shareUrl, shareTitle, shareText]);
 
   // Переключение видимости панели
   const toggleCollapse = useCallback(() => {
@@ -231,7 +246,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
   ];
 
   // Для мобильных добавляем нативный Share
-  if (Platform.OS !== 'web' && 'share' in navigator) {
+  if (Platform.OS !== 'web') {
     shareButtons.unshift({
       key: 'native',
       label: 'Поделиться',

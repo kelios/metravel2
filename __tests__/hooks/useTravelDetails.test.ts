@@ -32,7 +32,6 @@ let capturedQueryFn: ((...args: any[]) => Promise<any>) | null = null;
 
 describe('useTravelDetails', () => {
   const originalPlatform = Platform.OS;
-  // @ts-expect-error - jest env may or may not define window
   const originalWindow = (global as any).window;
 
   beforeEach(() => {
@@ -59,7 +58,6 @@ describe('useTravelDetails', () => {
     (Platform.OS as any) = originalPlatform;
     jest.useRealTimers();
     // Restore window (tests may override it).
-    // @ts-expect-error - test-only global
     (global as any).window = originalWindow;
   });
 
@@ -99,10 +97,16 @@ describe('useTravelDetails', () => {
 
   it('uses preloaded travel as initialData on web (no extra await needed)', () => {
     (Platform.OS as any) = 'web';
-    // @ts-expect-error - test-only global
     (global as any).window = {
       __metravelTravelPreload: {
-        data: { id: 498, slug: 'awesome-trip', name: 'Trip', travelAddress: [] },
+        data: {
+          id: 498,
+          slug: 'awesome-trip',
+          name: 'Trip',
+          description: '',
+          gallery: [],
+          travelAddress: [],
+        },
         slug: 'awesome-trip',
         isId: false,
       },
@@ -126,16 +130,21 @@ describe('useTravelDetails', () => {
     expect(result.current.isId).toBe(false);
     expect(result.current.slug).toBe('awesome-trip');
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.travel).toEqual({ id: 498, slug: 'awesome-trip', name: 'Trip', travelAddress: [] });
+    expect(result.current.travel).toEqual({
+      id: 498,
+      slug: 'awesome-trip',
+      name: 'Trip',
+      description: '',
+      gallery: [],
+      travelAddress: [],
+    });
 
     // Preload is consumed on first access to avoid stale data.
-    // @ts-expect-error - test-only global
     expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
   it('ignores sparse preloaded travel payloads and falls back to fetchTravelBySlug', async () => {
     (Platform.OS as any) = 'web';
-    // @ts-expect-error - test-only global
     (global as any).window = {
       __metravelTravelPreload: {
         data: {
@@ -166,17 +175,20 @@ describe('useTravelDetails', () => {
       userName: 'Julia',
     });
     // Sparse preload is still consumed so it cannot poison future navigations.
-    // @ts-expect-error - test-only global
     expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
-  it('waits briefly for preload bootstrap before falling back to fetchTravelBySlug', async () => {
+  it('waits briefly for bootstrap preload and uses it when full detail fields arrive', async () => {
     jest.useFakeTimers();
     (Platform.OS as any) = 'web';
+    let resolveBootstrap: (() => void) | null = null;
 
-    // @ts-expect-error - test-only global
     (global as any).window = {
       __metravelTravelPreloadScriptLoaded: true,
+      __metravelTravelPreloadPending: true,
+      __metravelTravelPreloadPromise: new Promise<void>((resolve) => {
+        resolveBootstrap = resolve;
+      }),
       location: { pathname: '/travels/awesome-trip' },
     };
 
@@ -188,25 +200,80 @@ describe('useTravelDetails', () => {
     const queryPromise = capturedQueryFn!();
 
     setTimeout(() => {
-      // @ts-expect-error - test-only global
       (global as any).window.__metravelTravelPreload = {
-        data: { id: 503, slug: 'awesome-trip', name: 'Trip', travelAddress: [] },
+        data: {
+          id: 503,
+          slug: 'awesome-trip',
+          name: 'Trip',
+          description: '',
+          gallery: [],
+          travelAddress: [],
+        },
         slug: 'awesome-trip',
         isId: false,
       };
+      (global as any).window.__metravelTravelPreloadPending = false;
+      resolveBootstrap?.();
     }, 100);
 
     await act(async () => {
       jest.advanceTimersByTime(120);
       await Promise.resolve();
+      await Promise.resolve();
     });
 
     const data = await queryPromise;
-    expect(data).toEqual({ id: 503, slug: 'awesome-trip', name: 'Trip', travelAddress: [] });
+    expect(data).toEqual({
+      id: 503,
+      slug: 'awesome-trip',
+      name: 'Trip',
+      description: '',
+      gallery: [],
+      travelAddress: [],
+    });
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
 
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+  });
+
+  it('falls back to fetchTravelBySlug when preload has identity but misses detail fields', async () => {
+    (Platform.OS as any) = 'web';
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 498,
+          slug: 'awesome-trip',
+          name: 'Trip',
+          travelAddress: [],
+        },
+        slug: 'awesome-trip',
+        isId: false,
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({
+      id: 777,
+      slug: 'awesome-trip',
+      name: 'Fetched detail travel',
+      description: '',
+      gallery: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
+    });
+
+    renderHook(() => useTravelDetails());
+
+    const data = await capturedQueryFn!();
+    expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
+    expect(data).toEqual({
+      id: 777,
+      slug: 'awesome-trip',
+      name: 'Fetched detail travel',
+      description: '',
+      gallery: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
+    });
   });
 
   it('exposes refetch function from react-query result', () => {

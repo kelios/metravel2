@@ -449,6 +449,11 @@ function ListTravelBase({
       return value;
     };
 
+    const normalizedSearchParam = useMemo(
+      () => normalizeParam(params.search) ?? '',
+      [params.search]
+    );
+
     const initialFilter = useMemo(() => {
       const f: Record<string, any> = {};
       const categories = normalizeParam(params.categories);
@@ -649,10 +654,12 @@ function ListTravelBase({
     const { userId, isSuperuser: isSuper } = useAuth();
 
     /* Top-bar state */
-    const [search, setSearch] = useState<string>(
-      Array.isArray(params.search) ? params.search.filter(Boolean).join(',') : (params.search ?? "")
-    );
+    const [search, setSearch] = useState<string>(normalizedSearchParam);
     const debSearch = useDebouncedValue(search, 400);
+
+    useEffect(() => {
+      setSearch((prev) => (prev === normalizedSearchParam ? prev : normalizedSearchParam));
+    }, [normalizedSearchParam]);
 
     const onMomentumRef = useRef(false);
     const lastEndReachedAtRef = useRef<number>(0);

@@ -69,4 +69,24 @@ describe('PlacePopupCard', () => {
     expect(props.blurBackground).toBe(true);
     expect(props.allowCriticalWebBlur).toBe(true);
   });
+
+  it('shrinks popup hero on narrow viewport to keep the card visible', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 360, height: 740, scale: 1, fontScale: 1 }));
+
+    renderer.act(() => {
+      renderer.create(
+        <PlacePopupCard
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          width={560}
+        />
+      );
+    });
+
+    expect(mockImageCardMedia).toHaveBeenCalled();
+    const props = mockImageCardMedia.mock.calls[0]?.[0];
+    expect(props).toBeTruthy();
+    expect(props.width).toBe(300);
+    expect(props.height).toBe(196);
+  });
 });

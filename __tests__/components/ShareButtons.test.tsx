@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { Platform, Share } from 'react-native';
 import ShareButtons from '@/components/travel/ShareButtons';
 import * as Clipboard from 'expo-clipboard';
 import type { Travel } from '@/types/types';
@@ -48,6 +48,7 @@ describe('ShareButtons', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (Platform.OS as any) = 'web';
+    jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' } as any);
     if (typeof window !== 'undefined') {
       (window as any).location = mockWindow.location;
       (window as any).open = mockWindow.open;
@@ -72,6 +73,10 @@ describe('ShareButtons', () => {
         }
       };
     }
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('should render share buttons', () => {
@@ -120,6 +125,23 @@ describe('ShareButtons', () => {
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'success', text1: 'Ссылка скопирована' })
+      );
+    });
+  });
+
+  it('should render native share action and use Share API on mobile', async () => {
+    (Platform.OS as any) = 'ios';
+    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+
+    const nativeShareButton = getByLabelText('Поделиться');
+    fireEvent.press(nativeShareButton);
+
+    await waitFor(() => {
+      expect(Share.share).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Test Travel',
+          message: expect.stringContaining('https://'),
+        })
       );
     });
   });

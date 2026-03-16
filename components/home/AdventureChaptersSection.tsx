@@ -14,7 +14,6 @@ import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
 import type { Travel } from '@/types/types';
 import { createAdventureChaptersStyles } from './homeAdventureChaptersStyles';
 
@@ -34,12 +33,11 @@ function isLikelyWatermarked(url: string | null | undefined): boolean {
 type ChapterCardProps = {
   item: Travel;
   index: number;
-  isMobile: boolean;
   styles: ReturnType<typeof createAdventureChaptersStyles>;
   colors: ReturnType<typeof useThemedColors>;
 };
 
-function ChapterCard({ item, index, isMobile, styles, colors }: ChapterCardProps) {
+function ChapterCard({ item, index, styles, colors }: ChapterCardProps) {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -68,17 +66,6 @@ function ChapterCard({ item, index, isMobile, styles, colors }: ChapterCardProps
   const rawImageUrl = !isLikelyWatermarked(item.travel_image_thumb_url)
     ? item.travel_image_thumb_url
     : null;
-
-  const imageUrl = useMemo(() => {
-    if (!rawImageUrl || !isWeb) return rawImageUrl ?? null;
-    return (
-      optimizeImageUrl(rawImageUrl, {
-        width: isMobile ? 480 : 640,
-        height: isMobile ? 260 : 320,
-        fit: 'contain',
-      }) ?? rawImageUrl
-    );
-  }, [rawImageUrl, isWeb, isMobile]);
 
   const handlePress = useCallback(() => {
     if (!travelUrl) return;
@@ -127,7 +114,7 @@ function ChapterCard({ item, index, isMobile, styles, colors }: ChapterCardProps
       {/* ── Cover photo ── */}
       <View style={styles.coverContainer}>
         <ImageCardMedia
-          src={imageUrl}
+          src={rawImageUrl}
           alt={title}
           fit="contain"
           blurBackground
@@ -397,7 +384,6 @@ function AdventureChaptersSection() {
                       <ChapterCard
                         item={item}
                         index={globalIndex}
-                        isMobile={isMobile}
                         styles={styles}
                         colors={colors}
                       />

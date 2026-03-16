@@ -438,27 +438,49 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
               height: popupRectAbs.height,
             };
 
-            const horizontalPadding = mapRect.width <= 420 ? 12 : 20;
-            const verticalPadding = 16;
+            const isNarrowMap = mapRect.width <= 640;
+            const horizontalPadding = mapRect.width <= 420 ? 12 : isNarrowMap ? 16 : 24;
+            const verticalPadding = isNarrowMap ? 18 : 24;
             let dx = 0;
             let dy = 0;
 
+            const popupCenterX = popupRect.left + popupRect.width / 2;
+            const popupCenterY = popupRect.top + popupRect.height / 2;
+            const safeLeft = horizontalPadding;
+            const safeRight = mapRect.width - horizontalPadding;
+            const safeTop = verticalPadding;
+            const safeBottom = mapRect.height - verticalPadding;
+            const safeCenterX = (safeLeft + safeRight) / 2;
+            const safeCenterY = (safeTop + safeBottom) / 2;
             const overflowLeft = horizontalPadding - popupRect.left;
             const overflowRight = popupRect.right - (mapRect.width - horizontalPadding);
             const overflowTop = verticalPadding - popupRect.top;
             const overflowBottom = popupRect.bottom - (mapRect.height - verticalPadding);
 
             if (overflowLeft > 0 && overflowRight > 0) {
-              const popupCenterX = popupRect.left + popupRect.width / 2;
-              const mapCenterX = mapRect.width / 2;
-              dx = popupCenterX >= mapCenterX ? overflowRight : -overflowLeft;
+              dx = popupCenterX - safeCenterX;
             } else if (overflowLeft > 0) {
               dx = -overflowLeft;
             } else if (overflowRight > 0) {
               dx = overflowRight;
+            } else if (isNarrowMap) {
+              const centerDeltaX = popupCenterX - safeCenterX;
+              if (Math.abs(centerDeltaX) > 18) {
+                dx = centerDeltaX;
+              }
             }
-            if (overflowTop > 0) dy = -overflowTop;
-            if (overflowBottom > 0) dy = overflowBottom;
+            if (overflowTop > 0 && overflowBottom > 0) {
+              dy = popupCenterY - safeCenterY;
+            } else if (overflowTop > 0) {
+              dy = -overflowTop;
+            } else if (overflowBottom > 0) {
+              dy = overflowBottom;
+            } else if (isNarrowMap) {
+              const centerDeltaY = popupCenterY - safeCenterY;
+              if (Math.abs(centerDeltaY) > 24) {
+                dy = centerDeltaY;
+              }
+            }
 
             // Избегаем микродвижений (дергания)
             if (Math.abs(dx) < 6) dx = 0;

@@ -34,6 +34,15 @@ jest.mock('leaflet', () => ({
   ...mockLeaflet,
 }))
 
+jest.mock('html2canvas', () => ({
+  __esModule: true,
+  default: jest.fn(() =>
+    Promise.resolve({
+      toDataURL: () => 'data:image/png;base64,local-html2canvas',
+    })
+  ),
+}))
+
 describe('generateStaticMapUrl', () => {
   const points = [
     { name: 'Moscow', lat: 55.75, lng: 37.61 },
@@ -135,6 +144,46 @@ describe('generateLeafletRouteSnapshot', () => {
     expect(mockLeaflet.map).toHaveBeenCalled()
     expect(mockMapRemove).toHaveBeenCalled()
     expect(document.getElementById('metravel-map-snapshot')).toBeNull()
+  })
+
+  it('uses locally installed leaflet and html2canvas in test env without globals', async () => {
+    jest.useFakeTimers()
+
+    const promise = generateLeafletRouteSnapshot(
+      [
+        { lat: 10, lng: 20 },
+        { lat: 11, lng: 22 },
+      ],
+      { width: 321, height: 181, zoom: 9 }
+    )
+
+    jest.runAllTimers()
+    const result = await promise
+
+    expect(result).toBe('data:image/png;base64,local-html2canvas')
+    expect(mockLeaflet.map).toHaveBeenCalled()
+    expect(document.getElementById('metravel-leaflet-snapshot-styles')).not.toBeNull()
+  })
+
+  it('creates snapshot for route line even when there are no point markers', async () => {
+    jest.useFakeTimers()
+
+    const promise = generateLeafletRouteSnapshot([], {
+      width: 320,
+      height: 180,
+      zoom: 9,
+      routeLine: [
+        [10, 20],
+        [11, 22],
+      ],
+    })
+
+    jest.runAllTimers()
+    const result = await promise
+
+    expect(result).toBe('data:image/png;base64,local-html2canvas')
+    expect(mockLeaflet.polyline).toHaveBeenCalled()
+    expect(mockFitBounds).toHaveBeenCalled()
   })
 
   it('does not reuse cache when routeLine changes for same points', async () => {

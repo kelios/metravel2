@@ -6,6 +6,62 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const leafletRouteSnapshotCache = new Map<string, Promise<string | null>>();
 
+function isTestEnvironment(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    !!(process as any).env &&
+    (process as any).env.NODE_ENV === 'test'
+  );
+}
+
+function ensureLeafletSnapshotStyles(): void {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('metravel-leaflet-snapshot-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'metravel-leaflet-snapshot-styles';
+  style.textContent = `
+    .leaflet-container {
+      overflow: hidden;
+      background: #d7e3f2;
+      outline: 0;
+      position: relative;
+      font-family: sans-serif;
+    }
+    .leaflet-pane,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow,
+    .leaflet-tile-container,
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas,
+    .leaflet-zoom-box,
+    .leaflet-image-layer,
+    .leaflet-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas {
+      width: 100%;
+      height: 100%;
+    }
+    .leaflet-tile-container {
+      pointer-events: none;
+    }
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow {
+      display: block;
+    }
+    .leaflet-control-container,
+    .leaflet-attribution-flag {
+      display: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 function normalizeCoordPair(lat: number, lng: number): string {
   const safeLat = Number.isFinite(lat) ? Number(lat).toFixed(6) : 'NaN';
   const safeLng = Number.isFinite(lng) ? Number(lng).toFixed(6) : 'NaN';
@@ -126,20 +182,41 @@ export async function generateMapImageFromDOM(
       return w.html2canvas;
     }
 
-    // Не создаём несколько тегов <script> при конкурентных вызовах
     if (!(ensureHtml2Canvas as any)._loader) {
-      (ensureHtml2Canvas as any)._loader = new Promise<void>((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = (err) => {
-          // Сбрасываем кеш промиса при ошибке загрузки, чтобы можно было повторить попытку
-          (ensureHtml2Canvas as any)._loader = null;
-          reject(err);
-        };
-        document.body.appendChild(script);
-      });
+      (ensureHtml2Canvas as any)._loader = (async () => {
+        if (isTestEnvironment()) {
+          try {
+            const req = (0, eval)('require') as NodeRequire;
+            const html2canvasMod = req('html2canvas');
+            w.html2canvas = html2canvasMod?.default ?? html2canvasMod;
+            if (w.html2canvas) return;
+          } catch (error) {
+            void error;
+          }
+        }
+
+        try {
+          const html2canvasMod = await import('html2canvas');
+          w.html2canvas = html2canvasMod?.default ?? html2canvasMod;
+          if (w.html2canvas) {
+            return;
+          }
+        } catch (error) {
+          void error;
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = (err) => {
+            (ensureHtml2Canvas as any)._loader = null;
+            reject(err);
+          };
+          document.body.appendChild(script);
+        });
+      })();
     }
 
     await (ensureHtml2Canvas as any)._loader;
@@ -218,47 +295,60 @@ export async function generateLeafletRouteSnapshot(
     const ensureLeaflet = async (): Promise<any> => {
       const w = window as any;
       if (w.L) {
+        ensureLeafletSnapshotStyles();
         return w.L;
       }
 
-      const isTestEnv =
-        typeof process !== 'undefined' &&
-        (process as any).env &&
-        (process as any).env.NODE_ENV === 'test';
-
-      if (isTestEnv) {
-        try {
-          // In Jest we mock 'leaflet', so prefer synchronous require to avoid hanging on CDN.
-          // Use an indirect require so Metro doesn't statically include Leaflet in the web entry bundle.
-          const req = (0, eval)('require') as NodeRequire;
-          const leafletMod = req('leaflet');
-          w.L = leafletMod?.default ?? leafletMod;
-          return w.L;
-        } catch {
-          return null;
-        }
-      }
-
       if (!(ensureLeaflet as any)._loader) {
-        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
-          const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          if (!document.querySelector(`link[href="${cssHref}"]`)) {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = cssHref;
-            document.head.appendChild(link);
+        (ensureLeaflet as any)._loader = (async () => {
+          if (isTestEnvironment()) {
+            try {
+              const req = (0, eval)('require') as NodeRequire;
+              const leafletMod = req('leaflet');
+              w.L = leafletMod?.default ?? leafletMod;
+              if (w.L) {
+                ensureLeafletSnapshotStyles();
+                return;
+              }
+            } catch (error) {
+              void error;
+            }
           }
 
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = (err) => {
-            (ensureLeaflet as any)._loader = null;
-            reject(err);
-          };
-          document.body.appendChild(script);
-        });
+          try {
+            const leafletMod = await import('leaflet');
+            w.L = leafletMod?.default ?? leafletMod;
+            if (w.L) {
+              ensureLeafletSnapshotStyles();
+              return;
+            }
+          } catch (error) {
+            void error;
+          }
+
+          await new Promise<void>((resolve, reject) => {
+            const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            if (!document.querySelector(`link[href="${cssHref}"]`)) {
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = cssHref;
+              document.head.appendChild(link);
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.async = true;
+            script.onload = () => {
+              ensureLeafletSnapshotStyles();
+              resolve();
+            };
+            script.onerror = (err) => {
+              (ensureLeaflet as any)._loader = null;
+              reject(err);
+            };
+            document.body.appendChild(script);
+          });
+        })();
       }
 
       await (ensureLeaflet as any)._loader;
@@ -306,14 +396,27 @@ export async function generateLeafletRouteSnapshot(
         p.lng <= 180
     );
 
-    if (validPoints.length === 0) {
+    const validRouteLine = routeLine.filter(
+      ([lat, lng]) =>
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180
+    );
+
+    if (validPoints.length === 0 && validRouteLine.length === 0) {
       document.body.removeChild(container);
       return null;
     }
 
-    // Минимальная инициализация карты (без анимаций, чтобы избежать багов в off-screen режиме)
-    const centerLat = validPoints.reduce((sum, p) => sum + p.lat, 0) / validPoints.length;
-    const centerLng = validPoints.reduce((sum, p) => sum + p.lng, 0) / validPoints.length;
+    const viewCoords = [
+      ...validPoints.map((p) => ({ lat: p.lat, lng: p.lng })),
+      ...validRouteLine.map(([lat, lng]) => ({ lat, lng })),
+    ];
+    const centerLat = viewCoords.reduce((sum, p) => sum + p.lat, 0) / viewCoords.length;
+    const centerLng = viewCoords.reduce((sum, p) => sum + p.lng, 0) / viewCoords.length;
 
     let map: any | null = null;
 
@@ -468,13 +571,8 @@ export async function generateLeafletRouteSnapshot(
       });
 
       // Рисуем линию маршрута из GPX/KML файла, если она есть
-      if (routeLine.length >= 2) {
-        const routeLatLngs = routeLine
-          .filter(([lat, lng]) => 
-            Number.isFinite(lat) && Number.isFinite(lng) &&
-            lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
-          )
-          .map(([lat, lng]) => L.latLng(lat, lng));
+      if (validRouteLine.length >= 2) {
+        const routeLatLngs = validRouteLine.map(([lat, lng]) => L.latLng(lat, lng));
 
         if (routeLatLngs.length >= 2) {
           L.polyline(routeLatLngs, {
@@ -489,12 +587,9 @@ export async function generateLeafletRouteSnapshot(
 
       // Подгоняем границы под маршрут (без плавной анимации)
       const allBoundsLatLngs = [...latLngs];
-      if (routeLine.length >= 2) {
-        routeLine.forEach(([lat, lng]) => {
-          if (Number.isFinite(lat) && Number.isFinite(lng) &&
-              lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-            allBoundsLatLngs.push(L.latLng(lat, lng));
-          }
+      if (validRouteLine.length >= 2) {
+        validRouteLine.forEach(([lat, lng]) => {
+          allBoundsLatLngs.push(L.latLng(lat, lng));
         });
       }
 

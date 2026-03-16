@@ -559,6 +559,48 @@ describe('ListTravel Integration Tests', () => {
     expect((searchInput as any).props.value).toBe('mountain');
   });
 
+  it('syncs search input with updated URL search params without remount', async () => {
+    (global as any).__mockLocalSearchParams = { search: 'mountain' };
+
+    const view = renderWithProviders(<ListTravel />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Найти путешествия...')).toBeTruthy();
+    });
+
+    expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('mountain');
+    expect(mockUseListTravelData).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        search: 'mountain',
+      })
+    );
+
+    (global as any).__mockLocalSearchParams = { search: 'beach' };
+
+    view.rerender(
+      <QueryClientProvider client={new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      })}>
+        <ThemeProvider>
+          <ListTravel />
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Найти путешествия...').props.value).toBe('beach');
+    });
+
+    expect(mockUseListTravelData).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        search: 'beach',
+      })
+    );
+  });
+
   it('handles filter clearing correctly', async () => {
     const mockResetFilters = jest.fn();
 

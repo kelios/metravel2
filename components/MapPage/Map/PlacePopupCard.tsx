@@ -252,6 +252,12 @@ const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
   default: 436,
 };
 
+const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
+  narrow: 196,
+  compact: 236,
+  default: 360,
+};
+
 const PlacePopupCard: React.FC<Props> = ({
   title,
   imageUrl,
@@ -270,7 +276,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Мои точки',
-  width = 560,
+  width = 436,
   imageHeight: _imageHeight = 72,
 }) => {
   const colors = useThemedColors();
@@ -300,7 +306,13 @@ const PlacePopupCard: React.FC<Props> = ({
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
   const maxPopupWidth = Math.min(width, POPUP_MAX_WIDTH_BY_BREAKPOINT[bp], safeViewportWidth);
   const heroWidth = maxPopupWidth;
-  const heroHeight = Math.max(1, Math.round(heroWidth / IMAGE_ASPECT[bp]));
+  const heroHeight = Math.max(
+    1,
+    Math.min(
+      IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp],
+      Math.round(heroWidth / IMAGE_ASPECT[bp])
+    )
+  );
 
   const styles = useMemo(() => getStyles(colors, bp, heroHeight), [colors, bp, heroHeight]);
 
@@ -533,6 +545,8 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number) 
   return StyleSheet.create({
     container: {
       width: '100%',
+      minWidth: 0,
+      alignSelf: 'stretch',
     },
     popupCard: {
       width: '100%',
