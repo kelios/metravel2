@@ -136,7 +136,7 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
   useCssBackdrop = false,
 }: WebBlurBackdropProps) {
   const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
-  const backdropFit = fit === 'contain' ? 'contain' : 'cover';
+  const backdropFit = 'cover';
   const backdropScale = fit === 'contain' ? 1 : 1.12;
   const backdropFilter = hasPreBlurredSource
     ? 'saturate(1.08)'

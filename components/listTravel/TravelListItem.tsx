@@ -689,6 +689,8 @@ const unifiedCard = (
       selectable && isSelected && styles.selected,
     ]}
     imageHeight={TRAVEL_CARD_IMAGE_HEIGHT}
+    contentPosition="aboveMedia"
+    insetMedia={true}
     leftTopSlot={leftTopSlot}
     rightTopSlot={selectable ? null : rightTopSlot}
     containerOverlaySlot={selectableOverlay}
