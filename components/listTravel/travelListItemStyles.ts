@@ -170,7 +170,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     // Компактная мета-информация — одна строка
     metaRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: 6,
       minHeight: Platform.OS === 'web' ? 18 : 20,
@@ -193,6 +193,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       alignItems: 'center',
       gap: 4,
       flexShrink: 0,
+      paddingTop: Platform.OS === 'web' ? 1 : 0,
     },
 
     // Inline рейтинг (без чипа)

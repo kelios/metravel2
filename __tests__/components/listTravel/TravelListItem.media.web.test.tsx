@@ -90,4 +90,12 @@ describe('TravelListItem media props on web', () => {
     expect(props).toBeTruthy();
     expect(props.mediaProps?.blurBackground).toBe(true);
   });
+
+  it('renders default list cards without inset media shell gaps', () => {
+    renderItem();
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props).toBeTruthy();
+    expect(props.insetMedia).toBe(false);
+  });
 });

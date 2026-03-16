@@ -98,4 +98,38 @@ describe('UnifiedTravelCard blur background (web)', () => {
 
     expect(renderedNodes.map((node: any) => node.type)).toEqual(['mock-image-card-media'])
   })
+
+  it('shows already loaded card image immediately on subsequent renders', () => {
+    const imageUrl = '/travel-image/already-loaded-card.jpg'
+
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Loaded travel"
+          imageUrl={imageUrl}
+          onPress={() => {}}
+        />
+      )
+    })
+
+    const firstProps = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(firstProps?.showImmediately).toBe(false)
+
+    renderer.act(() => {
+      firstProps?.onLoad?.()
+    })
+
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Loaded travel"
+          imageUrl={imageUrl}
+          onPress={() => {}}
+        />
+      )
+    })
+
+    const secondProps = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(secondProps?.showImmediately).toBe(true)
+  })
 })

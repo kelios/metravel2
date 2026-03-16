@@ -5,15 +5,19 @@ export type SkeletonPhase = 'loading' | 'fading' | 'hidden'
 
 interface UseSkeletonPhaseArgs {
   isDataReady: boolean
+  isVisualReady?: boolean
 }
 
-export function useSkeletonPhase({ isDataReady }: UseSkeletonPhaseArgs) {
+export function useSkeletonPhase({
+  isDataReady,
+  isVisualReady = isDataReady,
+}: UseSkeletonPhaseArgs) {
   const [skeletonPhase, setSkeletonPhase] = useState<SkeletonPhase>('loading')
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
 
-    if (!isDataReady) {
+    if (!isDataReady || !isVisualReady) {
       setSkeletonPhase('loading')
       return
     }
@@ -35,7 +39,7 @@ export function useSkeletonPhase({ isDataReady }: UseSkeletonPhaseArgs) {
         cancelled = true
       }
     }
-  }, [isDataReady])
+  }, [isDataReady, isVisualReady])
 
   return skeletonPhase
 }

@@ -952,7 +952,7 @@ function ListTravelBase({
     const searchHeaderStyle = useMemo(
       () => isMobileDevice
         ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
-        : [styles.searchHeader, { paddingHorizontal: contentPadding }],
+        : [styles.searchHeader, { paddingHorizontal: 0 }],
       [isMobileDevice, contentPadding, styles.searchHeader]
     );
 

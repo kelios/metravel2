@@ -176,10 +176,10 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }, [rowSeparatorStyle])
 
     const webContentContainerStyle = useMemo(() => ({
-      paddingHorizontal: contentPadding,
+      paddingHorizontal: 0,
       paddingTop: 8,
       paddingBottom: isMobile ? 32 + 8 : 28,
-    }), [contentPadding, isMobile])
+    }), [isMobile])
 
     const nativeContentContainerStyle = useMemo(() => ({
       paddingHorizontal: contentPadding,
@@ -188,13 +188,19 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }), [contentPadding])
 
     const paddingHorizontalStyle = useMemo(() => ({ paddingHorizontal: contentPadding }), [contentPadding])
-    const skeletonPaddingStyle = useMemo(() => ({ paddingHorizontal: contentPadding, paddingTop: 8 }), [contentPadding])
-    const recommendationsSkeletonStyle = useMemo(() => ({
-      height: RECOMMENDATIONS_TOTAL_HEIGHT,
-      marginBottom: 24,
-      overflow: 'hidden' as const,
-      paddingHorizontal: contentPadding,
-    }), [contentPadding])
+    const skeletonPaddingStyle = useMemo(
+      () => ({ paddingHorizontal: isWeb ? 0 : contentPadding, paddingTop: 8 }),
+      [contentPadding]
+    )
+    const recommendationsSkeletonStyle = useMemo(
+      () => ({
+        height: RECOMMENDATIONS_TOTAL_HEIGHT,
+        marginBottom: 24,
+        overflow: 'hidden' as const,
+        paddingHorizontal: isWeb ? 0 : contentPadding,
+      }),
+      [contentPadding]
+    )
 
     // Web: infinite scroll via onScroll instead of FlashList's onEndReached
     const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {

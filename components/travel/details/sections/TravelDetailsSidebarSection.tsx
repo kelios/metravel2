@@ -11,6 +11,14 @@ import NearTravelList from '@/components/travel/NearTravelList'
 import PopularTravelList from '@/components/travel/PopularTravelList'
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
+const areSameTravelLists = (prev: Travel[], next: Travel[]) => {
+  if (prev === next) return true
+  if (prev.length !== next.length) return false
+  for (let i = 0; i < prev.length; i += 1) {
+    if (String(prev[i]?.id ?? '') !== String(next[i]?.id ?? '')) return false
+  }
+  return true
+}
 
 
 export const TravelDetailsSidebarSection: React.FC<{
@@ -29,8 +37,11 @@ export const TravelDetailsSidebarSection: React.FC<{
   const styles = useTravelDetailsStyles()
   const isWeb = Platform.OS === 'web'
   const progressiveEnabled = !isWeb || canRenderHeavy
+  const hasValidTravelId = Number.isFinite(Number(travel.id)) && Number(travel.id) > 0
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([])
-  const handleTravelsLoaded = useCallback((travels: Travel[]) => setRelatedTravels(travels), [])
+  const handleTravelsLoaded = useCallback((travels: Travel[]) => {
+    setRelatedTravels((prev) => (areSameTravelLists(prev, travels) ? prev : travels))
+  }, [])
 
   // Unified progressive loading for both platforms
   const { setElementRef: setNearRef } = useProgressiveLoad({
@@ -72,7 +83,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
         <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
-          {travel.travelAddress && (
+          {hasValidTravelId && (
             <View testID="travel-details-near-loaded">
               <NearTravelList
                 travel={travel}

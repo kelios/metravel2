@@ -51,7 +51,7 @@ function useHeroMediaModel(
     null,
   )
 
-  const firstRaw = travel?.travel_image_thumb_url || travel?.gallery?.[0]
+  const firstRaw = travel?.gallery?.[0] || travel?.travel_image_thumb_url
   const firstImg = useMemo(() => {
     if (!firstRaw) return null
     if (typeof firstRaw === 'string') return { url: firstRaw }
@@ -178,9 +178,9 @@ function useHeroMediaModel(
       return
     }
     if (sliderImageReady) {
-      setIsOverlayFading(true)
-      const t = setTimeout(() => setOverlayUnmounted(true), 340)
-      return () => clearTimeout(t)
+      setIsOverlayFading(false)
+      setOverlayUnmounted(true)
+      return
     }
     setIsOverlayFading(false)
     setOverlayUnmounted(false)

@@ -330,13 +330,21 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, []);
 
   const applyOffset = useCallback((offset: number, withTransition: boolean, durationMs = 280) => {
-    visualOffsetRef.current = offset;
+    const roundedOffset = Math.round(offset);
+    const previousRoundedOffset = Math.round(visualOffsetRef.current);
     const trackNode = getDomNode(trackRef.current);
-    if (!trackNode) return;
+    if (!trackNode) {
+      visualOffsetRef.current = offset;
+      return;
+    }
+    if (!withTransition && previousRoundedOffset === roundedOffset) {
+      return;
+    }
+    visualOffsetRef.current = offset;
     trackNode.style.transition = withTransition
       ? `transform ${durationMs}ms cubic-bezier(0.22, 1, 0.36, 1)`
       : 'none';
-    trackNode.style.transform = `translate3d(${Math.round(offset)}px, 0, 0)`;
+    trackNode.style.transform = `translate3d(${roundedOffset}px, 0, 0)`;
   }, [getDomNode]);
 
   const snapOffsetForIndex = useCallback((idx: number, widthOverride?: number) => {

@@ -104,7 +104,7 @@ const Slide = memo(function Slide({
   const isFirstSlide = index === 0;
   const shouldEagerLoad =
     Platform.OS === 'web'
-      ? isFirstSlide
+      ? isFirstSlide && !firstImagePreloaded
       : isFirstSlide || isActive || !!preloadPriority;
   const mainPriority =
     Platform.OS === 'web'

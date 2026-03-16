@@ -456,6 +456,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     return [] as Array<{ coords: [number, number][]; color?: string }>;
   }, [showRouteLine, routeLineCoords, routeLinesProp]);
 
+  const hasRenderableMapData = safeTravelData.length > 0 || normalizedRouteLines.length > 0;
+
   // Highlight point when requested
   useEffect(() => {
     if (!highlightedPoint || !mapRef.current) return;
@@ -716,7 +718,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   }
 
   // No data state
-  if (safeTravelData.length === 0) {
+  if (!hasRenderableMapData) {
     return (
       <View style={[styles.mapContainer, mapContainerStyle, styles.emptyContainer]}>
         <ActivityIndicator size="small" color={colors.textMuted} />

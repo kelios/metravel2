@@ -109,11 +109,43 @@ export default function RootLayout() {
 }
 
 function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
-  const [isReady, setIsReady] = useState(true);
+  const [isReady, setIsReady] = useState(() => !isWeb || !isMounted || !isTravelRoute);
 
   useEffect(() => {
-    if (!isWeb || !isMounted) return;
-    setIsReady(true);
+    if (!isWeb) {
+      setIsReady(true);
+      return;
+    }
+    if (!isMounted) return;
+    if (!isTravelRoute) {
+      setIsReady(true);
+      return;
+    }
+
+    setIsReady(false);
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const reveal = () => {
+      setIsReady(true);
+      window.removeEventListener('pointerdown', reveal);
+      window.removeEventListener('touchstart', reveal);
+      window.removeEventListener('keydown', reveal);
+      window.removeEventListener('scroll', reveal);
+    };
+
+    window.addEventListener('pointerdown', reveal, { passive: true, once: true });
+    window.addEventListener('touchstart', reveal, { passive: true, once: true });
+    window.addEventListener('keydown', reveal, { passive: true, once: true });
+    window.addEventListener('scroll', reveal, { passive: true, once: true });
+    timeoutId = setTimeout(reveal, 900);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      window.removeEventListener('pointerdown', reveal);
+      window.removeEventListener('touchstart', reveal);
+      window.removeEventListener('keydown', reveal);
+      window.removeEventListener('scroll', reveal);
+    };
   }, [isMounted, isTravelRoute]);
 
   return isReady;

@@ -162,11 +162,10 @@ function TravelListItem({
         return '';
     }, [userName, travel]);
 
-    const _authorNameDisplay = useMemo(() => {
+    const authorDisplayName = useMemo(() => {
         const v = (authorName || '').trim();
-        // Если в данных приходит плейсхолдер вроде "....." — показываем нормальный fallback
-        if (!v) return 'Аноним';
-        if (/^[.\s\u00B7\u2022_-]{2,}$/.test(v)) return 'Аноним';
+        if (!v) return '';
+        if (/^[.\s\u00B7\u2022_-]+$/.test(v)) return '';
         return v;
     }, [authorName]);
 
@@ -561,82 +560,112 @@ const leftTopSlot = canEdit ? (
 ) : null;
 
 // Проверяем, есть ли какая-либо информация для отображения в контентной области
+const hasAuthorMeta = !hideAuthor && authorDisplayName !== '';
+
 const hasContentInfo = useMemo(() => {
   const hasRating = travel.rating != null && travel.rating > 0;
   return (
-    (!hideAuthor && !!authorName) ||
+    hasAuthorMeta ||
     countries.length > 0 ||
     views > 0 ||
     hasRating ||
     popularityFlags.isPopular ||
     popularityFlags.isNew
   );
-}, [hideAuthor, authorName, countries.length, popularityFlags.isPopular, popularityFlags.isNew, views, travel.rating]);
+}, [countries.length, hasAuthorMeta, popularityFlags.isPopular, popularityFlags.isNew, views, travel.rating]);
+
+const metaInfoTopRowChildren = useMemo(() => {
+  const children: React.ReactNode[] = [];
+
+  if (countries.length > 0) {
+    children.push(
+      <TravelListItemCountriesList
+        key="countries"
+        countries={countries}
+        styles={styles}
+        iconColor={tagIconColor}
+      />
+    );
+  }
+
+  if (hasAuthorMeta) {
+    if (countries.length > 0) {
+      children.push(<View key="author-dot" style={styles.metaDot} />);
+    }
+
+    children.push(
+      Platform.OS === 'web' ? (
+        <View
+          key="author"
+          {...({
+            ...(authorUserId
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  'aria-label': `Открыть профиль автора ${authorDisplayName}`,
+                }
+              : {}),
+          } as any)}
+          onClick={handleAuthorPress}
+          style={{ flexShrink: 1, minWidth: 0 }}
+        >
+          <Text style={styles.metaTxt} numberOfLines={1}>
+            {authorDisplayName}
+          </Text>
+        </View>
+      ) : (
+        <Pressable
+          key="author"
+          onPress={handleAuthorPress}
+          style={({ pressed }) => [{ flexShrink: 1, minWidth: 0 }, pressed && authorUserId ? { opacity: 0.85 } : null]}
+          accessibilityRole="button"
+          accessibilityLabel={`Автор: ${authorDisplayName}`}
+        >
+          <Text style={styles.metaTxt} numberOfLines={1}>
+            {authorDisplayName}
+          </Text>
+        </Pressable>
+      )
+    );
+  }
+
+  if (views > 0) {
+    if (countries.length > 0 || hasAuthorMeta) {
+      children.push(<View key="views-dot" style={styles.metaDot} />);
+    }
+
+    children.push(
+      <View key="views" style={styles.metaBoxViews} testID="views-meta">
+        <Feather
+          name="eye"
+          size={Platform.select({ default: 10, web: 11 })}
+          color={colors.textMuted}
+        />
+        <Text style={styles.metaTxtViews} numberOfLines={1}>
+          {viewsFormatted}
+        </Text>
+      </View>
+    );
+  }
+
+  return children;
+}, [
+  authorDisplayName,
+  authorUserId,
+  colors.textMuted,
+  countries,
+  handleAuthorPress,
+  hasAuthorMeta,
+  styles,
+  tagIconColor,
+  views,
+  viewsFormatted,
+]);
 
 const contentSlotWithoutTitle = hasContentInfo ? (
   <View style={styles.metaRow}>
     <View style={styles.metaInfoTopRow}>
-      {countries.length > 0 && (
-        <>
-          <TravelListItemCountriesList
-            countries={countries}
-            styles={styles}
-            iconColor={tagIconColor}
-          />
-        </>
-      )}
-
-      {!hideAuthor && authorName && authorName.trim() !== '' && (
-        <>
-          {countries.length > 0 && <View style={styles.metaDot} />}
-          {Platform.OS === 'web' ? (
-            <View
-              {...({
-                ...(authorUserId
-                  ? {
-                      role: 'button',
-                      tabIndex: 0,
-                      'aria-label': `Открыть профиль автора ${authorName}`,
-                    }
-                  : {}),
-              } as any)}
-              onClick={handleAuthorPress}
-              style={{ flexShrink: 1, minWidth: 0 }}
-            >
-              <Text style={styles.metaTxt} numberOfLines={1}>
-                {authorName}
-              </Text>
-            </View>
-          ) : (
-            <Pressable
-              onPress={handleAuthorPress}
-              style={({ pressed }) => [{ flexShrink: 1, minWidth: 0 }, pressed && authorUserId ? { opacity: 0.85 } : null]}
-              accessibilityRole="button"
-              accessibilityLabel={`Автор: ${authorName}`}
-            >
-              <Text style={styles.metaTxt} numberOfLines={1}>
-                {authorName}
-              </Text>
-            </Pressable>
-          )}
-        </>
-      )}
-
-      {views > 0 && (
-        <>
-          {(countries.length > 0 || (!hideAuthor && authorName)) && <View style={styles.metaDot} />}
-          <View style={styles.metaBoxViews} testID="views-meta">
-            <Feather
-              name="eye"
-              size={Platform.select({ default: 10, web: 11 })}
-              color={colors.textMuted}
-            />
-            <Text style={styles.metaTxtViews} numberOfLines={1}>
-              {viewsFormatted}
-            </Text>
-          </View>
-        </>
-      )}
+      {metaInfoTopRowChildren}
     </View>
 
     <View style={styles.metaBadgesRow}>
@@ -648,19 +677,19 @@ const contentSlotWithoutTitle = hasContentInfo ? (
       )}
       {popularityFlags.isPopular && (
         <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-          <Feather 
-            name="trending-up" 
-            size={Platform.select({ default: 9, web: 10 })} 
-            color={Platform.OS === 'web' ? 'rgb(180, 83, 9)' : colors.accent} 
+          <Feather
+            name="trending-up"
+            size={Platform.select({ default: 9, web: 10 })}
+            color={Platform.OS === 'web' ? 'rgb(180, 83, 9)' : colors.accent}
           />
         </View>
       )}
       {popularityFlags.isNew && (
         <View style={[styles.statusBadge, styles.statusBadgeNew]}>
-          <Feather 
-            name="star" 
-            size={Platform.select({ default: 9, web: 10 })} 
-            color={Platform.OS === 'web' ? 'rgb(22, 163, 74)' : colors.success} 
+          <Feather
+            name="star"
+            size={Platform.select({ default: 9, web: 10 })}
+            color={Platform.OS === 'web' ? 'rgb(22, 163, 74)' : colors.success}
           />
         </View>
       )}
@@ -689,8 +718,8 @@ const unifiedCard = (
       selectable && isSelected && styles.selected,
     ]}
     imageHeight={TRAVEL_CARD_IMAGE_HEIGHT}
-    contentPosition="aboveMedia"
-    insetMedia={true}
+    contentPosition="belowMedia"
+    insetMedia={false}
     leftTopSlot={leftTopSlot}
     rightTopSlot={selectable ? null : rightTopSlot}
     containerOverlaySlot={selectableOverlay}

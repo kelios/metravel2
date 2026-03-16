@@ -180,6 +180,10 @@ function UnifiedTravelCard({
   const cardImageCacheKey = useMemo(() => {
     return optimizedImageUrl ? String(optimizedImageUrl).trim() : '';
   }, [optimizedImageUrl]);
+  const isCardImageWarm = useMemo(() => {
+    if (!cardImageCacheKey) return false;
+    return loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey);
+  }, [cardImageCacheKey]);
   const [imageFailed, setImageFailed] = useState(false);
   const handleImageLoad = useCallback(() => {
     if (cardImageCacheKey) {
@@ -564,7 +568,7 @@ function UnifiedTravelCard({
             loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
             priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
             prefetch={mediaProps?.prefetch ?? false}
-            showImmediately={mediaProps?.showImmediately ?? false}
+            showImmediately={mediaProps?.showImmediately ?? isCardImageWarm}
             onLoad={handleImageLoad}
             onError={handleImageError}
           />

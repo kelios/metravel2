@@ -84,7 +84,7 @@ describe('useTravelHeroState', () => {
     jest.useRealTimers()
   })
 
-  it('uses only gallery images in the web hero slider when gallery exists', () => {
+  it('uses the first gallery image as the initial web hero media when gallery exists', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 42,
@@ -100,7 +100,7 @@ describe('useTravelHeroState', () => {
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
-    expect(result.current.firstImg?.url).toBe('https://example.com/cover.jpg?updated=1')
+    expect(result.current.firstImg?.url).toBe('https://example.com/gallery-1.jpg?size=sm')
     expect(result.current.galleryImages[0]?.url).toBe('https://example.com/gallery-1.jpg?size=sm')
     expect(result.current.heroSliderImages).toHaveLength(2)
     expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/gallery-1.jpg?size=sm')
@@ -123,6 +123,7 @@ describe('useTravelHeroState', () => {
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
+    expect(result.current.firstImg?.url).toBe('https://example.com/cover.jpg?size=lg')
     expect(result.current.heroSliderImages).toHaveLength(2)
     expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?size=lg')
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')

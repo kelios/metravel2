@@ -116,4 +116,25 @@ describe('TravelMap (web)', () => {
     const loaderValue = useLeafletLoader.mock.results[0]?.value;
     expect(loaderValue?.RL?.useMap).toHaveBeenCalled();
   });
+
+  it('renders map when there are no points but there is a route line', () => {
+    const { getByTestId } = render(
+      <TravelMap
+        travelData={[]}
+        showRouteLine
+        routeLines={[
+          {
+            coords: [
+              [51.72829, 10.260445],
+              [51.745633, 11.031075],
+            ],
+          },
+        ]}
+        compact
+        height={400}
+      />
+    );
+
+    expect(getByTestId('travel-map')).toBeTruthy();
+  });
 });
