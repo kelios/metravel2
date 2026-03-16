@@ -8,6 +8,20 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn(async () => true),
 }));
 
+jest.mock('@/components/ui/UnifiedTravelCard', () => ({
+  __esModule: true,
+  default: ({ contentSlot, containerOverlaySlot, testID }: any) => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return (
+      <View testID={testID ?? 'mock-unified-travel-card'}>
+        {containerOverlaySlot}
+        {contentSlot}
+      </View>
+    );
+  },
+}));
+
 describe('PointCard', () => {
   const mockPoint: ImportedPoint = {
     id: 1,

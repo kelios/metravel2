@@ -102,4 +102,31 @@ describe('fetchTravelsForMap where encoding', () => {
     expect(first.travelImageThumbUrl).toContain('/travel-image/123/conversions/file.webp');
     expect(first.imageUrl).toContain('/travel-image/123/conversions/file.webp');
   });
+
+  test('prefers full image for popup while preserving thumb separately', async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce(
+      createResponseMock({
+        data: [
+          {
+            id: 3,
+            coord: '53.9,27.56',
+            travel_image_url: '/travel-image/123/full.jpg',
+            travel_image_thumb_url: '/travel-image/123/conversions/file-thumb_200.webp',
+          },
+        ],
+      })
+    );
+
+    const result = await fetchTravelsForMap(
+      0,
+      20,
+      { lat: 53.9, lng: 27.56, radius: 60 },
+      { throwOnError: true }
+    );
+
+    const first = (result as any)[0];
+    expect(first).toBeTruthy();
+    expect(first.imageUrl).toContain('/travel-image/123/full.jpg');
+    expect(first.travelImageThumbUrl).toContain('/travel-image/123/conversions/file-thumb_200.webp');
+  });
 });

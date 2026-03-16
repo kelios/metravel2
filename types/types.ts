@@ -74,6 +74,7 @@ export type TravelCoords = {
     lat: string
     lng: string
     travelImageThumbUrl: string
+    imageUrl?: string
     urlTravel: string
     articleUrl?: string
 }

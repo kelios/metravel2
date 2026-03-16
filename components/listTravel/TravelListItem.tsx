@@ -673,6 +673,7 @@ const unifiedCard = (
     title={title}
     imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
     onPress={handlePress}
+    width={typeof cardWidth === 'number' ? cardWidth : undefined}
     mediaFit="contain"
     visualVariant={visualVariant === 'home-featured' ? 'featured' : 'default'}
     heroTitleOverlay={true}

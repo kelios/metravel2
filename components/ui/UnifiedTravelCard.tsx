@@ -159,18 +159,20 @@ function UnifiedTravelCard({
     const targetWidth =
       typeof width === 'number'
         ? width
-        : typeof window !== 'undefined'
-          ? Math.min(window.innerWidth || 360, 640)
-          : undefined;
+        : isFeatured
+          ? 480
+          : 320;
 
     return (
       optimizeImageUrl(imageUrl, {
         width: targetWidth,
         height: targetHeight,
+        quality: isFeatured ? 60 : 52,
+        format: 'webp',
         fit: mediaFit === 'contain' ? 'contain' : 'cover',
       }) ?? imageUrl
     );
-  }, [imageUrl, imageHeight, isWeb, mediaFit, width]);
+  }, [imageUrl, imageHeight, isFeatured, isWeb, mediaFit, width]);
   const cardImageCacheKey = useMemo(() => {
     return optimizedImageUrl ? String(optimizedImageUrl).trim() : '';
   }, [optimizedImageUrl]);
@@ -584,7 +586,7 @@ function UnifiedTravelCard({
               />
               {!imageLoaded && (
                 <ShimmerOverlay
-                  style={[StyleSheet.absoluteFill, styles.imageLoadingOverlay]}
+                  style={StyleSheet.absoluteFill}
                 />
               )}
             </>
@@ -598,9 +600,7 @@ function UnifiedTravelCard({
               {...(process.env.NODE_ENV === 'test'
                 ? {}
                 : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
-            >
-              <Feather name="image" size={32} color={colors.borderStrong} />
-            </View>
+            />
           )}
 
           {onMediaPress ? (

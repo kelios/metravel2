@@ -8,8 +8,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { parseCoordinateString } from '@/utils/coordinates';
 import MapIcon from './MapIcon';
-import CardActionPressable from '@/components/ui/CardActionPressable';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import PlaceListCard from '@/components/places/PlaceListCard';
 
 
 interface Props {
@@ -128,81 +127,27 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
     const categoryName = typeof place.categoryName === 'string'
       ? place.categoryName.split(',')[0].trim()
       : '';
-
-    const cardHeader = (
-      <View style={styles.cardHeader}>
-        <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
-        {place.rating > 0 ? (
-          <View style={styles.ratingBadge}>
-            <MapIcon name="star" size={14} color={colors.warning} />
-            <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
-          </View>
-        ) : null}
-      </View>
-    );
-
-    const cardInfo = (
-      <View style={styles.infoRow}>
-        <View style={styles.infoBadge}>
-          <MapIcon name="place" size={14} color={colors.primary} />
-          <Text style={styles.infoText}>{place.distanceText}</Text>
-        </View>
-        <View style={styles.infoBadge}>
-          <MapIcon
-            name={
-              transportMode === 'car'
-                ? 'directions-car'
-                : transportMode === 'bike'
-                ? 'directions-bike'
-                : 'directions-walk'
-            }
-            size={14}
-            color={colors.accent}
-          />
-          <Text style={styles.infoText}>{place.travelTimeText}</Text>
-        </View>
-      </View>
-    );
-
-    const cardCategory = categoryName ? (
-      <View style={styles.categoryBadge}>
-        <Text style={styles.categoryText} numberOfLines={1}>{categoryName}</Text>
-      </View>
-    ) : null;
+    const travelModeLabel = transportMode === 'car'
+      ? 'Авто'
+      : transportMode === 'bike'
+      ? 'Велосипед'
+      : 'Пешком';
+    const badges = [place.distanceText, `${travelModeLabel} ${place.travelTimeText}`];
 
     return (
-      <CardActionPressable
+      <PlaceListCard
         key={place.id ?? `place-${index}`}
-        style={({ pressed }) => [
+        title={place.address || 'Место'}
+        imageUrl={thumbUrl}
+        categoryLabel={categoryName || undefined}
+        badges={badges}
+        onCardPress={() => onPlaceSelect(place)}
+        imageHeight={100}
+        style={[
           styles.card,
           Platform.OS === 'web' && styles.cardWeb,
-          pressed && styles.cardPressed,
         ]}
-        onPress={() => onPlaceSelect(place)}
-        accessibilityLabel={place.address || 'Место'}
-      >
-        {thumbUrl ? (
-          <View style={styles.cardImage}>
-            <ImageCardMedia
-              src={thumbUrl}
-              alt={place.address || 'Место'}
-              fit="contain"
-              blurBackground
-              blurRadius={12}
-              loading="lazy"
-              priority="low"
-              style={StyleSheet.absoluteFillObject}
-            />
-          </View>
-        ) : (
-          <View style={[styles.cardImage, styles.cardImagePlaceholder]} />
-        )}
-        <View style={styles.cardBody}>
-          {cardHeader}
-          {cardInfo}
-          {cardCategory}
-        </View>
-      </CardActionPressable>
+      />
     );
   });
 
@@ -285,77 +230,5 @@ const getStyles = (colors: ThemedColors) =>
     },
     cardWeb: {
       width: '100%',
-    },
-    cardImage: {
-      width: '100%',
-      height: 100,
-      backgroundColor: colors.backgroundSecondary,
-    },
-    cardImagePlaceholder: {
-      height: 100,
-    },
-    cardBody: {
-      padding: 14,
-    },
-    cardPressed: {
-      opacity: 0.7,
-      transform: [{ scale: 0.98 }],
-    },
-    cardHeader: {
-      marginBottom: 10,
-    },
-    placeName: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 6,
-      lineHeight: 20,
-    },
-    ratingBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: colors.warningLight,
-      alignSelf: 'flex-start',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-    },
-    ratingText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 8,
-    },
-    infoBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: colors.backgroundSecondary,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-    },
-    infoText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    categoryBadge: {
-      backgroundColor: colors.primaryLight,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 8,
-      alignSelf: 'flex-start',
-    },
-    categoryText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.primaryText,
-      letterSpacing: 0.2,
     },
   });

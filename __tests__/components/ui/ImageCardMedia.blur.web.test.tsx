@@ -79,7 +79,6 @@ describe('ImageCardMedia blur background (web)', () => {
     })
 
     const blurLayers = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
       return node?.props?.['data-blur-backdrop'] === 'true'
     })
     const mainLayers = tree!.root.findAll((node: any) => node?.type === 'img')
@@ -87,8 +86,9 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(blurLayers.length).toBeGreaterThan(0)
     expect(mainLayers.length).toBeGreaterThan(0)
     expect(String(blurLayers[0].props.style?.filter || '')).toContain('saturate')
-    expect(blurLayers[0].props.style?.objectFit).toBe('cover')
-    expect(blurLayers[0].props.src).toBe(mainLayers[0].props.src)
+    expect(blurLayers[0].type).toBe('div')
+    expect(String(blurLayers[0].props.style?.backgroundImage || '')).toContain('photo.jpg')
+    expect(mainLayers[0].props.src).toContain('photo.jpg')
   })
 
   it('does not apply extra css blur when backdrop source is already server-blurred', () => {

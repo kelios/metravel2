@@ -57,6 +57,7 @@ describe('useTravelDetails', () => {
   afterEach(() => {
     // Some tests override Platform.OS; reset to avoid cross-test leaks.
     (Platform.OS as any) = originalPlatform;
+    jest.useRealTimers();
     // Restore window (tests may override it).
     // @ts-expect-error - test-only global
     (global as any).window = originalWindow;
@@ -101,7 +102,7 @@ describe('useTravelDetails', () => {
     // @ts-expect-error - test-only global
     (global as any).window = {
       __metravelTravelPreload: {
-        data: { id: 498, slug: 'awesome-trip', name: 'Trip' },
+        data: { id: 498, slug: 'awesome-trip', name: 'Trip', travelAddress: [] },
         slug: 'awesome-trip',
         isId: false,
       },
@@ -125,7 +126,7 @@ describe('useTravelDetails', () => {
     expect(result.current.isId).toBe(false);
     expect(result.current.slug).toBe('awesome-trip');
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.travel).toEqual({ id: 498, slug: 'awesome-trip', name: 'Trip' });
+    expect(result.current.travel).toEqual({ id: 498, slug: 'awesome-trip', name: 'Trip', travelAddress: [] });
 
     // Preload is consumed on first access to avoid stale data.
     // @ts-expect-error - test-only global
@@ -189,7 +190,7 @@ describe('useTravelDetails', () => {
     setTimeout(() => {
       // @ts-expect-error - test-only global
       (global as any).window.__metravelTravelPreload = {
-        data: { id: 503, slug: 'awesome-trip', name: 'Trip' },
+        data: { id: 503, slug: 'awesome-trip', name: 'Trip', travelAddress: [] },
         slug: 'awesome-trip',
         isId: false,
       };
@@ -201,7 +202,7 @@ describe('useTravelDetails', () => {
     });
 
     const data = await queryPromise;
-    expect(data).toEqual({ id: 503, slug: 'awesome-trip', name: 'Trip' });
+    expect(data).toEqual({ id: 503, slug: 'awesome-trip', name: 'Trip', travelAddress: [] });
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
 
     jest.runOnlyPendingTimers();

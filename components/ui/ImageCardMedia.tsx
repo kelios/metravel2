@@ -121,6 +121,7 @@ type WebBlurBackdropProps = {
   width: number;
   height: number;
   borderRadius: number;
+  useCssBackdrop?: boolean;
 };
 
 const WebBlurBackdrop = memo(function WebBlurBackdrop({
@@ -129,8 +130,43 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
   width,
   height,
   borderRadius,
+  useCssBackdrop = false,
 }: WebBlurBackdropProps) {
   const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
+
+  if (useCssBackdrop) {
+    return (
+      <div
+        aria-hidden="true"
+        data-blur-backdrop="true"
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          width: '100%',
+          height: '100%',
+          minWidth: '100%',
+          minHeight: '100%',
+          maxWidth: 'none',
+          maxHeight: 'none',
+          display: 'block',
+          zIndex: 0,
+          borderRadius,
+          transform: 'translate(-50%, -50%) scale(1.12)',
+          backgroundImage: `url("${src.replace(/"/g, '\\"')}")`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          filter: hasPreBlurredSource ? 'saturate(1.08)' : 'blur(24px) saturate(1.15)',
+          opacity: 1,
+          contain: 'paint',
+          willChange: 'transform',
+          backfaceVisibility: 'hidden',
+          pointerEvents: 'none',
+        }}
+      />
+    );
+  }
 
   return (
     <img
@@ -504,6 +540,7 @@ function ImageCardMedia({
               width={typeof width === 'number' ? width : 400}
               height={typeof height === 'number' ? height : 300}
               borderRadius={resolvedBorderRadius}
+              useCssBackdrop={allowCriticalWebBlur && (loading === 'eager' || priority === 'high')}
             />
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (

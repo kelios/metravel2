@@ -557,6 +557,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           isFirst={index === 0}
           isMobile={false}
           viewportWidth={width}
+          cardWidth={width <= 640 ? Math.max(260, Math.min(320, width * 0.86)) : undefined}
         />
       </View>
     ), [keyExtractor, styles.travelItem, styles.travelItemOdd, styles.webGridItem, width]);

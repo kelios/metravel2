@@ -40,6 +40,7 @@ export interface LegacyMapPoint {
   coord: string;
   address: string;
   travelImageThumbUrl?: string;
+  imageUrl?: string;
   categoryName?: string | { name?: string } | Array<string | { name?: string }>;
   category?: string | number | Array<string | { name?: string }>;
   categoryId?: string | number;

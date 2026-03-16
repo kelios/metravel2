@@ -280,10 +280,10 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
   const View = RN.View
   const Pressable = RN.Pressable
   const MockComponent = (props: any) => {
-    // Expose media click separately (matches new onMediaPress behavior)
     return (
       <View testID="unified-travel-card">
         <Pressable testID="unified-travel-card-media" onPress={props.onMediaPress} />
+        {props.contentSlot}
       </View>
     )
   }

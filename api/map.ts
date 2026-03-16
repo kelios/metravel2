@@ -146,8 +146,17 @@ const normalizeTravelCoordsItem = (raw: unknown) => {
     ''
   );
 
+  const travelImageUrl = normalizeImageUrl(
+    t.travelImageUrl ?? t.travel_image_url ?? t.imageUrl ?? t.image_url ?? t.image
+  );
+
   const travelImageThumbUrl = normalizeImageUrl(
-    t.travelImageThumbUrl ?? t.travel_image_thumb_url ?? t.imageUrl ?? t.image_url ?? t.image ?? t.thumb
+    t.travelImageThumbUrl ??
+      t.travel_image_thumb_url ??
+      t.travelImageThumbSmallUrl ??
+      t.travel_image_thumb_small_url ??
+      t.thumb ??
+      travelImageUrl
   );
 
   const urlTravel = normalizeString(t.urlTravel ?? t.url_travel ?? t.url, '');
@@ -161,7 +170,7 @@ const normalizeTravelCoordsItem = (raw: unknown) => {
     lat,
     lng,
     travelImageThumbUrl,
-    imageUrl: travelImageThumbUrl,
+    imageUrl: travelImageUrl || travelImageThumbUrl,
     urlTravel,
     articleUrl,
   };

@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View, 
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 
@@ -245,6 +246,12 @@ const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: nu
   default: { gap: 12, btnPadV: 9, btnPadH: 12, radius: 12, thumbSize: 88 },
 };
 
+const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
+  narrow: 272,
+  compact: 320,
+  default: 420,
+};
+
 const PlacePopupCard: React.FC<Props> = ({
   title,
   imageUrl,
@@ -289,7 +296,11 @@ const PlacePopupCard: React.FC<Props> = ({
   const isNarrow = bp === 'narrow';
   const _fs = FONT_SIZES[bp];
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
-  const maxPopupWidth = Math.min(width, Math.max(320, viewportWidth - (isNarrow ? 28 : 56)));
+  const viewportGutter = bp === 'narrow' ? 28 : bp === 'compact' ? 40 : 56;
+  const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
+  const maxPopupWidth = Math.min(width, POPUP_MAX_WIDTH_BY_BREAKPOINT[bp], safeViewportWidth);
+  const heroWidth = maxPopupWidth;
+  const heroHeight = Math.max(1, Math.round(heroWidth / IMAGE_ASPECT[bp]));
 
   const styles = useMemo(() => getStyles(colors, bp), [colors, bp]);
 
@@ -299,6 +310,16 @@ const PlacePopupCard: React.FC<Props> = ({
     [styles],
   );
 
+  const handleCardPress = useCallback(() => {
+    if (typeof onOpenArticle === 'function') {
+      onOpenArticle();
+      return;
+    }
+    if (imageUrl) {
+      setFullscreenVisible(true);
+    }
+  }, [imageUrl, onOpenArticle]);
+
   const handleOpenFullscreen = useCallback(() => {
     if (imageUrl) setFullscreenVisible(true);
   }, [imageUrl]);
@@ -307,35 +328,8 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, []);
 
-  return (
-    <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
-      {/* Hero image — only when photo exists */}
-      {imageUrl ? (
-        <View style={styles.heroWrap}>
-          <CardActionPressable
-            accessibilityLabel="Открыть фото на полный экран"
-            onPress={handleOpenFullscreen}
-            title={POPUP_TOOLTIPS.openPhoto}
-            style={styles.heroTouchable as any}
-          >
-            <ImageCardMedia
-              src={imageUrl}
-              alt={title || 'Point image'}
-              fit="contain"
-              blurBackground
-              blurRadius={12}
-              loading="lazy"
-              priority="low"
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.expandIcon}>
-              <Feather name="maximize-2" size={14} color={colors.textOnDark} />
-            </View>
-          </CardActionPressable>
-        </View>
-      ) : null}
-
-      {/* Info section */}
+  const contentSlot = useMemo(() => (
+    <View style={styles.content}>
       <View style={styles.infoSection}>
         <Text style={styles.titleText} numberOfLines={2}>
           {title}
@@ -343,11 +337,9 @@ const PlacePopupCard: React.FC<Props> = ({
 
         <View style={styles.metaRow}>
           {!!categoryLabel && (
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryText} numberOfLines={1}>
-                {categoryLabel}
-              </Text>
-            </View>
+            <Text style={styles.categoryText} numberOfLines={1}>
+              {categoryLabel}
+            </Text>
           )}
 
           {(isDrivingLoading || hasDrivingInfo) && (
@@ -365,7 +357,6 @@ const PlacePopupCard: React.FC<Props> = ({
         </View>
       </View>
 
-      {/* Coordinates row */}
       {hasCoord && (
         <CardActionPressable
           accessibilityLabel="Скопировать координаты"
@@ -378,9 +369,7 @@ const PlacePopupCard: React.FC<Props> = ({
         </CardActionPressable>
       )}
 
-      {/* Compact icon action row */}
       <View style={styles.actionsRow}>
-
         {hasCoord && onOpenGoogleMaps && (
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
@@ -462,6 +451,53 @@ const PlacePopupCard: React.FC<Props> = ({
           <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
       )}
+    </View>
+  ), [
+    actionBtnStyle,
+    addDisabled,
+    categoryLabel,
+    colors.primary,
+    colors.textMuted,
+    compactLabel,
+    coord,
+    drivingText,
+    hasArticle,
+    hasCoord,
+    hasDrivingInfo,
+    isAdding,
+    isDrivingLoading,
+    onAddPoint,
+    onBuildRoute,
+    onCopyCoord,
+    onOpenArticle,
+    onOpenGoogleMaps,
+    onOpenOrganicMaps,
+    onShareTelegram,
+    styles,
+    title,
+  ]);
+
+  return (
+    <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
+      <UnifiedTravelCard
+        title={title}
+        imageUrl={imageUrl}
+        onPress={handleCardPress}
+        onMediaPress={imageUrl ? handleOpenFullscreen : undefined}
+        imageHeight={imageUrl ? heroHeight : 0}
+        width={maxPopupWidth}
+        mediaFit="contain"
+        webHoverScale={false}
+        contentSlot={contentSlot}
+        contentContainerStyle={styles.contentContainer}
+        mediaProps={{
+          blurBackground: !!imageUrl,
+          allowCriticalWebBlur: Platform.OS === 'web',
+          blurRadius: 16,
+          loading: 'lazy',
+          priority: 'low',
+        }}
+      />
 
       {imageUrl && (
         <FullscreenImageViewer
@@ -488,35 +524,19 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
   return StyleSheet.create({
     container: {
       width: '100%',
+    },
+    card: {
+      width: '100%',
+    },
+    contentContainer: {
+      paddingHorizontal: bp === 'narrow' ? 10 : 12,
+      paddingVertical: bp === 'narrow' ? 8 : 10,
+    },
+    content: {
       gap: sp.gap,
-    },
-    heroWrap: {
-      width: '100%',
-      aspectRatio: IMAGE_ASPECT[bp],
-      borderRadius: sp.radius,
-      overflow: 'hidden',
-      backgroundColor: colors.backgroundSecondary ?? colors.surface,
-    },
-    heroTouchable: {
-      width: '100%',
-      height: '100%',
-      ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
-    },
-    expandIcon: {
-      position: 'absolute',
-      bottom: 8,
-      right: 8,
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 2,
     },
     infoSection: {
       gap: 6,
-      paddingHorizontal: 4,
     },
     metaRow: {
       flexDirection: 'row',
@@ -537,9 +557,6 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
             overflow: 'hidden',
           } as any)
         : null),
-    },
-    categoryChip: {
-      alignSelf: 'flex-start',
     },
     categoryText: {
       fontSize: fs.small,
@@ -564,6 +581,8 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     coordText: {
       fontSize: fs.small,
       color: colors.textMuted,
+      flex: 1,
+      minWidth: 0,
       fontFamily:
         Platform.OS === 'web'
           ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)

@@ -44,6 +44,8 @@ type Props = {
   imageHeight?: number;
   testID?: string;
   style?: any;
+  showActionRow?: boolean;
+  showAddButton?: boolean;
 };
 
 const PlaceListCard: React.FC<Props> = ({
@@ -66,6 +68,8 @@ const PlaceListCard: React.FC<Props> = ({
   imageHeight = 140,
   testID,
   style,
+  showActionRow = true,
+  showAddButton = true,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -74,6 +78,7 @@ const PlaceListCard: React.FC<Props> = ({
   const showBadges = badges.length > 0;
   const hasMapActions = mapActions.length > 0;
   const hasInlineActions = inlineActions.length > 0;
+  const hasActionRow = showActionRow && ((hasCoord && !!onCopyCoord) || (hasCoord && !!onShare) || hasMapActions || hasInlineActions);
 
   return (
     <UnifiedTravelCard
@@ -86,12 +91,9 @@ const PlaceListCard: React.FC<Props> = ({
       width={width}
       testID={testID}
       style={style}
+      heroTitleOverlay={true}
       contentSlot={
         <View style={styles.content}>
-          <Text numberOfLines={2} style={styles.titleText}>
-            {title}
-          </Text>
-
           <View style={styles.metaRow}>
             {!!categoryLabel && (
               <Text style={styles.categoryText} numberOfLines={1}>
@@ -103,56 +105,57 @@ const PlaceListCard: React.FC<Props> = ({
             ))}
           </View>
 
-          {/* Compact icon action row */}
-          <View style={styles.actionsRow}>
-            {hasCoord && onCopyCoord && (
-              <CardActionPressable
-                accessibilityLabel="Скопировать координаты"
-                onPress={() => void onCopyCoord()}
-                title={coord || 'Скопировать координаты'}
-                style={styles.iconBtn}
-              >
-                <Feather name="copy" size={14} color={colors.textMuted} />
-              </CardActionPressable>
-            )}
+          {hasActionRow ? (
+            <View style={styles.actionsRow}>
+              {hasCoord && onCopyCoord && (
+                <CardActionPressable
+                  accessibilityLabel="Скопировать координаты"
+                  onPress={() => void onCopyCoord()}
+                  title={coord || 'Скопировать координаты'}
+                  style={styles.iconBtn}
+                >
+                  <Feather name="copy" size={14} color={colors.textMuted} />
+                </CardActionPressable>
+              )}
 
-            {hasCoord && onShare && (
-              <CardActionPressable
-                accessibilityLabel="Поделиться в Telegram"
-                onPress={() => void onShare()}
-                title="Телеграм"
-                style={styles.iconBtn}
-              >
-                <Feather name="send" size={14} color={colors.textMuted} />
-              </CardActionPressable>
-            )}
+              {hasCoord && onShare && (
+                <CardActionPressable
+                  accessibilityLabel="Поделиться в Telegram"
+                  onPress={() => void onShare()}
+                  title="Телеграм"
+                  style={styles.iconBtn}
+                >
+                  <Feather name="send" size={14} color={colors.textMuted} />
+                </CardActionPressable>
+              )}
 
-            {hasMapActions && mapActions.map((action) => (
-              <CardActionPressable
-                key={action.key}
-                accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                onPress={action.onPress}
-                title={action.title ?? action.label}
-                style={styles.iconBtn}
-              >
-                <Feather name={action.icon} size={14} color={colors.textMuted} />
-              </CardActionPressable>
-            ))}
+              {hasMapActions && mapActions.map((action) => (
+                <CardActionPressable
+                  key={action.key}
+                  accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                  onPress={action.onPress}
+                  title={action.title ?? action.label}
+                  style={styles.iconBtn}
+                >
+                  <Feather name={action.icon} size={14} color={colors.textMuted} />
+                </CardActionPressable>
+              ))}
 
-            {hasInlineActions && inlineActions.map((action) => (
-              <CardActionPressable
-                key={action.key}
-                accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                onPress={action.onPress}
-                title={action.title ?? action.label}
-                style={styles.iconBtn}
-              >
-                <Feather name={action.icon} size={14} color={colors.textMuted} />
-              </CardActionPressable>
-            ))}
-          </View>
+              {hasInlineActions && inlineActions.map((action) => (
+                <CardActionPressable
+                  key={action.key}
+                  accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                  onPress={action.onPress}
+                  title={action.title ?? action.label}
+                  style={styles.iconBtn}
+                >
+                  <Feather name={action.icon} size={14} color={colors.textMuted} />
+                </CardActionPressable>
+              ))}
+            </View>
+          ) : null}
 
-          {onAddPoint && (
+          {showAddButton && onAddPoint && (
             <CardActionPressable
               onPress={() => void onAddPoint()}
               disabled={addDisabled || isAdding}
@@ -193,16 +196,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create({
     contentContainer: {
       paddingHorizontal: 12,
-      paddingVertical: 10,
+      paddingTop: 10,
+      paddingBottom: 12,
     },
     content: {
       gap: 6,
-    },
-    titleText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-      lineHeight: 18,
     },
     metaRow: {
       flexDirection: 'row',
@@ -221,14 +219,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     actionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 4,
+      gap: 6,
     },
     iconBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+      width: 34,
+      height: 34,
+      borderRadius: 10,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       ...Platform.select({
         web: {

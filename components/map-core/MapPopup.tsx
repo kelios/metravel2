@@ -296,7 +296,7 @@ const MapPopup: React.FC<MapPopupConfig> = ({
   return (
     <PlacePopupCard
       title={point.address || ''}
-      imageUrl={point.travelImageThumbUrl}
+      imageUrl={point.imageUrl || point.travelImageThumbUrl}
       categoryLabel={categoryLabel}
       coord={coord}
       drivingDistanceMeters={drivingDistanceMeters}

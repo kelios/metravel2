@@ -24,6 +24,17 @@ export interface UseTravelDetailsReturn {
   isMissingParam: boolean;
 }
 
+type TravelPreloadWindow = Window & typeof globalThis & {
+  __metravelTravelPreload?: {
+    data?: unknown;
+    slug?: string;
+    isId?: boolean;
+  };
+  __metravelTravelPreloadScriptLoaded?: boolean;
+  __metravelTravelPreloadPending?: boolean;
+  __metravelTravelPreloadPromise?: Promise<unknown>;
+};
+
 function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is Travel {
   if (!travel) return false;
 
@@ -31,8 +42,13 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
     (typeof travel.id === 'number' && Number.isFinite(travel.id) && travel.id > 0) ||
     (typeof travel.slug === 'string' && travel.slug.trim().length > 0);
   const hasName = typeof travel.name === 'string' && travel.name.trim().length > 0;
+  const hasRenderableDetailContract =
+    (typeof travel.description === 'string' && travel.description.trim().length > 0) ||
+    Array.isArray(travel.gallery) ||
+    Array.isArray(travel.travelAddress) ||
+    Array.isArray(travel.coordsMeTravel);
 
-  return hasIdentity && hasName;
+  return hasIdentity && hasName && hasRenderableDetailContract;
 }
 
 /**
@@ -42,13 +58,14 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
  */
 function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Travel | undefined {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
-  const preload = (window as unknown).__metravelTravelPreload;
+  const win = window as TravelPreloadWindow;
+  const preload = win.__metravelTravelPreload;
   if (!preload?.data) return undefined;
   const matches = isId
     ? preload.isId && String(preload.slug) === String(idNum)
     : !preload.isId && preload.slug === slug;
   if (!matches) return undefined;
-  delete (window as unknown).__metravelTravelPreload;
+  delete win.__metravelTravelPreload;
   try {
     const normalized = normalizeTravelItem(preload.data);
     return hasSufficientPreloadedTravelData(normalized) ? normalized : undefined;
@@ -59,20 +76,20 @@ function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Tra
 
 async function waitForTravelPreload(slug: string, isId: boolean, idNum: number): Promise<Travel | undefined> {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+  const win = window as TravelPreloadWindow;
 
   const immediate = consumePreloadedTravel(slug, isId, idNum);
   if (immediate) return immediate;
 
-  const scriptLoaded = Boolean((window as unknown).__metravelTravelPreloadScriptLoaded);
+  const scriptLoaded = Boolean(win.__metravelTravelPreloadScriptLoaded);
   if (scriptLoaded) {
     const bootstrapDeadline = Date.now() + 350;
     while (Date.now() < bootstrapDeadline) {
       const retry = consumePreloadedTravel(slug, isId, idNum);
       if (retry) return retry;
 
-      const pendingBootstrap = Boolean((window as unknown).__metravelTravelPreloadPending);
-      const bootstrapPromise: Promise<unknown> | undefined =
-        (window as unknown).__metravelTravelPreloadPromise;
+      const pendingBootstrap = Boolean(win.__metravelTravelPreloadPending);
+      const bootstrapPromise = win.__metravelTravelPreloadPromise;
       if (pendingBootstrap || (bootstrapPromise && typeof bootstrapPromise.then === 'function')) {
         break;
       }
@@ -81,8 +98,8 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
     }
   }
 
-  const pending = Boolean((window as unknown).__metravelTravelPreloadPending);
-  const promise: Promise<unknown> | undefined = (window as unknown).__metravelTravelPreloadPromise;
+  const pending = Boolean(win.__metravelTravelPreloadPending);
+  const promise = win.__metravelTravelPreloadPromise;
   if (!pending && !promise) return undefined;
 
   const timeoutMs = 2500;
@@ -104,7 +121,7 @@ async function waitForTravelPreload(slug: string, isId: boolean, idNum: number):
     await new Promise((resolve) => setTimeout(resolve, 50));
     const retry = consumePreloadedTravel(slug, isId, idNum);
     if (retry) return retry;
-    if (!(window as unknown).__metravelTravelPreloadPending) break;
+    if (!win.__metravelTravelPreloadPending) break;
   }
 
   return consumePreloadedTravel(slug, isId, idNum);
@@ -135,13 +152,15 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     () => consumePreloadedTravel(normalizedSlug, isId, idNum),
     [normalizedSlug, isId, idNum]
   );
+  const shouldRefetchInAutomation = isWebAutomation && !initialPreloadedTravel;
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
     queryKey: queryKeys.travel(cacheKey),
     enabled: !isMissingParam,
     initialData: initialPreloadedTravel,
     initialDataUpdatedAt: initialPreloadedTravel ? Date.now() : undefined,
-    queryFn: async ({ signal } = {} as unknown) => {
+    queryFn: async (context?: { signal?: AbortSignal }) => {
+      const signal = context?.signal;
       // Try to reuse preload from +html.tsx and wait shortly for its in-flight request.
       // This avoids duplicate travel-details fetches on first paint (critical for LCP).
       const preloaded = await waitForTravelPreload(normalizedSlug, isId, idNum);
@@ -157,8 +176,8 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
     // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала
-    refetchOnMount: isWebAutomation ? true : false,
-    refetchOnWindowFocus: isWebAutomation ? true : false,
+    refetchOnMount: shouldRefetchInAutomation,
+    refetchOnWindowFocus: shouldRefetchInAutomation,
     // keepPreviousData removed: it caused showing the PREVIOUS travel's gallery/content
     // when navigating between different travels, producing a visible flicker
     // (old gallery flash → skeleton → new content).

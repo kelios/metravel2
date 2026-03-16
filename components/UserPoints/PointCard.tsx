@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Share, Alert, ActionSheetIOS, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, Share, Alert, ActionSheetIOS, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -7,7 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import CardActionPressable from '@/components/ui/CardActionPressable';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 
@@ -257,207 +257,190 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     }
   }, [coordsText, hasCoords, point?.name]);
 
-  const [isHovered, setIsHovered] = React.useState(false);
-
-  const webHoverProps = Platform.OS === 'web' ? {
-    onMouseEnter: () => setIsHovered(true),
-    onMouseLeave: () => setIsHovered(false),
-  } : {};
-
-  const hoverStyle = Platform.OS === 'web' && isHovered ? {
-    transform: [{ translateY: -2 }],
-    // @ts-expect-error boxShadow is web-only CSS property not in RN types
-    boxShadow: '0 8px 24px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04)',
-  } : {};
-
-  const actionsHoverStyle = Platform.OS === 'web' && isHovered ? {
+  const actionsHoverStyle = Platform.OS === 'web' ? {
     opacity: 1,
   } : {};
 
+  const handleCardPress = React.useCallback(() => {
+    if (selectionMode) {
+      onToggleSelect?.(point);
+      return;
+    }
+    onPress?.(point);
+  }, [onPress, onToggleSelect, point, selectionMode]);
+
+  const mediaOverlay = (
+    <>
+      <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
+      {categoryLabel ? (
+        <View style={styles.imageOverlay}>
+          <View style={styles.imageBadge}>
+            <Text style={styles.imageBadgeText}>{categoryLabel}</Text>
+          </View>
+        </View>
+      ) : null}
+    </>
+  );
+
+  const contentSlot = (
+    <View
+      style={[
+        styles.content,
+        selectionMode ? styles.contentSelectionMode : null,
+      ]}
+    >
+      {selectionMode ? (
+        <View style={[styles.selectionBadge, selected ? styles.selectionBadgeSelected : styles.selectionBadgeUnselected]}>
+          <Feather
+            name={selected ? 'check-circle' : 'circle'}
+            size={18}
+            color={selected ? colors.textOnPrimary : colors.textMuted}
+          />
+        </View>
+      ) : null}
+
+      <View style={[styles.headerRow, isNarrowLayout ? styles.headerRowNarrow : null]}>
+        <View style={[styles.headerMain, isNarrowLayout ? styles.headerMainNarrow : null]}>
+          <Text style={styles.name} numberOfLines={2}>
+            {point.name}
+          </Text>
+        </View>
+
+        {showActions ? (
+          <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null, actionsHoverStyle]}>
+            {typeof onEdit === 'function' ? (
+              Platform.OS === 'web' ? (
+                <ActionButton label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
+              ) : (
+                <IconButton
+                  icon={<Feather name="edit-2" size={16} color={colors.text} />}
+                  label="Редактировать"
+                  onPress={() => onEdit(point)}
+                  size="sm"
+                />
+              )
+            ) : null}
+
+            {typeof onDelete === 'function' ? (
+              Platform.OS === 'web' ? (
+                <ActionButton label="Удалить" icon="trash-2" onActivate={() => onDelete(point)} />
+              ) : (
+                <IconButton
+                  icon={<Feather name="trash-2" size={16} color={colors.text} />}
+                  label="Удалить"
+                  onPress={() => onDelete(point)}
+                  size="sm"
+                />
+              )
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+
+      {showAddress ? (
+        <Text style={styles.address} numberOfLines={1}>
+          {point.address}
+        </Text>
+      ) : !isSitePoint && countryLabel ? (
+        <Text style={styles.address} numberOfLines={1}>
+          {countryLabel}
+        </Text>
+      ) : null}
+      
+      {point.description && (
+        <Text style={styles.description} numberOfLines={2}>
+          {point.description}
+        </Text>
+      )}
+
+      {hasCoords ? (
+        Platform.OS === 'web' ? (
+          <View style={styles.coordsBlock}>
+            <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
+              {coordsText}
+            </Text>
+            <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
+              <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
+              <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
+              {mapUrls ? (
+                <ActionButton label="Открыть в картах" icon="map-pin" onActivate={() => void openExternalLink(mapUrls.google)} />
+              ) : null}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.coordsRow}>
+            <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
+              {coordsText}
+            </Text>
+            <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
+              <IconButton
+                icon={<Feather name="copy" size={14} color={colors.textMuted} />}
+                label="Копировать координаты"
+                onPress={() => void copyCoords()}
+                size="sm"
+              />
+              <IconButton
+                icon={<Feather name="send" size={14} color={colors.textMuted} />}
+                label="Поделиться в Telegram"
+                onPress={() => void shareToTelegram()}
+                size="sm"
+              />
+              {mapUrls ? (
+                <IconButton
+                  icon={<Feather name="map-pin" size={14} color={colors.textMuted} />}
+                  label="Открыть в картах"
+                  onPress={() => void openInMaps()}
+                  size="sm"
+                />
+              ) : null}
+            </View>
+          </View>
+        )
+      ) : null}
+      
+      {typeof point.rating === 'number' && Number.isFinite(point.rating) && (
+        <Text style={styles.rating}>
+          {point.rating.toFixed(1)}
+        </Text>
+      )}
+
+      {active && !selectionMode && driveInfo?.status === 'ok' ? (
+        <View style={styles.driveInfoRow}>
+          <Text style={styles.driveInfoText}>
+            На машине: {driveInfo.distanceKm} км · ~{driveInfo.durationMin} мин
+          </Text>
+        </View>
+      ) : active && !selectionMode && driveInfo?.status === 'loading' ? (
+        <View style={styles.driveInfoRow}>
+          <Text style={styles.driveInfoText}>Считаю маршрут…</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
   return (
-    <TouchableOpacity
+    <UnifiedTravelCard
       testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
+      title={point.name}
+      imageUrl={photoUrl}
+      onPress={handleCardPress}
+      imageHeight={layout === 'grid' ? 160 : 140}
+      mediaFit="cover"
+      contentSlot={contentSlot}
+      containerOverlaySlot={mediaOverlay}
+      contentContainerStyle={styles.contentContainer}
       style={[
         styles.container,
         layout === 'grid' ? styles.containerGrid : null,
         compact ? styles.containerCompact : null,
         active ? styles.containerActive : null,
-        hoverStyle,
       ]}
-      onPress={() => {
-        if (selectionMode) {
-          onToggleSelect?.(point);
-          return;
-        }
-        onPress?.(point);
+      mediaProps={{
+        blurBackground: !!photoUrl,
+        blurRadius: 16,
       }}
-      activeOpacity={0.85}
-      {...webHoverProps}
-    >
-      {/* Image section - always on top in new vertical layout */}
-      <View style={[styles.photoWrap, layout === 'grid' ? styles.photoWrapGrid : null]}>
-        {photoUrl ? (
-          <ImageCardMedia
-            src={photoUrl}
-            height={layout === 'grid' ? 160 : 140}
-            width="100%"
-            borderRadius={0}
-            fit="cover"
-            blurBackground
-            blurRadius={16}
-          />
-        ) : (
-          <View style={{ flex: 1, backgroundColor: colors.backgroundTertiary }} />
-        )}
-        
-        {/* Color indicator dot on image */}
-        <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
-        
-        {/* Category badge overlay on image */}
-        {categoryLabel ? (
-          <View style={styles.imageOverlay}>
-            <View style={styles.imageBadge}>
-              <Text style={styles.imageBadgeText}>{categoryLabel}</Text>
-            </View>
-          </View>
-        ) : null}
-      </View>
-
-      <View
-        style={[
-          styles.content,
-          selectionMode ? styles.contentSelectionMode : null,
-        ]}
-      >
-        {selectionMode ? (
-          <View style={[styles.selectionBadge, selected ? styles.selectionBadgeSelected : styles.selectionBadgeUnselected]}>
-            <Feather
-              name={selected ? 'check-circle' : 'circle'}
-              size={18}
-              color={selected ? colors.textOnPrimary : colors.textMuted}
-            />
-          </View>
-        ) : null}
-
-        <View style={[styles.headerRow, isNarrowLayout ? styles.headerRowNarrow : null]}>
-          <View style={[styles.headerMain, isNarrowLayout ? styles.headerMainNarrow : null]}>
-            <Text style={styles.name} numberOfLines={2}>
-              {point.name}
-            </Text>
-          </View>
-
-          {showActions ? (
-            <View style={[styles.headerActions, isNarrowLayout ? styles.headerActionsNarrow : null, actionsHoverStyle]}>
-              {typeof onEdit === 'function' ? (
-                Platform.OS === 'web' ? (
-                  <ActionButton label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
-                ) : (
-                  <IconButton
-                    icon={<Feather name="edit-2" size={16} color={colors.text} />}
-                    label="Редактировать"
-                    onPress={() => onEdit(point)}
-                    size="sm"
-                  />
-                )
-              ) : null}
-
-              {typeof onDelete === 'function' ? (
-                Platform.OS === 'web' ? (
-                  <ActionButton label="Удалить" icon="trash-2" onActivate={() => onDelete(point)} />
-                ) : (
-                  <IconButton
-                    icon={<Feather name="trash-2" size={16} color={colors.text} />}
-                    label="Удалить"
-                    onPress={() => onDelete(point)}
-                    size="sm"
-                  />
-                )
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-
-        {/* Subtitle: address or country */}
-        {showAddress ? (
-          <Text style={styles.address} numberOfLines={1}>
-            {point.address}
-          </Text>
-        ) : !isSitePoint && countryLabel ? (
-          <Text style={styles.address} numberOfLines={1}>
-            {countryLabel}
-          </Text>
-        ) : null}
-        
-        {point.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {point.description}
-          </Text>
-        )}
-
-        {hasCoords ? (
-          Platform.OS === 'web' ? (
-            <View style={styles.coordsBlock}>
-              <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
-                {coordsText}
-              </Text>
-              <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
-                <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
-                <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
-                {mapUrls ? (
-                  <ActionButton label="Открыть в картах" icon="map-pin" onActivate={() => void openExternalLink(mapUrls.google)} />
-                ) : null}
-              </View>
-            </View>
-          ) : (
-            <View style={styles.coordsRow}>
-              <Text style={styles.coordsText} numberOfLines={isNarrowLayout ? 2 : 1}>
-                {coordsText}
-              </Text>
-              <View style={[styles.coordsActionsRow as any, isNarrowLayout ? styles.coordsActionsRowNarrow : null]}>
-                <IconButton
-                  icon={<Feather name="copy" size={14} color={colors.textMuted} />}
-                  label="Копировать координаты"
-                  onPress={() => void copyCoords()}
-                  size="sm"
-                />
-                <IconButton
-                  icon={<Feather name="send" size={14} color={colors.textMuted} />}
-                  label="Поделиться в Telegram"
-                  onPress={() => void shareToTelegram()}
-                  size="sm"
-                />
-                {mapUrls ? (
-                  <IconButton
-                    icon={<Feather name="map-pin" size={14} color={colors.textMuted} />}
-                    label="Открыть в картах"
-                    onPress={() => void openInMaps()}
-                    size="sm"
-                  />
-                ) : null}
-              </View>
-            </View>
-          )
-        ) : null}
-        
-        {typeof point.rating === 'number' && Number.isFinite(point.rating) && (
-          <Text style={styles.rating}>
-            {point.rating.toFixed(1)}
-          </Text>
-        )}
-
-        {active && !selectionMode && driveInfo?.status === 'ok' ? (
-          <View style={styles.driveInfoRow}>
-            <Text style={styles.driveInfoText}>
-              На машине: {driveInfo.distanceKm} км · ~{driveInfo.durationMin} мин
-            </Text>
-          </View>
-        ) : active && !selectionMode && driveInfo?.status === 'loading' ? (
-          <View style={styles.driveInfoRow}>
-            <Text style={styles.driveInfoText}>Считаю маршрут…</Text>
-          </View>
-        ) : null}
-      </View>
-    </TouchableOpacity>
+      webHoverScale={false}
+    />
   );
 });
 
@@ -512,6 +495,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   photoWrapGrid: {
     width: '100%',
     height: 160,
+  },
+  contentContainer: {
+    padding: 0,
   },
   content: {
     flex: 1,
