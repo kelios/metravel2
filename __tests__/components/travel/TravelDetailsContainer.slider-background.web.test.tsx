@@ -242,6 +242,10 @@ describe('TravelHeroSection slider background regression (web)', () => {
           { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
           { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
         ],
+        heroSliderImages: [
+          { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+          { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        ],
         heroAlt: 'Demo travel',
         aspectRatio: 1200 / 800,
         setHeroContainerWidth: jest.fn(),
@@ -261,6 +265,10 @@ describe('TravelHeroSection slider background regression (web)', () => {
         },
         heroHeight: 720,
         galleryImages: [
+          { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+          { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        ],
+        heroSliderImages: [
           { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
           { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
         ],

@@ -128,12 +128,12 @@ describe('CustomHeader', () => {
             expect(mockPush).toHaveBeenCalledWith('/map');
         });
 
-        it('correctly identifies active path for nested routes', () => {
+        it('does not highlight ideas navigation item on travel details routes', () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
             const utils = renderHeader();
             
             const homeItem = utils.getByLabelText('Идеи поездок');
-            expect(homeItem.props.accessibilityState?.selected).toBe(true);
+            expect(homeItem.props.accessibilityState?.selected).toBe(false);
         });
 
         it('correctly identifies active path for quest routes', () => {

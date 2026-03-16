@@ -91,6 +91,30 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(blurLayers[0].props.src).toBe(mainLayers[0].props.src)
   })
 
+  it('does not apply extra css blur when backdrop source is already server-blurred', () => {
+    let tree: renderer.ReactTestRenderer
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/travel-image/photo.jpg"
+          height={200}
+          width={320}
+          blurBackground
+          fit="contain"
+        />
+      )
+    })
+
+    const blurLayers = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      return node?.props?.['data-blur-backdrop'] === 'true'
+    })
+
+    expect(blurLayers.length).toBeGreaterThan(0)
+    expect(String(blurLayers[0].props.src || '')).toContain('blur=')
+    expect(blurLayers[0].props.style?.filter).toBe('saturate(1.08)')
+  })
+
   it('keeps a previously loaded web image visible after remount', () => {
     const src = 'https://example.com/photo-remount.jpg'
 

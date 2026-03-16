@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { act, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
@@ -47,7 +47,7 @@ describe('StableContent (web) link styles', () => {
 
     const html = '<p>See <a href="https://example.com">Example</a></p>';
 
-    const { UNSAFE_getAllByProps } = render(
+    const { container } = render(
       <StableContent html={html} contentWidth={700} />
     );
 
@@ -62,19 +62,19 @@ describe('StableContent (web) link styles', () => {
       expect(String(styleEl?.textContent || '')).toContain('text-decoration: underline');
     });
 
-    const [container] = UNSAFE_getAllByProps({ className: 'travel-rich-text' });
-    expect(container).toBeTruthy();
-    expect(container.props.className).toBe('travel-rich-text');
-    expect(container.props.dangerouslySetInnerHTML?.__html).toMatch(
+    const richText = container.querySelector('.travel-rich-text');
+    expect(richText).toBeTruthy();
+    expect(richText?.className).toBe('travel-rich-text');
+    expect(richText?.innerHTML).toMatch(
       /href="https:\/\/example\.com\/?"/
     );
-    expect(container.props.dangerouslySetInnerHTML?.__html).toContain('>Example<');
+    expect(richText?.innerHTML).toContain('>Example<');
   });
 
   it('opens inline image in a lightbox on click and closes it', async () => {
     const StableContent = (await import('@/components/travel/StableContent')).default;
 
-    render(
+    const { container } = render(
       <StableContent
         html={'<p><img src="https://example.com/photo.jpg" width="800" height="600" alt="Горы" /></p>'}
         contentWidth={700}
@@ -82,15 +82,13 @@ describe('StableContent (web) link styles', () => {
     );
 
     await waitFor(() => {
-      expect(document.querySelector(`.${'travel-rich-text'} img`)).toBeTruthy();
+      expect(container.querySelector('.travel-rich-text img')).toBeTruthy();
     });
 
-    const inlineImage = document.querySelector('.travel-rich-text img') as HTMLImageElement | null;
+    const inlineImage = container.querySelector('.travel-rich-text img') as HTMLImageElement | null;
     expect(inlineImage).toBeTruthy();
 
-    act(() => {
-      inlineImage?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    fireEvent.click(inlineImage!);
 
     await waitFor(() => {
       const lightbox = document.querySelector('[data-testid="travel-rich-text-lightbox"]');
@@ -101,9 +99,7 @@ describe('StableContent (web) link styles', () => {
     const closeButton = document.querySelector('button[aria-label="Закрыть изображение"]') as HTMLButtonElement | null;
     expect(closeButton).toBeTruthy();
 
-    act(() => {
-      closeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    fireEvent.click(closeButton!);
 
     await waitFor(() => {
       expect(document.querySelector('[data-testid="travel-rich-text-lightbox"]')).toBeNull();

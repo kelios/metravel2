@@ -56,10 +56,11 @@ describe('richTextImageLayout', () => {
       expect(result).toContain('img-row-2-portrait');
     });
 
-    it('wraps mixed pair (portrait + landscape) in img-row-2-mixed', () => {
+    it('wraps mixed pair (portrait + landscape) in a regular two-column row', () => {
       const html = '<p>Text</p><p><img src="1.jpg" width="800" height="600"></p><p><img src="2.jpg" width="600" height="800"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
-      expect(result).toContain('img-row-2-mixed');
+      expect(result).toContain('<div class="img-row-2">');
+      expect(result).not.toContain('img-row-2-mixed');
     });
 
     it('wraps 3+ consecutive images in img-grid', () => {
@@ -68,12 +69,12 @@ describe('richTextImageLayout', () => {
       expect(result).toContain('<div class="img-grid">');
     });
 
-    it('wraps 3 images with 1 portrait in img-grid-mixed', () => {
-      // 2 landscape + 1 portrait should use mixed layout
+    it('wraps 3 images with 1 portrait in a regular grid', () => {
       const html = '<p>Text</p><p><img src="1.jpg" width="800" height="600"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="800" height="600"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
-      expect(result).toContain('img-grid-mixed');
-      expect(result).toContain('img-grid-mixed-stack');
+      expect(result).toContain('<div class="img-grid">');
+      expect(result).not.toContain('img-grid-mixed');
+      expect(result).not.toContain('img-grid-mixed-stack');
     });
 
     it('wraps 3 images with 2+ portraits in img-grid-portrait', () => {

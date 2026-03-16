@@ -19,6 +19,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import type { SliderProps, SliderRef } from './sliderParts/types';
 import { buildUriWeb, SLIDER_MAX_WIDTH, DEFAULT_AR, MOBILE_HEIGHT_PERCENT, clamp } from './sliderParts/utils';
 import { createSliderStyles, MAX_VISIBLE_DOTS } from './sliderParts/styles';
@@ -270,14 +271,23 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const [layoutMeasured, setLayoutMeasured] = useState(false);
   const [measuredSlideWidth, setMeasuredSlideWidth] = useState<number | null>(null);
+  const [, setLoadedSlideIndices] = useState<Set<number>>(
+    () => new Set(firstImagePreloaded ? [0] : []),
+  );
+  const [transitionOverlayUri, setTransitionOverlayUri] = useState<string | null>(
+    null,
+  );
+  const [transitionOverlayFading, setTransitionOverlayFading] = useState(false);
 
   const wrapperRef = useRef<any>(null);
   const viewportRef = useRef<any>(null);
   const trackRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const overlayFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStateRef = useRef<DragState>(initialDragState());
   const visualOffsetRef = useRef(0);
   const currentIndexRef = useRef(0);
+  const loadedSlideIndicesRef = useRef<Set<number>>(new Set(firstImagePreloaded ? [0] : []));
 
   const computedH = coreContainerH;
   const containerH = fillContainer ? '100%' : computedH;
@@ -286,6 +296,18 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const slideHeight = fillContainer ? '100%' : computedH;
   const imagesLen = images.length;
   const navOffset = isMobile ? 8 : isTablet ? 12 : Math.max(44, 16 + Math.max(insets.left || 0, insets.right || 0));
+
+  useEffect(() => {
+    const nextLoaded = new Set<number>(firstImagePreloaded ? [0] : []);
+    loadedSlideIndicesRef.current = nextLoaded;
+    setLoadedSlideIndices(nextLoaded);
+    setTransitionOverlayUri(null);
+    setTransitionOverlayFading(false);
+    if (overlayFadeTimerRef.current) {
+      clearTimeout(overlayFadeTimerRef.current);
+      overlayFadeTimerRef.current = null;
+    }
+  }, [images, firstImagePreloaded]);
 
   const getDomNode = useCallback((target: unknown): HTMLElement | null => {
     if (!target) return null;
@@ -324,11 +346,29 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const animateToIndex = useCallback((idx: number, animated = true) => {
     const clampedIndex = clamp(idx, 0, maxIndex);
+    const currentSlideIndex = currentIndexRef.current;
+    const currentSlideLoaded = loadedSlideIndicesRef.current.has(currentSlideIndex);
+    const targetSlideLoaded = loadedSlideIndicesRef.current.has(clampedIndex);
+    if (
+      clampedIndex !== currentSlideIndex &&
+      currentSlideLoaded &&
+      !targetSlideLoaded
+    ) {
+      setTransitionOverlayFading(false);
+      setTransitionOverlayUri(getUri(currentSlideIndex));
+      if (overlayFadeTimerRef.current) {
+        clearTimeout(overlayFadeTimerRef.current);
+        overlayFadeTimerRef.current = null;
+      }
+    } else if (targetSlideLoaded) {
+      setTransitionOverlayUri(null);
+      setTransitionOverlayFading(false);
+    }
     const targetOffset = snapOffsetForIndex(clampedIndex);
     stopAnimation();
     applyOffset(targetOffset, animated);
     setActiveIndex(clampedIndex);
-  }, [applyOffset, maxIndex, setActiveIndex, snapOffsetForIndex, stopAnimation]);
+  }, [applyOffset, getUri, maxIndex, setActiveIndex, snapOffsetForIndex, stopAnimation]);
 
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -556,8 +596,33 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   useEffect(() => {
     return () => {
       stopAnimation();
+      if (overlayFadeTimerRef.current) {
+        clearTimeout(overlayFadeTimerRef.current);
+      }
     };
   }, [stopAnimation]);
+
+  const handleSlideLoad = useCallback((index: number) => {
+    setLoadedSlideIndices((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      loadedSlideIndicesRef.current = next;
+      return next;
+    });
+
+    if (index === currentIndexRef.current && transitionOverlayUri) {
+      setTransitionOverlayFading(true);
+      if (overlayFadeTimerRef.current) {
+        clearTimeout(overlayFadeTimerRef.current);
+      }
+      overlayFadeTimerRef.current = setTimeout(() => {
+        setTransitionOverlayUri(null);
+        setTransitionOverlayFading(false);
+        overlayFadeTimerRef.current = null;
+      }, 140);
+    }
+  }, [transitionOverlayUri]);
 
   const viewportTouchAction = isMobile ? 'pan-y pinch-zoom' : 'pan-x';
 
@@ -618,6 +683,35 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip} testID="slider-clip">
+          {transitionOverlayUri ? (
+            <View
+              pointerEvents="none"
+              style={[
+                {
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 6,
+                  opacity: transitionOverlayFading ? 0 : 1,
+                  transition: 'opacity 140ms ease',
+                } as any,
+              ]}
+            >
+              <ImageCardMedia
+                src={transitionOverlayUri}
+                width={renderedSlideWidth}
+                height={computedH}
+                fit={fit}
+                blurBackground={blurBackground}
+                blurRadius={12}
+                priority="high"
+                loading="eager"
+                transition={0}
+                style={styles.img}
+                showImmediately
+                allowCriticalWebBlur={blurBackground}
+              />
+            </View>
+          ) : null}
           <View
             ref={viewportRef}
             testID="slider-scroll"
@@ -676,6 +770,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       firstImagePreloaded={firstImagePreloaded}
                       preloadPriority={preloadPriority}
                       fit={fit}
+                      onSlideLoad={handleSlideLoad}
                     />
                   </View>
                 );

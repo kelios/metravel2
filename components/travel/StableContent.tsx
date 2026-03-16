@@ -1336,15 +1336,9 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
   }, [prepared]);
 
   const isWeb = (Platform.OS as string) === 'web';
-
-  if (isWeb) {
-    return (
-      <>
-        <div
-          className={WEB_RICH_TEXT_CLASS}
-          dangerouslySetInnerHTML={{ __html: prepared }}
-        />
-        {lightboxImage ? (
+  const webLightboxPortal =
+    isWeb && lightboxImage && typeof document !== 'undefined'
+      ? ((require('react-dom') as { createPortal: (node: React.ReactNode, container: Element | DocumentFragment) => React.ReactNode }).createPortal(
           <div
             data-testid="travel-rich-text-lightbox"
             role="dialog"
@@ -1403,8 +1397,19 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
                 cursor: 'default',
               }}
             />
-          </div>
-        ) : null}
+          </div>,
+          document.body
+        ))
+      : null;
+
+  if (isWeb) {
+    return (
+      <>
+        <div
+          className={WEB_RICH_TEXT_CLASS}
+          dangerouslySetInnerHTML={{ __html: prepared }}
+        />
+        {webLightboxPortal}
       </>
     )
   }
@@ -1451,6 +1456,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   htmlWrapperWeb: {
     width: '100%',
+    minHeight: 320,
   },
   ytStub: {
     marginVertical: DESIGN_TOKENS.spacing.sm,

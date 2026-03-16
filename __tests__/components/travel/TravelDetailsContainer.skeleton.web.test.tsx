@@ -7,6 +7,7 @@ import { act } from 'react-test-renderer'
 import { render } from '@testing-library/react-native'
 
 const mockSetOptions = jest.fn()
+const mockTravelHeroSection = jest.fn<any, [any]>(() => null)
 const mockPerformanceState = {
   lcpLoaded: false,
   setLcpLoaded: jest.fn(),
@@ -133,7 +134,7 @@ jest.mock('@/components/travel/details/TravelDetailsDeferred', () => ({
 
 jest.mock('@/components/travel/details/TravelDetailsHero', () => ({
   __esModule: true,
-  TravelHeroSection: () => null,
+  TravelHeroSection: (props: any) => mockTravelHeroSection(props),
 }))
 
 jest.mock('@/utils/rIC', () => ({
@@ -145,6 +146,11 @@ jest.mock('@/utils/rIC', () => ({
 
 import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
 
+const getLastHeroSectionProps = () =>
+  mockTravelHeroSection.mock.calls[mockTravelHeroSection.mock.calls.length - 1]?.[0] as
+    | { renderSlider?: boolean }
+    | undefined
+
 describe('TravelDetailsContainer skeleton gating (web)', () => {
   beforeAll(() => {
     const RN = require('react-native')
@@ -154,6 +160,7 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
 
   beforeEach(() => {
     jest.useFakeTimers()
+    mockTravelHeroSection.mockClear()
     mockPerformanceState.lcpLoaded = false
     mockPerformanceState.sliderReady = false
     mockPerformanceState.deferAllowed = false
@@ -186,5 +193,20 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
 
     const overlayAfter = UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' })
     expect(overlayAfter.props['aria-hidden']).toBe(true)
+  })
+
+  it('renders the hero slider on web as soon as LCP is ready even if sliderReady is false', () => {
+    const { rerender } = render(<TravelDetailsContainer />)
+
+    expect(getLastHeroSectionProps()?.renderSlider).toBe(false)
+
+    mockPerformanceState.lcpLoaded = true
+    mockPerformanceState.sliderReady = false
+    mockPerformanceState.deferAllowed = true
+    mockPerformanceState.postLcpRuntimeReady = true
+
+    rerender(<TravelDetailsContainer />)
+
+    expect(getLastHeroSectionProps()?.renderSlider).toBe(true)
   })
 })

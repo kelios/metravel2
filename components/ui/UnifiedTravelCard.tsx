@@ -566,12 +566,6 @@ function UnifiedTravelCard({
         >
           {optimizedImageUrl && !imageFailed ? (
             <>
-              {/* CARD-04: Shimmer placeholder пока изображение грузится */}
-              {!imageLoaded && (
-                <ShimmerOverlay
-                  style={StyleSheet.absoluteFill}
-                />
-              )}
               <ImageCardMedia
                 src={optimizedImageUrl}
                 alt={title}
@@ -588,6 +582,11 @@ function UnifiedTravelCard({
                 onLoad={handleImageLoad}
                 onError={handleImageError}
               />
+              {!imageLoaded && (
+                <ShimmerOverlay
+                  style={[StyleSheet.absoluteFill, styles.imageLoadingOverlay]}
+                />
+              )}
             </>
           ) : (
             <View

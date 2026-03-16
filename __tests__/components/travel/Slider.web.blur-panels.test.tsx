@@ -25,6 +25,20 @@ jest.mock('@/hooks/useResponsive', () => ({
   }),
 }))
 
+jest.mock('@/components/ui/ImageCardMedia', () => {
+  const React = require('react')
+
+  return {
+    __esModule: true,
+    default: (props: any) =>
+      React.createElement('mock-image-card-media', {
+        ...props,
+        ...(props?.imageProps || {}),
+        fetchPriority: props?.priority === 'high' ? 'high' : 'auto',
+      }),
+  }
+})
+
 describe('Slider (web) blur background', () => {
   const originalPlatform = Platform.OS
 
@@ -148,5 +162,37 @@ describe('Slider (web) blur background', () => {
     expect(firstImage.props.fetchPriority).toBe('high')
     expect(secondImage.props.loading).toBe('lazy')
     expect(secondImage.props.fetchPriority).toBe('auto')
+  })
+
+  it('shows the previous loaded frame as overlay while the next slide is not loaded yet', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+          firstImagePreloaded
+        />,
+      )
+    })
+
+    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    const previousFrameInstances = tree.root.findAll(
+      (node: any) =>
+        node.type === 'mock-image-card-media' &&
+        typeof node.props?.src === 'string' &&
+        node.props.src.includes('img-1.jpg'),
+    )
+
+    expect(previousFrameInstances.length).toBeGreaterThan(1)
   })
 })

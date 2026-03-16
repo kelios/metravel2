@@ -59,7 +59,7 @@ export default function TravelDetailsCriticalShell({
   handleLayout,
   contentHorizontalPadding,
   anchors,
-  sliderReady,
+  sliderReady: _sliderReady,
   lcpLoaded,
   onFirstImageLoad,
   sectionLinks,
@@ -201,7 +201,7 @@ export default function TravelDetailsCriticalShell({
                             travel={travel}
                             anchors={anchors}
                             isMobile={isMobile}
-                            renderSlider={Platform.OS !== 'web' ? true : sliderReady && lcpLoaded}
+                            renderSlider={Platform.OS !== 'web' ? true : lcpLoaded}
                             onFirstImageLoad={onFirstImageLoad}
                             sectionLinks={sectionLinks}
                             onQuickJump={onQuickJump}
@@ -219,7 +219,7 @@ export default function TravelDetailsCriticalShell({
                           travel={travel}
                           anchors={anchors}
                           isMobile={isMobile}
-                          renderSlider={Platform.OS !== 'web' ? true : sliderReady && lcpLoaded}
+                          renderSlider={Platform.OS !== 'web' ? true : lcpLoaded}
                           onFirstImageLoad={onFirstImageLoad}
                           sectionLinks={sectionLinks}
                           onQuickJump={onQuickJump}

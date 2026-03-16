@@ -65,12 +65,43 @@ function analyzeImageGroup(images: string[]): { landscape: number; portrait: num
   return { landscape, portrait, square };
 }
 
-/**
- * Finds the index of the portrait image in a group.
- * Returns -1 if no portrait found.
- */
-function findPortraitIndex(images: string[]): number {
-  return images.findIndex(img => isPortraitImage(img));
+function appendSingleImage(result: string[], imgParagraph: string, floatDirection: number): number {
+  if (isLandscapeImage(imgParagraph)) {
+    const img = imgParagraph.replace(/<p([^>]*)>/, '<p$1 class="img-single-wide">');
+    result.push(img);
+    return floatDirection;
+  }
+
+  const floatClass = floatDirection % 2 === 0 ? 'img-float-right' : 'img-float-left';
+  const img = imgParagraph.replace(/<p([^>]*)>/, `<p$1 class="${floatClass}">`);
+  result.push(img);
+  return floatDirection + 1;
+}
+
+function appendUniformImageGroup(result: string[], images: string[], floatDirection: number): number {
+  if (images.length === 0) return floatDirection;
+
+  if (images.length === 1) {
+    return appendSingleImage(result, images[0], floatDirection);
+  }
+
+  const composition = analyzeImageGroup(images);
+  if (images.length === 2) {
+    if (composition.portrait === 2) {
+      result.push(`<div class="img-row-2 img-row-2-portrait">${images.join('')}</div>`);
+      return floatDirection;
+    }
+    result.push(`<div class="img-row-2">${images.join('')}</div>`);
+    return floatDirection;
+  }
+
+  if (composition.portrait >= images.length - composition.portrait) {
+    result.push(`<div class="img-grid img-grid-portrait">${images.join('')}</div>`);
+    return floatDirection;
+  }
+
+  result.push(`<div class="img-grid">${images.join('')}</div>`);
+  return floatDirection;
 }
 
 /**
@@ -92,56 +123,7 @@ export function groupConsecutiveImages(html: string): string {
   const flushImageBuffer = (): void => {
     if (imageBuffer.length === 0) return;
 
-    if (imageBuffer.length === 1) {
-      const imgParagraph = imageBuffer[0];
-      // Check if image is landscape (horizontal)
-      if (isLandscapeImage(imgParagraph)) {
-        // Horizontal image - show full width, centered
-        const img = imgParagraph.replace(/<p([^>]*)>/, '<p$1 class="img-single-wide">');
-        result.push(img);
-      } else {
-        // Vertical/square image - add float class alternating left/right
-        const floatClass = floatDirection % 2 === 0 ? 'img-float-right' : 'img-float-left';
-        const img = imgParagraph.replace(/<p([^>]*)>/, `<p$1 class="${floatClass}">`);
-        result.push(img);
-        floatDirection++;
-      }
-    } else if (imageBuffer.length === 2) {
-      // Two images - analyze orientation for better layout
-      const composition = analyzeImageGroup(imageBuffer);
-      if (composition.portrait === 2) {
-        // Both portrait - use taller row
-        result.push(`<div class="img-row-2 img-row-2-portrait">${imageBuffer.join('')}</div>`);
-      } else if (composition.portrait === 1) {
-        // Mixed - portrait + landscape/square
-        const portraitIdx = findPortraitIndex(imageBuffer);
-        const reordered = portraitIdx === 0 
-          ? imageBuffer 
-          : [imageBuffer[1], imageBuffer[0]];
-        result.push(`<div class="img-row-2 img-row-2-mixed">${reordered.join('')}</div>`);
-      } else {
-        // Both landscape or square - standard row
-        result.push(`<div class="img-row-2">${imageBuffer.join('')}</div>`);
-      }
-    } else {
-      // 3+ images - analyze composition for smart grid layout
-      const composition = analyzeImageGroup(imageBuffer);
-      
-      if (composition.portrait === 1 && imageBuffer.length === 3) {
-        // Special case: 2 landscape/square + 1 portrait
-        // Put portrait on the side, landscapes stacked
-        const portraitIdx = findPortraitIndex(imageBuffer);
-        const portrait = imageBuffer[portraitIdx];
-        const others = imageBuffer.filter((_, i) => i !== portraitIdx);
-        result.push(`<div class="img-grid-mixed"><div class="img-grid-mixed-stack">${others.join('')}</div>${portrait}</div>`);
-      } else if (composition.portrait >= 2) {
-        // Multiple portraits - use portrait-optimized grid
-        result.push(`<div class="img-grid img-grid-portrait">${imageBuffer.join('')}</div>`);
-      } else {
-        // All landscape/square - standard grid
-        result.push(`<div class="img-grid">${imageBuffer.join('')}</div>`);
-      }
-    }
+    floatDirection = appendUniformImageGroup(result, imageBuffer, floatDirection);
     imageBuffer = [];
   };
 
@@ -179,7 +161,6 @@ export function removeImageLayoutClasses(html: string): string {
   // Remove float and single-wide classes from paragraphs
   result = result.replace(/(<p[^>]*)\s+class="img-float-(?:right|left)"([^>]*>)/gi, '$1$2');
   result = result.replace(/(<p[^>]*)\s+class="img-single-wide"([^>]*>)/gi, '$1$2');
-
   return result;
 }
 

@@ -20,17 +20,6 @@ type ImgLike = {
 }
 type GalleryImage = ImgLike & Record<string, unknown>
 
-const normalizeMediaIdentity = (value?: string | null): string => {
-  const raw = String(value || '').trim()
-  if (!raw) return ''
-  try {
-    const parsed = new URL(raw, 'https://metravel.by')
-    return `${parsed.origin}${parsed.pathname}`
-  } catch {
-    return raw.split('?')[0] || raw
-  }
-}
-
 const HERO_HEIGHT = {
   desktopMin: 360,
   desktopMax: 750,
@@ -111,19 +100,13 @@ function useHeroMediaModel(
   }, [travel.gallery, travel.travel_image_thumb_url])
 
   const heroSliderImages = useMemo(() => {
+    if (galleryImages.length > 0) return galleryImages
     if (!firstImg?.url) return galleryImages
-    const firstIdentity = normalizeMediaIdentity(firstImg.url)
-    const dedupedTail = galleryImages.filter((item) => {
-      const itemIdentity = normalizeMediaIdentity(item?.url)
-      return !!itemIdentity && itemIdentity !== firstIdentity
-    })
-
     return [
       {
         ...firstImg,
         id: firstImg.id ?? 'hero-cover',
       },
-      ...dedupedTail,
     ]
   }, [firstImg, galleryImages])
 

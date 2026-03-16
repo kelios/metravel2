@@ -84,7 +84,7 @@ describe('useTravelHeroState', () => {
     jest.useRealTimers()
   })
 
-  it('starts web hero slider with the cover image to keep hero handoff stable', () => {
+  it('uses only gallery images in the web hero slider when gallery exists', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 42,
@@ -102,11 +102,12 @@ describe('useTravelHeroState', () => {
 
     expect(result.current.firstImg?.url).toBe('https://example.com/cover.jpg?updated=1')
     expect(result.current.galleryImages[0]?.url).toBe('https://example.com/gallery-1.jpg?size=sm')
-    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
-    expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-1.jpg?size=sm')
+    expect(result.current.heroSliderImages).toHaveLength(2)
+    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/gallery-1.jpg?size=sm')
+    expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
   })
 
-  it('deduplicates the cover from slider images when gallery already starts with the same media', () => {
+  it('keeps gallery order even when the first gallery image matches the cover media', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 43,
@@ -123,7 +124,24 @@ describe('useTravelHeroState', () => {
     )
 
     expect(result.current.heroSliderImages).toHaveLength(2)
-    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
+    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?size=lg')
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
+  })
+
+  it('falls back to the cover image in the slider when gallery is empty', () => {
+    const onFirstImageLoad = jest.fn()
+    const travel = {
+      id: 44,
+      name: 'Cover fallback travel',
+      travel_image_thumb_url: 'https://example.com/cover.jpg?updated=1',
+      gallery: [],
+    } as any
+
+    const { result } = renderHook(() =>
+      useTravelHeroState(travel, false, onFirstImageLoad, false),
+    )
+
+    expect(result.current.heroSliderImages).toHaveLength(1)
+    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
   })
 })

@@ -72,6 +72,7 @@ interface SlideProps {
   preloadPriority?: boolean;
   /** Image fit mode. Defaults to 'contain'. */
   fit?: 'cover' | 'contain';
+  onSlideLoad?: (index: number) => void;
 }
 
 const Slide = memo(function Slide({
@@ -91,11 +92,13 @@ const Slide = memo(function Slide({
   firstImagePreloaded,
   preloadPriority,
   fit = 'contain',
+  onSlideLoad,
 }: SlideProps) {
   const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(() => loadedSlideUriCache.has(uri));
   const firstLoadReportedRef = useRef(false);
+  const slideLoadReportedRef = useRef(false);
   const fallbackTriedRef = useRef(false);
 
   const isFirstSlide = index === 0;
@@ -137,20 +140,28 @@ const Slide = memo(function Slide({
     if (currentBaseUri !== baseUriRef.current) {
       baseUriRef.current = currentBaseUri;
       firstLoadReportedRef.current = false;
+      slideLoadReportedRef.current = false;
       setHasError(false);
       setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri));
     }
   }, [resolvedUri, index, isFirstSlide, firstImagePreloaded]);
 
+  const reportSlideLoad = useCallback(() => {
+    if (slideLoadReportedRef.current) return;
+    slideLoadReportedRef.current = true;
+    onSlideLoad?.(index);
+  }, [index, onSlideLoad]);
+
   const handleLoad = useCallback(() => {
     loadedSlideUriCache.add(resolvedUri);
     setHasError(false);
     setIsLoaded(true);
+    reportSlideLoad();
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
-  }, [isFirstSlide, onFirstImageLoad, resolvedUri]);
+  }, [isFirstSlide, onFirstImageLoad, reportSlideLoad, resolvedUri]);
 
   useEffect(() => {
     // If first slide is already preloaded/cached, report readiness once on mount.
@@ -158,9 +169,15 @@ const Slide = memo(function Slide({
     if (!firstImagePreloaded) return;
     if (firstLoadReportedRef.current) return;
     setIsLoaded(true);
+    reportSlideLoad();
     firstLoadReportedRef.current = true;
     onFirstImageLoad?.();
-  }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
+  }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad, reportSlideLoad]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    reportSlideLoad();
+  }, [isLoaded, reportSlideLoad]);
 
   const handleError = useCallback(() => {
     if (!fallbackTriedRef.current) {

@@ -64,6 +64,13 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
   const attrAR = attW && attH && attH > 0 ? attW / attH : null;
   const { width: screenWidth } = useResponsive();
   const src = useMemo(() => (raw ? normalizeUrl(raw) : ''), [raw]);
+  const maxImageHeight = useMemo(
+    () =>
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? Math.max(240, Math.floor(window.innerHeight * 0.7))
+        : MAX_IMAGE_HEIGHT,
+    []
+  );
   const maxFrameWidth = useMemo(
     () => Math.min(contentWidth || screenWidth || MAX_WIDTH, MAX_WIDTH, (screenWidth || MAX_WIDTH) - H_PADDING * 2),
     [contentWidth, screenWidth]
@@ -126,11 +133,11 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
 
   const { boxWidth, boxHeight } = useMemo(() => {
     const heightIfFullWidth = maxFrameWidth / aspect;
-    if (heightIfFullWidth > MAX_IMAGE_HEIGHT) {
-      return { boxWidth: MAX_IMAGE_HEIGHT * aspect, boxHeight: MAX_IMAGE_HEIGHT };
+    if (heightIfFullWidth > maxImageHeight) {
+      return { boxWidth: maxImageHeight * aspect, boxHeight: maxImageHeight };
     }
     return { boxWidth: maxFrameWidth, boxHeight: heightIfFullWidth };
-  }, [maxFrameWidth, aspect]);
+  }, [maxFrameWidth, aspect, maxImageHeight]);
 
   if (!raw || isSmallIcon) return null;
 

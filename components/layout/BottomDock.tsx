@@ -84,8 +84,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     // Normalize: Expo Router may include group prefixes like /(tabs)/
     const normalized = pathname.replace(/^\/\(tabs\)/, '') || '/';
     if (normalized === '/' || normalized === '/index') return '/search';
-    if (normalized.startsWith('/travels/')) return '/search';
-    if (normalized.startsWith('/travel/')) return '/search';
+    if (normalized.startsWith('/travels/')) return '';
+    if (normalized.startsWith('/travel/')) return '';
     if (normalized.startsWith('/search')) return '/search';
     if (normalized.startsWith('/travelsby')) return '/travelsby';
     if (normalized.startsWith('/export')) return '/export';

@@ -130,6 +130,8 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
   height,
   borderRadius,
 }: WebBlurBackdropProps) {
+  const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
+
   return (
     <img
       aria-hidden="true"
@@ -154,7 +156,7 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
         zIndex: 0,
         borderRadius,
         transform: 'translate(-50%, -50%) scale(1.12)',
-        filter: 'blur(24px) saturate(1.15)',
+        filter: hasPreBlurredSource ? 'saturate(1.08)' : 'blur(24px) saturate(1.15)',
         opacity: 1,
         contain: 'paint',
         willChange: 'transform',
