@@ -33,6 +33,7 @@ import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
 
 type ReactLeafletNS = typeof import('react-leaflet');
+const MAP_LAYOUT_INVALIDATE_EVENT = 'metravel:map-layout-invalidate';
 
 const isTestEnv =
   typeof process !== 'undefined' &&
@@ -103,8 +104,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [mapInstance, setMapInstance] = useState<any>(null);
+  const [mapPaneWidth, setMapPaneWidth] = useState(0);
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
+  const wrapperRef = useRef<View | null>(null);
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -163,6 +166,34 @@ const MapPageComponent: React.FC<Props> = (props) => {
   useEffect(() => {
     return () => {
       mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const wrapperEl = wrapperRef.current as unknown as HTMLElement | null;
+    if (!(wrapperEl instanceof HTMLElement)) return;
+
+    const updateWidth = () => {
+      setMapPaneWidth(wrapperEl.clientWidth || 0);
+    };
+
+    updateWidth();
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        updateWidth();
+      });
+      resizeObserver.observe(wrapperEl);
+    }
+
+    window.addEventListener('resize', updateWidth);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateWidth);
     };
   }, []);
 
@@ -638,6 +669,15 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
     const canUseWindow = typeof window !== 'undefined' && typeof window.addEventListener === 'function';
     const onWindowResize = () => scheduleInvalidate();
+    const onMapLayoutInvalidate = () => scheduleInvalidate();
+
+    if (canUseWindow) {
+      try {
+        window.addEventListener(MAP_LAYOUT_INVALIDATE_EVENT, onMapLayoutInvalidate as EventListener);
+      } catch {
+        // noop
+      }
+    }
 
     if (el && typeof (window as any).ResizeObserver !== 'undefined') {
       ro = new ResizeObserver(() => scheduleInvalidate());
@@ -667,6 +707,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       if (canUseWindow) {
         try {
           window.removeEventListener('resize', onWindowResize as any);
+          window.removeEventListener(MAP_LAYOUT_INVALIDATE_EVENT, onMapLayoutInvalidate as EventListener);
         } catch {
           // noop
         }
@@ -934,21 +975,129 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return createMapPopupComponent({ useMap: rl.useMap, userLocation: userLocationLatLng });
   }, [rl, userLocationLatLng]);
 
+  const handlePopupOpen = useCallback((e: any) => {
+    const popup = e?.popup;
+    const popupEl: HTMLElement | null = popup?.getElement ? popup.getElement() : null;
+    const map = mapRef.current;
+    const mapEl: HTMLElement | null = map?.getContainer ? map.getContainer() : null;
+    if (!popupEl || !mapEl || typeof window === 'undefined') return;
+
+    const run = () => {
+      try {
+        const mapRect = mapEl.getBoundingClientRect();
+        const popupRectAbs = popupEl.getBoundingClientRect();
+        const popupRect = {
+          left: popupRectAbs.left - mapRect.left,
+          top: popupRectAbs.top - mapRect.top,
+          right: popupRectAbs.right - mapRect.left,
+          bottom: popupRectAbs.bottom - mapRect.top,
+          width: popupRectAbs.width,
+          height: popupRectAbs.height,
+        };
+
+        const horizontalPadding = mapRect.width <= 420 ? 12 : 20;
+        const verticalPadding = 16;
+        let dx = 0;
+        let dy = 0;
+
+        const overflowLeft = horizontalPadding - popupRect.left;
+        const overflowRight = popupRect.right - (mapRect.width - horizontalPadding);
+        const overflowTop = verticalPadding - popupRect.top;
+        const overflowBottom = popupRect.bottom - (mapRect.height - verticalPadding);
+
+        if (overflowLeft > 0 && overflowRight > 0) {
+          const popupCenterX = popupRect.left + popupRect.width / 2;
+          const mapCenterX = mapRect.width / 2;
+          dx = popupCenterX >= mapCenterX ? overflowRight : -overflowLeft;
+        } else if (overflowLeft > 0) {
+          dx = -overflowLeft;
+        } else if (overflowRight > 0) {
+          dx = overflowRight;
+        }
+
+        if (overflowTop > 0) dy = -overflowTop;
+        if (overflowBottom > 0) dy = overflowBottom;
+
+        if (Math.abs(dx) < 6) dx = 0;
+        if (Math.abs(dy) < 6) dy = 0;
+        if (!dx && !dy) return;
+
+        map?.panBy?.([dx, dy], { animate: true, duration: 0.35 } as any);
+      } catch {
+        // noop
+      }
+    };
+
+    let rafId = 0;
+    const scheduleRun = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(run);
+      });
+    };
+
+    scheduleRun();
+
+    let resizeObserver: ResizeObserver | null = null;
+    let cleanupTimer: ReturnType<typeof setTimeout> | null = null;
+    const cleanup = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      if (cleanupTimer) {
+        clearTimeout(cleanupTimer);
+        cleanupTimer = null;
+      }
+      map?.off?.('popupclose', cleanup);
+    };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        scheduleRun();
+      });
+      resizeObserver.observe(popupEl);
+      const popupContentEl = popupEl.querySelector('.leaflet-popup-content');
+      if (popupContentEl instanceof HTMLElement) {
+        resizeObserver.observe(popupContentEl);
+      }
+    }
+
+    map?.on?.('popupclose', cleanup);
+    cleanupTimer = setTimeout(cleanup, 1000);
+  }, []);
+
   const popupAutoPanPadding = useMemo(() => {
-    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    const isNarrowViewport = vw <= 768;
-    const isVeryNarrow = vw <= 480;
+    const effectiveWidth = mapPaneWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+    const isNarrowViewport = effectiveWidth <= 768;
+    const isVeryNarrow = effectiveWidth <= 480;
+    const maxWidth = isVeryNarrow
+      ? Math.min(300, Math.max(248, effectiveWidth - 28))
+      : isNarrowViewport
+        ? Math.min(348, Math.max(280, effectiveWidth - 32))
+        : Math.min(436, Math.max(320, effectiveWidth - 40));
+    const minWidth = isVeryNarrow
+      ? 228
+      : isNarrowViewport
+        ? Math.min(280, Math.max(240, maxWidth - 56))
+        : Math.min(336, Math.max(280, maxWidth - 88));
     return {
       autoPan: true,
       keepInView: true,
-      // MAP-03: уменьшаем popup на мобайле чтобы не перекрывал карту
-      maxWidth: isVeryNarrow ? 280 : isNarrowViewport ? 340 : 560,
-      minWidth: isVeryNarrow ? 220 : isNarrowViewport ? 260 : 420,
+      maxWidth,
+      minWidth,
       className: 'metravel-place-popup',
-      autoPanPaddingTopLeft: isNarrowViewport ? [12, 60] : [24, 140],
-      autoPanPaddingBottomRight: isNarrowViewport ? [12, 60] : [400, 240],
+      autoPanPaddingTopLeft: isNarrowViewport ? [12, 72] : [24, 140],
+      autoPanPaddingBottomRight: isNarrowViewport ? [12, 72] : [24, 140],
+      eventHandlers: {
+        popupopen: handlePopupOpen,
+      },
     };
-  }, []);
+  }, [handlePopupOpen, mapPaneWidth]);
 
   const fitBoundsPadding = useMemo(() => {
     // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.
@@ -1017,7 +1166,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [fullRouteCoords, mode, normalizeLngLatWithHint, routePointsForRouting]);
 
   return (
-    <View style={styles.wrapper} testID="map-leaflet-wrapper">
+    <View ref={wrapperRef} style={styles.wrapper} testID="map-leaflet-wrapper">
       {Platform.OS === 'web' && (
         <img
           alt=""

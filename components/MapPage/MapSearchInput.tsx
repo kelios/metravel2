@@ -112,7 +112,11 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.text,
       paddingVertical: 6,
       ...(Platform.OS === 'web'
-        ? ({ outline: 'none' } as any)
+        ? ({
+          outlineWidth: 0,
+          outlineStyle: 'none',
+          outlineColor: 'transparent',
+        } as any)
         : null),
     },
     clearButton: {

@@ -2,7 +2,7 @@
  * Компонент виджета погоды
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -29,39 +29,48 @@ type DailyForecast = {
 
 function WeatherWidget({ points, countryName, onSettled }: Props) {
     const [forecast, setForecast] = useState<DailyForecast[]>([]);
-    const [locationLabel, setLocationLabel] = useState<string>('');
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const settledRef = useRef(false);
+
+    const primaryCoord = useMemo(() => String(points?.[0]?.coord ?? '').trim(), [points]);
+    const primaryAddress = useMemo(() => String(points?.[0]?.address ?? '').trim(), [points]);
+    const normalizedCountryName = useMemo(() => String(countryName ?? '').trim(), [countryName]);
+
+    const locationLabel = useMemo(() => {
+        if (!primaryAddress && !normalizedCountryName) return '';
+        const addressParts = primaryAddress.split(',').map((part) => part.trim());
+        const locationParts = addressParts.slice(0, 3).filter(Boolean);
+        if (normalizedCountryName) locationParts.push(normalizedCountryName);
+        return locationParts.join(', ');
+    }, [normalizedCountryName, primaryAddress]);
+
+    const settle = useCallback(() => {
+        if (settledRef.current) return;
+        settledRef.current = true;
+        onSettled?.();
+    }, [onSettled]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        if (forecast.length > 0 && locationLabel) {
-            onSettled?.();
-        }
-    }, [forecast, locationLabel, onSettled]);
+        settledRef.current = false;
+        setForecast([]);
+    }, [locationLabel, primaryCoord]);
 
     useEffect(() => {
-        if (Platform.OS !== 'web' || !points?.length) {
-            onSettled?.();
+        if (Platform.OS !== 'web' || !primaryCoord) {
+            settle();
             return;
         }
 
         let isCancelled = false;
 
-        const [latStr, lonStr] = points[0].coord.split(',').map((s) => s.trim());
+        const [latStr, lonStr] = primaryCoord.split(',').map((s) => s.trim());
         const lat = parseFloat(latStr);
         const lon = parseFloat(lonStr);
         if (isNaN(lat) || isNaN(lon)) {
-            onSettled?.();
+            settle();
             return;
         }
-
-        const rawAddress = points[0]?.address ?? '';
-        const addressParts = rawAddress.split(',').map(part => part.trim());
-        const locationParts = addressParts.slice(0, 3).filter(Boolean);
-        if (countryName) locationParts.push(countryName);
-        const fullLabel = locationParts.join(', ');
-        setLocationLabel(fullLabel);
 
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto`;
 
@@ -69,7 +78,7 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
           try {
             const res = await fetchWithTimeout(url, undefined as any, 8000);
             if (!res.ok) {
-              if (!isCancelled) onSettled?.();
+              if (!isCancelled) settle();
               return;
             }
 
@@ -88,17 +97,18 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
 
             if (!isCancelled) {
               setForecast(forecastData);
+              settle();
             }
           } catch {
             // Ignore weather failures (CORS/offline/adblock) to avoid polluting console.
-            if (!isCancelled) onSettled?.();
+            if (!isCancelled) settle();
           }
         })();
 
         return () => {
           isCancelled = true;
         };
-    }, [points, countryName, onSettled]);
+    }, [primaryCoord, settle]);
 
     if (Platform.OS !== 'web' || !forecast.length || !locationLabel) return null;
 

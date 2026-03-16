@@ -306,6 +306,8 @@ const PointListRow = React.memo(function PointListRow({
               src={imgUri}
               alt={point.address}
               fit="cover"
+              blurBackground
+              blurRadius={16}
               priority="low"
               loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
               onError={handleImageError}

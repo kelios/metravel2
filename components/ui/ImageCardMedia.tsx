@@ -4,6 +4,7 @@ import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 
 import OptimizedImage from '@/components/ui/OptimizedImage';
+import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl, generateSrcSet } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -121,6 +122,7 @@ type WebBlurBackdropProps = {
   width: number;
   height: number;
   borderRadius: number;
+  fit: 'contain' | 'cover';
   useCssBackdrop?: boolean;
 };
 
@@ -130,9 +132,17 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
   width,
   height,
   borderRadius,
+  fit,
   useCssBackdrop = false,
 }: WebBlurBackdropProps) {
   const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
+  const backdropFit = fit === 'contain' ? 'contain' : 'cover';
+  const backdropScale = fit === 'contain' ? 1 : 1.12;
+  const backdropFilter = hasPreBlurredSource
+    ? 'saturate(1.08)'
+    : fit === 'contain'
+      ? 'blur(12px) saturate(1.06)'
+      : 'blur(24px) saturate(1.15)';
 
   if (useCssBackdrop) {
     return (
@@ -152,12 +162,12 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
           display: 'block',
           zIndex: 0,
           borderRadius,
-          transform: 'translate(-50%, -50%) scale(1.12)',
+          transform: `translate(-50%, -50%) scale(${backdropScale})`,
           backgroundImage: `url("${src.replace(/"/g, '\\"')}")`,
-          backgroundSize: 'cover',
+          backgroundSize: backdropFit,
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          filter: hasPreBlurredSource ? 'saturate(1.08)' : 'blur(24px) saturate(1.15)',
+          filter: backdropFilter,
           opacity: 1,
           contain: 'paint',
           willChange: 'transform',
@@ -187,12 +197,12 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
         maxWidth: 'none',
         maxHeight: 'none',
         display: 'block',
-        objectFit: 'cover',
+        objectFit: backdropFit,
         objectPosition: 'center',
         zIndex: 0,
         borderRadius,
-        transform: 'translate(-50%, -50%) scale(1.12)',
-        filter: hasPreBlurredSource ? 'saturate(1.08)' : 'blur(24px) saturate(1.15)',
+        transform: `translate(-50%, -50%) scale(${backdropScale})`,
+        filter: backdropFilter,
         opacity: 1,
         contain: 'paint',
         willChange: 'transform',
@@ -425,11 +435,6 @@ function ImageCardMedia({
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
   }, [width]);
 
-  const shouldShowWebImageImmediately = useMemo(() => {
-    if (Platform.OS !== 'web') return showImmediately;
-    return showImmediately || loading === 'eager' || priority === 'high';
-  }, [showImmediately, loading, priority]);
-
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
     if (!blurBackground || !webMainSrc) return false;
@@ -438,6 +443,23 @@ function ImageCardMedia({
     // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
   }, [allowCriticalWebBlur, blurBackground, loading, priority, webMainSrc]);
+
+  const shouldShowWebImageImmediately = useMemo(() => {
+    if (Platform.OS !== 'web') return showImmediately;
+    return showImmediately || loading === 'eager' || priority === 'high';
+  }, [showImmediately, loading, priority]);
+
+  const shouldRevealWebMedia = useMemo(() => {
+    if (Platform.OS !== 'web') return true;
+    return shouldShowWebImageImmediately || webLoaded;
+  }, [shouldShowWebImageImmediately, webLoaded]);
+
+  const shouldRenderWebSkeleton = useMemo(() => {
+    if (Platform.OS !== 'web') return false;
+    if (blurOnly) return false;
+    if (!webMainSrc) return false;
+    return !shouldRevealWebMedia;
+  }, [blurOnly, shouldRevealWebMedia, webMainSrc]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -533,14 +555,15 @@ function ImageCardMedia({
     >
       {resolvedSource && !shouldDisableNetwork ? (
         <>
-          {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
+          {Platform.OS === 'web' && shouldRenderWebBlurBackground && shouldRevealWebMedia && webBlurSrc ? (
             <WebBlurBackdrop
               src={webBlurSrc}
               alt={alt || ''}
               width={typeof width === 'number' ? width : 400}
               height={typeof height === 'number' ? height : 300}
               borderRadius={resolvedBorderRadius}
-              useCssBackdrop={allowCriticalWebBlur && (loading === 'eager' || priority === 'high')}
+              fit={fit}
+              useCssBackdrop={allowCriticalWebBlur}
             />
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
@@ -597,6 +620,9 @@ function ImageCardMedia({
               ]}
             />
           )}
+          {shouldRenderWebSkeleton ? (
+            <ShimmerOverlay style={StyleSheet.absoluteFill} />
+          ) : null}
         </>
       ) : (
         <View

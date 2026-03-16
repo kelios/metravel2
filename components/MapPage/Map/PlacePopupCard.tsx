@@ -3,9 +3,9 @@ import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View, 
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type Props = {
   title: string;
@@ -234,22 +234,22 @@ const getBreakpoint = (viewportWidth: number): BreakpointKey => {
   return 'default';
 };
 
-const FONT_SIZES: Record<BreakpointKey, { title: number; small: number }> = {
-  narrow: { title: 14, small: 12 },
-  compact: { title: 15, small: 13 },
-  default: { title: 16, small: 14 },
+const FONT_SIZES: Record<BreakpointKey, { title: number; small: number; coord: number }> = {
+  narrow: { title: 15, small: 12, coord: 13 },
+  compact: { title: 16, small: 13, coord: 14 },
+  default: { title: 17, small: 14, coord: 14 },
 };
 
-const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: number; radius: number; thumbSize: number }> = {
-  narrow: { gap: 8, btnPadV: 7, btnPadH: 9, radius: 10, thumbSize: 72 },
-  compact: { gap: 10, btnPadV: 8, btnPadH: 10, radius: 11, thumbSize: 80 },
-  default: { gap: 12, btnPadV: 9, btnPadH: 12, radius: 12, thumbSize: 88 },
+const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: number; radius: number; iconButtonSize: number; sectionGap: number }> = {
+  narrow: { gap: 10, btnPadV: 10, btnPadH: 12, radius: 12, iconButtonSize: 44, sectionGap: 14 },
+  compact: { gap: 12, btnPadV: 11, btnPadH: 14, radius: 13, iconButtonSize: 46, sectionGap: 16 },
+  default: { gap: 14, btnPadV: 12, btnPadH: 16, radius: 14, iconButtonSize: 48, sectionGap: 18 },
 };
 
 const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 272,
-  compact: 320,
-  default: 420,
+  narrow: 300,
+  compact: 348,
+  default: 436,
 };
 
 const PlacePopupCard: React.FC<Props> = ({
@@ -296,29 +296,19 @@ const PlacePopupCard: React.FC<Props> = ({
   const isNarrow = bp === 'narrow';
   const _fs = FONT_SIZES[bp];
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
-  const viewportGutter = bp === 'narrow' ? 28 : bp === 'compact' ? 40 : 56;
+  const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
   const maxPopupWidth = Math.min(width, POPUP_MAX_WIDTH_BY_BREAKPOINT[bp], safeViewportWidth);
   const heroWidth = maxPopupWidth;
   const heroHeight = Math.max(1, Math.round(heroWidth / IMAGE_ASPECT[bp]));
 
-  const styles = useMemo(() => getStyles(colors, bp), [colors, bp]);
+  const styles = useMemo(() => getStyles(colors, bp, heroHeight), [colors, bp, heroHeight]);
 
   const actionBtnStyle = useMemo(
     () =>
       ({ pressed }: { pressed: boolean }) => [styles.actionBtn, pressed && styles.actionBtnPressed],
     [styles],
   );
-
-  const handleCardPress = useCallback(() => {
-    if (typeof onOpenArticle === 'function') {
-      onOpenArticle();
-      return;
-    }
-    if (imageUrl) {
-      setFullscreenVisible(true);
-    }
-  }, [imageUrl, onOpenArticle]);
 
   const handleOpenFullscreen = useCallback(() => {
     if (imageUrl) setFullscreenVisible(true);
@@ -331,19 +321,22 @@ const PlacePopupCard: React.FC<Props> = ({
   const contentSlot = useMemo(() => (
     <View style={styles.content}>
       <View style={styles.infoSection}>
-        <Text style={styles.titleText} numberOfLines={2}>
+        <Text style={styles.titleText} numberOfLines={bp === 'narrow' ? 3 : 2}>
           {title}
         </Text>
 
         <View style={styles.metaRow}>
           {!!categoryLabel && (
-            <Text style={styles.categoryText} numberOfLines={1}>
-              {categoryLabel}
-            </Text>
+            <View style={styles.metaBadge}>
+              <Feather name="tag" size={13} color={colors.textMuted} />
+              <Text style={styles.categoryText} numberOfLines={1}>
+                {categoryLabel}
+              </Text>
+            </View>
           )}
 
           {(isDrivingLoading || hasDrivingInfo) && (
-            <View testID="popup-driving-info" style={styles.drivingRow}>
+            <View testID="popup-driving-info" style={[styles.drivingRow, styles.metaBadge]}>
               <Feather name="navigation" size={14} color={colors.textMuted} />
               {isDrivingLoading ? (
                 <ActivityIndicator size="small" color={colors.textMuted} />
@@ -364,12 +357,14 @@ const PlacePopupCard: React.FC<Props> = ({
           title={POPUP_TOOLTIPS.copyCoords}
           style={styles.coordRow}
         >
+          <Feather name="map-pin" size={15} color={colors.primary} style={{ flexShrink: 0 } as any} />
           <Text style={styles.coordText} numberOfLines={1} selectable>{coord}</Text>
-          {onCopyCoord && <Feather name="copy" size={14} color={colors.textMuted} />}
+          {onCopyCoord && <Feather name="copy" size={16} color={colors.textMuted} style={{ flexShrink: 0 } as any} />}
         </CardActionPressable>
       )}
 
-      <View style={styles.actionsRow}>
+      <View style={styles.actionsGroup}>
+        <View style={styles.actionsRow}>
         {hasCoord && onOpenGoogleMaps && (
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
@@ -429,6 +424,7 @@ const PlacePopupCard: React.FC<Props> = ({
             <Feather name="corner-up-right" size={16} color={colors.primary} />
           </CardActionPressable>
         )}
+        </View>
       </View>
 
       {onAddPoint && (
@@ -455,6 +451,7 @@ const PlacePopupCard: React.FC<Props> = ({
   ), [
     actionBtnStyle,
     addDisabled,
+    bp,
     categoryLabel,
     colors.primary,
     colors.textMuted,
@@ -479,25 +476,37 @@ const PlacePopupCard: React.FC<Props> = ({
 
   return (
     <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
-      <UnifiedTravelCard
-        title={title}
-        imageUrl={imageUrl}
-        onPress={handleCardPress}
-        onMediaPress={imageUrl ? handleOpenFullscreen : undefined}
-        imageHeight={imageUrl ? heroHeight : 0}
-        width={maxPopupWidth}
-        mediaFit="contain"
-        webHoverScale={false}
-        contentSlot={contentSlot}
-        contentContainerStyle={styles.contentContainer}
-        mediaProps={{
-          blurBackground: !!imageUrl,
-          allowCriticalWebBlur: Platform.OS === 'web',
-          blurRadius: 16,
-          loading: 'lazy',
-          priority: 'low',
-        }}
-      />
+      <View style={styles.popupCard}>
+        {imageUrl && (
+          <Pressable
+            onPress={handleOpenFullscreen}
+            style={styles.imageContainer}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть фото на весь экран"
+          >
+            <ImageCardMedia
+              src={imageUrl}
+              alt={title}
+              fit="contain"
+              blurBackground
+              allowCriticalWebBlur={Platform.OS === 'web'}
+              blurRadius={16}
+              priority="low"
+              loading="lazy"
+              width={maxPopupWidth}
+              height={heroHeight}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.imageExpandButton}>
+              <Feather name="maximize-2" size={18} color={colors.textOnDark} />
+            </View>
+          </Pressable>
+        )}
+
+        <View style={styles.contentContainer}>
+          {contentSlot}
+        </View>
+      </View>
 
       {imageUrl && (
         <FullscreenImageViewer
@@ -517,7 +526,7 @@ const IMAGE_ASPECT: Record<BreakpointKey, number> = {
   default: 1.35,
 };
 
-const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
+const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number) => {
   const sp = SPACING[bp];
   const fs = FONT_SIZES[bp];
 
@@ -525,34 +534,80 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     container: {
       width: '100%',
     },
-    card: {
+    popupCard: {
       width: '100%',
+      backgroundColor: colors.surface,
+      borderRadius: sp.radius + 2,
+      overflow: 'hidden',
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
+          } as any)
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 3,
+          }),
+    },
+    imageContainer: {
+      width: '100%',
+      height: heroHeight > 0 ? heroHeight : undefined,
+      minHeight: heroHeight > 0 ? heroHeight : 0,
+      position: 'relative',
+      backgroundColor: colors.backgroundSecondary,
+    },
+    imageExpandButton: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     contentContainer: {
-      paddingHorizontal: bp === 'narrow' ? 10 : 12,
-      paddingVertical: bp === 'narrow' ? 8 : 10,
+      paddingHorizontal: bp === 'narrow' ? 12 : 14,
+      paddingTop: bp === 'narrow' ? 12 : 14,
+      paddingBottom: bp === 'narrow' ? 14 : 16,
     },
     content: {
-      gap: sp.gap,
+      gap: sp.sectionGap,
     },
     infoSection: {
-      gap: 6,
+      gap: bp === 'narrow' ? 10 : 12,
     },
     metaRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      alignItems: 'center',
+      alignItems: bp === 'narrow' ? 'flex-start' : 'center',
       gap: 6,
+    },
+    metaBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      minHeight: 30,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
     },
     titleText: {
       fontSize: fs.title,
       fontWeight: '600',
       color: colors.text,
-      lineHeight: fs.title * 1.32,
+      lineHeight: fs.title * 1.4,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: bp === 'narrow' ? 3 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           } as any)
@@ -575,12 +630,19 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     coordRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 4,
+      gap: 10,
+      minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, 48),
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: sp.radius,
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
+      borderWidth: 1.5,
+      borderColor: colors.primaryAlpha30 ?? colors.border,
     },
     coordText: {
-      fontSize: fs.small,
-      color: colors.textMuted,
+      fontSize: fs.coord,
+      fontWeight: '500',
+      color: colors.text,
       flex: 1,
       minWidth: 0,
       fontFamily:
@@ -588,47 +650,65 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
           ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
           : undefined,
     },
+    actionsGroup: {
+      gap: 0,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '600',
+      color: colors.textMuted,
+      paddingHorizontal: 2,
+      textTransform: 'uppercase',
+      letterSpacing: Platform.OS === 'web' ? 0.3 : undefined,
+    },
     actionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 6,
-      paddingHorizontal: 4,
+      gap: bp === 'narrow' ? 8 : 10,
     },
     iconBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: 38,
-      height: 38,
-      borderRadius: 10,
+      width: sp.iconButtonSize,
+      height: sp.iconButtonSize,
+      borderRadius: sp.radius,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: 38,
-      height: 38,
-      borderRadius: 10,
+      width: sp.iconButtonSize,
+      height: sp.iconButtonSize,
+      borderRadius: sp.radius,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionBtnPressed: {
-      opacity: 0.7,
+      opacity: 0.78,
+      transform: [{ scale: 0.98 }],
     },
     routeBtn: {
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
+      borderColor: colors.primaryAlpha30 ?? colors.border,
     },
     addBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
+      gap: 9,
+      minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, 48),
       paddingVertical: sp.btnPadV + 2,
       paddingHorizontal: sp.btnPadH + 6,
-      borderRadius: sp.radius,
-      borderWidth: 1,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      borderWidth: 1.5,
       borderColor: colors.primary,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.primarySoft ?? 'transparent',
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     addBtnDisabled: {
@@ -639,7 +719,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
       opacity: 0.7,
     },
     addBtnText: {
-      fontSize: fs.small,
+      fontSize: bp === 'narrow' ? 14 : fs.small,
       fontWeight: '600',
       color: colors.primary,
     },

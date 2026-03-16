@@ -11,20 +11,10 @@ const mockImageCardMedia: jest.Mock<any, any> = jest.fn((props: any) =>
   React.createElement('mock-image-card-media', props)
 )
 const mockPrefetchImage = jest.fn(() => Promise.resolve())
-const mockShimmerOverlay: jest.Mock<any, any> = jest.fn((props: any) =>
-  React.createElement('mock-shimmer-overlay', props)
-)
-
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
   default: (props: any) => mockImageCardMedia(props),
-  prefetchImage: (...args: any[]) => mockPrefetchImage(...args),
-}))
-
-jest.mock('@/components/ui/ShimmerOverlay', () => ({
-  __esModule: true,
-  default: (props: any) => mockShimmerOverlay(props),
-  ShimmerOverlay: (props: any) => mockShimmerOverlay(props),
+  prefetchImage: (...args: any[]) => (mockPrefetchImage as any)(...args),
 }))
 
 describe('UnifiedTravelCard blur background (web)', () => {
@@ -34,7 +24,6 @@ describe('UnifiedTravelCard blur background (web)', () => {
     Platform.OS = 'web'
     mockImageCardMedia.mockClear()
     mockPrefetchImage.mockClear()
-    mockShimmerOverlay.mockClear()
   })
 
   afterEach(() => {
@@ -90,7 +79,7 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(mockPrefetchImage).not.toHaveBeenCalled()
   })
 
-  it('renders shimmer after media so loading placeholder stays above blur background', () => {
+  it('delegates loading UI to ImageCardMedia instead of rendering a card-level shimmer overlay', () => {
     let tree: renderer.ReactTestRenderer
 
     renderer.act(() => {
@@ -103,15 +92,10 @@ describe('UnifiedTravelCard blur background (web)', () => {
       )
     })
 
-    expect(mockShimmerOverlay).toHaveBeenCalled()
-
     const renderedNodes = tree!.root.findAll((node: any) => {
-      return node?.type === 'mock-image-card-media' || node?.type === 'mock-shimmer-overlay'
+      return node?.type === 'mock-image-card-media'
     })
 
-    expect(renderedNodes.map((node: any) => node.type)).toEqual([
-      'mock-image-card-media',
-      'mock-shimmer-overlay',
-    ])
+    expect(renderedNodes.map((node: any) => node.type)).toEqual(['mock-image-card-media'])
   })
 })

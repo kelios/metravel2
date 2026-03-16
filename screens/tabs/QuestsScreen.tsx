@@ -1419,7 +1419,7 @@ function QuestCard({
                         src={imageUrl}
                         alt={quest.title}
                         fit="cover"
-                        blurBackground={false}
+                        blurBackground
                         style={StyleSheet.absoluteFill}
                         loading="lazy"
                         priority="normal"

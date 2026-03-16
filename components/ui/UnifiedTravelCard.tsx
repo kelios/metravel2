@@ -6,7 +6,6 @@ import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia';
-import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -47,6 +46,7 @@ type Props = {
   bottomRightSlot?: ReactNode;
   containerOverlaySlot?: ReactNode;
   contentSlot?: ReactNode;
+  contentPosition?: 'belowMedia' | 'aboveMedia';
   mediaProps?: {
     placeholderBlurhash?: string;
     blurRadius?: number;
@@ -60,6 +60,7 @@ type Props = {
   width?: number;
   imageHeight?: number;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  insetMedia?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
   webAsView?: boolean;
@@ -103,10 +104,12 @@ function UnifiedTravelCard({
   bottomRightSlot,
   containerOverlaySlot,
   contentSlot,
+  contentPosition = 'belowMedia',
   mediaProps,
   width,
   imageHeight,
   contentContainerStyle,
+  insetMedia = false,
   style,
   testID,
   webPressableProps,
@@ -123,6 +126,7 @@ function UnifiedTravelCard({
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const isFeatured = visualVariant === 'featured';
+  const enableWebHoverEffects = isWeb && webHoverScale;
   const { isPhone, isLargePhone } = useResponsive();
   const isMobileDevice = isPhone || isLargePhone;
   const cardActionLabel = `Открыть маршрут «${title}»`;
@@ -176,24 +180,15 @@ function UnifiedTravelCard({
   const cardImageCacheKey = useMemo(() => {
     return optimizedImageUrl ? String(optimizedImageUrl).trim() : '';
   }, [optimizedImageUrl]);
-  // CARD-04: Отслеживаем загрузку изображения для показа shimmer
-  const [imageLoaded, setImageLoaded] = useState(() => {
-    return (
-      !!cardImageCacheKey &&
-      (loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey))
-    );
-  });
   const [imageFailed, setImageFailed] = useState(false);
   const handleImageLoad = useCallback(() => {
     if (cardImageCacheKey) {
       loadedCardImageCache.add(cardImageCacheKey);
     }
     setImageFailed(false);
-    setImageLoaded(true);
   }, [cardImageCacheKey]);
   const handleImageError = useCallback(() => {
     setImageFailed(true);
-    setImageLoaded(true);
   }, []);
   const canPrefetchCardImage = useMemo(() => {
     if (!isWeb) return false;
@@ -211,13 +206,9 @@ function UnifiedTravelCard({
   useEffect(() => {
     if (!cardImageCacheKey) {
       setImageFailed(false);
-      setImageLoaded(false);
       return;
     }
     setImageFailed(false);
-    setImageLoaded(
-      loadedCardImageCache.has(cardImageCacheKey) || prefetchedCardImageCache.has(cardImageCacheKey)
-    );
   }, [cardImageCacheKey]);
 
   useEffect(() => {
@@ -237,8 +228,6 @@ function UnifiedTravelCard({
         .then(() => {
           if (cancelled) return;
           prefetchedCardImageCache.add(cardImageCacheKey);
-          loadedCardImageCache.add(cardImageCacheKey);
-          setImageLoaded(true);
         })
         .catch(() => undefined);
     };
@@ -337,6 +326,12 @@ function UnifiedTravelCard({
           height: isWeb ? DESIGN_TOKENS.cardImageHeights.medium : DESIGN_TOKENS.cardImageHeights.medium - 20,
           position: 'relative',
           backgroundColor: colors.backgroundSecondary,
+        },
+        imageContainerInset: {
+          overflow: 'hidden',
+          borderRadius: DESIGN_TOKENS.radii.lg,
+          marginHorizontal: DESIGN_TOKENS.spacing.sm,
+          marginBottom: DESIGN_TOKENS.spacing.sm,
         },
         imagePlaceholder: {
           ...StyleSheet.absoluteFillObject,
@@ -446,6 +441,9 @@ function UnifiedTravelCard({
           gap: 0,
           ...(isWeb ? { flex: 0 } : {}),
         },
+        contentAboveMedia: {
+          paddingBottom: 6,
+        },
         title: {
           fontSize: 14,
           fontWeight: '600',
@@ -510,11 +508,15 @@ function UnifiedTravelCard({
     return {
       ...base,
       onMouseEnter: (e: any) => {
-        setIsHovered(true);
+        if (enableWebHoverEffects) {
+          setIsHovered(true);
+        }
         originalMouseEnter?.(e);
       },
       onMouseLeave: (e: any) => {
-        setIsHovered(false);
+        if (enableWebHoverEffects) {
+          setIsHovered(false);
+        }
         originalMouseLeave?.(e);
       },
       onFocus: (e: any) => {
@@ -526,7 +528,7 @@ function UnifiedTravelCard({
         originalBlur?.(e);
       },
     };
-  }, [defaultWebProps, isWeb, onPress, onLongPress, handleLongPress, webPressableProps]);
+  }, [defaultWebProps, enableWebHoverEffects, isWeb, onPress, onLongPress, handleLongPress, webPressableProps]);
 
   const showHeroTitle = heroTitleOverlay && typeof title === 'string' && title.trim().length > 0;
   const normalizedMetaText = typeof metaText === 'string' ? metaText.trim() : '';
@@ -535,6 +537,154 @@ function UnifiedTravelCard({
   // AND-16: Wrap in Animated.View for native spring, plain View for web
   const CardWrapper = isWeb ? View : Animated.View;
   const wrapperStyle = isWeb ? (typeof width === 'number' ? { width } : undefined) : [animatedCardStyle, typeof width === 'number' ? { width } : undefined];
+  const mediaNode = (
+    <View
+      ref={mediaViewportRef}
+      key="media"
+      style={[
+        styles.imageContainer,
+        typeof imageHeight === 'number' ? { height: imageHeight } : null,
+        imageHeight === 0 && { display: 'none' },
+        insetMedia ? styles.imageContainerInset : null,
+      ]}
+      accessible={false}
+      importantForAccessibility="no"
+    >
+      {optimizedImageUrl && !imageFailed ? (
+        <>
+          <ImageCardMedia
+            src={optimizedImageUrl}
+            alt={title}
+            fit={mediaFit}
+            blurBackground={mediaProps?.blurBackground ?? true}
+            allowCriticalWebBlur={mediaProps?.allowCriticalWebBlur ?? false}
+            blurRadius={mediaProps?.blurRadius ?? 16}
+            placeholderBlurhash={mediaProps?.placeholderBlurhash}
+            style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
+            loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
+            priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
+            prefetch={mediaProps?.prefetch ?? false}
+            showImmediately={mediaProps?.showImmediately ?? false}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        </>
+      ) : (
+        <View
+          testID="image-stub"
+          style={[
+            styles.imagePlaceholder,
+            isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null,
+          ]}
+          {...(process.env.NODE_ENV === 'test'
+            ? {}
+            : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
+        />
+      )}
+
+      {onMediaPress ? (
+        isWeb ? (
+          <View
+            style={StyleSheet.absoluteFill}
+            {...({
+              tabIndex: 0,
+              'aria-label': mediaActionLabel,
+              onClick: (e: any) => {
+                e?.preventDefault?.();
+                e?.stopPropagation?.();
+                onMediaPress();
+              },
+              onKeyDown: (e: any) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e?.stopPropagation?.();
+                  onMediaPress();
+                }
+              },
+              'data-card-action': 'true',
+              style: { cursor: 'pointer', position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+            } as any)}
+          />
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={mediaActionLabel}
+            onPress={onMediaPress}
+            style={StyleSheet.absoluteFill}
+            {...({ 'data-card-action': 'true' } as any)}
+          />
+        )
+      ) : null}
+
+      {onMediaPress && !showHeroTitle ? (
+        <View style={[styles.mediaActionHint, { pointerEvents: 'none' }]}>
+          <Feather name="maximize-2" size={14} color="#fff" />
+        </View>
+      ) : null}
+
+      {showHeroTitle ? (
+        <View style={StyleSheet.absoluteFillObject}>
+          <View style={styles.imageVignetteOverlay} />
+          {isFeatured ? <View style={styles.imageVignetteOverlayFeatured} /> : null}
+          <View style={styles.imageTitleOverlay}>
+            <View style={styles.imageTitleOverlayBg} />
+            <Text style={styles.imageTitleOverlayText} numberOfLines={heroTitleMaxLines}>
+              {title}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {containerOverlaySlot ? (
+        <View
+          style={[
+            StyleSheet.absoluteFillObject,
+            isWeb ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
+          ]}
+        >
+          {containerOverlaySlot}
+        </View>
+      ) : null}
+      {leftTopSlot ? <View style={styles.leftTopSlot}>{leftTopSlot}</View> : null}
+      {rightTopSlot ? <View style={styles.rightTopSlot}>{rightTopSlot}</View> : null}
+      {badge ? (
+        <View style={[styles.badge, { backgroundColor: badge.backgroundColor }]}>
+          <Feather name={badge.icon as any} size={14} color={badge.iconColor} />
+        </View>
+      ) : null}
+      {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
+      {bottomRightSlot ? <View style={styles.bottomRightSlot}>{bottomRightSlot}</View> : null}
+    </View>
+  );
+  const contentNode = contentSlot != null ? (
+    <View
+      key="content"
+      style={[
+        styles.content,
+        contentPosition === 'aboveMedia' ? styles.contentAboveMedia : null,
+        contentContainerStyle,
+      ]}
+    >
+      {contentSlot}
+    </View>
+  ) : (
+    <View key="content-default" style={styles.content}>
+      {!heroTitleOverlay && (
+        <Text style={styles.title} numberOfLines={isMobileDevice ? 1 : 2} ellipsizeMode="tail">
+          {title}
+        </Text>
+      )}
+      <View style={styles.metaRow}>
+        <Feather name="map-pin" size={12} color={colors.textMuted} style={MAP_PIN_ICON_STYLE as any} />
+        <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
+          {displayMetaText}
+        </Text>
+      </View>
+    </View>
+  );
+  const orderedContent = contentPosition === 'aboveMedia'
+    ? [contentNode, mediaNode]
+    : [mediaNode, contentNode];
 
   return (
     <CardWrapper style={wrapperStyle as any}>
@@ -544,9 +694,9 @@ function UnifiedTravelCard({
       {...(!isWeb ? { onPressIn: handlePressIn, onPressOut: handlePressOut } : {})}
       style={[
         styles.container,
-        isWeb && !isFeatured && isHovered && styles.containerHovered,
+        enableWebHoverEffects && !isFeatured && isHovered && styles.containerHovered,
         isFeatured && styles.containerFeatured,
-        isFeatured && isHovered && styles.containerFeaturedHovered,
+        isFeatured && enableWebHoverEffects && isHovered && styles.containerFeaturedHovered,
         isWeb && isFocused && styles.containerFocused,
         typeof width === 'number' ? { width } : null,
         style,
@@ -558,146 +708,7 @@ function UnifiedTravelCard({
       {...(!isWeb ? { android_ripple: { color: 'rgba(0,0,0,0.08)', borderless: false } } : {})}
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
-      {[
-        <View
-          ref={mediaViewportRef}
-          key="media"
-          style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null, imageHeight === 0 && { display: 'none' }]}
-          accessible={false}
-          importantForAccessibility="no"
-        >
-          {optimizedImageUrl && !imageFailed ? (
-            <>
-              <ImageCardMedia
-                src={optimizedImageUrl}
-                alt={title}
-                fit={mediaFit}
-                blurBackground={mediaProps?.blurBackground ?? true}
-                allowCriticalWebBlur={mediaProps?.allowCriticalWebBlur ?? false}
-                blurRadius={mediaProps?.blurRadius ?? 16}
-                placeholderBlurhash={mediaProps?.placeholderBlurhash}
-                style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
-                loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
-                priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
-                prefetch={mediaProps?.prefetch ?? false}
-                showImmediately={mediaProps?.showImmediately ?? imageLoaded}
-                onLoad={handleImageLoad}
-                onError={handleImageError}
-              />
-              {!imageLoaded && (
-                <ShimmerOverlay
-                  style={StyleSheet.absoluteFill}
-                />
-              )}
-            </>
-          ) : (
-            <View
-              testID="image-stub"
-              style={[
-                styles.imagePlaceholder,
-                isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null,
-              ]}
-              {...(process.env.NODE_ENV === 'test'
-                ? {}
-                : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
-            />
-          )}
-
-          {onMediaPress ? (
-            isWeb ? (
-              <View
-                style={StyleSheet.absoluteFill}
-                {...({
-                  tabIndex: 0,
-                  'aria-label': mediaActionLabel,
-                  onClick: (e: any) => {
-                    e?.preventDefault?.();
-                    e?.stopPropagation?.();
-                    onMediaPress();
-                  },
-                  onKeyDown: (e: any) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e?.stopPropagation?.();
-                      onMediaPress();
-                    }
-                  },
-                  'data-card-action': 'true',
-                  style: { cursor: 'pointer', position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
-                } as any)}
-              />
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={mediaActionLabel}
-                onPress={onMediaPress}
-                style={StyleSheet.absoluteFill}
-                {...({ 'data-card-action': 'true' } as any)}
-              />
-            )
-          ) : null}
-
-          {/* CARD-03: Визуальный индикатор, что фото кликабельно отдельно от карточки */}
-          {onMediaPress && !showHeroTitle ? (
-            <View style={[styles.mediaActionHint, { pointerEvents: 'none' }]}>
-              <Feather name="maximize-2" size={14} color="#fff" />
-            </View>
-          ) : null}
-
-          {showHeroTitle ? (
-            <View style={StyleSheet.absoluteFillObject}>
-              <View style={styles.imageVignetteOverlay} />
-              {isFeatured ? <View style={styles.imageVignetteOverlayFeatured} /> : null}
-              <View style={styles.imageTitleOverlay}>
-                <View style={styles.imageTitleOverlayBg} />
-                <Text style={styles.imageTitleOverlayText} numberOfLines={heroTitleMaxLines}>
-                  {title}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          {containerOverlaySlot ? (
-            <View
-              style={[
-                StyleSheet.absoluteFillObject,
-                isWeb ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
-              ]}
-            >
-              {containerOverlaySlot}
-            </View>
-          ) : null}
-          {leftTopSlot ? <View style={styles.leftTopSlot}>{leftTopSlot}</View> : null}
-          {rightTopSlot ? <View style={styles.rightTopSlot}>{rightTopSlot}</View> : null}
-          {badge ? (
-            <View style={[styles.badge, { backgroundColor: badge.backgroundColor }]}>
-              <Feather name={badge.icon as any} size={14} color={badge.iconColor} />
-            </View>
-          ) : null}
-          {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
-          {bottomRightSlot ? <View style={styles.bottomRightSlot}>{bottomRightSlot}</View> : null}
-        </View>,
-        contentSlot != null ? (
-          <View key="content" style={[styles.content, contentContainerStyle]}>
-            {contentSlot}
-          </View>
-        ) : (
-          <View key="content-default" style={styles.content}>
-            {/* RESP-06: На desktop 2 строки заголовка, на mobile 1 */}
-            {!heroTitleOverlay && (
-              <Text style={styles.title} numberOfLines={isMobileDevice ? 1 : 2} ellipsizeMode="tail">
-                {title}
-              </Text>
-            )}
-            <View style={styles.metaRow}>
-              <Feather name="map-pin" size={12} color={colors.textMuted} style={MAP_PIN_ICON_STYLE as any} />
-              <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
-                {displayMetaText}
-              </Text>
-            </View>
-          </View>
-        ),
-      ]}
+      {orderedContent}
     </ContainerComponent>
     </CardWrapper>
   );

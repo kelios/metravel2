@@ -693,6 +693,7 @@ const unifiedCard = (
     rightTopSlot={selectable ? null : rightTopSlot}
     containerOverlaySlot={selectableOverlay}
     contentSlot={contentSlotWithoutTitle}
+    webHoverScale={false}
     webAsView={isWeb}
     webPressableProps={
       isWeb

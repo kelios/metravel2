@@ -9,6 +9,7 @@ const PANEL_WIDTH_KEY = 'metravel_map_panel_width';
 const PANEL_MIN_WIDTH = 300;
 const PANEL_MAX_WIDTH_RATIO = 0.5; // 50vw
 const PANEL_DEFAULT_WIDTH = 384;
+const MAP_LAYOUT_INVALIDATE_EVENT = 'metravel:map-layout-invalidate';
 
 function readPanelCollapsed(): boolean {
   if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return false;
@@ -78,7 +79,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
 
     resizeRafRef.current = requestAnimationFrame(() => {
       resizeRafRef.current = null;
-      window.dispatchEvent(new Event('resize'));
+      window.dispatchEvent(new Event(MAP_LAYOUT_INVALIDATE_EVENT));
     });
   }, []);
 

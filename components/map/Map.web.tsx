@@ -113,6 +113,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const markersRef = useRef<Map<string, any>>(new Map());
   const pendingHighlightRef = useRef<{ coordKey: string; requestKey: string } | null>(null);
   const siteCategoryDictionaryRef = useRef<CategoryDictionaryItem[]>([]);
+  const [mapPaneWidth, setMapPaneWidth] = useState(0);
   const [categoryDictionaryVersion, setCategoryDictionaryVersion] = useState(0);
   const categoryIdToName = useMemo(() => {
     if (categoryDictionaryVersion === -1) return new Map<string, string>();
@@ -146,6 +147,34 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     loadDictionary();
     return () => {
       active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isWeb) return;
+
+    const hostEl = rootRef.current as HTMLElement | null;
+    if (!(hostEl instanceof HTMLElement)) return;
+
+    const updateWidth = () => {
+      setMapPaneWidth(hostEl.clientWidth || 0);
+    };
+
+    updateWidth();
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        updateWidth();
+      });
+      resizeObserver.observe(hostEl);
+    }
+
+    window.addEventListener('resize', updateWidth);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateWidth);
     };
   }, []);
 
@@ -238,6 +267,20 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     coordinates?.latitude ?? 53.8828449,
     coordinates?.longitude ?? 27.7273595,
   ];
+
+  const popupContentMaxWidth = useMemo(() => {
+    if (!mapPaneWidth) return 320;
+    return Math.max(220, Math.min(320, mapPaneWidth - 56));
+  }, [mapPaneWidth]);
+
+  const popupMinWidth = useMemo(() => {
+    return Math.max(180, Math.min(220, popupContentMaxWidth - 32));
+  }, [popupContentMaxWidth]);
+
+  const popupHorizontalPadding = useMemo(() => {
+    if (!mapPaneWidth) return 24;
+    return mapPaneWidth <= 420 ? 12 : 24;
+  }, [mapPaneWidth]);
 
   const leafletIcons = useLeafletIcons(L);
 
@@ -395,22 +438,25 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
               height: popupRectAbs.height,
             };
 
-            const padding = 16;
-
-            // Приоритет: убедиться, что попап полностью виден внутри карты.
-            // panBy([dx, dy]) сдвигает карту, т.е. чтобы попап поднялся вверх,
-            // нужно сдвинуть карту вниз (положительный dy).
+            const horizontalPadding = mapRect.width <= 420 ? 12 : 20;
+            const verticalPadding = 16;
             let dx = 0;
             let dy = 0;
 
-            const overflowLeft = padding - popupRect.left;
-            const overflowRight = popupRect.right - (mapRect.width - padding);
-            const overflowTop = padding - popupRect.top;
-            const overflowBottom = popupRect.bottom - (mapRect.height - padding);
+            const overflowLeft = horizontalPadding - popupRect.left;
+            const overflowRight = popupRect.right - (mapRect.width - horizontalPadding);
+            const overflowTop = verticalPadding - popupRect.top;
+            const overflowBottom = popupRect.bottom - (mapRect.height - verticalPadding);
 
-            // Сдвигаем карту, чтобы попап вошёл в видимую область
-            if (overflowLeft > 0) dx = -overflowLeft;
-            if (overflowRight > 0) dx = overflowRight;
+            if (overflowLeft > 0 && overflowRight > 0) {
+              const popupCenterX = popupRect.left + popupRect.width / 2;
+              const mapCenterX = mapRect.width / 2;
+              dx = popupCenterX >= mapCenterX ? overflowRight : -overflowLeft;
+            } else if (overflowLeft > 0) {
+              dx = -overflowLeft;
+            } else if (overflowRight > 0) {
+              dx = overflowRight;
+            }
             if (overflowTop > 0) dy = -overflowTop;
             if (overflowBottom > 0) dy = overflowBottom;
 
@@ -517,11 +563,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       <PopupC
         autoPan
         keepInView
-        maxWidth={320}
-        minWidth={220}
-        autoPanPadding={[24, 24] as any}
-        autoPanPaddingTopLeft={[24, 72] as any}
-        autoPanPaddingBottomRight={[24, 72] as any}
+        maxWidth={popupContentMaxWidth}
+        minWidth={popupMinWidth}
+        autoPanPadding={[popupHorizontalPadding, 24] as any}
+        autoPanPaddingTopLeft={[popupHorizontalPadding, 72] as any}
+        autoPanPaddingBottomRight={[popupHorizontalPadding, 72] as any}
         closeButton
       >
         <MapPopup
@@ -535,7 +581,10 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   return (
     <View
-      style={styles.mapContainer}
+      style={[
+        styles.mapContainer,
+        { ['--metravel-popup-content-max-width' as any]: `${popupContentMaxWidth}px` } as any,
+      ]}
       ref={rootRef}
       {...({ className: 'metravel-travel-map' } as any)}
     >

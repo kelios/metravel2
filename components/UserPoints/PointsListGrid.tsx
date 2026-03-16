@@ -714,7 +714,9 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     color: colors.text,
     fontSize: 15,
     ...(Platform.OS === 'web' ? ({
-      outline: 'none',
+      outlineWidth: 0,
+      outlineStyle: 'none',
+      outlineColor: 'transparent',
       transition: 'border-color 150ms ease, box-shadow 150ms ease',
     } as any) : null),
   },

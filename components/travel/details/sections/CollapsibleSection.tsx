@@ -14,6 +14,21 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const CONTENT_MARGIN_STYLE = { marginTop: 12 } as const;
 
+const normalizeViewChildren = (children: React.ReactNode): React.ReactNode =>
+  React.Children.map(children, (child) => {
+    if (typeof child === 'string' || typeof child === 'number') {
+      return <Text>{child}</Text>;
+    }
+    if (React.isValidElement(child) && child.type === React.Fragment) {
+      return (
+        <React.Fragment key={child.key}>
+          {normalizeViewChildren((child.props as { children?: React.ReactNode }).children)}
+        </React.Fragment>
+      );
+    }
+    return child;
+  });
+
 export type HighlightType = 'default' | 'positive' | 'negative' | 'info';
 
 export interface CollapsibleSectionProps {
@@ -47,6 +62,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
     const isControlled = typeof controlledOpen === 'boolean';
     const [internalOpen, setInternalOpen] = useState(initiallyOpen);
     const open = isControlled ? (controlledOpen as boolean) : internalOpen;
+    const safeChildren = normalizeViewChildren(children);
 
     useEffect(() => {
       if (forceOpen) {
@@ -90,7 +106,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
                   width={56}
                   height={56}
                   fit="cover"
-                  blurBackground={false}
+                  blurBackground
                   loading="lazy"
                   priority="low"
                   borderRadius={10}
@@ -109,7 +125,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
             <Icon name={open ? 'chevron-up' : 'chevron-down'} size={22} />
           </View>
         </CardActionPressable>
-        {open ? <View style={CONTENT_MARGIN_STYLE}>{children}</View> : null}
+        {open ? <View style={CONTENT_MARGIN_STYLE}>{safeChildren}</View> : null}
       </View>
     );
   }

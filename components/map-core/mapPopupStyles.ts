@@ -34,8 +34,8 @@ ${cssScope} .leaflet-popup-content {
   color: ${colors.text} !important;
   max-height: 460px !important;
   overflow-y: auto !important;
-  width: min(320px, calc(100vw - 56px)) !important;
-  max-width: min(320px, calc(100vw - 56px)) !important;
+  width: min(var(--metravel-popup-content-max-width, 320px), calc(100vw - 56px)) !important;
+  max-width: min(var(--metravel-popup-content-max-width, 320px), calc(100vw - 56px)) !important;
 }
 ${cssScope} .leaflet-popup-close-button {
   display: block !important;
@@ -67,8 +67,8 @@ ${cssScope} .leaflet-popup-close-button:hover {
     max-height: 60vh !important;
   }
   ${cssScope} .leaflet-popup-content {
-    width: min(300px, calc(100vw - 40px)) !important;
-    max-width: min(300px, calc(100vw - 40px)) !important;
+    width: min(var(--metravel-popup-content-max-width, 300px), calc(100vw - 40px)) !important;
+    max-width: min(var(--metravel-popup-content-max-width, 300px), calc(100vw - 40px)) !important;
     max-height: calc(60vh - 16px) !important;
     margin: ${DESIGN_TOKENS.spacing.xs}px !important;
   }

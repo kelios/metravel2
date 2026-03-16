@@ -87,11 +87,13 @@ const PlaceListCard: React.FC<Props> = ({
       metaText={categoryLabel ?? undefined}
       onPress={onCardPress ?? (() => {})}
       onMediaPress={onMediaPress}
+      mediaFit="contain"
       imageHeight={imageHeight}
       width={width}
       testID={testID}
       style={style}
       heroTitleOverlay={true}
+      webHoverScale={false}
       contentSlot={
         <View style={styles.content}>
           <View style={styles.metaRow}>
@@ -183,6 +185,7 @@ const PlaceListCard: React.FC<Props> = ({
       }
       mediaProps={{
         blurBackground: !!imageUrl,
+        allowCriticalWebBlur: Platform.OS === 'web',
         blurRadius: 16,
         loading: 'lazy',
         priority: 'low',
