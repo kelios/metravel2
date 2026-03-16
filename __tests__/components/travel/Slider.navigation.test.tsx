@@ -96,6 +96,35 @@ describe('Slider navigation - Web', () => {
       expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
     })
 
+    it('emits index change once per web arrow navigation', async () => {
+      const images = createImages(5)
+      const onIndexChanged = jest.fn()
+      let tree: renderer.ReactTestRenderer
+
+      await act(async () => {
+        tree = renderer.create(
+          <SliderWeb
+            images={images}
+            showArrows
+            showDots={false}
+            autoPlay={false}
+            preloadCount={0}
+            blurBackground={false}
+            onIndexChanged={onIndexChanged}
+          />,
+        )
+      })
+
+      const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+
+      await act(async () => {
+        nextButton.props.onPress()
+      })
+
+      expect(onIndexChanged).toHaveBeenCalledTimes(1)
+      expect(onIndexChanged).toHaveBeenCalledWith(1)
+    })
+
     it('navigates to previous slide when Previous button is pressed', async () => {
       const images = createImages(5)
       let tree: renderer.ReactTestRenderer

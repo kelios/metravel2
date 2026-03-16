@@ -236,6 +236,10 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobileDevice = isPhone || isLargePhone;
   const effectivePreloadCount = isMobileDevice ? Math.max(preloadCountProp, 2) : preloadCountProp;
+  const buildUri = useCallback(
+    (img: any, w: number, h: number, isFirst: boolean) => buildUriWeb(img, w, h, fit, isFirst),
+    [fit],
+  );
   const {
     containerW,
     containerH: coreContainerH,
@@ -247,7 +251,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     insets,
     getUri,
     setContainerWidth,
-    setActiveIndex,
     dismissSwipeHint,
     prefetchEnabled,
     enablePrefetch,
@@ -263,7 +266,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     preloadCount: effectivePreloadCount,
     mobileHeightPercent,
     onIndexChanged,
-    buildUri: (img, w, h, isFirst) => buildUriWeb(img, w, h, fit, isFirst),
+    buildUri,
     deferWebPrefetchUntilInteraction: effectivePreloadCount < 1,
     handleAppState: false,
     includeUriMap: false,
@@ -271,13 +274,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const [layoutMeasured, setLayoutMeasured] = useState(false);
   const [measuredSlideWidth, setMeasuredSlideWidth] = useState<number | null>(null);
-  const [, setLoadedSlideIndices] = useState<Set<number>>(
-    () => new Set(firstImagePreloaded ? [0] : []),
-  );
   const [transitionOverlayUri, setTransitionOverlayUri] = useState<string | null>(
     null,
   );
   const [transitionOverlayFading, setTransitionOverlayFading] = useState(false);
+  const [backdropUri, setBackdropUri] = useState<string | null>(() =>
+    images.length ? getUri(0) : null,
+  );
 
   const wrapperRef = useRef<any>(null);
   const viewportRef = useRef<any>(null);
@@ -287,8 +290,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const overlayFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStateRef = useRef<DragState>(initialDragState());
   const visualOffsetRef = useRef(0);
-  const currentIndexRef = useRef(0);
   const loadedSlideIndicesRef = useRef<Set<number>>(new Set(firstImagePreloaded ? [0] : []));
+  const transitionOverlayUriRef = useRef<string | null>(null);
 
   const computedH = coreContainerH;
   const containerH = fillContainer ? '100%' : computedH;
@@ -301,14 +304,18 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   useEffect(() => {
     const nextLoaded = new Set<number>(firstImagePreloaded ? [0] : []);
     loadedSlideIndicesRef.current = nextLoaded;
-    setLoadedSlideIndices(nextLoaded);
     setTransitionOverlayUri(null);
     setTransitionOverlayFading(false);
+    setBackdropUri(images.length ? getUri(0) : null);
     if (overlayFadeTimerRef.current) {
       clearTimeout(overlayFadeTimerRef.current);
       overlayFadeTimerRef.current = null;
     }
-  }, [images, firstImagePreloaded]);
+  }, [firstImagePreloaded, getUri, images]);
+
+  useEffect(() => {
+    transitionOverlayUriRef.current = transitionOverlayUri;
+  }, [transitionOverlayUri]);
 
   const getDomNode = useCallback((target: unknown): HTMLElement | null => {
     if (!target) return null;
@@ -362,7 +369,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const animateToIndex = useCallback((idx: number, animated = true) => {
     const clampedIndex = clamp(idx, 0, maxIndex);
-    const currentSlideIndex = currentIndexRef.current;
+    const currentSlideIndex = indexRef.current;
     const currentSlideLoaded = loadedSlideIndicesRef.current.has(currentSlideIndex);
     const targetSlideLoaded = loadedSlideIndicesRef.current.has(clampedIndex);
     if (
@@ -379,20 +386,22 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     } else if (targetSlideLoaded) {
       setTransitionOverlayUri(null);
       setTransitionOverlayFading(false);
+      setBackdropUri(getUri(clampedIndex));
     }
     const targetOffset = snapOffsetForIndex(clampedIndex);
     stopAnimation();
     applyOffset(targetOffset, animated);
-    setActiveIndex(clampedIndex);
-  }, [applyOffset, getUri, maxIndex, setActiveIndex, snapOffsetForIndex, stopAnimation]);
-
-  useEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
+  }, [applyOffset, getUri, indexRef, maxIndex, snapOffsetForIndex, stopAnimation]);
 
   useEffect(() => {
     applyOffset(snapOffsetForIndex(currentIndex), false);
   }, [applyOffset, currentIndex, snapOffsetForIndex]);
+
+  useEffect(() => {
+    if (!blurBackground) return;
+    if (!loadedSlideIndicesRef.current.has(currentIndex)) return;
+    setBackdropUri(getUri(currentIndex));
+  }, [blurBackground, currentIndex, getUri]);
 
   const syncWidthFromDom = useCallback(() => {
     const wrapperNode = getDomNode(wrapperRef.current);
@@ -401,8 +410,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     setMeasuredSlideWidth(width);
     setLayoutMeasured(true);
     setContainerWidth(width);
-    applyOffset(snapOffsetForIndex(currentIndexRef.current, width), false);
-  }, [applyOffset, currentIndexRef, getDomNode, setContainerWidth, snapOffsetForIndex]);
+    applyOffset(snapOffsetForIndex(indexRef.current, width), false);
+  }, [applyOffset, getDomNode, indexRef, setContainerWidth, snapOffsetForIndex]);
 
   useEffect(() => {
     syncWidthFromDom();
@@ -443,15 +452,15 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (): SliderRef => ({
       scrollTo,
       next: () => {
-        const nextIndex = Math.min(maxIndex, currentIndexRef.current + 1);
-        if (nextIndex !== currentIndexRef.current) scrollTo(nextIndex);
+        const nextIndex = Math.min(maxIndex, indexRef.current + 1);
+        if (nextIndex !== indexRef.current) scrollTo(nextIndex);
       },
       prev: () => {
-        const prevIndex = Math.max(0, currentIndexRef.current - 1);
-        if (prevIndex !== currentIndexRef.current) scrollTo(prevIndex);
+        const prevIndex = Math.max(0, indexRef.current - 1);
+        if (prevIndex !== indexRef.current) scrollTo(prevIndex);
       },
     }),
-    [maxIndex, scrollTo],
+    [indexRef, maxIndex, scrollTo],
   );
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
@@ -492,7 +501,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       dismissSwipeHint();
       enablePrefetch();
 
-      const baseOffset = snapOffsetForIndex(currentIndexRef.current);
+      const baseOffset = snapOffsetForIndex(indexRef.current);
       dragStateRef.current = {
         pointerId: event.pointerId,
         pointerType: event.pointerType || null,
@@ -566,7 +575,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       if (draggedHorizontally) {
         animateToIndex(targetIndex, true);
       } else {
-        applyOffset(snapOffsetForIndex(currentIndexRef.current), true, 200);
+        applyOffset(snapOffsetForIndex(indexRef.current), true, 200);
       }
       resumeAutoplay();
     };
@@ -574,7 +583,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     const handleLostPointerCapture = () => {
       if (dragStateRef.current.pointerId == null) return;
       resetDrag();
-      applyOffset(snapOffsetForIndex(currentIndexRef.current), true, 200);
+      applyOffset(snapOffsetForIndex(indexRef.current), true, 200);
       resumeAutoplay();
     };
 
@@ -600,6 +609,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     enablePrefetch,
     getDomNode,
     imagesLen,
+    indexRef,
     maxIndex,
     pauseAutoplay,
     renderedSlideWidth,
@@ -620,19 +630,18 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [clearOverlayRevealFrame, stopAnimation]);
 
   const handleSlideLoad = useCallback((index: number) => {
-    setLoadedSlideIndices((prev) => {
-      if (prev.has(index)) return prev;
-      const next = new Set(prev);
+    if (!loadedSlideIndicesRef.current.has(index)) {
+      const next = new Set(loadedSlideIndicesRef.current);
       next.add(index);
       loadedSlideIndicesRef.current = next;
-      return next;
-    });
+    }
 
-    if (index === currentIndexRef.current && transitionOverlayUri) {
+    if (index === indexRef.current && transitionOverlayUriRef.current) {
       if (overlayFadeTimerRef.current) {
         clearTimeout(overlayFadeTimerRef.current);
       }
       clearOverlayRevealFrame();
+      setBackdropUri(getUri(index));
 
       const startOverlayFade = () => {
         setTransitionOverlayFading(true);
@@ -654,7 +663,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         });
       }
     }
-  }, [clearOverlayRevealFrame, transitionOverlayUri]);
+  }, [clearOverlayRevealFrame, getUri, indexRef]);
 
   const viewportTouchAction = isMobile ? 'pan-y pinch-zoom' : 'pan-x';
 
@@ -666,10 +675,10 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     const key = typeof event?.key === 'string' ? event.key : '';
     if (key === 'ArrowLeft') {
       event?.preventDefault?.();
-      scrollTo(Math.max(0, currentIndexRef.current - 1));
+      scrollTo(Math.max(0, indexRef.current - 1));
     } else if (key === 'ArrowRight') {
       event?.preventDefault?.();
-      scrollTo(Math.min(maxIndex, currentIndexRef.current + 1));
+      scrollTo(Math.min(maxIndex, indexRef.current + 1));
     } else if (key === 'Home') {
       event?.preventDefault?.();
       scrollTo(0);
@@ -677,19 +686,19 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       event?.preventDefault?.();
       scrollTo(maxIndex);
     }
-  }, [dismissSwipeHint, enablePrefetch, imagesLen, maxIndex, scrollTo]);
+  }, [dismissSwipeHint, enablePrefetch, imagesLen, indexRef, maxIndex, scrollTo]);
 
   const onPrev = useCallback(() => {
     enablePrefetch();
-    const target = Math.max(0, currentIndexRef.current - 1);
-    if (target !== currentIndexRef.current) scrollTo(target);
-  }, [enablePrefetch, scrollTo]);
+    const target = Math.max(0, indexRef.current - 1);
+    if (target !== indexRef.current) scrollTo(target);
+  }, [enablePrefetch, indexRef, scrollTo]);
 
   const onNext = useCallback(() => {
     enablePrefetch();
-    const target = Math.min(maxIndex, currentIndexRef.current + 1);
-    if (target !== currentIndexRef.current) scrollTo(target);
-  }, [enablePrefetch, maxIndex, scrollTo]);
+    const target = Math.min(maxIndex, indexRef.current + 1);
+    if (target !== indexRef.current) scrollTo(target);
+  }, [enablePrefetch, indexRef, maxIndex, scrollTo]);
 
   if (!images.length) return null;
 
@@ -715,6 +724,35 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip} testID="slider-clip">
+          {blurBackground && backdropUri ? (
+            <View
+              pointerEvents="none"
+              style={[
+                {
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 0,
+                } as any,
+              ]}
+            >
+              <ImageCardMedia
+                src={backdropUri}
+                width={renderedSlideWidth}
+                height={computedH}
+                fit={fit}
+                blurBackground
+                blurOnly
+                blurRadius={12}
+                priority="high"
+                loading="eager"
+                transition={0}
+                showImmediately
+                allowCriticalWebBlur
+                style={styles.img}
+                testID="slider-shared-blur-backdrop"
+              />
+            </View>
+          ) : null}
           {transitionOverlayUri ? (
             <View
               pointerEvents="none"
@@ -794,7 +832,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       slideHeightPx={computedH}
                       imagesLength={imagesLen}
                       styles={styles}
-                      blurBackground={blurBackground}
+                      blurBackground={false}
                       isActive={index === currentIndex}
                       imageProps={imageProps}
                       onFirstImageLoad={onFirstImageLoad}

@@ -46,6 +46,18 @@ describe('seo utils', () => {
     it('adds leading slash if missing', () => {
       expect(buildCanonicalUrl('map')).toBe('https://metravel.by/map');
     });
+
+    it('strips trailing slash for non-root paths', () => {
+      expect(buildCanonicalUrl('/travels/my-route/')).toBe(
+        'https://metravel.by/travels/my-route',
+      );
+    });
+
+    it('strips multiple trailing slashes after normalizing leading slash', () => {
+      expect(buildCanonicalUrl('article/123///')).toBe(
+        'https://metravel.by/article/123',
+      );
+    });
   });
 
   describe('buildOgImageUrl', () => {

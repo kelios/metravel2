@@ -73,6 +73,7 @@ interface SlideProps {
   /** Image fit mode. Defaults to 'contain'. */
   fit?: 'cover' | 'contain';
   onSlideLoad?: (index: number) => void;
+  prepareBlur?: boolean;
 }
 
 const Slide = memo(function Slide({
@@ -93,6 +94,7 @@ const Slide = memo(function Slide({
   preloadPriority,
   fit = 'contain',
   onSlideLoad,
+  prepareBlur = false,
 }: SlideProps) {
   const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
@@ -116,7 +118,7 @@ const Slide = memo(function Slide({
         : 'low';
 
   const mainFit: 'cover' | 'contain' = fit;
-  const shouldBlur = blurBackground && isActive;
+  const shouldBlur = blurBackground && (isActive || prepareBlur);
 
   useEffect(() => {
     setResolvedUri(uri);
@@ -253,7 +255,7 @@ const Slide = memo(function Slide({
             onError={handleError}
             showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={shouldBlur}
-            revealOnLoadOnly={Platform.OS === 'web' && shouldBlur}
+            revealOnLoadOnly={Platform.OS === 'web' && isActive && shouldBlur}
           />
         </>
       )}

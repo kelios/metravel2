@@ -27,7 +27,13 @@ export function getSiteBaseUrl(): string {
  */
 export function buildCanonicalUrl(pathname: string): string {
   const base = getSiteBaseUrl();
-  const normalized = pathname.startsWith('/') ? pathname : `/${pathname}`;
+  const rawPath = String(pathname || '').trim();
+  if (!rawPath || /^\/+$/.test(rawPath)) {
+    return `${base}/`;
+  }
+
+  const normalizedWithLeadingSlash = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+  const normalized = normalizedWithLeadingSlash.replace(/\/+$/, '');
   return `${base}${normalized}`;
 }
 
