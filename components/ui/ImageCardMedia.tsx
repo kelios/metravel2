@@ -102,8 +102,8 @@ const WebMainImage = memo(function WebMainImage({
         // Show image only when loaded to avoid showing progressive/partial image that looks blurry.
         // showImmediately bypasses this for cached images or deliberate immediate reveal.
         opacity: showImmediately || loaded ? 1 : 0,
-        transition: hasBlurBehind ? 'opacity 0.2s ease' : 'none',
-        willChange: hasBlurBehind ? 'opacity' : 'auto',
+        transition: hasBlurBehind && !showImmediately ? 'opacity 0.2s ease' : 'none',
+        willChange: hasBlurBehind && !showImmediately ? 'opacity' : 'auto',
         contain: 'layout',
       }}
       loading={loading}
@@ -447,11 +447,23 @@ function ImageCardMedia({
     return !(loading === 'eager' || priority === 'high');
   }, [allowCriticalWebBlur, blurBackground, loading, priority, webMainSrc]);
 
+  // When blur backdrop reuses the main image URL, both the CSS background-image
+  // and the <img> share one browser cache entry. The sharp image appears as soon
+  // as data arrives — no need for an opacity fade that creates a "blur first,
+  // image second" flash during scroll.
+  const blurSharesMainUrl = useMemo(() => {
+    if (Platform.OS !== 'web') return false;
+    // allowCriticalWebBlur forces webBlurSrc = webMainSrc (line above), so both
+    // elements share one browser cache entry and render simultaneously.
+    return allowCriticalWebBlur && shouldRenderWebBlurBackground && webMainSrc != null;
+  }, [allowCriticalWebBlur, shouldRenderWebBlurBackground, webMainSrc]);
+
   const shouldShowWebImageImmediately = useMemo(() => {
     if (Platform.OS !== 'web') return showImmediately;
     if (revealOnLoadOnly) return showImmediately;
+    if (blurSharesMainUrl) return true;
     return showImmediately || loading === 'eager' || priority === 'high';
-  }, [showImmediately, loading, priority, revealOnLoadOnly]);
+  }, [showImmediately, loading, priority, revealOnLoadOnly, blurSharesMainUrl]);
 
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;

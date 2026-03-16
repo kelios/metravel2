@@ -270,8 +270,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   // --- Transition overlay ---
   const {
-    backdropA,
-    backdropB,
     overlayUri,
     overlayVisible,
     handleSlideLoad,
@@ -391,77 +389,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip} testID="slider-clip">
-          {/* Dual-layer blur backdrop — two layers crossfade via CSS opacity
-              so the <img> src swap always happens on the hidden layer. */}
-          {blurBackground ? (
-            <View
-              pointerEvents="none"
-              style={[{ position: 'absolute', inset: 0, zIndex: 0 } as any]}
-            >
-              {backdropA.uri ? (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    {
-                      position: 'absolute',
-                      inset: 0,
-                      opacity: backdropA.active ? 1 : 0,
-                      transition: 'opacity 300ms ease',
-                    } as any,
-                  ]}
-                >
-                  <ImageCardMedia
-                    src={backdropA.uri}
-                    width={renderedSlideWidth}
-                    height={computedH}
-                    fit={fit}
-                    blurBackground
-                    blurOnly
-                    blurRadius={12}
-                    priority="high"
-                    loading="eager"
-                    transition={0}
-                    showImmediately
-                    allowCriticalWebBlur
-                    style={styles.img}
-                    testID="slider-shared-blur-backdrop"
-                  />
-                </View>
-              ) : null}
-              {backdropB.uri ? (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    {
-                      position: 'absolute',
-                      inset: 0,
-                      opacity: backdropB.active ? 1 : 0,
-                      transition: 'opacity 300ms ease',
-                    } as any,
-                  ]}
-                >
-                  <ImageCardMedia
-                    src={backdropB.uri}
-                    width={renderedSlideWidth}
-                    height={computedH}
-                    fit={fit}
-                    blurBackground
-                    blurOnly
-                    blurRadius={12}
-                    priority="high"
-                    loading="eager"
-                    transition={0}
-                    showImmediately
-                    allowCriticalWebBlur
-                    style={styles.img}
-                  />
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-
           {/* Transition overlay — always mounted, visibility via CSS opacity.
-              Avoids DOM mount/unmount flashes. */}
+              Covers viewport while the target slide's image is loading. */}
           <View
             pointerEvents="none"
             style={[
@@ -516,6 +445,56 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 },
               ]}
             >
+              {/* Blur backdrop slides — inside the track so they share the
+                  same CSS transform and scroll perfectly in sync with photos. */}
+              {blurBackground ? (
+                <View
+                  pointerEvents="none"
+                  style={[
+                    {
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      flexDirection: 'row',
+                      zIndex: 0,
+                    } as any,
+                  ]}
+                >
+                  {images.map((_, idx) => (
+                    <View
+                      key={`blur-${idx}`}
+                      pointerEvents="none"
+                      style={[
+                        {
+                          width: layoutMeasured ? renderedSlideWidth : `${100 / imagesLen}%`,
+                          height: '100%',
+                          flexShrink: 0,
+                        },
+                      ]}
+                    >
+                      <ImageCardMedia
+                        src={getUri(idx)}
+                        width={renderedSlideWidth}
+                        height={computedH}
+                        fit={fit}
+                        blurBackground
+                        blurOnly
+                        blurRadius={12}
+                        priority={idx === 0 ? 'high' : 'low'}
+                        loading={idx === 0 ? 'eager' : 'lazy'}
+                        transition={0}
+                        showImmediately={idx === 0}
+                        allowCriticalWebBlur={idx === 0}
+                        style={styles.img}
+                        testID={idx === 0 ? 'slider-shared-blur-backdrop' : undefined}
+                      />
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
               {images.map((item, index) => {
                 const distanceToCurrent = Math.abs(index - currentIndex);
                 const preloadPriority =
@@ -531,6 +510,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       {
                         width: layoutMeasured ? renderedSlideWidth : '100%',
                         height: containerH,
+                        zIndex: 1,
                       },
                     ]}
                   >

@@ -132,11 +132,11 @@ export const computeSliderHeight = (
   }
 
   if (opts.isTablet) {
-    const maxH = opts.winH * 0.75;
+    const maxH = opts.winH * 0.7;
     return clamp(arDriven, 350, maxH);
   }
 
   // Desktop
-  const maxH = opts.winH * 0.85;
+  const maxH = opts.winH * 0.7;
   return clamp(arDriven, 400, maxH);
 };

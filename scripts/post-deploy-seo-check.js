@@ -122,6 +122,12 @@ function extractJsonLdScripts(html) {
     .map((match) => match[1])
 }
 
+function getHeaderValue(headers, name) {
+  const raw = headers?.[String(name || '').toLowerCase()]
+  if (Array.isArray(raw)) return raw.join(', ')
+  return typeof raw === 'string' ? raw : ''
+}
+
 function detectPageType(url) {
   const pathname = new URL(url).pathname
   if (pathname === '/') return 'home'
@@ -271,6 +277,52 @@ function validateRobots(html, pageType) {
   return issues
 }
 
+function validateSitemapResponse(result) {
+  const issues = []
+  const xRobotsTag = getHeaderValue(result.headers, 'x-robots-tag')
+  const contentType = getHeaderValue(result.headers, 'content-type')
+
+  if (result.status !== 200) {
+    issues.push({
+      severity: 'error',
+      code: 'sitemap.status',
+      message: `Sitemap returned HTTP ${result.status}`,
+    })
+  }
+
+  if (xRobotsTag && /noindex/i.test(xRobotsTag)) {
+    issues.push({
+      severity: 'error',
+      code: 'sitemap.xrobots.noindex',
+      message: `Sitemap has X-Robots-Tag="${xRobotsTag}"`,
+    })
+  }
+
+  if (contentType && !/xml/i.test(contentType)) {
+    issues.push({
+      severity: 'warning',
+      code: 'sitemap.content_type',
+      message: `Unexpected sitemap Content-Type "${contentType}"`,
+    })
+  }
+
+  if (!/<(?:urlset|sitemapindex)\b/i.test(result.body || '')) {
+    issues.push({
+      severity: 'error',
+      code: 'sitemap.body.invalid',
+      message: 'Sitemap body is not valid XML sitemap markup',
+    })
+  }
+
+  return {
+    url: result.url,
+    finalUrl: result.finalUrl,
+    pageType: 'sitemap',
+    title: '',
+    issues,
+  }
+}
+
 function validateTravelHtml(html) {
   const issues = []
   const h1Count = countMatches(html, /<h1\b/gi)
@@ -401,7 +453,10 @@ async function loadTargetUrls() {
   ]
 
   const deduped = Array.from(new Set([...coreUrls, ...sitemapUrls]))
-  return LIMIT > 0 ? deduped.slice(0, LIMIT) : deduped
+  return {
+    sitemapResponse,
+    urls: LIMIT > 0 ? deduped.slice(0, LIMIT) : deduped,
+  }
 }
 
 function printSummary(summary) {
@@ -436,13 +491,13 @@ function printSummary(summary) {
 }
 
 async function main() {
-  const urls = await loadTargetUrls()
+  const { sitemapResponse, urls } = await loadTargetUrls()
   if (!JSON_OUTPUT) {
     console.log(`🌐 Post-deploy SEO check against ${SITE}`)
-    console.log(`📄 Queue: ${urls.length} pages`)
+    console.log(`📄 Queue: ${urls.length + 1} pages`)
   }
 
-  const checked = await mapLimit(urls, CONCURRENCY, async (url) => {
+  const pageChecks = await mapLimit(urls, CONCURRENCY, async (url) => {
     try {
       const response = await fetchUrl(url)
       const validated = validatePageResult(response)
@@ -464,6 +519,7 @@ async function main() {
       }
     }
   })
+  const checked = [validateSitemapResponse(sitemapResponse), ...pageChecks]
 
   const summary = {
     site: SITE,
@@ -495,6 +551,7 @@ if (typeof module !== 'undefined' && module.exports) {
     validateDescription,
     validateHomeAssets,
     validatePageResult,
+    validateSitemapResponse,
     validateRobots,
     validateSocialMeta,
     validateTitle,

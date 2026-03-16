@@ -3,11 +3,11 @@ import { Platform } from 'react-native';
 
 const renderer = require('react-test-renderer');
 
-const mockUnifiedTravelCard = jest.fn((props: any) => React.createElement('mock-unified-travel-card', props));
+const mockImageCardMedia = jest.fn((props: any) => React.createElement('mock-image-card-media', props));
 
-jest.mock('@/components/ui/UnifiedTravelCard', () => ({
+jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
-  default: (props: any) => mockUnifiedTravelCard(props),
+  default: (props: any) => mockImageCardMedia(props),
 }));
 
 jest.mock('@/components/ui/CardActionPressable', () => {
@@ -40,7 +40,7 @@ describe('PlacePopupCard', () => {
 
   beforeEach(() => {
     (Platform as any).OS = 'web';
-    mockUnifiedTravelCard.mockClear();
+    mockImageCardMedia.mockClear();
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 1024, height: 768, scale: 1, fontScale: 1 }));
   });
 
@@ -49,7 +49,7 @@ describe('PlacePopupCard', () => {
     require('react-native').useWindowDimensions = originalWindowDimensions;
   });
 
-  it('passes actual popup hero dimensions to UnifiedTravelCard on web', () => {
+  it('passes actual popup hero dimensions to ImageCardMedia on web', () => {
     renderer.act(() => {
       renderer.create(
         <PlacePopupCard
@@ -60,12 +60,13 @@ describe('PlacePopupCard', () => {
       );
     });
 
-    expect(mockUnifiedTravelCard).toHaveBeenCalled();
-    const props = mockUnifiedTravelCard.mock.calls[0]?.[0];
+    expect(mockImageCardMedia).toHaveBeenCalled();
+    const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.mediaFit).toBe('contain');
-    expect(props.width).toBe(420);
-    expect(props.imageHeight).toBe(Math.round(420 / 1.35));
-    expect(props.mediaProps.blurBackground).toBe(true);
+    expect(props.fit).toBe('contain');
+    expect(props.width).toBe(436);
+    expect(props.height).toBe(Math.round(436 / 1.35));
+    expect(props.blurBackground).toBe(true);
+    expect(props.allowCriticalWebBlur).toBe(true);
   });
 });

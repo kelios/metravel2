@@ -4,6 +4,7 @@ const {
   validateCanonical,
   validateHomeAssets,
   validatePageResult,
+  validateSitemapResponse,
   validateTravelHtml,
 } = require('@/scripts/post-deploy-seo-check')
 
@@ -52,6 +53,35 @@ describe('post-deploy SEO check helpers', () => {
     expect(issues.map((issue: any) => issue.code)).toEqual(
       expect.arrayContaining(['travel.h1.count', 'travel.h1.marker', 'travel.schema.article'])
     )
+  })
+
+  it('fails when sitemap sends X-Robots-Tag noindex', () => {
+    const result = validateSitemapResponse({
+      url: 'https://metravel.by/sitemap.xml',
+      finalUrl: 'https://metravel.by/sitemap.xml',
+      status: 200,
+      headers: {
+        'content-type': 'application/xml; charset=utf-8',
+        'x-robots-tag': 'noindex, nofollow',
+      },
+      body: '<?xml version="1.0" encoding="UTF-8"?><urlset></urlset>',
+    })
+
+    expect(result.issues.map((issue: any) => issue.code)).toContain('sitemap.xrobots.noindex')
+  })
+
+  it('accepts a valid sitemap response', () => {
+    const result = validateSitemapResponse({
+      url: 'https://metravel.by/sitemap.xml',
+      finalUrl: 'https://metravel.by/sitemap.xml',
+      status: 200,
+      headers: {
+        'content-type': 'application/xml; charset=utf-8',
+      },
+      body: '<?xml version="1.0" encoding="UTF-8"?><urlset><url><loc>https://metravel.by/</loc></url></urlset>',
+    })
+
+    expect(result.issues).toEqual([])
   })
 
   it('accepts a valid travel page HTML', () => {
