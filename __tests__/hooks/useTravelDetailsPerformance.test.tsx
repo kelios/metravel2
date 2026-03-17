@@ -132,7 +132,7 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.sliderReady).toBe(true)
   })
 
-  it('reveals post-LCP runtime automatically after LCP without user interaction', async () => {
+  it('reveals post-LCP runtime automatically after data loading without user interaction', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 1, name: 'Demo travel' } as any,
@@ -140,13 +140,6 @@ describe('useTravelDetailsPerformance', () => {
         isLoading: false,
       })
     )
-
-    expect(result.current.deferAllowed).toBe(false)
-    expect(result.current.postLcpRuntimeReady).toBe(false)
-
-    await act(async () => {
-      result.current.setLcpLoaded(true)
-    })
 
     expect(result.current.deferAllowed).toBe(true)
     expect(result.current.postLcpRuntimeReady).toBe(true)

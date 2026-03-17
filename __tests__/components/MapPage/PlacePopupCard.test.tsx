@@ -89,4 +89,23 @@ describe('PlacePopupCard', () => {
     expect(props.width).toBe(300);
     expect(props.height).toBe(164);
   });
+
+  it('uses a compact hero on travel details popup layout', () => {
+    renderer.act(() => {
+      renderer.create(
+        <PlacePopupCard
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          width={560}
+          compactLayout
+        />
+      );
+    });
+
+    expect(mockImageCardMedia).toHaveBeenCalled();
+    const props = mockImageCardMedia.mock.calls[0]?.[0];
+    expect(props).toBeTruthy();
+    expect(props.width).toBe(320);
+    expect(props.height).toBe(192);
+  });
 });

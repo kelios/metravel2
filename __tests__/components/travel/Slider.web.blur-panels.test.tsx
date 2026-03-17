@@ -216,4 +216,36 @@ describe('Slider (web) blur background', () => {
 
     expect(previousFrameInstances.length).toBeGreaterThan(1)
   })
+
+  it('does not keep a sharp previous-frame overlay when blur background mode is enabled', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+          firstImagePreloaded
+        />,
+      )
+    })
+
+    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    const previousFrameInstances = tree.root.findAll(
+      (node: any) =>
+        node.type === 'mock-image-card-media' &&
+        typeof node.props?.src === 'string' &&
+        node.props.src.includes('img-1.jpg'),
+    )
+
+    expect(previousFrameInstances.length).toBe(2)
+  })
 })

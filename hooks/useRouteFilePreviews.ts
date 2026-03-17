@@ -73,6 +73,7 @@ export function useRouteFilePreviews({
   shouldForceRenderMap,
 }: UseRouteFilePreviewsArgs) {
   const [routePreviewItems, setRoutePreviewItems] = useState<RoutePreviewItem[]>([])
+  const [isParsingRouteFiles, setIsParsingRouteFiles] = useState(false)
   const colors = useThemedColors()
 
   const routeColorPalette = useMemo(
@@ -91,39 +92,55 @@ export function useRouteFilePreviews({
     [colors]
   )
 
-  const routeFilesEnabled =
-    Boolean(travelId) &&
-    canRenderHeavy &&
-    (Platform.OS !== 'web' || shouldRender || shouldForceRenderMap || isWebAutomation)
+  const routeFilesEnabled = Boolean(travelId) && canRenderHeavy
 
-  const { data: routeFiles = [] } = useTravelRouteFiles(travelId, {
+  const {
+    data: routeFiles = [],
+    isLoading: isRouteFilesLoading = false,
+    isFetching: isRouteFilesFetching = false,
+  } = useTravelRouteFiles(travelId, {
     enabled: routeFilesEnabled,
   })
+
+  const supportedFiles = useMemo(
+    () =>
+      routeFiles.filter((file) => {
+        const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
+          .toLowerCase()
+          .replace(/^\./, '')
+        return SUPPORTED_ROUTE_EXTENSIONS.has(ext)
+      }),
+    [routeFiles]
+  )
 
   useEffect(() => {
     let active = true
 
     const loadRouteFiles = async () => {
-      if (!canRenderHeavy) return
-      if (Platform.OS === 'web' && !shouldRender && !shouldForceRenderMap && !isWebAutomation) return
+      if (!canRenderHeavy) {
+        if (active) setIsParsingRouteFiles(false)
+        return
+      }
+      if (Platform.OS === 'web' && !shouldRender && !shouldForceRenderMap && !isWebAutomation) {
+        if (active) setIsParsingRouteFiles(false)
+        return
+      }
       if (!travelId) {
         if (active) {
+          setIsParsingRouteFiles(false)
+          setRoutePreviewItems((prev) => (prev.length > 0 ? [] : prev))
+        }
+        return
+      }
+      if (supportedFiles.length === 0) {
+        if (active) {
+          setIsParsingRouteFiles(false)
           setRoutePreviewItems((prev) => (prev.length > 0 ? [] : prev))
         }
         return
       }
       try {
-        const supportedFiles = routeFiles.filter((file) => {
-          const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
-            .toLowerCase()
-            .replace(/^\./, '')
-          return SUPPORTED_ROUTE_EXTENSIONS.has(ext)
-        })
-
-        if (supportedFiles.length === 0) {
-          setRoutePreviewItems((prev) => (prev.length > 0 ? [] : prev))
-          return
-        }
+        if (active) setIsParsingRouteFiles(true)
 
         const parsedResults = await Promise.allSettled(
           supportedFiles.map(async (file, index) => {
@@ -158,6 +175,10 @@ export function useRouteFilePreviews({
         if (active) {
           setRoutePreviewItems((prev) => (prev.length > 0 ? [] : prev))
         }
+      } finally {
+        if (active) {
+          setIsParsingRouteFiles(false)
+        }
       }
     }
 
@@ -165,7 +186,7 @@ export function useRouteFilePreviews({
     return () => {
       active = false
     }
-  }, [canRenderHeavy, routeColorPalette, routeFiles, shouldForceRenderMap, shouldRender, travelId])
+  }, [canRenderHeavy, routeColorPalette, shouldForceRenderMap, shouldRender, supportedFiles, travelId])
 
   const resetRoutePreviewItems = useCallback(() => setRoutePreviewItems([]), [])
 
@@ -173,5 +194,7 @@ export function useRouteFilePreviews({
     routePreviewItems,
     resetRoutePreviewItems,
     primaryRoutePreview: routePreviewItems[0]?.preview ?? null,
+    hasSupportedRouteFiles: supportedFiles.length > 0,
+    isRoutePreviewLoading: routeFilesEnabled && (isRouteFilesLoading || isRouteFilesFetching || isParsingRouteFiles),
   }
 }

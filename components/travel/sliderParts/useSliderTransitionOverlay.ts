@@ -38,7 +38,7 @@ export interface UseSliderTransitionOverlayResult {
 export function useSliderTransitionOverlay(
   options: UseSliderTransitionOverlayOptions,
 ): UseSliderTransitionOverlayResult {
-  const { images, getUri, indexRef, firstImagePreloaded } = options;
+  const { images, getUri, indexRef, firstImagePreloaded, blurBackground } = options;
 
   // Transition overlay (always mounted in DOM, visibility via CSS opacity)
   const [overlayUri, setOverlayUri] = useState<string | null>(null);
@@ -87,6 +87,18 @@ export function useSliderTransitionOverlay(
 
   const onBeforeNavigate = useCallback(
     (fromIdx: number, toIdx: number) => {
+      if (blurBackground) {
+        setOverlayVisible(false);
+        setOverlayUri(null);
+        overlayUriRef.current = null;
+        if (overlayFadeTimerRef.current) {
+          clearTimeout(overlayFadeTimerRef.current);
+          overlayFadeTimerRef.current = null;
+        }
+        clearOverlayRevealFrame();
+        return;
+      }
+
       const fromLoaded = loadedSlideIndicesRef.current.has(fromIdx);
       const toLoaded = loadedSlideIndicesRef.current.has(toIdx);
 
@@ -103,7 +115,7 @@ export function useSliderTransitionOverlay(
       // If target is already loaded — no overlay needed; backdrop blur scrolls
       // in sync via the shared track transform.
     },
-    [getUri],
+    [blurBackground, clearOverlayRevealFrame, getUri],
   );
 
   // ---------------------------------------------------------------------------

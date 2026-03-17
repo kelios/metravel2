@@ -57,47 +57,22 @@ export function useTravelDetailsPerformance({
   }, [deferAllowed, lcpLoaded, travel])
 
   useEffect(() => {
-    if (Platform.OS !== 'web') {
-      if (!isLoading) setDeferAllowed(true)
-      return
-    }
-
-    // If loading is complete but we still don't have travel data (e.g. missing param / error state),
-    // allow deferred UI immediately. The heavy sections won't mount meaningfully without data,
-    // and this keeps tests and non-happy paths deterministic.
-    if (!isLoading && !travel) {
+    if (!isLoading) {
       setDeferAllowed(true)
-      return
-    }
-
-    // On web we gate heavy deferred sections until LCP hero is painted.
-    // This prevents map/comments chunks + route downloads from competing with LCP.
-    if (travel && lcpLoaded) {
-      setDeferAllowed(true)
-      return
-    }
-
-    if (travel && !lcpLoaded) {
-      setDeferAllowed(false)
       return
     }
 
     setDeferAllowed(false)
-  }, [isLoading, lcpLoaded, travel])
+  }, [isLoading])
 
   useEffect(() => {
-    if (Platform.OS !== 'web') {
-      if (!isLoading) setPostLcpRuntimeReady(true)
-      return
-    }
-
     if (!deferAllowed) {
       setPostLcpRuntimeReady(false)
       return
     }
 
     setPostLcpRuntimeReady(true)
-  }, [deferAllowed, isLoading])
+  }, [deferAllowed])
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -159,6 +134,7 @@ export function useTravelDetailsPerformance({
         window.removeEventListener('wheel', reveal as EventListener)
       }
     }
+    return undefined
   }, [isLoading, travel])
 
   useEffect(() => {

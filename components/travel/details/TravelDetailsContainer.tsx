@@ -35,7 +35,6 @@ import { useAccessibilityAnnounce } from "@/hooks/useAccessibilityAnnounce";
 import { useThemedColors } from "@/hooks/useTheme";
 import { useTravelDetailsTrace } from '@/hooks/useTravelDetailsTrace';
 import { useSkeletonPhase } from '@/hooks/useSkeletonPhase';
-import { rIC } from '@/utils/rIC';
 
 const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
 const AccessibilityAnnouncer = withLazy(() => import("@/components/accessibility/AccessibilityAnnouncer"));
@@ -73,24 +72,13 @@ const SKELETON_OVERLAY_FALLBACK_STYLE = { flex: 1 } as const
 
 /* -------------------- Defer wrapper -------------------- */
 const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, children }) => {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(when);
   useEffect(() => {
-    if (!when) return;
-
-    if (Platform.OS === 'web') {
-      // Use rIC so the browser can finish painting the LCP hero image and run
-      // any pending layout work before we mount heavy deferred sections.
-      // The 600 ms timeout is a safety net — on fast machines rIC fires much
-      // sooner, but we never block the paint for more than one idle period.
-      let cancelled = false;
-      const kick = () => { if (!cancelled) setReady(true); };
-      const cancelRIC = rIC(kick, 600);
-      return () => { cancelled = true; cancelRIC(); };
+    if (when) {
+      setReady(true);
+      return;
     }
-    let cancelled = false;
-    const kick = () => { if (!cancelled) setReady(true); };
-    const cancelRIC = rIC(kick, 500);
-    return () => { cancelled = true; cancelRIC(); };
+    setReady(false);
   }, [when]);
   return ready ? <>{children}</> : null;
 };

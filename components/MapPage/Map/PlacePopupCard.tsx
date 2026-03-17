@@ -27,6 +27,7 @@ type Props = {
   addLabel?: string;
   width?: number;
   imageHeight?: number;
+  compactLayout?: boolean;
 };
 
 const POPUP_TOOLTIPS = {
@@ -252,10 +253,22 @@ const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
   default: 436,
 };
 
+const COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
+  narrow: 272,
+  compact: 300,
+  default: 320,
+};
+
 const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
   narrow: 164,
   compact: 212,
   default: 320,
+};
+
+const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
+  narrow: 148,
+  compact: 172,
+  default: 192,
 };
 
 const PlacePopupCard: React.FC<Props> = ({
@@ -278,6 +291,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addLabel = 'Мои точки',
   width = 436,
   imageHeight: _imageHeight = 72,
+  compactLayout = false,
 }) => {
   const colors = useThemedColors();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
@@ -304,17 +318,23 @@ const PlacePopupCard: React.FC<Props> = ({
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
   const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
-  const maxPopupWidth = Math.min(width, POPUP_MAX_WIDTH_BY_BREAKPOINT[bp], safeViewportWidth);
+  const popupWidthCap = compactLayout
+    ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
+    : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
+  const imageHeightCap = compactLayout
+    ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
+    : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
+  const maxPopupWidth = Math.min(width, popupWidthCap, safeViewportWidth);
   const heroWidth = maxPopupWidth;
   const heroHeight = Math.max(
     1,
     Math.min(
-      IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp],
+      imageHeightCap,
       Math.round(heroWidth / IMAGE_ASPECT[bp])
     )
   );
 
-  const styles = useMemo(() => getStyles(colors, bp, heroHeight), [colors, bp, heroHeight]);
+  const styles = useMemo(() => getStyles(colors, bp, heroHeight, compactLayout), [colors, bp, heroHeight, compactLayout]);
 
   const actionBtnStyle = useMemo(
     () =>
@@ -333,7 +353,7 @@ const PlacePopupCard: React.FC<Props> = ({
   const contentSlot = useMemo(() => (
     <View style={styles.content}>
       <View style={styles.infoSection}>
-        <Text style={styles.titleText} numberOfLines={bp === 'narrow' ? 3 : 2}>
+        <Text style={styles.titleText} numberOfLines={compactLayout ? 2 : bp === 'narrow' ? 3 : 2}>
           {title}
         </Text>
 
@@ -454,7 +474,7 @@ const PlacePopupCard: React.FC<Props> = ({
           {isAdding ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <Feather name="map-pin" size={16} color={colors.primary} />
+            <Feather name="plus" size={16} color={colors.primary} />
           )}
           <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
@@ -465,6 +485,7 @@ const PlacePopupCard: React.FC<Props> = ({
     addDisabled,
     bp,
     categoryLabel,
+    compactLayout,
     colors.primary,
     colors.textMuted,
     compactLabel,
@@ -537,9 +558,30 @@ const IMAGE_ASPECT: Record<BreakpointKey, number> = {
   default: 1.35,
 };
 
-const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number) => {
+const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, compactLayout: boolean) => {
   const sp = SPACING[bp];
   const fs = FONT_SIZES[bp];
+  const horizontalPadding = compactLayout
+    ? bp === 'narrow'
+      ? 10
+      : 12
+    : bp === 'narrow'
+      ? 12
+      : 14;
+  const topPadding = compactLayout
+    ? bp === 'narrow'
+      ? 10
+      : 12
+    : bp === 'narrow'
+      ? 12
+      : 14;
+  const bottomPadding = compactLayout
+    ? bp === 'narrow'
+      ? 12
+      : 14
+    : bp === 'narrow'
+      ? 14
+      : 16;
 
   return StyleSheet.create({
     container: {
@@ -584,15 +626,15 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number) 
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     contentContainer: {
-      paddingHorizontal: bp === 'narrow' ? 12 : 14,
-      paddingTop: bp === 'narrow' ? 12 : 14,
-      paddingBottom: bp === 'narrow' ? 14 : 16,
+      paddingHorizontal: horizontalPadding,
+      paddingTop: topPadding,
+      paddingBottom: bottomPadding,
     },
     content: {
-      gap: sp.sectionGap,
+      gap: compactLayout ? Math.max(10, sp.sectionGap - 4) : sp.sectionGap,
     },
     infoSection: {
-      gap: bp === 'narrow' ? 10 : 12,
+      gap: compactLayout ? 8 : bp === 'narrow' ? 10 : 12,
     },
     metaRow: {
       flexDirection: 'row',

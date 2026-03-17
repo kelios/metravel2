@@ -154,6 +154,33 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainLayers[0].props.src).toContain('photo.jpg')
   })
 
+  it('keeps contain-mode web backdrop strongly blurred so side fill does not read like adjacent slides', () => {
+    let tree: renderer.ReactTestRenderer
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/photo-contain-blur.jpg"
+          height={200}
+          width={320}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="high"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const blurLayer = tree!.root.findAll((node: any) => {
+      return node?.props?.['data-blur-backdrop'] === 'true'
+    })[0]
+
+    expect(blurLayer).toBeTruthy()
+    expect(blurLayer.type).toBe('div')
+    expect(String(blurLayer.props.style?.filter || '')).toContain('blur(20px)')
+    expect(String(blurLayer.props.style?.transform || '')).toContain('scale(1.08)')
+  })
+
   it('does not apply extra css blur when backdrop source is already server-blurred', () => {
     let tree: renderer.ReactTestRenderer
     renderer.act(() => {

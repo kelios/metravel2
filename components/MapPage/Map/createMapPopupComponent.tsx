@@ -15,6 +15,7 @@ type UseMap = () => any;
 interface CreatePopupComponentArgs {
   useMap: UseMap;
   userLocation?: { lat: number; lng: number } | null;
+  compactLayout?: boolean;
 }
 
 const stripCountryFromCategoryString = (raw: unknown, address?: string | null) => {
@@ -37,7 +38,7 @@ const stripCountryFromCategoryString = (raw: unknown, address?: string | null) =
   return filtered.join(', ');
 };
 
-export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupComponentArgs) => {
+export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = false }: CreatePopupComponentArgs) => {
   const PopupComponent: React.FC<{ point: Point }> = ({ point }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [isDrivingLoading, setIsDrivingLoading] = useState(false);
@@ -251,6 +252,7 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
         onAddPoint={handleAddPoint}
         addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
         isAdding={isAdding}
+        compactLayout={compactLayout}
       />
     );
   };

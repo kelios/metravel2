@@ -96,7 +96,12 @@ export const TravelDetailsMapSection: React.FC<{
   const shouldForceRenderExcursions = forceOpenKey === 'excursions'
 
   // ✅ REFACTORED: Route file parsing extracted to useRouteFilePreviews hook
-  const { routePreviewItems, resetRoutePreviewItems, primaryRoutePreview } = useRouteFilePreviews({
+  const {
+    routePreviewItems,
+    resetRoutePreviewItems,
+    primaryRoutePreview,
+    isRoutePreviewLoading,
+  } = useRouteFilePreviews({
     travelId: travel?.id,
     canRenderHeavy,
     shouldRender,
@@ -110,6 +115,7 @@ export const TravelDetailsMapSection: React.FC<{
     hasEmbeddedCoords ||
     hasTravelAddressPoints ||
     routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0)
+  const shouldShowMapLoadingState = !hasMapData && isRoutePreviewLoading
 
   const colors = useThemedColors()
 
@@ -220,7 +226,7 @@ export const TravelDetailsMapSection: React.FC<{
                 <BelkrajWidgetComponent
                   countryCode={travel.countryCode}
                   points={travel.travelAddress as any}
-                  collapsedHeight={760}
+                  collapsedHeight={980}
                 />
               </View>
             </View>
@@ -307,6 +313,8 @@ export const TravelDetailsMapSection: React.FC<{
                 />
               ))}
             </>
+          ) : shouldShowMapLoadingState ? (
+            <MapFallback />
           ) : (
             <View style={styles.mapEmptyState}>
               <Text style={styles.mapEmptyText}>Маршрут ещё не добавлен</Text>

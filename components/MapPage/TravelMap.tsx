@@ -379,8 +379,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // Popup component
   const PopupComponent = useMemo(() => {
     if (!rl) return null;
-    return createMapPopupComponent({ useMap: rl.useMap, userLocation: null });
-  }, [rl]);
+    return createMapPopupComponent({ useMap: rl.useMap, userLocation: null, compactLayout: compact });
+  }, [compact, rl]);
 
   const handlePopupOpen = useCallback((e: any) => {
     const popup = e?.popup;
@@ -503,16 +503,28 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const popupProps = useMemo(() => {
     const isNarrowViewport = viewportWidth <= 768;
     const isVeryNarrow = viewportWidth <= 480;
-    const maxWidth = isVeryNarrow
-      ? Math.min(300, Math.max(248, viewportWidth - 28))
-      : isNarrowViewport
-        ? Math.min(348, Math.max(280, viewportWidth - 32))
-        : Math.min(436, Math.max(320, viewportWidth - 40));
-    const minWidth = isVeryNarrow
-      ? 228
-      : isNarrowViewport
-        ? Math.min(280, Math.max(240, maxWidth - 56))
-        : Math.min(336, Math.max(280, maxWidth - 88));
+    const maxWidth = compact
+      ? isVeryNarrow
+        ? Math.min(272, Math.max(228, viewportWidth - 24))
+        : isNarrowViewport
+          ? Math.min(300, Math.max(248, viewportWidth - 28))
+          : Math.min(320, Math.max(264, viewportWidth - 32))
+      : isVeryNarrow
+        ? Math.min(300, Math.max(248, viewportWidth - 28))
+        : isNarrowViewport
+          ? Math.min(348, Math.max(280, viewportWidth - 32))
+          : Math.min(436, Math.max(320, viewportWidth - 40));
+    const minWidth = compact
+      ? isVeryNarrow
+        ? 220
+        : isNarrowViewport
+          ? Math.min(248, Math.max(220, maxWidth - 36))
+          : Math.min(264, Math.max(240, maxWidth - 56))
+      : isVeryNarrow
+        ? 228
+        : isNarrowViewport
+          ? Math.min(280, Math.max(240, maxWidth - 56))
+          : Math.min(336, Math.max(280, maxWidth - 88));
 
     return {
       autoPan: true,
@@ -520,13 +532,13 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       className: 'metravel-place-popup',
       maxWidth,
       minWidth,
-      autoPanPaddingTopLeft: isNarrowViewport ? [12, 72] : [24, 140],
-      autoPanPaddingBottomRight: isNarrowViewport ? [12, 72] : [24, 140],
+      autoPanPaddingTopLeft: compact ? [12, 72] : isNarrowViewport ? [12, 72] : [24, 140],
+      autoPanPaddingBottomRight: compact ? [12, 72] : isNarrowViewport ? [12, 72] : [24, 140],
       eventHandlers: {
         popupopen: handlePopupOpen,
       },
     };
-  }, [handlePopupOpen, viewportWidth]);
+  }, [compact, handlePopupOpen, viewportWidth]);
 
   // Convert travel data to route line coordinates
   const routeLineCoords = useMemo(() => {
@@ -981,7 +993,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 const styles: any = {
   mapContainer: {
     width: '100%',
-    overflow: 'hidden',
+    overflow: Platform.OS === 'web' ? 'visible' : 'hidden',
     position: 'relative',
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },

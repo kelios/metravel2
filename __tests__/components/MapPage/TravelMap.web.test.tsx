@@ -171,6 +171,7 @@ describe('TravelMap (web)', () => {
       expect.objectContaining({
         useMap: expect.any(Function),
         userLocation: null,
+        compactLayout: true,
       })
     );
 
@@ -182,10 +183,10 @@ describe('TravelMap (web)', () => {
         autoPan: true,
         keepInView: true,
         className: 'metravel-place-popup',
-        maxWidth: 436,
-        minWidth: 336,
-        autoPanPaddingTopLeft: [24, 140],
-        autoPanPaddingBottomRight: [24, 140],
+        maxWidth: 320,
+        minWidth: 264,
+        autoPanPaddingTopLeft: [12, 72],
+        autoPanPaddingBottomRight: [12, 72],
       })
     );
     expect(props.popupProps.eventHandlers).toEqual(
