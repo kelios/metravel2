@@ -85,7 +85,7 @@ export const GalleryGrid: React.FC<{
                   fit="contain"
                   blurBackground
                   loading="lazy"
-                  alt={`Error ${index + 1}`}
+                  alt={`Изображение галереи ${index + 1}`}
                   style={[styles.image, styles.errorImage]}
                   onError={() => onImageError(stableKey, image.url)}
                   onLoad={() => onImageLoad(stableKey)}
@@ -130,7 +130,7 @@ export const GalleryGrid: React.FC<{
                   fit="contain"
                   blurBackground
                   loading="lazy"
-                  alt={`Gallery image ${index + 1}`}
+                  alt={`Изображение галереи ${index + 1}`}
                   style={[styles.image, !image.hasLoaded && ({ opacity: 0 } as any)]}
                   onError={() => onImageError(stableKey, image.url)}
                   onLoad={() => onImageLoad(stableKey)}

@@ -117,6 +117,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
                   {thumbUrl ? (
                     <ImageCardMedia
                       src={thumbUrl}
+                      alt={place.address || `Место ${index + 1}`}
                       fit="cover"
                       loading="lazy"
                       priority="low"
