@@ -97,7 +97,12 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     }),
   },
   containerFocused: {
-    borderColor: colors.borderStrong,
+    borderColor: colors.primary,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 0 3px rgba(59, 130, 246, 0.12)',
+      } as any,
+    }),
   },
   contentRow: {
     flexDirection: 'row',
@@ -119,8 +124,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
     borderWidth: 0,
     borderColor: 'transparent',
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
@@ -129,9 +134,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     height: Platform.select({ default: 40, web: 44 }),
     ...Platform.select({
       web: {
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 255, 0.98) 100%)',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
       } as any,
     }),
   },
@@ -364,14 +367,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   },
   searchBoxFocused: {
     borderColor: 'transparent',
-    backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        transform: 'translateY(-1px)',
-        boxShadow: '0 8px 24px rgba(59, 130, 246, 0.15), 0 0 0 3px rgba(59, 130, 246, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 255, 1) 100%)',
-      } as any,
-    }),
+    backgroundColor: 'transparent',
   },
   clearButtonIconWrap: {
     width: 24,

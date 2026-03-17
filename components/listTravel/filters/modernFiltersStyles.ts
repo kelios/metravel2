@@ -16,7 +16,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       paddingHorizontal: spacing.sm,
       ...Platform.select({
         web: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)',
           width: 280,
           position: 'sticky' as any,
           top: spacing.md,
@@ -193,24 +193,20 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
     sortSection: {
       marginBottom: spacing.md,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      borderRadius: 0,
+      borderWidth: 0,
+      borderColor: 'transparent',
+      backgroundColor: 'transparent',
       overflow: 'hidden',
-      ...Platform.select({
-        web: {
-          boxShadow: colors.boxShadows.light,
-        },
-      }),
     },
     sortDropdownTrigger: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.surface,
+      paddingHorizontal: spacing.xs,
+      backgroundColor: 'transparent',
+      borderRadius: radii.md,
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -225,8 +221,8 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     }),
     sortDropdownTriggerActive: {
       backgroundColor: colors.primarySoft,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomWidth: 0,
+      borderBottomColor: 'transparent',
     },
     sortDropdownTriggerLeft: {
       flexDirection: 'row',
@@ -266,17 +262,17 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
     sortDropdownContent: {
       paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.xs,
-      backgroundColor: colors.surface,
+      paddingHorizontal: 0,
+      backgroundColor: 'transparent',
       gap: 2,
     },
     sortOption: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
+      backgroundColor: 'transparent',
+      borderWidth: 0,
       borderColor: 'transparent',
       marginBottom: 0,
       paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
+      paddingHorizontal: spacing.xs,
       borderRadius: radii.md,
       ...Platform.select({
         web: {
@@ -470,11 +466,6 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
-      ...Platform.select({
-        web: {
-          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-        } as any,
-      }),
     },
     selectedBadgeText: {
       fontSize: 11,
@@ -488,14 +479,9 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       paddingHorizontal: spacing.md,
       borderRadius: radii.lg,
       backgroundColor: colors.primarySoft,
-      borderWidth: 1.5,
+      borderWidth: 1,
       borderColor: colors.primaryAlpha30,
       gap: 4,
-      ...Platform.select({
-        web: {
-          boxShadow: '0 1px 3px rgba(59, 130, 246, 0.1)',
-        } as any,
-      }),
     },
     selectedSummaryLabel: {
       fontSize: typography.sizes.xs,
@@ -627,7 +613,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
           gap: spacing.xs,
           position: 'sticky' as any,
           bottom: 0,
-          boxShadow: '0 -2px 8px rgba(0,0,0,0.08)',
+          boxShadow: '0 -2px 6px rgba(0,0,0,0.04)',
         } as any,
       }),
     },
