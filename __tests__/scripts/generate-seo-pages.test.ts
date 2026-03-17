@@ -568,6 +568,7 @@ describe('travel hero preload helpers', () => {
     expect(second).toContain('q=40');
     expect(second).toContain('imagesrcset=');
     expect(second).toContain('imagesizes=');
+    expect(second).not.toContain('crossorigin="anonymous"');
   });
 });
 

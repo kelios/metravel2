@@ -275,9 +275,11 @@
         var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, dpr);
         if (!preloadHref) return;
 
+        var preloadIsCrossOrigin = false;
         try {
           var resolved = new URL(preloadHref, window.location.origin);
           var origin = resolved.origin;
+          preloadIsCrossOrigin = !!origin && origin !== window.location.origin;
           if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
             var pre = document.createElement('link');
             pre.rel = 'preconnect';
@@ -304,7 +306,9 @@
           link.fetchPriority = 'high';
           link.setAttribute('fetchPriority', 'high');
         } catch (_e) {}
-        link.crossOrigin = 'anonymous';
+        if (preloadIsCrossOrigin) {
+          link.crossOrigin = 'anonymous';
+        }
         document.head.appendChild(link);
       }).catch(function(){}).finally(function(){
         try { window.__metravelTravelPreloadPending = false; } catch (_e) {}

@@ -691,12 +691,22 @@ function injectBreadcrumbJsonLd(baseHtml, breadcrumb) {
 function injectTravelHeroPreload(baseHtml, preloadData) {
   if (!preloadData?.mobile?.href && !preloadData?.desktop?.href) return baseHtml;
 
+  const resolveCrossOriginAttr = (href) => {
+    if (!href) return '';
+    try {
+      const resolved = new URL(href, 'https://metravel.by');
+      return resolved.origin !== 'https://metravel.by' ? ' crossorigin="anonymous"' : '';
+    } catch {
+      return '';
+    }
+  };
+
   const preloadTags = [
     preloadData.mobile?.href
-      ? `<link data-travel-hero-preload="true" data-hero-variant="mobile" rel="preload" as="image" href="${escapeAttr(preloadData.mobile.href)}"${preloadData.mobile.srcSet ? ` imagesrcset="${escapeAttr(preloadData.mobile.srcSet)}"` : ''}${preloadData.mobile.sizes ? ` imagesizes="${escapeAttr(preloadData.mobile.sizes)}"` : ''} media="(max-width: 767px)" fetchpriority="high" crossorigin="anonymous"/>`
+      ? `<link data-travel-hero-preload="true" data-hero-variant="mobile" rel="preload" as="image" href="${escapeAttr(preloadData.mobile.href)}"${preloadData.mobile.srcSet ? ` imagesrcset="${escapeAttr(preloadData.mobile.srcSet)}"` : ''}${preloadData.mobile.sizes ? ` imagesizes="${escapeAttr(preloadData.mobile.sizes)}"` : ''} media="(max-width: 767px)" fetchpriority="high"${resolveCrossOriginAttr(preloadData.mobile.href)}/>`
       : '',
     preloadData.desktop?.href
-      ? `<link data-travel-hero-preload="true" data-hero-variant="desktop" rel="preload" as="image" href="${escapeAttr(preloadData.desktop.href)}"${preloadData.desktop.srcSet ? ` imagesrcset="${escapeAttr(preloadData.desktop.srcSet)}"` : ''}${preloadData.desktop.sizes ? ` imagesizes="${escapeAttr(preloadData.desktop.sizes)}"` : ''} media="(min-width: 768px)" fetchpriority="high" crossorigin="anonymous"/>`
+      ? `<link data-travel-hero-preload="true" data-hero-variant="desktop" rel="preload" as="image" href="${escapeAttr(preloadData.desktop.href)}"${preloadData.desktop.srcSet ? ` imagesrcset="${escapeAttr(preloadData.desktop.srcSet)}"` : ''}${preloadData.desktop.sizes ? ` imagesizes="${escapeAttr(preloadData.desktop.sizes)}"` : ''} media="(min-width: 768px)" fetchpriority="high"${resolveCrossOriginAttr(preloadData.desktop.href)}/>`
       : '',
   ].filter(Boolean).join('\n');
 
