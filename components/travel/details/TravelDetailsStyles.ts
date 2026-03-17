@@ -46,6 +46,31 @@ export const COMPACT_TYPOGRAPHY = {
   },
 } as const
 
+/* ✅ УЛУЧШЕНИЕ: Fluid typography для плавного масштабирования */
+export const FLUID_TYPOGRAPHY = {
+  // Для Web используем CSS clamp(), для Native - responsive values
+  hero: {
+    // clamp(24px, 1.5rem + 1.5vw, 32px)
+    minSize: 24,
+    maxSize: 32,
+  },
+  h1: {
+    // clamp(22px, 1.375rem + 0.5vw, 24px)
+    minSize: 22,
+    maxSize: 24,
+  },
+  h2: {
+    // clamp(18px, 1.125rem + 0.5vw, 20px)
+    minSize: 18,
+    maxSize: 20,
+  },
+  body: {
+    // clamp(14px, 0.875rem + 0.25vw, 16px)
+    minSize: 14,
+    maxSize: 16,
+  },
+} as const
+
 /* -------------------- helpers -------------------- */
 const _getShadowStyle = (
   colors: ThemedColors,
@@ -160,9 +185,15 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
     quickJumpChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 8,
+      // ✅ УЛУЧШЕНИЕ: Увеличенные touch targets (min 44x44)
+      minHeight: 44,
+      minWidth: 44,
+      paddingVertical: Platform.select({
+        default: 10, // увеличено с 8 для лучшего touch target
+        web: 8,
+      }),
       paddingHorizontal: Platform.select({
-        default: 14,
+        default: 16, // увеличено с 14 для лучшего touch target
         web: 16,
       }),
       borderRadius: DESIGN_TOKENS.radii.pill,
@@ -173,8 +204,16 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       gap: 6,
       ...(Platform.OS === 'web'
         ? ({
-            transition: 'background-color 0.2s ease, color 0.2s ease',
+            transition: 'background-color 0.2s ease, color 0.2s ease, transform 0.15s ease',
             cursor: 'pointer',
+            // ✅ УЛУЧШЕНИЕ: Микроинтеракция при hover
+            ':hover': {
+              transform: 'translateY(-1px)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            },
+            ':active': {
+              transform: 'translateY(0)',
+            },
           } as any)
         : {}),
     },

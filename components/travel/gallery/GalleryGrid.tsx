@@ -44,7 +44,17 @@ export const GalleryGrid: React.FC<{
   }
 
   if (!images.length) {
-    return <Text style={[styles.noImagesText, { color: colors.textMuted }]}>Нет загруженных изображений</Text>
+    return (
+      <View style={styles.emptyGalleryContainer}>
+        <Feather name="image" size={48} color={colors.textMuted} style={{ opacity: 0.5 }} />
+        <Text style={[styles.noImagesText, { color: colors.textMuted }]}>
+          Нет загруженных изображений
+        </Text>
+        <Text style={[styles.emptyGalleryHint, { color: colors.textMuted }]}>
+          Перетащите файлы или нажмите на зону выше
+        </Text>
+      </View>
+    )
   }
 
   return (

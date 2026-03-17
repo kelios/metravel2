@@ -295,3 +295,195 @@ export function getAccessibleFocusStyles(
     outlineOffset: 2,
   };
 }
+
+/**
+ * Get fluid typography size using CSS clamp
+ * Scales smoothly between min and max based on viewport width
+ */
+export function getFluidTypography(
+  minSize: number,
+  maxSize: number,
+  minViewport: number = 320,
+  maxViewport: number = 1440
+): string {
+  // Calculate slope: (maxSize - minSize) / (maxViewport - minViewport)
+  const slope = (maxSize - minSize) / (maxViewport - minViewport);
+  const intercept = minSize - slope * minViewport;
+
+  // clamp(min, preferred, max)
+  return `clamp(${minSize}px, ${intercept.toFixed(2)}px + ${(slope * 100).toFixed(2)}vw, ${maxSize}px)`;
+}
+
+/**
+ * Calculate optimal vertical rhythm based on base font size
+ * Returns consistent spacing scale for typography
+ */
+export function getVerticalRhythm(baseFontSize: number = 16): {
+  lineHeight: number;
+  paragraphSpacing: number;
+  headingSpacing: number;
+  sectionSpacing: number;
+} {
+  const baseLineHeight = baseFontSize * 1.5; // 1.5 ratio for readability
+
+  return {
+    lineHeight: baseLineHeight,
+    paragraphSpacing: baseLineHeight * 0.75, // 12px for 16px base
+    headingSpacing: baseLineHeight * 1.5, // 24px for 16px base
+    sectionSpacing: baseLineHeight * 2, // 32px for 16px base
+  };
+}
+
+/**
+ * Get touch target size following Material/iOS guidelines
+ * Ensures minimum 44x44 pixels for accessibility
+ */
+export function getTouchTargetSize(
+  baseSize: number,
+  minSize: number = 44
+): {
+  width: number;
+  height: number;
+  padding: number;
+} {
+  const size = Math.max(baseSize, minSize);
+  const padding = Math.max(0, (size - baseSize) / 2);
+
+  return {
+    width: size,
+    height: size,
+    padding,
+  };
+}
+
+/**
+ * Calculate scroll snap points for smooth scrolling
+ * Returns optimal snap positions for sections
+ */
+export function getScrollSnapPoints(
+  sectionHeights: number[],
+  viewportHeight: number
+): number[] {
+  const snapPoints: number[] = [0];
+  let accumulated = 0;
+
+  for (const height of sectionHeights) {
+    accumulated += height;
+    // Add snap point if section is taller than 1/3 viewport
+    if (height > viewportHeight / 3) {
+      snapPoints.push(accumulated);
+    }
+  }
+
+  return snapPoints;
+}
+
+/**
+ * Get spring animation config for natural motion
+ */
+export function getSpringConfig(
+  type: 'gentle' | 'snappy' | 'bouncy' = 'gentle'
+): {
+  tension: number;
+  friction: number;
+  mass?: number;
+} {
+  switch (type) {
+    case 'snappy':
+      return { tension: 300, friction: 30 };
+    case 'bouncy':
+      return { tension: 180, friction: 12, mass: 1 };
+    case 'gentle':
+    default:
+      return { tension: 170, friction: 26 };
+  }
+}
+
+/**
+ * Check if device supports haptic feedback
+ */
+export function supportsHaptics(): boolean {
+  if (Platform.OS === 'web') {
+    return 'vibrate' in navigator;
+  }
+  // Native platforms support haptics
+  return true;
+}
+
+/**
+ * Trigger haptic feedback with fallback
+ */
+export async function triggerHaptic(
+  type: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' = 'light'
+): Promise<void> {
+  if (!supportsHaptics()) return;
+
+  if (Platform.OS === 'web') {
+    const patterns: Record<string, number[]> = {
+      light: [10],
+      medium: [20],
+      heavy: [30],
+      success: [10, 50, 10],
+      warning: [20, 50, 20],
+      error: [30, 50, 30],
+    };
+
+    const pattern = patterns[type] || patterns.light;
+    navigator.vibrate(pattern);
+  } else {
+    // Native: use expo-haptics
+    try {
+      const Haptics = await import('expo-haptics');
+      const impactMap = {
+        light: Haptics.ImpactFeedbackStyle.Light,
+        medium: Haptics.ImpactFeedbackStyle.Medium,
+        heavy: Haptics.ImpactFeedbackStyle.Heavy,
+        success: Haptics.NotificationFeedbackType.Success,
+        warning: Haptics.NotificationFeedbackType.Warning,
+        error: Haptics.NotificationFeedbackType.Error,
+      };
+
+      if (['success', 'warning', 'error'].includes(type)) {
+        await Haptics.notificationAsync(impactMap[type] as any);
+      } else {
+        await Haptics.impactAsync(impactMap[type] as any);
+      }
+    } catch {
+      // Haptics not available
+    }
+  }
+}
+
+/**
+ * Get optimal image loading strategy based on position and viewport
+ */
+export function getImageLoadingStrategy(
+  imagePosition: { top: number; bottom: number },
+  viewport: { height: number; scrollY: number }
+): {
+  shouldLoad: boolean;
+  priority: 'high' | 'low' | 'lazy';
+  loading: 'eager' | 'lazy';
+} {
+  const { top, bottom } = imagePosition;
+  const { height, scrollY } = viewport;
+
+  // Check if image is in viewport
+  const isInViewport = top < scrollY + height && bottom > scrollY;
+
+  // Check if image is above the fold
+  const isAboveFold = bottom < height;
+
+  // Check if image is near viewport (within 1.5x viewport height)
+  const isNearViewport = top < scrollY + height * 1.5;
+
+  if (isAboveFold) {
+    return { shouldLoad: true, priority: 'high', loading: 'eager' };
+  }
+
+  if (isInViewport || isNearViewport) {
+    return { shouldLoad: true, priority: 'low', loading: 'lazy' };
+  }
+
+  return { shouldLoad: false, priority: 'lazy', loading: 'lazy' };
+}

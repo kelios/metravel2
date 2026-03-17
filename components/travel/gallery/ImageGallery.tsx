@@ -395,7 +395,7 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const dropzoneProps = dropzoneRootProps()
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
       {Platform.OS === 'web' ? (
         <GalleryControls
           styles={styles}
