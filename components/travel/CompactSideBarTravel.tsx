@@ -172,20 +172,24 @@ function CompactSideBarTravel({
   const [active, setActive] = useState<string>("");
   const [isRouteDownloading, setIsRouteDownloading] = useState(false);
   const [hasDownloadableRoute, setHasDownloadableRoute] = useState(false);
+  const supportedRouteFile = useMemo(
+    () =>
+      routeFiles.find((file) => {
+        const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
+          .toLowerCase()
+          .replace(/^\./, '');
+        return ext === 'gpx' || ext === 'kml';
+      }) ?? null,
+    [routeFiles]
+  );
   const [weatherSettled, setWeatherSettled] = useState(Platform.OS !== 'web');
   const handleWeatherSettled = useCallback(() => {
     setWeatherSettled(true);
   }, []);
 
   useEffect(() => {
-    const hasSupported = routeFiles.some((file) => {
-      const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
-        .toLowerCase()
-        .replace(/^\./, '');
-      return ext === 'gpx' || ext === 'kml';
-    });
-    setHasDownloadableRoute(hasSupported);
-  }, [routeFiles]);
+    setHasDownloadableRoute(Boolean(supportedRouteFile));
+  }, [supportedRouteFile]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -332,22 +336,14 @@ function CompactSideBarTravel({
 
     setIsRouteDownloading(true);
     try {
-      const files = await listTravelRouteFiles(travelId);
-      const supported = files.find((file) => {
-        const ext = String(file.ext ?? file.original_name?.split('.').pop() ?? '')
-          .toLowerCase()
-          .replace(/^\./, '');
-        return ext === 'gpx' || ext === 'kml';
-      });
-
-      if (!supported) {
+      if (!supportedRouteFile) {
         notifyUnavailable('Скачать маршрут');
         return;
       }
 
       const rawUrl =
-        String(supported.download_url ?? '').trim() ||
-        buildTravelRouteDownloadPath(travelId, supported.id);
+        String(supportedRouteFile.download_url ?? '').trim() ||
+        buildTravelRouteDownloadPath(travelId, supportedRouteFile.id);
 
       await openExternalUrlInNewTab(rawUrl, {
         allowRelative: true,
@@ -361,7 +357,7 @@ function CompactSideBarTravel({
     } finally {
       setIsRouteDownloading(false);
     }
-  }, [isRouteDownloading, notifyUnavailable, travel]);
+  }, [isRouteDownloading, notifyUnavailable, supportedRouteFile, travel]);
 
   const setWebTitle = useCallback(
     (title: string) => (el: any) => {

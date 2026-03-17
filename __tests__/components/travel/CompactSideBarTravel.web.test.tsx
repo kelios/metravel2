@@ -8,6 +8,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
+const mockOpenExternalUrlInNewTab: jest.Mock = jest.fn(() => Promise.resolve(true));
+const mockUseTravelRouteFiles: jest.Mock = jest.fn(() => ({
+  data: [] as any[],
+  isLoading: false,
+  isFetching: false,
+  error: null,
+  refetch: jest.fn(),
+}));
+
 const mockAuthState = {
   isSuperuser: false,
   userId: null as string | null,
@@ -28,6 +37,18 @@ jest.mock('@/hooks/useUserProfileCached', () => ({
     fullName: '',
     refetch: jest.fn(),
   }),
+}));
+
+jest.mock('@/hooks/useTravelRouteFiles', () => ({
+  __esModule: true,
+  useTravelRouteFiles: (travelId: unknown, options?: unknown) =>
+    mockUseTravelRouteFiles(travelId, options),
+}));
+
+jest.mock('@/utils/externalLinks', () => ({
+  __esModule: true,
+  openExternalUrlInNewTab: (url: unknown, options?: unknown) =>
+    mockOpenExternalUrlInNewTab(url, options),
 }));
 
 jest.mock('@/components/home/WeatherWidget', () => ({
@@ -124,6 +145,13 @@ describe('CompactSideBarTravel - Web', () => {
     jest.clearAllMocks();
     mockAuthState.isSuperuser = false;
     mockAuthState.userId = null;
+    mockUseTravelRouteFiles.mockReturnValue({
+      data: [] as any[],
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: jest.fn(),
+    });
   });
 
   describe('Рендеринг компонентов', () => {
@@ -255,6 +283,38 @@ describe('CompactSideBarTravel - Web', () => {
       const activeLink = UNSAFE_getAllByProps({ 'data-active': 'true' })[0];
       expect(activeLink).toBeTruthy();
       expect(activeLink.props.accessibilityLabel).toBe('Галерея');
+    });
+
+    it('должен скачивать маршрут через уже загруженный route file без повторного запроса списка', async () => {
+      mockUseTravelRouteFiles.mockReturnValue({
+        data: [
+          {
+            id: 77,
+            ext: 'gpx',
+            original_name: 'route.gpx',
+            download_url: '/api/travels/test-123/routes/77/download/',
+          },
+        ] as any[],
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: jest.fn(),
+      });
+
+      render(<CompactSideBarTravel {...defaultProps} />);
+
+      const downloadButton = await screen.findByLabelText('Скачать маршрут');
+      fireEvent.press(downloadButton);
+
+      await waitFor(() => {
+        expect(mockOpenExternalUrlInNewTab).toHaveBeenCalledWith(
+          '/api/travels/test-123/routes/77/download/',
+          expect.objectContaining({
+            allowRelative: true,
+          })
+        );
+      });
+      expect(defaultProps.onNavigate).not.toHaveBeenCalledWith('download-route');
     });
   });
 
