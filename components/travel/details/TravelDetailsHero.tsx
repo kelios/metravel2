@@ -1,11 +1,8 @@
 // E11: Refactored — state/logic extracted to useTravelHeroState hook
 import React, {
   Suspense,
-  useCallback,
-  useState,
 } from 'react'
 import {
-  LayoutChangeEvent,
   Platform,
   Text,
   View,
@@ -16,6 +13,7 @@ import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
+import { useTravelDetailsHeroCompositionModel } from './hooks/useTravelDetailsHeroCompositionModel'
 import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
 import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
 import { TravelHeroExtras } from './TravelHeroExtras'
@@ -65,43 +63,26 @@ function TravelHeroSectionInner({
     sliderUpgradeAllowed,
   } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras)
 
-  const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
-
-  // AND-28: Fullscreen gallery state (native only)
-  const [fullscreenVisible, setFullscreenVisible] = useState(false)
-  const [fullscreenIndex, setFullscreenIndex] = useState(0)
-  const handleImagePress = useCallback((index: number) => {
-    if (Platform.OS === 'web') return
-    setFullscreenIndex(index)
-    setFullscreenVisible(true)
-  }, [])
-  const handleCloseFullscreen = useCallback(
-    () => setFullscreenVisible(false),
-    [],
-  )
-
-  const shouldRenderWebOptimizedHero =
-    Platform.OS === 'web' && shouldShowOptimizedHero
-  const hasInteractiveWebGallery =
-    Platform.OS === 'web' && heroSliderImages.length > 1
-  const shouldRenderWebSlider =
-    shouldRenderWebOptimizedHero &&
-    hasInteractiveWebGallery &&
-    webHeroLoaded &&
-    renderSlider &&
-    sliderUpgradeAllowed
-  const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2
-
-  const activateWebSlider = useCallback(() => {
-    if (!hasInteractiveWebGallery) return
-  }, [hasInteractiveWebGallery])
-
-  const handleWebHeroKeyDown = useCallback((event: any) => {
-    const key = event?.key
-    if (key !== 'Enter' && key !== ' ') return
-    event?.preventDefault?.()
-    activateWebSlider()
-  }, [activateWebSlider])
+  const {
+    fullscreenIndex,
+    fullscreenVisible,
+    handleCloseFullscreen,
+    handleHeroContainerLayout,
+    handleImagePress,
+    shouldRenderWebOptimizedHero,
+    shouldRenderWebSlider,
+    sliderPreloadCount,
+    webHeroInteractionProps,
+  } = useTravelDetailsHeroCompositionModel({
+    firstImg,
+    heroContainerWidth,
+    heroSliderImages,
+    isMobile,
+    renderSlider,
+    setHeroContainerWidth,
+    sliderUpgradeAllowed,
+    webHeroLoaded,
+  })
 
   return (
     <>
@@ -124,20 +105,9 @@ function TravelHeroSectionInner({
             { height: heroHeight },
             Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
           ]}
-          {...(Platform.OS === 'web' && hasInteractiveWebGallery
-            ? {
-                tabIndex: 0,
-                'aria-label': 'Открыть интерактивную галерею',
-                onClick: activateWebSlider,
-                onKeyDown: handleWebHeroKeyDown,
-              }
-            : {})}
+          {...webHeroInteractionProps}
           collapsable={false}
-          onLayout={(e: LayoutChangeEvent) => {
-            const w = e.nativeEvent.layout.width
-            if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2)
-              setHeroContainerWidth(w)
-          }}
+          onLayout={handleHeroContainerLayout}
         >
           {!firstImg ? (
             <NeutralHeroPlaceholder height={heroHeight} />

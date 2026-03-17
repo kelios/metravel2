@@ -1,14 +1,11 @@
-import React, { memo, useEffect, useState } from 'react'
-import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
+import React, { memo } from 'react'
+import { Animated, Platform, View } from 'react-native'
 import type { Travel } from '@/types/types'
-import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
-import TravelRatingSection from '@/components/travel/TravelRatingSection'
-import AuthorCard from '@/components/travel/AuthorCard'
-import ShareButtons from '@/components/travel/ShareButtons'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
-import { useTravelDetailsStyles } from './TravelDetailsStyles'
-import { useTdTrace } from '@/hooks/useTdTrace'
+import { useTravelDeferredSectionsModel } from './hooks/useTravelDeferredSectionsModel'
+import TravelDeferredAuthorSection from './TravelDeferredAuthorSection'
+import TravelDeferredRatingSection from './TravelDeferredRatingSection'
 
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
 import { TravelDetailsSidebarSection } from './sections/TravelDetailsSidebarSection'
@@ -16,7 +13,6 @@ import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSectio
 import { TravelDetailsMapSection } from './sections/TravelDetailsMapSection'
 import { CommentsSection } from '@/components/travel/CommentsSection'
 
-const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
 const PLACEHOLDER_MIN_H_160 = { minHeight: 160 } as const
 const PLACEHOLDER_MIN_H_56 = { minHeight: 56 } as const
 
@@ -38,86 +34,20 @@ export const TravelDeferredSections: React.FC<{
   viewportHeight,
   scrollToMapSection,
 }) => {
-  const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === 'web')
-  const isWebAutomation =
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    Boolean((navigator as unknown as Record<string, unknown>).webdriver)
-
-  const tdTrace = useTdTrace()
-  const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 800,
-    enabled: canRenderHeavy,
+  const {
+    canRenderHeavy,
+    isWebAutomation,
+    setAuthorSectionRef,
+    setCommentsRef,
+    setFooterRef,
+    setMapRef,
+    setRatingRef,
+    setSidebarRef,
+    shouldLoadAuthorSection,
+    shouldLoadRating,
+  } = useTravelDeferredSectionsModel({
+    travelId: travel?.id,
   })
-  const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 900,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 950,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 1000,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useProgressiveLoad({
-    priority: 'high',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 500,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
-    priority: 'high',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 600,
-    enabled: canRenderHeavy,
-  })
-
-  useEffect(() => {
-    tdTrace('deferred:mount', { travelId: travel?.id })
-    return () => tdTrace('deferred:unmount', { travelId: travel?.id })
-  }, [tdTrace, travel?.id])
-
-  useEffect(() => {
-    if (Platform.OS === 'web') return
-    const task = InteractionManager.runAfterInteractions(() => setCanRenderHeavy(true))
-    return () => task.cancel()
-  }, [])
-
-  useEffect(() => {
-    if (canRenderHeavy) tdTrace('deferred:heavy:enabled')
-  }, [canRenderHeavy, tdTrace])
-
-  useEffect(() => {
-    if (shouldLoadMap) tdTrace('deferred:map:visible')
-  }, [shouldLoadMap, tdTrace])
-
-  useEffect(() => {
-    if (shouldLoadSidebar) tdTrace('deferred:sidebar:visible')
-  }, [shouldLoadSidebar, tdTrace])
-
-  useEffect(() => {
-    if (shouldLoadComments) tdTrace('deferred:comments:visible')
-  }, [shouldLoadComments, tdTrace])
-
-  useEffect(() => {
-    if (shouldLoadFooter) tdTrace('deferred:footer:visible')
-  }, [shouldLoadFooter, tdTrace])
 
   const shouldLoadAuthor = isWebAutomation || shouldLoadAuthorSection
   const shouldLoadRatingSection = isWebAutomation || shouldLoadRating
@@ -137,7 +67,7 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
       >
         {shouldLoadAuthor ? (
-          <DeferredAuthorSection travel={travel} isMobile={isMobile} />
+          <TravelDeferredAuthorSection travel={travel} isMobile={isMobile} />
         ) : (
           <>
             <View style={PLACEHOLDER_MIN_H_160} />
@@ -152,7 +82,7 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
       >
         {shouldLoadRatingSection ? (
-          <TravelRatingWrapper travel={travel} />
+          <TravelDeferredRatingSection travel={travel} />
         ) : (
           <View style={PLACEHOLDER_MIN_H_56} />
         )}
@@ -203,85 +133,6 @@ export const TravelDeferredSections: React.FC<{
         <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
       </View>
     </>
-  )
-})
-
-const DeferredAuthorSection: React.FC<{ travel: Travel; isMobile: boolean }> = memo(
-  function DeferredAuthorSection({ travel, isMobile }) {
-    if (isMobile) {
-      return <MobileAuthorShareSection travel={travel} />
-    }
-
-    return <DesktopAuthorSection travel={travel} />
-  }
-)
-
-const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function DesktopAuthorSection({ travel }) {
-  const styles = useTravelDetailsStyles()
-  return (
-    <View
-      testID="travel-details-author"
-      accessibilityRole="region"
-      accessibilityLabel="Автор маршрута"
-      style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
-    >
-      <Text style={styles.sectionHeaderText}>Автор</Text>
-      <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-      <View style={PLACEHOLDER_MT_12}>
-        <AuthorCard travel={travel} />
-      </View>
-    </View>
-  )
-})
-
-const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function MobileAuthorShareSection({ travel }) {
-  const styles = useTravelDetailsStyles()
-  return (
-    <>
-      <View
-        testID="travel-details-author-mobile"
-        accessibilityRole="region"
-        accessibilityLabel="Автор маршрута"
-        style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
-      >
-        <Text style={styles.sectionHeaderText}>Автор</Text>
-        <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-        <View style={PLACEHOLDER_MT_12}>
-          <AuthorCard travel={travel} />
-        </View>
-      </View>
-
-      <View
-        testID="travel-details-share-mobile"
-        accessibilityRole="region"
-        accessibilityLabel="Поделиться маршрутом"
-        style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
-      >
-        <ShareButtons travel={travel} />
-      </View>
-    </>
-  )
-})
-
-const TravelRatingWrapper: React.FC<{ travel: Travel }> = memo(function TravelRatingWrapper({ travel }) {
-  const styles = useTravelDetailsStyles()
-
-  if (!travel?.id) return null
-
-  return (
-    <View
-      testID="travel-details-rating"
-      accessibilityRole="region"
-      accessibilityLabel="Рейтинг путешествия"
-      style={[styles.sectionContainer, styles.contentStable]}
-    >
-      <TravelRatingSection
-        travelId={travel.id}
-        initialRating={travel.rating}
-        initialCount={travel.rating_count}
-        initialUserRating={travel.user_rating}
-      />
-    </View>
   )
 })
 

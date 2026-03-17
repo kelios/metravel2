@@ -1,63 +1,13 @@
-import React, { useMemo } from 'react'
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
+import React from 'react'
+import { View } from 'react-native'
 
-import { useThemedColors } from '@/hooks/useTheme'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 import type { Travel } from '@/types/types'
 import QuickFacts from '@/components/travel/QuickFacts'
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
-
-const HERO_QUICK_JUMP_KEYS = [
-  'description',
-  'map',
-  'points',
-  'comments',
-  'video',
-] as const
-
-function HeroQuickJumps({
-  links,
-  isMobile,
-  onQuickJump,
-}: {
-  links: TravelSectionLink[]
-  isMobile: boolean
-  onQuickJump: (key: string) => void
-}) {
-  const styles = useTravelDetailsHeroStyles()
-  const colors = useThemedColors()
-
-  const chips = links.map((link) => (
-    <Pressable
-      key={link.key}
-      onPress={() => onQuickJump(link.key)}
-      style={({ pressed }) => [
-        styles.quickJumpChip,
-        pressed && styles.quickJumpChipPressed,
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={`Перейти к разделу ${link.label}`}
-    >
-      <Feather name={link.icon as any} size={16} color={colors.primary} />
-      <Text style={styles.quickJumpLabel}>{link.label}</Text>
-    </Pressable>
-  ))
-
-  if (!isMobile) return <>{chips}</>
-
-  return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.quickJumpScrollContent}
-      style={styles.quickJumpScroll}
-    >
-      {chips}
-    </ScrollView>
-  )
-}
+import TravelHeroQuickJumps from './TravelHeroQuickJumps'
+import { useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel'
 
 export const TravelHeroExtras: React.FC<{
   travel: Travel
@@ -66,14 +16,7 @@ export const TravelHeroExtras: React.FC<{
   onQuickJump: (key: string) => void
 }> = ({ travel, isMobile, sectionLinks, onQuickJump }) => {
   const styles = useTravelDetailsHeroStyles()
-  const showQuickJumps = Platform.OS !== 'web'
-
-  const quickJumpLinks = useMemo(() => {
-    const linksByKey = new Map(sectionLinks.map((link) => [link.key, link]))
-    return HERO_QUICK_JUMP_KEYS.map((key) => linksByKey.get(key)).filter(
-      Boolean,
-    ) as TravelSectionLink[]
-  }, [sectionLinks])
+  const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
 
   return (
     <>
@@ -98,7 +41,7 @@ export const TravelHeroExtras: React.FC<{
             styles.quickJumpWrapper,
           ]}
         >
-          <HeroQuickJumps
+          <TravelHeroQuickJumps
             links={quickJumpLinks}
             isMobile={isMobile}
             onQuickJump={onQuickJump}

@@ -1,0 +1,140 @@
+import React from 'react';
+import Feather from '@expo/vector-icons/Feather';
+import { Platform, View } from 'react-native';
+
+import PlaceListCard from '@/components/places/PlaceListCard';
+import PointCard from '@/components/travel/PointCard';
+
+type PointLike = {
+  id: string;
+  address: string;
+  coord: string;
+};
+
+type ItemModel = {
+  addDisabled: boolean;
+  categoryLabel?: string;
+  handleAddPointClick: (event?: { stopPropagation?: () => void }) => void;
+  imageUrl?: string;
+  inlineActions: Array<{
+    icon: keyof typeof Feather.glyphMap;
+    key: string;
+    label: string;
+    onPress: () => void;
+    title?: string;
+  }>;
+  isAdding: boolean;
+  mapActions: Array<{
+    icon: keyof typeof Feather.glyphMap;
+    key: string;
+    label: string;
+    onPress: () => void;
+    title?: string;
+  }>;
+  onCardPress?: () => void;
+  onCopyCoord?: () => void;
+  onMediaPress?: () => void;
+  onShareCoord?: () => void;
+};
+
+type PointListCardRendererProps = {
+  colors: {
+    textOnDark: string;
+    textOnPrimary: string;
+  };
+  isMobile: boolean;
+  item: PointLike;
+  itemModel: ItemModel;
+  numColumns: number;
+  onCopy: (coordStr: string) => void | Promise<void>;
+  onOpenAppleMap: () => void;
+  onOpenGoogleMap: () => void;
+  onOpenMap: (coordStr: string) => void | Promise<void>;
+  onOpenOsmMap: () => void;
+  onOpenYandexMap: () => void;
+  onPointCardPress?: (point: PointLike) => void;
+  onShare: (coordStr: string) => void | Promise<void>;
+  responsive: {
+    coordSize: number;
+    imageMinHeight: number;
+    titleSize: number;
+  };
+  styles: Record<string, any>;
+};
+
+const POINT_CARD_MARGIN_STYLE = { marginRight: 16 };
+
+const PointListCardRenderer = React.memo(function PointListCardRenderer({
+  colors,
+  isMobile,
+  item,
+  itemModel,
+  numColumns,
+  onCopy,
+  onOpenAppleMap,
+  onOpenGoogleMap,
+  onOpenMap,
+  onOpenOsmMap,
+  onOpenYandexMap,
+  onPointCardPress,
+  onShare,
+  responsive,
+  styles,
+}: PointListCardRendererProps) {
+  return (
+    <View
+      style={[
+        styles.col,
+        Platform.OS === 'web' ? styles.colHorizontal : (numColumns === 2 ? styles.col2 : styles.col1),
+      ]}
+    >
+      {Platform.OS === 'web' ? (
+        <PlaceListCard
+          title={item.address}
+          imageUrl={itemModel.imageUrl}
+          categoryLabel={itemModel.categoryLabel}
+          coord={item.coord}
+          onCardPress={itemModel.onCardPress}
+          onMediaPress={itemModel.onMediaPress}
+          onCopyCoord={itemModel.onCopyCoord}
+          onShare={itemModel.onShareCoord}
+          mapActions={itemModel.mapActions}
+          inlineActions={itemModel.inlineActions}
+          onAddPoint={itemModel.handleAddPointClick}
+          addDisabled={itemModel.addDisabled}
+          isAdding={itemModel.isAdding}
+          imageHeight={180}
+          width={300}
+          style={POINT_CARD_MARGIN_STYLE}
+          testID={`travel-point-card-${item.id}`}
+        />
+      ) : (
+        <PointCard
+          point={{
+            address: item.address,
+            coord: item.coord,
+          }}
+          categoryLabel={itemModel.categoryLabel}
+          imageUrl={itemModel.imageUrl}
+          isMobile={isMobile}
+          responsive={responsive}
+          onCopy={onCopy}
+          onShare={onShare}
+          onOpenMap={onOpenMap}
+          onOpenGoogleMap={onOpenGoogleMap}
+          onOpenAppleMap={onOpenAppleMap}
+          onOpenYandexMap={onOpenYandexMap}
+          onOpenOsmMap={onOpenOsmMap}
+          colors={colors}
+          styles={styles}
+          onCardPress={onPointCardPress ? itemModel.onCardPress : undefined}
+          onAddPoint={itemModel.handleAddPointClick}
+          addButtonLoading={itemModel.isAdding}
+          addButtonDisabled={itemModel.addDisabled}
+        />
+      )}
+    </View>
+  );
+});
+
+export default PointListCardRenderer;

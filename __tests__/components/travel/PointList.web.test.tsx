@@ -58,6 +58,38 @@ const basePoint = {
 };
 
 describe('PointList (web coordinates list uses popup template)', () => {
+  it('shows collapsed preview rows and reveals view mode controls after expand', () => {
+    const prevOs = Platform.OS;
+    (Platform as any).OS = 'web';
+
+    const points = [
+      { ...basePoint, id: '1', address: 'A', coord: '50.0,20.0' },
+      { ...basePoint, id: '2', address: 'B', coord: '51.0,21.0' },
+      { ...basePoint, id: '3', address: 'C', coord: '52.0,22.0' },
+      { ...basePoint, id: '4', address: 'D', coord: '53.0,23.0' },
+    ];
+
+    const { getByLabelText, getByText, queryByText } = render(
+      <PointList points={points as any} baseUrl="https://example.com/travel-page" />
+    );
+
+    expect(getByText('A')).toBeTruthy();
+    expect(getByText('B')).toBeTruthy();
+    expect(getByText('C')).toBeTruthy();
+    expect(getByText('+ ещё 1')).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Показать все точки маршрута'));
+
+    expect(getByLabelText('Карточки')).toBeTruthy();
+    expect(getByLabelText('Список')).toBeTruthy();
+    expect(queryByText('+ ещё 1')).toBeNull();
+
+    fireEvent.press(getByLabelText('Список'));
+    expect(getByText('A')).toBeTruthy();
+
+    (Platform as any).OS = prevOs;
+  });
+
   it('passes baseUrl as articleUrl to PopupContentComponent on web', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';

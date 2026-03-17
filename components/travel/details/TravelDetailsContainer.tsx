@@ -1,87 +1,42 @@
 // app/travels/[param].tsx
 import React, {
-  Suspense,
-  useCallback,
   useEffect,
   useMemo,
   useState,
   useTransition,
 } from "react";
 import {
-  Animated,
   Platform,
   useWindowDimensions,
   View,
 } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
-import Head from 'expo-router/head';
 import { METRICS } from '@/constants/layout';
 import { useTravelDetails } from '@/hooks/travel-details';
 
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
-import InstantSEO from "@/components/seo/LazyInstantSEO";
-import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from "@/utils/seo";
-import { createTravelArticleJsonLd, stripHtmlForSeo } from "@/utils/travelSeo";
-import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import TravelDetailsCriticalShell from "@/components/travel/details/TravelDetailsCriticalShell";
 import { getTravelDetailsShellStyles } from "@/components/travel/details/TravelDetailsShellStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
-import TravelDetailsPostLcpRuntime from '@/components/travel/details/TravelDetailsPostLcpRuntime'
 import { MissingParamError, LoadError } from '@/components/travel/details/TravelDetailsErrorStates'
+import TravelDetailsSeoBlock from '@/components/travel/details/TravelDetailsSeoBlock'
+import TravelDetailsAccessibilityChrome from '@/components/travel/details/TravelDetailsAccessibilityChrome'
+import TravelDetailsDeferredRuntimeSlot from '@/components/travel/details/TravelDetailsDeferredRuntimeSlot'
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import { useAccessibilityAnnounce } from "@/hooks/useAccessibilityAnnounce";
 import { useThemedColors } from "@/hooks/useTheme";
 import { useTravelDetailsTrace } from '@/hooks/useTravelDetailsTrace';
 import { useSkeletonPhase } from '@/hooks/useSkeletonPhase';
-
-const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
-const AccessibilityAnnouncer = withLazy(() => import("@/components/accessibility/AccessibilityAnnouncer"));
+import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel';
+import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync';
 const TravelDetailPageSkeleton = withLazy(() =>
   import('@/components/travel/TravelDetailPageSkeleton').then((m) => ({
     default: m.TravelDetailPageSkeleton,
   }))
 );
-/* -------------------- utils (используются из импортов) -------------------- */
-// ✅ SECURITY: Функции перемещены в utils/travelDetailsSecure.ts:
-// - stripHtml: защита от XSS
-// - createSafeImageUrl: безопасное преобразование URL
-// - getSafeOrigin: валидация origin
-
-// Переадресация для обратной совместимости внутри компонента
-const stripToDescription = (html?: string) => stripHtmlForSeo(html).slice(0, 160);
-const SEO_TITLE_MAX_LENGTH = 60;
-const SEO_TITLE_SUFFIX = ' | Metravel';
-const _WEB_SKELETON_SETTLE_MS = 180
-
-const buildSeoTitle = (base: string): string => {
-  const normalized = String(base || '').replace(/\s+/g, ' ').trim();
-  if (!normalized) return 'Metravel';
-
-  const maxBaseLength = Math.max(10, SEO_TITLE_MAX_LENGTH - SEO_TITLE_SUFFIX.length);
-  const clippedBase =
-    normalized.length > maxBaseLength
-      ? `${normalized.slice(0, maxBaseLength - 1).trimEnd()}…`
-      : normalized;
-
-  return `${clippedBase}${SEO_TITLE_SUFFIX}`;
-};
-
 const SKELETON_OVERLAY_FALLBACK_STYLE = { flex: 1 } as const
-
-/* -------------------- Defer wrapper -------------------- */
-const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, children }) => {
-  const [ready, setReady] = useState(when);
-  useEffect(() => {
-    if (when) {
-      setReady(true);
-      return;
-    }
-    setReady(false);
-  }, [when]);
-  return ready ? <>{children}</> : null;
-};
 
 /* =================================================================== */
 
@@ -171,204 +126,46 @@ export default function TravelDetailsContainer() {
     };
   }, []);
 
-  const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
-  // Стабильный ключ для <Head> — используем slug (доступен сразу из URL),
-  // чтобы Helmet instance НЕ пересоздавался при загрузке данных.
-  // Это критично: если key меняется, react-helmet-async теряет meta-теги
-  // при первичной загрузке страницы (race condition с requestAnimationFrame).
-  const headKey = useMemo(
-    () => `travel-${slug ?? travel?.id ?? "unknown"}`,
-    [slug, travel?.id]
-  );
-
   const {
-    readyTitle,
-    readyDesc,
+    criticalChromeReady,
+    deferredChromeReady,
+    handleFirstImageLoad,
+    headKey,
+    scrollEventHandler,
+    scrollToComments,
+    scrollToMapSection,
+    scrollToWithMenuClose,
+    scrollViewStyle,
+    sectionLinks,
+    seo: { readyTitle, readyDesc, canonicalUrl, readyImage, jsonLd },
+    syncNavigationTitle,
+    wrapperStyle,
+  } = useTravelDetailsContainerViewModel({
+    closeMenu,
+    forceOpenKey,
+    isMobile,
+    isWebAutomation,
+    lcpLoaded,
+    navigationSetOptions: navigation.setOptions,
+    postLcpRuntimeReady,
+    scrollTo,
+    scrollY,
+    setActiveSection,
+    setLcpLoaded,
+    slug,
+    styles,
+    themedBackground: themedColors.background,
+    themedBackgroundSecondary: themedColors.backgroundSecondary,
+    travel,
+  })
+  useTravelDetailsHeadSync({
     canonicalUrl,
+    isFocused,
+    readyDesc,
     readyImage,
-    jsonLd,
-  } = useMemo(() => {
-    // Пока travel не загружен — показываем нейтральный title на русском,
-    // а не slug (транслитерация на латинице)
-    const title = travel?.name
-      ? buildSeoTitle(travel.name)
-      : 'Загрузка... | Metravel';
-    const desc =
-      stripToDescription(travel?.description) || 'Путешествие на Metravel.';
-    const canonical =
-      typeof travel?.slug === "string" && travel.slug
-        ? buildCanonicalUrl(`/travels/${travel.slug}`)
-        : typeof travel?.id === "number"
-          ? buildCanonicalUrl(`/travels/${travel.id}`)
-          : slug
-            ? buildCanonicalUrl(`/travels/${slug}`)
-            : undefined;
-    const rawFirst = travel?.gallery?.[0] || travel?.travel_image_thumb_url;
-    const firstUrl = rawFirst
-      ? typeof rawFirst === "string"
-        ? rawFirst
-        : rawFirst.url
-      : undefined;
-    // Ensure og:image is always an absolute URL (required by Google/social crawlers)
-    const absImage = firstUrl
-      ? firstUrl.startsWith("http")
-        ? firstUrl.replace(/^http:\/\//, "https://")
-        : buildOgImageUrl(firstUrl)
-      : buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
-    const structuredData = createTravelArticleJsonLd(travel);
-
-    return {
-      readyTitle: title,
-      readyDesc: desc,
-      canonicalUrl: canonical,
-      readyImage: absImage,
-      jsonLd: structuredData,
-    };
-  }, [travel, slug]);
-  // ✅ FIX: Синхронизируем title экрана с navigation options.
-  // useDocumentTitle from @react-navigation overwrites document.title AFTER our
-  // effect via its own parent-level effect. A MutationObserver on <title> detects
-  // the overwrite and re-applies the correct value. We also patch og:title and
-  // other critical meta tags directly because react-helmet-async can lose the
-  // race on initial page loads with async data.
-	  useEffect(() => {
-	    if (!readyTitle || readyTitle === 'Metravel') return undefined;
-      if (!isFocused) return undefined;
-      if (isFocused) {
-        navigation.setOptions({ title: readyTitle });
-      }
-	    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
-
-	    const patchMeta = (sel: string, attr: string, val: string) => {
-      const all = document.querySelectorAll(sel);
-      // Remove duplicates — keep only the first, update it
-      for (let i = 1; i < all.length; i++) all[i].remove();
-      let el = all[0] ?? null;
-      if (!el) {
-        // Create the meta tag if Helmet never rendered it
-        el = document.createElement('meta');
-        const m = sel.match(/\[(\w+)="([^"]+)"]/);
-        if (m) el.setAttribute(m[1], m[2]);
-        el.setAttribute('data-rh', 'true');
-        document.head.appendChild(el);
-      }
-	      if (el.getAttribute(attr) !== val) el.setAttribute(attr, val);
-	    };
-	    const patchCanonical = (href: string) => {
-	      const sel = 'link[rel="canonical"]';
-	      const all = document.querySelectorAll(sel);
-	      for (let i = 1; i < all.length; i++) all[i].remove();
-	      let el = all[0] as HTMLLinkElement | undefined;
-	      if (!el) {
-	        el = document.createElement('link');
-	        el.setAttribute('rel', 'canonical');
-	        el.setAttribute('data-rh', 'true');
-	        document.head.appendChild(el);
-	      }
-	      if (el.getAttribute('href') !== href) el.setAttribute('href', href);
-	    };
-	    const applyAll = () => {
-	      document.title = readyTitle;
-	      patchMeta('meta[property="og:title"]', 'content', readyTitle);
-	      patchMeta('meta[name="twitter:title"]', 'content', readyTitle);
-	      if (readyDesc) {
-        patchMeta('meta[name="description"]', 'content', readyDesc);
-        patchMeta('meta[property="og:description"]', 'content', readyDesc);
-        patchMeta('meta[name="twitter:description"]', 'content', readyDesc);
-      }
-	      if (readyImage) {
-	        patchMeta('meta[property="og:image"]', 'content', readyImage);
-	        patchMeta('meta[name="twitter:image"]', 'content', readyImage);
-	      }
-	      if (canonicalUrl) {
-	        patchCanonical(canonicalUrl);
-	      }
-	    };
-
-    // Apply after a short delay to let Helmet commit its initial tags,
-    // then apply again after a longer delay to catch late overwrites.
-    const t1 = setTimeout(applyAll, 50);
-    const t2 = setTimeout(applyAll, 300);
-    const t3 = setTimeout(applyAll, 800);
-
-    // Watch <title> for overwrites by useDocumentTitle
-    const titleEl = document.querySelector('title');
-    let titleObs: MutationObserver | null = null;
-    if (titleEl) {
-      titleObs = new MutationObserver(() => {
-        if (document.title !== readyTitle) {
-          document.title = readyTitle;
-        }
-      });
-      titleObs.observe(titleEl, { childList: true, characterData: true, subtree: true });
-    }
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      titleObs?.disconnect();
-    };
-	  }, [isFocused, navigation, readyTitle, readyDesc, readyImage, canonicalUrl]);
-
-  const forceDeferMount = !!forceOpenKey;
-  const criticalChromeReady =
-    Platform.OS !== 'web' || lcpLoaded || forceDeferMount || isWebAutomation
-  const deferredChromeReady =
-    postLcpRuntimeReady || forceDeferMount || isWebAutomation
-
-  // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
-  // Расширяем scrollTo для добавления логики закрытия меню на мобильных
-  const scrollToWithMenuClose = useCallback(
-    (key: string) => {
-      // Немедленно обновляем активную секцию при клике по меню,
-      // чтобы подсветка в боковом меню менялась сразу (например, на "Видео").
-      setActiveSection(key);
-      scrollTo(key);
-      if (isMobile) closeMenu();
-    },
-    [scrollTo, isMobile, closeMenu, setActiveSection]
-  );
-
-  const scrollToMapSection = useCallback(() => {
-    scrollToWithMenuClose('map');
-  }, [scrollToWithMenuClose]);
-
-  const handleFirstImageLoad = useCallback(() => {
-    setLcpLoaded(true);
-  }, [setLcpLoaded]);
-
-  const scrollToComments = useCallback(() => {
-    scrollToWithMenuClose('comments');
-  }, [scrollToWithMenuClose]);
-
-  // Memoize Animated.event handler to prevent ScrollView re-renders
-  const scrollEventHandler = useMemo(
-    () =>
-      Animated.event(
-        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-        { useNativeDriver: false }
-      ),
-    [scrollY]
-  );
-
-  // Memoize inline styles to prevent new object allocations each render
-  const wrapperStyle = useMemo(
-    () => [
-      styles.wrapper,
-      { backgroundColor: themedColors.background },
-      Platform.OS === 'web' &&
-        ({
-          backgroundImage: `linear-gradient(180deg, ${themedColors.background} 0%, ${themedColors.backgroundSecondary} 100%)`,
-        } as any),
-    ],
-    [styles.wrapper, themedColors.background, themedColors.backgroundSecondary]
-  );
-
-  const scrollViewStyle = useMemo(
-    () => [styles.scrollView, isMobile && { width: '100%' as any }],
-    [styles.scrollView, isMobile]
-  );
+    readyTitle,
+    syncNavigationTitle,
+  })
 
   /* ---- prefetch near travels ---- */
   // ✅ ИСПРАВЛЕНИЕ: Убираем prefetch, чтобы избежать дублирующихся запросов
@@ -384,42 +181,16 @@ export default function TravelDetailsContainer() {
   //   }
   // }, [travel?.id, queryClient]);
 
-  /* -------------------- SEO (must mount before early returns) -------------------- */
-  // ⚠️ CRITICAL: InstantSEO must render from the FIRST render, not after async data loads.
-  // react-helmet-async has a race condition on direct page loads: if a Helmet instance
-  // mounts late (after requestAnimationFrame), meta tags are committed as empty.
-  // Rendering it here with fallback values ensures the Helmet instance is stable.
   const seoBlock = (
-    <>
-      <InstantSEO
-        headKey={headKey}
-        title={readyTitle}
-        description={readyDesc}
-        canonical={canonicalUrl}
-        image={readyImage}
-        imageWidth={readyImage ? 1200 : undefined}
-        imageHeight={readyImage ? 630 : undefined}
-        ogType="article"
-        additionalTags={
-          <>
-            {/* preconnect for image origin removed — already covered by static hints in +html.tsx */}
-            <meta name="theme-color" content={themedColors.background} />
-          </>
-        }
-      />
-      {jsonLd && (
-        <Head key={`${headKey}-article-jsonld`}>
-          <script
-            key="travel-article-jsonld"
-            id="travel-article-jsonld"
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify(jsonLd),
-            }}
-          />
-        </Head>
-      )}
-    </>
+    <TravelDetailsSeoBlock
+      backgroundColor={themedColors.background}
+      canonicalUrl={canonicalUrl}
+      headKey={headKey}
+      jsonLd={jsonLd}
+      readyDesc={readyDesc}
+      readyImage={readyImage}
+      readyTitle={readyTitle}
+    />
   );
 
   // NOTE: Skeleton gate is purely data-driven: show skeleton until `travel` is available.
@@ -455,22 +226,11 @@ export default function TravelDetailsContainer() {
     <>
       {seoBlock}
 
-      {/* ✅ PHASE 2: Accessibility Components */}
-      {showSkipToContentLink ? (
-        <Suspense fallback={null}>
-          <SkipToContentLink
-            targetId="travel-main-content"
-            label="Skip to main content"
-            initiallyVisible={Platform.OS === 'web'}
-            autoFocusOnMount={Platform.OS === 'web'}
-          />
-        </Suspense>
-      ) : null}
-      {announcement ? (
-        <Suspense fallback={null}>
-          <AccessibilityAnnouncer message={announcement} priority={announcementPriority} id="travel-announcer" />
-        </Suspense>
-      ) : null}
+      <TravelDetailsAccessibilityChrome
+        announcement={announcement}
+        announcementPriority={announcementPriority}
+        showSkipToContentLink={showSkipToContentLink}
+      />
 
       <TravelDetailsCriticalShell
         travel={travel}
@@ -502,27 +262,24 @@ export default function TravelDetailsContainer() {
         sideMenuPlatformStyles={sideMenuPlatformStyles}
         mainAriaLabel={`Детали путешествия: ${travel?.name || 'путешествие'}`}
         deferredContent={
-          <Defer when={deferredChromeReady}>
-            <Suspense fallback={null}>
-              <TravelDetailsPostLcpRuntime
-                travel={travel!}
-                isMobile={isMobile}
-                screenWidth={screenWidth}
-                anchors={anchors}
-                sectionLinks={sectionLinks}
-                onNavigate={scrollToWithMenuClose}
-                activeSection={activeSection}
-                forceOpenKey={forceOpenKey}
-                scrollY={scrollY}
-                contentHeight={contentHeight}
-                viewportHeight={viewportHeight}
-                scrollViewRef={scrollRef as any}
-                criticalChromeReady={criticalChromeReady}
-                scrollToMapSection={scrollToMapSection}
-                scrollToComments={scrollToComments}
-              />
-            </Suspense>
-          </Defer>
+          <TravelDetailsDeferredRuntimeSlot
+            travel={travel!}
+            isMobile={isMobile}
+            screenWidth={screenWidth}
+            anchors={anchors}
+            sectionLinks={sectionLinks}
+            onNavigate={scrollToWithMenuClose}
+            activeSection={activeSection}
+            forceOpenKey={forceOpenKey}
+            scrollY={scrollY}
+            contentHeight={contentHeight}
+            viewportHeight={viewportHeight}
+            scrollViewRef={scrollRef as any}
+            criticalChromeReady={criticalChromeReady}
+            deferredChromeReady={deferredChromeReady}
+            scrollToMapSection={scrollToMapSection}
+            scrollToComments={scrollToComments}
+          />
         }
       />
      </>

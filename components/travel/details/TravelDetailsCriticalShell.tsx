@@ -8,8 +8,9 @@ import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
 
-import { TravelHeroSection } from './TravelDetailsSections';
 import type { AnchorsMap } from './TravelDetailsTypes';
+import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
+import TravelDetailsHeroDeferredColumn from './TravelDetailsHeroDeferredColumn';
 
 type TravelDetailsCriticalShellProps = {
   travel?: Travel;
@@ -97,7 +98,7 @@ export default function TravelDetailsCriticalShell({
       maxHeight: '100vh',
       overflowY: 'auto' as const,
       overflowX: 'hidden' as const,
-    }),
+    } as any),
     [menuWidthNum]
   );
 
@@ -137,25 +138,11 @@ export default function TravelDetailsCriticalShell({
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
           {showSkeletonOverlay && (
-            <View
-              testID="travel-details-skeleton-overlay"
-              collapsable={false}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: skeletonPhase === 'hidden' ? -1 : 50,
-                opacity: skeletonPhase === 'loading' ? 1 : 0,
-                visibility: skeletonPhase === 'hidden' ? 'hidden' : 'visible',
-                transition: 'opacity 200ms ease-out',
-                contain: 'strict',
-                pointerEvents: 'none',
-              } as any}
-              aria-hidden={skeletonPhase !== 'loading'}
-            >
-              {skeletonPhase !== 'hidden' && (
-                <Suspense fallback={skeletonFallback}>{travelDetailSkeleton}</Suspense>
-              )}
-            </View>
+            <TravelDetailsSkeletonOverlay
+              skeletonFallback={skeletonFallback}
+              skeletonPhase={skeletonPhase}
+              travelDetailSkeleton={travelDetailSkeleton}
+            />
           )}
 
           <ScrollView
@@ -190,45 +177,37 @@ export default function TravelDetailsCriticalShell({
                             links={sectionLinks}
                             closeMenu={closeMenu}
                             onNavigate={onNavigate}
-                            activeSection={activeSection}
+                            activeSection={activeSection ?? undefined}
                           />
                         </Animated.View>
                       </View>
 
                       <View style={desktopContentColumnStyle} collapsable={false}>
-                        <View collapsable={false}>
-                          <TravelHeroSection
-                            travel={travel}
-                            anchors={anchors}
-                            isMobile={isMobile}
-                            renderSlider={Platform.OS !== 'web' ? true : lcpLoaded}
-                            onFirstImageLoad={onFirstImageLoad}
-                            sectionLinks={sectionLinks}
-                            onQuickJump={onQuickJump}
-                            deferExtras={deferHeroExtras}
-                          />
-                        </View>
-
-                        {deferredContent}
-                      </View>
-                    </View>
-                  ) : (
-                    <>
-                      <View collapsable={false}>
-                        <TravelHeroSection
+                        <TravelDetailsHeroDeferredColumn
                           travel={travel}
                           anchors={anchors}
                           isMobile={isMobile}
-                          renderSlider={Platform.OS !== 'web' ? true : lcpLoaded}
+                          lcpLoaded={lcpLoaded}
                           onFirstImageLoad={onFirstImageLoad}
                           sectionLinks={sectionLinks}
                           onQuickJump={onQuickJump}
-                          deferExtras={deferHeroExtras}
+                          deferHeroExtras={deferHeroExtras}
+                          deferredContent={deferredContent}
                         />
                       </View>
-
-                      {deferredContent}
-                    </>
+                    </View>
+                  ) : (
+                    <TravelDetailsHeroDeferredColumn
+                      travel={travel}
+                      anchors={anchors}
+                      isMobile={isMobile}
+                      lcpLoaded={lcpLoaded}
+                      onFirstImageLoad={onFirstImageLoad}
+                      sectionLinks={sectionLinks}
+                      onQuickJump={onQuickJump}
+                      deferHeroExtras={deferHeroExtras}
+                      deferredContent={deferredContent}
+                    />
                   )
                 ) : (
                   <Suspense fallback={skeletonFallback}>{travelDetailSkeleton}</Suspense>

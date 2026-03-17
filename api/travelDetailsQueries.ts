@@ -223,6 +223,18 @@ export const fetchTravelBySlug = async (
         if (shouldUseSlugFallback(status)) {
             const fallbackTravel = await findTravelBySlugFallback(slug, options);
             if (fallbackTravel) {
+                const fallbackTravelId = Number(fallbackTravel.id);
+                if (Number.isFinite(fallbackTravelId) && fallbackTravelId > 0) {
+                    const detailedTravel = await fetchTravel(fallbackTravelId, options);
+                    if (__DEV__) {
+                        devWarn('Resolved travel by slug fallback via detail fetch', {
+                            requestedSlug: slug,
+                            resolvedSlug: fallbackTravel.slug,
+                            id: fallbackTravelId,
+                        });
+                    }
+                    return normalizeTravelItem(detailedTravel);
+                }
                 if (__DEV__) {
                     devWarn('Resolved travel by slug fallback', {
                         requestedSlug: slug,

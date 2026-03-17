@@ -733,6 +733,14 @@ describe('src/api/travelsApi.ts', () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
       mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 2677,
+        name: 'Модынь  - одна из самых высоких вершин Бескидов',
+        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
+      } as any);
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({
         data: [
@@ -760,7 +768,9 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
       expect(result.id).toBe(2677);
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(result.description).toBe('<p>detail payload</p>');
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/2677/');
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
       const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
       const urlObj = new URL(url);
@@ -772,6 +782,14 @@ describe('src/api/travelsApi.ts', () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const badGatewayError = Object.assign(new Error('bad gateway'), { status: 502 });
       mockedApiClientGet.mockRejectedValueOnce(badGatewayError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 2677,
+        name: 'Модынь  - одна из самых высоких вершин Бескидов',
+        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
+      } as any);
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({
         data: [
@@ -791,7 +809,8 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
       expect(result.id).toBe(2677);
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(result.description).toBe('<p>detail payload</p>');
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
@@ -799,6 +818,14 @@ describe('src/api/travelsApi.ts', () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
       mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 2677,
+        name: 'Модынь  - одна из самых высоких вершин Бескидов',
+        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
+      } as any);
 
       mockedFetchWithTimeout
         .mockResolvedValueOnce({ ok: true } as any)
@@ -827,6 +854,7 @@ describe('src/api/travelsApi.ts', () => {
       const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vershin-beskidov');
 
       expect(result.id).toBe(2677);
+      expect(result.description).toBe('<p>detail payload</p>');
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(4);
       const firstUrl = mockedFetchWithTimeout.mock.calls[0][0] as string;
       const firstUrlObj = new URL(firstUrl);
@@ -837,6 +865,14 @@ describe('src/api/travelsApi.ts', () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
       mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 498,
+        name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
+        slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
+      } as any);
 
       mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
         ok: true,
@@ -867,8 +903,9 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(result.id).toBe(498);
       expect(result.slug).toBe('modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029');
+      expect(result.description).toBe('<p>detail payload</p>');
       const requestedQueries = mockedFetchWithTimeout.mock.calls.map(
-        (call) => new URL(call[0] as string).searchParams.get('query') || ''
+        (call: any[]) => new URL(call[0] as string).searchParams.get('query') || ''
       );
       expect(requestedQueries).toContain('modyn');
     });
@@ -877,6 +914,14 @@ describe('src/api/travelsApi.ts', () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
       mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 498,
+        name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
+        slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
+      } as any);
 
       mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
         ok: true,
@@ -906,6 +951,7 @@ describe('src/api/travelsApi.ts', () => {
       const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
 
       expect(result.id).toBe(498);
+      expect(result.description).toBe('<p>detail payload</p>');
       const firstQuery = new URL(mockedFetchWithTimeout.mock.calls[0][0] as string).searchParams.get('query') || '';
       expect(firstQuery.split(' ').length).toBe(1);
       expect(firstQuery).toBe('modyn');
@@ -915,6 +961,14 @@ describe('src/api/travelsApi.ts', () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
       mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedApiClientGet.mockResolvedValueOnce({
+        id: 1029,
+        name: 'Модынь  - одна из самых высоких вершин Бескидов',
+        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+        description: '<p>detail payload</p>',
+        gallery: [],
+        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
+      } as any);
       mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValue({
         data: [
@@ -934,6 +988,7 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(result.id).toBe(1029);
       expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
+      expect(result.description).toBe('<p>detail payload</p>');
       expect(mockedFetchWithTimeout.mock.calls.length).toBeGreaterThan(0);
       expect(mockedFetchWithTimeout.mock.calls.length).toBeLessThanOrEqual(3);
       const url = mockedFetchWithTimeout.mock.calls[0][0] as string;

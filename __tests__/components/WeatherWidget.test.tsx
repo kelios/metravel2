@@ -61,4 +61,44 @@ describe('WeatherWidget', () => {
     expect(getByText(/Гроза/)).toBeTruthy()
     expect(queryByText(/tooltip/i)).toBeNull()
   })
+
+  it('calls onSettled for invalid coords and again after a successful reload with new coords', async () => {
+    const fetchMock = global.fetch as jest.Mock
+    const onSettled = jest.fn()
+
+    const { rerender } = render(
+      <WeatherWidget
+        points={[{ coord: 'bad', address: 'Минск' }]}
+        countryName="BY"
+        onSettled={onSettled}
+      />
+    )
+
+    await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(1))
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          daily: {
+            time: ['2024-01-01', '2024-01-02', '2024-01-03'],
+            temperature_2m_max: [8, 7, 6],
+            temperature_2m_min: [1, 0, -1],
+            weather_code: [1, 2, 3],
+          },
+        }),
+    })
+
+    rerender(
+      <WeatherWidget
+        points={[{ coord: '53.9, 27.56', address: 'Минск, Беларусь, Центр' }]}
+        countryName="BY"
+        onSettled={onSettled}
+      />
+    )
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(2))
+  })
 })

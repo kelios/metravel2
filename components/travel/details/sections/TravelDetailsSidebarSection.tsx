@@ -1,25 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React from 'react'
 import { Platform, Text, View } from 'react-native'
 
 import type { Travel } from '@/types/types'
-import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import NavigationArrows from '@/components/travel/NavigationArrows'
 import NearTravelList from '@/components/travel/NearTravelList'
 import PopularTravelList from '@/components/travel/PopularTravelList'
+import { useTravelDetailsSidebarSectionModel } from '../hooks/useTravelDetailsSidebarSectionModel'
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
-const areSameTravelLists = (prev: Travel[], next: Travel[]) => {
-  if (prev === next) return true
-  if (prev.length !== next.length) return false
-  for (let i = 0; i < prev.length; i += 1) {
-    if (String(prev[i]?.id ?? '') !== String(next[i]?.id ?? '')) return false
-  }
-  return true
-}
-
 
 export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
@@ -35,34 +26,17 @@ export const TravelDetailsSidebarSection: React.FC<{
   forceOpenKey: _forceOpenKey = null,
 }) => {
   const styles = useTravelDetailsStyles()
-  const isWeb = Platform.OS === 'web'
-  const progressiveEnabled = !isWeb || canRenderHeavy
-  const hasValidTravelId = Number.isFinite(Number(travel.id)) && Number(travel.id) > 0
-  const [relatedTravels, setRelatedTravels] = useState<Travel[]>([])
-  const handleTravelsLoaded = useCallback((travels: Travel[]) => {
-    setRelatedTravels((prev) => (areSameTravelLists(prev, travels) ? prev : travels))
-  }, [])
-
-  // Unified progressive loading for both platforms
-  const { setElementRef: setNearRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 1000,
-    enabled: progressiveEnabled,
+  const {
+    handleTravelsLoaded,
+    hasValidTravelId,
+    relatedTravels,
+    setNearRef,
+    setPopularRef,
+    shouldShowNavigationArrows,
+  } = useTravelDetailsSidebarSectionModel({
+    canRenderHeavy,
+    travel,
   })
-
-  const { setElementRef: setPopularRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 1000,
-    enabled: progressiveEnabled,
-  })
-
-  useEffect(() => {
-    setRelatedTravels([])
-  }, [travel.id, travel.slug])
 
 
   return (
@@ -96,7 +70,7 @@ export const TravelDetailsSidebarSection: React.FC<{
         </View>
       </View>
 
-      {relatedTravels.length > 0 && (
+      {shouldShowNavigationArrows && (
         <View
           style={[styles.sectionContainer, styles.navigationArrowsContainer]}
           accessibilityLabel="Навигация по похожим маршрутам"
