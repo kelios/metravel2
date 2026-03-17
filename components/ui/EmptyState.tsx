@@ -194,10 +194,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingVertical: 16,
     borderRadius: DESIGN_TOKENS.radii.pill,
     minHeight: 48,
+    overflow: 'hidden',
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
-        transition: 'all 0.2s ease',
+        background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
+        backgroundSize: '200% 100%',
+        boxShadow: '0 4px 16px rgba(59, 130, 246, 0.35), 0 2px 8px rgba(139, 92, 246, 0.2)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       } as any,
     }),
   },

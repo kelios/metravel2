@@ -21,26 +21,27 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         ? ({
             maxWidth: '100%',
             alignSelf: 'stretch',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+            willChange: 'transform, box-shadow, border-color',
           } as any)
         : null),
       // Мягкие тени для глубины
       ...Platform.select({
         web: {
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03)',
+          boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
         } as any,
         ios: {
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.08,
-          shadowRadius: 8,
+          shadowRadius: 12,
         },
-        android: { elevation: 2 },
+        android: { elevation: 3 },
         default: {
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.08,
-          shadowRadius: 8,
+          shadowRadius: 12,
         },
       }),
     },
