@@ -168,7 +168,7 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           filter: backdropFilter,
-          opacity: 1,
+          opacity: 0.95,
           contain: 'paint',
           willChange: 'transform',
           backfaceVisibility: 'hidden',
@@ -177,6 +177,9 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
       />
     );
   }
+
+  const loading = fit === 'contain' ? 'lazy' : 'eager';
+  const fetchPriority = fit === 'contain' ? 'low' : 'auto';
 
   return (
     <img
@@ -203,16 +206,21 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
         borderRadius,
         transform: `translate(-50%, -50%) scale(${backdropScale})`,
         filter: backdropFilter,
-        opacity: 1,
+        opacity: 0,
         contain: 'paint',
-        willChange: 'transform',
+        willChange: 'transform, opacity',
         backfaceVisibility: 'hidden',
         pointerEvents: 'none',
+        transition: 'opacity 0.15s ease-in',
       }}
-      loading="eager"
+      loading={loading}
       decoding="async"
       // @ts-ignore -- fetchPriority is a valid HTML attribute not yet in React types
-      fetchPriority="high"
+      fetchPriority={fetchPriority}
+      onLoad={(e) => {
+        const img = e.currentTarget;
+        img.style.opacity = '1';
+      }}
     />
   );
 });
