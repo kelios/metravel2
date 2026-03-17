@@ -142,30 +142,36 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
   iconContainer: {
-    width: 120, // ✅ ДИЗАЙН: Контейнер для иконки
-    height: 120,
-    borderRadius: 60,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
     ...Platform.select({
       web: {
-        boxShadow: colors.boxShadows.light,
+        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)',
+      },
+      ios: {
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
       },
     }),
   },
   title: {
     fontSize: Platform.select({
-      default: 22, // Mobile: 22px
-      web: 24, // Desktop: 24px
+      default: 24,
+      web: 28,
     }),
-    fontWeight: '700',
-    fontFamily: Platform.select({ web: 'Georgia, serif', default: undefined }), // ✅ ДИЗАЙН: Georgia для заголовков
-    marginTop: 8, // ✅ ДИЗАЙН: Уменьшен отступ
-    marginBottom: 12, // ✅ ДИЗАЙН: Увеличен отступ
+    fontWeight: '800',
+    fontFamily: Platform.select({ web: 'Georgia, serif', default: undefined }),
+    marginTop: 8,
+    marginBottom: 16,
     textAlign: 'center',
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
   description: {
     fontSize: Platform.select({
@@ -184,10 +190,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
   actionButton: {
-    paddingHorizontal: 32, // ✅ ДИЗАЙН: Увеличены отступы
-    paddingVertical: 14, // ✅ ДИЗАЙН: Высота 48px (14*2 + 20px текста)
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    minHeight: 48,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
+        transition: 'all 0.2s ease',
+      } as any,
+    }),
   },
   actionsContainer: {
     flexDirection: 'row',

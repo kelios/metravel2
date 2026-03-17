@@ -54,11 +54,11 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
           // @ts-ignore — web-only: CSS shimmer sweep
           {
             backgroundImage:
-              `linear-gradient(90deg, ${colors.surfaceLight} 0%, ${colors.backgroundTertiary} 50%, ${colors.surfaceLight} 100%)`,
+              `linear-gradient(90deg, ${colors.surfaceLight} 0%, ${colors.surface} 50%, ${colors.surfaceLight} 100%)`,
             backgroundSize: '200% 100%',
             animationKeyframes: 'slider-shimmer',
-            animationDuration: '1.8s',
-            animationTimingFunction: 'ease-in-out',
+            animationDuration: '1.5s',
+            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.6, 1)',
             animationIterationCount: 'infinite',
           },
         ]}

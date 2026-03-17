@@ -170,7 +170,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       return result
     }, [travels, gridColumns, isMobile])
 
-    const rowSeparatorStyle = useMemo(() => ({ height: cardSpacing }), [cardSpacing])
+    const rowSeparatorStyle = useMemo(() => ({ height: Platform.OS === 'web' ? cardSpacing + 4 : cardSpacing }), [cardSpacing])
     const RowSeparator = useCallback(() => {
       return <View style={rowSeparatorStyle} />
     }, [rowSeparatorStyle])

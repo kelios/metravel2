@@ -137,14 +137,19 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       fontWeight: typography.weights.medium as any,
     },
     clearButton: {
-      paddingHorizontal: spacing.sm,
+      paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
       borderRadius: radii.pill,
       backgroundColor: colors.brandSoft,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+        },
+      }),
     },
     clearButtonText: {
-      fontSize: typography.sizes.xs,
-      fontWeight: typography.weights.medium as any,
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.semibold as any,
       color: colors.brandText,
     },
     clearAllMobileButton: {
@@ -514,13 +519,13 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       alignItems: 'center',
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      marginBottom: spacing.xxs,
-      minHeight: 44,
+      borderRadius: radii.lg,
+      marginBottom: spacing.xs,
+      minHeight: 48,
       ...Platform.select({
         web: {
           cursor: 'pointer',
-          transition: `all ${DESIGN_TOKENS.animations.duration.fast}ms ${DESIGN_TOKENS.animations.easing.default}`,
+          transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
