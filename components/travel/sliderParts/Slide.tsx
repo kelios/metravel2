@@ -2,6 +2,12 @@ import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import type { SliderImage } from './types';
+import { injectSliderGlobalStyles } from './globalStyles';
+
+// ✅ OPTIMIZATION: Inject global styles once
+if (Platform.OS === 'web') {
+  injectSliderGlobalStyles();
+}
 
 const loadedSlideUriCache = new Set<string>();
 const MEDIA_PATH_WITH_API_PREFIX = /^\/api\/(gallery|travel-image|travel-description-image|address-image)(\/|$)/i;
@@ -221,11 +227,20 @@ const Slide = memo(function Slide({
         />
       ) : (
         <>
-          {!isLoaded && Platform.OS !== 'web' && (
+          {/* ✅ OPTIMIZATION: Show subtle skeleton with pulse animation */}
+          {!isLoaded && (
             <View
               style={[
-                styles.neutralPlaceholder,
-                { position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none' } as any,
+                {
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 2,
+                  pointerEvents: 'none',
+                  backgroundColor: 'rgba(240, 240, 240, 0.6)',
+                  ...(Platform.OS === 'web' ? {
+                    animation: 'sliderPulse 1.5s ease-in-out infinite',
+                  } : {})
+                } as any,
               ]}
             />
           )}
@@ -245,7 +260,7 @@ const Slide = memo(function Slide({
                   : 'lazy'
                 : 'lazy'
             }
-            transition={0}
+            transition={isFirstSlide ? 0 : 200}
             style={styles.img}
             alt={`Фотография путешествия ${index + 1} из ${imagesLength}`}
             imageProps={{

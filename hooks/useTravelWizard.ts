@@ -5,6 +5,7 @@ import { useRouter, useNavigation } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
 import { showToast } from '@/utils/toast';
+import { useBeforeUnload } from '@/utils/beforeunloadGuard';
 
 async function showToastMessage(payload: unknown) {
   await showToast(payload);
@@ -344,26 +345,14 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     [hasUnsavedChanges, canSave, onSave, clearPersistedStep]
   );
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof window === 'undefined') return;
-    // Some embeds disallow the `unload`/`beforeunload` permission. Avoid attaching the listener to
-    // prevent "Permissions policy violation: unload is not allowed in this document".
-    const isTopWindow = window.self === window.top;
-    const permissionsPolicy = (document as unknown).permissionsPolicy || (document as unknown).featurePolicy;
-    const unloadAllowed =
-      !permissionsPolicy?.allowsFeature ? true : permissionsPolicy.allowsFeature('unload');
-    if (!isTopWindow || !unloadAllowed) return;
-
-    const handler = (e: BeforeUnloadEvent) => {
-      if (!hasUnsavedChanges) return;
+  // ✅ REFACTORED: Use safe beforeunload hook to prevent Permissions Policy violations
+  useBeforeUnload(
+    (e) => {
       e.preventDefault();
       e.returnValue = '';
-    };
-
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [hasUnsavedChanges]);
+    },
+    hasUnsavedChanges
+  );
 
   useEffect(() => {
     if (Platform.OS === 'web') return;

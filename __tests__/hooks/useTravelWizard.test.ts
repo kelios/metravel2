@@ -29,6 +29,12 @@ jest.mock('react-native-toast-message', () => ({
   show: jest.fn(),
 }));
 
+jest.mock('@/utils/beforeunloadGuard', () => ({
+  __esModule: true,
+  useBeforeUnload: jest.fn(),
+  isUnloadAllowed: jest.fn(() => true),
+}));
+
 describe('useTravelWizard step persistence', () => {
   const stepKey = 'metravel_travel_wizard_step_test';
 
@@ -165,9 +171,6 @@ describe('useTravelWizard step persistence', () => {
 });
 
 describe('useTravelWizard beforeunload guard (web)', () => {
-  const originalWindow = (global as any).window;
-  const originalDocument = (global as any).document;
-
   const setPlatformOs = (os: string) => {
     Object.defineProperty(Platform, 'OS', {
       value: os,
@@ -175,43 +178,16 @@ describe('useTravelWizard beforeunload guard (web)', () => {
     });
   };
 
-  let addEventListener: jest.Mock;
-  let removeEventListener: jest.Mock;
-
   beforeEach(() => {
     jest.clearAllMocks();
     setPlatformOs('web');
-
-    addEventListener = jest.fn();
-    removeEventListener = jest.fn();
-
-    const win: any = {
-      addEventListener,
-      removeEventListener,
-      self: null,
-      top: null,
-    };
-    win.self = win;
-    win.top = win;
-
-    const doc: any = {
-      permissionsPolicy: {
-        allowsFeature: jest.fn(() => true),
-      },
-      featurePolicy: undefined,
-    };
-
-    (global as any).window = win;
-    (global as any).document = doc;
   });
 
-  afterEach(() => {
-    (global as any).window = originalWindow;
-    (global as any).document = originalDocument;
-  });
+  // ✅ REFACTORED: Tests now verify useBeforeUnload hook is called correctly
+  it('calls useBeforeUnload with handler when hasUnsavedChanges=true', () => {
+    const { useBeforeUnload } = require('@/utils/beforeunloadGuard');
 
-  it('attaches beforeunload handler and prevents unload when hasUnsavedChanges=true', () => {
-    const { unmount } = renderHook(() =>
+    renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: true,
@@ -220,38 +196,27 @@ describe('useTravelWizard beforeunload guard (web)', () => {
       }),
     );
 
-    expect(addEventListener).toHaveBeenCalledTimes(1);
-    expect(addEventListener).toHaveBeenCalledWith('beforeunload', expect.any(Function));
-
-    const handler = (addEventListener.mock.calls[0] as any[])[1] as (e: any) => void;
-    const e: any = { preventDefault: jest.fn(), returnValue: undefined };
-
-    handler(e);
-    expect(e.preventDefault).toHaveBeenCalled();
-    expect(e.returnValue).toBe('');
-
-    unmount();
+    expect(useBeforeUnload).toHaveBeenCalledWith(
+      expect.any(Function),
+      true
+    );
   });
 
-  it('removes beforeunload handler when hasUnsavedChanges toggles to false', () => {
-    const { rerender, unmount } = renderHook<ReturnType<typeof useTravelWizard>, { hasUnsavedChanges: boolean }>(
-      ({ hasUnsavedChanges }) =>
-        useTravelWizard({
-          totalSteps: 6,
-          hasUnsavedChanges,
-          canSave: true,
-          onSave: jest.fn(async () => ({ publish: false, moderation: false })),
-        }),
-      {
-        initialProps: { hasUnsavedChanges: true },
-      },
+  it('calls useBeforeUnload with enabled=false when hasUnsavedChanges=false', () => {
+    const { useBeforeUnload } = require('@/utils/beforeunloadGuard');
+
+    renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: false,
+        canSave: true,
+        onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+      }),
     );
 
-    const handler = (addEventListener.mock.calls[0] as any[])[1] as any;
-
-    rerender({ hasUnsavedChanges: false });
-    expect(removeEventListener).toHaveBeenCalledWith('beforeunload', handler);
-
-    unmount();
+    expect(useBeforeUnload).toHaveBeenCalledWith(
+      expect.any(Function),
+      false
+    );
   });
 });
