@@ -168,7 +168,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         result.push(travels.slice(i, i + cols))
       }
       return result
-    }, [travels, gridColumns, isMobile])
+    }, [travels.length, gridColumns, isMobile])
 
     const rowSeparatorStyle = useMemo(() => ({ height: Platform.OS === 'web' ? cardSpacing + 4 : cardSpacing }), [cardSpacing])
     const RowSeparator = useCallback(() => {
@@ -221,7 +221,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       return nodes.length ? nodes : null
     }, [topContent])
 
-    const renderRow = useCallback((item: { item: Travel[]; index: number }) => { // Destructure properly for FlatList compatibility
+    const renderRow = useCallback((item: { item: Travel[]; index: number }) => {
         const { item: rowItems, index: rowIndex } = item;
         const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1);
         const missingSlots = Math.max(0, cols - rowItems.length);
@@ -509,7 +509,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 renderItem={renderRow as any}
                 extraData={gridColumns}
                 keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
-                {...({ estimatedItemSize: 300 } as any)}
+                {...({ estimatedItemSize: 320 } as any)}
                 ListHeaderComponent={ListHeader}
                 ListFooterComponent={showNextPageLoading ? (
                   <View style={footerLoaderStyle}>
@@ -518,9 +518,14 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 ) : null}
                 onEndReached={onEndReached}
                 onEndReachedThreshold={onEndReachedThreshold}
-                drawDistance={600}
+                drawDistance={800}
                 contentContainerStyle={nativeContentContainerStyle}
                 scrollEventThrottle={16}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                updateCellsBatchingPeriod={50}
+                initialNumToRender={8}
+                windowSize={5}
               />
             )
           )}
@@ -530,4 +535,17 @@ const RightColumn: React.FC<RightColumnProps> = memo(
   },
 )
 
-export default RightColumn
+export default memo(RightColumn, (prev, next) => {
+  return (
+    prev.search === next.search &&
+    prev.total === next.total &&
+    prev.travels.length === next.travels.length &&
+    prev.gridColumns === next.gridColumns &&
+    prev.isMobile === next.isMobile &&
+    prev.showInitialLoading === next.showInitialLoading &&
+    prev.isError === next.isError &&
+    prev.showNextPageLoading === next.showNextPageLoading &&
+    prev.activeFiltersCount === next.activeFiltersCount &&
+    prev.isRecommendationsVisible === next.isRecommendationsVisible
+  )
+})
