@@ -118,15 +118,15 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
+    borderWidth: 1.5,
+    borderColor: colors.borderLight,
     paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
     paddingVertical: Platform.select({ default: spacing.xs, web: spacing.sm }),
     gap: spacing.xs,
-    height: Platform.select({ default: 46, web: 52 }),
+    height: Platform.select({ default: 46, web: 56 }),
     ...Platform.select({
       web: {
-        transition: 'all 0.2s ease',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         boxShadow: colors.boxShadows.light,
       } as any,
     }),
@@ -142,9 +142,11 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   },
   input: {
     flex: 1,
-    fontSize: Platform.select({ default: 14, web: 15 }),
+    fontSize: Platform.select({ default: 15, web: 16 }),
+    fontWeight: '400',
     color: colors.text,
     padding: 0,
+    lineHeight: Platform.select({ default: 22, web: 24 }),
     ...Platform.select({
       web: {
         outlineStyle: 'none',
@@ -357,8 +359,13 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     marginBottom: 2,
   },
   searchBoxFocused: {
-    borderColor: colors.borderStrong,
+    borderColor: colors.primary,
     backgroundColor: colors.surfaceElevated,
+    ...Platform.select({
+      web: {
+        boxShadow: `0 0 0 3px ${colors.primaryAlpha20 || 'rgba(59, 130, 246, 0.1)'}`,
+      } as any,
+    }),
   },
   clearButtonIconWrap: {
     width: 24,

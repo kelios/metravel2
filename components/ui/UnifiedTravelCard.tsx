@@ -194,9 +194,9 @@ function UnifiedTravelCard({
           ...Platform.select({
             web: {
               // ANIM-02: optional scale + translateY hover effect for dense grids
-              ...(webHoverScale ? { transform: 'translateY(-2px) scale(1.015)' } : null),
-              borderColor: colors.primaryAlpha30,
-              boxShadow: DESIGN_TOKENS.shadows.medium,
+              ...(webHoverScale ? { transform: 'translateY(-4px) scale(1.02)' } : { transform: 'translateY(-2px)' }),
+              borderColor: colors.primary,
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.08)',
             } as any,
           }),
         },

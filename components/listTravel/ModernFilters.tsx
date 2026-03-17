@@ -174,6 +174,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <Feather name="filter" size={20} color={colors.primary} />
           <Text style={styles.headerTitle}>Фильтры</Text>
         </View>
         <View style={styles.headerRight}>
@@ -196,7 +197,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               accessibilityRole="button"
               accessibilityLabel="Закрыть фильтры"
             >
-              <Feather name="x" size={18} color={colors.textSecondary} />
+              <Feather name="x" size={20} color={colors.textSecondary} />
             </Pressable>
           )}
         </View>

@@ -13,32 +13,34 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     card: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 0,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
             maxWidth: '100%',
             alignSelf: 'stretch',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           } as any)
         : null),
       // Мягкие тени для глубины
       ...Platform.select({
         web: {
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03)',
         } as any,
         ios: {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.06,
-          shadowRadius: 3,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
         },
-        android: { elevation: 1 },
+        android: { elevation: 2 },
         default: {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.06,
-          shadowRadius: 3,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
         },
       }),
     },
