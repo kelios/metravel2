@@ -174,7 +174,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: '100%',
         minHeight: 400,
         borderRadius: DESIGN_TOKENS.radii.md,
-        overflow: 'hidden',
+        overflow: Platform.OS === 'web' ? 'visible' : 'hidden',
         backgroundColor: colors.surface,
         borderWidth: 1,
         borderColor: colors.borderLight,

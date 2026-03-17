@@ -486,7 +486,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                         loading={idx === 0 ? 'eager' : 'lazy'}
                         transition={0}
                         showImmediately={idx === 0}
-                        allowCriticalWebBlur={idx === 0}
+                        allowCriticalWebBlur
                         style={styles.img}
                         testID={idx === 0 ? 'slider-shared-blur-backdrop' : undefined}
                       />
