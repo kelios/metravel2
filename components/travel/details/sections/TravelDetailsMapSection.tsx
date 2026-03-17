@@ -283,7 +283,7 @@ export const TravelDetailsMapSection: React.FC<{
                       highlightedPoint={highlightedPoint ?? undefined}
                       resizeTrigger={mapResizeTrigger}
                       compact
-                      height={isMobileWeb ? 400 : 500}
+                      height={isMobileWeb ? 520 : 500}
                       showRouteLine={routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) >= 2)}
                       routeLines={routePreviewItems.map((item) => ({
                         color: item.color,
