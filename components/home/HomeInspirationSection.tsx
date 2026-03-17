@@ -224,10 +224,11 @@ export function HomeInspirationSection({
   return (
     <View style={[styles.section, isMobile && styles.sectionMobile]}>
       <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
-        <View style={styles.heroHeader}>
-
-          <Text style={styles.heroTitle}>{title}</Text>
-          {titleAccent && <Text style={styles.heroTitleAccent}>{titleAccent}</Text>}
+        <View style={[styles.heroHeader, { marginBottom: isMobile ? 20 : 32 }]}>
+          <View style={{ alignItems: 'center', gap: isMobile ? 6 : 10 }}>
+            <Text style={styles.heroTitle}>{title}</Text>
+            {titleAccent && <Text style={styles.heroTitleAccent}>{titleAccent}</Text>}
+          </View>
           {subtitle && <Text style={styles.heroSubtitle}>{subtitle}</Text>}
         </View>
 

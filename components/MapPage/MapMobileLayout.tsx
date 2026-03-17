@@ -503,10 +503,11 @@ const getStyles = (
     },
     mapContainer: {
       flex: 1,
-      minHeight: 220,
+      minHeight: 240,
       ...(Platform.OS === 'web'
         ? ({
             overflow: 'hidden',
+            position: 'relative',
           } as any)
         : null),
     },
@@ -519,17 +520,27 @@ const getStyles = (
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
       alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
-      gap: options.isNarrow ? 4 : 6,
-      minHeight: options.stackSheetToolbar ? undefined : (options.isNarrow ? 38 : 42),
-      paddingVertical: options.isNarrow ? 4 : 6,
-      paddingLeft: options.isNarrow ? 8 : 12,
-      paddingRight: options.isNarrow ? 8 : 12,
+      gap: options.isNarrow ? 6 : 8,
+      minHeight: options.stackSheetToolbar ? undefined : (options.isNarrow ? 44 : 48),
+      paddingVertical: options.isNarrow ? 6 : 8,
+      paddingLeft: options.isNarrow ? 10 : 14,
+      paddingRight: options.isNarrow ? 10 : 14,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web'
-        ? ({ boxShadow: '0 1px 0 rgba(0,0,0,0.05)' } as any)
-        : null),
+        ? ({
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          } as any)
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.08,
+            shadowRadius: 3,
+            elevation: 2,
+          }),
       ...Platform.select({
         web: {
           position: 'sticky' as any,
@@ -547,7 +558,7 @@ const getStyles = (
     sheetCloseButton: {
       width: 44,
       height: 44,
-      borderRadius: 12,
+      borderRadius: 14,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderWidth: StyleSheet.hairlineWidth,
@@ -555,11 +566,19 @@ const getStyles = (
       backgroundColor: colors.backgroundSecondary,
       flexShrink: 0,
       marginHorizontal: 0,
-      shadowColor: 'transparent',
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-      ...(Platform.OS === 'web' ? ({ boxShadow: 'none', cursor: 'pointer', transition: 'background-color 0.12s ease' } as any) : null),
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          } as any)
+        : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 3,
+            elevation: 1,
+          }),
     },
     sheetShowResultsButton: {
       flexDirection: 'row' as const,

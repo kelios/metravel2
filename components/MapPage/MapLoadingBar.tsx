@@ -9,7 +9,7 @@ interface MapLoadingBarProps {
   visible: boolean;
 }
 
-const BAR_HEIGHT = 3;
+const BAR_HEIGHT = 4;
 
 export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible }) => {
   const colors = useThemedColors();
@@ -51,6 +51,11 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
     outputRange: ['0%', '70%', '100%'],
   });
 
+  const gradientAnim = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
   return (
     <Animated.View
       style={[styles.container, { opacity, pointerEvents: 'none' }]}
@@ -61,6 +66,12 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
           {
             backgroundColor: colors.primary,
             width: width as any,
+            ...(Platform.OS === 'web'
+              ? ({
+                  background: `linear-gradient(90deg, ${colors.primary} 0%, ${colors.accent} 100%)`,
+                  boxShadow: `0 0 12px ${colors.primary}40`,
+                } as any)
+              : null),
           },
         ]}
       />

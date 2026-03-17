@@ -142,19 +142,32 @@ const styles = StyleSheet.create({
                   position: 'relative',
               } as any)
             : null),
-        borderRadius: 16,
+        borderRadius: 20,
         overflow: 'hidden',
+        ...(Platform.OS === 'web'
+            ? ({
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
+              } as any)
+            : {
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 8,
+              }),
     },
     placeholder: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
-        padding: 24,
-        borderRadius: 16,
+        gap: 16,
+        padding: 32,
+        borderRadius: 20,
     },
     placeholderText: {
-        fontSize: 16,
+        fontSize: 15,
+        fontWeight: '500',
         textAlign: 'center',
+        opacity: 0.8,
     },
 });

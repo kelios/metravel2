@@ -8,20 +8,21 @@ import type { useThemedColors } from '@/hooks/useTheme';
 type Colors = ReturnType<typeof useThemedColors>;
 
 export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleSheet.create({
-  section: { gap: isMobile ? 16 : 28 },
-  sectionMobile: { gap: 14 },
+  section: { gap: isMobile ? 20 : 32 },
+  sectionMobile: { gap: 18 },
   sectionFrame: {
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderRadius: DESIGN_TOKENS.radii.xl,
     backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: isMobile ? 16 : 32,
-    paddingTop: isMobile ? 24 : 36,
-    paddingBottom: isMobile ? 16 : 28,
+    paddingHorizontal: isMobile ? 20 : 40,
+    paddingTop: isMobile ? 28 : 44,
+    paddingBottom: isMobile ? 24 : 36,
     ...Platform.select({
       web: {
-        boxShadow: '0 2px 16px rgba(15, 23, 42, 0.045)',
-        backgroundImage: 'none',
+        boxShadow: '0 4px 24px rgba(15, 23, 42, 0.06), 0 2px 8px rgba(15, 23, 42, 0.03)',
+        backgroundImage: `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.surface} 100%)`,
+        transition: 'box-shadow 0.3s ease, transform 0.3s ease',
       } as any,
     }),
   },
@@ -48,13 +49,13 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   },
   sectionBadgeText: { color: colors.textMuted, fontSize: 10, lineHeight: 14, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
   title: {
-    fontSize: isMobile ? 26 : 38, fontWeight: '800', color: colors.text,
-    lineHeight: isMobile ? 32 : 46, letterSpacing: isMobile ? -0.6 : -1.0,
+    fontSize: isMobile ? 28 : 42, fontWeight: '800', color: colors.text,
+    lineHeight: isMobile ? 34 : 50, letterSpacing: isMobile ? -0.7 : -1.2,
     textAlign: 'center', maxWidth: 760,
   },
-  titleMobile: { fontSize: 26, lineHeight: 32, letterSpacing: -0.6 },
-  subtitle: { fontSize: isMobile ? 14 : 16, color: colors.textMuted, lineHeight: isMobile ? 21 : 24, textAlign: 'center', maxWidth: 640 },
-  subtitleMobile: { fontSize: 14, lineHeight: 20, maxWidth: 420 },
+  titleMobile: { fontSize: 28, lineHeight: 34, letterSpacing: -0.7 },
+  subtitle: { fontSize: isMobile ? 15 : 17, color: colors.textMuted, lineHeight: isMobile ? 23 : 26, textAlign: 'center', maxWidth: 680, letterSpacing: 0.1 },
+  subtitleMobile: { fontSize: 15, lineHeight: 22, maxWidth: 440 },
   showcaseSectionFrame: {
     backgroundColor: colors.backgroundSecondary,
     borderColor: colors.borderLight,
@@ -111,29 +112,38 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     textTransform: 'uppercase',
   },
   heroTitle: {
-    fontSize: isMobile ? 28 : 48,
+    fontSize: isMobile ? 30 : 52,
     fontWeight: '800',
     color: colors.text,
     textAlign: 'center',
-    letterSpacing: -1.2,
-    lineHeight: isMobile ? 34 : 56,
+    letterSpacing: isMobile ? -0.8 : -1.5,
+    lineHeight: isMobile ? 36 : 60,
   },
   heroTitleAccent: {
-    fontSize: isMobile ? 28 : 48,
+    fontSize: isMobile ? 30 : 52,
     fontWeight: '800',
     color: colors.brand,
     textAlign: 'center',
-    letterSpacing: -1.2,
-    lineHeight: isMobile ? 34 : 56,
+    letterSpacing: isMobile ? -0.8 : -1.5,
+    lineHeight: isMobile ? 36 : 60,
+    ...Platform.select({
+      web: {
+        backgroundImage: `linear-gradient(135deg, ${colors.brand} 0%, ${colors.primary} 100%)`,
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+      } as any,
+    }),
   },
   heroSubtitle: {
-    fontSize: isMobile ? 15 : 17,
+    fontSize: isMobile ? 15 : 18,
     fontWeight: '400',
     color: colors.textMuted,
     textAlign: 'center',
-    lineHeight: isMobile ? 22 : 26,
-    maxWidth: 540,
+    lineHeight: isMobile ? 23 : 28,
+    maxWidth: 600,
     alignSelf: 'center',
+    letterSpacing: 0.2,
   },
   heroHeader: {
     alignItems: 'center',
@@ -194,18 +204,19 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
   },
   viewMoreButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingHorizontal: isMobile ? 18 : 24, paddingVertical: isMobile ? 11 : 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingHorizontal: isMobile ? 20 : 28, paddingVertical: isMobile ? 13 : 16,
     borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: colors.surface,
     borderWidth: 1.5, borderColor: colors.border, flexShrink: 0,
     ...Platform.select({ web: {
-      transition: 'background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
     } }),
   },
-  viewMoreButtonMobile: { flexShrink: 0, width: '100%', maxWidth: 300 },
+  viewMoreButtonMobile: { flexShrink: 0, width: '100%', maxWidth: 320 },
   viewMoreButtonHover: {
-    backgroundColor: colors.primarySoft, borderColor: colors.primaryAlpha40,
-    ...Platform.select({ web: { transform: 'translateY(-2px)', boxShadow: '0 6px 18px rgba(0,0,0,0.08)' } }),
+    backgroundColor: colors.primarySoft, borderColor: colors.primary,
+    ...Platform.select({ web: { transform: 'translateY(-3px) scale(1.02)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' } }),
   },
   viewMoreText: { fontSize: isMobile ? 14 : 15, fontWeight: '600', color: colors.text },
   articlesButton: {
@@ -236,11 +247,11 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   cardWrapperPlaceholder: { opacity: 0, ...Platform.select({ web: { visibility: 'hidden', pointerEvents: 'none' } as any }) },
   emptyState: {
     borderRadius: DESIGN_TOKENS.radii.xl, borderWidth: 1, borderColor: colors.borderLight,
-    backgroundColor: colors.surface, paddingHorizontal: isMobile ? 22 : 32, paddingVertical: isMobile ? 28 : 40,
-    alignItems: 'center', gap: 14,
+    backgroundColor: colors.surface, paddingHorizontal: isMobile ? 24 : 40, paddingVertical: isMobile ? 32 : 48,
+    alignItems: 'center', gap: 16,
     ...Platform.select({ web: {
-      boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
-      backgroundImage: `radial-gradient(ellipse 55% 50% at 50% 105%, ${colors.primarySoft} 0%, transparent 65%)`,
+      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+      backgroundImage: `radial-gradient(ellipse 60% 55% at 50% 110%, ${colors.primarySoft} 0%, transparent 70%)`,
       backgroundRepeat: 'no-repeat',
     } }),
   },
@@ -271,11 +282,11 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   quickFiltersSection: {
     width: '100%', borderRadius: DESIGN_TOKENS.radii.xl, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.surface,
-    paddingHorizontal: isMobile ? 18 : 44, paddingTop: isMobile ? 24 : 44, paddingBottom: isMobile ? 24 : 44,
-    gap: isMobile ? 22 : 36, overflow: 'hidden',
+    paddingHorizontal: isMobile ? 20 : 48, paddingTop: isMobile ? 28 : 52, paddingBottom: isMobile ? 28 : 52,
+    gap: isMobile ? 24 : 40, overflow: 'hidden',
     ...Platform.select({ web: {
-      boxShadow: '0 4px 28px rgba(0,0,0,0.05), 0 1px 4px rgba(0,0,0,0.035)',
-      backgroundImage: `linear-gradient(158deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+      boxShadow: '0 6px 32px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
+      backgroundImage: `linear-gradient(145deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
       backgroundRepeat: 'no-repeat',
     } }),
   },
@@ -311,12 +322,12 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
 
   quickFiltersTitle: {
     color: colors.text,
-    fontSize: isMobile ? 24 : 36,
-    lineHeight: isMobile ? 30 : 44,
+    fontSize: isMobile ? 26 : 40,
+    lineHeight: isMobile ? 32 : 48,
     fontWeight: '800',
-    letterSpacing: isMobile ? -0.6 : -0.9,
+    letterSpacing: isMobile ? -0.7 : -1.1,
   },
-  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 14 : 15, lineHeight: isMobile ? 21 : 24, maxWidth: 540 },
+  quickFiltersSubtitle: { color: colors.textMuted, fontSize: isMobile ? 15 : 16, lineHeight: isMobile ? 23 : 26, maxWidth: 600, letterSpacing: 0.1 },
 
   quickFiltersArticlesButton: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
@@ -346,18 +357,18 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   filterGroupCard: {
     borderRadius: DESIGN_TOKENS.radii.lg, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.surface,
-    paddingHorizontal: isMobile ? 16 : 20, paddingVertical: isMobile ? 14 : 18,
-    gap: isMobile ? 10 : 12,
+    paddingHorizontal: isMobile ? 18 : 24, paddingVertical: isMobile ? 16 : 20,
+    gap: isMobile ? 12 : 14,
     flexBasis: isMobile ? 'auto' : '47%',
     flexGrow: 1,
     ...Platform.select({ web: {
-      boxShadow: '0 2px 10px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.025)',
-      transition: 'box-shadow 0.18s ease, border-color 0.18s ease',
+      boxShadow: '0 3px 14px rgba(0,0,0,0.045), 0 1px 4px rgba(0,0,0,0.03)',
+      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     } as any }),
   },
   filterGroupCardHover: {
-    borderColor: colors.primaryAlpha30,
-    ...Platform.select({ web: { boxShadow: `0 6px 22px rgba(0,0,0,0.07), 0 2px 6px ${colors.primary}0E` } }),
+    borderColor: colors.primary,
+    ...Platform.select({ web: { boxShadow: `0 8px 28px rgba(0,0,0,0.09), 0 3px 8px ${colors.primary}16`, transform: 'translateY(-2px)' } }),
   },
 
   filterGroupCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -373,22 +384,22 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   chip: {
     borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1, borderColor: colors.borderLight,
     backgroundColor: colors.backgroundSecondary,
-    paddingHorizontal: isMobile ? 12 : 14, paddingVertical: isMobile ? 6 : 7,
+    paddingHorizontal: isMobile ? 14 : 16, paddingVertical: isMobile ? 8 : 9,
     ...Platform.select({ web: {
       cursor: 'pointer',
-      transition: 'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
-      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     } }),
   },
   chipHover: {
-    borderColor: colors.primaryAlpha40, backgroundColor: colors.primarySoft,
-    ...Platform.select({ web: { transform: 'translateY(-1px)', boxShadow: `0 3px 10px ${colors.primary}16` } }),
+    borderColor: colors.primary, backgroundColor: colors.primarySoft,
+    ...Platform.select({ web: { transform: 'translateY(-2px) scale(1.02)', boxShadow: `0 4px 12px ${colors.primary}20` } }),
   },
   chipSelected: {
     borderColor: colors.primary, backgroundColor: colors.primarySoft,
-    ...Platform.select({ web: { boxShadow: `0 2px 8px ${colors.primary}24` } }),
+    ...Platform.select({ web: { boxShadow: `0 3px 10px ${colors.primary}28`, transform: 'scale(1.02)' } }),
   },
-  chipText: { color: colors.text, fontSize: isMobile ? 13 : 13, lineHeight: isMobile ? 18 : 19, fontWeight: '500' },
+  chipText: { color: colors.text, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 20, fontWeight: '500' },
   chipTextSelected: { color: colors.primaryText, fontWeight: '700' },
 });
 
