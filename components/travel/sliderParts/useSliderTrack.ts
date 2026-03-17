@@ -131,8 +131,24 @@ export function useSliderTrack(options: UseSliderTrackOptions): UseSliderTrackRe
 
   const syncWidthFromDom = useCallback(() => {
     const wrapperNode = getDomNode(wrapperRef.current);
+    if (!wrapperNode) return;
+
     const width = wrapperNode?.getBoundingClientRect?.().width ?? 0;
-    if (!Number.isFinite(width) || width <= 0) return;
+    if (!Number.isFinite(width) || width <= 0) {
+      // Retry after a short delay if width is not available yet
+      if (typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(() => {
+          const retryWidth = wrapperNode?.getBoundingClientRect?.().width ?? 0;
+          if (Number.isFinite(retryWidth) && retryWidth > 0) {
+            setMeasuredSlideWidth(retryWidth);
+            setLayoutMeasured(true);
+            setContainerWidth(retryWidth);
+            applyOffset(snapOffsetForIndex(indexRef.current, retryWidth), false);
+          }
+        });
+      }
+      return;
+    }
     setMeasuredSlideWidth(width);
     setLayoutMeasured(true);
     setContainerWidth(width);
