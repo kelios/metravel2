@@ -22,7 +22,7 @@ export function useTravelDetailsHeroCompositionModel({
   renderSlider,
   setHeroContainerWidth,
   sliderUpgradeAllowed,
-  webHeroLoaded,
+  webHeroLoaded: _webHeroLoaded,
 }: UseTravelDetailsHeroCompositionModelArgs) {
   const [fullscreenVisible, setFullscreenVisible] = useState(false)
   const [fullscreenIndex, setFullscreenIndex] = useState(0)
@@ -33,7 +33,6 @@ export function useTravelDetailsHeroCompositionModel({
   const shouldRenderWebSlider =
     shouldRenderWebOptimizedHero &&
     hasInteractiveWebGallery &&
-    webHeroLoaded &&
     renderSlider &&
     sliderUpgradeAllowed
   const sliderPreloadCount = Platform.OS === 'web' ? 0 : isMobile ? 1 : 2

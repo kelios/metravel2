@@ -525,6 +525,7 @@ const PlacePopupCard: React.FC<Props> = ({
               blurRadius={16}
               priority="low"
               loading="lazy"
+              allowCriticalWebBlur
               width={maxPopupWidth}
               height={heroHeight}
               style={StyleSheet.absoluteFill}

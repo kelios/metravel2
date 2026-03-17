@@ -28,6 +28,7 @@ const HERO_HEIGHT = {
   mobileMaxViewportRatio: 0.85,
   webViewportCapRatio: 0.7,
 } as const
+const WEB_HERO_LOAD_FALLBACK_MS = 400
 
 const normalizeGalleryImage = (
   item: unknown,
@@ -174,7 +175,7 @@ function useHeroMediaModel(
         setWebHeroLoaded(true)
         notifyHeroReadyInEffect('hero:lcpImg:fallbackTimeout')
       }
-    }, 1000)
+    }, WEB_HERO_LOAD_FALLBACK_MS)
     return () => clearTimeout(fallback)
   }, [webHeroLoaded, firstImg])
 

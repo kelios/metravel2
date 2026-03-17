@@ -119,6 +119,11 @@ const Slide = memo(function Slide({
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
+  const shouldDelayWebRevealUntilLoad =
+    Platform.OS === 'web' &&
+    isActive &&
+    shouldBlur &&
+    !isFirstSlide;
 
   useEffect(() => {
     setResolvedUri(uri);
@@ -255,7 +260,7 @@ const Slide = memo(function Slide({
             onError={handleError}
             showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={shouldBlur}
-            revealOnLoadOnly={Platform.OS === 'web' && isActive && shouldBlur}
+            revealOnLoadOnly={shouldDelayWebRevealUntilLoad}
           />
         </>
       )}

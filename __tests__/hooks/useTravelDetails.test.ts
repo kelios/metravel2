@@ -106,6 +106,7 @@ describe('useTravelDetails', () => {
           description: '',
           gallery: [],
           travelAddress: [],
+          coordsMeTravel: [],
         },
         slug: 'awesome-trip',
         isId: false,
@@ -137,6 +138,7 @@ describe('useTravelDetails', () => {
       description: '',
       gallery: [],
       travelAddress: [],
+      coordsMeTravel: [],
     });
 
     // Preload is consumed on first access to avoid stale data.
@@ -208,6 +210,7 @@ describe('useTravelDetails', () => {
           description: '',
           gallery: [],
           travelAddress: [],
+          coordsMeTravel: [],
         },
         slug: 'awesome-trip',
         isId: false,
@@ -230,6 +233,7 @@ describe('useTravelDetails', () => {
       description: '',
       gallery: [],
       travelAddress: [],
+      coordsMeTravel: [],
     });
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
 
@@ -273,6 +277,48 @@ describe('useTravelDetails', () => {
       description: '',
       gallery: [],
       travelAddress: [{ id: 1, name: 'Point' }],
+    });
+  });
+
+  it('falls back to fetchTravelBySlug when preload has description and gallery but misses map arrays', async () => {
+    (Platform.OS as any) = 'web';
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 362,
+          slug: 'morskoe-oko-v-mae',
+          name: 'Морское око в мае.',
+          description: '<p>Full text</p>',
+          gallery: [{ url: 'https://metravel.by/gallery/362/detail_hd.jpg' }],
+        },
+        slug: 'morskoe-oko-v-mae',
+        isId: false,
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'morskoe-oko-v-mae' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({
+      id: 362,
+      slug: 'morskoe-oko-v-mae',
+      name: 'Морское око в мае.',
+      description: '<p>Full text</p>',
+      gallery: [{ url: 'https://metravel.by/gallery/362/detail_hd.jpg' }],
+      travelAddress: [{ id: 1, name: 'Point' }],
+      coordsMeTravel: [{ id: 1, lat: 49.25, lng: 20.1 }],
+    });
+
+    renderHook(() => useTravelDetails());
+
+    const data = await capturedQueryFn!();
+    expect(fetchTravelBySlug).toHaveBeenCalledWith('morskoe-oko-v-mae', { signal: undefined });
+    expect(data).toEqual({
+      id: 362,
+      slug: 'morskoe-oko-v-mae',
+      name: 'Морское око в мае.',
+      description: '<p>Full text</p>',
+      gallery: [{ url: 'https://metravel.by/gallery/362/detail_hd.jpg' }],
+      travelAddress: [{ id: 1, name: 'Point' }],
+      coordsMeTravel: [{ id: 1, lat: 49.25, lng: 20.1 }],
     });
   });
 

@@ -67,7 +67,7 @@ describe('PlacePopupCard', () => {
     expect(props.width).toBe(436);
     expect(props.height).toBe(320);
     expect(props.blurBackground).toBe(true);
-    expect(props.allowCriticalWebBlur).toBeUndefined();
+    expect(props.allowCriticalWebBlur).toBe(true);
   });
 
   it('shrinks popup hero on narrow viewport to keep the card visible', () => {

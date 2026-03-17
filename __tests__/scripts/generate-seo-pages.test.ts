@@ -146,6 +146,46 @@ describe('injectTravelBootstrapData', () => {
     expect(html).toContain('"description":"Полный текст маршрута"');
     expect(html).toContain('"url":"https://metravel.by/gallery/42/detail_hd.jpg"');
   });
+
+  it('preserves travel map and excursions fields in bootstrap payload', () => {
+    const bootstrapTravel = {
+      id: 362,
+      slug: 'morskoe-oko-v-mae',
+      name: 'Морское око в мае.',
+      countryCode: 'pl',
+      travelAddress: [{ id: 1, coord: '49.2557252,20.1030021', address: 'Palenica Białczańska' }],
+      coordsMeTravel: [{ id: 1, lat: 49.2557252, lng: 20.1030021 }],
+      gallery: [],
+      description: '',
+    };
+    const html = injectTravelBootstrapData(MINIMAL_BASE, bootstrapTravel, 'morskoe-oko-v-mae');
+
+    expect(html).toContain('"countryCode":"pl"');
+    expect(html).toContain('"travelAddress":[{"id":1,"coord":"49.2557252,20.1030021","address":"Palenica Białczańska"}]');
+    expect(html).toContain('"coordsMeTravel":[{"id":1,"lat":49.2557252,"lng":20.1030021}]');
+  });
+
+  it('preserves author identity fields in bootstrap payload', () => {
+    const bootstrapTravel = {
+      id: 362,
+      slug: 'morskoe-oko-v-mae',
+      name: 'Морское око в мае.',
+      userName: 'Julia',
+      userIds: '42',
+      userTravelsCount: 7,
+      user: {
+        id: 42,
+        first_name: 'Julia',
+        avatar: 'https://metravel.by/media/avatar.jpg',
+      },
+    };
+    const html = injectTravelBootstrapData(MINIMAL_BASE, bootstrapTravel, 'morskoe-oko-v-mae');
+
+    expect(html).toContain('"userName":"Julia"');
+    expect(html).toContain('"userIds":"42"');
+    expect(html).toContain('"userTravelsCount":7');
+    expect(html).toContain('"user":{"id":42,"first_name":"Julia","avatar":"https://metravel.by/media/avatar.jpg"}');
+  });
 });
 
 // ---------------------------------------------------------------------------

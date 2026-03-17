@@ -29,7 +29,9 @@ import { useNearTravelData } from '@/hooks/useNearTravelData';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
-const MapClientSideComponent = React.lazy(() => import('@/components/map/Map'));
+const MapClientSideComponent = React.lazy(() =>
+  import('@/components/MapPage/TravelMap').then((module) => ({ default: module.TravelMap }))
+);
 
 type Segment = 'list' | 'map';
 
@@ -128,50 +130,6 @@ const MapContainer = memo(({
       color: colors.textMuted,
       textAlign: 'center',
     },
-    mapContainer: {
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      // overflow: visible to allow popup to extend beyond container
-      overflow: 'visible',
-      borderWidth: 1,
-      borderColor: colors.border,
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 3,
-    },
-    mapHeader: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingVertical: DESIGN_TOKENS.spacing.md,
-      backgroundColor: colors.surfaceElevated,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    mapTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      color: colors.textSecondary,
-      textAlign: 'center',
-    },
-    mapWrapper: {
-      flex: 1,
-      minHeight: 300,
-      overflow: 'visible',
-    },
-    mapFooter: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingVertical: DESIGN_TOKENS.spacing.xs,
-      backgroundColor: colors.backgroundSecondary,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    mapHint: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      color: colors.textMuted,
-      textAlign: 'center',
-      fontStyle: 'italic',
-    },
   }), [colors]);
 
   if (!canRenderMap) {
@@ -185,31 +143,14 @@ const MapContainer = memo(({
   }
 
   return (
-    <View 
-      style={[mapStyles.mapContainer, { height }]}
-    >
-      <View style={mapStyles.mapHeader}>
-        <Text style={mapStyles.mapTitle}>
-          {points.length} {points.length === 1 ? 'точка' :
-          points.length < 5 ? 'точки' : 'точек'} на карте
-        </Text>
-      </View>
-
-      <View style={mapStyles.mapWrapper}>
-        <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
-          <MapClientSideComponent
-            showRoute={showRoute}
-            travel={{ data: points }}
-          />
-        </React.Suspense>
-      </View>
-
-      <View style={mapStyles.mapFooter}>
-        <Text style={mapStyles.mapHint}>
-          Приближайте и перемещайтесь для детального просмотра
-        </Text>
-      </View>
-    </View>
+    <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
+      <MapClientSideComponent
+        travelData={points}
+        compact
+        height={height}
+        showRouteLine={showRoute}
+      />
+    </React.Suspense>
   );
 });
 

@@ -48,16 +48,12 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
     Object.prototype.hasOwnProperty.call(travelRecord, 'gallery') ||
     Object.prototype.hasOwnProperty.call(travelRecord, 'travelAddress') ||
     Object.prototype.hasOwnProperty.call(travelRecord, 'coordsMeTravel');
-  const hasRenderableDetailContract =
-    (typeof travel.description === 'string' && travel.description.trim().length > 0) ||
-    (Array.isArray(travel.gallery) && travel.gallery.length > 0) ||
-    (Array.isArray(travel.travelAddress) && travel.travelAddress.length > 0) ||
-    (Array.isArray(travel.coordsMeTravel) && travel.coordsMeTravel.length > 0);
+  const hasStableDetailContract =
+    Array.isArray(travel.gallery) &&
+    Array.isArray(travel.travelAddress) &&
+    Array.isArray(travel.coordsMeTravel);
 
-  return hasIdentity && hasName && hasAnyDetailField && (
-    hasRenderableDetailContract ||
-    (Array.isArray(travel.gallery) && Array.isArray(travel.travelAddress))
-  );
+  return hasIdentity && hasName && hasAnyDetailField && hasStableDetailContract;
 }
 
 /**

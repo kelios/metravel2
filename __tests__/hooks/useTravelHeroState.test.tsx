@@ -173,4 +173,50 @@ describe('useTravelHeroState', () => {
 
     expect(result.current.heroHeight).toBeLessThanOrEqual(Math.round(1000 * 0.7))
   })
+
+  it('marks web hero as loaded after the shortened fallback timeout when load event is delayed', () => {
+    const originalUserAgent = window.navigator.userAgent
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36',
+      configurable: true,
+    })
+
+    const onFirstImageLoad = jest.fn()
+    const travel = {
+      id: 46,
+      name: 'Fallback handoff travel',
+      gallery: [
+        {
+          id: 1,
+          url: 'https://example.com/fallback-gallery.jpg',
+          width: 1200,
+          height: 800,
+        },
+      ],
+    } as any
+
+    const { result } = renderHook(() =>
+      useTravelHeroState(travel, false, onFirstImageLoad, false),
+    )
+
+    expect(result.current.webHeroLoaded).toBe(false)
+
+    act(() => {
+      jest.advanceTimersByTime(399)
+    })
+
+    expect(result.current.webHeroLoaded).toBe(false)
+
+    act(() => {
+      jest.advanceTimersByTime(1)
+    })
+
+    expect(result.current.webHeroLoaded).toBe(true)
+    expect(onFirstImageLoad).toHaveBeenCalledTimes(1)
+
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: originalUserAgent,
+      configurable: true,
+    })
+  })
 })
