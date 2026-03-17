@@ -47,9 +47,17 @@ export const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }
           height: height ? `${height}px` : '100%',
           borderRadius: 12,
           backgroundColor: colors.backgroundSecondary,
+          opacity: 0,
+          animation: 'fadeInPlaceholder 0.2s ease-in 0.15s forwards',
         }}
         aria-hidden="true"
-      />
+      >
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeInPlaceholder {
+            to { opacity: 1; }
+          }
+        `}} />
+      </div>
     );
   }
   return (
@@ -117,7 +125,27 @@ function OptimizedLCPHeroInner({
     } catch {
       /* noop */
     }
-  }, []);
+
+    // Add preconnect for image domain to speed up loading
+    if (typeof document !== 'undefined' && baseSrc) {
+      try {
+        const url = new URL(baseSrc);
+        const origin = url.origin;
+        if (origin && origin !== window.location.origin) {
+          const existingPreconnect = document.querySelector(`link[rel="preconnect"][href="${origin}"]`);
+          if (!existingPreconnect) {
+            const link = document.createElement('link');
+            link.rel = 'preconnect';
+            link.href = origin;
+            link.crossOrigin = 'anonymous';
+            document.head.appendChild(link);
+          }
+        }
+      } catch {
+        /* noop */
+      }
+    }
+  }, [baseSrc]);
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc;
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
@@ -202,10 +230,18 @@ function OptimizedLCPHeroInner({
               backgroundSize: 'cover',
               filter: 'blur(18px)',
               transform: 'scale(1.08)',
-              opacity: 0.9,
+              opacity: 0,
+              transition: 'opacity 0.25s ease-in',
+              animation: 'fadeInBackdrop 0.3s ease-in 0.05s forwards',
             }}
             data-hero-backdrop="true"
-          />
+          >
+            <style dangerouslySetInnerHTML={{ __html: `
+              @keyframes fadeInBackdrop {
+                to { opacity: 0.9; }
+              }
+            `}} />
+          </div>
           <img
             src={srcWithRetry}
             srcSet={responsive.srcSet}

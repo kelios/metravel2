@@ -28,7 +28,7 @@ const HERO_HEIGHT = {
   mobileMaxViewportRatio: 0.85,
   webViewportCapRatio: 0.7,
 } as const
-const WEB_HERO_LOAD_FALLBACK_MS = 400
+const WEB_HERO_LOAD_FALLBACK_MS = 200
 
 const normalizeGalleryImage = (
   item: unknown,
