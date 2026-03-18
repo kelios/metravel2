@@ -116,7 +116,7 @@ function ChapterCard({ item, index, styles, colors }: ChapterCardProps) {
         <ImageCardMedia
           src={rawImageUrl}
           alt={title}
-          fit="contain"
+          fit="cover"
           blurBackground
           blurRadius={20}
           placeholderBlurhash={PLACEHOLDER_BLURHASH}
