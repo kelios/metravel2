@@ -113,7 +113,7 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage.props.style?.opacity).toBe(0)
 
     renderer.act(() => {
-      mainImage.props.onLoad()
+      mainImage.props.onLoad({ currentTarget: { style: {} } })
     })
 
     const loadedMainImage = tree!.root.findAll((node: any) => {
@@ -202,7 +202,7 @@ describe('ImageCardMedia blur background (web)', () => {
     })[0]
 
     renderer.act(() => {
-      mainImage.props.onLoad()
+      mainImage.props.onLoad({ currentTarget: { style: {} } })
     })
 
     const blurLayers = tree!.root.findAll((node: any) => {

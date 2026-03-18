@@ -202,7 +202,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.webHeroLoaded).toBe(false)
 
     act(() => {
-      jest.advanceTimersByTime(399)
+      jest.advanceTimersByTime(199)
     })
 
     expect(result.current.webHeroLoaded).toBe(false)

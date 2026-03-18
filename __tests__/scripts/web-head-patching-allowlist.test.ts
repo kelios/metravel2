@@ -7,6 +7,7 @@ const ALLOWED_DOCUMENT_TITLE_FILES = new Set([
   'app/+html.tsx',
   'app/(tabs)/quests/[city]/[questId].tsx',
   'components/travel/details/TravelDetailsContainer.tsx',
+  'components/travel/details/hooks/useTravelDetailsHeadSync.ts',
 ])
 
 const SEARCH_DIRS = ['app', 'components', 'hooks', 'utils']
