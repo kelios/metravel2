@@ -51,7 +51,7 @@ export const ExcursionsSection: React.FC<{
             <BelkrajWidgetComponent
               countryCode={travel.countryCode}
               points={travel.travelAddress as any}
-              collapsedHeight={980}
+              cardsCount={6}
             />
           </View>
         </View>
