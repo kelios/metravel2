@@ -34,6 +34,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -543,7 +544,7 @@ const contentStyles = StyleSheet.create({
     borderRadius: 4,
   },
   durationText: {
-    color: '#FFFFFF',
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -560,7 +561,7 @@ const contentStyles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -635,7 +636,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
       borderRadius: 8,
     },
     retryButtonText: {
-      color: '#FFFFFF',
+      color: colors.textOnDark,
       fontSize: 16,
       fontWeight: '600',
     },

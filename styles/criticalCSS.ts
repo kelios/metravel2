@@ -2,6 +2,7 @@
  * Critical CSS for above-the-fold content
  * Optimized for fastest First Paint and LCP
  */
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 export const criticalCSS = `
 /* Critical CSS - Above the Fold Content */
@@ -16,8 +17,8 @@ body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f9f8f2;
-  color: #1f2937;
+  background-color: ${DESIGN_COLORS.criticalBgSecondaryLight};
+  color: ${DESIGN_COLORS.criticalTextLight};
   line-height: 1.6;
 }
 
@@ -26,7 +27,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f9f8f2;
+  background-color: ${DESIGN_COLORS.criticalBgSecondaryLight};
 }
 
 /* Hero section - LCP critical */
@@ -35,7 +36,7 @@ body {
   aspect-ratio: 16/9;
   border-radius: 12px;
   overflow: hidden;
-  background-color: #e9e7df;
+  background-color: ${DESIGN_COLORS.criticalBgTertiaryLight};
   margin-bottom: 16px;
 }
 
@@ -49,7 +50,7 @@ body {
 
 /* Loading skeleton */
 .skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, ${DESIGN_COLORS.criticalSurfaceLight} 25%, ${DESIGN_COLORS.criticalBgTertiaryLight} 50%, ${DESIGN_COLORS.criticalSurfaceLight} 75%);
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
 }
@@ -76,14 +77,14 @@ body {
 .title {
   font-size: 24px;
   font-weight: 600;
-  color: #1f2937;
+  color: ${DESIGN_COLORS.criticalTextLight};
   margin: 0 0 8px 0;
   line-height: 1.3;
 }
 
 .subtitle {
   font-size: 16px;
-  color: #6b7280;
+  color: rgba(58, 58, 58, 0.72);
   margin: 0 0 16px 0;
   line-height: 1.5;
 }
@@ -101,10 +102,10 @@ body {
 
 .progress-bar {
   height: 100%;
-  background-color: #ff9f5a;
+  background-color: var(--color-brand, rgb(245, 132, 44));
   width: 0%;
   transition: width 0.15s ease-out;
-  box-shadow: 0 2px 4px rgba(255, 159, 90, 0.3);
+  box-shadow: 0 2px 4px rgba(245, 132, 44, 0.3);
 }
 
 /* Safe area handling */
@@ -168,7 +169,7 @@ body {
 
 /* Critical button styles */
 .btn-primary {
-  background-color: #2c7a7a;
+  background-color: var(--color-success, rgb(82, 125, 102));
   color: white;
   border: none;
   padding: 12px 24px;
@@ -179,7 +180,7 @@ body {
 }
 
 .btn-primary:hover {
-  background-color: #236666;
+  background-color: var(--color-successDark, rgb(66, 109, 86));
   transform: translateY(-1px);
 }
 
@@ -189,7 +190,7 @@ body {
 
 /* Focus styles for accessibility */
 .btn-primary:focus-visible {
-  outline: 2px solid #2c7a7a;
+  outline: 2px solid var(--color-success, rgb(82, 125, 102));
   outline-offset: 2px;
 }
 
@@ -207,7 +208,7 @@ body {
   width: 20px;
   height: 20px;
   margin: -10px 0 0 -10px;
-  border: 2px solid #ffffff;
+  border: 2px solid ${DESIGN_COLORS.criticalSurfaceLight};
   border-radius: 50%;
   border-top-color: transparent;
   animation: spin 1s linear infinite;
@@ -219,11 +220,11 @@ body {
 
 /* Error states */
 .error {
-  color: #dc2626;
-  background-color: #fef2f2;
+  color: rgb(154, 99, 99);
+  background-color: rgb(245, 240, 240);
   padding: 16px;
   border-radius: 8px;
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(154, 99, 99, 0.22);
 }
 
 /* Smooth scrolling */

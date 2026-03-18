@@ -8,7 +8,7 @@ const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
 const toRgba = (color: unknown, opacity: number): string => {
   const safeOpacity = clamp01(opacity);
-  const raw = String(color ?? '#000000').trim();
+  const raw = String(color ?? 'rgb(0, 0, 0)').trim();
 
   const hex = raw.match(/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/);
   if (hex) {
