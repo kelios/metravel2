@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import NearTravelList from '@/components/travel/NearTravelList';
@@ -10,6 +10,14 @@ jest.mock('@/api/map', () => ({
 }));
 
 jest.mock('@/components/map/Map', () => () => null);
+
+const mockTravelMap = jest.fn(() => null);
+jest.mock('@/components/MapPage/TravelMap', () => ({
+  TravelMap: (props: any) => {
+    mockTravelMap(props);
+    return null;
+  },
+}));
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({
@@ -33,6 +41,7 @@ describe('NearTravelList', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     fetchTravelsNear.mockClear();
+    mockTravelMap.mockClear();
     queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -86,5 +95,39 @@ describe('NearTravelList', () => {
     );
     await flush();
     expect(fetchTravelsNear).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not connect nearby travel points with lines on the map tab', async () => {
+    fetchTravelsNear.mockResolvedValueOnce([
+      {
+        id: 101,
+        name: 'Nearby 1',
+        points: [{ coord: '50.061,19.938', address: 'Krakow' }],
+      },
+      {
+        id: 102,
+        name: 'Nearby 2',
+        points: [{ coord: '49.822,19.044', address: 'Bielsko-Biala' }],
+      },
+    ]);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <NearTravelList travel={{ id: 1 }} />
+      </QueryClientProvider>
+    );
+
+    await flush();
+
+    fireEvent.press(screen.getByText('Карта'));
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockTravelMap).toHaveBeenCalled();
+    const lastCall = mockTravelMap.mock.calls[mockTravelMap.mock.calls.length - 1]?.[0];
+    expect(lastCall?.showRouteLine).toBe(false);
   });
 });

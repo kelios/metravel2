@@ -74,6 +74,7 @@ export interface ImageBlock extends ContentBlock {
   caption?: string;
   width?: number;
   height?: number;
+  layout?: 'single-wide' | 'float-left' | 'float-right';
 }
 
 /**
@@ -85,8 +86,21 @@ export interface ImageGalleryBlock extends ContentBlock {
     src: string;
     alt?: string;
     caption?: string;
+    width?: number;
+    height?: number;
   }>;
   columns?: number;
+  layout?:
+    | 'row-2-balanced'
+    | 'row-2-landscape'
+    | 'row-2-portrait'
+    | 'row-2-mixed'
+    | 'grid-default'
+    | 'grid-portrait'
+    | 'grid-mixed'
+    | 'grid-mixed-reverse'
+    | 'grid-balanced'
+    | 'grid-quilt';
 }
 
 /**
@@ -144,6 +158,53 @@ export type ParsedContentBlock =
  * ✅ ИСПРАВЛЕНИЕ: Объединяет текст в нормальные абзацы, нормализует пробелы
  */
 export class ContentParser {
+  private parseDimension(value: string | null): number | undefined {
+    if (!value) return undefined;
+    const numeric = parseInt(value, 10);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+  }
+
+  private getSingleImageLayout(className: string): ImageBlock['layout'] | undefined {
+    if (!className) return undefined;
+    if (className.includes('img-single-wide')) return 'single-wide';
+    if (className.includes('img-float-left')) return 'float-left';
+    if (className.includes('img-float-right')) return 'float-right';
+    return undefined;
+  }
+
+  private getGalleryLayout(className: string): ImageGalleryBlock['layout'] {
+    if (!className) return 'grid-default';
+    if (className.includes('img-row-2-landscape')) return 'row-2-landscape';
+    if (className.includes('img-row-2-portrait')) return 'row-2-portrait';
+    if (className.includes('img-row-2-mixed')) return 'row-2-mixed';
+    if (className.includes('img-row-2-balanced')) return 'row-2-balanced';
+    if (className.includes('img-grid-mixed-reverse')) return 'grid-mixed-reverse';
+    if (className.includes('img-grid-mixed')) return 'grid-mixed';
+    if (className.includes('img-grid-balanced')) return 'grid-balanced';
+    if (className.includes('img-grid-quilt')) return 'grid-quilt';
+    if (className.includes('img-grid-portrait')) return 'grid-portrait';
+    return 'grid-default';
+  }
+
+  private getGalleryColumns(layout: ImageGalleryBlock['layout'], imageCount: number): number {
+    switch (layout) {
+      case 'row-2-balanced':
+      case 'row-2-landscape':
+      case 'row-2-portrait':
+      case 'row-2-mixed':
+      case 'grid-balanced':
+      case 'grid-mixed':
+      case 'grid-mixed-reverse':
+      case 'grid-portrait':
+        return 2;
+      case 'grid-quilt':
+        return 6;
+      case 'grid-default':
+      default:
+        return imageCount <= 4 ? 2 : imageCount <= 6 ? 3 : 4;
+    }
+  }
+
   /**
    * Нормализует текст: удаляет невидимые символы, нормализует пробелы
    */
@@ -486,14 +547,17 @@ export class ContentParser {
     if (!src) return null;
 
     const alt = element.getAttribute('alt') || undefined;
-    const width = element.getAttribute('width') ? parseInt(element.getAttribute('width')!) : undefined;
-    const height = element.getAttribute('height') ? parseInt(element.getAttribute('height')!) : undefined;
+    const width = this.parseDimension(element.getAttribute('width'));
+    const height = this.parseDimension(element.getAttribute('height'));
 
     // Ищем подпись в родительском figure или следующем элементе
     const parent = element.parentElement;
     const caption = parent?.tagName.toLowerCase() === 'figure'
       ? this.normalizeText(parent.querySelector('figcaption')?.textContent || '')
       : undefined;
+    const layout = this.getSingleImageLayout(
+      `${element.className || ''} ${parent?.className || ''}`.toLowerCase()
+    );
 
     return {
       type: 'image',
@@ -502,6 +566,7 @@ export class ContentParser {
       caption: caption && caption.length > 0 ? caption : undefined,
       width,
       height,
+      layout,
     };
   }
 
@@ -510,6 +575,7 @@ export class ContentParser {
    */
   private parseFigure(element: HTMLElement): ParsedContentBlock | null {
     const images = element.querySelectorAll('img');
+    const className = (element.className || '').toLowerCase();
     
     if (images.length === 0) return null;
     
@@ -530,12 +596,16 @@ export class ContentParser {
         src: img.getAttribute('src') || '',
         alt: img.getAttribute('alt') || undefined,
         caption: undefined, // Можно улучшить, если подписи хранятся отдельно
+        width: this.parseDimension(img.getAttribute('width')),
+        height: this.parseDimension(img.getAttribute('height')),
       }));
+      const layout = this.getGalleryLayout(className);
 
       return {
         type: 'image-gallery',
         images: galleryImages,
-        columns: images.length <= 4 ? 2 : images.length <= 6 ? 3 : 4,
+        columns: this.getGalleryColumns(layout, images.length),
+        layout,
       };
     }
   }
@@ -554,15 +624,19 @@ export class ContentParser {
     // Проверяем на галерею изображений
     const images = element.querySelectorAll('img');
     if (images.length > 1) {
+      const layout = this.getGalleryLayout((element.className || '').toLowerCase());
       const galleryImages = Array.from(images).map((img) => ({
         src: img.getAttribute('src') || '',
         alt: img.getAttribute('alt') || undefined,
+        width: this.parseDimension(img.getAttribute('width')),
+        height: this.parseDimension(img.getAttribute('height')),
       }));
 
       return {
         type: 'image-gallery',
         images: galleryImages,
-        columns: images.length <= 4 ? 2 : images.length <= 6 ? 3 : 4,
+        columns: this.getGalleryColumns(layout, images.length),
+        layout,
       };
     }
 

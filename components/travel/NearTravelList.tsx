@@ -99,7 +99,7 @@ const TravelCardSkeleton = ({ colors }: { colors: ReturnType<typeof useThemedCol
 const MapContainer = memo(({
                              points,
                              height = 400,
-                             showRoute = true,
+                             showRoute = false,
                              isLoading = false,
                              colors,
                            }: {
@@ -567,7 +567,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 <MapContainer
                   points={mapPoints}
                   height={mapHeight}
-                  showRoute={true}
+                  showRoute={false}
                   isLoading={isLoading}
                   colors={colors}
                 />
@@ -652,7 +652,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 <MapContainer
                   points={mapPoints}
                   height={mapHeight}
-                  showRoute={true}
+                  showRoute={false}
                   isLoading={isLoading}
                   colors={colors}
                 />

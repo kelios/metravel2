@@ -154,6 +154,7 @@ describe('TravelPageGenerator', () => {
       const html = await generator.generate(mockContext);
       expect(html).toContain(mockTravel.description!);
     });
+
   });
 
   describe('estimatePageCount', () => {
@@ -195,4 +196,3 @@ describe('TravelPageGenerator', () => {
     });
   });
 });
-

@@ -64,8 +64,49 @@ describe('BlockRenderer', () => {
     expect(gallery).toContain('grid-template-columns: repeat(3')
     expect(gallery).toContain('a.jpg')
 
+    const mixedGallery = renderer.renderBlock({
+      type: 'image-gallery',
+      layout: 'grid-mixed',
+      columns: 2,
+      images: [
+        { src: 'wide-a.jpg', width: 1200, height: 700 },
+        { src: 'tall.jpg', width: 700, height: 1200 },
+        { src: 'wide-b.jpg', width: 1200, height: 700 },
+      ],
+    } as any)
+    expect(mixedGallery).toContain('grid-template-columns: 1fr 1fr')
+    expect(mixedGallery).toContain('min-height: 96mm')
+
+    const quiltGallery = renderer.renderBlock({
+      type: 'image-gallery',
+      layout: 'grid-quilt',
+      columns: 6,
+      images: [
+        { src: '1.jpg' },
+        { src: '2.jpg' },
+        { src: '3.jpg' },
+        { src: '4.jpg' },
+      ],
+    } as any)
+    expect(quiltGallery).toContain('grid-template-columns: repeat(6, 1fr)')
+    expect(quiltGallery).toContain('grid-column: span 4')
+
     const separator = renderer.renderBlock({ type: 'separator' } as any)
     expect(separator).toContain('<hr')
+  })
+
+  it('renders single image layout variants for pdf-rich text media', () => {
+    const renderer = new BlockRenderer(theme)
+
+    const floated = renderer.renderBlock({
+      type: 'image',
+      src: 'https://example.com/portrait.jpg',
+      layout: 'float-right',
+    } as any)
+
+    expect(floated).toContain('width: 44%')
+    expect(floated).toContain('margin:')
+    expect(floated).toContain('auto')
   })
 
   it('normalizes relative image URLs so they can be fetched in print/PDF context', () => {

@@ -10,6 +10,77 @@ import type { ParsedContentBlock } from '../parsers/ContentParser';
 export class BlockRenderer {
   constructor(private theme: PdfThemeConfig) {}
 
+  private getImageAlignmentStyle(layout?: 'single-wide' | 'float-left' | 'float-right'): string {
+    switch (layout) {
+      case 'float-left':
+        return `
+          width: 44%;
+          max-width: 44%;
+          margin: ${this.theme.spacing.blockSpacing} auto ${this.theme.spacing.blockSpacing} 0;
+        `;
+      case 'float-right':
+        return `
+          width: 44%;
+          max-width: 44%;
+          margin: ${this.theme.spacing.blockSpacing} 0 ${this.theme.spacing.blockSpacing} auto;
+        `;
+      case 'single-wide':
+      default:
+        return `
+          width: 100%;
+          max-width: 100%;
+          margin: ${this.theme.spacing.blockSpacing} auto;
+        `;
+    }
+  }
+
+  private detectPortraitIndex(
+    images: Array<{ width?: number; height?: number }>,
+    fallbackIndex: number
+  ): number {
+    const explicit = images.findIndex((img) => (img.height || 0) > (img.width || 0));
+    return explicit >= 0 ? explicit : fallbackIndex;
+  }
+
+  private renderGalleryCaption(caption?: string): string {
+    if (!caption) return '';
+    return `<div style="font-size: ${this.theme.typography.caption.size}; color: ${this.theme.colors.textMuted}; text-align: center; margin-top: 4pt;">${this.escapeHtml(caption)}</div>`;
+  }
+
+  private renderGalleryImageCard(
+    img: { src: string; alt?: string; caption?: string; width?: number; height?: number },
+    options: { containerStyle?: string; imageStyle?: string } = {}
+  ): string {
+    return `
+      <div style="
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: ${this.theme.spacing.elementSpacing};
+        ${options.containerStyle || ''}
+      ">
+        <img
+          src="${this.escapeHtml(this.buildSafeImageUrl(img.src))}"
+          alt="${this.escapeHtml(img.alt || '')}"
+          ${img.width ? `width="${img.width}"` : ''}
+          ${img.height ? `height="${img.height}"` : ''}
+          style="
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: ${this.theme.blocks.borderRadius};
+            box-shadow: ${this.theme.blocks.shadow};
+            object-fit: contain;
+            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+            ${options.imageStyle || ''}
+          "
+          onerror="this.style.display='none';"
+          crossorigin="anonymous"
+        />
+        ${this.renderGalleryCaption(img.caption)}
+      </div>
+    `;
+  }
+
   /**
    * Рендерит массив блоков в HTML
    */
@@ -174,19 +245,20 @@ export class BlockRenderer {
    * Рендерит изображение
    */
   private renderImage(block: ParsedContentBlock & { type: 'image' }): string {
-    const { src, alt, caption, width, height } = block;
+    const { src, alt, caption, width, height, layout } = block;
     const safeSrc = this.buildSafeImageUrl(src);
 
     const imageStyle = `
       max-width: 100%;
       height: auto;
       display: block;
-      margin: ${this.theme.spacing.blockSpacing} auto;
       border-radius: ${this.theme.blocks.borderRadius};
       box-shadow: ${this.theme.blocks.shadow};
       page-break-inside: avoid;
+      object-fit: contain;
       ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
     `;
+    const wrapperStyle = this.getImageAlignmentStyle(layout);
 
     const imageTag = `
       <img 
@@ -203,8 +275,9 @@ export class BlockRenderer {
     if (caption) {
       return `
         <figure style="
-          margin: ${this.theme.spacing.blockSpacing} 0;
+          ${wrapperStyle}
           page-break-inside: avoid;
+          break-inside: avoid;
         ">
           ${imageTag}
           <figcaption style="
@@ -220,7 +293,11 @@ export class BlockRenderer {
     }
 
     return `
-      <div style="margin: ${this.theme.spacing.blockSpacing} 0;">
+      <div style="
+        ${wrapperStyle}
+        page-break-inside: avoid;
+        break-inside: avoid;
+      ">
         ${imageTag}
       </div>
     `;
@@ -230,33 +307,72 @@ export class BlockRenderer {
    * Рендерит галерею изображений
    */
   private renderImageGallery(block: ParsedContentBlock & { type: 'image-gallery' }): string {
-    const { images, columns = 2 } = block;
+    const { images, columns = 2, layout = 'grid-default' } = block;
+
+    if (layout === 'grid-mixed' || layout === 'grid-mixed-reverse') {
+      const portraitIndex = this.detectPortraitIndex(images, layout === 'grid-mixed-reverse' ? 0 : images.length - 1);
+      const portrait = images[portraitIndex];
+      const supporting = images.filter((_, index) => index !== portraitIndex);
+
+      if (portrait && supporting.length >= 2) {
+        const stackHtml = supporting
+          .map((img) =>
+            this.renderGalleryImageCard(img, {
+              imageStyle: 'min-height: 42mm; max-height: 52mm;',
+            })
+          )
+          .join('');
+        const portraitHtml = this.renderGalleryImageCard(portrait, {
+          imageStyle: 'min-height: 96mm; max-height: 112mm;',
+        });
+
+        return `
+          <div style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: ${this.theme.spacing.elementSpacing};
+            margin: ${this.theme.spacing.blockSpacing} 0;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            align-items: stretch;
+          ">
+            ${layout === 'grid-mixed-reverse' ? portraitHtml : `<div style="display:flex; flex-direction:column; gap:${this.theme.spacing.elementSpacing};">${stackHtml}</div>`}
+            ${layout === 'grid-mixed-reverse' ? `<div style="display:flex; flex-direction:column; gap:${this.theme.spacing.elementSpacing};">${stackHtml}</div>` : portraitHtml}
+          </div>
+        `;
+      }
+    }
 
     const imagesHtml = images
-      .map(
-        (img) => `
-      <div style="
-        page-break-inside: avoid;
-        margin-bottom: ${this.theme.spacing.elementSpacing};
-      ">
-        <img 
-          src="${this.escapeHtml(this.buildSafeImageUrl(img.src))}" 
-          alt="${this.escapeHtml(img.alt || '')}"
-          style="
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: ${this.theme.blocks.borderRadius};
-            box-shadow: ${this.theme.blocks.shadow};
-            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-          "
-          onerror="this.style.display='none';"
-          crossorigin="anonymous"
-        />
-        ${img.caption ? `<div style="font-size: ${this.theme.typography.caption.size}; color: ${this.theme.colors.textMuted}; text-align: center; margin-top: 4pt;">${this.escapeHtml(img.caption)}</div>` : ''}
-      </div>
-    `
-      )
+      .map((img, index) => {
+        let containerStyle = '';
+        let imageStyle = '';
+
+        if (layout === 'row-2-landscape' || layout === 'row-2-balanced') {
+          imageStyle = 'min-height: 64mm; max-height: 72mm;';
+        } else if (layout === 'row-2-portrait') {
+          imageStyle = 'min-height: 78mm; max-height: 90mm;';
+        } else if (layout === 'row-2-mixed') {
+          imageStyle = 'min-height: 72mm; max-height: 84mm;';
+        } else if (layout === 'grid-portrait') {
+          imageStyle = 'min-height: 72mm; max-height: 92mm;';
+        } else if (layout === 'grid-balanced') {
+          imageStyle = 'min-height: 62mm; max-height: 78mm;';
+        } else if (layout === 'grid-quilt') {
+          const span = index === 0 || index === 3 ? 4 : 2;
+          containerStyle = `grid-column: span ${span};`;
+          imageStyle = span === 4
+            ? 'min-height: 56mm; max-height: 70mm;'
+            : 'min-height: 44mm; max-height: 54mm;';
+        } else {
+          imageStyle = 'min-height: 54mm; max-height: 76mm;';
+        }
+
+        return this.renderGalleryImageCard(img, {
+          containerStyle,
+          imageStyle,
+        });
+      })
       .join('');
 
     return `
@@ -266,6 +382,7 @@ export class BlockRenderer {
         gap: ${this.theme.spacing.elementSpacing};
         margin: ${this.theme.spacing.blockSpacing} 0;
         page-break-inside: avoid;
+        break-inside: avoid;
       ">${imagesHtml}</div>
     `;
   }
