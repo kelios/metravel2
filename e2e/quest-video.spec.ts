@@ -1,6 +1,7 @@
 // e2e/quest-video.spec.ts
 // Тест для проверки загрузки видео в финале квеста
 import { test, expect } from '@playwright/test';
+import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/;
 const QUEST_FALLBACK_RE = /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов/i;
@@ -169,7 +170,7 @@ test.describe('Quest Video Loading', () => {
         } else if (questsResponse) {
             console.log(`Quests API unavailable, status=${questsResponse.status()}, using fallback data`);
         }
-        
+
         if (!Array.isArray(quests) || quests.length === 0) {
             quests = [{ quest_id: 'fallback-quest' }];
         }
@@ -180,7 +181,7 @@ test.describe('Quest Video Loading', () => {
 
         console.log(`Testing quest: ${questId}`);
 
-        // Получаем полный бандл квеста
+        // Получаем полный бандл квеста напрямую из API
         let bundleResponse;
         let bundle = fallbackBundle;
         try {
@@ -193,36 +194,26 @@ test.describe('Quest Video Loading', () => {
         } else if (bundleResponse) {
             console.log(`Quest bundle API unavailable, status=${bundleResponse.status()}, using fallback data`);
         }
-        console.log('Quest bundle:', JSON.stringify(bundle, null, 2));
 
         // Проверяем наличие финала
         expect(bundle.finale).toBeDefined();
         expect(bundle.finale.text).toBeTruthy();
 
-        // Проверяем video_url
+        // Проверяем video_url - применяем ту же нормализацию, что и фронтенд
         if (bundle.finale.video_url) {
-            console.log(`Video URL from API: ${bundle.finale.video_url}`);
+            console.log(`Video URL from backend: ${bundle.finale.video_url}`);
 
-            // Проверяем формат URL
-            expect(bundle.finale.video_url).toMatch(/^https?:\/\//);
+            // Применяем нормализацию как в api/quests.ts
+            const normalizedUrl = normalizeMediaUrl(bundle.finale.video_url);
 
-            // Проверяем, что нет двойного хоста
+            console.log(`Normalized video URL: ${normalizedUrl}`);
+
+            // Проверяем формат нормализованного URL
+            expect(normalizedUrl).toMatch(/^https?:\/\//);
+
+            // Проверяем, что нет двойного хоста в нормализованном URL
             const doubleHostPattern = /https?:\/\/[^/]+https?:\/\//;
-            if (doubleHostPattern.test(bundle.finale.video_url)) {
-                console.error('❌ FOUND DOUBLE HOST IN VIDEO URL!');
-                console.error(`Original URL: ${bundle.finale.video_url}`);
-            }
-
-            // Пытаемся загрузить видео
-            try {
-                const videoResponse = await request.head(bundle.finale.video_url, {
-                    timeout: 10000,
-                });
-                console.log(`Video URL status: ${videoResponse.status()}`);
-                console.log(`Video URL headers:`, await videoResponse.headers());
-            } catch (error: any) {
-                console.error(`Failed to fetch video URL: ${error.message}`);
-            }
+            expect(normalizedUrl).not.toMatch(doubleHostPattern);
         } else {
             console.log('No video URL in finale');
         }
