@@ -440,7 +440,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               style={[
                 styles.carouselTrack,
                 {
-                  width: layoutMeasured ? renderedSlideWidth * imagesLen : `${imagesLen * 100}%`,
+                  width: imagesLen === 1 ? '100%' : (layoutMeasured ? renderedSlideWidth * imagesLen : `${imagesLen * 100}%`),
                   height: containerH,
                 },
               ]}
@@ -468,7 +468,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       pointerEvents="none"
                       style={[
                         {
-                          width: layoutMeasured ? renderedSlideWidth : `${100 / imagesLen}%`,
+                          width: imagesLen === 1 ? '100%' : (layoutMeasured ? renderedSlideWidth : `${100 / imagesLen}%`),
                           height: '100%',
                           flexShrink: 0,
                         },
@@ -508,7 +508,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     style={[
                       styles.slide,
                       {
-                        width: layoutMeasured ? renderedSlideWidth : '100%',
+                        width: imagesLen === 1 ? '100%' : (layoutMeasured ? renderedSlideWidth : '100%'),
                         height: containerH,
                         zIndex: 1,
                       },

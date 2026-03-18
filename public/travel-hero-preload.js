@@ -256,62 +256,77 @@
         if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
         if (document.querySelector('link[data-travel-hero-preload="true"][as="image"]')) return;
 
-        var isMobile = (window.innerWidth || 0) < 768;
-        var quality = isMobile ? 35 : 45;
-        var dpr = isMobile ? 1 : 1.5;
-
-        // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [480, 720]
-        var widths = isMobile ? [320, 400] : [480, 720];
-
-        // Build srcSet entries to match buildResponsiveImageProps()
-        var srcSetParts = [];
-        for (var i = 0; i < widths.length; i++) {
-          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, dpr);
-          if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
+        // Skip if not visible soon (prevents "preloaded but not used" warning)
+        if (!document.querySelector('.travel-hero, [data-hero-container]')) {
+          // Defer preload until hero container exists
+          setTimeout(function() {
+            if (document.querySelector('.travel-hero, [data-hero-container]')) {
+              createPreloadLink();
+            }
+          }, 100);
+          return;
         }
 
-        // The main src uses the widest breakpoint.
-        var widest = widths[widths.length - 1];
-        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, dpr);
-        if (!preloadHref) return;
+        function createPreloadLink() {
+          var isMobile = (window.innerWidth || 0) < 768;
+          var quality = isMobile ? 35 : 45;
+          var dpr = isMobile ? 1 : 1.5;
 
-        var preloadIsCrossOrigin = false;
-        try {
-          var resolved = new URL(preloadHref, window.location.origin);
-          var origin = resolved.origin;
-          preloadIsCrossOrigin = !!origin && origin !== window.location.origin;
-          if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
-            var pre = document.createElement('link');
-            pre.rel = 'preconnect';
-            pre.href = origin;
-            pre.crossOrigin = 'anonymous';
-            document.head.appendChild(pre);
+          // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [480, 720]
+          var widths = isMobile ? [320, 400] : [480, 720];
+
+          // Build srcSet entries to match buildResponsiveImageProps()
+          var srcSetParts = [];
+          for (var i = 0; i < widths.length; i++) {
+            var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, dpr);
+            if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
           }
-        } catch (_e) {}
 
-        if (document.querySelector('link[rel="preload"][href="' + preloadHref + '"]')) return;
+          // The main src uses the widest breakpoint.
+          var widest = widths[widths.length - 1];
+          var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, dpr);
+          if (!preloadHref) return;
 
-        var link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'image';
-        link.href = preloadHref;
-        link.setAttribute('data-travel-hero-preload', 'true');
+          var preloadIsCrossOrigin = false;
+          try {
+            var resolved = new URL(preloadHref, window.location.origin);
+            var origin = resolved.origin;
+            preloadIsCrossOrigin = !!origin && origin !== window.location.origin;
+            if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
+              var pre = document.createElement('link');
+              pre.rel = 'preconnect';
+              pre.href = origin;
+              pre.crossOrigin = 'anonymous';
+              document.head.appendChild(pre);
+            }
+          } catch (_e) {}
 
-        // Exact match with TravelDetailsHero.tsx sizes
-        var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px';
+          if (document.querySelector('link[rel="preload"][href="' + preloadHref + '"]')) return;
 
-        if (srcSetParts.length > 0) {
-          link.setAttribute('imagesrcset', srcSetParts.join(', '));
-          link.setAttribute('imagesizes', sizesAttr);
+          var link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'image';
+          link.href = preloadHref;
+          link.setAttribute('data-travel-hero-preload', 'true');
+
+          // Exact match with TravelDetailsHero.tsx sizes
+          var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px';
+
+          if (srcSetParts.length > 0) {
+            link.setAttribute('imagesrcset', srcSetParts.join(', '));
+            link.setAttribute('imagesizes', sizesAttr);
+          }
+          try {
+            link.fetchPriority = 'high';
+            link.setAttribute('fetchPriority', 'high');
+          } catch (_e) {}
+          if (preloadIsCrossOrigin) {
+            link.crossOrigin = 'anonymous';
+          }
+          document.head.appendChild(link);
         }
-        try {
-          link.fetchPriority = 'high';
-          link.setAttribute('fetchPriority', 'high');
-        } catch (_e) {}
-        if (preloadIsCrossOrigin) {
-          link.crossOrigin = 'anonymous';
-        }
-        document.head.appendChild(link);
+
+        createPreloadLink();
       }).catch(function(){}).finally(function(){
         try { window.__metravelTravelPreloadPending = false; } catch (_e) {}
         clearTimeout(timeout);
