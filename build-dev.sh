@@ -1,9 +1,11 @@
 #!/bin/bash
 
-set -e
+# Строгий режим
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 function apply_env() {
-  ENV=$1
+  local ENV="$1"
 
   if [ "$ENV" != "dev" ] && [ "$ENV" != "prod" ] && [ "$ENV" != "preprod" ]; then
     echo "❌ Укажи dev, preprod или prod"
@@ -16,26 +18,31 @@ function apply_env() {
   fi
 
   echo "📦 Применяю .env.$ENV → .env"
-  cp .env.$ENV .env
+  cp ".env.$ENV" .env
 }
 
 function clean_all() {
   echo "🧹 Чищу проект..."
-  rm -rf node_modules dist
+  rm -rf node_modules dist || true
   echo "📦 Устанавливаю зависимости..."
-  yarn install --frozen-lockfile || yarn install
+  if command -v yarn >/dev/null 2>&1; then
+    yarn install --frozen-lockfile || yarn install
+  else
+    npm install
+  fi
 }
 
 function build_env() {
-  ENV=$1
-  DIR="dist/$ENV"
-  EXPORT_LOG="/tmp/expo-export-$ENV.log"
+  local ENV="$1"
+  local DIR="dist/$ENV"
+  local EXPORT_LOG
+  EXPORT_LOG="$(mktemp "/tmp/expo-export-${ENV}.XXXX.log")"
+  trap 'rm -f "${EXPORT_LOG}"' EXIT
 
   echo "🚀 Сборка для $ENV → $DIR"
-  apply_env $ENV
+  apply_env "$ENV"
 
   echo "🛠️ NODE_ENV=dev"
-  rm -f "$EXPORT_LOG"
   CI=1 \
   EXPO_NO_INTERACTIVE=1 \
   NODE_ENV=dev \
@@ -43,10 +50,10 @@ function build_env() {
   EXPO_NO_METRO_LAZY=true \
   EXPO_WEB_BUILD_MINIFY=true \
   EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
-    npx expo export --output-dir $DIR -p web -c > "$EXPORT_LOG" 2>&1 &
+    npx expo export --output-dir "$DIR" -p web -c > "$EXPORT_LOG" 2>&1 &
 
-  EXPO_PID=$!
-  EXPORT_MARKER="Exported: $DIR"
+  local EXPO_PID=$!
+  local EXPORT_MARKER="Exported: $DIR"
 
   while kill -0 "$EXPO_PID" 2>/dev/null; do
     if grep -Fq "$EXPORT_MARKER" "$EXPORT_LOG"; then
@@ -58,7 +65,7 @@ function build_env() {
   done
 
   wait "$EXPO_PID" 2>/dev/null || true
-  cat "$EXPORT_LOG"
+  cat "$EXPORT_LOG" || true
 
   if [ ! -f "$DIR/index.html" ]; then
     echo "❌ Сборка не завершилась: не найден $DIR/index.html"
@@ -70,7 +77,7 @@ function build_env() {
 function deploy_dev() {
   rsync -avzhe "ssh" --delete \
     ./dist/ \
-    sergey@192.168.50.36:/home/sergey/metravel/dist/
+    "sergey@192.168.50.36:/home/sergey/metravel/dist/"
 
   ssh sergey@192.168.50.36 "set -e
     cd /home/sergey/metravel

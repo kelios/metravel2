@@ -1,8 +1,9 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 apply_env() {
-  ENV="$1"
+  local ENV="$1"
 
   if [[ "$ENV" != "dev" && "$ENV" != "prod" && "$ENV" != "preprod" ]]; then
     echo "❌ Укажи dev, preprod или prod"
@@ -28,16 +29,17 @@ install_deps() {
 }
 
 build_env() {
-  ENV="$1"
-  DIR="dist/$ENV"
-  EXPORT_LOG="/tmp/expo-export-$ENV.log"
+  local ENV="$1"
+  local DIR="dist/$ENV"
+  local EXPORT_LOG
+  EXPORT_LOG="$(mktemp "/tmp/expo-export-${ENV}.XXXX.log")"
+  trap 'rm -f "${EXPORT_LOG}"' EXIT
 
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
 
   rm -rf "$DIR"
 
-  rm -f "$EXPORT_LOG"
   CI=1 \
   EXPO_NO_INTERACTIVE=1 \
   NODE_ENV=production \
@@ -47,8 +49,8 @@ build_env() {
   EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
     npx expo export --output-dir "$DIR" -p web -c > "$EXPORT_LOG" 2>&1 &
 
-  EXPO_PID=$!
-  EXPORT_MARKER="Exported: $DIR"
+  local EXPO_PID=$!
+  local EXPORT_MARKER="Exported: $DIR"
 
   while kill -0 "$EXPO_PID" 2>/dev/null; do
     if grep -Fq "$EXPORT_MARKER" "$EXPORT_LOG"; then
@@ -60,7 +62,7 @@ build_env() {
   done
 
   wait "$EXPO_PID" 2>/dev/null || true
-  cat "$EXPORT_LOG"
+  cat "$EXPORT_LOG" || true
 
   if [[ ! -f "$DIR/index.html" ]]; then
     echo "❌ Сборка не завершилась: не найден $DIR/index.html"
@@ -69,10 +71,10 @@ build_env() {
 }
 
 deploy_prod() {
-  ENV="$1"
+  local ENV="$1"
   rsync -avzhe "ssh" --delete \
     ./dist/ \
-    sx3@178.172.137.129:/home/sx3/metravel/dist/
+    "sx3@178.172.137.129:/home/sx3/metravel/dist/"
 
   ssh sx3@178.172.137.129 "set -e
     cd /home/sx3/metravel
