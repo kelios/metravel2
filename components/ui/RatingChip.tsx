@@ -74,16 +74,12 @@ function getRatingLabel(count: number): string {
     return 'оценок';
 }
 
-const STAR_COLOR = '#e8a838';
-const STAR_COLOR_DARK = '#f4b84d';
-
 const createStyles = (
     colors: any,
     size: 'small' | 'medium',
     variant: 'default' | 'highlighted'
 ) => {
-    const isDark = colors.text?.includes?.('e8e4') || colors.text?.includes?.('d4d0');
-    const starColor = isDark ? STAR_COLOR_DARK : STAR_COLOR;
+    const starColor = variant === 'highlighted' ? colors.warning : colors.brand;
 
     const isSmall = size === 'small';
     const isHighlighted = variant === 'highlighted';

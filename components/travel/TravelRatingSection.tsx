@@ -320,7 +320,7 @@ const createStyles = (colors: any) =>
         },
         successText: {
             fontSize: 13,
-            color: '#10b981',
+            color: colors.success,
             fontWeight: '600',
         },
         loginHint: {
@@ -335,4 +335,3 @@ const createStyles = (colors: any) =>
     });
 
 export default memo(TravelRatingSection);
-

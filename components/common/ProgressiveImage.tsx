@@ -6,6 +6,7 @@
 
 import React, { useMemo } from 'react'
 import { Image, View, StyleSheet, Platform, ImageStyle, ViewStyle } from 'react-native'
+import { useThemedColors } from '@/hooks/useTheme'
 import { useProgressiveImage, generateLQIP } from '@/hooks/useProgressiveImage'
 
 export interface ProgressiveImageProps {
@@ -61,6 +62,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
   testID,
   updatedAt,
 }) => {
+  const colors = useThemedColors()
   // Generate LQIP if not provided
   const lqip = useMemo(() => {
     if (placeholder) return placeholder
@@ -80,7 +82,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
   const computedContainerStyle = useMemo(() => {
     const base: ViewStyle = {
       overflow: 'hidden',
-      backgroundColor: '#f0f0f0',
+      backgroundColor: colors.mutedBackground,
     }
 
     if (width !== undefined) base.width = typeof width === 'number' ? width : width
@@ -88,7 +90,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
     if (aspectRatio) base.aspectRatio = aspectRatio
 
     return base
-  }, [width, height, aspectRatio])
+  }, [colors.mutedBackground, width, height, aspectRatio])
 
   // Build image style with blur and opacity
   const computedImageStyle = useMemo(() => {
@@ -143,7 +145,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
       {/* Loading skeleton overlay */}
       {!isLoaded && (
         <View style={styles.skeletonOverlay}>
-          <View style={styles.skeleton} />
+          <View style={[styles.skeleton, { backgroundColor: colors.borderLight }]} />
         </View>
       )}
     </View>
@@ -164,7 +166,6 @@ const styles = StyleSheet.create({
   skeleton: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#e0e0e0',
     ...(Platform.OS === 'web'
       ? {
           animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',

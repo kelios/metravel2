@@ -89,7 +89,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 <Feather
                     name="heart"
                     size={size}
-                    color={serverIsFav ? colors.danger : '#fff'}
+                    color={serverIsFav ? colors.danger : colors.textOnDark}
                     {...(!serverIsFav ? ({ style: { opacity: 0.85 } } as any) : null)}
                 />
             </WebView>
@@ -106,7 +106,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             <Feather
                 name="heart"
                 size={size}
-                color={serverIsFav ? colors.danger : '#fff'}
+                color={serverIsFav ? colors.danger : colors.textOnDark}
                 {...(!serverIsFav ? ({ style: { opacity: 0.85 } } as any) : null)}
             />
         </Pressable>

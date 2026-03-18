@@ -225,14 +225,8 @@ function StarRating({
     );
 }
 
-const STAR_COLOR_FILLED = '#e8a838';
-const STAR_COLOR_EMPTY = '#d4d0c8';
-const STAR_COLOR_EMPTY_DARK = '#6b6552'; // 🎨 Увеличен контраст для тёмной темы
-const STAR_COLOR_HOVER = '#f4b84d'; // 🎨 Цвет при hover
-
 const createStyles = (colors: any, config: { starSize: number; fontSize: number; gap: number }) => {
-    const isDarkTheme = colors.text?.includes?.('e8e4') || colors.text?.includes?.('d4d0');
-    const emptyColor = isDarkTheme ? STAR_COLOR_EMPTY_DARK : STAR_COLOR_EMPTY;
+    const emptyColor = colors.borderStrong;
 
     return StyleSheet.create({
         container: {
@@ -248,7 +242,7 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
         compactStarChar: {
             fontSize: config.starSize,
             lineHeight: config.starSize + 2,
-            color: STAR_COLOR_FILLED,
+            color: colors.warning,
             includeFontPadding: false,
         } as any,
         compactText: {
@@ -275,7 +269,7 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
         },
         starHovered: {
             ...(Platform.OS === 'web' && {
-                backgroundColor: isDarkTheme ? 'rgba(232,168,56,0.1)' : 'rgba(232,168,56,0.06)',
+                backgroundColor: colors.warningAlpha40,
             } as any),
         },
         starDisabled: {
@@ -297,7 +291,7 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
             } as any),
         } as any,
         starCharFilled: {
-            color: STAR_COLOR_FILLED,
+            color: colors.warning,
         },
         starCharEmpty: {
             color: emptyColor,
@@ -307,7 +301,7 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
         },
         starCharHovered: {
             ...(Platform.OS === 'web' && {
-                color: STAR_COLOR_HOVER,
+                color: colors.brand,
             } as any),
         },
         textContainer: {
@@ -328,4 +322,3 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
 };
 
 export default memo(StarRating);
-

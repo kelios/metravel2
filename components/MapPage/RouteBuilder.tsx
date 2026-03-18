@@ -80,7 +80,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
         {/* Start address */}
         <SafeView style={styles.addressRow}>
           <SafeView style={[styles.addressIcon, styles.startIcon]}>
-            <MapIcon name="trip-origin" size={compact ? 14 : 16} color="#fff" />
+            <MapIcon name="trip-origin" size={compact ? 14 : 16} color={colors.textOnDark} />
           </SafeView>
           <SafeView style={styles.addressInputWrapper}>
             <AddressSearch
@@ -102,7 +102,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
         {/* End address */}
         <SafeView style={styles.addressRow}>
           <SafeView style={[styles.addressIcon, styles.endIcon]}>
-            <MapIcon name="location-on" size={compact ? 14 : 16} color="#fff" />
+            <MapIcon name="location-on" size={compact ? 14 : 16} color={colors.textOnDark} />
           </SafeView>
           <SafeView style={styles.addressInputWrapper}>
             <AddressSearch

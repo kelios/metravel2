@@ -149,7 +149,7 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#fff',
+            color: colors.textOnDark,
             fontSize: 20,
             lineHeight: 1,
           }}
@@ -598,7 +598,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
             boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)',
           } as any)
         : {
-            shadowColor: '#000',
+            shadowColor: DESIGN_TOKENS.colors.text,
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.08,
             shadowRadius: 8,

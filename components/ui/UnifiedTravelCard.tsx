@@ -527,7 +527,7 @@ function UnifiedTravelCard({
 
       {onMediaPress && !showHeroTitle ? (
         <View style={[styles.mediaActionHint, { pointerEvents: 'none' }]}>
-          <Feather name="maximize-2" size={14} color="#fff" />
+          <Feather name="maximize-2" size={14} color={colors.textOnDark} />
         </View>
       ) : null}
 

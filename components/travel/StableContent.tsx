@@ -334,22 +334,13 @@ const prepareHtml = (html: string) => {
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
 const WEB_RICH_TEXT_STYLES_ID = "travel-rich-text-styles";
 
-/* Apple-style Clean Color Palette */
-const EDITORIAL_COLORS = {
-  textPrimary: '#1d1d1f',
-  textSecondary: '#424245',
-  textMuted: '#86868b',
-  accent: '#0071e3',
-  accentLight: 'rgba(0, 113, 227, 0.08)',
-};
-
 const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 17px;
   line-height: 1.58;
   letter-spacing: -0.003em;
-  color: ${EDITORIAL_COLORS.textSecondary};
+  color: ${colors.textMuted};
   width: 100%;
   max-width: 680px;
   margin: 0 auto;
@@ -366,7 +357,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} h2,
 .${WEB_RICH_TEXT_CLASS} h3 {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: ${EDITORIAL_COLORS.textPrimary};
+  color: ${colors.text};
   font-weight: 600;
   letter-spacing: -0.022em;
 }
@@ -644,7 +635,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 
 /* ===== APPLE-STYLE LINKS ===== */
 .${WEB_RICH_TEXT_CLASS} a {
-  color: ${EDITORIAL_COLORS.accent};
+  color: ${colors.primaryText};
   text-decoration: none;
   word-break: break-word;
   transition: opacity 0.2s;
@@ -656,7 +647,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   cursor: pointer;
 }
 .${WEB_RICH_TEXT_CLASS} a:focus-visible {
-  outline: 2px solid ${EDITORIAL_COLORS.accent};
+  outline: 2px solid ${colors.focusStrong};
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -680,10 +671,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} blockquote {
   margin: 1.8em 0;
   padding: 0 0 0 1.5em;
-  border-left: 3px solid #d2d2d7;
+  border-left: 3px solid ${colors.border};
   font-size: 17px;
   line-height: 1.58;
-  color: ${EDITORIAL_COLORS.textMuted};
+  color: ${colors.textSubtle};
   clear: both;
 }
 .${WEB_RICH_TEXT_CLASS} blockquote p {
@@ -709,7 +700,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} figcaption {
   text-align: center;
   font-size: 0.85rem;
-  color: ${EDITORIAL_COLORS.textMuted};
+  color: ${colors.textSubtle};
   font-style: italic;
   margin-top: 0.75em;
   padding: 0 2em;

@@ -17,6 +17,7 @@ import { FlashList } from '@shopify/flash-list'
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/ui/EmptyState'
 import { TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
+import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
@@ -118,6 +119,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      testID,
      listRef: externalListRef,
    }) => {
+    const colors = useThemedColors()
     const localListRef = useRef<any>(null)
     const listRef = externalListRef ?? localListRef
     const handleRecommendationsLayout = useCallback((_event: LayoutChangeEvent) => {
@@ -498,7 +500,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 {showNextPageLoading && (
                   <View style={[footerLoaderStyle, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
                     <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
-                    <Text style={{ fontSize: 13, color: '#888' }}>Загружаем ещё...</Text>
+                    <Text style={{ fontSize: 13, color: colors.textMuted }}>Загружаем ещё...</Text>
                   </View>
                 )}
               </ScrollView>

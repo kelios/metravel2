@@ -3,7 +3,7 @@
  * Provides haptic feedback, animations, and loading states
  */
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import {
   Pressable,
   Text,
@@ -65,6 +65,7 @@ export const InteractiveButton: React.FC<InteractiveButtonProps> = ({
   accessibilityLabel,
 }) => {
   const colors = useThemedColors()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const [isPressed, setIsPressed] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -148,7 +149,7 @@ export const InteractiveButton: React.FC<InteractiveButtonProps> = ({
   )
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -183,18 +184,18 @@ const styles = StyleSheet.create({
 
   // Variants (colors added dynamically)
   variant_primary: {
-    backgroundColor: '#FF6B00',
+    backgroundColor: colors.brand,
   },
   variant_secondary: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: colors.border,
   },
   variant_ghost: {
     backgroundColor: 'transparent',
   },
   variant_danger: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.danger,
   },
 
   // States
@@ -250,16 +251,16 @@ const styles = StyleSheet.create({
 
   // Text variants
   textVariant_primary: {
-    color: '#ffffff',
+    color: colors.textOnDark,
   },
   textVariant_secondary: {
-    color: '#1a1a1a',
+    color: colors.text,
   },
   textVariant_ghost: {
-    color: '#1a1a1a',
+    color: colors.text,
   },
   textVariant_danger: {
-    color: '#ffffff',
+    color: colors.textOnDark,
   },
   textDisabled: {
     opacity: 0.7,
