@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, Suspense, lazy, useState, memo, useMemo, useCallback } from 'react';
+import React, { useEffect, Suspense, lazy, useState, memo, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Platform, RefreshControl } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

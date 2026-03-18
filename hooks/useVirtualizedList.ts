@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { LayoutChangeEvent, NativeScrollEvent } from 'react-native'
+import { LayoutChangeEvent } from 'react-native'
 
 export interface VirtualizedListConfig {
   /** Height of each item in pixels */
@@ -136,26 +136,8 @@ export function useVirtualizedList<T>(
 export function useVariableVirtualizedList<T>(
   items: T[],
   estimatedItemHeight: number,
-  getItemHeight: (item: T, index: number) => number
+  _getItemHeight: (item: T, index: number) => number
 ): VirtualizedListReturn<T> {
-  // Calculate cumulative heights for fast lookup
-  const heightMap = useMemo(() => {
-    const map = new Map<number, number>()
-    let accumulated = 0
-
-    items.forEach((item, index) => {
-      const height = getItemHeight(item, index)
-      map.set(index, accumulated)
-      accumulated += height
-    })
-
-    map.set(items.length, accumulated) // Total height
-
-    return map
-  }, [items, getItemHeight])
-
-  const totalHeight = heightMap.get(items.length) || 0
-
   return useVirtualizedList(items, {
     itemHeight: estimatedItemHeight,
     overscan: 5, // Larger overscan for variable heights
@@ -167,8 +149,7 @@ export function useVariableVirtualizedList<T>(
  */
 export function useWindowedList<T>(
   items: T[],
-  windowSize: number = 20,
-  currentIndex: number = 0
+  windowSize: number = 20
 ): { visibleItems: T[]; hasMore: boolean; loadMore: () => void } {
   const [endIndex, setEndIndex] = useState(Math.min(windowSize, items.length))
 

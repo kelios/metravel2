@@ -168,7 +168,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         result.push(travels.slice(i, i + cols))
       }
       return result
-    }, [travels.length, gridColumns, isMobile])
+    }, [travels, gridColumns, isMobile])
 
     const rowSeparatorStyle = useMemo(() => ({ height: Platform.OS === 'web' ? cardSpacing + 4 : cardSpacing }), [cardSpacing])
     const RowSeparator = useCallback(() => {

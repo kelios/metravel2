@@ -4,6 +4,7 @@
  */
 
 import { Platform } from 'react-native'
+import * as React from 'react'
 
 /**
  * Check if unload/beforeunload is allowed by Permissions Policy
@@ -28,9 +29,8 @@ export function isUnloadAllowed(): boolean {
 
     // Check if 'unload' feature is allowed
     return permissionsPolicy.allowsFeature('unload')
-  } catch (error) {
+  } catch (_error) {
     // If we can't check, assume not allowed to be safe
-    console.warn('[beforeunloadGuard] Failed to check unload permission:', error)
     return false
   }
 }
@@ -51,12 +51,11 @@ export function addBeforeUnloadListener(
     return () => {
       try {
         window.removeEventListener('beforeunload', handler)
-      } catch (error) {
+      } catch (_error) {
         // Ignore cleanup errors
       }
     }
-  } catch (error) {
-    console.warn('[beforeunloadGuard] Failed to add beforeunload listener:', error)
+  } catch (_error) {
     return null
   }
 }
@@ -68,9 +67,8 @@ export function useBeforeUnload(
   handler: (event: BeforeUnloadEvent) => string | void,
   enabled: boolean = true
 ): void {
-  if (Platform.OS !== 'web') return
-
   React.useEffect(() => {
+    if (Platform.OS !== 'web') return
     if (!enabled) return
 
     const cleanup = addBeforeUnloadListener(handler)
@@ -106,12 +104,11 @@ export function addPageHideListener(
     return () => {
       try {
         window.removeEventListener('pagehide', handler)
-      } catch (error) {
+      } catch (_error) {
         // Ignore cleanup errors
       }
     }
-  } catch (error) {
-    console.warn('[beforeunloadGuard] Failed to add pagehide listener:', error)
+  } catch (_error) {
     return null
   }
 }
@@ -136,15 +133,11 @@ export function addVisibilityChangeListener(
     return () => {
       try {
         document.removeEventListener('visibilitychange', wrappedHandler)
-      } catch (error) {
+      } catch (_error) {
         // Ignore cleanup errors
       }
     }
-  } catch (error) {
-    console.warn('[beforeunloadGuard] Failed to add visibilitychange listener:', error)
+  } catch (_error) {
     return null
   }
 }
-
-// Re-export React for useBeforeUnload hook
-import * as React from 'react'

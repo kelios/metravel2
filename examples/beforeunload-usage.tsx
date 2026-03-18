@@ -45,7 +45,7 @@ export function FormWithUnsavedWarning() {
 // ============================================
 
 export function ManualBeforeUnloadExample() {
-  const [hasChanges, setHasChanges] = useState(false)
+  const [hasChanges] = useState(false)
 
   useEffect(() => {
     if (!hasChanges) return
@@ -77,7 +77,6 @@ export function AutoSaveOnLeave() {
       if (draft) {
         // Сохраняем в localStorage когда пользователь уходит
         localStorage.setItem('draft', draft)
-        console.log('Draft auto-saved')
       }
     })
 
@@ -100,7 +99,7 @@ export function AutoSaveOnLeave() {
 export function CleanupOnPageHide() {
   useEffect(() => {
     // ✅ ПРАВИЛЬНО: Используем pagehide для cleanup операций
-    const cleanup = addPageHideListener((event) => {
+    const cleanup = addPageHideListener(() => {
       // Отправить аналитику
       if (typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
         navigator.sendBeacon('/api/analytics', JSON.stringify({
@@ -177,7 +176,7 @@ export function WrongExamples() {
   // ❌ НЕПРАВИЛЬНО: Использование deprecated 'unload' event
   useEffect(() => {
     const handler = () => {
-      console.log('Page unloaded')
+      // Page unloaded
     }
 
     // unload deprecated и может быть заблокирован!

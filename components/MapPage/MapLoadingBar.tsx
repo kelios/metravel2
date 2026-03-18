@@ -51,11 +51,6 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
     outputRange: ['0%', '70%', '100%'],
   });
 
-  const gradientAnim = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
-
   return (
     <Animated.View
       style={[styles.container, { opacity, pointerEvents: 'none' }]}

@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useRef } from 'react'
-import { GestureResponderEvent, Platform, PanResponder } from 'react-native'
+import { GestureResponderEvent, PanResponder } from 'react-native'
 import { triggerHaptic } from '@/utils/travelDetailsUIUX'
 
 export interface SwipeGestureConfig {
@@ -53,7 +53,6 @@ export function useSwipeGesture(
   const {
     threshold = 50,
     maxDuration = 300,
-    velocityThreshold = 0.3,
     haptics = true,
     direction = 'horizontal',
   } = config
@@ -68,7 +67,6 @@ export function useSwipeGesture(
     (deltaX: number, deltaY: number, duration: number) => {
       const absX = Math.abs(deltaX)
       const absY = Math.abs(deltaY)
-      const velocity = Math.max(absX, absY) / duration
 
       // Check if meets threshold
       const meetsDistanceThreshold =
@@ -76,7 +74,6 @@ export function useSwipeGesture(
         (direction === 'vertical' && absY >= threshold) ||
         (direction === 'both' && (absX >= threshold || absY >= threshold))
 
-      const meetsVelocityThreshold = velocity >= velocityThreshold
       const meetsDurationThreshold = duration <= maxDuration
 
       if (!meetsDistanceThreshold || !meetsDurationThreshold) {
@@ -110,7 +107,7 @@ export function useSwipeGesture(
 
       return null
     },
-    [threshold, velocityThreshold, maxDuration, direction, haptics, handlers]
+    [threshold, maxDuration, direction, haptics, handlers]
   )
 
   const panResponder = useRef(

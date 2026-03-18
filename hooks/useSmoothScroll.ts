@@ -36,10 +36,8 @@ export function useSmoothScroll(
   options: UseSmoothScrollOptions = {}
 ): UseSmoothScrollReturn {
   const {
-    duration = 400,
     springType = 'gentle',
     enableSnap = false,
-    snapThreshold = 0.3,
     offset = 0,
   } = options
 
