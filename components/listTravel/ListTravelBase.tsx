@@ -1057,7 +1057,7 @@ function ListTravelBase({
         }
       }
 
-      if (Array.isArray(filter.transports) && filter.transports.length > 0) {
+      if (Array.isArray(filter.transports) && filter.transports.length > 0 && options?.transports) {
         const transportNames = (options.transports || [])
           .filter((t: any) => t?.name && filter.transports?.some((fid: any) => String(fid) === String(t.id)))
           .map((t: any) => t.name)
@@ -1067,7 +1067,7 @@ function ListTravelBase({
         }
       }
 
-      if (Array.isArray(filter.categoryTravelAddress) && filter.categoryTravelAddress.length > 0) {
+      if (Array.isArray(filter.categoryTravelAddress) && filter.categoryTravelAddress.length > 0 && options?.categoryTravelAddress) {
         const objectNames = (options.categoryTravelAddress || [])
           .filter((obj: any) => obj?.name && filter.categoryTravelAddress?.some((fid: any) => String(fid) === String(obj.id)))
           .map((obj: any) => obj.name)

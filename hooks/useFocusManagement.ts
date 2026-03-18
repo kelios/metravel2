@@ -14,7 +14,7 @@ export interface FocusOptions {
   /** Focus trap (don't allow focus outside) */
   trapFocus?: boolean
   /** Initial focus ref */
-  initialFocusRef?: React.RefObject<any>
+  initialFocusRef?: React.RefObject<HTMLElement | null>
 }
 
 export interface UseFocusManagementReturn {
@@ -31,7 +31,7 @@ export interface UseFocusManagementReturn {
   /** Focus last element */
   focusLast: () => void
   /** Register focusable element */
-  registerFocusable: (id: string, ref: React.RefObject<any>) => void
+  registerFocusable: (id: string, ref: React.RefObject<HTMLElement | null>) => void
   /** Unregister focusable element */
   unregisterFocusable: (id: string) => void
   /** Check if screen reader is enabled */
@@ -50,8 +50,8 @@ export function useFocusManagement(
 
   const [focusedId, setFocusedId] = useState<string | null>(null)
   const [isScreenReaderEnabled, setIsScreenReaderEnabled] = useState(false)
-  const focusableElements = useRef<Map<string, React.RefObject<any>>>(new Map())
-  const previousFocusRef = useRef<any>(null)
+  const focusableElements = useRef<Map<string, React.RefObject<HTMLElement | null>>>(new Map())
+  const previousFocusRef = useRef<HTMLElement | null>(null)
 
   /**
    * Check screen reader status
@@ -77,7 +77,7 @@ export function useFocusManagement(
    * Register focusable element
    */
   const registerFocusable = useCallback(
-    (id: string, ref: React.RefObject<any>) => {
+    (id: string, ref: React.RefObject<HTMLElement | null>) => {
       focusableElements.current.set(id, ref)
     },
     []

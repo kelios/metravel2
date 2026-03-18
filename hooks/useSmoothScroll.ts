@@ -31,8 +31,14 @@ export interface UseSmoothScrollReturn {
   scrollY: Animated.Value
 }
 
+interface ScrollableElement {
+  scrollTo?: (options: { x?: number; y?: number; animated?: boolean }) => void;
+  addEventListener?: (event: string, handler: () => void, options?: { passive?: boolean }) => void;
+  removeEventListener?: (event: string, handler: () => void) => void;
+}
+
 export function useSmoothScroll(
-  scrollViewRef: React.RefObject<any>,
+  scrollViewRef: React.RefObject<ScrollableElement>,
   options: UseSmoothScrollOptions = {}
 ): UseSmoothScrollReturn {
   const {
@@ -172,7 +178,7 @@ export function getScrollBehavior(): ScrollBehavior {
  * Scroll to top with animation
  */
 export function scrollToTop(
-  scrollViewRef: React.RefObject<any>,
+  scrollViewRef: React.RefObject<ScrollableElement>,
   animated: boolean = true
 ): void {
   if (!scrollViewRef.current) return

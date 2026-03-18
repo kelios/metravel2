@@ -17,13 +17,22 @@ export interface VirtualizedListConfig {
   debug?: boolean
 }
 
+interface ScrollEvent {
+  nativeEvent?: {
+    contentOffset?: { y: number };
+  };
+  currentTarget?: {
+    scrollTop: number;
+  };
+}
+
 export interface VirtualizedListReturn<T> {
   /** Visible items to render */
   visibleItems: Array<{ item: T; index: number; offset: number }>
   /** Total height for scroll container */
   totalHeight: number
   /** Scroll handler for ScrollView */
-  onScroll: (event: any) => void
+  onScroll: (event: ScrollEvent) => void
   /** Layout handler for container */
   onLayout: (event: LayoutChangeEvent) => void
   /** Current scroll position */
@@ -64,8 +73,8 @@ export function useVirtualizedList<T>(
       })
     }
 
-    if (debug) {
-      console.log(`[VirtualizedList] Rendering ${visible.length}/${items.length} items`, {
+    if (debug && __DEV__) {
+      console.info(`[VirtualizedList] Rendering ${visible.length}/${items.length} items`, {
         start,
         end,
         scrollY,
@@ -83,7 +92,7 @@ export function useVirtualizedList<T>(
   /**
    * Handle scroll events with throttling
    */
-  const onScroll = useCallback((event: any) => {
+  const onScroll = useCallback((event: ScrollEvent) => {
     if (rafId.current) {
       cancelAnimationFrame(rafId.current)
     }

@@ -39,7 +39,14 @@ export interface SwipeGestureHandlers {
 
 export interface UseSwipeGestureReturn {
   /** Pan responder handlers to spread on component */
-  panHandlers: any
+  panHandlers: {
+    onStartShouldSetPanResponder: () => boolean;
+    onMoveShouldSetPanResponder: () => boolean;
+    onPanResponderGrant: (evt: GestureResponderEvent) => void;
+    onPanResponderMove: (evt: GestureResponderEvent) => void;
+    onPanResponderRelease: (evt: GestureResponderEvent) => void;
+    onPanResponderTerminate: () => void;
+  }
   /** Current drag position */
   dragPosition: { x: number; y: number }
   /** Whether currently dragging */
