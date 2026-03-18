@@ -194,7 +194,7 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
           height: '100%',
         } as any,
         default: {
-          shadowColor: '#000',
+          shadowColor: DESIGN_TOKENS.colors.text,
           shadowOffset: { width: 0, height: 3 },
           shadowOpacity: 0.08,
           shadowRadius: 10,
@@ -309,7 +309,7 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
     titleOverlayText: {
       fontSize: isMobile ? 16 : 18,
       fontWeight: '700',
-      color: '#fff',
+      color: colors.textOnDark,
       lineHeight: isMobile ? 22 : 25,
       letterSpacing: -0.25,
       ...Platform.select({
@@ -381,7 +381,7 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
     },
     metaRatingStar: {
       fontSize: 10,
-      color: '#f59e0b',
+      color: colors.warning,
     },
     metaRatingText: {
       fontSize: 11,

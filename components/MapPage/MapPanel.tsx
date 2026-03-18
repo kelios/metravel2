@@ -1,5 +1,6 @@
 import React, { Suspense, useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
 import { MapSkeleton } from '@/components/ui/SkeletonLoader';
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
               } as any)
             : {
-                  shadowColor: '#000',
+                  shadowColor: DESIGN_TOKENS.colors.text,
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.15,
                   shadowRadius: 12,

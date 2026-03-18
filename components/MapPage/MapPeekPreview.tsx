@@ -4,6 +4,7 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { parseCoordinateString } from '@/utils/coordinates';
@@ -225,7 +226,7 @@ const getStyles = (colors: ThemedColors) =>
             transition: 'all 0.2s ease',
           } as any)
         : {
-            shadowColor: '#000',
+            shadowColor: DESIGN_TOKENS.colors.text,
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.08,
             shadowRadius: 4,

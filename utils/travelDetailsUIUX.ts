@@ -4,7 +4,7 @@
  */
 
 import { Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { getThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 /**
@@ -52,20 +52,12 @@ export function getAccessibleColor(lightMode: boolean): {
   background: string;
   primary: string;
 } {
-  if (lightMode) {
-    return {
-      text: '#1a1a1a', // AAA contrast against white
-      textMuted: '#4a4a4a', // AAA contrast against white
-      background: '#ffffff',
-      primary: '#0066cc', // AAA contrast against white
-    };
-  }
-
+  const colors = getThemedColors(!lightMode);
   return {
-    text: '#f5f5f5',
-    textMuted: '#b0b0b0',
-    background: '#1a1a1a',
-    primary: '#66b3ff',
+    text: colors.text,
+    textMuted: colors.textMuted,
+    background: lightMode ? DESIGN_COLORS.themeColorLight : DESIGN_COLORS.themeColorDark,
+    primary: colors.primary,
   };
 }
 

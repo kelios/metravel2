@@ -31,14 +31,14 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
           boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
         } as any,
         ios: {
-          shadowColor: '#000',
+          shadowColor: DESIGN_TOKENS.colors.text,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.08,
           shadowRadius: 12,
         },
         android: { elevation: 3 },
         default: {
-          shadowColor: '#000',
+          shadowColor: DESIGN_TOKENS.colors.text,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.08,
           shadowRadius: 12,
@@ -210,7 +210,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     metaRatingStar: {
       fontSize: Platform.OS === 'web' ? 11 : 10,
       lineHeight: Platform.OS === 'web' ? 14 : 12,
-      color: '#e8a838',
+      color: colors.warning,
     },
 
     metaRatingValue: {

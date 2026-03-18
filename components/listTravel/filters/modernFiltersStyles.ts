@@ -43,7 +43,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
           boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
         } as any,
         ios: {
-          shadowColor: '#000',
+          shadowColor: DESIGN_TOKENS.colors.text,
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.15,
           shadowRadius: 12,
@@ -639,9 +639,9 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%)',
+          background: `linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 50%, ${colors.brand} 100%)`,
           backgroundSize: '200% 100%',
-          boxShadow: '0 4px 16px rgba(59, 130, 246, 0.35), 0 2px 8px rgba(139, 92, 246, 0.2)',
+          boxShadow: `0 4px 16px ${colors.primaryAlpha30}, 0 2px 8px ${colors.brandAlpha40}`,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         } as any,
         ios: {

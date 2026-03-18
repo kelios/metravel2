@@ -39,14 +39,14 @@ export function openPendingBookPreviewWindow(): Window | null {
     display: grid;
     place-items: center;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #223042;
-    background: #f6f9fc;
+    color: var(--color-text);
+    background: var(--color-backgroundSecondary);
   }
   .card {
-    border: 1px solid #d8e2ee;
+    border: 1px solid var(--color-borderLight);
     border-radius: 12px;
     padding: 18px 20px;
-    background: #ffffff;
+    background: var(--color-surface);
     box-shadow: 0 8px 18px rgba(20, 45, 70, 0.08);
     font-size: 15px;
     font-weight: 600;

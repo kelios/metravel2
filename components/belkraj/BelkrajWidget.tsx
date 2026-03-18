@@ -99,8 +99,8 @@ function BelkrajWidget({
                 overflow: allowScroll ? 'auto' : 'hidden',
                 overflowX: 'hidden',
                 overflowY: allowScroll ? 'auto' : 'hidden',
-                border: '1px solid var(--color-border, #e8e4df)',
-                background: 'var(--color-surface, #ffffff)',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-surface)',
                 boxShadow: 'var(--shadow-light, 0 1px 4px rgba(0,0,0,0.06))',
                 ...(allowScroll ? {
                     height: targetHeight,

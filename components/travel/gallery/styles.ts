@@ -71,7 +71,7 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           },
         },
         default: {
-          shadowColor: '#000',
+          shadowColor: DESIGN_TOKENS.colors.text,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.08,
           shadowRadius: 8,
@@ -97,9 +97,9 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
       zIndex: 9999,
       elevation: 9999,
       // ✅ УЛУЧШЕНИЕ: Улучшенный фон с blur эффектом
-      backgroundColor: 'rgba(220, 38, 38, 0.9)',
+      backgroundColor: colors.danger,
       borderWidth: 2,
-      borderColor: 'rgba(255, 255, 255, 0.9)',
+      borderColor: colors.textOnDark,
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -108,15 +108,15 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
           transition: 'all 0.2s ease',
           ':hover': {
             transform: 'scale(1.1)',
-            backgroundColor: 'rgba(220, 38, 38, 1)',
-            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)',
+            backgroundColor: colors.dangerDark,
+            boxShadow: `0 4px 12px ${colors.dangerSoft}`,
           },
           ':active': {
             transform: 'scale(0.95)',
           },
         },
         default: {
-          shadowColor: '#000',
+          shadowColor: DESIGN_TOKENS.colors.text,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.3,
           shadowRadius: 4,

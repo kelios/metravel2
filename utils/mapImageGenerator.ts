@@ -23,7 +23,7 @@ function ensureLeafletSnapshotStyles(): void {
   style.textContent = `
     .leaflet-container {
       overflow: hidden;
-      background: #d7e3f2;
+      background: ${DESIGN_TOKENS.colors.backgroundSecondary};
       outline: 0;
       position: relative;
       font-family: sans-serif;

@@ -535,7 +535,7 @@ const getStyles = (
             WebkitBackdropFilter: 'blur(8px)',
           } as any)
         : {
-            shadowColor: '#000',
+            shadowColor: DESIGN_TOKENS.colors.text,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.08,
             shadowRadius: 3,
@@ -573,7 +573,7 @@ const getStyles = (
             transition: 'all 0.15s ease',
           } as any)
         : {
-            shadowColor: '#000',
+            shadowColor: DESIGN_TOKENS.colors.text,
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.05,
             shadowRadius: 3,

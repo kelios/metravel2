@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import * as ReactQuery from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import type { ImportedPoint } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
@@ -19,7 +20,7 @@ type PointLike = {
   categoryName?: string | { name?: string } | Array<string | { name?: string }>;
 };
 
-const DEFAULT_TRAVEL_POINT_COLOR = '#4F46E5';
+const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_TOKENS.colors.travelPoint;
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 export function usePointListAddPointModel({

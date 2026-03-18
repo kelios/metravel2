@@ -68,7 +68,7 @@ const WebVideo = memo(function WebVideo({ src, poster, onError }: { src?: string
         playsInline: true,
         preload: 'metadata',
         // @ts-ignore -- inline style object for web video element, not a RN StyleSheet type
-        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' },
+        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', backgroundColor: _DESIGN_TOKENS.colors.text },
         onError: (e: any) => {
             console.error('[WebVideo] Video error:', e?.target?.error);
             onError();
@@ -116,12 +116,12 @@ const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 };
 // Modern design constants
 const QUEST_DESIGN = {
     // Cinematic gradients
-    headerGradient: 'linear-gradient(135deg, #1a2f23 0%, #2d4a3e 50%, #1a2f23 100%)',
+    headerGradient: 'linear-gradient(135deg, var(--color-background) 0%, var(--color-primaryDark) 50%, var(--color-background) 100%)',
     cardGlow: '0 8px 32px rgba(245, 132, 44, 0.08), 0 2px 8px rgba(0,0,0,0.04)',
     cardHoverGlow: '0 16px 48px rgba(245, 132, 44, 0.15), 0 4px 12px rgba(0,0,0,0.08)',
     // Step pill colors
-    stepActiveGradient: 'linear-gradient(135deg, #f5842c 0%, #e07020 100%)',
-    stepDoneGradient: 'linear-gradient(135deg, #527d66 0%, #426d56 100%)',
+    stepActiveGradient: 'linear-gradient(135deg, var(--color-brand) 0%, var(--color-brandDark) 100%)',
+    stepDoneGradient: 'linear-gradient(135deg, var(--color-success) 0%, var(--color-successDark) 100%)',
     // Typography
     titleSize: 28,
     sectionTitleSize: 11,
@@ -1511,7 +1511,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             } as any,
             android: { elevation: 3 },
             ios: {
-                shadowColor: '#f5842c',
+                shadowColor: colors.brand,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.08,
                 shadowRadius: 16,
@@ -1985,7 +1985,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     videoFrame: {
         alignSelf: 'center',
-        backgroundColor: '#000',
+        backgroundColor: colors.text,
         borderRadius: 12,
         overflow: 'hidden',
         marginBottom: SPACING.md,
@@ -2020,9 +2020,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     animatedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     zoomedImage: { width: '100%', height: '100%' },
     closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    closeButtonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+    closeButtonText: { color: colors.textOnDark, fontSize: 18, fontWeight: 'bold' },
     zoomHintContainer: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' },
-    zoomHint: { color: '#fff', fontSize: 14, backgroundColor: 'rgba(0,0,0,0.55)', padding: 10, borderRadius: 8 },
+    zoomHint: { color: colors.textOnDark, fontSize: 14, backgroundColor: 'rgba(0,0,0,0.55)', padding: 10, borderRadius: 8 },
 
     flipBadge: {
         paddingHorizontal: 28, 
@@ -2035,7 +2035,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             } as any,
             ios: { 
                 backgroundColor: colors.success,
-                shadowColor: '#527d66', 
+                shadowColor: colors.success, 
                 shadowOffset: { width: 0, height: 8 }, 
                 shadowOpacity: 0.35, 
                 shadowRadius: 20,
@@ -2047,7 +2047,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
     },
     flipText: { 
-        color: '#fff', 
+        color: colors.textOnDark, 
         fontWeight: '800', 
         fontSize: 18, 
         letterSpacing: -0.3,

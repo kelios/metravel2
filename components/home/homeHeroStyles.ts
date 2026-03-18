@@ -1084,7 +1084,7 @@ export const createHomeHeroStyles = ({
     tabletFeaturedTitle: {
       fontSize: 22,
       fontWeight: '700' as const,
-      color: '#FFFFFF',
+      color: colors.textOnDark,
       marginBottom: 4,
       letterSpacing: -0.3,
       ...Platform.select({
@@ -1351,15 +1351,15 @@ export const createHomeHeroStyles = ({
     },
     bookHighlightTextWrap: { flex: 1, gap: 2 },
     highlightTitle: {
-      color: '#2A1F14',
+      color: colors.text,
       fontSize: 13,
       lineHeight: 17,
       fontWeight: '600',
       letterSpacing: -0.1,
     },
-    highlightSubtitle: { color: '#8B7D6B', fontSize: 12, lineHeight: 16 },
+    highlightSubtitle: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
     bookHighlightTitle: {
-      color: '#2A1F14',
+      color: colors.text,
       fontSize: isMobile ? 12 : 13,
       lineHeight: isMobile ? 16 : 18,
       fontWeight: '600',
@@ -1367,7 +1367,7 @@ export const createHomeHeroStyles = ({
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
     bookHighlightSubtitle: {
-      color: '#8B7D6B',
+      color: colors.textMuted,
       fontSize: isMobile ? 10 : 11,
       lineHeight: isMobile ? 14 : 15,
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
@@ -1632,7 +1632,7 @@ export const createHomeHeroStyles = ({
     popularTitle: {
       fontSize: 13,
       fontWeight: '600',
-      color: '#8B7D6B',
+      color: colors.textMuted,
       marginBottom: 18,
       textTransform: 'uppercase',
       letterSpacing: 1.6,
@@ -1686,7 +1686,7 @@ export const createHomeHeroStyles = ({
     featuredCardTitle: {
       fontSize: isMobile ? 20 : 24,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: colors.textOnDark,
       marginBottom: 6,
       letterSpacing: -0.4,
       ...Platform.select({
@@ -1737,7 +1737,7 @@ export const createHomeHeroStyles = ({
     imageCardTitle: {
       fontSize: 15,
       fontWeight: '600',
-      color: '#2A1F14',
+      color: colors.text,
       lineHeight: 20,
       letterSpacing: -0.2,
       ...Platform.select({ web: { fontFamily: editorialSerif } as any }),
@@ -1745,7 +1745,7 @@ export const createHomeHeroStyles = ({
     imageCardSubtitle: {
       fontSize: 13,
       fontWeight: '400',
-      color: '#8B7D6B',
+      color: colors.textMuted,
       lineHeight: 18,
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
