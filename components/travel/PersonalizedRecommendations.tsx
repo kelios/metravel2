@@ -267,8 +267,9 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <Text style={styles.sectionTitle}>Избранное</Text>
                     <ScrollView
                         horizontal
-                        showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                        showsHorizontalScrollIndicator={false}
                         nestedScrollEnabled
+                        scrollEnabled={true}
                         style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
@@ -285,8 +286,9 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <Text style={styles.sectionTitle}>Недавно просмотрено</Text>
                     <ScrollView
                         horizontal
-                        showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                        showsHorizontalScrollIndicator={false}
                         nestedScrollEnabled
+                        scrollEnabled={true}
                         style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
@@ -303,8 +305,9 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <Text style={styles.sectionTitle}>Рекомендации</Text>
                     <ScrollView
                         horizontal
-                        showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                        showsHorizontalScrollIndicator={false}
                         nestedScrollEnabled
+                        scrollEnabled={true}
                         style={styles.webHorizontalScroll}
                         contentContainerStyle={styles.scrollContent}
                         removeClippedSubviews={Platform.OS !== "web"}
@@ -409,14 +412,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     scrollContent: {
         paddingHorizontal: 4,
         paddingVertical: 4,
-        flexDirection: 'row',
-        flexWrap: 'nowrap',
-        ...(Platform.select({
-            web: {
-                width: 'max-content',
-            } as any,
-            default: {},
-        }) as any),
+        gap: 12,
     },
     webHorizontalScroll: {
         ...Platform.select({
@@ -425,7 +421,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 overflowY: 'hidden',
                 width: '100%',
                 WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-x pan-y',
+                touchAction: 'pan-x',
             } as any,
             default: {},
         }),

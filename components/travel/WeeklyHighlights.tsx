@@ -183,10 +183,12 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
             )}
             <ScrollView
                 horizontal
-                showsHorizontalScrollIndicator={Platform.OS === 'web'}
+                showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
                 removeClippedSubviews={Platform.OS !== "web"}
                 decelerationRate="fast"
+                scrollEnabled={true}
+                nestedScrollEnabled={true}
                 // Явно включаем горизонтальный скролл на вебе
                 style={Platform.select({
                     web: {
@@ -323,14 +325,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 12,
         paddingVertical: 6,
-        flexDirection: 'row',
-        flexWrap: 'nowrap',
-        ...(Platform.select({
-            web: {
-                width: 'max-content',
-            } as any,
-            default: {},
-        }) as any),
+        gap: 12,
     },
 });
 
