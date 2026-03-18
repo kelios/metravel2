@@ -556,15 +556,22 @@ function ListTravelBase({
         return 1;
       }
 
+      let columns: number;
+
       if (isMobileDevice) {
-        return calculateColumns(width, resolvedIsPortrait ? 'portrait' : 'landscape');
+        columns = calculateColumns(width, resolvedIsPortrait ? 'portrait' : 'landscape');
+      } else if (!isTablet || !resolvedIsPortrait) {
+        columns = calculateColumns(effectiveWidth, 'landscape');
+      } else {
+        columns = calculateColumns(effectiveWidth, 'portrait');
       }
 
-      if (!isTablet || !resolvedIsPortrait) {
-        return calculateColumns(effectiveWidth, 'landscape');
+      // Search desktop should stay at 3 columns max so cards match the larger editorial layout.
+      if (!isMobileDevice && effectiveWidth >= BREAKPOINTS.DESKTOP) {
+        return Math.min(columns, 3);
       }
 
-      return calculateColumns(effectiveWidth, 'portrait');
+      return columns;
     }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, resolvedIsPortrait, width]);
 
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {

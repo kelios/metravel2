@@ -105,7 +105,7 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.width).toBe(320);
-    expect(props.height).toBe(192);
+    expect(props.width).toBe(288);
+    expect(props.height).toBe(156);
   });
 });

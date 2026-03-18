@@ -197,6 +197,99 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     width: isMobile ? '100%' : undefined,
     minHeight: isMobile ? 200 : 280,
   },
+  editorialGrid: {
+    width: '100%',
+    gap: isMobile ? 12 : 18,
+    ...Platform.select({
+      web: !isMobile
+        ? ({
+            display: 'grid',
+            gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
+            alignItems: 'stretch',
+          } as any)
+        : null,
+    }),
+  },
+  editorialGridThree: Platform.select({
+    web: !isMobile
+      ? ({
+          gridTemplateRows: 'minmax(320px, auto) minmax(252px, auto)',
+        } as any)
+      : {},
+  }) as any,
+  editorialGridFour: Platform.select({
+    web: !isMobile
+      ? ({
+          gridTemplateRows: 'minmax(252px, auto) minmax(252px, auto)',
+        } as any)
+      : {},
+  }) as any,
+  editorialCard: {
+    minWidth: 0,
+    ...Platform.select({
+      web: !isMobile
+        ? ({
+            height: '100%',
+          } as any)
+        : null,
+    }),
+  },
+  editorialCardHero: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '1 / span 7',
+          gridRow: '1 / span 2',
+        } as any)
+      : {},
+  }) as any,
+  editorialCardTop: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '8 / span 5',
+          gridRow: '1 / span 1',
+        } as any)
+      : {},
+  }) as any,
+  editorialCardBottomLeft: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '1 / span 6',
+          gridRow: '2 / span 1',
+        } as any)
+      : {},
+  }) as any,
+  editorialCardBottomRight: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '7 / span 6',
+          gridRow: '2 / span 1',
+        } as any)
+      : {},
+  }) as any,
+  editorialCardSideTop: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '8 / span 5',
+          gridRow: '1 / span 1',
+        } as any)
+      : {},
+  }) as any,
+  editorialCardBottomWideLeft: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '1 / span 6',
+          gridRow: '2 / span 1',
+        } as any)
+      : {},
+  }) as any,
+  editorialCardBottomWideRight: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '7 / span 6',
+          gridRow: '2 / span 1',
+        } as any)
+      : {},
+  }) as any,
   viewMoreButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingHorizontal: isMobile ? 20 : 28, paddingVertical: isMobile ? 13 : 16,
@@ -396,4 +489,3 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   chipText: { color: colors.text, fontSize: isMobile ? 13 : 14, lineHeight: isMobile ? 18 : 20, fontWeight: '500' },
   chipTextSelected: { color: colors.primaryText, fontWeight: '700' },
 });
-

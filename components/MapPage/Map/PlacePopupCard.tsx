@@ -248,6 +248,12 @@ const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: nu
   default: { gap: 14, btnPadV: 12, btnPadH: 16, radius: 14, iconButtonSize: 48, sectionGap: 18 },
 };
 
+const COMPACT_LAYOUT_SPACING: Record<BreakpointKey, { radius: number; iconButtonSize: number; sectionGap: number; horizontalPadding: number; topPadding: number; bottomPadding: number; metaMinHeight: number; coordMinHeight: number; addBtnMinHeight: number }> = {
+  narrow: { radius: 10, iconButtonSize: 40, sectionGap: 10, horizontalPadding: 10, topPadding: 10, bottomPadding: 12, metaMinHeight: 28, coordMinHeight: 44, addBtnMinHeight: 44 },
+  compact: { radius: 11, iconButtonSize: 42, sectionGap: 11, horizontalPadding: 11, topPadding: 11, bottomPadding: 13, metaMinHeight: 28, coordMinHeight: 44, addBtnMinHeight: 44 },
+  default: { radius: 12, iconButtonSize: 44, sectionGap: 12, horizontalPadding: 12, topPadding: 12, bottomPadding: 14, metaMinHeight: 28, coordMinHeight: 46, addBtnMinHeight: 46 },
+};
+
 const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
   narrow: 300,
   compact: 348,
@@ -255,9 +261,9 @@ const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
 };
 
 const COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 272,
-  compact: 300,
-  default: 320,
+  narrow: 248,
+  compact: 268,
+  default: 288,
 };
 
 const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
@@ -267,9 +273,9 @@ const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
 };
 
 const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 148,
-  compact: 172,
-  default: 192,
+  narrow: 132,
+  compact: 148,
+  default: 156,
 };
 
 const PlacePopupCard: React.FC<Props> = ({
@@ -562,24 +568,19 @@ const IMAGE_ASPECT: Record<BreakpointKey, number> = {
 const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, compactLayout: boolean) => {
   const sp = SPACING[bp];
   const fs = FONT_SIZES[bp];
+  const compactSp = COMPACT_LAYOUT_SPACING[bp];
   const horizontalPadding = compactLayout
-    ? bp === 'narrow'
-      ? 10
-      : 12
+    ? compactSp.horizontalPadding
     : bp === 'narrow'
       ? 12
       : 14;
   const topPadding = compactLayout
-    ? bp === 'narrow'
-      ? 10
-      : 12
+    ? compactSp.topPadding
     : bp === 'narrow'
       ? 12
       : 14;
   const bottomPadding = compactLayout
-    ? bp === 'narrow'
-      ? 12
-      : 14
+    ? compactSp.bottomPadding
     : bp === 'narrow'
       ? 14
       : 16;
@@ -593,7 +594,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     popupCard: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: sp.radius + 2,
+      borderRadius: (compactLayout ? compactSp.radius : sp.radius) + 2,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
@@ -616,11 +617,11 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     },
     imageExpandButton: {
       position: 'absolute',
-      top: 10,
-      right: 10,
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      top: compactLayout ? 8 : 10,
+      right: compactLayout ? 8 : 10,
+      width: compactLayout ? 32 : 36,
+      height: compactLayout ? 32 : 36,
+      borderRadius: compactLayout ? 16 : 18,
       backgroundColor: 'rgba(0,0,0,0.5)',
       alignItems: 'center',
       justifyContent: 'center',
@@ -632,10 +633,10 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       paddingBottom: bottomPadding,
     },
     content: {
-      gap: compactLayout ? Math.max(10, sp.sectionGap - 4) : sp.sectionGap,
+      gap: compactLayout ? compactSp.sectionGap : sp.sectionGap,
     },
     infoSection: {
-      gap: compactLayout ? 8 : bp === 'narrow' ? 10 : 12,
+      gap: compactLayout ? 6 : bp === 'narrow' ? 10 : 12,
     },
     metaRow: {
       flexDirection: 'row',
@@ -646,10 +647,10 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     metaBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 7,
-      minHeight: 30,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
+      gap: compactLayout ? 6 : 7,
+      minHeight: compactLayout ? compactSp.metaMinHeight : 30,
+      paddingHorizontal: compactLayout ? 10 : 12,
+      paddingVertical: compactLayout ? 6 : 7,
       borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: 1,
@@ -686,11 +687,11 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     coordRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, 48),
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: sp.radius,
+      gap: compactLayout ? 8 : 10,
+      minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, compactLayout ? compactSp.coordMinHeight : 48),
+      paddingHorizontal: compactLayout ? 12 : 14,
+      paddingVertical: compactLayout ? 10 : 12,
+      borderRadius: compactLayout ? compactSp.radius : sp.radius,
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
       borderWidth: 1.5,
       borderColor: colors.primaryAlpha30 ?? colors.border,
@@ -721,14 +722,14 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     actionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: bp === 'narrow' ? 8 : 10,
+      gap: compactLayout ? 8 : bp === 'narrow' ? 8 : 10,
     },
     iconBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: sp.iconButtonSize,
-      height: sp.iconButtonSize,
-      borderRadius: sp.radius,
+      width: compactLayout ? compactSp.iconButtonSize : sp.iconButtonSize,
+      height: compactLayout ? compactSp.iconButtonSize : sp.iconButtonSize,
+      borderRadius: compactLayout ? compactSp.radius : sp.radius,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight ?? colors.border,
@@ -737,9 +738,9 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     actionBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: sp.iconButtonSize,
-      height: sp.iconButtonSize,
-      borderRadius: sp.radius,
+      width: compactLayout ? compactSp.iconButtonSize : sp.iconButtonSize,
+      height: compactLayout ? compactSp.iconButtonSize : sp.iconButtonSize,
+      borderRadius: compactLayout ? compactSp.radius : sp.radius,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight ?? colors.border,
@@ -757,10 +758,10 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 9,
-      minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, 48),
-      paddingVertical: sp.btnPadV + 2,
-      paddingHorizontal: sp.btnPadH + 6,
+      gap: compactLayout ? 7 : 9,
+      minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, compactLayout ? compactSp.addBtnMinHeight : 48),
+      paddingVertical: compactLayout ? sp.btnPadV : sp.btnPadV + 2,
+      paddingHorizontal: compactLayout ? sp.btnPadH + 2 : sp.btnPadH + 6,
       borderRadius: DESIGN_TOKENS.radii.pill,
       borderWidth: 1.5,
       borderColor: colors.primary,
@@ -775,7 +776,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       opacity: 0.7,
     },
     addBtnText: {
-      fontSize: bp === 'narrow' ? 14 : fs.small,
+      fontSize: compactLayout ? fs.small - 1 : bp === 'narrow' ? 14 : fs.small,
       fontWeight: '600',
       color: colors.primary,
     },

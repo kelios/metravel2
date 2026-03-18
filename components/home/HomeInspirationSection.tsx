@@ -183,6 +183,30 @@ export function HomeInspirationSection({
   };
 
   const styles = useMemo(() => createSectionStyles(colors, isMobile), [colors, isMobile]);
+  const isDesktopEditorial = Platform.OS === 'web' && !isMobile;
+
+  const getEditorialCardStyle = useCallback((index: number, count: number) => {
+    if (count === 1) return styles.editorialCardHero;
+    if (count === 2) return index === 0 ? styles.editorialCardHero : styles.editorialCardTop;
+    if (count === 3) {
+      if (index === 0) return styles.editorialCardHero;
+      if (index === 1) return styles.editorialCardBottomLeft;
+      return styles.editorialCardBottomRight;
+    }
+
+    if (index === 0) return styles.editorialCardHero;
+    if (index === 1) return styles.editorialCardSideTop;
+    if (index === 2) return styles.editorialCardBottomWideLeft;
+    return styles.editorialCardBottomWideRight;
+  }, [
+    styles.editorialCardBottomLeft,
+    styles.editorialCardBottomRight,
+    styles.editorialCardBottomWideLeft,
+    styles.editorialCardBottomWideRight,
+    styles.editorialCardHero,
+    styles.editorialCardSideTop,
+    styles.editorialCardTop,
+  ]);
 
   if (isLoading) {
     return (
@@ -200,6 +224,26 @@ export function HomeInspirationSection({
               Array.from({ length: 2 }).map((_, i) => (
                 <SkeletonLoader key={i} width="100%" height={260} borderRadius={12} />
               ))
+            ) : isDesktopEditorial ? (
+              <View
+                style={[
+                  styles.editorialGrid,
+                  styles.editorialGridFour,
+                ]}
+              >
+                <View style={[styles.editorialCard, styles.editorialCardHero]}>
+                  <SkeletonLoader width="100%" height="100%" borderRadius={12} />
+                </View>
+                <View style={[styles.editorialCard, styles.editorialCardSideTop]}>
+                  <SkeletonLoader width="100%" height="100%" borderRadius={12} />
+                </View>
+                <View style={[styles.editorialCard, styles.editorialCardBottomWideLeft]}>
+                  <SkeletonLoader width="100%" height="100%" borderRadius={12} />
+                </View>
+                <View style={[styles.editorialCard, styles.editorialCardBottomWideRight]}>
+                  <SkeletonLoader width="100%" height="100%" borderRadius={12} />
+                </View>
+              </View>
             ) : (
               [0, 1].map((rowIdx) => {
                 const wideFirst = rowIdx % 2 === 0;
@@ -271,6 +315,38 @@ export function HomeInspirationSection({
                     />
                   </View>
                 </React.Fragment>
+              );
+            })}
+          </View>
+        ) : isDesktopEditorial && travelsList.length >= 2 ? (
+          <View
+            style={[
+              styles.editorialGrid,
+              travelsList.length === 3 ? styles.editorialGridThree : styles.editorialGridFour,
+            ]}
+          >
+            {travelsList.slice(0, 4).map((item: any, index: number) => {
+              const key = item?.id != null && String(item.id).length > 0
+                ? String(item.id)
+                : item?.url ? String(item.url) : `${queryKey}-${index}`;
+
+              return (
+                <View
+                  key={key}
+                  style={[
+                    styles.editorialCard,
+                    getEditorialCardStyle(index, Math.min(travelsList.length, 4)),
+                  ]}
+                >
+                  <RenderTravelItem
+                    item={item}
+                    index={index}
+                    isMobile={isMobile}
+                    hideAuthor={hideAuthor}
+                    viewportWidth={viewportWidth}
+                    visualVariant="home-featured"
+                  />
+                </View>
               );
             })}
           </View>
