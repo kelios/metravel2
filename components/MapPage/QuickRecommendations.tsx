@@ -167,6 +167,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
           horizontal
           showsHorizontalScrollIndicator={false}
           nestedScrollEnabled={true}
+          scrollEnabled={true}
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
         >
@@ -203,8 +204,6 @@ const getStyles = (colors: ThemedColors) =>
     scrollContent: {
       paddingHorizontal: 8,
       gap: 12,
-      flexDirection: 'row',
-      flexWrap: 'nowrap',
     },
     scroll: {
       ...Platform.select({

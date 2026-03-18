@@ -246,7 +246,6 @@ const getStyles = (colors: ThemedColors) =>
         ? ({
             overflowY: 'auto',
             WebkitOverflowScrolling: 'touch',
-            touchAction: 'pan-y',
             overscrollBehavior: 'contain',
           } as any)
         : null),

@@ -261,8 +261,6 @@ const getStyles = (colors: ThemedColors) =>
           overflowY: 'auto',
           // @ts-ignore: web-only style
           WebkitOverflowScrolling: 'touch',
-          // @ts-ignore: web-only style
-          touchAction: 'manipulation',
         },
         default: {
           flex: 1,
