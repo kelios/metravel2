@@ -126,10 +126,7 @@ function Home() {
 
   return (
     <ScrollView
-      style={[
-        styles.container,
-        isWeb && ({ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } as any),
-      ]}
+      style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={isWeb ? 32 : 16}

@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
@@ -407,12 +407,14 @@ function FilterGroupCard({
   onChipPress,
   styles,
   colors,
+  isMobile,
 }: {
   group: typeof FILTER_GROUPS[number];
   selectedChip: string | null;
   onChipPress: (label: string, filters?: QuickFilterParams, route?: string) => void;
   styles: ReturnType<typeof createSectionsStyles>;
   colors: ReturnType<typeof useThemedColors>;
+  isMobile: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const isWeb = Platform.OS === 'web';
@@ -431,29 +433,60 @@ function FilterGroupCard({
         </View>
         <Text style={styles.filterGroupTitleText}>{group.title}</Text>
       </View>
-      <View style={styles.chipsWrap}>
-        {group.chips.map((chip) => {
-          const isSelected = selectedChip === chip.label;
-          return (
-            <Pressable
-              key={chip.label}
-              onPress={() => onChipPress(chip.label, (chip as any).filters, (chip as any).route)}
-              style={({ pressed, hovered: chipHovered }) => [
-                styles.chip,
-                isSelected && styles.chipSelected,
-                !isSelected && (pressed || chipHovered) && styles.chipHover,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Фильтр ${chip.label}`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                {chip.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {isMobile ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 7, paddingRight: 16 }}
+          style={{ marginHorizontal: -16, paddingHorizontal: 16 }}
+        >
+          {group.chips.map((chip) => {
+            const isSelected = selectedChip === chip.label;
+            return (
+              <Pressable
+                key={chip.label}
+                onPress={() => onChipPress(chip.label, (chip as any).filters, (chip as any).route)}
+                style={({ pressed }) => [
+                  styles.chip,
+                  isSelected && styles.chipSelected,
+                  !isSelected && pressed && styles.chipHover,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Фильтр ${chip.label}`}
+                accessibilityState={{ selected: isSelected }}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {chip.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : (
+        <View style={styles.chipsWrap}>
+          {group.chips.map((chip) => {
+            const isSelected = selectedChip === chip.label;
+            return (
+              <Pressable
+                key={chip.label}
+                onPress={() => onChipPress(chip.label, (chip as any).filters, (chip as any).route)}
+                style={({ pressed, hovered: chipHovered }) => [
+                  styles.chip,
+                  isSelected && styles.chipSelected,
+                  !isSelected && (pressed || chipHovered) && styles.chipHover,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Фильтр ${chip.label}`}
+                accessibilityState={{ selected: isSelected }}
+              >
+                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                  {chip.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -531,6 +564,7 @@ function HomeInspirationSections() {
                   onChipPress={handleFilterPress}
                   styles={styles}
                   colors={colors}
+                  isMobile={isMobile}
                 />
               ))}
             </View>
