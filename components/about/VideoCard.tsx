@@ -27,6 +27,7 @@ export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => {
           alt="YouTube видео о MeTravel"
           fit="contain"
           blurBackground
+          allowCriticalWebBlur
           borderRadius={0}
           transition={200}
           cachePolicy="memory-disk"

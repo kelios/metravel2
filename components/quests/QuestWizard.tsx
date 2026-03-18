@@ -423,6 +423,7 @@ const StepCard = memo((props: StepCardProps) => {
                                                 source={typeof step.image === 'string' ? { uri: step.image } : step.image}
                                                 fit="contain"
                                                 blurBackground
+                                                allowCriticalWebBlur
                                                 blurRadius={16}
                                                 alt={step.title ? `Фото-подсказка для шага ${step.title}` : 'Фото-подсказка'}
                                                 style={styles.previewImage}
@@ -888,6 +889,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                             src={posterUri}
                                                             fit="contain"
                                                             blurBackground
+                                                            allowCriticalWebBlur
                                                             blurRadius={18}
                                                             style={StyleSheet.absoluteFillObject as any}
                                                             alt="Постер видео квеста"

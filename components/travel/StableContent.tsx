@@ -496,6 +496,20 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 
 /* ===== TWO IMAGES ROW VARIANTS ===== */
+.${WEB_RICH_TEXT_CLASS} .img-row-2-landscape img {
+  height: 240px !important;
+  max-height: 240px !important;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-row-2-balanced {
+  gap: 16px;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-row-2-balanced img {
+  height: 240px !important;
+  max-height: 240px !important;
+}
+
 /* Portrait pair - taller images */
 .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
   height: 280px !important;
@@ -505,6 +519,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 /* Mixed pair - portrait + landscape, auto height to respect aspect ratios */
 .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed {
   align-items: start;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
 }
 .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed img {
   height: 260px !important;
@@ -547,6 +562,36 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   background: transparent;
 }
 
+.${WEB_RICH_TEXT_CLASS} .img-grid-balanced {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-balanced img {
+  min-height: 220px !important;
+  max-height: 300px !important;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(1),
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(4) {
+  grid-column: span 4;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(2),
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(3) {
+  grid-column: span 2;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt img {
+  min-height: 170px !important;
+  max-height: 260px !important;
+}
+
 /* ===== MIXED GRID: 2 landscape + 1 portrait ===== */
 /* Layout: [landscape stack] [portrait] side by side */
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
@@ -561,6 +606,9 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+.${WEB_RICH_TEXT_CLASS} .img-grid-mixed-reverse {
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
 }
 .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack p {
   margin: 0;
@@ -831,6 +879,14 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     height: 150px !important;
     max-height: 150px !important;
   }
+  .${WEB_RICH_TEXT_CLASS} .img-row-2-landscape img,
+  .${WEB_RICH_TEXT_CLASS} .img-row-2-balanced img {
+    height: 160px !important;
+    max-height: 160px !important;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed {
+    grid-template-columns: 1fr 1fr;
+  }
   /* Mobile: grid becomes 2 columns */
   .${WEB_RICH_TEXT_CLASS} .img-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -844,6 +900,20 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid-quilt,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-balanced {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-balanced > p {
+    grid-column: auto !important;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-grid-quilt img,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-balanced img {
+    min-height: 150px !important;
+    max-height: 220px !important;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack {
     flex-direction: row;

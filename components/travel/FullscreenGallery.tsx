@@ -95,6 +95,7 @@ export default function FullscreenGallery({
           style={styles.image}
           fit="contain"
           blurBackground
+          allowCriticalWebBlur
           blurRadius={18}
           loading="eager"
           priority="high"

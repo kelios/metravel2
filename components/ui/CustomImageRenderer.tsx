@@ -164,6 +164,7 @@ const CustomImageRenderer = ({ tnode, contentWidth, onPressImage }: CustomImageR
         alt={alt}
         fit="contain"
         blurBackground
+        allowCriticalWebBlur
         blurRadius={16}
         priority={Platform.OS === 'web' ? 'low' : 'normal'}
         loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}

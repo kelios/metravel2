@@ -165,6 +165,7 @@ export const VideoSection: React.FC<VideoSectionProps> = memo(({
                 height={720}
                 fit="contain"
                 blurBackground
+                allowCriticalWebBlur
                 loading="lazy"
                 priority="low"
                 style={StyleSheet.absoluteFillObject}

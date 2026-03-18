@@ -230,6 +230,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                 borderRadius={avatarBorderRadius}
                 fit="contain"
                 blurBackground
+                allowCriticalWebBlur
                 priority="high"
                 loading="eager"
                 style={[styles.avatar, isMobile && styles.avatarMobile]}

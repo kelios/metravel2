@@ -65,17 +65,64 @@ function analyzeImageGroup(images: string[]): { landscape: number; portrait: num
   return { landscape, portrait, square };
 }
 
+function appendClassToParagraph(paragraphHtml: string, className: string): string {
+  return paragraphHtml.replace(/<p([^>]*)>/i, (match, attrs = '') => {
+    if (/\bclass="/i.test(attrs)) {
+      return `<p${attrs.replace(/class="([^"]*)"/i, (_, current) => ` class="${`${current} ${className}`.trim()}"`)}>`;
+    }
+    return `<p${attrs} class="${className}">`;
+  });
+}
+
 function appendSingleImage(result: string[], imgParagraph: string, floatDirection: number): number {
   if (isLandscapeImage(imgParagraph)) {
-    const img = imgParagraph.replace(/<p([^>]*)>/, '<p$1 class="img-single-wide">');
+    const img = appendClassToParagraph(imgParagraph, 'img-single-wide');
     result.push(img);
     return floatDirection;
   }
 
   const floatClass = floatDirection % 2 === 0 ? 'img-float-right' : 'img-float-left';
-  const img = imgParagraph.replace(/<p([^>]*)>/, `<p$1 class="${floatClass}">`);
+  const img = appendClassToParagraph(imgParagraph, floatClass);
   result.push(img);
   return floatDirection + 1;
+}
+
+function buildMixedThreeImageLayout(images: string[]): string | null {
+  if (images.length !== 3) return null;
+
+  const portraitIndex = images.findIndex((image) => isPortraitImage(image));
+  if (portraitIndex < 0) return null;
+
+  const portrait = images[portraitIndex];
+  const supporting = images.filter((_, index) => index !== portraitIndex);
+  if (supporting.length !== 2 || supporting.some((image) => !isLandscapeImage(image))) {
+    return null;
+  }
+
+  if (portraitIndex === 0) {
+    return `<div class="img-grid-mixed img-grid-mixed-reverse"><p>${portrait.replace(/^<p[^>]*>|<\/p>$/gi, '')}</p><div class="img-grid-mixed-stack">${supporting.join('')}</div></div>`;
+  }
+
+  return `<div class="img-grid-mixed"><div class="img-grid-mixed-stack">${supporting.join('')}</div><p>${portrait.replace(/^<p[^>]*>|<\/p>$/gi, '')}</p></div>`;
+}
+
+function buildBalancedFourImageLayout(images: string[]): string | null {
+  if (images.length !== 4) return null;
+
+  const composition = analyzeImageGroup(images);
+  if (composition.portrait >= 3) {
+    return `<div class="img-grid img-grid-portrait">${images.join('')}</div>`;
+  }
+
+  if (composition.landscape >= 3) {
+    return `<div class="img-grid img-grid-quilt">${images.join('')}</div>`;
+  }
+
+  if (composition.landscape === 2 && composition.portrait === 2) {
+    return `<div class="img-grid img-grid-balanced">${images.join('')}</div>`;
+  }
+
+  return null;
 }
 
 function appendUniformImageGroup(result: string[], images: string[], floatDirection: number): number {
@@ -91,7 +138,27 @@ function appendUniformImageGroup(result: string[], images: string[], floatDirect
       result.push(`<div class="img-row-2 img-row-2-portrait">${images.join('')}</div>`);
       return floatDirection;
     }
-    result.push(`<div class="img-row-2">${images.join('')}</div>`);
+    if (composition.landscape === 2) {
+      result.push(`<div class="img-row-2 img-row-2-landscape">${images.join('')}</div>`);
+      return floatDirection;
+    }
+    if (composition.landscape === 1 && composition.portrait === 1) {
+      result.push(`<div class="img-row-2 img-row-2-mixed">${images.join('')}</div>`);
+      return floatDirection;
+    }
+    result.push(`<div class="img-row-2 img-row-2-balanced">${images.join('')}</div>`);
+    return floatDirection;
+  }
+
+  const mixedThreeLayout = buildMixedThreeImageLayout(images);
+  if (mixedThreeLayout) {
+    result.push(mixedThreeLayout);
+    return floatDirection;
+  }
+
+  const balancedFourLayout = buildBalancedFourImageLayout(images);
+  if (balancedFourLayout) {
+    result.push(balancedFourLayout);
     return floatDirection;
   }
 
@@ -153,9 +220,10 @@ export function removeImageLayoutClasses(html: string): string {
   let result = html;
 
   // Remove wrapper divs for img-row-2 and img-grid variants, keeping inner content
-  result = result.replace(/<div\s+class="img-row-2(?:\s+img-row-2-(?:portrait|mixed))?">([\s\S]*?)<\/div>/gi, '$1');
-  result = result.replace(/<div\s+class="img-grid(?:\s+img-grid-portrait)?">([\s\S]*?)<\/div>/gi, '$1');
-  result = result.replace(/<div\s+class="img-grid-mixed"><div\s+class="img-grid-mixed-stack">([\s\S]*?)<\/div>([\s\S]*?)<\/div>/gi, '$1$2');
+  result = result.replace(/<div\s+class="img-row-2(?:\s+img-row-2-(?:portrait|mixed|landscape|balanced))?">([\s\S]*?)<\/div>/gi, '$1');
+  result = result.replace(/<div\s+class="img-grid(?:\s+img-grid-(?:portrait|quilt|balanced))?">([\s\S]*?)<\/div>/gi, '$1');
+  result = result.replace(/<div\s+class="img-grid-mixed(?:\s+img-grid-mixed-reverse)?"><div\s+class="img-grid-mixed-stack">([\s\S]*?)<\/div><p>([\s\S]*?)<\/p><\/div>/gi, '$1<p>$2</p>');
+  result = result.replace(/<div\s+class="img-grid-mixed(?:\s+img-grid-mixed-reverse)?"><p>([\s\S]*?)<\/p><div\s+class="img-grid-mixed-stack">([\s\S]*?)<\/div><\/div>/gi, '<p>$1</p>$2');
 
   // Remove float and single-wide classes from paragraphs
   result = result.replace(/(<p[^>]*)\s+class="img-float-(?:right|left)"([^>]*>)/gi, '$1$2');

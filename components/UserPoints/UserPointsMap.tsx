@@ -776,6 +776,7 @@ const PointMarkerWeb = React.memo(
                   borderRadius={12}
                   fit="contain"
                   blurBackground
+                  allowCriticalWebBlur
                   blurRadius={16}
                 />
               </div>

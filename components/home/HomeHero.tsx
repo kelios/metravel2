@@ -1067,6 +1067,7 @@ const HomeHero = memo(function HomeHero({
                     borderRadius={0}
                     fit="contain"
                     blurBackground
+                    allowCriticalWebBlur
                     quality={85}
                     alt={image.alt}
                     loading="lazy"

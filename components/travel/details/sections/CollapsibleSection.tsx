@@ -107,6 +107,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
                   height={56}
                   fit="contain"
                   blurBackground
+                  allowCriticalWebBlur
                   loading="lazy"
                   priority="low"
                   borderRadius={10}

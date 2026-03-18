@@ -438,6 +438,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       mediaProps={{
         blurBackground: !!photoUrl,
         blurRadius: 16,
+        allowCriticalWebBlur: true,
       }}
       webHoverScale={false}
     />

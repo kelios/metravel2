@@ -179,6 +179,7 @@ function OptimizedLCPHeroInner({
               src={srcWithRetry}
               fit="contain"
               blurBackground
+              allowCriticalWebBlur
               blurRadius={12}
               cachePolicy="memory-disk"
               priority="high"

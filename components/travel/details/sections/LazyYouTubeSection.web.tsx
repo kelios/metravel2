@@ -59,6 +59,7 @@ export const LazyYouTube: React.FC<LazyYouTubeProps> = memo(({ url }) => {
           alt="Превью видео YouTube"
           fit="contain"
           blurBackground
+          allowCriticalWebBlur
           cachePolicy="memory-disk"
           style={StyleSheet.absoluteFill}
           borderRadius={DESIGN_TOKENS.radii.md}

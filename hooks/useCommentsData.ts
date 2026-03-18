@@ -30,7 +30,7 @@ export function useCommentsData(travelId: number) {
     isLoading: isLoadingThread,
     error: threadError,
     refetch: refetchThread,
-  } = useMainThread(travelId, { enabled: false });
+  } = useMainThread(travelId, { enabled: true });
 
   const {
     data: comments = [],

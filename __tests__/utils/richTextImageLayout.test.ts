@@ -46,7 +46,7 @@ describe('richTextImageLayout', () => {
     it('wraps 2 consecutive images in img-row-2', () => {
       const html = '<p>Text</p><p><img src="1.jpg"></p><p><img src="2.jpg"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-row-2">');
+      expect(result).toContain('img-row-2');
       expect(result).toContain('</div>');
     });
 
@@ -56,11 +56,11 @@ describe('richTextImageLayout', () => {
       expect(result).toContain('img-row-2-portrait');
     });
 
-    it('wraps mixed pair (portrait + landscape) in a regular two-column row', () => {
+    it('wraps mixed pair (portrait + landscape) in a dedicated mixed row', () => {
       const html = '<p>Text</p><p><img src="1.jpg" width="800" height="600"></p><p><img src="2.jpg" width="600" height="800"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-row-2">');
-      expect(result).not.toContain('img-row-2-mixed');
+      expect(result).toContain('img-row-2');
+      expect(result).toContain('img-row-2-mixed');
     });
 
     it('wraps 3+ consecutive images in img-grid', () => {
@@ -69,12 +69,25 @@ describe('richTextImageLayout', () => {
       expect(result).toContain('<div class="img-grid">');
     });
 
-    it('wraps 3 images with 1 portrait in a regular grid', () => {
+    it('wraps 3 images with 1 portrait in a mixed grid layout', () => {
       const html = '<p>Text</p><p><img src="1.jpg" width="800" height="600"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="800" height="600"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
-      expect(result).toContain('<div class="img-grid">');
-      expect(result).not.toContain('img-grid-mixed');
-      expect(result).not.toContain('img-grid-mixed-stack');
+      expect(result).toContain('img-grid-mixed');
+      expect(result).toContain('img-grid-mixed-stack');
+    });
+
+    it('wraps 4 landscape-heavy images in a quilt grid', () => {
+      const html = '<p>Text</p><p><img src="1.jpg" width="1200" height="700"></p><p><img src="2.jpg" width="1000" height="700"></p><p><img src="3.jpg" width="1100" height="700"></p><p><img src="4.jpg" width="1200" height="720"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-grid');
+      expect(result).toContain('img-grid-quilt');
+    });
+
+    it('wraps 4 balanced mixed-orientation images in a balanced grid', () => {
+      const html = '<p>Text</p><p><img src="1.jpg" width="1200" height="700"></p><p><img src="2.jpg" width="700" height="1100"></p><p><img src="3.jpg" width="700" height="1100"></p><p><img src="4.jpg" width="1200" height="700"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-grid');
+      expect(result).toContain('img-grid-balanced');
     });
 
     it('wraps 3 images with 2+ portraits in img-grid-portrait', () => {

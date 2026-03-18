@@ -948,6 +948,7 @@ const WebMapComponent = ({
                                                             alt="Фото"
                                                             fit="contain"
                                                             blurBackground
+                                                            allowCriticalWebBlur
                                                             loading="lazy"
                                                             priority="low"
                                                             borderRadius={DESIGN_TOKENS.radii.md}

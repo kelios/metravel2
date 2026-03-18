@@ -120,6 +120,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
                       alt={place.address || `Место ${index + 1}`}
                       fit="contain"
                       blurBackground
+                      allowCriticalWebBlur
                       loading="lazy"
                       priority="low"
                       cachePolicy="memory-disk"

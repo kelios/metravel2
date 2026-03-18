@@ -103,6 +103,7 @@ const PointListRow = React.memo(function PointListRow({
               alt={point.address}
               fit="contain"
               blurBackground
+              allowCriticalWebBlur
               blurRadius={16}
               priority="low"
               loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}

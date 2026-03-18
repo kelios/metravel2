@@ -200,6 +200,7 @@ function NavigationArrows({
                   src={buildImageUrl(prevTravel)!}
                   fit="contain"
                   blurBackground
+                  allowCriticalWebBlur
                   blurRadius={12}
                   loading="lazy"
                   priority="low"
@@ -230,6 +231,7 @@ function NavigationArrows({
                   src={buildImageUrl(nextTravel)!}
                   fit="contain"
                   blurBackground
+                  allowCriticalWebBlur
                   blurRadius={12}
                   loading="lazy"
                   priority="low"

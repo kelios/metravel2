@@ -174,6 +174,7 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
             src={hiResUrl}
             fit="contain"
             blurBackground
+            allowCriticalWebBlur
             blurRadius={20}
             priority="high"
             loading="eager"
@@ -522,6 +523,7 @@ const PlacePopupCard: React.FC<Props> = ({
               alt={title}
               fit="contain"
               blurBackground
+              allowCriticalWebBlur
               priority="high"
               loading="eager"
               width={maxPopupWidth}

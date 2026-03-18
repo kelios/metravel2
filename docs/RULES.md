@@ -212,6 +212,9 @@ npx serve dist/prod -l 3000 -s
 - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
 - Images must preserve original aspect ratio (use `contain`) and any unused area should be filled by a blurred version of the same image.
+- For web content images that intentionally use `contain + blurBackground` in cards, popups, inline rich-text media, map previews, and similar surfaces, enable the shared-source blur mode (`allowCriticalWebBlur` in `ImageCardMedia`, or `mediaProps.allowCriticalWebBlur` in `UnifiedTravelCard`).
+  - The visible image and the blur backdrop must use the same effective image source whenever possible.
+  - Sibling sections that use the same card/media pattern must not render different backdrop strength or timing.
 - On web, travel hero/gallery media and description images must not exceed `70vh`.
   - Apply the limit at the authoritative container/layout level, not via ad-hoc per-page overrides.
   - Keep `contain` rendering and blurred surround inside that bounded area.

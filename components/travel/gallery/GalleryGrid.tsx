@@ -84,6 +84,7 @@ export const GalleryGrid: React.FC<{
                   src={image.url}
                   fit="contain"
                   blurBackground
+                  allowCriticalWebBlur
                   loading="lazy"
                   alt={`Изображение галереи ${index + 1}`}
                   style={[styles.image, styles.errorImage]}
@@ -129,6 +130,7 @@ export const GalleryGrid: React.FC<{
                   src={image.url}
                   fit="contain"
                   blurBackground
+                  allowCriticalWebBlur
                   loading="lazy"
                   alt={`Изображение галереи ${index + 1}`}
                   style={[styles.image, !image.hasLoaded && ({ opacity: 0 } as any)]}

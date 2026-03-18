@@ -404,6 +404,7 @@ function CompactSideBarTravel({
               borderRadius={styles.avatar.borderRadius as any}
               fit="contain"
               blurBackground
+              allowCriticalWebBlur
               priority="low"
               loading="lazy"
               style={styles.avatar}

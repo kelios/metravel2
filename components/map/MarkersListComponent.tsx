@@ -180,6 +180,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                 src={normalizeImageUrl(marker.image)}
                                                 fit="contain"
                                                 blurBackground
+                                                allowCriticalWebBlur
                                                 loading="lazy"
                                                 priority="low"
                                                 borderRadius={10}

@@ -107,6 +107,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                                     alt={formData.name || 'Обложка путешествия'}
                                     fit="contain"
                                     blurBackground
+                                    allowCriticalWebBlur
                                     style={styles.cardImage}
                                 />
                             ) : (

@@ -150,7 +150,7 @@ const AddressListItem: React.FC<Props> = ({
         onHoverIn={() => !isMobile && setHovered(true)} onHoverOut={() => !isMobile && setHovered(false)}>
         <View style={styles.image}>
           {imgUri ? (
-            <ImageCardMedia src={imgUri} fit="contain" blurBackground blurRadius={12} overlayColor={colors.overlayLight}
+            <ImageCardMedia src={imgUri} fit="contain" blurBackground allowCriticalWebBlur blurRadius={12} overlayColor={colors.overlayLight}
               cachePolicy="memory-disk" transition={200} loading="lazy" priority="low"
               style={StyleSheet.absoluteFillObject} onLoad={() => setImgLoaded(true)} onError={() => setImgLoaded(true)} />
           ) : <View style={styles.noImageFallback} />}

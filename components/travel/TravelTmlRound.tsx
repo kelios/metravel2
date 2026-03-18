@@ -150,6 +150,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 webAsView={Platform.OS === 'web'}
                 mediaProps={{
                     blurBackground: true,
+                    allowCriticalWebBlur: Platform.OS === 'web',
                 }}
             />
         </View>
