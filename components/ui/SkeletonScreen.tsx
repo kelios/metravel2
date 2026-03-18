@@ -301,7 +301,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderRadius: DESIGN_TOKENS.radii.md,
     },
     retryButtonText: {
-      color: '#FFFFFF',
+      color: colors.textOnDark,
       fontSize: 16,
       fontWeight: '600',
     },

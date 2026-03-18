@@ -131,7 +131,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       }),
     },
     slidePlaceholder: {
-      backgroundColor: colors.backgroundTertiary || '#333',
+      backgroundColor: colors.backgroundTertiary || DESIGN_TOKENS.colors.backgroundTertiary,
     },
     slideSnap: Platform.OS === 'web'
       ? ({ 
@@ -278,7 +278,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     dotActive: {
       width: DOT_ACTIVE_SIZE,
       height: DOT_ACTIVE_SIZE,
-      backgroundColor: '#ffffff',
+      backgroundColor: colors.textOnDark,
       borderRadius: DOT_ACTIVE_SIZE / 2,
     },
     dotSmall: {
@@ -318,7 +318,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       }),
     },
     counterText: {
-      color: '#fff',
+      color: colors.textOnDark,
       fontSize: 13,
       fontWeight: '700' as any,
       fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,

@@ -757,7 +757,7 @@ const HomeHero = memo(function HomeHero({
                   />
                   <View style={styles.tabletFeaturedOverlay}>
                     <View style={styles.slideEyebrow}>
-                      <Feather name="map-pin" size={11} color="#FFFFFF" />
+                      <Feather name="map-pin" size={11} color={colors.textOnDark} />
                       <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
                     </View>
                     <Text style={styles.tabletFeaturedTitle}>
@@ -1022,7 +1022,7 @@ const HomeHero = memo(function HomeHero({
               />
               <View style={styles.featuredCardOverlay}>
                 <View style={styles.slideEyebrow}>
-                  <Feather name="map-pin" size={11} color="#FFFFFF" />
+                  <Feather name="map-pin" size={11} color={colors.textOnDark} />
                   <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
                 </View>
                 <Text style={styles.featuredCardTitle} numberOfLines={1}>

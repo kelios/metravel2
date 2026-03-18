@@ -690,7 +690,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   imageBadgeText: {
     fontSize: 11,
     fontWeight: '600' as any,
-    color: '#1a1a1a',
+    color: colors.text,
     letterSpacing: 0.3,
   },
 });
