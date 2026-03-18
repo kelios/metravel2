@@ -27,7 +27,7 @@ export default function TravelDetailsSkeletonOverlay({
         pointerEvents: 'none',
       } as any}
       // @ts-ignore - web-only inert attribute
-      inert={skeletonPhase !== 'loading' ? '' : undefined}
+      inert={skeletonPhase === 'loading' ? true : undefined}
     >
       {skeletonPhase !== 'hidden' && (
         <Suspense fallback={skeletonFallback}>{travelDetailSkeleton}</Suspense>

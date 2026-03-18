@@ -954,7 +954,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
             padding: '6px 8px',
             borderRadius: 8,
             border: '1px solid rgba(0,0,0,0.15)',
-            background: 'rgba(255,255,255,0.92)',
+            backgroundColor: 'rgba(255,255,255,0.92)',
             color: `var(--color-text, ${DESIGN_COLORS.criticalTextLight})`,
           }}
         >
@@ -978,7 +978,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         padding: 10,
         borderRadius: 12,
         border: '1px solid rgba(0,0,0,0.15)',
-        background: 'rgba(255,255,255,0.92)',
+        backgroundColor: 'rgba(255,255,255,0.92)',
         color: `var(--color-text, ${DESIGN_COLORS.criticalTextLight})`,
         fontSize: 12,
         lineHeight: 1.3,
@@ -996,7 +996,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
               padding: '4px 8px',
               borderRadius: 8,
               border: '1px solid rgba(0,0,0,0.15)',
-              background: 'rgba(255,255,255,0.95)',
+              backgroundColor: 'rgba(255,255,255,0.95)',
             }}
           >
             Refresh
@@ -1011,7 +1011,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
               padding: '4px 8px',
               borderRadius: 8,
               border: '1px solid rgba(0,0,0,0.15)',
-              background: 'rgba(255,255,255,0.95)',
+              backgroundColor: 'rgba(255,255,255,0.95)',
             }}
           >
             Copy JSON
@@ -1024,7 +1024,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
               padding: '4px 8px',
               borderRadius: 8,
               border: '1px solid rgba(0,0,0,0.15)',
-              background: 'rgba(255,255,255,0.95)',
+              backgroundColor: 'rgba(255,255,255,0.95)',
             }}
           >
             Hide

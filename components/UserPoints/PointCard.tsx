@@ -672,7 +672,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: 8,
     ...(Platform.OS === 'web' ? ({
-      background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
+      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
     } as any) : {
       backgroundColor: 'rgba(0,0,0,0.3)',
     }),
