@@ -4,7 +4,7 @@ import type { useThemedColors } from '@/hooks/useTheme';
 
 type Colors = ReturnType<typeof useThemedColors>;
 
-export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean) =>
+export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean, numColumns: number) =>
   StyleSheet.create({
     // ── Section wrapper ──────────────────────────────────────────────────────
     section: {
@@ -160,16 +160,31 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
       flexDirection: isMobile ? 'column' : 'row',
       flexWrap: 'wrap',
       gap: isMobile ? 14 : 18,
+      ...Platform.select({
+        web: !isMobile
+          ? ({
+              alignItems: 'stretch',
+            } as any)
+          : null,
+      }),
     },
 
     // Each card slot — flex equal columns on desktop
     cardSlot: {
-      flexGrow: 1,
-      flexShrink: 1,
-      flexBasis: isMobile ? 'auto' : 0,
+      flexGrow: isMobile ? 1 : 0,
+      flexShrink: isMobile ? 1 : 0,
+      flexBasis: isMobile ? 'auto' : `${100 / Math.max(1, numColumns)}%`,
       minWidth: isMobile ? '100%' : 260,
+      maxWidth: isMobile ? '100%' : `${100 / Math.max(1, numColumns)}%`,
       ...Platform.select({
-        web: { alignSelf: 'stretch' } as any,
+        web: !isMobile
+          ? ({
+              alignSelf: 'stretch',
+              minWidth: `calc((100% - ${(Math.max(1, numColumns) - 1) * 18}px) / ${Math.max(1, numColumns)})`,
+              maxWidth: `calc((100% - ${(Math.max(1, numColumns) - 1) * 18}px) / ${Math.max(1, numColumns)})`,
+              flexBasis: `calc((100% - ${(Math.max(1, numColumns) - 1) * 18}px) / ${Math.max(1, numColumns)})`,
+            } as any)
+          : ({ alignSelf: 'stretch' } as any),
       }),
     },
     cardSlotPlaceholder: {
@@ -462,8 +477,18 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
       borderColor: colors.borderLight,
       flexGrow: 1,
       flexShrink: 1,
-      flexBasis: isMobile ? 'auto' : 0,
+      flexBasis: isMobile ? 'auto' : `${100 / Math.max(1, numColumns)}%`,
       minWidth: isMobile ? '100%' : 260,
+      maxWidth: isMobile ? '100%' : `${100 / Math.max(1, numColumns)}%`,
       height: isMobile ? 360 : 420,
+      ...Platform.select({
+        web: !isMobile
+          ? ({
+              minWidth: `calc((100% - ${(Math.max(1, numColumns) - 1) * 18}px) / ${Math.max(1, numColumns)})`,
+              maxWidth: `calc((100% - ${(Math.max(1, numColumns) - 1) * 18}px) / ${Math.max(1, numColumns)})`,
+              flexBasis: `calc((100% - ${(Math.max(1, numColumns) - 1) * 18}px) / ${Math.max(1, numColumns)})`,
+            } as any)
+          : null,
+      }),
     },
   });

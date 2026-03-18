@@ -118,6 +118,7 @@ function ChapterCard({ item, index, styles, colors }: ChapterCardProps) {
           alt={title}
           fit="contain"
           blurBackground
+          allowCriticalWebBlur={Platform.OS === 'web'}
           blurRadius={20}
           placeholderBlurhash={PLACEHOLDER_BLURHASH}
           transition={300}
@@ -283,7 +284,10 @@ function AdventureChaptersSection() {
     return arr.slice(0, isMobile ? 4 : numColumns <= 3 ? 6 : 6);
   }, [travelData, isMobile, numColumns]);
 
-  const styles = useMemo(() => createAdventureChaptersStyles(colors, isMobile), [colors, isMobile]);
+  const styles = useMemo(
+    () => createAdventureChaptersStyles(colors, isMobile, numColumns),
+    [colors, isMobile, numColumns]
+  );
 
   const handleViewAll = useCallback(() => {
     sendAnalyticsEvent('AdventureChapters_ViewAll');

@@ -1,5 +1,6 @@
 import { normalizeHtmlForQuill, sanitizeHtml, stripBase64Images } from '@/utils/htmlUtils';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
+import { safeGetYoutubeId } from '@/utils/travelMedia';
 import type { ArticleEditorVariant } from './articleEditor.types';
 
 export const ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS = 250;
@@ -40,6 +41,8 @@ export function getQuillModulesForVariant(variant: ArticleEditorVariant) {
 
 const INSTAGRAM_POST_URL_RE =
   /https?:\/\/(?:www\.)?instagram\.com\/(?:(?:p|reel|tv)\/[A-Za-z0-9_-]+)(?:\/)?(?:\?[^\s"'<>]*)?/i;
+const YOUTUBE_URL_RE =
+  /https?:\/\/(?:(?:www\.)?youtube\.com\/(?:watch\?v=|embed\/|shorts\/)[^\s"'<>]+|youtu\.be\/[^\s"'<>]+)/i;
 
 function normalizeInstagramPostUrl(url: string): string | null {
   const raw = String(url ?? '').trim();
@@ -76,33 +79,85 @@ export function buildInstagramEmbedHtmlFromUrl(url: string): string | null {
   ].join('');
 }
 
-function replaceStandaloneInstagramLinksWithEmbeds(html: string): string {
+export function buildYoutubeEmbedHtmlFromUrl(url: string): string | null {
+  const youtubeId = safeGetYoutubeId(url);
+  if (!youtubeId) return null;
+
+  return [
+    '<iframe',
+    ' class="ql-video"',
+    ' frameborder="0"',
+    ' allowfullscreen="true"',
+    ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"',
+    ` src="https://www.youtube.com/embed/${youtubeId}"`,
+    ' width="560"',
+    ' height="315"',
+    ' title="YouTube video"',
+    '></iframe>',
+  ].join('');
+}
+
+function replaceStandaloneLinksWithEmbeds(
+  html: string,
+  buildEmbed: (url: string) => string | null,
+  urlRe: RegExp,
+): string {
   let next = String(html ?? '');
   if (!next.trim()) return next;
 
   next = next.replace(
     /<(p|div)>\s*(?:<a\b[^>]*href="([^"]+)"[^>]*>[\s\S]*?<\/a>|(https?:\/\/[^\s<]+))\s*<\/\1>/gi,
     (full, _tagName, href, rawUrl) => {
-      const embed = buildInstagramEmbedHtmlFromUrl(String(href || rawUrl || '').trim());
+      const embed = buildEmbed(String(href || rawUrl || '').trim());
       return embed ?? full;
     },
   );
 
   next = next.replace(
     /<a\b[^>]*href="([^"]+)"[^>]*>\s*\1\s*<\/a>/gi,
-    (full, href) => buildInstagramEmbedHtmlFromUrl(String(href || '')) ?? full,
+    (full, href) => buildEmbed(String(href || '')) ?? full,
   );
 
-  if (!/<iframe\b/i.test(next) && INSTAGRAM_POST_URL_RE.test(next.trim())) {
-    return buildInstagramEmbedHtmlFromUrl(next.trim()) ?? next;
+  if (!/<iframe\b/i.test(next) && urlRe.test(next.trim())) {
+    return buildEmbed(next.trim()) ?? next;
   }
 
   return next;
 }
 
+function replaceStandaloneInstagramLinksWithEmbeds(html: string): string {
+  return replaceStandaloneLinksWithEmbeds(html, buildInstagramEmbedHtmlFromUrl, INSTAGRAM_POST_URL_RE);
+}
+
+function replaceStandaloneYoutubeLinksWithEmbeds(html: string): string {
+  return replaceStandaloneLinksWithEmbeds(html, buildYoutubeEmbedHtmlFromUrl, YOUTUBE_URL_RE);
+}
+
+function normalizeSupportedVideoIframes(html: string): string {
+  return String(html ?? '').replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe>/gi, (full, rawAttrs) => {
+    const attrs = String(rawAttrs ?? '');
+    const srcMatch = attrs.match(/\ssrc=(["'])(.*?)\1/i);
+    const src = srcMatch?.[2] ?? '';
+
+    const youtubeEmbed = buildYoutubeEmbedHtmlFromUrl(src);
+    if (youtubeEmbed) {
+      return youtubeEmbed;
+    }
+
+    const instagramEmbed = buildInstagramEmbedHtmlFromUrl(src.replace(/embed\/captioned\/?$/i, ''));
+    if (instagramEmbed) {
+      return instagramEmbed;
+    }
+
+    return full;
+  });
+}
+
 export function normalizeArticleEditorHtmlForInput(html: string): string {
-  return replaceStandaloneInstagramLinksWithEmbeds(
-    stripBase64Images(normalizeHtmlForQuill(String(html ?? ''))),
+  return replaceStandaloneYoutubeLinksWithEmbeds(
+    replaceStandaloneInstagramLinksWithEmbeds(
+      normalizeSupportedVideoIframes(stripBase64Images(normalizeHtmlForQuill(String(html ?? '')))),
+    ),
   );
 }
 

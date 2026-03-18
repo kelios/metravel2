@@ -109,5 +109,6 @@ describe('AdventureChaptersSection', () => {
     expect(props.src).toBe('https://metravel.by/travel-image/sample.jpg');
     expect(props.fit).toBe('contain');
     expect(props.blurBackground).toBe(true);
+    expect(props.allowCriticalWebBlur).toBe(true);
   });
 });

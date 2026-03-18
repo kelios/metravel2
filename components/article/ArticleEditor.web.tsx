@@ -40,6 +40,7 @@ import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
     ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
     buildInstagramEmbedHtmlFromUrl,
+    buildYoutubeEmbedHtmlFromUrl,
     extractArticleEditorUploadUrl,
     getQuillModulesForVariant,
 } from './articleEditorConfig';
@@ -994,7 +995,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 const pastedHtml = e.clipboardData?.getData('text/html') ?? '';
                 const pastedText = e.clipboardData?.getData('text/plain') ?? '';
                 const instagramEmbedHtml = buildInstagramEmbedHtmlFromUrl(pastedText);
-                if (instagramEmbedHtml) {
+                const youtubeEmbedHtml = buildYoutubeEmbedHtmlFromUrl(pastedText);
+                const knownEmbedHtml = instagramEmbedHtml ?? youtubeEmbedHtml;
+                if (knownEmbedHtml) {
                     e.preventDefault();
                     try {
                         (e as any).stopImmediatePropagation?.();
@@ -1005,7 +1008,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     if (ed && typeof ed.clipboard?.dangerouslyPasteHTML === 'function') {
                         const range = ed.getSelection() || { index: ed.getLength(), length: 0 };
                         if (range.length > 0) ed.deleteText(range.index, range.length, 'silent');
-                        ed.clipboard.dangerouslyPasteHTML(range.index, instagramEmbedHtml, 'user');
+                        ed.clipboard.dangerouslyPasteHTML(range.index, knownEmbedHtml, 'user');
                     }
                     return;
                 }

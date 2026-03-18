@@ -1,5 +1,6 @@
 import {
   buildInstagramEmbedHtmlFromUrl,
+  buildYoutubeEmbedHtmlFromUrl,
   normalizeArticleEditorHtmlForInput,
   normalizeArticleEditorHtmlForOutput,
 } from '@/components/article/articleEditorConfig'
@@ -61,5 +62,30 @@ describe('articleEditorConfig instagram embeds', () => {
 
     expect(normalized).not.toContain('<iframe')
     expect(normalized).toContain('https://www.instagram.com/metravelby/')
+  })
+
+  it('builds embed html from youtube urls', () => {
+    expect(
+      buildYoutubeEmbedHtmlFromUrl('https://www.youtube.com/watch?v=Bk_gnrqrDww'),
+    ).toContain('https://www.youtube.com/embed/Bk_gnrqrDww')
+  })
+
+  it('converts standalone youtube plain url into iframe embed', () => {
+    const normalized = normalizeArticleEditorHtmlForInput('https://youtu.be/Bk_gnrqrDww')
+
+    expect(normalized).toContain('<iframe')
+    expect(normalized).toContain('https://www.youtube.com/embed/Bk_gnrqrDww')
+    expect(normalized).toContain('class="ql-video"')
+  })
+
+  it('normalizes pasted youtube iframe into ql-video embed markup', () => {
+    const output = normalizeArticleEditorHtmlForOutput(
+      '<iframe width="560" height="315" src="https://www.youtube.com/embed/Bk_gnrqrDww?si=Jq7LXSWAYuJ7AF87" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>',
+    )
+
+    expect(output).toContain('<iframe')
+    expect(output).toContain('class="ql-video"')
+    expect(output).toContain('https://www.youtube.com/embed/Bk_gnrqrDww')
+    expect(output).toContain('title="YouTube video"')
   })
 })
