@@ -187,25 +187,22 @@ export function HomeInspirationSection({
 
   const getEditorialCardStyle = useCallback((index: number, count: number) => {
     if (count === 1) return styles.editorialCardHero;
-    if (count === 2) return index === 0 ? styles.editorialCardHero : styles.editorialCardTop;
+    if (count === 2) return index === 0 ? styles.editorialCardHero : styles.editorialCardStackTop;
     if (count === 3) {
       if (index === 0) return styles.editorialCardHero;
-      if (index === 1) return styles.editorialCardBottomLeft;
-      return styles.editorialCardBottomRight;
+      if (index === 1) return styles.editorialCardStackTop;
+      return styles.editorialCardStackMiddle;
     }
 
     if (index === 0) return styles.editorialCardHero;
-    if (index === 1) return styles.editorialCardSideTop;
-    if (index === 2) return styles.editorialCardBottomWideLeft;
-    return styles.editorialCardBottomWideRight;
+    if (index === 1) return styles.editorialCardStackTop;
+    if (index === 2) return styles.editorialCardStackMiddle;
+    return styles.editorialCardStackBottom;
   }, [
-    styles.editorialCardBottomLeft,
-    styles.editorialCardBottomRight,
-    styles.editorialCardBottomWideLeft,
-    styles.editorialCardBottomWideRight,
     styles.editorialCardHero,
-    styles.editorialCardSideTop,
-    styles.editorialCardTop,
+    styles.editorialCardStackBottom,
+    styles.editorialCardStackMiddle,
+    styles.editorialCardStackTop,
   ]);
 
   if (isLoading) {
@@ -234,13 +231,13 @@ export function HomeInspirationSection({
                 <View style={[styles.editorialCard, styles.editorialCardHero]}>
                   <SkeletonLoader width="100%" height="100%" borderRadius={12} />
                 </View>
-                <View style={[styles.editorialCard, styles.editorialCardSideTop]}>
+                <View style={[styles.editorialCard, styles.editorialCardStackTop]}>
                   <SkeletonLoader width="100%" height="100%" borderRadius={12} />
                 </View>
-                <View style={[styles.editorialCard, styles.editorialCardBottomWideLeft]}>
+                <View style={[styles.editorialCard, styles.editorialCardStackMiddle]}>
                   <SkeletonLoader width="100%" height="100%" borderRadius={12} />
                 </View>
-                <View style={[styles.editorialCard, styles.editorialCardBottomWideRight]}>
+                <View style={[styles.editorialCard, styles.editorialCardStackBottom]}>
                   <SkeletonLoader width="100%" height="100%" borderRadius={12} />
                 </View>
               </View>

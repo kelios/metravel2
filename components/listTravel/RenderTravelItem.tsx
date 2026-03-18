@@ -24,6 +24,7 @@ type RenderTravelItemProps = {
     isSelected?: boolean;
     onToggle?: () => void;
     cardWidth?: string | number; // пока не используем для width, оставляем для совместимости пропсов
+    imageHeight?: number;
     viewportWidth?: number;
     hideAuthor?: boolean;
     visualVariant?: 'default' | 'home-featured';
@@ -43,6 +44,7 @@ function RenderTravelItem({
                               isSelected = false,
                               onToggle,
                               cardWidth,
+                              imageHeight,
                               viewportWidth = 0,
                               hideAuthor = false,
                               visualVariant = 'default',
@@ -88,6 +90,7 @@ function RenderTravelItem({
                 isMobile={isMobile}
                 viewportWidth={viewportWidth}
                 cardWidth={cardWidthNumber}
+                imageHeight={imageHeight}
                 hideAuthor={hideAuthor}
                 visualVariant={visualVariant}
             />
@@ -118,6 +121,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     if (prev.isFirst !== next.isFirst) return false;
     if (prev.isSingle !== next.isSingle) return false;
     if (prev.viewportWidth !== next.viewportWidth) return false;
+    if (prev.imageHeight !== next.imageHeight) return false;
     if (prev.visualVariant !== next.visualVariant) return false;
 
     return true;

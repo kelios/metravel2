@@ -67,18 +67,7 @@ function useHeroMediaModel(
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
     if (Platform.OS === 'web') {
-      const viewportCap = Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
-      const minHeight = Math.min(
-        isMobile ? HERO_HEIGHT.mobileMin : HERO_HEIGHT.desktopMin,
-        viewportCap,
-      )
-      const arHeight = resolvedWidth
-        ? Math.round(resolvedWidth / aspectRatio)
-        : viewportCap
-      const maxHeight = isMobile
-        ? viewportCap
-        : Math.min(HERO_HEIGHT.desktopMax, viewportCap)
-      return Math.max(minHeight, Math.min(arHeight, maxHeight))
+      return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
     }
     const minViewportHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
     const arHeight = resolvedWidth
@@ -89,7 +78,7 @@ function useHeroMediaModel(
       Math.min(arHeight, Math.round(winH * HERO_HEIGHT.mobileMaxViewportRatio)),
     )
     return Math.max(minViewportHeight, boundedAspectHeight)
-  }, [isMobile, winH, resolvedWidth, aspectRatio])
+  }, [winH, resolvedWidth, aspectRatio])
 
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []

@@ -213,14 +213,14 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   editorialGridThree: Platform.select({
     web: !isMobile
       ? ({
-          gridTemplateRows: 'minmax(320px, auto) minmax(252px, auto)',
+          gridTemplateRows: 'minmax(176px, auto) minmax(176px, auto)',
         } as any)
       : {},
   }) as any,
   editorialGridFour: Platform.select({
     web: !isMobile
       ? ({
-          gridTemplateRows: 'minmax(252px, auto) minmax(252px, auto)',
+          gridTemplateRows: 'minmax(184px, auto) minmax(184px, auto)',
         } as any)
       : {},
   }) as any,
@@ -237,55 +237,31 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   editorialCardHero: Platform.select({
     web: !isMobile
       ? ({
-          gridColumn: '1 / span 7',
-          gridRow: '1 / span 2',
-        } as any)
-      : {},
-  }) as any,
-  editorialCardTop: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '8 / span 5',
+          gridColumn: '1 / span 8',
           gridRow: '1 / span 1',
         } as any)
       : {},
   }) as any,
-  editorialCardBottomLeft: Platform.select({
+  editorialCardStackTop: Platform.select({
     web: !isMobile
       ? ({
-          gridColumn: '1 / span 6',
-          gridRow: '2 / span 1',
-        } as any)
-      : {},
-  }) as any,
-  editorialCardBottomRight: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '7 / span 6',
-          gridRow: '2 / span 1',
-        } as any)
-      : {},
-  }) as any,
-  editorialCardSideTop: Platform.select({
-    web: !isMobile
-      ? ({
-          gridColumn: '8 / span 5',
+          gridColumn: '9 / span 4',
           gridRow: '1 / span 1',
         } as any)
       : {},
   }) as any,
-  editorialCardBottomWideLeft: Platform.select({
+  editorialCardStackMiddle: Platform.select({
     web: !isMobile
       ? ({
-          gridColumn: '1 / span 6',
+          gridColumn: '1 / span 5',
           gridRow: '2 / span 1',
         } as any)
       : {},
   }) as any,
-  editorialCardBottomWideRight: Platform.select({
+  editorialCardStackBottom: Platform.select({
     web: !isMobile
       ? ({
-          gridColumn: '7 / span 6',
+          gridColumn: '6 / span 7',
           gridRow: '2 / span 1',
         } as any)
       : {},

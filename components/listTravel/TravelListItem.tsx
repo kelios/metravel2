@@ -79,6 +79,7 @@ type Props = {
     onToggle?: () => void;
     isMobile?: boolean; // ✅ УЛУЧШЕНИЕ: Добавлен проп для определения мобильного устройства
     cardWidth?: number; // ✅ Фактическая ширина карточки (с учётом паддингов и колонок)
+    imageHeight?: number;
     viewportWidth?: number; // ✅ Ширина viewport для width-based адаптивности на web
     hideAuthor?: boolean;
     visualVariant?: 'default' | 'home-featured';
@@ -97,6 +98,7 @@ function TravelListItem({
                             onToggle,
                             isMobile = false,
                             cardWidth,
+                            imageHeight,
                             viewportWidth,
                             hideAuthor = false,
                             visualVariant = 'default',
@@ -717,7 +719,7 @@ const unifiedCard = (
       isSingle && styles.single,
       selectable && isSelected && styles.selected,
     ]}
-    imageHeight={TRAVEL_CARD_IMAGE_HEIGHT}
+    imageHeight={typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT}
     contentPosition="belowMedia"
     insetMedia={false}
     leftTopSlot={leftTopSlot}

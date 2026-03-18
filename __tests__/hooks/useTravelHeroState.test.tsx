@@ -152,7 +152,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
   })
 
-  it('caps web hero height to 70 percent of the viewport', () => {
+  it('keeps web hero height at exactly 70 percent of the viewport', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 45,
@@ -171,7 +171,7 @@ describe('useTravelHeroState', () => {
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
-    expect(result.current.heroHeight).toBeLessThanOrEqual(Math.round(1000 * 0.7))
+    expect(result.current.heroHeight).toBe(Math.round(1000 * 0.7))
   })
 
   it('marks web hero as loaded after the shortened fallback timeout when load event is delayed', () => {
