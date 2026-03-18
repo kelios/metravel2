@@ -189,7 +189,7 @@ export function HomeInspirationSection({
     if (count === 1) return styles.editorialCardHero;
     if (count === 2) return index === 0 ? styles.editorialCardHero : styles.editorialCardStackTop;
     if (count === 3) {
-      if (index === 0) return styles.editorialCardHero;
+      if (index === 0) return styles.editorialCardHeroTall;
       if (index === 1) return styles.editorialCardStackTop;
       return styles.editorialCardStackMiddle;
     }
@@ -200,10 +200,18 @@ export function HomeInspirationSection({
     return styles.editorialCardStackBottom;
   }, [
     styles.editorialCardHero,
+    styles.editorialCardHeroTall,
     styles.editorialCardStackBottom,
     styles.editorialCardStackMiddle,
     styles.editorialCardStackTop,
   ]);
+
+  const getEditorialImageHeight = useCallback((index: number, count: number) => {
+    if (count === 1) return 340;
+    if (count === 2) return index === 0 ? 340 : 304;
+    if (count === 3) return index === 0 ? 336 : 296;
+    return index === 0 ? 316 : 292;
+  }, []);
 
   if (isLoading) {
     return (
@@ -339,6 +347,7 @@ export function HomeInspirationSection({
                     item={item}
                     index={index}
                     isMobile={isMobile}
+                    imageHeight={getEditorialImageHeight(index, Math.min(travelsList.length, 4))}
                     hideAuthor={hideAuthor}
                     viewportWidth={viewportWidth}
                     visualVariant="home-featured"

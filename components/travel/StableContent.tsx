@@ -31,6 +31,7 @@ const LazyFullscreenGallery = React.lazy<React.ComponentType<FullscreenGalleryPr
 interface StableContentProps {
   html: string;
   contentWidth: number;
+  fullWidth?: boolean;
 }
 
 type IframeModelType = typeof import("@native-html/iframe-plugin")["iframeModel"];
@@ -332,6 +333,7 @@ const prepareHtml = (html: string) => {
 };
 
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
+const WEB_RICH_TEXT_FULL_WIDTH_CLASS = "travel-rich-text--full-width";
 const WEB_RICH_TEXT_STYLES_ID = "travel-rich-text-styles";
 
 const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
@@ -345,6 +347,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   max-width: 680px;
   margin: 0 auto;
   padding: 0 ${DESIGN_TOKENS.spacing.md}px 48px;
+}
+
+.${WEB_RICH_TEXT_CLASS}.${WEB_RICH_TEXT_FULL_WIDTH_CLASS} {
+  max-width: 100%;
+  margin: 0;
 }
 
 /* ===== APPLE-STYLE PARAGRAPHS ===== */
@@ -959,7 +966,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 `;
 
-const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }) => {
+const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth, fullWidth = false }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const webRichTextStyles = useMemo(() => getWebRichTextStyles(colors), [colors]);
@@ -1567,10 +1574,13 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
       : null;
 
   if (isWeb) {
+    const webRichTextClassName = fullWidth
+      ? `${WEB_RICH_TEXT_CLASS} ${WEB_RICH_TEXT_FULL_WIDTH_CLASS}`
+      : WEB_RICH_TEXT_CLASS;
     return (
       <>
         <div
-          className={WEB_RICH_TEXT_CLASS}
+          className={webRichTextClassName}
           dangerouslySetInnerHTML={{ __html: prepared }}
         />
         {webLightboxPortal}

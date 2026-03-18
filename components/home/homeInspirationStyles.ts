@@ -237,15 +237,23 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   editorialCardHero: Platform.select({
     web: !isMobile
       ? ({
-          gridColumn: '1 / span 8',
+          gridColumn: '1 / span 7',
           gridRow: '1 / span 1',
+        } as any)
+      : {},
+  }) as any,
+  editorialCardHeroTall: Platform.select({
+    web: !isMobile
+      ? ({
+          gridColumn: '1 / span 7',
+          gridRow: '1 / span 2',
         } as any)
       : {},
   }) as any,
   editorialCardStackTop: Platform.select({
     web: !isMobile
       ? ({
-          gridColumn: '9 / span 4',
+          gridColumn: '8 / span 5',
           gridRow: '1 / span 1',
         } as any)
       : {},

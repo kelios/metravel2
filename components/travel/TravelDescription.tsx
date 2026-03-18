@@ -154,7 +154,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           {isEmptyHtml ? (
             <Text style={styles.placeholder}>Описание скоро появится</Text>
           ) : canParseHtml ? (
-            <StableContent html={htmlContent} contentWidth={contentWidth} />
+            <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
           ) : (
             <Text style={styles.placeholder}>Загружаем описание…</Text>
           )}
