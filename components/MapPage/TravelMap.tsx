@@ -60,7 +60,7 @@ interface TravelMapProps {
 
   /**
    * Draw a line connecting points (NOT routing; just straight segments).
-   * Defaults to false on travel pages (points-only).
+   * Disabled by default to show only markers.
    */
   showRouteLine?: boolean;
 
