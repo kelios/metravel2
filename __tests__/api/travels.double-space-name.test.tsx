@@ -54,6 +54,8 @@ const TRAVEL_WITH_DOUBLE_SPACES = {
   moderation: true,
   userIds: [1],
   gallery: [],
+  travelAddress: [],
+  coordsMeTravel: [],
   travel_image_thumb_url: 'https://metravel.by/travel-image/2676/test.webp',
 };
 

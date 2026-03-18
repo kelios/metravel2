@@ -95,6 +95,7 @@ const RAW_API_DATA = {
       id: 22,
     },
   ],
+  coordsMeTravel: [],
 } as const
 
 const setPlatformOs = (os: string) => {
@@ -121,13 +122,20 @@ describe('Travel details web preload (modyn)', () => {
 
   it('consumes window preload as React Query initialData (no fetch)', async () => {
     setPlatformOs('web')
-    useLocalSearchParams.mockReturnValue({ param: RAW_API_DATA.slug })
 
+    // Verify normalization works
+    const normalized = normalizeTravelItem(RAW_API_DATA)
+    expect(normalized.id).toBe(498)
+    expect(normalized.slug).toBe(RAW_API_DATA.slug)
+
+    // Set preload BEFORE mocking useLocalSearchParams so useMemo can consume it
     ;(window as any).__metravelTravelPreload = {
       data: RAW_API_DATA,
       slug: RAW_API_DATA.slug,
       isId: false,
     }
+
+    useLocalSearchParams.mockReturnValue({ param: RAW_API_DATA.slug })
 
     const qc = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -139,6 +147,7 @@ describe('Travel details web preload (modyn)', () => {
 
     const { result } = renderHook(() => useTravelDetails(), { wrapper })
 
+    // With initialData set, travel should be available immediately (or after React Query initialization)
     await waitFor(() => {
       expect(result.current.travel?.id).toBe(498)
     })

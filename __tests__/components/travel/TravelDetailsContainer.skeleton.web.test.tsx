@@ -178,7 +178,8 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     const { UNSAFE_getByProps, rerender } = render(<TravelDetailsContainer />)
 
     const overlayBefore = UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' })
-    expect(overlayBefore.props['aria-hidden']).toBe(false)
+    expect(overlayBefore.props.style.visibility).toBe('visible')
+    expect(overlayBefore.props.inert).toBe(true)
 
     mockPerformanceState.lcpLoaded = true
     mockPerformanceState.sliderReady = true
@@ -192,7 +193,8 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     })
 
     const overlayAfter = UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' })
-    expect(overlayAfter.props['aria-hidden']).toBe(true)
+    expect(overlayAfter.props.style.visibility).toBe('hidden')
+    expect(overlayAfter.props.inert).toBeUndefined()
   })
 
   it('renders the hero slider on web as soon as LCP is ready even if sliderReady is false', () => {
