@@ -35,7 +35,7 @@ const FavoritesProviderLazy = safeLazy(
 const AuthProviderLazy = safeLazy(
   () =>
     import('@/context/AuthContext').then((mod) => ({
-      default: (mod.AuthProvider ?? mod.default ?? EmptyFallback) as React.ComponentType<any>,
+      default: (mod.AuthProvider ?? EmptyFallback) as React.ComponentType<any>,
     })),
   'AuthProvider'
 );

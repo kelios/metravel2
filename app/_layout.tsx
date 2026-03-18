@@ -153,7 +153,8 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
 
 	function RootLayoutNav() {
 	    const pathname = usePathname();
-	    const colorScheme = useColorScheme();
+	    const colorSchemeRaw = useColorScheme();
+	    const colorScheme = colorSchemeRaw === 'unspecified' ? null : colorSchemeRaw;
       const { width } = useWindowDimensions();
       const [isViewportHydrated, setIsViewportHydrated] = useState(!isWeb);
     const loadingColors = useMemo(
@@ -384,7 +385,7 @@ function ThemedContent({
                               )}
 
                               {/* AND-10: Индикатор синхронизации при восстановлении сети (native only) */}
-                              {!isWeb && (
+                              {!isWeb && SyncIndicatorLazy && (
                                 <React.Suspense fallback={null}>
                                   <SyncIndicatorLazy />
                                 </React.Suspense>
@@ -418,7 +419,7 @@ function ThemedContent({
                               )}
                         </View>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
-            {!isWeb && isMounted && (
+            {!isWeb && isMounted && ToastLazy && (
               <React.Suspense fallback={null}>
                 <ToastLazy />
               </React.Suspense>
