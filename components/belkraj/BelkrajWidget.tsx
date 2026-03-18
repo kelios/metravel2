@@ -92,7 +92,6 @@ function BelkrajWidget({
                     height: targetHeight,
                     maxHeight: targetHeight,
                     WebkitOverflowScrolling: 'touch',
-                    touchAction: 'pan-y',
                 } : null),
             }}
         >

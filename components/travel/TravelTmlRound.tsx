@@ -83,7 +83,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         height: optimalSize.height,
         format: 'webp',
         quality: 85,
-        fit: 'contain',
+        fit: 'cover',
       }) || versionedUrl;
     }, [baseImageUrl, imageHeight, travel]);
 
@@ -135,7 +135,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 imageUrl={optimizedImageUrl ?? null}
                 onPress={onPress}
                 onLongPress={handleLongPress}
-                mediaFit="contain"
+                mediaFit="cover"
                 heroTitleOverlay={false}
                 containerOverlaySlot={overlay}
                 contentSlot={contentSlot}
