@@ -130,18 +130,17 @@ export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo
     previewImage: {
         width: '100%',
         height: '100%',
-        objectFit: 'cover' as const,
+        objectFit: 'contain' as const,
     },
     previewMedia: {
         width: '100%',
         height: '100%',
     },
     placeholderImage: {
-        fontSize: '10px',
-        color: colors.textMuted,
-        textAlign: 'center' as const,
-        padding: '4px',
-        lineHeight: 1.2,
+        width: '100%',
+        height: '100%',
+        borderRadius: '10px',
+        backgroundColor: colors.backgroundSecondary,
     },
     previewText: {
         flex: 1,
@@ -282,7 +281,7 @@ export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo
     imagePreview: {
         width: '100px',
         height: '100px',
-        objectFit: 'cover' as const,
+        objectFit: 'contain' as const,
         borderRadius: '6px',
         backgroundColor: colors.backgroundSecondary,
         marginTop: '4px',
@@ -389,4 +388,3 @@ export const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo
         backgroundColor: colors.backgroundSecondary,
     },
 }), [colors]);
-

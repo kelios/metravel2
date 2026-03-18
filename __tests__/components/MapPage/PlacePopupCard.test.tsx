@@ -49,7 +49,7 @@ describe('PlacePopupCard', () => {
     require('react-native').useWindowDimensions = originalWindowDimensions;
   });
 
-  it('passes actual popup hero dimensions to ImageCardMedia on web', () => {
+  it('passes actual popup hero dimensions to ImageCardMedia on web with contain fit and blur backdrop', () => {
     renderer.act(() => {
       renderer.create(
         <PlacePopupCard
@@ -63,10 +63,10 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.fit).toBe('cover');
+    expect(props.fit).toBe('contain');
     expect(props.width).toBe(436);
     expect(props.height).toBe(320);
-    expect(props.blurBackground).toBe(false);
+    expect(props.blurBackground).toBe(true);
     expect(props.allowCriticalWebBlur).toBeUndefined();
   });
 

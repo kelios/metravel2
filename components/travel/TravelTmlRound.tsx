@@ -83,7 +83,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
         height: optimalSize.height,
         format: 'webp',
         quality: 85,
-        fit: 'cover',
+        fit: 'contain',
       }) || versionedUrl;
     }, [baseImageUrl, imageHeight, travel]);
 
@@ -135,7 +135,7 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
                 imageUrl={optimizedImageUrl ?? null}
                 onPress={onPress}
                 onLongPress={handleLongPress}
-                mediaFit="cover"
+                mediaFit="contain"
                 heroTitleOverlay={false}
                 containerOverlaySlot={overlay}
                 contentSlot={contentSlot}
@@ -204,7 +204,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         height: "100%",
         ...Platform.select({
             web: {
-                objectFit: 'cover' as any,
+                objectFit: 'contain' as any,
             },
         }),
     },

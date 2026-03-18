@@ -9,7 +9,6 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { parseCoordinateString } from '@/utils/coordinates';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import Feather from '@expo/vector-icons/Feather';
 import MapIcon from './MapIcon';
 import Button from '@/components/ui/Button';
 import CardActionPressable from '@/components/ui/CardActionPressable';
@@ -119,14 +118,15 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
                     <ImageCardMedia
                       src={thumbUrl}
                       alt={place.address || `Место ${index + 1}`}
-                      fit="cover"
+                      fit="contain"
+                      blurBackground
                       loading="lazy"
                       priority="low"
                       cachePolicy="memory-disk"
                       style={StyleSheet.absoluteFillObject}
                     />
                   ) : (
-                    <Feather name="map-pin" size={16} color={colors.primary} />
+                    <View style={styles.thumbnailPlaceholder} />
                   )}
                 </View>
                 <View style={styles.cardContent}>
@@ -242,12 +242,17 @@ const getStyles = (colors: ThemedColors) =>
       height: 44,
       borderRadius: 12,
       overflow: 'hidden',
-      backgroundColor: colors.primaryLight,
+      backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
+    },
+    thumbnailPlaceholder: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.backgroundSecondary,
     },
     cardContent: {
       flex: 1,

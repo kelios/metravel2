@@ -102,7 +102,7 @@ function NavigationArrows({
       height: optimalSize.height,
       format: 'webp',
       quality: 80,
-      fit: 'cover',
+      fit: 'contain',
     }) || versionedUrl;
   }, []);
 

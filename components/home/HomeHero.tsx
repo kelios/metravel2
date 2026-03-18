@@ -747,7 +747,7 @@ const HomeHero = memo(function HomeHero({
                     width={width * 0.45}
                     height={340}
                     borderRadius={0}
-                    fit="cover"
+                    fit="contain"
                     blurBackground
                     allowCriticalWebBlur
                     quality={85}

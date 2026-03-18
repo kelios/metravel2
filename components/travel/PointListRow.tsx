@@ -101,7 +101,7 @@ const PointListRow = React.memo(function PointListRow({
             <ImageCardMedia
               src={imageUrl}
               alt={point.address}
-              fit="cover"
+              fit="contain"
               blurBackground
               blurRadius={16}
               priority="low"

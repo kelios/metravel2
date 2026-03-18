@@ -886,7 +886,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                     {posterUri ? (
                                                         <ImageCardMedia
                                                             src={posterUri}
-                                                            fit="cover"
+                                                            fit="contain"
                                                             blurBackground
                                                             blurRadius={18}
                                                             style={StyleSheet.absoluteFillObject as any}

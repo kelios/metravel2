@@ -425,7 +425,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       imageUrl={photoUrl}
       onPress={handleCardPress}
       imageHeight={layout === 'grid' ? 160 : 140}
-      mediaFit="cover"
+      mediaFit="contain"
       contentSlot={contentSlot}
       containerOverlaySlot={mediaOverlay}
       contentContainerStyle={styles.contentContainer}

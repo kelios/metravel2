@@ -98,7 +98,7 @@ describe('AdventureChaptersSection', () => {
     jest.clearAllMocks();
   });
 
-  it('passes the original travel image url to ImageCardMedia on web', () => {
+  it('passes the original travel image url to ImageCardMedia on web with contain fit', () => {
     renderer.act(() => {
       renderer.create(<AdventureChaptersSection />);
     });
@@ -107,7 +107,7 @@ describe('AdventureChaptersSection', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
     expect(props.src).toBe('https://metravel.by/travel-image/sample.jpg');
-    expect(props.fit).toBe('cover');
+    expect(props.fit).toBe('contain');
     expect(props.blurBackground).toBe(true);
   });
 });

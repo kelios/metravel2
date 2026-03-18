@@ -23,6 +23,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 /* -------------------- Types -------------------- */
 
@@ -156,22 +157,17 @@ export const VideoSection: React.FC<VideoSectionProps> = memo(({
             testID="video-preview"
           >
             {/* Фоновое изображение */}
-            {Platform.OS === 'web' && thumbnailUrl ? (
-              <img
+            {thumbnailUrl ? (
+              <ImageCardMedia
                 src={thumbnailUrl}
                 alt="Превью видео"
                 width={1280}
                 height={720}
+                fit="contain"
+                blurBackground
                 loading="lazy"
-                decoding="async"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
+                priority="low"
+                style={StyleSheet.absoluteFillObject}
               />
             ) : (
               <View style={[styles.previewPlaceholder, { backgroundColor: colors.surfaceElevated }]} />

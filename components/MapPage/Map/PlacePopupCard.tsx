@@ -520,8 +520,8 @@ const PlacePopupCard: React.FC<Props> = ({
             <ImageCardMedia
               src={imageUrl}
               alt={title}
-              fit="cover"
-              blurBackground={false}
+              fit="contain"
+              blurBackground
               priority="high"
               loading="eager"
               width={maxPopupWidth}
