@@ -32,16 +32,17 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     const { width, height } = useWindowDimensions();
     const isMobileLayout = width < METRICS.breakpoints.tablet;
     const colors = useThemedColors();
+    const shouldUseFullWidthLayout = noBox && !isMobileLayout;
 
     // ✅ ОПТИМИЗАЦИЯ: Адаптивные размеры контейнера
     const pageHeight = useMemo(() => Math.round(height * 0.7), [height]);
     const contentWidth = useMemo(() => {
-        // Адаптивная максимальная ширина
-        const maxContent = Math.min(width, 760);
-        // Адаптивные отступы в зависимости от ширины
-        const padding = width >= 768 ? 64 : width >= 480 ? 40 : 32;
+        const maxContent = shouldUseFullWidthLayout ? width : Math.min(width, 760);
+        const padding = shouldUseFullWidthLayout
+            ? (width >= 768 ? 32 : width >= 480 ? 24 : 16)
+            : (width >= 768 ? 64 : width >= 480 ? 40 : 32);
         return Math.max(maxContent - padding, 220);
-    }, [width]);
+    }, [shouldUseFullWidthLayout, width]);
 
     // ---- состояние содержимого ----
     const isEmptyHtml = useMemo(() => {
@@ -94,7 +95,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             backgroundColor: 'transparent',
         },
 
-        wrapperNoBoxMobile: {
+        wrapperNoBox: {
             alignSelf: "stretch",
             maxWidth: undefined,
             paddingHorizontal: 0,
@@ -164,7 +165,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
       <View
         style={[
           styles.wrapper,
-          noBox && isMobileLayout && styles.wrapperNoBoxMobile,
+          noBox && styles.wrapperNoBox,
         ]}
         testID="travel-description"
       >
