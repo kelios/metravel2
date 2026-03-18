@@ -157,7 +157,6 @@ function HomeFAQSection() {
         web: {
           transition: 'background-color 0.18s ease',
           cursor: 'pointer',
-          touchAction: 'pan-y',
         } as any,
       }),
     },

@@ -6,7 +6,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
   StyleSheet.create({
     wrap: {
       width: '100%',
-      ...(Platform.OS === 'web' ? { height: '100%', touchAction: 'pan-y' } as any : {}),
+      ...(Platform.OS === 'web' ? { height: '100%' } as any : {}),
     },
 
     // Современная минималистичная карточка

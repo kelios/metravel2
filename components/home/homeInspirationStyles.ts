@@ -163,12 +163,10 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   trioGrid: {
     gap: isMobile ? 12 : 14,
     width: '100%',
-    ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
   },
   trioCardTop: {
     width: '100%',
     minHeight: isMobile ? 220 : 360,
-    ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
   },
   trioBottomRow: {
     flexDirection: isMobile ? 'column' : 'row',
@@ -178,12 +176,10 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
   trioCardBottom: {
     flex: 1,
     minHeight: isMobile ? 200 : 280,
-    ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
   },
   bentoGrid: {
     gap: isMobile ? 12 : 14,
     width: '100%',
-    ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
   },
   bentoRow: {
     flexDirection: isMobile ? 'column' : 'row',
@@ -195,13 +191,11 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     flex: isMobile ? undefined : 2,
     width: isMobile ? '100%' : undefined,
     minHeight: isMobile ? 220 : 340,
-    ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
   },
   bentoCardNarrow: {
     flex: isMobile ? undefined : 1,
     width: isMobile ? '100%' : undefined,
     minHeight: isMobile ? 200 : 280,
-    ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
   },
   viewMoreButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -232,15 +226,15 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     ...Platform.select({ web: { transform: 'translateY(-2px)', boxShadow: `0 6px 18px ${colors.primary}18` } }),
   },
   articlesButtonText: { color: colors.primaryText, fontSize: isMobile ? 14 : 15, lineHeight: isMobile ? 20 : 22, fontWeight: '700' },
-  grid: { width: '100%', gap: isMobile ? 12 : 16, ...Platform.select({ web: { touchAction: 'pan-y' } as any }) },
+  grid: { width: '100%', gap: isMobile ? 12 : 16 },
   row: {
     flexDirection: 'row', gap: isMobile ? 12 : 16, justifyContent: 'flex-start', alignItems: 'stretch', width: '100%',
-    ...Platform.select({ web: { justifyContent: 'flex-start', touchAction: 'pan-y' } as any }),
+    ...Platform.select({ web: { justifyContent: 'flex-start' } as any }),
   },
   rowWebCentered: { justifyContent: 'center' },
   cardWrapper: {
     flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, minHeight: isMobile ? 0 : 300,
-    ...Platform.select({ web: { flexGrow: 1, flexShrink: 1, flexBasis: 0, alignSelf: 'stretch', touchAction: 'pan-y' } as any }),
+    ...Platform.select({ web: { flexGrow: 1, flexShrink: 1, flexBasis: 0, alignSelf: 'stretch' } as any }),
   },
   cardWrapperSingleColumn: { width: '100%', flexGrow: 0, flexShrink: 0, flexBasis: 'auto', alignSelf: 'stretch' },
   cardWrapperMobile: { width: '100%', minWidth: 150 },

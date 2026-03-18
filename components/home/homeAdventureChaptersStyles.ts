@@ -160,7 +160,6 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
       flexDirection: isMobile ? 'column' : 'row',
       flexWrap: 'wrap',
       gap: isMobile ? 14 : 18,
-      ...Platform.select({ web: { touchAction: 'pan-y' } as any }),
     },
 
     // Each card slot — flex equal columns on desktop
@@ -170,7 +169,7 @@ export const createAdventureChaptersStyles = (colors: Colors, isMobile: boolean)
       flexBasis: isMobile ? 'auto' : 0,
       minWidth: isMobile ? '100%' : 260,
       ...Platform.select({
-        web: { alignSelf: 'stretch', touchAction: 'pan-y' } as any,
+        web: { alignSelf: 'stretch' } as any,
       }),
     },
     cardSlotPlaceholder: {
