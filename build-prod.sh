@@ -32,7 +32,7 @@ build_env() {
   local ENV="$1"
   local DIR="dist/$ENV"
   local EXPORT_LOG
-  EXPORT_LOG="$(mktemp "/tmp/expo-export-${ENV}.XXXX.log")"
+  EXPORT_LOG="$(mktemp "/tmp/expo-export-${ENV}.XXXXXX.log")"
   trap 'rm -f "${EXPORT_LOG}"' EXIT
 
   echo "🚀 Сборка для $ENV → $DIR"
