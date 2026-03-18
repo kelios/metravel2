@@ -17,17 +17,31 @@ type Props = {
     expandedHeight?: number;  // высота при развороте
     className?: string;
     allowScroll?: boolean;
+    cardsCount?: number; // количество карточек для отображения
 };
 
 function BelkrajWidget({
                                           points,
                                           countryCode,
-                                          collapsedHeight = 520,
+                                          collapsedHeight,
                                           expandedHeight = 1200,
                                           className,
                                           allowScroll = false,
+                                          cardsCount = 6,
                                       }: Props) {
     const expanded = false;
+
+    // Динамический расчет высоты в зависимости от количества карточек
+    // Примерно: header (60px) + (карточка 280px + gap 16px) * количество карточек + footer (40px)
+    const calculatedHeight = useMemo(() => {
+        const HEADER_HEIGHT = 60;
+        const FOOTER_HEIGHT = 40;
+        const CARD_HEIGHT = 280;
+        const GAP = 16;
+        return HEADER_HEIGHT + (CARD_HEIGHT + GAP) * cardsCount + FOOTER_HEIGHT;
+    }, [cardsCount]);
+
+    const finalCollapsedHeight = collapsedHeight ?? calculatedHeight;
 
     const firstCoord = useMemo(() => {
         const p = points?.[0];
@@ -42,7 +56,7 @@ function BelkrajWidget({
     }, [points]);
 
     // Текущая целевая высота iframe
-    const targetHeight = expanded ? expandedHeight : collapsedHeight;
+    const targetHeight = expanded ? expandedHeight : finalCollapsedHeight;
     const scrollFrameHeight = allowScroll ? Math.max(targetHeight, expandedHeight, 1600) : targetHeight;
 
     const isProd =
@@ -66,13 +80,13 @@ function BelkrajWidget({
             term: 'place',
             theme: 'cards',
             partner: 'u180793',
-            size: '6',
+            size: String(cardsCount),
         });
         if (resolvedCountryCode) {
             params.set('country', resolvedCountryCode);
         }
         return `https://belkraj.by/partner/widget?${params.toString()}`;
-    }, [firstCoord, resolvedCountryCode]);
+    }, [firstCoord, resolvedCountryCode, cardsCount]);
 
     // Не рендерим ничего, если нет координат
     if (!firstCoord || !isProd || !iframeSrc) return null;
