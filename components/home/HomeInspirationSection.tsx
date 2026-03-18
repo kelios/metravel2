@@ -184,6 +184,11 @@ export function HomeInspirationSection({
 
   const styles = useMemo(() => createSectionStyles(colors, isMobile), [colors, isMobile]);
   const isDesktopEditorial = Platform.OS === 'web' && !isMobile;
+  const shouldUseThreeColumnRow =
+    Platform.OS === 'web' &&
+    !isMobile &&
+    queryKey === 'home-random-travels' &&
+    travelsList.length === 3;
 
   const getEditorialCardStyle = useCallback((index: number, count: number) => {
     if (count === 1) return styles.editorialCardHero;
@@ -320,6 +325,27 @@ export function HomeInspirationSection({
                     />
                   </View>
                 </React.Fragment>
+              );
+            })}
+          </View>
+        ) : shouldUseThreeColumnRow ? (
+          <View style={styles.threeColumnGrid}>
+            {travelsList.map((item: any, index: number) => {
+              const key = item?.id != null && String(item.id).length > 0
+                ? String(item.id)
+                : item?.url ? String(item.url) : `${queryKey}-${index}`;
+
+              return (
+                <View key={key} style={styles.threeColumnCard}>
+                  <RenderTravelItem
+                    item={item}
+                    index={index}
+                    isMobile={isMobile}
+                    hideAuthor={hideAuthor}
+                    viewportWidth={viewportWidth}
+                    visualVariant="home-featured"
+                  />
+                </View>
               );
             })}
           </View>

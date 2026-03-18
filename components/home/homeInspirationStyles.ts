@@ -177,6 +177,18 @@ export const createSectionStyles = (colors: Colors, isMobile: boolean) => StyleS
     flex: 1,
     minHeight: isMobile ? 200 : 280,
   },
+  threeColumnGrid: {
+    flexDirection: isMobile ? 'column' : 'row',
+    gap: isMobile ? 12 : 14,
+    alignItems: 'stretch',
+    width: '100%',
+  },
+  threeColumnCard: {
+    flex: isMobile ? undefined : 1,
+    width: isMobile ? '100%' : undefined,
+    minHeight: isMobile ? 220 : 320,
+    minWidth: 0,
+  },
   bentoGrid: {
     gap: isMobile ? 12 : 14,
     width: '100%',
