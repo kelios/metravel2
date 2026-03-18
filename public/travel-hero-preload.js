@@ -290,10 +290,12 @@
         } catch (_e) {}
 
         if (document.querySelector('link[rel="preload"][href="' + preloadHref + '"]')) return;
+
         var link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
         link.href = preloadHref;
+        link.setAttribute('data-travel-hero-preload', 'true');
 
         // Exact match with TravelDetailsHero.tsx sizes
         var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px';

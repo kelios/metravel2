@@ -26,7 +26,8 @@ export default function TravelDetailsSkeletonOverlay({
         contain: 'strict',
         pointerEvents: 'none',
       } as any}
-      aria-hidden={skeletonPhase !== 'loading'}
+      // @ts-ignore - web-only inert attribute
+      inert={skeletonPhase !== 'loading' ? '' : undefined}
     >
       {skeletonPhase !== 'hidden' && (
         <Suspense fallback={skeletonFallback}>{travelDetailSkeleton}</Suspense>
