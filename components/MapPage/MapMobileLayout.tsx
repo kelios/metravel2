@@ -69,7 +69,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const isNarrow = viewportWidth <= 390;
   const isVeryNarrow = viewportWidth <= 350;
   const compactSheetActions = viewportWidth <= 360;
-  const stackSheetToolbar = viewportWidth <= 330;
+  const stackSheetToolbar = viewportWidth <= 390;
   const styles = useMemo(
     () => getStyles(colors, { isNarrow, compactSheetActions, stackSheetToolbar }),
     [colors, isNarrow, compactSheetActions, stackSheetToolbar]
@@ -436,20 +436,25 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     styles.sheetToolbarActions,
     styles.sheetCloseButton,
     styles.sheetShowResultsButton,
+    styles.sheetShowResultsButtonCompact,
     styles.sheetResultsBadge,
     styles.filtersModeBar,
     styles.sheetToolbarLeft,
+    styles.sheetToolbarActionsStacked,
     styles.sheetBody,
     styles.sheetRoot,
     styles.sheetToolbar,
     styles.sheetToolbarInline,
+    styles.sheetToolbarStacked,
     styles.sheetToolbarFullWidth,
+    styles.sheetIconButtonCompact,
     transportMode,
     travelsData,
     onExpandRadius,
     onResetFilters,
     listTabsOptions,
     modeTabsOptions,
+    compactSheetActions,
     isNarrow,
     stackSheetToolbar,
   ]);
