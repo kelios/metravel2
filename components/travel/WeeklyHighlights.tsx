@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
@@ -24,6 +25,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
     const router = useRouter();
     const { viewHistory } = useFavorites();
     const colors = useThemedColors();
+    const { isMobile } = useResponsive();
 
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
@@ -181,47 +183,71 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                     <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>
                 </>
             )}
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-                removeClippedSubviews={Platform.OS !== "web"}
-                decelerationRate="fast"
-                scrollEnabled={true}
-                nestedScrollEnabled={true}
-                // Явно включаем горизонтальный скролл на вебе
-                style={Platform.select({
-                    web: {
-                        overflowX: 'auto',
-                        overflowY: 'hidden',
-                        overscrollBehaviorX: 'contain',
-                        width: '100%',
-                        WebkitOverflowScrolling: 'touch',
-                        touchAction: 'pan-x pan-y',
-                    } as any,
-                    default: {},
-                })}
-                {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
-            >
-                {highlights.map((item) => (
-                    <TabTravelCard
-                        key={item.id}
-                        item={{
-                            id: item.id,
-                            title: item.title,
-                            imageUrl: item.imageUrl,
-                            city: null,
-                            country: item.country ?? null,
-                        }}
-                        badge={{
-                            icon: 'trending-up',
-                            backgroundColor: colors.surface,
-                            iconColor: colors.primary,
-                        }}
-                        onPress={() => handleItemPress(item.url)}
-                    />
-                ))}
-            </ScrollView>
+            {isMobile ? (
+                <View style={styles.mobileGrid}>
+                    {highlights.map((item) => (
+                        <View key={item.id} style={styles.mobileGridItem}>
+                            <TabTravelCard
+                                item={{
+                                    id: item.id,
+                                    title: item.title,
+                                    imageUrl: item.imageUrl,
+                                    city: null,
+                                    country: item.country ?? null,
+                                }}
+                                badge={{
+                                    icon: 'trending-up',
+                                    backgroundColor: colors.surface,
+                                    iconColor: colors.primary,
+                                }}
+                                onPress={() => handleItemPress(item.url)}
+                                layout="grid"
+                            />
+                        </View>
+                    ))}
+                </View>
+            ) : (
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.scrollContent}
+                    removeClippedSubviews={Platform.OS !== "web"}
+                    decelerationRate="fast"
+                    scrollEnabled={true}
+                    nestedScrollEnabled={true}
+                    style={Platform.select({
+                        web: {
+                            overflowX: 'auto',
+                            overflowY: 'hidden',
+                            overscrollBehaviorX: 'contain',
+                            width: '100%',
+                            WebkitOverflowScrolling: 'touch',
+                            touchAction: 'pan-x pan-y',
+                        } as any,
+                        default: {},
+                    })}
+                    {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+                >
+                    {highlights.map((item) => (
+                        <TabTravelCard
+                            key={item.id}
+                            item={{
+                                id: item.id,
+                                title: item.title,
+                                imageUrl: item.imageUrl,
+                                city: null,
+                                country: item.country ?? null,
+                            }}
+                            badge={{
+                                icon: 'trending-up',
+                                backgroundColor: colors.surface,
+                                iconColor: colors.primary,
+                            }}
+                            onPress={() => handleItemPress(item.url)}
+                        />
+                    ))}
+                </ScrollView>
+            )}
         </View>
     );
 }
@@ -328,6 +354,20 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         gap: 12,
         ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : {}),
+    },
+    mobileGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'stretch',
+        justifyContent: 'space-between',
+        rowGap: 12,
+        columnGap: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+    },
+    mobileGridItem: {
+        width: '48%',
+        minWidth: 0,
     },
 });
 

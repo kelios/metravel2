@@ -108,34 +108,21 @@ export class V1GalleryRenderer {
                   : `min-height: ${isSingle ? singleImageHeight : resolvedHeight};`;
 
               return `
-            <div style="
+            <div class="gallery-photo-frame" style="
               ${wrapperStyle}
               ${collageSpan}
               border-radius: ${this.ctx.theme.blocks.borderRadius};
               overflow: hidden;
               position: relative;
               box-shadow: ${this.ctx.theme.blocks.shadow};
-              background: ${layout === 'polaroid' ? '#fff' : colors.surfaceAlt};
+              background: ${layout === 'polaroid' ? '#fff' : `linear-gradient(180deg, ${colors.background} 0%, ${colors.surfaceAlt} 100%)`};
               ${polaroidStyle}
               ${wrapperMinHeight}
               display: flex;
               align-items: center;
               justify-content: center;
+              ${layout === 'polaroid' ? '' : 'padding: 2.5mm;'}
             ">
-              <img src="${escapeHtml(photo)}" alt="" aria-hidden="true"
-                style="
-                  position: absolute;
-                  inset: -8px;
-                  width: calc(100% + 16px);
-                  height: calc(100% + 16px);
-                  object-fit: cover;
-                  filter: blur(14px);
-                  opacity: 0.28;
-                  transform: scale(1.03);
-                  display: block;
-                  pointer-events: none;
-                "
-                crossorigin="anonymous" />
               <img src="${escapeHtml(photo)}" alt="Фото ${index + 1}"
                 style="
                   width: 100%;
@@ -146,7 +133,7 @@ export class V1GalleryRenderer {
                   ${getImageFilterStyle(this.ctx)}
                 "
                 crossorigin="anonymous"
-                onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
             </div>
           `;
             })

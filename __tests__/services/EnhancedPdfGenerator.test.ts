@@ -49,6 +49,8 @@ const baseSettings: BookSettings = {
 const travelA: TravelForBook = {
   id: 1,
   name: 'Alpha',
+  slug: 'alpha',
+  url: 'https://metravel.by/travels/alpha',
   countryName: 'Belarus',
   year: '2023',
   travel_image_thumb_url: 'http://example.com/a.jpg',
@@ -66,6 +68,8 @@ const travelA: TravelForBook = {
 const travelB: TravelForBook = {
   id: 2,
   name: 'Beta',
+  slug: 'beta',
+  url: 'https://metravel.by/travels/beta',
   countryName: 'Austria',
   year: '2021',
   travel_image_thumb_url: '/cover.jpg',
@@ -92,9 +96,11 @@ describe('EnhancedPdfGenerator helpers', () => {
   it('builds gallery, checklist and map sections', async () => {
     const galleryHtml = generator.renderGalleryPage(travelA, 2)
     expect(galleryHtml).toContain('gallery-page')
+    expect(galleryHtml).toContain('gallery-photo-frame')
     expect(galleryHtml).toContain('images.weserv.nl')
     expect(galleryHtml).toContain('height: 285mm')
     expect(galleryHtml).not.toContain('flex: 1; min-height: 170mm')
+    expect(galleryHtml).not.toContain('filter: blur(14px)')
 
     const checklist = generator.renderChecklistPage(baseSettings, 5)
     expect(checklist).toContain('Одежда')
@@ -104,8 +110,10 @@ describe('EnhancedPdfGenerator helpers', () => {
     const mapPage = await generator.renderMapPage(travelA, locations, 4)
     expect(mapPage).toContain('leaflet-snapshot')
     expect(mapPage).toContain('Маршрут')
+    expect(mapPage).toContain('map-location-card')
     expect(mapPage).toContain('height: 125mm')
     expect(mapPage).not.toContain('height: 135mm')
+    expect(mapPage).toContain('alt="QR"')
   })
 
   it('builds inline gallery and safe URLs', () => {
@@ -162,9 +170,12 @@ describe('EnhancedPdfGenerator helpers', () => {
 
     expect(html).toContain('<title>Book</title>')
     expect(html).toContain('cover-page')
+    expect(html).toContain('cover-story-panel')
     expect(html).toContain('toc-page')
     expect(html).toContain('travel-content-page')
+    expect(html).toContain('travel-online-card')
     expect(html).toContain('final-page')
+    expect(html).toContain('final-summary-tile')
 
     expect(html).toContain('hyphens: auto')
     expect(html).toContain('word-break: break-word')

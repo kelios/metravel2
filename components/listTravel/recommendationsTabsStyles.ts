@@ -105,6 +105,20 @@ export const createRecommendationsTabsStyles = (
     paddingHorizontal: 4, paddingBottom: 6,
     ...Platform.select({ web: { paddingBottom: 12 } as any, default: {} }),
   },
+  mobileGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+    rowGap: 12,
+    columnGap: 12,
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+  },
+  mobileGridItem: {
+    width: '48%',
+    minWidth: 0,
+  },
   favoritesHeaderRow: {
     paddingHorizontal: 0, paddingTop: 4, paddingBottom: 10, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'space-between', gap: 12,

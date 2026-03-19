@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import RecommendationsTabs from '@/components/listTravel/RecommendationsTabs';
 
 const mockPush = jest.fn();
+const mockUseResponsive = jest.fn(() => ({ isMobile: false }));
 
 const mockUseAuth: jest.Mock<any, any> = jest.fn(() => ({ isAuthenticated: false }));
 const mockUseFavorites: jest.Mock<any, any> = jest.fn(() => ({
@@ -26,6 +27,10 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => mockUseFavorites(),
 }));
 
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => mockUseResponsive(),
+}));
+
 jest.mock('@/components/travel/WeeklyHighlights', () => ({
   __esModule: true,
   default: () => {
@@ -44,17 +49,19 @@ jest.mock('@/components/travel/PersonalizedRecommendations', () => ({
   },
 }));
 
+const mockTabTravelCard = jest.fn(({ item, onPress }: any) => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+  return React.createElement(
+    Pressable,
+    { accessibilityRole: 'button', onPress },
+    React.createElement(Text, null, String(item?.title ?? 'card'))
+  );
+});
+
 jest.mock('@/components/listTravel/TabTravelCard', () => ({
   __esModule: true,
-  default: ({ item, onPress }: any) => {
-    const React = require('react');
-    const { Pressable, Text } = require('react-native');
-    return React.createElement(
-      Pressable,
-      { accessibilityRole: 'button', onPress },
-      React.createElement(Text, null, String(item?.title ?? 'card'))
-    );
-  },
+  default: (props: any) => mockTabTravelCard(props),
 }));
 
 describe('RecommendationsTabs', () => {
@@ -62,6 +69,7 @@ describe('RecommendationsTabs', () => {
     jest.clearAllMocks();
 
     mockUseAuth.mockReturnValue({ isAuthenticated: false });
+    mockUseResponsive.mockReturnValue({ isMobile: false });
     mockUseFavorites.mockReturnValue({
       favorites: [] as any[],
       viewHistory: [] as any[],
@@ -158,6 +166,33 @@ describe('RecommendationsTabs', () => {
       expect(confirmSpy).toHaveBeenCalledWith('Очистить избранное?');
       expect(clearFavorites).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('renders favorites cards in grid mode on mobile', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true });
+    mockUseResponsive.mockReturnValue({ isMobile: true });
+    mockUseFavorites.mockReturnValue({
+      favorites: [
+        {
+          id: 1,
+          type: 'travel',
+          title: 'Fav 1',
+          url: '/travels/1',
+          imageUrl: 'https://example.com/1.jpg',
+        },
+      ],
+      viewHistory: [],
+      clearFavorites: jest.fn(),
+      clearHistory: jest.fn(),
+    });
+
+    render(<RecommendationsTabs forceVisible={true} />);
+
+    fireEvent.press(screen.getByText('Избранное'));
+    expect(await screen.findByText('Fav 1')).toBeTruthy();
+
+    const props = mockTabTravelCard.mock.calls.at(-1)?.[0];
+    expect(props?.layout).toBe('grid');
   });
 
   it('collapses and expands and calls onVisibilityChange', async () => {

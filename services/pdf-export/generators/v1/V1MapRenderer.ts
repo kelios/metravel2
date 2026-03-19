@@ -27,7 +27,8 @@ export class V1MapRenderer {
 
   render(data: V1MapPageData): string {
     const { colors, typography, spacing } = this.ctx.theme;
-    const mapHeightMm = this.getMapHeightMm(data.locationCount);
+    const locationCount = Number.isFinite(data.locationCount) ? data.locationCount : 0;
+    const mapHeightMm = this.getMapHeightMm(locationCount);
 
     const elevationProfileHtml = data.routePreview
       ? this.renderElevationProfile(data.routePreview)
@@ -60,27 +61,38 @@ export class V1MapRenderer {
         </div>
         ${elevationProfileHtml}
         <div>
-          <h2 style="
-            font-size: ${typography.h2.size};
+          <div style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 8px;
             margin-bottom: 4mm;
-            font-family: ${typography.headingFont};
-            page-break-after: avoid;
-          ">Маршрут</h2>
-          ${data.routeInfo ? `
-            <p style="
-              color: ${colors.textMuted};
-              margin-bottom: 3mm;
-              font-size: 10pt;
+          ">
+            <h2 style="
+              font-size: ${typography.h2.size};
+              margin: 0;
+              font-family: ${typography.headingFont};
+              page-break-after: avoid;
+            ">Маршрут</h2>
+            <span style="
+              display: inline-flex;
+              align-items: center;
+              padding: 4px 10px;
+              border-radius: 999px;
+              background: ${colors.accentSoft};
+              color: ${colors.accentStrong};
+              font-size: ${typography.caption.size};
+              font-weight: 700;
               font-family: ${typography.bodyFont};
-            ">${escapeHtml(data.routeInfo)}</p>
-          ` : `
-            <p style="
-              color: ${colors.textMuted};
-              margin-bottom: 3mm;
-              font-size: 10pt;
-              font-family: ${typography.bodyFont};
-            ">${escapeHtml(data.travelName)}</p>
-          `}
+            ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
+          </div>
+          <p style="
+            color: ${colors.textMuted};
+            margin-bottom: 4mm;
+            font-size: 9pt;
+            font-family: ${typography.bodyFont};
+            line-height: 1.45;
+          ">${escapeHtml(data.routeInfo || data.travelName)}</p>
           <div style="column-count: 1;">${data.locationListHtml}</div>
         </div>
       </section>

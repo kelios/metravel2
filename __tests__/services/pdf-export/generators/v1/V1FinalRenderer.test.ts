@@ -40,6 +40,7 @@ describe('V1FinalRenderer', () => {
 
     expect(html).toContain('3');
     expect(html).toContain('путешествия');
+    expect(html).toContain('final-summary-tile');
   });
 
   it('должен отображать количество стран', () => {

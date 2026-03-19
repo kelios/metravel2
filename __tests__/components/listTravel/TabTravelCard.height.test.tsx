@@ -8,18 +8,21 @@ jest.mock('@/hooks/useResponsive', () => ({
   }),
 }));
 
-jest.mock('@/components/ui/UnifiedTravelCard', () => {
+const mockUnifiedTravelCard = jest.fn((props: any) => {
   const React = require('react');
   const { View } = require('react-native');
 
-  return function MockUnifiedTravelCard(props: any) {
-    return (
-      <View testID={props.testID || 'unified-travel-card'}>
-        {props.contentSlot}
-      </View>
-    );
-  };
+  return (
+    <View testID={props.testID || 'unified-travel-card'}>
+      {props.contentSlot}
+    </View>
+  );
 });
+
+jest.mock('@/components/ui/UnifiedTravelCard', () => ({
+  __esModule: true,
+  default: (props: any) => mockUnifiedTravelCard(props),
+}));
 
 describe('TabTravelCard content height rules', () => {
   const baseItem = {
@@ -55,5 +58,15 @@ describe('TabTravelCard content height rules', () => {
     const style = Array.isArray(content.props.style) ? Object.assign({}, ...content.props.style.filter(Boolean)) : content.props.style;
 
     expect(style.minHeight).toBe(48);
+  });
+
+  it('enables shared web blur background on card media', () => {
+    render(
+      <TabTravelCard item={baseItem as any} onPress={() => undefined} testID="tab-card" />
+    );
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
+    expect(props?.mediaProps?.allowCriticalWebBlur).toBe(true);
+    expect(props?.mediaProps?.blurBackground).toBe(true);
   });
 });

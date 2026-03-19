@@ -36,6 +36,8 @@ describe('V1GalleryRenderer', () => {
 
     expect(pages).toHaveLength(1);
     expect(pages[0]).toContain('gallery-page');
+    expect(pages[0]).toContain('gallery-photo-frame');
+    expect(pages[0]).not.toContain('filter: blur(14px)');
   });
 
   it('должен генерировать страницу для нескольких фото', () => {

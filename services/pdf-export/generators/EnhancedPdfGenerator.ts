@@ -601,27 +601,6 @@ export class EnhancedPdfGenerator {
     `;
   }
 
-  private buildGoogleMapsUrl(location: NormalizedLocation): string {
-    if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return '';
-    const query = `${location.lat},${location.lng}`;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-  }
-
-  private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
-    const QRCode = await this.getQRCode();
-    return Promise.all(
-      locations.map(async (loc) => {
-        const url = this.buildGoogleMapsUrl(loc);
-        if (!url) return '';
-        try {
-          return await QRCode.toDataURL(url, { margin: 1, scale: 4, width: 140 });
-        } catch {
-          return '';
-        }
-      })
-    );
-  }
-
   /**
    * Рендерит страницу с фото путешествия (поддерживает 3 layout'а)
    */
@@ -764,7 +743,7 @@ export class EnhancedPdfGenerator {
         </div>
       `;
     } else {
-      // Full-bleed (default): фото на всю страницу с gradient overlay
+      // Full-bleed (default): фото с честным cover-crop без blur-placeholder
       content = `
         <div style="
           border-radius: ${this.theme.blocks.borderRadius};
@@ -774,55 +753,72 @@ export class EnhancedPdfGenerator {
           height: 100%;
           min-height: 235mm;
         ">
-          ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
+          <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
+            style="
+              width: 100%;
+              height: 100%;
+              min-height: 235mm;
+              display: block;
+              object-fit: cover;
+              object-position: center;
+              ${this.getImageFilterStyle()}
+            "
+            crossorigin="anonymous"
+            onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(180deg, ${colors.accentLight} 0%, ${colors.accentSoft} 100%)';" />
           <div style="
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(15,23,42,0.02) 0%, rgba(15,23,42,0.16) 100%);
+            background:
+              linear-gradient(180deg, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.18) 100%),
+              linear-gradient(180deg, rgba(255,255,255,0.0) 48%, rgba(15,23,42,0.22) 100%);
           "></div>
           <div style="
             position: absolute;
             left: 14mm;
-            right: 14mm;
+            right: auto;
             bottom: 14mm;
-            padding: 12mm 14mm 11mm 14mm;
-            border-radius: 18px;
+            max-width: 116mm;
+            padding: 11mm 12mm 10mm 12mm;
+            border-radius: 20px;
             background: rgba(255,255,255,0.92);
             border: 1px solid rgba(255,255,255,0.72);
             box-shadow: 0 18px 42px rgba(15,23,42,0.16);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
           ">
-            <div style="
-              width: 22mm;
-              height: 3px;
-              border-radius: 999px;
-              margin-bottom: 5mm;
-              background: linear-gradient(90deg, ${colors.accent}, ${colors.accentStrong});
-            "></div>
+            ${metaPieces.length ? `
+              <div style="
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-bottom: 5mm;
+              ">
+                ${metaPieces.map((part) => `
+                  <span style="
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 4px 9px;
+                    border-radius: 999px;
+                    background: ${colors.accentLight};
+                    border: 1px solid ${colors.border};
+                    color: ${colors.textSecondary};
+                    font-size: ${typography.caption.size};
+                    line-height: 1.2;
+                    font-weight: 600;
+                    font-family: ${typography.bodyFont};
+                  ">${this.escapeHtml(part)}</span>
+                `).join('')}
+              </div>
+            ` : ''}
             <h1 style="
               color: ${colors.text};
               font-size: ${typography.h1.size};
-              margin: 0 0 4mm 0;
+              margin: 0;
               font-weight: ${typography.h1.weight};
-              line-height: ${typography.h1.lineHeight};
+              line-height: 1.12;
               font-family: ${typography.headingFont};
               overflow-wrap: anywhere;
               word-break: break-word;
               hyphens: auto;
             ">${this.escapeHtml(travel.name)}</h1>
-            ${metaHtml ? `
-              <div style="
-                color: ${colors.textMuted};
-                font-size: 11pt;
-                display: block;
-                font-weight: 500;
-                font-family: ${typography.bodyFont};
-                line-height: 1.45;
-              ">
-                ${metaHtml}
-              </div>
-            ` : ''}
           </div>
         </div>
       `;
@@ -1080,44 +1076,89 @@ export class EnhancedPdfGenerator {
         ` : ''}
 
         ${url ? `
-          <div style="
-            margin-top: ${spacing.sectionSpacing};
+          <div class="travel-online-card" style="
             display: flex;
             gap: ${spacing.blockSpacing};
-            align-items: flex-start;
-            border-top: ${this.theme.blocks.borderWidth} solid ${colors.border};
-            padding-top: ${spacing.blockSpacing};
+            align-items: center;
+            margin-top: ${spacing.sectionSpacing};
+            padding: ${spacing.blockSpacing};
+            border-radius: 20px;
+            background: linear-gradient(135deg, ${colors.accentLight} 0%, ${colors.surface} 100%);
+            border: 1px solid ${colors.border};
+            box-shadow: ${this.theme.blocks.shadow};
           ">
             ${qrCode ? `
-              <img src="${this.escapeHtml(qrCode)}" alt="QR" style="
-                width: 28mm;
-                height: 28mm;
-                border-radius: ${this.theme.blocks.borderRadius};
-                border: 2px solid ${colors.surfaceAlt};
+              <div style="
+                width: 31mm;
+                height: 31mm;
+                padding: 3mm;
+                border-radius: 16px;
+                background: ${colors.surface};
+                border: 1px solid ${colors.border};
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 flex-shrink: 0;
-              " />
+              ">
+                <img src="${this.escapeHtml(qrCode)}" alt="QR" style="
+                  width: 100%;
+                  height: 100%;
+                  display: block;
+                " />
+              </div>
             ` : ''}
             <div style="
               font-size: ${typography.small.size};
               color: ${colors.textMuted};
               flex: 1;
               font-family: ${typography.bodyFont};
+              min-width: 0;
             ">
               <div style="
                 text-transform: uppercase;
-                letter-spacing: 0.08em;
+                letter-spacing: 0.1em;
                 font-weight: 700;
-                margin-bottom: ${spacing.elementSpacing};
+                margin-bottom: 6px;
                 color: ${colors.accent};
-                font-size: ${typography.body.size};
+                font-size: ${typography.caption.size};
                 font-family: ${typography.headingFont};
               ">Онлайн-версия</div>
               <div style="
-                overflow-wrap: anywhere;
-                word-break: break-word;
-                line-height: ${typography.body.lineHeight};
+                font-size: ${typography.h4.size};
+                line-height: 1.25;
                 color: ${colors.text};
-              ">${this.escapeHtml(url)}</div>
+                font-weight: ${typography.h4.weight};
+                margin-bottom: 5px;
+                font-family: ${typography.headingFont};
+              ">Открыть маршрут на MeTravel</div>
+              <div style="
+                line-height: 1.5;
+                color: ${colors.textSecondary};
+                margin-bottom: 8px;
+              ">Сканируйте QR, чтобы посмотреть полную историю, фотографии и маршрут в браузере.</div>
+              <div style="
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                border-radius: 999px;
+                background: ${colors.surface};
+                border: 1px solid ${colors.border};
+                color: ${colors.text};
+                font-size: ${typography.caption.size};
+                line-height: 1.3;
+                max-width: 100%;
+              ">
+                <span style="
+                  font-weight: 700;
+                  color: ${colors.accentStrong};
+                  white-space: nowrap;
+                ">metravel.by</span>
+                <span style="
+                  overflow-wrap: anywhere;
+                  word-break: break-word;
+                ">${this.escapeHtml(url.replace(/^https?:\/\//i, ''))}</span>
+              </div>
             </div>
           </div>
         ` : ''}
@@ -2062,6 +2103,27 @@ export class EnhancedPdfGenerator {
   `;
   }
 
+  private buildGoogleMapsUrl(location: NormalizedLocation): string {
+    if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return '';
+    const query = `${location.lat},${location.lng}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+
+  private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
+    const QRCode = await this.getQRCode();
+    return Promise.all(
+      locations.map(async (location) => {
+        const url = this.buildGoogleMapsUrl(location);
+        if (!url) return '';
+        try {
+          return await QRCode.toDataURL(url, { margin: 1, scale: 4, width: 120 });
+        } catch {
+          return '';
+        }
+      })
+    );
+  }
+
   private buildLocationList(locations: NormalizedLocation[], qrCodes: string[]): string {
     const { colors, typography } = this.theme;
     return locations
@@ -2077,27 +2139,27 @@ export class EnhancedPdfGenerator {
           const mapsUrl = this.buildGoogleMapsUrl(location);
 
           return `
-        <div style="
+        <div class="map-location-card" style="
           display: flex;
           gap: 8px;
           align-items: flex-start;
-          padding: 6px 8px;
+          padding: 7px 8px;
           border: 1px solid ${colors.border};
           background: ${colors.surface};
-          border-radius: ${this.theme.blocks.borderRadius};
+          border-radius: 14px;
           margin-bottom: 4px;
           break-inside: avoid;
           page-break-inside: avoid;
         ">
           ${location.thumbnailUrl ? `
             <div style="
-              width: 118px;
-              height: 72px;
-              border-radius: 8px;
+              width: 92px;
+              height: 62px;
+              border-radius: 10px;
               overflow: hidden;
               flex-shrink: 0;
               box-shadow: ${this.theme.blocks.shadow};
-              background: ${colors.surfaceAlt};
+              background: linear-gradient(180deg, ${colors.background} 0%, ${colors.surfaceAlt} 100%);
             ">
               <img src="${this.escapeHtml(location.thumbnailUrl)}" alt="Точка ${index + 1}"
                 style="width: 100%; height: 100%; object-fit: cover; display: block; ${this.getImageFilterStyle()}" />
@@ -2111,65 +2173,90 @@ export class EnhancedPdfGenerator {
               margin-bottom: 2px;
             ">
               <div style="
-                min-width: 18px;
-                height: 18px;
+                min-width: 20px;
+                height: 20px;
                 border-radius: 999px;
-                background: ${colors.surfaceAlt};
-                color: ${colors.text};
+                background: ${colors.accentSoft};
+                color: ${colors.accentStrong};
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-weight: 600;
+                font-weight: 700;
                 font-size: 8pt;
                 flex-shrink: 0;
                 border: 1px solid ${colors.border};
                 font-family: ${typography.headingFont};
               ">${index + 1}</div>
-              <div style="
-                font-weight: 600;
-                color: ${colors.text};
-                font-size: 10pt;
-                line-height: 1.3;
-                font-family: ${typography.bodyFont};
-              ">${this.escapeHtml(title || location.address)}</div>
-              ${qr ? `
-                <a href="${this.escapeHtml(mapsUrl)}" target="_blank" rel="noreferrer" style="margin-left: auto; display: inline-flex;">
+              <div style="min-width: 0; flex: 1;">
+                <div style="
+                  font-weight: 700;
+                  color: ${colors.text};
+                  font-size: 9.5pt;
+                  line-height: 1.25;
+                  font-family: ${typography.bodyFont};
+                ">${this.escapeHtml(title || location.address)}</div>
+                ${subtitle ? `
+                  <div style="
+                    font-size: 8pt;
+                    color: ${colors.textMuted};
+                    margin-top: 2px;
+                  line-height: 1.3;
+                  font-family: ${typography.bodyFont};
+                ">${this.escapeHtml(subtitle)}</div>
+                ` : ''}
+              </div>
+              ${qr && mapsUrl ? `
+                <a href="${this.escapeHtml(mapsUrl)}" target="_blank" rel="noreferrer" style="
+                  width: 11mm;
+                  height: 11mm;
+                  padding: 1.2mm;
+                  border-radius: 8px;
+                  background: ${colors.surface};
+                  border: 1px solid ${colors.border};
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  flex-shrink: 0;
+                  margin-left: auto;
+                ">
                   <img src="${this.escapeHtml(qr)}" alt="QR" style="
-                    width: 12mm;
-                    height: 12mm;
-                    border-radius: 4px;
-                    border: 1px solid ${colors.border};
-                    background: #fff;
+                    width: 100%;
+                    height: 100%;
+                    display: block;
                   "/>
                 </a>
               ` : ''}
             </div>
-            ${subtitle ? `
-              <div style="
-                font-size: 8.5pt;
-                color: ${colors.textMuted};
-                margin-bottom: 1px;
-                line-height: 1.25;
-                font-family: ${typography.bodyFont};
-              ">${this.escapeHtml(subtitle)}</div>
-            ` : ''}
-            ${location.categoryName ? `
-              <div style="
-                font-size: 8.5pt;
-                color: ${colors.textMuted};
-                margin-bottom: 1px;
-                line-height: 1.25;
-                font-family: ${typography.bodyFont};
-              ">${this.escapeHtml(location.categoryName)}</div>
-            ` : ''}
-            ${location.coord && showCoordinates ? `
-              <div style="
-                font-size: 7.5pt;
-                color: ${colors.textMuted};
-                opacity: 0.7;
-                font-family: ${typography.monoFont};
-              ">${this.escapeHtml(location.coord)}</div>
-            ` : ''}
+            <div style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 4px 6px;
+              margin-top: 4px;
+            ">
+              ${location.categoryName ? `
+                <span style="
+                  display: inline-flex;
+                  align-items: center;
+                  padding: 2px 7px;
+                  border-radius: 999px;
+                  background: ${colors.accentLight};
+                  color: ${colors.textSecondary};
+                  border: 1px solid ${colors.border};
+                  font-size: 7.5pt;
+                  line-height: 1.2;
+                  font-family: ${typography.bodyFont};
+                  font-weight: 600;
+                ">${this.escapeHtml(location.categoryName)}</span>
+              ` : ''}
+              ${location.coord && showCoordinates ? `
+                <span style="
+                  font-size: 7pt;
+                  color: ${colors.textMuted};
+                  opacity: 0.78;
+                  font-family: ${typography.monoFont};
+                ">${this.escapeHtml(location.coord)}</span>
+              ` : ''}
+            </div>
           </div>
         </div>
       `;
@@ -2307,13 +2394,13 @@ export class EnhancedPdfGenerator {
     const filterStyle = this.getImageFilterStyle();
     const extra = opts?.extraStyle || '';
     return `
-      <img src="${this.escapeHtml(src)}" alt="" aria-hidden="true"
-        style="position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);object-fit:cover;filter:blur(14px);opacity:0.28;transform:scale(1.03);display:block;pointer-events:none;"
-        crossorigin="anonymous" />
+      <div aria-hidden="true"
+        style="position:absolute;inset:0;background:linear-gradient(180deg, ${this.theme.colors.background} 0%, ${bg} 100%);">
+      </div>
       <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
         style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}${extra}"
         crossorigin="anonymous"
-        onerror="this.style.display='none';this.previousElementSibling.style.display='none';this.parentElement.style.background='${bg}';" />
+        onerror="this.style.display='none';this.parentElement.style.background='${bg}';" />
     `;
   }
 

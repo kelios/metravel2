@@ -24,6 +24,7 @@ describe('V1MapRenderer', () => {
     expect(html).toContain('Поездка в Париж');
     expect(html).toContain('data:image/png;base64,ABC');
     expect(html).toContain('Location 1');
+    expect(html).toContain('0 точек');
     expect(html).toContain('>8<');
   });
 

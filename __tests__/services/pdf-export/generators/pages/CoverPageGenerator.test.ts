@@ -25,6 +25,8 @@ describe('CoverPageGenerator', () => {
       expect(html).toContain('10');
       expect(html).toContain('pdf-page');
       expect(html).toContain('cover-page');
+      expect(html).toContain('cover-story-panel');
+      expect(html).toContain('cover-footer-rail');
     });
 
     it('не должен рендерить заголовок если title пустой', async () => {

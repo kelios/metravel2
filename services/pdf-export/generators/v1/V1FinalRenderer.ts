@@ -46,21 +46,21 @@ export class V1FinalRenderer {
       <div style="
         display: flex;
         justify-content: center;
-        gap: 10mm;
-        margin-bottom: 14mm;
+        gap: 7mm;
+        margin-bottom: 12mm;
         flex-wrap: wrap;
       ">
         ${stats.map((s) => `
-          <div style="
+          <div class="final-summary-tile" style="
             text-align: center;
-            padding: 8px 14px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.15);
-            min-width: 60px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+            min-width: 56px;
           ">
             <div style="
-              font-size: 26pt;
+              font-size: 24pt;
               font-weight: 800;
               color: ${colors.cover.text};
               font-family: ${typography.headingFont};
@@ -103,66 +103,86 @@ export class V1FinalRenderer {
         "></div>
 
         <div style="
-          width: 50mm;
-          height: 3px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-          border-radius: 999px;
-          margin-bottom: 10mm;
+          position: absolute;
+          inset: 0;
+          background:
+            radial-gradient(circle at 50% 25%, rgba(255,255,255,0.08), transparent 36%),
+            radial-gradient(circle at 50% 80%, rgba(217,115,85,0.16), transparent 32%);
+          pointer-events: none;
         "></div>
 
-        <h2 style="
-          font-size: ${typography.h1.size};
-          margin-bottom: 6mm;
-          letter-spacing: -0.02em;
-          font-family: ${typography.headingFont};
-          color: ${colors.cover.text};
-          line-height: ${typography.h1.lineHeight};
-          text-shadow: 0 8px 24px rgba(0,0,0,0.18);
-        ">Спасибо за путешествие!</h2>
-        <p style="
-          max-width: 120mm;
-          margin: 0 auto 12mm auto;
-          font-size: ${typography.body.size};
-          line-height: ${typography.body.lineHeight};
-          opacity: 0.85;
-          font-family: ${typography.bodyFont};
+        <div style="
+          position: relative;
+          z-index: 1;
+          width: 148mm;
+          padding: 22mm 18mm 18mm;
+          border-radius: 26px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.14);
+          box-shadow: 0 18px 42px rgba(0,0,0,0.2);
         ">
-          Пусть эта книга напоминает о самых тёплых эмоциях
-          и помогает планировать новые приключения.
-        </p>
-        ${statsHtml}
-        ${finalQuote ? `
           <div style="
-            max-width: 120mm;
-            margin: 0 auto 6mm auto;
-            padding: 10px 16px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 10px;
-            border-left: 3px solid rgba(255,255,255,0.3);
+            width: 38mm;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+            border-radius: 999px;
+            margin: 0 auto 9mm auto;
+          "></div>
+
+          <h2 style="
+            font-size: ${typography.h1.size};
+            margin-bottom: 5mm;
+            letter-spacing: -0.02em;
+            font-family: ${typography.headingFont};
+            color: ${colors.cover.text};
+            line-height: ${typography.h1.lineHeight};
+            text-shadow: 0 8px 24px rgba(0,0,0,0.18);
+          ">Спасибо за путешествие!</h2>
+          <p style="
+            max-width: 112mm;
+            margin: 0 auto 10mm auto;
+            font-size: ${typography.body.size};
+            line-height: ${typography.body.lineHeight};
+            opacity: 0.85;
+            font-family: ${typography.bodyFont};
           ">
-            <p style="
-              margin: 0 0 4mm 0;
-              font-size: 10.5pt;
-              line-height: 1.6;
-              opacity: 0.9;
-              font-style: italic;
-              font-family: ${typography.bodyFont};
+            Пусть эта книга напоминает о самых тёплых эмоциях
+            и помогает планировать новые приключения.
+          </p>
+          ${statsHtml}
+          ${finalQuote ? `
+            <div style="
+              max-width: 112mm;
+              margin: 0 auto;
+              padding: 10px 14px;
+              background: rgba(255,255,255,0.04);
+              border-radius: 16px;
+              border: 1px solid rgba(255,255,255,0.1);
             ">
-              «${escapeHtml(finalQuote.text)}»
-            </p>
-            <p style="
-              margin: 0;
-              font-size: 8.5pt;
-              line-height: 1.4;
-              opacity: 0.65;
-              letter-spacing: 0.06em;
-              text-transform: uppercase;
-              font-family: ${typography.bodyFont};
-            ">
-              ${escapeHtml(finalQuote.author || 'MeTravel.by')}
-            </p>
-          </div>
-        ` : ''}
+              <p style="
+                margin: 0 0 4mm 0;
+                font-size: 10.5pt;
+                line-height: 1.6;
+                opacity: 0.9;
+                font-style: italic;
+                font-family: ${typography.bodyFont};
+              ">
+                «${escapeHtml(finalQuote.text)}»
+              </p>
+              <p style="
+                margin: 0;
+                font-size: 8.5pt;
+                line-height: 1.4;
+                opacity: 0.65;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                font-family: ${typography.bodyFont};
+              ">
+                ${escapeHtml(finalQuote.author || 'MeTravel.by')}
+              </p>
+            </div>
+          ` : ''}
+        </div>
         <div style="
           position: absolute;
           bottom: 22mm;

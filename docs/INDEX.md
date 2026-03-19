@@ -11,6 +11,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/RELEASE.md` — release/deploy flow
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
 - `docs/TRAVEL_PERFORMANCE_REFACTOR.md` — рабочая спецификация performance refactor для travel details web
+- `docs/POLISH_CAMINO_PDF_UI_AUDIT.md` — постраничный UI-аудит PDF и пошаговый план редизайна
 
 ## Governance templates
 

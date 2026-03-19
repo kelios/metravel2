@@ -98,6 +98,7 @@ function TabTravelCard({
       style={[layout === 'grid' ? styles.containerGrid : styles.container, style]}
       mediaProps={{
         blurBackground: true,
+        allowCriticalWebBlur: true,
       }}
     />
   );

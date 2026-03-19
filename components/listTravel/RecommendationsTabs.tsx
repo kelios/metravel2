@@ -18,11 +18,11 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import { FlashList } from '@shopify/flash-list';
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -148,6 +148,7 @@ const RecommendationsTabs = memo(
     const styles = useMemo(() => createRecommendationsTabsStyles(colors, tabCardTemplate), [colors, tabCardTemplate]);
     const [activeTab, setActiveTab] = useState<TabType>('highlights');
     const [collapsed, setCollapsed] = useState(false);
+    const { isMobile } = useResponsive();
 
     const router = useRouter();
     const { favorites = [], viewHistory = [], clearFavorites, clearHistory, ensureServerData } = useFavorites() as any;
@@ -263,6 +264,49 @@ const RecommendationsTabs = memo(
       }
     };
 
+    const renderCardCollection = useCallback(
+      (
+        items: any[],
+        keyFactory: (item: any) => string,
+        cardFactory: (item: any) => React.ReactNode,
+      ) => {
+        if (isMobile) {
+          return (
+            <View style={styles.mobileGrid}>
+              {items.map((item) => (
+                <View key={keyFactory(item)} style={styles.mobileGridItem}>
+                  {cardFactory(item)}
+                </View>
+              ))}
+            </View>
+          );
+        }
+
+        return (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={Platform.OS === 'web'}
+            style={[styles.horizontalList, Platform.OS === 'web' ? styles.webHorizontalScroll : null]}
+            contentContainerStyle={Platform.OS === 'web' ? styles.webHorizontalScrollContent : styles.horizontalListContent}
+            bounces={false}
+            {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
+          >
+            {items.map(cardFactory)}
+          </ScrollView>
+        );
+      },
+      [
+        handleHorizontalWheel,
+        isMobile,
+        styles.horizontalList,
+        styles.horizontalListContent,
+        styles.mobileGrid,
+        styles.mobileGridItem,
+        styles.webHorizontalScroll,
+        styles.webHorizontalScrollContent,
+      ]
+    );
+
     const toggleCollapse = () => {
       const newCollapsed = !collapsed;
       setCollapsed(newCollapsed);
@@ -352,52 +396,23 @@ const RecommendationsTabs = memo(
                   </View>
                 </View>
 
-                {Platform.OS === 'web' ? (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={Platform.OS === 'web'}
-                    style={[styles.horizontalList, styles.webHorizontalScroll]}
-                    contentContainerStyle={styles.webHorizontalScrollContent}
-                    bounces={false}
-                    {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
-                  >
-                    {favorites.map((item: any) => (
-                      <TabTravelCard
-                        key={`${item.type || 'item'}-${item.id}`}
-                        item={{
-                          id: item.id,
-                          title: item.title,
-                          imageUrl: item.imageUrl,
-                          city: (item as any).city ?? null,
-                          country: item.country ?? (item as any).countryName ?? null,
-                        }}
-                        onPress={() => router.push(item.url as any)}
-                      />
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <FlashList
-                    horizontal
-                    data={favorites}
-                    renderItem={({ item }: any) => (
-                      <TabTravelCard
-                        item={{
-                          id: item.id,
-                          title: item.title,
-                          imageUrl: item.imageUrl,
-                          city: (item as any).city ?? null,
-                          country: item.country ?? (item as any).countryName ?? null,
-                        }}
-                        onPress={() => router.push(item.url as any)}
-                      />
-                    )}
-                    keyExtractor={(item: any) => `${item.type || 'item'}-${item.id}`}
-                    {...({ estimatedItemSize: 220 } as any)}
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.horizontalList}
-                    contentContainerStyle={styles.horizontalListContent}
-                    drawDistance={800}
-                  />
+                {renderCardCollection(
+                  favorites,
+                  (item: any) => `${item.type || 'item'}-${item.id}`,
+                  (item: any) => (
+                    <TabTravelCard
+                      key={`${item.type || 'item'}-${item.id}`}
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        imageUrl: item.imageUrl,
+                        city: (item as any).city ?? null,
+                        country: item.country ?? (item as any).countryName ?? null,
+                      }}
+                      onPress={() => router.push(item.url as any)}
+                      layout={isMobile ? 'grid' : 'horizontal'}
+                    />
+                  )
                 )}
               </View>
             )
@@ -449,62 +464,28 @@ const RecommendationsTabs = memo(
                   </View>
                 </View>
 
-                {Platform.OS === 'web' ? (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={Platform.OS === 'web'}
-                    style={[styles.horizontalList, styles.webHorizontalScroll]}
-                    contentContainerStyle={styles.webHorizontalScrollContent}
-                    bounces={false}
-                    {...(Platform.OS === 'web' ? ({ onWheel: handleHorizontalWheel } as any) : {})}
-                  >
-                    {viewHistory.map((item: any) => (
-                      <TabTravelCard
-                        key={`history-${item.id}-${item.viewedAt}`}
-                        item={{
-                          id: item.id,
-                          title: item.title,
-                          imageUrl: item.imageUrl,
-                          city: (item as any).city ?? null,
-                          country: item.country ?? (item as any).countryName ?? null,
-                        }}
-                        badge={{
-                          icon: 'clock',
-                          backgroundColor: colors.overlay,
-                          iconColor: colors.textOnDark,
-                        }}
-                        onPress={() => router.push(item.url as any)}
-                      />
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <FlashList
-                    horizontal
-                    data={viewHistory}
-                    renderItem={({ item }: any) => (
-                      <TabTravelCard
-                        item={{
-                          id: item.id,
-                          title: item.title,
-                          imageUrl: item.imageUrl,
-                          city: (item as any).city ?? null,
-                          country: item.country ?? (item as any).countryName ?? null,
-                        }}
-                        badge={{
-                          icon: 'clock',
-                          backgroundColor: colors.overlay,
-                          iconColor: colors.textOnDark,
-                        }}
-                        onPress={() => router.push(item.url as any)}
-                      />
-                    )}
-                    keyExtractor={(item: any) => `history-${item.id}-${item.viewedAt}`}
-                    {...({ estimatedItemSize: 220 } as any)}
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.horizontalList}
-                    contentContainerStyle={styles.horizontalListContent}
-                    drawDistance={800}
-                  />
+                {renderCardCollection(
+                  viewHistory,
+                  (item: any) => `history-${item.id}-${item.viewedAt}`,
+                  (item: any) => (
+                    <TabTravelCard
+                      key={`history-${item.id}-${item.viewedAt}`}
+                      item={{
+                        id: item.id,
+                        title: item.title,
+                        imageUrl: item.imageUrl,
+                        city: (item as any).city ?? null,
+                        country: item.country ?? (item as any).countryName ?? null,
+                      }}
+                      badge={{
+                        icon: 'clock',
+                        backgroundColor: colors.overlay,
+                        iconColor: colors.textOnDark,
+                      }}
+                      onPress={() => router.push(item.url as any)}
+                      layout={isMobile ? 'grid' : 'horizontal'}
+                    />
+                  )
                 )}
               </View>
             )

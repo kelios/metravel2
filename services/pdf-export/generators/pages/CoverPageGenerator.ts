@@ -88,44 +88,10 @@ export class CoverPageGenerator {
         ${safeCoverImage ? this.renderSmartOverlay(overlayColor, overlayOpacity, textPosition) : ''}
         ${data.showDecorations !== false ? this.renderDecorativeElements() : ''}
 
-        ${this.renderContent(data, textPosition, textColor)}
-
-        <div style="
-          padding: 0 24mm 24mm 24mm;
-          position: relative;
-          z-index: 2;
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 10mm;
-        ">
-          <div style="
-            font-size: 11pt;
-            letter-spacing: 0.04em;
-            color: rgba(255,255,255,0.85);
-            font-weight: 500;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            hyphens: auto;
-          ">
-            ${this.escapeHtml(String(data.travelCount))} ${travelLabel}${data.yearRange ? ` • ${this.escapeHtml(data.yearRange)}` : ''}
-          </div>
-          <div style="
-            font-size: 10pt;
-            opacity: 0.7;
-            font-weight: 500;
-            letter-spacing: 0.08em;
-          ">MeTravel</div>
-        </div>
-
-        <div style="
-          position: absolute;
-          bottom: 10mm;
-          left: 24mm;
-          font-size: 9pt;
-          opacity: 0.7;
-          z-index: 2;
-        ">${this.renderDate()}</div>
+        ${this.renderContent(data, textPosition, textColor, Boolean(safeCoverImage))}
+        ${this.renderFooterRail(
+          `${this.escapeHtml(String(data.travelCount))} ${travelLabel}${data.yearRange ? ` • ${this.escapeHtml(data.yearRange)}` : ''}`
+        )}
       </section>
     `;
   }
@@ -164,16 +130,24 @@ export class CoverPageGenerator {
   private renderContent(
     data: CoverPageData,
     textPosition: 'top' | 'center' | 'bottom',
-    textColor: string
+    textColor: string,
+    hasImage: boolean
   ): string {
-    const justifyContent = textPosition === 'top' 
-      ? 'flex-start' 
-      : textPosition === 'bottom' 
-      ? 'flex-end' 
-      : 'center';
-    
+    const justifyContent =
+      textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : 'center';
     const paddingTop = textPosition === 'top' ? '30mm' : '0';
     const paddingBottom = textPosition === 'bottom' ? '30mm' : '0';
+    const panelBackground =
+      hasImage
+        ? textColor === '#000000'
+          ? 'rgba(255,255,255,0.82)'
+          : 'rgba(15,23,42,0.34)'
+        : 'transparent';
+    const panelBorder =
+      textColor === '#000000'
+        ? 'rgba(255,255,255,0.65)'
+        : 'rgba(255,255,255,0.18)';
+    const panelShadow = hasImage ? '0 18px 44px rgba(15,23,42,0.22)' : 'none';
 
     return `
       <div style="
@@ -182,14 +156,26 @@ export class CoverPageGenerator {
         flex-direction: column;
         justify-content: ${justifyContent};
         padding: ${paddingTop} 24mm ${paddingBottom} 24mm;
-        text-align: center;
+        align-items: ${textPosition === 'center' ? 'center' : 'flex-start'};
         position: relative;
         z-index: 2;
       ">
-        ${this.renderTitle(data.title, textColor)}
-        ${data.subtitle ? this.renderSubtitle(data.subtitle, textColor) : ''}
-        ${this.renderUserName(data.userName, textColor)}
-        ${data.quote ? this.renderQuote(data.quote, textColor) : ''}
+        <div class="cover-story-panel" style="
+          width: min(126mm, 100%);
+          padding: ${hasImage ? '13mm 14mm 12mm 14mm' : '0'};
+          border-radius: 22px;
+          background: ${panelBackground};
+          border: ${hasImage ? `1px solid ${panelBorder}` : 'none'};
+          box-shadow: ${panelShadow};
+          backdrop-filter: ${hasImage ? 'blur(10px)' : 'none'};
+          -webkit-backdrop-filter: ${hasImage ? 'blur(10px)' : 'none'};
+          text-align: left;
+        ">
+          ${this.renderTitle(data.title, textColor)}
+          ${data.subtitle ? this.renderSubtitle(data.subtitle, textColor) : ''}
+          ${this.renderUserName(data.userName, textColor)}
+          ${data.quote ? this.renderQuote(data.quote, textColor) : ''}
+        </div>
       </div>
     `;
   }
@@ -224,12 +210,14 @@ export class CoverPageGenerator {
     
     return `
       <div style="
-        font-size: 16pt;
+        font-size: 13pt;
         letter-spacing: 0.02em;
         color: ${textColor || 'rgba(255,255,255,0.88)'};
         opacity: ${opacity};
-        margin-top: 6mm;
+        margin-top: 4mm;
         font-family: ${typography.bodyFont};
+        max-width: 104mm;
+        line-height: 1.55;
       ">${this.escapeHtml(subtitle)}</div>
     `;
   }
@@ -243,27 +231,25 @@ export class CoverPageGenerator {
     
     return `
       <div style="
-        width: 40mm;
+        width: 26mm;
         height: 2px;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        background: linear-gradient(90deg, ${this.theme.colors.accent}, ${this.theme.colors.accentStrong});
         border-radius: 999px;
-        margin: 0 auto 8mm auto;
+        margin: 0 0 6mm 0;
       "></div>
       <h1 style="
         color: ${color};
-        font-size: 36pt;
+        font-size: 32pt;
         font-weight: 800;
-        line-height: 1.15;
+        line-height: 1.08;
         margin: 0;
-        text-shadow: 
-          0 2px 4px rgba(0,0,0,0.8),
-          0 4px 16px rgba(0,0,0,0.6),
-          0 8px 32px rgba(0,0,0,0.4);
+        text-shadow: 0 6px 18px rgba(15,23,42,0.2);
         letter-spacing: 0.02em;
         font-family: ${typography.headingFont};
         overflow-wrap: anywhere;
         word-break: break-word;
         hyphens: auto;
+        max-width: 108mm;
       ">${this.escapeHtml(safeTitle)}</h1>
     `;
   }
@@ -272,19 +258,18 @@ export class CoverPageGenerator {
     const { typography } = this.theme;
     return `
       <div style="
-        margin-top: 10mm;
+        margin-top: 8mm;
         display: flex;
-        flex-direction: column;
         align-items: center;
         gap: 4mm;
       ">
         <div style="
-          width: 20mm;
+          width: 16mm;
           height: 1px;
-          background: rgba(255,255,255,0.3);
+          background: ${textColor === '#000000' ? 'rgba(15,23,42,0.22)' : 'rgba(255,255,255,0.28)'};
         "></div>
         <div style="
-          font-size: 12pt;
+          font-size: 11pt;
           color: ${textColor || 'rgba(255,255,255,0.85)'};
           opacity: 0.85;
           font-family: ${typography.bodyFont};
@@ -314,23 +299,79 @@ export class CoverPageGenerator {
   private renderQuote(quote: { text: string; author: string }, textColor?: string): string {
     return `
       <div style="
-        margin-top: 14mm;
-        max-width: 120mm;
-        margin-left: auto;
-        margin-right: auto;
+        margin-top: 11mm;
+        max-width: 100%;
         font-style: italic;
         opacity: 0.85;
         color: ${textColor || 'rgba(255,255,255,0.85)'};
-        padding: 8px 14px;
-        background: rgba(255,255,255,0.06);
-        border-radius: 8px;
-        border-left: 2px solid rgba(255,255,255,0.25);
+        padding: 8px 12px;
+        background: ${textColor === '#000000' ? 'rgba(15,23,42,0.05)' : 'rgba(255,255,255,0.08)'};
+        border-radius: 14px;
+        border-left: 2px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.18)' : 'rgba(255,255,255,0.24)'};
       ">
-        <div style="font-size: 12pt; margin-bottom: 5mm; line-height: 1.5;">
+        <div style="font-size: 11pt; margin-bottom: 4mm; line-height: 1.55;">
           \u00AB${this.escapeHtml(quote.text)}\u00BB
         </div>
-        <div style="font-size: 10pt; opacity: 0.7; letter-spacing: 0.04em;">
+        <div style="font-size: 9pt; opacity: 0.7; letter-spacing: 0.04em;">
           \u2014 ${this.escapeHtml(quote.author)}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderFooterRail(metaLine: string): string {
+    return `
+      <div class="cover-footer-rail" style="
+        margin: 0 24mm 16mm 24mm;
+        padding: 8mm 10mm;
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 10mm;
+        border-radius: 18px;
+        background: rgba(15,23,42,0.28);
+        border: 1px solid rgba(255,255,255,0.12);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      ">
+        <div style="
+          display: flex;
+          flex-direction: column;
+          gap: 2mm;
+          min-width: 0;
+        ">
+          <div style="
+            font-size: 8.5pt;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.62);
+            font-weight: 600;
+          ">Книга путешествий</div>
+          <div style="
+            font-size: 11pt;
+            letter-spacing: 0.02em;
+            color: rgba(255,255,255,0.92);
+            font-weight: 500;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
+          ">${metaLine}</div>
+        </div>
+        <div style="
+          text-align: right;
+          min-width: 30mm;
+        ">
+          <div style="
+            font-size: 10pt;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: rgba(255,255,255,0.92);
+            text-transform: uppercase;
+            margin-bottom: 2mm;
+          ">MeTravel</div>
+          ${this.renderDate()}
         </div>
       </div>
     `;
