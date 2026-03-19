@@ -1,10 +1,53 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MEASUREMENT_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4;
 const API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET;
+const ANALYTICS_CLIENT_ID_KEY = 'metravel_ga4_client_id';
 let hasWarnedMissingConfig = false;
+let cachedClientId: string | null = null;
+let clientIdRequest: Promise<string> | null = null;
 
 const generateClientId = () => `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
+
+const getPersistentClientId = async () => {
+    if (cachedClientId) {
+        return cachedClientId;
+    }
+
+    if (clientIdRequest) {
+        return clientIdRequest;
+    }
+
+    clientIdRequest = (async () => {
+        try {
+            const storedClientId = await AsyncStorage.getItem(ANALYTICS_CLIENT_ID_KEY);
+            if (storedClientId) {
+                cachedClientId = storedClientId;
+                return storedClientId;
+            }
+        } catch {
+            // ignore storage read issues and fall back to a generated anonymous id
+        }
+
+        const generatedClientId = generateClientId();
+        cachedClientId = generatedClientId;
+
+        try {
+            await AsyncStorage.setItem(ANALYTICS_CLIENT_ID_KEY, generatedClientId);
+        } catch {
+            // ignore storage write issues and keep the in-memory id for the current session
+        }
+
+        return generatedClientId;
+    })();
+
+    try {
+        return await clientIdRequest;
+    } finally {
+        clientIdRequest = null;
+    }
+};
 
 export const sendAnalyticsEvent = async (
     eventName: string,
@@ -49,8 +92,9 @@ export const sendAnalyticsEvent = async (
     }
 
     const url = `https://www.google-analytics.com/mp/collect?measurement_id=${MEASUREMENT_ID}&api_secret=${API_SECRET}`;
+    const clientId = await getPersistentClientId();
     const body = {
-        client_id: generateClientId(),
+        client_id: clientId,
         events: [
             {
                 name: eventName,
