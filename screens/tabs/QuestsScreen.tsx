@@ -48,6 +48,9 @@ type QuestMeta = {
     cover?: any;
     lat: number; lng: number;
     cityId?: string;
+    cityName?: string;
+    countryName?: string;
+    countryCode?: string;
 };
 
 const STORAGE_SELECTED_CITY = 'quests_selected_city';
@@ -722,9 +725,24 @@ export default function QuestsScreen() {
     const { quests: ALL_QUESTS, cityQuestsIndex: CITY_QUESTS, loading: questsLoading } = useQuestsList();
     const { cities: apiCities, loading: citiesLoading } = useQuestCities();
     const dataLoaded = !questsLoading && !citiesLoading;
+    const cityCountryMetaById = useMemo(() => {
+        const meta: Record<string, { countryCode?: string }> = {};
+        for (const quest of ALL_QUESTS) {
+            if (!quest.cityId || meta[quest.cityId]?.countryCode) continue;
+            meta[quest.cityId] = {
+                countryCode: quest.countryCode,
+            };
+        }
+        return meta;
+    }, [ALL_QUESTS]);
+
     const CITIES = useMemo<City[]>(() => apiCities.map(c => ({
-        id: c.id, name: c.name, lat: c.lat, lng: c.lng, countryCode: c.countryCode,
-    })), [apiCities]);
+        id: c.id,
+        name: c.name,
+        lat: c.lat,
+        lng: c.lng,
+        countryCode: cityCountryMetaById[c.id]?.countryCode || c.countryCode,
+    })), [apiCities, cityCountryMetaById]);
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
@@ -916,7 +934,7 @@ export default function QuestsScreen() {
         return sortedKeys.map(code => ({
             code,
             name: COUNTRY_NAMES[code] || (code === 'OTHER' ? '' : code),
-            cities: groups[code],
+            cities: groups[code].slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')),
         }));
     }, [visibleCities]);
 

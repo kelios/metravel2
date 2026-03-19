@@ -21,6 +21,9 @@ export type QuestMeta = {
     title: string;
     points: number;
     cityId: string;
+    cityName?: string;
+    countryName?: string;
+    countryCode?: string;
     lat: number;
     lng: number;
     durationMin?: number;
@@ -264,13 +267,22 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
 
 /** Конвертирует метаданные квеста из API формата */
 export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
+    const lat = parseFloat(String(apiMeta.lat));
+    const lng = parseFloat(String(apiMeta.lng));
+    const normalizedCountryCode = String(
+        apiMeta.country_code || getCountryCodeByCoords(lat, lng) || '',
+    ).trim().toUpperCase() || undefined;
+
     return {
         id: apiMeta.quest_id,
         title: apiMeta.title,
         points: parseInt(String(apiMeta.points), 10) || 0,
         cityId: apiMeta.city_id,
-        lat: parseFloat(String(apiMeta.lat)),
-        lng: parseFloat(String(apiMeta.lng)),
+        cityName: apiMeta.city_name || undefined,
+        countryName: apiMeta.country_name || undefined,
+        countryCode: normalizedCountryCode,
+        lat,
+        lng,
         durationMin: apiMeta.duration_min ?? undefined,
         difficulty: (apiMeta.difficulty as 'easy' | 'medium' | 'hard') || undefined,
         tags: apiMeta.tags ? Object.keys(apiMeta.tags) : undefined,

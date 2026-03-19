@@ -15,6 +15,7 @@ import {
     adaptMeta,
     adaptBundle,
 } from '@/utils/questAdapters';
+import { getCountryCodeByCoords } from '@/utils/geoCountry';
 import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 
 // Re-export types for backward compatibility
@@ -81,7 +82,14 @@ export function useQuestCities() {
                     name: c.name || '',
                     lat: parseFloat(String(c.lat)),
                     lng: parseFloat(String(c.lng)),
-                    countryCode: c.country_code || undefined,
+                    countryCode: (
+                        c.country_code ||
+                        getCountryCodeByCoords(
+                            parseFloat(String(c.lat)),
+                            parseFloat(String(c.lng)),
+                        ) ||
+                        undefined
+                    ),
                 })));
             } catch (err: unknown) {
                 if (cancelled) return;

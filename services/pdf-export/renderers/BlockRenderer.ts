@@ -14,22 +14,22 @@ export class BlockRenderer {
     switch (layout) {
       case 'float-left':
         return `
-          width: 44%;
-          max-width: 44%;
-          margin: ${this.theme.spacing.blockSpacing} auto ${this.theme.spacing.blockSpacing} 0;
+          width: 62%;
+          max-width: 62%;
+          margin: calc(${this.theme.spacing.blockSpacing} * 1.15) auto calc(${this.theme.spacing.blockSpacing} * 1.3) 0;
         `;
       case 'float-right':
         return `
-          width: 44%;
-          max-width: 44%;
-          margin: ${this.theme.spacing.blockSpacing} 0 ${this.theme.spacing.blockSpacing} auto;
+          width: 62%;
+          max-width: 62%;
+          margin: calc(${this.theme.spacing.blockSpacing} * 1.15) 0 calc(${this.theme.spacing.blockSpacing} * 1.3) auto;
         `;
       case 'single-wide':
       default:
         return `
           width: 100%;
           max-width: 100%;
-          margin: ${this.theme.spacing.blockSpacing} auto;
+          margin: calc(${this.theme.spacing.blockSpacing} * 1.2) auto calc(${this.theme.spacing.blockSpacing} * 1.35);
         `;
     }
   }
@@ -55,7 +55,12 @@ export class BlockRenderer {
       <div style="
         page-break-inside: avoid;
         break-inside: avoid;
-        margin-bottom: ${this.theme.spacing.elementSpacing};
+        margin-bottom: 0;
+        padding: 3.5mm;
+        border-radius: calc(${this.theme.blocks.borderRadius} * 1.6);
+        background: ${this.theme.colors.surfaceAlt};
+        border: 1px solid ${this.theme.colors.borderLight};
+        box-shadow: ${this.theme.blocks.shadow};
         ${options.containerStyle || ''}
       ">
         <img
@@ -252,7 +257,7 @@ export class BlockRenderer {
       max-width: 100%;
       height: auto;
       display: block;
-      border-radius: ${this.theme.blocks.borderRadius};
+      border-radius: calc(${this.theme.blocks.borderRadius} * 1.65);
       box-shadow: ${this.theme.blocks.shadow};
       page-break-inside: avoid;
       object-fit: contain;
@@ -278,6 +283,10 @@ export class BlockRenderer {
           ${wrapperStyle}
           page-break-inside: avoid;
           break-inside: avoid;
+          padding: 4mm;
+          background: ${this.theme.colors.surfaceAlt};
+          border: 1px solid ${this.theme.colors.borderLight};
+          border-radius: calc(${this.theme.blocks.borderRadius} * 1.8);
         ">
           ${imageTag}
           <figcaption style="
@@ -297,6 +306,10 @@ export class BlockRenderer {
         ${wrapperStyle}
         page-break-inside: avoid;
         break-inside: avoid;
+        padding: 4mm;
+        background: ${this.theme.colors.surfaceAlt};
+        border: 1px solid ${this.theme.colors.borderLight};
+        border-radius: calc(${this.theme.blocks.borderRadius} * 1.8);
       ">
         ${imageTag}
       </div>
@@ -309,7 +322,7 @@ export class BlockRenderer {
   private renderImageGallery(block: ParsedContentBlock & { type: 'image-gallery' }): string {
     const { images, columns = 2, layout = 'grid-default' } = block;
 
-    if (layout === 'grid-mixed' || layout === 'grid-mixed-reverse') {
+    if (layout === 'grid-mixed' || layout === 'grid-mixed-reverse' || layout === 'quilt-3') {
       const portraitIndex = this.detectPortraitIndex(images, layout === 'grid-mixed-reverse' ? 0 : images.length - 1);
       const portrait = images[portraitIndex];
       const supporting = images.filter((_, index) => index !== portraitIndex);
@@ -329,9 +342,9 @@ export class BlockRenderer {
         return `
           <div style="
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: ${layout === 'grid-mixed-reverse' ? '1.08fr 0.92fr' : '0.92fr 1.08fr'};
             gap: ${this.theme.spacing.elementSpacing};
-            margin: ${this.theme.spacing.blockSpacing} 0;
+            margin: calc(${this.theme.spacing.blockSpacing} * 1.1) 0 calc(${this.theme.spacing.blockSpacing} * 1.35);
             page-break-inside: avoid;
             break-inside: avoid;
             align-items: stretch;
@@ -343,22 +356,67 @@ export class BlockRenderer {
       }
     }
 
+    if (layout === 'stack-landscape') {
+      const cards = images
+        .map((img, index) =>
+          this.renderGalleryImageCard(img, {
+            containerStyle: index === 0 ? 'transform: translateY(4mm);' : 'transform: translateY(-4mm);',
+            imageStyle: 'min-height: 66mm; max-height: 74mm;',
+          })
+        )
+        .join('');
+
+      return `
+        <div style="
+          display: grid;
+          grid-template-columns: 1.14fr 0.86fr;
+          gap: ${this.theme.spacing.elementSpacing};
+          margin: calc(${this.theme.spacing.blockSpacing} * 1.1) 0 calc(${this.theme.spacing.blockSpacing} * 1.35);
+          page-break-inside: avoid;
+          break-inside: avoid;
+          align-items: start;
+        ">${cards}</div>
+      `;
+    }
+
     const imagesHtml = images
       .map((img, index) => {
         let containerStyle = '';
         let imageStyle = '';
 
-        if (layout === 'row-2-landscape' || layout === 'row-2-balanced') {
+        if (layout === 'pair-portraits') {
+          imageStyle = 'min-height: 82mm; max-height: 96mm;';
+          containerStyle = index === 0 ? 'transform: translateY(5mm);' : 'transform: translateY(-5mm);';
+        } else if (layout === 'pair-mixed') {
+          imageStyle = index === 0
+            ? 'min-height: 70mm; max-height: 80mm;'
+            : 'min-height: 78mm; max-height: 92mm;';
+          containerStyle = index === 0 ? 'transform: translateY(3mm);' : 'transform: translateY(-2mm);';
+        } else if (layout === 'pair-balanced') {
+          imageStyle = 'min-height: 68mm; max-height: 78mm;';
+          containerStyle = index === 0 ? 'transform: translateY(3mm);' : 'transform: translateY(-3mm);';
+        } else if (layout === 'row-2-landscape' || layout === 'row-2-balanced') {
           imageStyle = 'min-height: 64mm; max-height: 72mm;';
         } else if (layout === 'row-2-portrait') {
           imageStyle = 'min-height: 78mm; max-height: 90mm;';
         } else if (layout === 'row-2-mixed') {
           imageStyle = 'min-height: 72mm; max-height: 84mm;';
+        } else if (layout === 'column-portraits') {
+          imageStyle = 'min-height: 76mm; max-height: 94mm;';
+          containerStyle = index % 2 === 0 ? 'transform: translateY(3mm);' : 'transform: translateY(-3mm);';
+        } else if (layout === 'pair-grid') {
+          imageStyle = 'min-height: 62mm; max-height: 78mm;';
+          containerStyle = index === 0 || index === 3 ? 'transform: translateY(3mm);' : 'transform: translateY(-3mm);';
+        } else if (layout === 'editorial-grid') {
+          containerStyle = index === 0 ? 'grid-column: span 2;' : index === 1 || index === 4 ? 'transform: translateY(3mm);' : 'transform: translateY(-2mm);';
+          imageStyle = index === 0
+            ? 'min-height: 62mm; max-height: 78mm;'
+            : 'min-height: 50mm; max-height: 62mm;';
         } else if (layout === 'grid-portrait') {
           imageStyle = 'min-height: 72mm; max-height: 92mm;';
         } else if (layout === 'grid-balanced') {
           imageStyle = 'min-height: 62mm; max-height: 78mm;';
-        } else if (layout === 'grid-quilt') {
+        } else if (layout === 'grid-quilt' || layout === 'quilt-4') {
           const span = index === 0 || index === 3 ? 4 : 2;
           containerStyle = `grid-column: span ${span};`;
           imageStyle = span === 4
@@ -378,11 +436,20 @@ export class BlockRenderer {
     return `
       <div style="
         display: grid;
-        grid-template-columns: repeat(${columns}, 1fr);
+        grid-template-columns: ${
+          layout === 'pair-portraits' ? '0.96fr 1.04fr'
+          : layout === 'pair-mixed' ? '0.92fr 1.08fr'
+          : layout === 'pair-balanced' ? '1.02fr 0.98fr'
+          : layout === 'pair-grid' ? '1.04fr 0.96fr'
+          : layout === 'column-portraits' ? '0.94fr 1.06fr'
+          : layout === 'editorial-grid' ? 'repeat(3, 1fr)'
+          : `repeat(${columns}, 1fr)`
+        };
         gap: ${this.theme.spacing.elementSpacing};
-        margin: ${this.theme.spacing.blockSpacing} 0;
+        margin: calc(${this.theme.spacing.blockSpacing} * 1.1) 0 calc(${this.theme.spacing.blockSpacing} * 1.35);
         page-break-inside: avoid;
         break-inside: avoid;
+        align-items: start;
       ">${imagesHtml}</div>
     `;
   }

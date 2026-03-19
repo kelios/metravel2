@@ -449,6 +449,15 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   box-shadow: ${colors.boxShadows?.light || 'none'};
 }
 
+.${WEB_RICH_TEXT_CLASS} .figure-landscape {
+  margin: 2.4em 0 2.7em;
+}
+
+.${WEB_RICH_TEXT_CLASS} .figure-landscape img {
+  width: min(100%, 78vw);
+  max-width: min(100%, 78vw);
+}
+
 /* ===== SINGLE IMAGE WITH FLOAT (desktop, vertical/square images only) ===== */
 @media (min-width: 769px) {
   .${WEB_RICH_TEXT_CLASS} .img-float-right {
@@ -482,6 +491,24 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     margin: 0;
     border-radius: 20px;
     box-shadow: ${colors.boxShadows?.light || 'none'};
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .figure-portrait {
+    margin: 2.1em 0 2.5em;
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .figure-portrait.img-float-right {
+    padding-left: clamp(32px, 7vw, 88px);
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .figure-portrait.img-float-left {
+    padding-right: clamp(32px, 7vw, 88px);
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .figure-portrait img {
+    width: clamp(300px, 62%, 500px);
+    max-width: min(100%, 500px);
+    max-height: min(70vh, 720px);
   }
 }
 
@@ -533,12 +560,49 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   max-height: 248px !important;
 }
 
+.${WEB_RICH_TEXT_CLASS} .img-stack-landscape {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-stack-landscape > p:first-child {
+  transform: translateY(16px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-stack-landscape > p:last-child {
+  transform: translateY(-16px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-balanced {
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-balanced > p:first-child {
+  transform: translateY(10px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-balanced > p:last-child {
+  transform: translateY(-10px);
+}
+
 /* Portrait pair - taller images */
 .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
   height: 320px !important;
   max-height: 320px !important;
   aspect-ratio: auto !important;
 }
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-portraits {
+  grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-portraits > p:first-child {
+  transform: translateY(18px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-portraits > p:last-child {
+  transform: translateY(-18px);
+}
+
 /* Mixed pair - portrait + landscape, auto height to respect aspect ratios */
 .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed {
   align-items: start;
@@ -549,6 +613,14 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   max-height: 282px !important;
   aspect-ratio: auto !important;
   object-fit: contain;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-mixed > p:first-child {
+  transform: translateY(14px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-mixed > p:last-child {
+  transform: translateY(-8px);
 }
 
 /* ===== THREE+ IMAGES GRID ===== */
@@ -596,9 +668,27 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   max-height: 300px !important;
 }
 
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid {
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(1),
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(4) {
+  transform: translateY(12px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(2),
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(3) {
+  transform: translateY(-12px);
+}
+
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 18px;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-quilt-4 {
+  margin: 2.2em 0 2.7em;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(1),
@@ -678,14 +768,48 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   border-radius: 20px;
 }
 
+.${WEB_RICH_TEXT_CLASS} .img-quilt-3 {
+  margin: 2.2em 0 2.65em;
+}
+
 /* ===== PORTRAIT-HEAVY GRID ===== */
 /* Multiple portraits - use 2 columns with taller cells */
 .${WEB_RICH_TEXT_CLASS} .img-grid-portrait {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.${WEB_RICH_TEXT_CLASS} .img-column-portraits {
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-column-portraits > p:nth-child(odd) {
+  transform: translateY(12px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-column-portraits > p:nth-child(even) {
+  transform: translateY(-12px);
+}
+
 .${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
   min-height: 280px;
   max-height: 420px;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-editorial-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(1) {
+  grid-column: span 2;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(2),
+.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(5) {
+  transform: translateY(14px);
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(3),
+.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(4) {
+  transform: translateY(-10px);
 }
 
 /* ===== CLEARFIX ===== */
@@ -896,6 +1020,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     float: none;
     max-width: 100%;
     margin: 1em 0;
+    padding-left: 0;
+    padding-right: 0;
   }
   /* Mobile: 2 images still side by side but smaller */
   .${WEB_RICH_TEXT_CLASS} .img-row-2 {
@@ -912,6 +1038,18 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   }
   .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed {
     grid-template-columns: 1fr 1fr;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-stack-landscape,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-balanced,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-portraits,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-mixed {
+    grid-template-columns: 1fr 1fr;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-stack-landscape > p,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-balanced > p,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-portraits > p,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-mixed > p {
+    transform: none !important;
   }
   /* Mobile: grid becomes 2 columns */
   .${WEB_RICH_TEXT_CLASS} .img-grid {
@@ -932,9 +1070,21 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
+  .${WEB_RICH_TEXT_CLASS} .img-pair-grid,
+  .${WEB_RICH_TEXT_CLASS} .img-column-portraits,
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
   .${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p,
   .${WEB_RICH_TEXT_CLASS} .img-grid-balanced > p {
     grid-column: auto !important;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-pair-grid > p,
+  .${WEB_RICH_TEXT_CLASS} .img-column-portraits > p,
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p {
+    grid-column: auto !important;
+    transform: none !important;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-quilt img,
   .${WEB_RICH_TEXT_CLASS} .img-grid-balanced img {

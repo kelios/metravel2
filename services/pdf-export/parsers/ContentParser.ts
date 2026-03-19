@@ -91,10 +91,19 @@ export interface ImageGalleryBlock extends ContentBlock {
   }>;
   columns?: number;
   layout?:
+    | 'stack-landscape'
+    | 'pair-portraits'
+    | 'pair-mixed'
+    | 'pair-balanced'
     | 'row-2-balanced'
     | 'row-2-landscape'
     | 'row-2-portrait'
     | 'row-2-mixed'
+    | 'quilt-3'
+    | 'quilt-4'
+    | 'pair-grid'
+    | 'column-portraits'
+    | 'editorial-grid'
     | 'grid-default'
     | 'grid-portrait'
     | 'grid-mixed'
@@ -174,6 +183,15 @@ export class ContentParser {
 
   private getGalleryLayout(className: string): ImageGalleryBlock['layout'] {
     if (!className) return 'grid-default';
+    if (className.includes('img-stack-landscape')) return 'stack-landscape';
+    if (className.includes('img-pair-portraits')) return 'pair-portraits';
+    if (className.includes('img-pair-mixed')) return 'pair-mixed';
+    if (className.includes('img-pair-balanced')) return 'pair-balanced';
+    if (className.includes('img-quilt-3')) return 'quilt-3';
+    if (className.includes('img-quilt-4')) return 'quilt-4';
+    if (className.includes('img-pair-grid')) return 'pair-grid';
+    if (className.includes('img-column-portraits')) return 'column-portraits';
+    if (className.includes('img-editorial-grid')) return 'editorial-grid';
     if (className.includes('img-row-2-landscape')) return 'row-2-landscape';
     if (className.includes('img-row-2-portrait')) return 'row-2-portrait';
     if (className.includes('img-row-2-mixed')) return 'row-2-mixed';
@@ -188,15 +206,25 @@ export class ContentParser {
 
   private getGalleryColumns(layout: ImageGalleryBlock['layout'], imageCount: number): number {
     switch (layout) {
+      case 'stack-landscape':
+      case 'pair-portraits':
+      case 'pair-mixed':
+      case 'pair-balanced':
       case 'row-2-balanced':
       case 'row-2-landscape':
       case 'row-2-portrait':
       case 'row-2-mixed':
+      case 'quilt-3':
+      case 'pair-grid':
+      case 'column-portraits':
       case 'grid-balanced':
       case 'grid-mixed':
       case 'grid-mixed-reverse':
       case 'grid-portrait':
         return 2;
+      case 'editorial-grid':
+        return 3;
+      case 'quilt-4':
       case 'grid-quilt':
         return 6;
       case 'grid-default':

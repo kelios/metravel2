@@ -52,6 +52,9 @@ export type ApiQuestMeta = {
     points: string; // readOnly from backend
     city_id: string; // readOnly
     city_name: string; // readOnly
+    country_id?: string | null;
+    country_name?: string | null;
+    country_code?: string | null;
     lat: string;
     lng: string;
     duration_min: number | null;

@@ -28,6 +28,9 @@ const filesToCopy = [
   'travel-hero-preload.js',
   'assets/fonts/Roboto-Regular.ttf',
   'assets/fonts/Roboto-Medium.ttf',
+  'assets/icons/logo_yellow_512x512.png',
+  'assets/icons/logo_yellow_192x192.png',
+  'assets/icons/apple-touch-icon-180x180.png',
 ];
 
 const externalFilesToCopy = [
