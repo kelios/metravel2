@@ -91,4 +91,58 @@ describe('utils/analytics', () => {
     expect(firstPayload.client_id).toBe(generatedClientId)
     expect(secondPayload.client_id).toBe(generatedClientId)
   })
+
+  it('sends web product events to both GA4 and Yandex Metrika when both are ready', async () => {
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'web' },
+    }))
+
+    jest.doMock('@react-native-async-storage/async-storage', () => ({
+      __esModule: true,
+      default: { getItem: jest.fn(), setItem: jest.fn() },
+    }))
+
+    const gtag = jest.fn()
+    const ym = jest.fn()
+    ;(global as any).window = {
+      gtag,
+      ym,
+      __metravelMetrikaId: 62803912,
+      __metravelMetrikaReady: true,
+    }
+
+    const { sendAnalyticsEvent } = require('@/utils/analytics')
+
+    await sendAnalyticsEvent('AuthSuccess', { source: 'google', intent: 'build-pdf' })
+
+    expect(gtag).toHaveBeenCalledWith('event', 'AuthSuccess', { source: 'google', intent: 'build-pdf' })
+    expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'AuthSuccess', {
+      source: 'google',
+      intent: 'build-pdf',
+    })
+  })
+
+  it('normalizes Yandex goal names on web when event names contain unsupported characters', async () => {
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'web' },
+    }))
+
+    jest.doMock('@react-native-async-storage/async-storage', () => ({
+      __esModule: true,
+      default: { getItem: jest.fn(), setItem: jest.fn() },
+    }))
+
+    const ym = jest.fn()
+    ;(global as any).window = {
+      ym,
+      __metravelMetrikaId: 62803912,
+      __metravelMetrikaReady: true,
+    }
+
+    const { sendAnalyticsEvent } = require('@/utils/analytics')
+
+    await sendAnalyticsEvent('Goal: CTA click / hero')
+
+    expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'Goal__CTA_click___hero', {})
+  })
 })

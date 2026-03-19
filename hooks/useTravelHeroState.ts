@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -28,7 +27,6 @@ const HERO_HEIGHT = {
   mobileMaxViewportRatio: 0.85,
   webViewportCapRatio: 0.7,
 } as const
-const WEB_HERO_LOAD_FALLBACK_MS = 200
 
 const normalizeGalleryImage = (
   item: unknown,
@@ -117,10 +115,6 @@ function useHeroMediaModel(
   const webHeroLoadNotifiedRef = useRef(false)
   const sliderLoadNotifiedRef = useRef(false)
   const lastTravelIdRef = useRef<number | string | null>(travel?.id ?? null)
-  const notifyHeroReadyInEffect = useEffectEvent((traceEvent: string) => {
-    tdTrace(traceEvent)
-    onFirstImageLoad()
-  })
 
   useEffect(() => {
     tdTrace('hero:mount', { travelId: travel?.id })
@@ -145,18 +139,6 @@ function useHeroMediaModel(
     }
     lastTravelIdRef.current = nextId
   }, [travel?.id, tdTrace])
-
-  useEffect(() => {
-    if (Platform.OS !== 'web' || webHeroLoaded || !firstImg) return
-    const fallback = setTimeout(() => {
-      if (!webHeroLoadNotifiedRef.current) {
-        webHeroLoadNotifiedRef.current = true
-        setWebHeroLoaded(true)
-        notifyHeroReadyInEffect('hero:lcpImg:fallbackTimeout')
-      }
-    }, WEB_HERO_LOAD_FALLBACK_MS)
-    return () => clearTimeout(fallback)
-  }, [webHeroLoaded, firstImg])
 
   useEffect(() => {
     if (!webHeroLoaded || Platform.OS !== 'web') return

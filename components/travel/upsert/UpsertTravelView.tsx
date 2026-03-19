@@ -495,6 +495,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             currentStep={controller.wizard.currentStep}
             totalSteps={controller.wizard.totalSteps}
             formData={controller.formData}
+            countries={controller.filters.countries}
             setFormData={setFormDataDirect}
             isSuperAdmin={controller.isSuperAdmin}
             onManualSave={controller.handleManualSave}

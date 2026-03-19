@@ -17,8 +17,15 @@ jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({}));
 jest.mock('@/utils/toast', () => ({
   showToast: jest.fn(),
 }));
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('@/api/instagramPublish', () => ({
+  publishTravelToInstagram: jest.fn().mockResolvedValue({ status: 'queued' }),
+}));
 
 import { showToast } from '@/utils/toast';
+import { publishTravelToInstagram } from '@/api/instagramPublish';
 
 const baseFormData: TravelFormData = {
   id: '640',
@@ -198,6 +205,59 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(getByText('Панель модератора')).toBeTruthy();
     expect(getByText('Одобрить модерацию')).toBeTruthy();
     expect(getByText('Отклонить')).toBeTruthy();
+    expect(getByText('Instagram публикация')).toBeTruthy();
+  });
+
+  it('publishes to instagram for superadmin with generated payload', async () => {
+    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
+    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
+      { key: 'metravelby', label: '@metravelby' },
+    ]);
+
+    try {
+      const { getByText } = render(
+        <TravelWizardStepPublish
+          currentStep={6}
+          totalSteps={6}
+          formData={{
+            ...baseFormData,
+            name: 'Минск и Несвиж',
+            countries: ['1'],
+            coordsMeTravel: [
+              { lat: 53.9, lng: 27.56, address: 'Минск', categories: [] },
+              { lat: 53.22, lng: 26.68, address: 'Несвиж', categories: [] },
+            ],
+          }}
+          countries={[{ country_id: '1', title_ru: 'Беларусь' }]}
+          setFormData={jest.fn()}
+          isSuperAdmin={true}
+          onManualSave={jest.fn()}
+          onGoBack={jest.fn()}
+          onFinish={jest.fn()}
+        />
+      );
+
+      await act(async () => {
+        fireEvent.press(getByText('Опубликовать в Instagram'));
+      });
+
+      expect(publishTravelToInstagram).toHaveBeenCalledWith(
+        expect.objectContaining({
+          travelId: 640,
+          accountKey: 'metravelby',
+          hashtags: expect.arrayContaining(['#metravelby', '#беларусь', '#минск', '#несвиж']),
+          imageUrls: expect.arrayContaining(['https://example.com/cover.jpg']),
+        })
+      );
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'success',
+          text1: 'Публикация запущена',
+        })
+      );
+    } finally {
+      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
+    }
   });
 
   it('hides status switch when already sent to moderation', () => {

@@ -3,7 +3,7 @@ import { Platform } from 'react-native'
 
 import { useTravelDetailsPerformance } from '@/hooks/useTravelDetailsPerformance'
 
-jest.mock('@/components/travel/Slider', () => ({
+jest.mock('@/components/travel/Slider.web', () => ({
   __esModule: true,
   default: () => null,
 }))

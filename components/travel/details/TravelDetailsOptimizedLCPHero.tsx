@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -150,14 +150,34 @@ function OptimizedLCPHeroInner({
   const srcWithRetry = overrideSrc || responsive.src || baseSrc;
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
 
+  const notifyReady = useCallback(async () => {
+    if (didNotifyLoadRef.current) return;
+
+    if (Platform.OS === 'web') {
+      const el = imgRef.current;
+      if (!el || !el.complete || el.naturalWidth <= 0) return;
+
+      if (typeof el.decode === 'function') {
+        try {
+          await el.decode();
+        } catch {
+          // Browsers may reject decode() for already-decoded/cached images.
+        }
+      }
+
+      if (!el.complete || el.naturalWidth <= 0 || didNotifyLoadRef.current) return;
+    }
+
+    didNotifyLoadRef.current = true;
+    onLoad?.();
+  }, [onLoad]);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const el = imgRef.current;
     if (!el || !el.complete || el.naturalWidth <= 0) return;
-    if (didNotifyLoadRef.current) return;
-    didNotifyLoadRef.current = true;
-    onLoad?.();
-  }, [onLoad, srcWithRetry]);
+    void notifyReady();
+  }, [notifyReady, srcWithRetry]);
 
   if (!srcWithRetry) return <NeutralHeroPlaceholder height={height} />;
 
@@ -267,8 +287,7 @@ function OptimizedLCPHeroInner({
             referrerPolicy="no-referrer-when-downgrade"
             data-lcp
             onLoad={() => {
-              didNotifyLoadRef.current = true;
-              onLoad?.();
+              void notifyReady();
             }}
             onError={() => {
               if (!didTryApiPrefix) {

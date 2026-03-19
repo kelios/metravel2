@@ -197,7 +197,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroHeight).toBe(540)
   })
 
-  it('marks web hero as loaded after the shortened fallback timeout when load event is delayed', () => {
+  it('waits for an explicit hero-ready signal instead of auto-unblocking on a timer', () => {
     const originalUserAgent = window.navigator.userAgent
     Object.defineProperty(window.navigator, 'userAgent', {
       value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36',
@@ -207,11 +207,11 @@ describe('useTravelHeroState', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 46,
-      name: 'Fallback handoff travel',
+      name: 'Explicit handoff travel',
       gallery: [
         {
           id: 1,
-          url: 'https://example.com/fallback-gallery.jpg',
+          url: 'https://example.com/explicit-gallery.jpg',
           width: 1200,
           height: 800,
         },
@@ -225,13 +225,14 @@ describe('useTravelHeroState', () => {
     expect(result.current.webHeroLoaded).toBe(false)
 
     act(() => {
-      jest.advanceTimersByTime(199)
+      jest.advanceTimersByTime(500)
     })
 
     expect(result.current.webHeroLoaded).toBe(false)
+    expect(onFirstImageLoad).not.toHaveBeenCalled()
 
     act(() => {
-      jest.advanceTimersByTime(1)
+      result.current.handleWebHeroLoad()
     })
 
     expect(result.current.webHeroLoaded).toBe(true)

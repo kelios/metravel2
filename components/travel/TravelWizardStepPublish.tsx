@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -16,6 +17,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
+import { publishTravelToInstagram } from '@/api/instagramPublish';
 import { sendMessage } from '@/api/messages';
 import { devError } from '@/utils/logger';
 import { hapticNotification } from '@/utils/haptics';
@@ -30,6 +32,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishChecklist';
 import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
+import { buildInstagramPublicationDraft, getInstagramAccountOptions } from '@/utils/instagramPublish';
 
 async function showToastMessage(payload: any) {
     await showToast(payload);
@@ -42,6 +45,13 @@ interface TravelWizardStepPublishProps {
     currentStep: number;
     totalSteps: number;
     formData: TravelFormData;
+    countries?: Array<{
+        country_id: string;
+        title_ru: string;
+        title_en?: string;
+        title?: string;
+        name?: string;
+    }>;
     // ✅ FIX: Унифицированная сигнатура setFormData для совместимости с другими шагами
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>> | ((data: TravelFormData) => void);
     isSuperAdmin: boolean;
@@ -67,6 +77,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     currentStep,
     totalSteps,
     formData,
+    countries = [],
     setFormData,
     isSuperAdmin,
     onManualSave,
@@ -130,6 +141,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const [rejectionComment, setRejectionComment] = useState('');
+    const [selectedInstagramAccount, setSelectedInstagramAccount] = useState('');
     const isNew = !formData.id;
 
     const scrollRef = useRef<ScrollView | null>(null);
@@ -138,12 +150,35 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const [primaryOverrideLabel, setPrimaryOverrideLabel] = useState<string | null>(null);
 
     const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
+    const instagramAccountOptions = useMemo(
+        () => getInstagramAccountOptions(process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS),
+        []
+    );
+    const instagramDraft = useMemo(
+        () => buildInstagramPublicationDraft({ formData, countries }),
+        [countries, formData]
+    );
+    const canPublishToInstagram = isSuperAdmin && !!formData.id && instagramDraft.imageUrls.length > 0;
 
     useEffect(() => {
         trackWizardEvent('wizard_step_view', {
             step: currentStep,
         });
     }, [currentStep]);
+
+    useEffect(() => {
+        if (instagramAccountOptions.length === 0) {
+            setSelectedInstagramAccount('');
+            return;
+        }
+
+        setSelectedInstagramAccount((currentValue) => {
+            if (instagramAccountOptions.some((option) => option.key === currentValue)) {
+                return currentValue;
+            }
+            return instagramAccountOptions[0]?.key ?? '';
+        });
+    }, [instagramAccountOptions]);
 
     useEffect(() => {
         return () => {
@@ -460,6 +495,66 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         }
     };
 
+    const handleCopyInstagramText = useCallback(async () => {
+        if (!instagramDraft.finalText) return;
+        await Clipboard.setStringAsync(instagramDraft.finalText);
+        void showToastMessage({
+            type: 'success',
+            text1: 'Текст для Instagram скопирован',
+        });
+    }, [instagramDraft.finalText]);
+
+    const handlePublishToInstagram = useCallback(async () => {
+        if (!canPublishToInstagram) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Не хватает данных для публикации',
+                text2: 'Нужен сохранённый маршрут и хотя бы одна фотография.',
+            });
+            return;
+        }
+
+        if (!selectedInstagramAccount) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Выберите Instagram-аккаунт',
+                text2: 'Добавьте аккаунты в EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS.',
+            });
+            return;
+        }
+
+        try {
+            const result = await publishTravelToInstagram({
+                travelId: Number(formData.id),
+                accountKey: selectedInstagramAccount,
+                caption: instagramDraft.caption,
+                hashtags: instagramDraft.hashtags,
+                imageUrls: instagramDraft.imageUrls,
+            });
+
+            void showToastMessage({
+                type: 'success',
+                text1: 'Публикация запущена',
+                text2: result?.postUrl
+                    ? `Пост создан: ${result.postUrl}`
+                    : 'Backend принял задачу на публикацию в Instagram.',
+            });
+        } catch (error) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Не удалось опубликовать в Instagram',
+                text2: error instanceof Error ? error.message : 'Проверьте backend endpoint и конфигурацию аккаунтов.',
+            });
+        }
+    }, [
+        canPublishToInstagram,
+        formData.id,
+        instagramDraft.caption,
+        instagramDraft.hashtags,
+        instagramDraft.imageUrls,
+        selectedInstagramAccount,
+    ]);
+
     return (
         <SafeAreaView style={styles.safeContainer}>
             <KeyboardAvoidingView
@@ -689,6 +784,90 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                     style={[styles.adminButton, styles.adminButtonReject]}
                                     labelStyle={styles.adminButtonText}
                                     accessibilityLabel="Отклонить модерацию"
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    {isSuperAdmin && (
+                        <View style={[styles.card, styles.instagramCard]}>
+                            <Text style={styles.cardTitle}>Instagram публикация</Text>
+                            <Text style={styles.adminHint}>
+                                Кнопка вызывает backend endpoint. В клиентском env держите только ключи аккаунтов,
+                                а логин и пароль Instagram храните на сервере.
+                            </Text>
+
+                            <View style={styles.instagramSection}>
+                                <Text style={styles.rejectionCommentLabel}>Аккаунт для публикации</Text>
+                                <View style={styles.accountList}>
+                                    {instagramAccountOptions.length > 0 ? (
+                                        instagramAccountOptions.map((option) => {
+                                            const isActive = option.key === selectedInstagramAccount;
+                                            return (
+                                                <CardActionPressable
+                                                    key={option.key}
+                                                    style={[
+                                                        styles.accountOption,
+                                                        isActive && styles.accountOptionActive,
+                                                    ]}
+                                                    onPress={() => setSelectedInstagramAccount(option.key)}
+                                                    accessibilityLabel={`Выбрать аккаунт ${option.label}`}
+                                                >
+                                                    <View style={styles.radioOuter}>
+                                                        {isActive && <View style={styles.radioInner} />}
+                                                    </View>
+                                                    <Text style={styles.statusLabel}>{option.label}</Text>
+                                                </CardActionPressable>
+                                            );
+                                        })
+                                    ) : (
+                                        <View style={[styles.bannerInfo, styles.inlineBanner]}>
+                                            <Text style={[styles.bannerDescription, styles.bannerInfoText]}>
+                                                Задайте `EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS` в формате JSON
+                                                или `key:@label,key2:@label2`.
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
+
+                            <View style={styles.instagramMetaRow}>
+                                <View style={styles.instagramMetaItem}>
+                                    <Text style={styles.instagramMetaLabel}>Фото</Text>
+                                    <Text style={styles.instagramMetaValue}>{instagramDraft.imageUrls.length}</Text>
+                                </View>
+                                <View style={styles.instagramMetaItem}>
+                                    <Text style={styles.instagramMetaLabel}>Теги</Text>
+                                    <Text style={styles.instagramMetaValue}>{instagramDraft.hashtags.length}</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.instagramPreview}>
+                                <Text style={styles.rejectionCommentLabel}>Текст поста</Text>
+                                <Text style={styles.instagramPreviewText}>{instagramDraft.finalText}</Text>
+                            </View>
+
+                            <View style={styles.adminButtons}>
+                                <Button
+                                    label="Скопировать текст"
+                                    onPress={() => void handleCopyInstagramText()}
+                                    icon={<Feather name="copy" size={18} color={colors.textOnPrimary} />}
+                                    variant="secondary"
+                                    size="md"
+                                    style={styles.adminButton}
+                                    labelStyle={styles.adminButtonText}
+                                    accessibilityLabel="Скопировать текст для Instagram"
+                                />
+                                <Button
+                                    label="Опубликовать в Instagram"
+                                    onPress={() => void handlePublishToInstagram()}
+                                    icon={<Feather name="instagram" size={18} color={colors.textOnPrimary} />}
+                                    variant="primary"
+                                    size="md"
+                                    style={[styles.adminButton, !canPublishToInstagram && styles.adminButtonDisabled]}
+                                    labelStyle={styles.adminButtonText}
+                                    disabled={!canPublishToInstagram || !selectedInstagramAccount}
+                                    accessibilityLabel="Опубликовать в Instagram"
                                 />
                             </View>
                         </View>
@@ -972,6 +1151,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.infoSoft,
         borderColor: colors.infoLight,
     },
+    bannerInfoText: {
+        color: colors.text,
+        marginBottom: 0,
+    },
+    inlineBanner: {
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        padding: DESIGN_TOKENS.spacing.md,
+    },
     bannerTitle: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
@@ -987,10 +1174,73 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.backgroundSecondary,
         borderColor: colors.border,
     },
+    instagramCard: {
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+    },
     adminHint: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         color: colors.textMuted,
         marginTop: DESIGN_TOKENS.spacing.xs,
+        lineHeight: 20,
+    },
+    instagramSection: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    accountList: {
+        gap: DESIGN_TOKENS.spacing.xs,
+    },
+    accountOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.backgroundSecondary,
+    },
+    accountOptionActive: {
+        borderColor: colors.borderAccent,
+        backgroundColor: colors.primarySoft,
+    },
+    instagramMetaRow: {
+        flexDirection: 'row',
+        gap: DESIGN_TOKENS.spacing.sm,
+        marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    instagramMetaItem: {
+        flex: 1,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        backgroundColor: colors.backgroundSecondary,
+    },
+    instagramMetaLabel: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+        marginBottom: 4,
+    },
+    instagramMetaValue: {
+        fontSize: DESIGN_TOKENS.typography.sizes.md,
+        color: colors.text,
+        fontWeight: '700',
+    },
+    instagramPreview: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    instagramPreviewText: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        paddingVertical: DESIGN_TOKENS.spacing.md,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.backgroundSecondary,
+        color: colors.text,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
         lineHeight: 20,
     },
     rejectionCommentContainer: {
@@ -1040,6 +1290,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
         color: colors.textOnPrimary,
+    },
+    adminButtonDisabled: {
+        opacity: 0.6,
     },
 });
 

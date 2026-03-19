@@ -9,6 +9,7 @@ let cachedClientId: string | null = null;
 let clientIdRequest: Promise<string> | null = null;
 
 const generateClientId = () => `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
+const MAX_YANDEX_GOAL_NAME_LENGTH = 64;
 
 const getPersistentClientId = async () => {
     if (cachedClientId) {
@@ -49,6 +50,12 @@ const getPersistentClientId = async () => {
     }
 };
 
+const toYandexGoalName = (eventName: string) =>
+    String(eventName || '')
+        .trim()
+        .replace(/[^A-Za-z0-9_]/g, '_')
+        .slice(0, MAX_YANDEX_GOAL_NAME_LENGTH);
+
 export const sendAnalyticsEvent = async (
     eventName: string,
     eventParams: Record<string, unknown> = {}
@@ -64,18 +71,41 @@ export const sendAnalyticsEvent = async (
     if (Platform.OS === 'web') {
         const w = typeof window !== 'undefined' ? (window as any) : undefined;
         const gtag = w?.gtag;
+        const ym = w?.ym;
+        const metrikaId = Number(w?.__metravelMetrikaId || 0);
+        const yandexGoalName = toYandexGoalName(eventName);
+        let sentAnyEvent = false;
+
         if (typeof gtag === 'function') {
             try {
                 gtag('event', eventName, eventParams);
+                sentAnyEvent = true;
             } catch (error) {
                 console.error('GA4 gtag Error:', error);
             }
+        }
+
+        if (
+            typeof ym === 'function' &&
+            metrikaId > 0 &&
+            w?.__metravelMetrikaReady &&
+            yandexGoalName.length > 0
+        ) {
+            try {
+                ym(metrikaId, 'reachGoal', yandexGoalName, eventParams);
+                sentAnyEvent = true;
+            } catch (error) {
+                console.error('Yandex Metrika reachGoal Error:', error);
+            }
+        }
+
+        if (sentAnyEvent) {
             return;
         }
 
         // GA bootstraps lazily after consent/idle; missing gtag early is expected in production.
         if (__DEV__ && !hasWarnedMissingConfig) {
-            console.warn('GA4: gtag is not available – analytics event skipped.');
+            console.warn('Analytics: web analytics is not available yet – event skipped.');
             hasWarnedMissingConfig = true;
         }
         return;

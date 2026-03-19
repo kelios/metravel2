@@ -7,6 +7,7 @@ import { rIC } from '@/utils/rIC'
 import { initPerformanceMonitoring } from '@/utils/performance'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
+const preloadTravelHeroSliderRuntime = () => import('@/components/travel/Slider.web')
 
 export interface UseTravelDetailsPerformanceArgs {
   travel?: Travel
@@ -43,7 +44,7 @@ export function useTravelDetailsPerformance({
     let cancelled = false
 
     const preloadSlider = () => {
-      import('@/components/travel/Slider')
+      preloadTravelHeroSliderRuntime()
         .catch(() => {})
         .finally(() => {
           if (!cancelled) setSliderReady(true)
@@ -152,7 +153,7 @@ export function useTravelDetailsPerformance({
     // Prefetch the Slider chunk after idle so it doesn't compete with hero
     // image paint for main thread time. The 800ms timeout is a safety net.
     rIC(() => {
-      import('@/components/travel/Slider').catch(() => {})
+      preloadTravelHeroSliderRuntime().catch(() => {})
     }, 800)
   }, [travel, postLcpRuntimeReady])
 
