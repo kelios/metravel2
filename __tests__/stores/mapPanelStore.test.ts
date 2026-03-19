@@ -41,4 +41,17 @@ describe('mapPanelStore throttle', () => {
     useMapPanelStore.getState().requestOpen();
     expect(useMapPanelStore.getState().openNonce).toBe(2);
   });
+
+  it('stores requestedTab for open requests', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(3_000);
+
+    const { useMapPanelStore } = await import('@/stores/mapPanelStore');
+
+    useMapPanelStore.getState().requestOpen('list');
+    expect(useMapPanelStore.getState().requestedTab).toBe('list');
+
+    (Date.now as jest.Mock).mockReturnValue(3_500);
+    useMapPanelStore.getState().requestOpen();
+    expect(useMapPanelStore.getState().requestedTab).toBe('filters');
+  });
 });

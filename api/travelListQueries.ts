@@ -34,6 +34,14 @@ export type TravelFacetsResponse = {
     facets: Record<string, TravelFacetItem[]>;
 };
 
+const createTravelQueryError = (message: string, status?: number) => {
+    const error = new Error(message) as Error & { status?: number };
+    if (typeof status === 'number') {
+        error.status = status;
+    }
+    return error;
+};
+
 export const fetchTravelFacets = async (
     search: string,
     urlParams: Record<string, unknown>,
@@ -199,21 +207,28 @@ export const fetchTravels = async (
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
 
+        const parseFallback: Travel[] = [];
         const result = await safeJsonParse<{
             data?: Travel[];
             total?: unknown;
             results?: Travel[];
             count?: unknown;
             detail?: string;
-        } | Travel[]>(res, []);
+        } | Travel[]>(res, parseFallback as Travel[]);
 
         if (!res.ok) {
             if (isInvalidPagePayload(result)) {
                 devError('Invalid page requested:', page + 1);
                 return { data: [], total: 0 };
             }
-            devError('Error fetching Travels: HTTP', res.status, res.statusText);
-            return { data: [], total: 0 };
+            throw createTravelQueryError(
+                `Не удалось загрузить путешествия: ${res.status} ${res.statusText || 'Unknown error'}`.trim(),
+                res.status
+            );
+        }
+
+        if (result === parseFallback) {
+            throw createTravelQueryError('API путешествий вернул непарсируемый ответ.');
         }
 
         const { items, total } = unwrapTravelsList(result);
@@ -223,11 +238,11 @@ export const fetchTravels = async (
             return { data: [], total: coerceTotal(result.total, total) };
         }
 
-        if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
-            if (!hasKnownListArrays(result) && __DEV__) {
+        if (!Array.isArray(result) && !hasKnownListArrays(result)) {
+            if (__DEV__) {
                 devWarn('API returned unexpected structure:', result);
             }
-            return { data: [], total: coerceTotal((result as Record<string, unknown>).total, 0) };
+            throw createTravelQueryError('API путешествий вернул неожиданный формат данных.');
         }
 
         const normalized = items.map(normalizeTravelItem);
@@ -238,7 +253,7 @@ export const fetchTravels = async (
     } catch (e) {
         if (isAbortError(e)) throw e;
         devError('Error fetching Travels:', e);
-        return { data: [], total: 0 };
+        throw e;
     }
 };
 
@@ -281,21 +296,28 @@ export const fetchRandomTravels = async (
                 { maxAttempts: 2, delay: 1000, shouldRetry: (error) => isRetryableError(error) }
             );
 
+        const parseFallback: Travel[] = [];
         const result = await safeJsonParse<{
             data?: Travel[];
             total?: unknown;
             results?: Travel[];
             count?: unknown;
             detail?: string;
-        } | Travel[]>(res, []);
+        } | Travel[]>(res, parseFallback as Travel[]);
 
         if (!res.ok) {
             if (isInvalidPagePayload(result)) {
                 devError('Invalid random page requested:', page + 1);
                 return { data: [], total: 0 };
             }
-            devError('Error fetching Random Travels: HTTP', res.status, res.statusText);
-            return { data: [], total: 0 };
+            throw createTravelQueryError(
+                `Не удалось загрузить случайные путешествия: ${res.status} ${res.statusText || 'Unknown error'}`.trim(),
+                res.status
+            );
+        }
+
+        if (result === parseFallback) {
+            throw createTravelQueryError('API случайных путешествий вернул непарсируемый ответ.');
         }
 
         if (Array.isArray(result)) {
@@ -310,11 +332,11 @@ export const fetchRandomTravels = async (
             return { data: [], total: coerceTotal(result.total, 0) };
         }
 
-        if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
-            if (!hasKnownListArrays(result) && __DEV__) {
+        if (!Array.isArray(result) && !hasKnownListArrays(result)) {
+            if (__DEV__) {
                 devWarn('API returned unexpected random structure:', result);
             }
-            return { data: [], total: coerceTotal((result as Record<string, unknown>).total, 0) };
+            throw createTravelQueryError('API случайных путешествий вернул неожиданный формат данных.');
         }
 
         return {
@@ -322,7 +344,8 @@ export const fetchRandomTravels = async (
             total: coerceTotal(total, 0),
         };
     } catch (e) {
+        if (isAbortError(e)) throw e;
         devError('Error fetching Random Travels:', e);
-        return { data: [], total: 0 };
+        throw e;
     }
 };

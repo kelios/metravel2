@@ -332,24 +332,45 @@ describe('src/api/travelsApi.ts', () => {
       expect(where.year).toBe('2024');
     });
 
-    it('обрабатывает неожиданный объект без data как пустой результат', async () => {
+    it('пробрасывает ошибку для неожиданного объекта без data', async () => {
       const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ total: 10 } as any);
 
-      const result = await fetchTravels(0, 10, '', {}, {} as any);
-
-      expect(result).toEqual({ data: [], total: 10 });
+      await expect(fetchTravels(0, 10, '', {}, {} as any)).rejects.toThrow(
+        'API путешествий вернул неожиданный формат данных.'
+      );
     });
 
-    it('обрабатывает unknown shape со строковым total', async () => {
+    it('пробрасывает ошибку для unknown shape со строковым total', async () => {
       const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ foo: 'bar', total: '12' } as any);
 
-      const result = await fetchTravels(0, 10, '', {}, {} as any);
+      await expect(fetchTravels(0, 10, '', {}, {} as any)).rejects.toThrow(
+        'API путешествий вернул неожиданный формат данных.'
+      );
+    });
 
-      expect(result).toEqual({ data: [], total: 12 });
+    it('пробрасывает ошибку, если safeJsonParse вернул fallback вместо payload', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockImplementationOnce(async (_response, fallback) => fallback as any);
+
+      await expect(fetchTravels(0, 10, '', {}, {} as any)).rejects.toThrow(
+        'API путешествий вернул непарсируемый ответ.'
+      );
+    });
+
+    it('пробрасывает HTTP-ошибку для невалидного не-Invalid-page ответа', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Boom' } as any);
+
+      await expect(fetchTravels(0, 10, '', {}, {} as any)).rejects.toMatchObject({
+        message: 'Не удалось загрузить путешествия: 500 Server Error',
+        status: 500,
+      });
     });
 
     it('нормализует числовые массивы фильтров и отбрасывает мусорные значения', async () => {
@@ -466,14 +487,24 @@ describe('src/api/travelsApi.ts', () => {
       expect(result).toEqual({ data: [], total: 6 });
     });
 
-    it('возвращает total из unknown shape со строковым total', async () => {
+    it('пробрасывает ошибку для unknown shape со строковым total', async () => {
       const { fetchRandomTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce({ foo: 'bar', total: '11' } as any);
 
-      const result = await fetchRandomTravels(0, 12, '', {}, {} as any);
+      await expect(fetchRandomTravels(0, 12, '', {}, {} as any)).rejects.toThrow(
+        'API случайных путешествий вернул неожиданный формат данных.'
+      );
+    });
 
-      expect(result).toEqual({ data: [], total: 11 });
+    it('пробрасывает ошибку, если random payload не распарсился', async () => {
+      const { fetchRandomTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockImplementationOnce(async (_response, fallback) => fallback as any);
+
+      await expect(fetchRandomTravels(0, 12, '', {}, {} as any)).rejects.toThrow(
+        'API случайных путешествий вернул непарсируемый ответ.'
+      );
     });
   });
 

@@ -108,6 +108,7 @@ export default function MapScreen() {
     }, []);
 
     const openNonce = useMapPanelStore((s) => s.openNonce);
+    const requestedOpenTab = useMapPanelStore((s) => s.requestedTab);
 
     const openRightPanelRef = useRef(openRightPanel);
     useEffect(() => {
@@ -116,8 +117,13 @@ export default function MapScreen() {
 
     useEffect(() => {
         if (!openNonce) return;
+        if (requestedOpenTab === 'list') {
+            selectTravelsTab();
+        } else {
+            selectFiltersTab();
+        }
         openRightPanelRef.current();
-    }, [openNonce]);
+    }, [openNonce, requestedOpenTab, selectFiltersTab, selectTravelsTab]);
 
 
     const mapPanelPlaceholder = useMemo(
@@ -229,7 +235,7 @@ export default function MapScreen() {
                         bottomOffset={56}
                         onPress={() => {
                             selectTravelsTab();
-                            requestOpenBottomSheet();
+                            requestOpenBottomSheet('list');
                         }}
                     />
                 )}
@@ -314,7 +320,7 @@ export default function MapScreen() {
                         onCenterOnUser={centerOnUser}
                         onOpenFilters={() => {
                             selectFiltersTab();
-                            requestOpenBottomSheet();
+                            requestOpenBottomSheet('filters');
                         }}
                         filtersPanelProps={filtersPanelProps}
                         onResetFilters={handleClearAllFilters}

@@ -7,6 +7,7 @@ import { View, Text as RNText, StyleSheet, Platform, InteractionManager, useWind
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { usePathname } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
 import TravelListPanel from './TravelListPanel';
@@ -67,10 +68,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrow = viewportWidth <= 390;
   const isVeryNarrow = viewportWidth <= 350;
+  const compactSheetActions = viewportWidth <= 360;
   const stackSheetToolbar = viewportWidth <= 330;
   const styles = useMemo(
-    () => getStyles(colors, { isNarrow, stackSheetToolbar }),
-    [colors, isNarrow, stackSheetToolbar]
+    () => getStyles(colors, { isNarrow, compactSheetActions, stackSheetToolbar }),
+    [colors, isNarrow, compactSheetActions, stackSheetToolbar]
   );
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
   const pathname = usePathname();
@@ -83,6 +85,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const [sheetState, setSheetState] = useState<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed');
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
+  const requestedOpenTab = useMapPanelStore((s) => s.requestedTab);
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
 
   // Синхронизация состояния Bottom Sheet с глобальным store
@@ -97,10 +100,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   useEffect(() => {
     if (!openNonce) return;
-    setUiTab('filters');
-    setContentTab('filters');
+    const nextTab = requestedOpenTab === 'list' ? 'list' : 'filters';
+    setUiTab(nextTab);
+    setContentTab(nextTab);
+    if (nextTab === 'list') {
+      bottomSheetRef.current?.snapToHalf();
+      return;
+    }
     bottomSheetRef.current?.snapToFull();
-  }, [openNonce]);
+  }, [openNonce, requestedOpenTab]);
 
   useEffect(() => {
     if (!toggleNonce) return;
@@ -313,7 +321,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
     return (
       <View style={styles.sheetRoot}>
-        <View style={[styles.sheetToolbar, styles.sheetToolbarInline]}>
+        <View
+          style={[
+            styles.sheetToolbar,
+            stackSheetToolbar ? styles.sheetToolbarStacked : styles.sheetToolbarInline,
+          ]}
+        >
           <View style={[styles.sheetToolbarLeft, stackSheetToolbar && styles.sheetToolbarFullWidth]}>
             <SegmentedControl
               options={listTabsOptions}
@@ -321,6 +334,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               onChange={(key) => {
                 const next = key === 'filters' ? 'filters' : 'list';
                 setTabDeferred(next);
+                if (next === 'filters') {
+                  bottomSheetRef.current?.snapToFull();
+                  return;
+                }
                 bottomSheetRef.current?.snapToHalf();
               }}
               compact={true}
@@ -331,7 +348,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             />
           </View>
 
-          <View style={styles.sheetToolbarActions}>
+          <View style={[styles.sheetToolbarActions, stackSheetToolbar && styles.sheetToolbarActionsStacked]}>
             {uiTab === 'filters' && filtersMode === 'radius' && (
               <>
                 {typeof filtersContextProps?.resetFilters === 'function' && (
@@ -343,6 +360,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                     hitSlop={6}
                     style={({ pressed }) => [
                       styles.sheetCloseButton,
+                      compactSheetActions && styles.sheetIconButtonCompact,
                       { borderColor: colors.borderLight },
                       pressed && { opacity: 0.6 },
                     ]}
@@ -358,6 +376,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                   hitSlop={6}
                   style={({ pressed }) => [
                     styles.sheetShowResultsButton,
+                    compactSheetActions && styles.sheetShowResultsButtonCompact,
                     { backgroundColor: pressed ? colors.primaryDark : colors.primary },
                   ]}
                 >
@@ -378,6 +397,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               hitSlop={8}
               style={({ pressed }) => [
                 styles.sheetCloseButton,
+                compactSheetActions && styles.sheetIconButtonCompact,
                 pressed && { opacity: 0.6 },
               ]}
             >
@@ -487,7 +507,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
 const getStyles = (
   colors: ThemedColors,
-  options: { isNarrow: boolean; stackSheetToolbar: boolean }
+  options: { isNarrow: boolean; compactSheetActions: boolean; stackSheetToolbar: boolean }
 ) =>
   StyleSheet.create({
     container: {
@@ -520,7 +540,7 @@ const getStyles = (
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
       alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
-      gap: options.isNarrow ? 6 : 8,
+      gap: options.stackSheetToolbar ? 8 : options.isNarrow ? 6 : 8,
       minHeight: options.stackSheetToolbar ? undefined : (options.isNarrow ? 44 : 48),
       paddingVertical: options.isNarrow ? 6 : 8,
       paddingLeft: options.isNarrow ? 10 : 14,
@@ -554,6 +574,10 @@ const getStyles = (
       alignItems: 'center' as const,
       gap: 4,
       flexShrink: 0,
+    },
+    sheetToolbarActionsStacked: {
+      width: '100%',
+      justifyContent: 'flex-end' as const,
     },
     sheetCloseButton: {
       width: 44,
@@ -593,13 +617,22 @@ const getStyles = (
       flexShrink: 0,
       ...(Platform.OS === 'web' ? ({ boxShadow: 'none', cursor: 'pointer' } as any) : null),
     },
+    sheetShowResultsButtonCompact: {
+      height: 40,
+      paddingHorizontal: 10,
+    },
+    sheetIconButtonCompact: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+    },
     sheetResultsBadge: {
-      fontSize: 11,
+      fontSize: options.compactSheetActions ? 10 : 11,
       fontWeight: '700' as const,
       lineHeight: 14,
       backgroundColor: 'rgba(255,255,255,0.20)',
       borderRadius: 999,
-      paddingHorizontal: 6,
+      paddingHorizontal: options.compactSheetActions ? 5 : 6,
       paddingVertical: 1,
       overflow: 'hidden' as const,
     },

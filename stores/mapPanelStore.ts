@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 
+export type MapPanelRequestedTab = 'filters' | 'list';
+
 interface MapPanelState {
   openNonce: number;
-  requestOpen: () => void;
+  requestedTab: MapPanelRequestedTab;
+  requestOpen: (tab?: MapPanelRequestedTab) => void;
   toggleNonce: number;
   requestToggle: () => void;
 }
@@ -13,12 +16,13 @@ const THROTTLE_MS = 300;
 
 export const useMapPanelStore = create<MapPanelState>((set) => ({
   openNonce: 0,
-  requestOpen: () =>
+  requestedTab: 'filters',
+  requestOpen: (tab = 'filters') =>
     set((s) => {
       const now = Date.now();
       if (now - lastOpenTs < THROTTLE_MS) return s;
       lastOpenTs = now;
-      return { openNonce: s.openNonce + 1 };
+      return { openNonce: s.openNonce + 1, requestedTab: tab };
     }),
   toggleNonce: 0,
   requestToggle: () =>

@@ -14,8 +14,8 @@ function ConsentBanner() {
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const [suspendForOverlay, setSuspendForOverlay] = useState(false);
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const { isMobile, width } = useResponsive();
+  const isNarrowMobile = isMobile && width > 0 && width < 360;
   const insets = useSafeAreaInsets();
   const bottomOffset = useMemo(() => {
     if (!isMobile) return 12;
@@ -108,6 +108,7 @@ function ConsentBanner() {
       style={[
         styles.wrapper,
         styles.pointerEventsNone,
+        isMobile && styles.wrapperMobile,
         { bottom: bottomOffset },
         suspendForOverlay && styles.wrapperHidden,
       ]}
@@ -118,6 +119,7 @@ function ConsentBanner() {
           styles.container,
           styles.pointerEventsAuto,
           { backgroundColor: colors.surface },
+          isNarrowMobile && styles.containerNarrow,
           !isMobile && styles.containerDesktop,
         ]}
       >
@@ -129,13 +131,17 @@ function ConsentBanner() {
             </Link>
           </Text>
         </View>
-        <View style={styles.buttonsRow}>
+        <View style={[styles.buttonsRow, isNarrowMobile && styles.buttonsRowNarrow]}>
           <Button
             label="Отклонить"
             onPress={handleNecessaryOnly}
             variant="outline"
             size="sm"
-            style={[styles.button, { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' }]}
+            style={[
+              styles.button,
+              isNarrowMobile && styles.buttonNarrow,
+              { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' },
+            ]}
             accessibilityLabel="Отклонить"
           />
           <Button
@@ -143,7 +149,11 @@ function ConsentBanner() {
             onPress={handleAcceptAll}
             variant="primary"
             size="sm"
-            style={[styles.button, { backgroundColor: colors.primary }]}
+            style={[
+              styles.button,
+              isNarrowMobile && styles.buttonNarrow,
+              { backgroundColor: colors.primary },
+            ]}
             accessibilityLabel="Принять"
           />
         </View>
@@ -160,6 +170,9 @@ const styles = StyleSheet.create({
     bottom: 12,
     zIndex: 900,
     alignItems: 'flex-end',
+  },
+  wrapperMobile: {
+    alignItems: 'stretch',
   },
   wrapperHidden: {
     opacity: 0,
@@ -199,6 +212,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxWidth: 560,
   },
+  containerNarrow: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
   textBlock: {
     flexShrink: 1,
   },
@@ -215,10 +232,17 @@ const styles = StyleSheet.create({
     gap: 6 as any,
     flexShrink: 0,
   },
+  buttonsRowNarrow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
   button: {
     borderRadius: 9999,
     paddingVertical: 6,
     paddingHorizontal: 12,
+  },
+  buttonNarrow: {
+    width: '100%',
   },
 });
 
