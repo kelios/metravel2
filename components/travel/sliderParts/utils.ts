@@ -85,13 +85,22 @@ export const buildUriWeb = (
   const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit;
 
   if (containerWidth) {
-    // On narrow screens (mobile), use smaller cap and lower quality for faster load
     const isMobileWidth = containerWidth <= SLIDER_MAX_WIDTH.mobile;
-    const maxWidth = isMobileWidth ? SLIDER_MAX_WIDTH.mobile : SLIDER_MAX_WIDTH.desktop;
+    const maxWidth = isFirst
+      ? isMobileWidth
+        ? 400
+        : 720
+      : isMobileWidth
+        ? SLIDER_MAX_WIDTH.mobile
+        : SLIDER_MAX_WIDTH.desktop;
     const cappedWidth = Math.min(containerWidth, maxWidth);
-    const quality = isMobileWidth
-      ? (isFirst ? 45 : 40)
-      : (isFirst ? 55 : 65);
+    const quality = isFirst
+      ? isMobileWidth
+        ? 35
+        : 45
+      : isMobileWidth
+        ? 40
+        : 65;
     return (
       optimizeImageUrl(versionedUrl, {
         width: cappedWidth,
