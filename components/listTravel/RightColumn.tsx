@@ -303,7 +303,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                     minWidth: 0,
                     columnGap: cardSpacing,
                     rowGap: cardSpacing,
-                    alignItems: 'flex-start',
+                    alignItems: 'stretch',
                   } as any)
                 : ({
                     flexWrap: 'nowrap',
@@ -335,6 +335,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                             width: calcWidth,
                             maxWidth: calcWidth,
                             minWidth: 0,
+                            alignSelf: 'stretch',
                           } as any))
                     : ({
                         flex: 1,

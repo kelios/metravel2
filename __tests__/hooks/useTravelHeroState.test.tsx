@@ -135,7 +135,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
   })
 
-  it('falls back to the cover image in the slider when gallery is empty', () => {
+  it('does not expose hero media when gallery is empty', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 44,
@@ -148,11 +148,12 @@ describe('useTravelHeroState', () => {
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
-    expect(result.current.heroSliderImages).toHaveLength(1)
-    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
+    expect(result.current.firstImg).toBeNull()
+    expect(result.current.galleryImages).toHaveLength(0)
+    expect(result.current.heroSliderImages).toHaveLength(0)
   })
 
-  it('keeps web hero height at exactly 70 percent of the viewport', () => {
+  it('caps web hero height at 70 percent of the viewport for tall media', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 45,
@@ -172,6 +173,28 @@ describe('useTravelHeroState', () => {
     )
 
     expect(result.current.heroHeight).toBe(Math.round(1000 * 0.7))
+  })
+
+  it('uses aspect-ratio height on web when the image is wider than the 70vh cap', () => {
+    const onFirstImageLoad = jest.fn()
+    const travel = {
+      id: 47,
+      name: 'Wide web hero',
+      gallery: [
+        {
+          id: 1,
+          url: 'https://example.com/wide-gallery.jpg',
+          width: 2400,
+          height: 900,
+        },
+      ],
+    } as any
+
+    const { result } = renderHook(() =>
+      useTravelHeroState(travel, false, onFirstImageLoad, false),
+    )
+
+    expect(result.current.heroHeight).toBe(540)
   })
 
   it('marks web hero as loaded after the shortened fallback timeout when load event is delayed', () => {

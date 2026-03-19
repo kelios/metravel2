@@ -767,7 +767,11 @@ return (
             <a
               ref={anchorRef}
               href={isNavigable ? navigationUrl : undefined}
-              style={EMPTY_STYLE as any}
+              style={
+                isWeb && visualVariant === 'home-featured'
+                  ? ({ display: 'block', width: '100%', height: '100%' } as any)
+                  : (EMPTY_STYLE as any)
+              }
               {...(isWeb
                 ? ({
                     'data-testid': 'travel-card-link',

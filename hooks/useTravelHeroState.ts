@@ -53,7 +53,7 @@ function useHeroMediaModel(
     null,
   )
 
-  const firstRaw = travel?.gallery?.[0] || travel?.travel_image_thumb_url
+  const firstRaw = travel?.gallery?.[0]
   const firstImg = useMemo(() => {
     if (!firstRaw) return null
     if (typeof firstRaw === 'string') return { url: firstRaw }
@@ -67,7 +67,14 @@ function useHeroMediaModel(
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
     if (Platform.OS === 'web') {
-      return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
+      const maxWebHeroHeight = Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
+      const arHeight = resolvedWidth
+        ? Math.round(resolvedWidth / aspectRatio)
+        : maxWebHeroHeight
+      return Math.max(
+        HERO_HEIGHT.desktopMin,
+        Math.min(arHeight, maxWebHeroHeight),
+      )
     }
     const minViewportHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
     const arHeight = resolvedWidth
@@ -82,31 +89,14 @@ function useHeroMediaModel(
 
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
-    const mapped = gallery.map((item: unknown, index: number) =>
+    return gallery.map((item: unknown, index: number) =>
       normalizeGalleryImage(item, index),
     )
-    // If gallery is empty, use cover as fallback for slider
-    if (mapped.length === 0) {
-      const coverUrl =
-        typeof travel.travel_image_thumb_url === 'string'
-          ? travel.travel_image_thumb_url.trim()
-          : ''
-      if (coverUrl) return [{ url: coverUrl, id: 0 }]
-    }
-    // Otherwise use only gallery images (cover is shown in OptimizedLCPHero)
-    return mapped
-  }, [travel.gallery, travel.travel_image_thumb_url])
+  }, [travel.gallery])
 
   const heroSliderImages = useMemo(() => {
-    if (galleryImages.length > 0) return galleryImages
-    if (!firstImg?.url) return galleryImages
-    return [
-      {
-        ...firstImg,
-        id: firstImg.id ?? 'hero-cover',
-      },
-    ]
-  }, [firstImg, galleryImages])
+    return galleryImages
+  }, [galleryImages])
 
   const heroAlt = travel?.name
     ? `Фотография маршрута «${travel.name}»`

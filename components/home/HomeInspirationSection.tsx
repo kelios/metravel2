@@ -213,7 +213,7 @@ export function HomeInspirationSection({
 
   const getEditorialImageHeight = useCallback((index: number, count: number) => {
     if (count === 1) return 340;
-    if (count === 2) return index === 0 ? 340 : 304;
+    if (count === 2) return 340;
     if (count === 3) return index === 0 ? 336 : 296;
     return index === 0 ? 316 : 292;
   }, []);

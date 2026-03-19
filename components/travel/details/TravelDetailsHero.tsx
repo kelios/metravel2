@@ -19,7 +19,6 @@ import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
 import { TravelHeroExtras } from './TravelHeroExtras'
 const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
 import {
-  NeutralHeroPlaceholder,
   OptimizedLCPHero,
   OVERLAY_TRANSITION_MS,
 } from './TravelDetailsOptimizedLCPHero'
@@ -86,32 +85,31 @@ function TravelHeroSectionInner({
 
   return (
     <>
-      <View
-        testID="travel-details-hero"
-        ref={anchors.gallery}
-        accessibilityRole="none"
-        accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : {})}
-        style={[
-          styles.sectionContainer,
-          styles.contentStable,
-          { marginBottom: 0 },
-        ]}
-      >
+      {firstImg ? (
         <View
-          testID="travel-details-hero-slider-container"
+          testID="travel-details-hero"
+          ref={anchors.gallery}
+          accessibilityRole="none"
+          accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
+          {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : {})}
           style={[
-            styles.sliderContainer,
-            { height: heroHeight },
-            Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
+            styles.sectionContainer,
+            styles.contentStable,
+            { marginBottom: 0 },
           ]}
-          {...webHeroInteractionProps}
-          collapsable={false}
-          onLayout={handleHeroContainerLayout}
         >
-          {!firstImg ? (
-            <NeutralHeroPlaceholder height={heroHeight} />
-          ) : shouldRenderWebOptimizedHero ? (
+          <View
+            testID="travel-details-hero-slider-container"
+            style={[
+              styles.sliderContainer,
+              { height: heroHeight },
+              Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
+            ]}
+            {...webHeroInteractionProps}
+            collapsable={false}
+            onLayout={handleHeroContainerLayout}
+          >
+            {shouldRenderWebOptimizedHero ? (
             <>
               {shouldRenderWebSlider ? (
                 <Suspense fallback={null}>
@@ -156,46 +154,47 @@ function TravelHeroSectionInner({
                 </View>
               )}
             </>
-          ) : (
-            <Suspense fallback={null}>
-              <TravelHeroInteractiveSlider
-                visible
-                galleryImages={heroSliderImages}
-                isMobile={isMobile}
-                aspectRatio={aspectRatio as number}
-                preloadCount={sliderPreloadCount}
-                onFirstImageLoad={onFirstImageLoad}
-                firstImagePreloaded={renderSlider && Platform.OS === 'web'}
-                onImagePress={handleImagePress}
-                fullscreenVisible={fullscreenVisible}
-                fullscreenIndex={fullscreenIndex}
-                onCloseFullscreen={handleCloseFullscreen}
-              />
-            </Suspense>
-          )}
+            ) : (
+              <Suspense fallback={null}>
+                <TravelHeroInteractiveSlider
+                  visible
+                  galleryImages={heroSliderImages}
+                  isMobile={isMobile}
+                  aspectRatio={aspectRatio as number}
+                  preloadCount={sliderPreloadCount}
+                  onFirstImageLoad={onFirstImageLoad}
+                  firstImagePreloaded={renderSlider && Platform.OS === 'web'}
+                  onImagePress={handleImagePress}
+                  fullscreenVisible={fullscreenVisible}
+                  fullscreenIndex={fullscreenIndex}
+                  onCloseFullscreen={handleCloseFullscreen}
+                />
+              </Suspense>
+            )}
 
-          {travel?.name ? (
-            <View style={[styles.heroOverlay, { pointerEvents: 'none' }]}>
-              <View style={{ pointerEvents: 'auto' } as any}>
-                <Text
-                  style={styles.heroTitle}
-                  numberOfLines={2}
-                  accessibilityRole="header"
-                >
-                  {travel.name}
-                </Text>
+            {travel?.name ? (
+              <View style={[styles.heroOverlay, { pointerEvents: 'none' }]}>
+                <View style={{ pointerEvents: 'auto' } as any}>
+                  <Text
+                    style={styles.heroTitle}
+                    numberOfLines={2}
+                    accessibilityRole="header"
+                  >
+                    {travel.name}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
-          {(Platform.OS !== 'web' || extrasReady) && (
-            <TravelHeroFavoriteToggle
-              travel={travel}
-              isMobile={isMobile}
-            />
-          )}
+            {(Platform.OS !== 'web' || extrasReady) && (
+              <TravelHeroFavoriteToggle
+                travel={travel}
+                isMobile={isMobile}
+              />
+            )}
+          </View>
         </View>
-      </View>
+      ) : null}
 
       {extrasReady ? (
         <TravelHeroExtras
