@@ -23,6 +23,7 @@ import type { Travel } from '@/types/types'
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
 const isWeb = Platform.OS === 'web';
+const TOP_SCROLL_PADDING = 8;
 
 // Lazy load RecommendationsTabs with proper error boundary
 const RecommendationsTabs = lazy(async () => {
@@ -122,12 +123,70 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const colors = useThemedColors()
     const localListRef = useRef<any>(null)
     const listRef = externalListRef ?? localListRef
-    const handleRecommendationsLayout = useCallback((_event: LayoutChangeEvent) => {
+    const recommendationsOffsetRef = useRef<number | null>(null)
+    const pendingRecommendationsScrollRef = useRef(false)
+
+    const scheduleAfterLayout = useCallback((callback: () => void) => {
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => callback())
+        return
+      }
+      setTimeout(callback, 0)
     }, [])
+
+    const scrollToRecommendations = useCallback(() => {
+      const offset = recommendationsOffsetRef.current
+      if (offset == null) return false
+
+      const targetOffset = Math.max(offset - TOP_SCROLL_PADDING, 0)
+      const scrollNode = listRef.current
+
+      if (typeof scrollNode?.scrollTo === 'function') {
+        scrollNode.scrollTo({ y: targetOffset, animated: true })
+        return true
+      }
+
+      if (typeof scrollNode?.scrollToOffset === 'function') {
+        scrollNode.scrollToOffset({ offset: targetOffset, animated: true })
+        return true
+      }
+
+      if (typeof scrollNode?.getNativeScrollRef === 'function') {
+        const nativeScrollRef = scrollNode.getNativeScrollRef()
+        if (typeof nativeScrollRef?.scrollTo === 'function') {
+          nativeScrollRef.scrollTo({ y: targetOffset, animated: true })
+          return true
+        }
+      }
+
+      return false
+    }, [listRef])
+
+    const handleRecommendationsLayout = useCallback((event: LayoutChangeEvent) => {
+      recommendationsOffsetRef.current = event.nativeEvent.layout.y
+
+      if (!pendingRecommendationsScrollRef.current) return
+
+      scheduleAfterLayout(() => {
+        if (scrollToRecommendations()) {
+          pendingRecommendationsScrollRef.current = false
+        }
+      })
+    }, [scheduleAfterLayout, scrollToRecommendations])
 
     const webWidth = Platform.OS === 'web' ? Dimensions.get('window').width : 0
     const isWebMobile = Platform.OS === 'web' && (isMobile || webWidth <= 420)
     const showRecommendations = isRecommendationsVisible
+
+    useEffect(() => {
+      if (!showRecommendations || !pendingRecommendationsScrollRef.current) return
+
+      scheduleAfterLayout(() => {
+        if (scrollToRecommendations()) {
+          pendingRecommendationsScrollRef.current = false
+        }
+      })
+    }, [scheduleAfterLayout, scrollToRecommendations, showRecommendations])
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
       const resetPadding = {
@@ -349,6 +408,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
       return (
         <View
+          testID="recommendations-list-header"
           onLayout={showRecommendations ? handleRecommendationsLayout : undefined}
           style={
             showRecommendations
@@ -369,6 +429,12 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }, [showRecommendations, handleRecommendationsLayout, isMobile]);
 
     const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
+
+    const handleRecommendationsToggle = useCallback(() => {
+      const nextVisible = !showRecommendations
+      pendingRecommendationsScrollRef.current = nextVisible
+      handleRecommendationsVisibilityChange(nextVisible)
+    }, [handleRecommendationsVisibilityChange, showRecommendations])
 
     const skeletonDelayMs = Platform.OS === 'web' ? 200 : 250
 
@@ -406,9 +472,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             onSearchChange={setSearch}
             flush={Platform.OS === 'web'}
             onFiltersPress={onFiltersPress}
-            onToggleRecommendations={() =>
-              handleRecommendationsVisibilityChange(!showRecommendations)
-            }
+            onToggleRecommendations={handleRecommendationsToggle}
             isRecommendationsVisible={showRecommendations}
             hasActiveFilters={activeFiltersCount > 0}
             resultsCount={total}
@@ -480,7 +544,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             )}
 
           {/* Travel Cards Grid - Only show when we have data */}
-          {!showInitialLoading && !isError && !showEmptyState && travels.length > 0 && (
+        {!showInitialLoading && !isError && !showEmptyState && travels.length > 0 && (
             isWeb ? (
               <ScrollView
                 ref={listRef as any}
@@ -488,6 +552,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 scrollEventThrottle={32}
                 style={{ flex: 1, minHeight: 0 }}
                 contentContainerStyle={webContentContainerStyle}
+                testID="right-column-scrollview"
               >
                 {ListHeader}
                 {rows.map((rowItems, rowIndex) => (
@@ -522,6 +587,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 onEndReachedThreshold={onEndReachedThreshold}
                 drawDistance={800}
                 contentContainerStyle={nativeContentContainerStyle}
+                testID="right-column-flashlist"
                 scrollEventThrottle={16}
                 removeClippedSubviews={true}
                 maxToRenderPerBatch={10}

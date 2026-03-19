@@ -1,8 +1,37 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/hooks/useTheme';
 import RightColumn from '@/components/listTravel/RightColumn';
+
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  return {
+    FlashList: React.forwardRef((props: any, ref: any) => {
+      const existingRefValue = ref && typeof ref === 'object' ? ref.current : null;
+      React.useImperativeHandle(ref, () => ({
+        ...existingRefValue,
+        scrollToOffset: existingRefValue?.scrollToOffset ?? jest.fn(),
+      }));
+
+      return (
+        <View testID={props.testID || 'flashlist-mock'}>
+          {props.ListHeaderComponent ?? null}
+          {Array.isArray(props.data)
+            ? props.data.map((item: any, index: number) => (
+                <React.Fragment key={`flashlist-item-${index}`}>
+                  {props.renderItem?.({ item, index })}
+                </React.Fragment>
+              ))
+            : null}
+          {props.ListFooterComponent ?? null}
+        </View>
+      );
+    }),
+  };
+});
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
@@ -13,9 +42,24 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/components/mainPage/StickySearchBar', () => {
   const React = require('react');
-  const { Text } = require('react-native');
+  const { Pressable, Text } = require('react-native');
   return function MockStickySearchBar(props: any) {
-    return React.createElement(Text, { testID: 'sticky-search-bar-mock' }, props?.search ?? '');
+    return React.createElement(
+      Pressable,
+      {
+        testID: 'sticky-search-bar-mock',
+        onPress: props?.onToggleRecommendations,
+      },
+      React.createElement(Text, null, props?.search ?? '')
+    );
+  };
+});
+
+jest.mock('@/components/listTravel/RecommendationsTabs', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return function MockRecommendationsTabs() {
+    return React.createElement(Text, { testID: 'recommendations-tabs-mock' }, 'recommendations');
   };
 });
 
@@ -133,5 +177,54 @@ describe('RightColumn layout invariants', () => {
     expect(screen.queryByTestId('travel-row-2-item-1')).toBeNull();
 
     expect(screen.queryByTestId('travel-row-3')).toBeNull();
+  });
+
+  it('scrolls to recommendations after toggling them on', async () => {
+    const listRef = {
+      current: {
+        scrollToOffset: jest.fn(),
+      },
+    } as any;
+
+    const StatefulWrapper = () => {
+      const [visible, setVisible] = React.useState(false);
+
+      return (
+        <RightColumn
+          search=""
+          setSearch={jest.fn()}
+          isRecommendationsVisible={visible}
+          handleRecommendationsVisibilityChange={setVisible}
+          activeFiltersCount={0}
+          total={travels.length}
+          contentPadding={16}
+          showInitialLoading={false}
+          isError={false}
+          showEmptyState={false}
+          getEmptyStateMessage={null}
+          travels={travels as any}
+          gridColumns={1}
+          isMobile={true}
+          showNextPageLoading={false}
+          refetch={jest.fn()}
+          renderItem={renderItem as any}
+          listRef={listRef}
+        />
+      );
+    };
+
+    renderWithProviders(<StatefulWrapper />);
+
+    fireEvent.press(screen.getByTestId('sticky-search-bar-mock'));
+
+    const header = await screen.findByTestId('recommendations-list-header');
+    fireEvent(header, 'layout', { nativeEvent: { layout: { y: 184, height: 376, width: 320 } } });
+
+    await waitFor(() => {
+      expect(listRef.current.scrollToOffset).toHaveBeenCalledWith({
+        offset: 176,
+        animated: true,
+      });
+    });
   });
 });

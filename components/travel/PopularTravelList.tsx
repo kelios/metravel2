@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Animated,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -207,15 +206,13 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
     const webGridStyle: any = useMemo(() => {
       if (Platform.OS !== 'web') return undefined;
 
-      // mobile-first: on small screens allow horizontal scroll while keeping CSS Grid as the layout engine
       if (width < METRICS.breakpoints.tablet) {
         return {
           display: 'grid',
-          gridAutoFlow: 'column',
-          gridAutoColumns: 'minmax(260px, 86vw)',
+          gridTemplateColumns: 'minmax(0, 1fr)',
           gap: styles.webGrid?.gap ?? DESIGN_TOKENS.spacing.sm,
           alignItems: 'stretch',
-          width: 'max-content',
+          width: '100%',
         };
       }
 
@@ -250,18 +247,16 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
         key={keyExtractor(item)}
         style={[
           styles.webGridItem,
-          width < METRICS.breakpoints.tablet
-            ? { width: mobileWebCardWidth ?? undefined, marginRight: DESIGN_TOKENS.spacing.sm }
-            : null,
+          width < METRICS.breakpoints.tablet ? { width: '100%', marginRight: 0 } : null,
         ]}
         {...(Platform.OS === 'web' ? ({ role: 'listitem' } as any) : {})}
       >
         <TravelListItem
           travel={item as any}
           isFirst={index === 0}
-          isMobile={false}
+          isMobile={width < METRICS.breakpoints.tablet}
           viewportWidth={width}
-          cardWidth={mobileWebCardWidth ?? undefined}
+          cardWidth={width < METRICS.breakpoints.tablet ? undefined : mobileWebCardWidth ?? undefined}
         />
       </View>
     ), [keyExtractor, mobileWebCardWidth, styles.webGridItem, width]);
@@ -344,30 +339,14 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
 
         <Animated.View style={{ opacity: fadeAnim }}>
           {Platform.OS === 'web' ? (
-            width < METRICS.breakpoints.tablet ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={[
-                  styles.flatListContent,
-                  { paddingRight: DESIGN_TOKENS.spacing.sm },
-                ]}
-                nestedScrollEnabled={!embedded}
-                scrollEventThrottle={16}
-                keyboardShouldPersistTaps="handled"
+            <View>
+              <View
+                accessibilityRole="list"
+                style={[styles.flatListContent, styles.webGrid, webGridStyle]}
               >
                 {popularList.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
-              </ScrollView>
-            ) : (
-              <View>
-                <View
-                  accessibilityRole="list"
-                  style={[styles.flatListContent, styles.webGrid, webGridStyle]}
-                >
-                  {popularList.map((item, index) => renderWebSearchLikeTravelItem(item, index))}
-                </View>
               </View>
-            )
+            </View>
           ) : (
             <Animated.FlatList
               key={`cols-${numColumns}`}
