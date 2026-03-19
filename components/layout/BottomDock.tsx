@@ -7,6 +7,7 @@ import {
   Platform,
   SafeAreaView,
   LayoutChangeEvent,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePathname, useRouter, type Href } from "expo-router";
@@ -49,7 +50,9 @@ const MOBILE_DOCK_HEIGHT_WEB = 56;
 
 function BottomDock({ onDockHeight }: BottomDockProps) {
   const { isPhone, isLargePhone, isTablet } = useResponsive();
+  const { width: viewportWidth } = useWindowDimensions();
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
+  const isCompactMobileWidth = viewportWidth > 0 && viewportWidth <= 390;
   const [showMore, setShowMore] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const nativeSheetRef = useRef<any>(null);
@@ -73,7 +76,10 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   }, [showMore]);
   useAndroidBackHandler(handleDismissSheet);
 
-  const styles = useMemo(() => createStyles(colors, safeBottomPadding), [colors, safeBottomPadding]);
+  const styles = useMemo(
+    () => createStyles(colors, safeBottomPadding, isCompactMobileWidth),
+    [colors, safeBottomPadding, isCompactMobileWidth]
+  );
 
   const activePath = useMemo(() => {
     // Normalize: Expo Router may include group prefixes like /(tabs)/
@@ -253,7 +259,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
         ]}
         testID="footer-dock-wrapper"
       >
-        <View onLayout={handleDockLayout} testID="footer-dock-measure">
+        <View style={styles.measure} onLayout={handleDockLayout} testID="footer-dock-measure">
           <View
             style={styles.row}
             testID="footer-dock-row"
@@ -263,23 +269,24 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             {items.map((item) => {
               const isActive = !item.isMore && activePath === String(item.route);
               return (
-                <DockButton
-                  key={item.key}
-                  testID={`footer-item-${item.key}`}
-                  href={item.route}
-                  label={item.label}
-                  accessibilityLabel={item.accessibilityLabel}
-                  showLabel
-                  onPress={item.isMore ? () => {
-                    if (Platform.OS !== 'web' && GorhomBottomSheet && nativeSheetRef.current) {
-                      nativeSheetRef.current.expand();
-                    }
-                    setShowMore(true);
-                  } : undefined}
-                  isActive={isActive}
-                >
-                  {item.icon}
-                </DockButton>
+                <View key={item.key} style={styles.itemSlot}>
+                  <DockButton
+                    testID={`footer-item-${item.key}`}
+                    href={item.route}
+                    label={item.label}
+                    accessibilityLabel={item.accessibilityLabel}
+                    showLabel
+                    onPress={item.isMore ? () => {
+                      if (Platform.OS !== 'web' && GorhomBottomSheet && nativeSheetRef.current) {
+                        nativeSheetRef.current.expand();
+                      }
+                      setShowMore(true);
+                    } : undefined}
+                    isActive={isActive}
+                  >
+                    {item.icon}
+                  </DockButton>
+                </View>
               );
             })}
           </View>
@@ -404,7 +411,11 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   );
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadding: number = 0) => StyleSheet.create({
+const createStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  safeBottomPadding: number = 0,
+  isCompactMobileWidth: boolean = false
+) => StyleSheet.create({
   container: {
     position: Platform.OS === "web" ? ("fixed" as any) : "relative",
     bottom: 0,
@@ -415,9 +426,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     zIndex: 11000,
   },
   dockWrapper: {
+    width: "100%",
     paddingTop: 4,
     paddingBottom: Platform.select({ web: 6, default: Math.max(4, safeBottomPadding + 2) }),
-    paddingHorizontal: 4,
+    paddingHorizontal: isCompactMobileWidth ? 2 : 4,
     backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
@@ -436,16 +448,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     }),
   },
   row: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  measure: {
+    width: "100%",
+  },
   item: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    flexGrow: 1,
-    flexBasis: 0,
-    paddingHorizontal: 2,
+    minWidth: 0,
+    paddingHorizontal: isCompactMobileWidth ? 1 : 2,
     paddingVertical: 4,
     minHeight: 44,
     borderRadius: 8,
@@ -454,10 +470,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     backgroundColor: colors.primarySoft,
     borderRadius: 8,
   },
+  itemSlot: {
+    flex: 1,
+    minWidth: 0,
+  },
   pressed: { opacity: 0.7 },
   itemInner: {
     alignItems: "center",
     justifyContent: "center",
+    width: "100%",
+    minWidth: 0,
     gap: 0,
   },
   iconBox: {
@@ -468,8 +490,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
   },
   itemText: {
     color: colors.textMuted,
-    fontSize: 9,
-    lineHeight: 11,
+    width: "100%",
+    maxWidth: "100%",
+    fontSize: isCompactMobileWidth ? 8 : 9,
+    lineHeight: isCompactMobileWidth ? 10 : 11,
     marginTop: 1,
     textAlign: "center",
   },
