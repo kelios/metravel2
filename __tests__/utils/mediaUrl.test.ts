@@ -76,4 +76,13 @@ describe('normalizeMediaUrl', () => {
   it('trims whitespace from input', () => {
     expect(normalizeMediaUrl('  https://cdn.com/x.jpg  ')).toBe('https://cdn.com/x.jpg');
   });
+
+  it('upgrades insecure metravel absolute urls to https', () => {
+    expect(normalizeMediaUrl('http://metravel.by/address-image/123/file.jpg')).toBe(
+      'https://metravel.by/address-image/123/file.jpg',
+    );
+    expect(normalizeMediaUrl('http://cdn.metravel.by/travel-image/1/photo.jpg')).toBe(
+      'https://cdn.metravel.by/travel-image/1/photo.jpg',
+    );
+  });
 });

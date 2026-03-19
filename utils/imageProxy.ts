@@ -2,6 +2,7 @@
 // J4: Image URL proxy/optimization (extracted from imageOptimization.ts)
 
 import { Platform } from 'react-native';
+import { normalizeAbsoluteMediaUrl } from '@/utils/mediaUrl';
 
 export interface ImageOptimizationOptions {
   width?: number;
@@ -59,7 +60,7 @@ export function optimizeImageUrl(
 ): string | undefined {
   if (originalUrl == null || originalUrl === '') return undefined;
 
-  const trimmedUrl = originalUrl.trim();
+  const trimmedUrl = normalizeAbsoluteMediaUrl(originalUrl.trim());
   if (!trimmedUrl) return undefined;
 
   if (/^data:/i.test(trimmedUrl) || /^blob:/i.test(trimmedUrl)) return originalUrl;
@@ -161,7 +162,7 @@ export function buildVersionedImageUrl(
   id?: string | number | null
 ): string {
   if (!rawUrl) return rawUrl;
-  const trimmed = String(rawUrl).trim();
+  const trimmed = normalizeAbsoluteMediaUrl(String(rawUrl).trim());
   if (!trimmed) return rawUrl;
   if (/^(data:|blob:)/i.test(trimmed)) {
     return trimmed;
