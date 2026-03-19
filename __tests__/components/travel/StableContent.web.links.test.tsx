@@ -133,4 +133,23 @@ describe('StableContent (web) link styles', () => {
     expect(css).toContain('object-fit: contain;');
     expect(css).not.toContain('object-fit: cover;');
   });
+
+  it('adds spacing between consecutive inline images rendered inside one paragraph', async () => {
+    const StableContent = (await import('@/components/travel/StableContent')).default;
+
+    render(
+      <StableContent
+        html={'<p><img src="https://example.com/one.jpg" width="800" height="600" alt="One" /><img src="https://example.com/two.jpg" width="800" height="600" alt="Two" /></p>'}
+        contentWidth={700}
+      />
+    );
+
+    await waitFor(() => {
+      const styleEl = document.getElementById('travel-rich-text-styles') as HTMLStyleElement | null;
+      expect(styleEl).toBeTruthy();
+      const css = String(styleEl?.textContent || '');
+      expect(css).toContain('.travel-rich-text p > img + img');
+      expect(css).toContain('margin-top: 18px !important;');
+    });
+  });
 });

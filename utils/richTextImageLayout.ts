@@ -3,6 +3,29 @@
  * Groups consecutive image paragraphs into visually appealing layouts.
  */
 
+function expandMultiImageOnlyParagraphs(html: string): string {
+  if (!html || typeof html !== 'string') return html ?? '';
+
+  return html.replace(/<p([^>]*)>([\s\S]*?)<\/p>/gi, (full, attrs = '', inner = '') => {
+    const normalizedInner = String(inner || '').trim();
+    if (!normalizedInner) return full;
+
+    const withoutImagesAndBreaks = normalizedInner
+      .replace(/<img\b[^>]*>/gi, '')
+      .replace(/<br\s*\/?>/gi, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, '')
+      .trim();
+
+    if (withoutImagesAndBreaks.length > 0) return full;
+
+    const images = normalizedInner.match(/<img\b[^>]*>\s*(?:<br\s*\/?>\s*)*/gi) ?? [];
+    if (images.length <= 1) return full;
+
+    return images.map((img) => `<p${attrs}>${img.trim()}</p>`).join('');
+  });
+}
+
 /**
  * Extracts width and height from an img tag.
  * Returns { width, height } or null if not found.
@@ -181,8 +204,10 @@ function appendUniformImageGroup(result: string[], images: string[], floatDirect
 export function groupConsecutiveImages(html: string): string {
   if (!html || typeof html !== 'string') return html ?? '';
 
+  const normalizedHtml = expandMultiImageOnlyParagraphs(html);
+
   // Split into paragraphs while preserving structure
-  const parts = html.split(/(<p[^>]*>[\s\S]*?<\/p>)/gi).filter(Boolean);
+  const parts = normalizedHtml.split(/(<p[^>]*>[\s\S]*?<\/p>)/gi).filter(Boolean);
   const result: string[] = [];
   let imageBuffer: string[] = [];
   let floatDirection = 0; // 0 = right, 1 = left, alternates

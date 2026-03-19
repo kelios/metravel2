@@ -155,7 +155,7 @@ const Slide = memo(function Slide({
       firstLoadReportedRef.current = false;
       slideLoadReportedRef.current = false;
       setHasError(false);
-      setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri));
+      setIsLoaded(loadedSlideUriCache.has(resolvedUri));
     }
   }, [resolvedUri, index, isFirstSlide, firstImagePreloaded]);
 
@@ -177,17 +177,6 @@ const Slide = memo(function Slide({
   }, [isFirstSlide, onFirstImageLoad, reportSlideLoad, resolvedUri]);
 
   useEffect(() => {
-    // If first slide is already preloaded/cached, report readiness once on mount.
-    if (!isFirstSlide) return;
-    if (!firstImagePreloaded) return;
-    if (firstLoadReportedRef.current) return;
-    setIsLoaded(true);
-    reportSlideLoad();
-    firstLoadReportedRef.current = true;
-    onFirstImageLoad?.();
-  }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad, reportSlideLoad]);
-
-  useEffect(() => {
     if (!isLoaded) return;
     reportSlideLoad();
   }, [isLoaded, reportSlideLoad]);
@@ -199,13 +188,13 @@ const Slide = memo(function Slide({
         fallbackTriedRef.current = true;
         setResolvedUri(fallback);
         setHasError(false);
-        setIsLoaded((isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(fallback));
+        setIsLoaded(loadedSlideUriCache.has(fallback));
         return;
       }
       fallbackTriedRef.current = true;
     }
     setHasError(true);
-  }, [firstImagePreloaded, isFirstSlide, resolvedUri]);
+  }, [resolvedUri]);
 
   const handlePress = useCallback(() => {
     onImagePress?.(index);
@@ -273,7 +262,7 @@ const Slide = memo(function Slide({
             }}
             onLoad={handleLoad}
             onError={handleError}
-            showImmediately={(isFirstSlide && !!firstImagePreloaded) || loadedSlideUriCache.has(resolvedUri)}
+            showImmediately={loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={shouldBlur}
             revealOnLoadOnly={shouldDelayWebRevealUntilLoad}
           />

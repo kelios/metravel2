@@ -248,4 +248,34 @@ describe('Slider (web) blur background', () => {
 
     expect(previousFrameInstances.length).toBe(2)
   })
+
+  it('does not report the first slide as loaded before the actual image onLoad fires', async () => {
+    const onFirstImageLoad = jest.fn()
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+          firstImagePreloaded
+          onFirstImageLoad={onFirstImageLoad}
+        />,
+      )
+    })
+
+    expect(onFirstImageLoad).not.toHaveBeenCalled()
+
+    const firstSlideImage = tree.root.findByProps({ testID: 'slider-image-0' })
+
+    await act(async () => {
+      firstSlideImage.props.onLoad()
+    })
+
+    expect(onFirstImageLoad).toHaveBeenCalledTimes(1)
+  })
 })

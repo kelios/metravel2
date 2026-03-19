@@ -69,6 +69,14 @@ describe('richTextImageLayout', () => {
       expect(result).toContain('<div class="img-grid">');
     });
 
+    it('expands multiple image-only tags inside one paragraph before grouping them', () => {
+      const html = '<p>Text</p><p><img src="1.jpg" width="700" height="900"><img src="2.jpg" width="1200" height="700"><img src="3.jpg" width="700" height="900"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-grid');
+      expect(result).toContain('img-grid-portrait');
+      expect(result).not.toContain('<p><img src="1.jpg" width="700" height="900"><img src="2.jpg" width="1200" height="700"><img src="3.jpg" width="700" height="900"></p>');
+    });
+
     it('wraps 3 images with 1 portrait in a mixed grid layout', () => {
       const html = '<p>Text</p><p><img src="1.jpg" width="800" height="600"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="800" height="600"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
