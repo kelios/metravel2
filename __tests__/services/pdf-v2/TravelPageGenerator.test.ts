@@ -155,6 +155,16 @@ describe('TravelPageGenerator', () => {
       expect(html).toContain(mockTravel.description!);
     });
 
+    it('применяет editorial image layouts в печатном описании', async () => {
+      mockContext.travel!.description = '<div class="img-pair-mixed img-row-2 img-row-2-mixed"><p><img src="https://example.com/wide.jpg" width="1200" height="700" /></p><p><img src="https://example.com/tall.jpg" width="700" height="1200" /></p></div><div class="img-quilt-4 img-grid img-grid-quilt"><p><img src="https://example.com/a.jpg" width="1200" height="700" /></p><p><img src="https://example.com/b.jpg" width="900" height="700" /></p><p><img src="https://example.com/c.jpg" width="900" height="700" /></p><p><img src="https://example.com/d.jpg" width="1200" height="700" /></p></div>';
+
+      const html = await generator.generate(mockContext);
+
+      expect(html).toContain('grid-template-columns: repeat(3, 1fr)')
+      expect(html).toContain('grid-column: span 2')
+      expect(html).toContain('padding: 3.5mm')
+    });
+
   });
 
   describe('estimatePageCount', () => {

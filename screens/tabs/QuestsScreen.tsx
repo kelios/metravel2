@@ -88,6 +88,13 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
     const isMobileW = screenWidth < 768;
     const isTablet = screenWidth >= 768 && screenWidth < 1024;
     const SIDEBAR_WIDTH = isTablet ? 300 : 340;
+    const headerPadding = isMobileW ? spacing.lg : spacing.xl;
+    const headerTopPadding = isMobileW ? spacing.xl : spacing.xxl;
+    const sectionPaddingX = isMobileW ? spacing.md : spacing.lg;
+    const sectionPaddingY = isMobileW ? spacing.sm : spacing.md;
+    const countryGapTop = isMobileW ? spacing.md : spacing.lg;
+    const cityItemVertical = isMobileW ? spacing.xs + 2 : spacing.sm + 2;
+    const cityIconSize = isMobileW ? 34 : 40;
     
     return StyleSheet.create({
         /* ---- Root Layout (Two-column, Premium) ---- */
@@ -104,6 +111,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         sidebar: {
             width: isMobileW ? '100%' : SIDEBAR_WIDTH,
             flexShrink: 0,
+            flexDirection: 'column',
             borderRightWidth: 0,
             backgroundColor: colors.surface,
             ...Platform.select({
@@ -118,10 +126,14 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                 } as any,
             }),
         },
+        sidebarScroll: {
+            flex: 1,
+            minHeight: 0,
+        },
         sidebarHeader: {
-            padding: spacing.xl,
-            paddingTop: spacing.xxl,
-            paddingBottom: spacing.xl,
+            padding: headerPadding,
+            paddingTop: headerTopPadding,
+            paddingBottom: isMobileW ? spacing.lg : spacing.xl,
             borderBottomWidth: 0,
             borderBottomColor: colors.borderLight,
             ...Platform.select({
@@ -132,16 +144,16 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         sidebarTitle: {
             color: colors.text,
-            fontSize: 32,
+            fontSize: isMobileW ? 24 : 32,
             fontWeight: '800',
-            marginBottom: spacing.sm,
+            marginBottom: isMobileW ? spacing.xs : spacing.sm,
             letterSpacing: -0.8,
-            lineHeight: 38,
+            lineHeight: isMobileW ? 30 : 38,
         },
         sidebarSubtitle: {
             color: colors.textMuted,
-            fontSize: typography.sizes.md,
-            lineHeight: 24,
+            fontSize: isMobileW ? typography.sizes.sm : typography.sizes.md,
+            lineHeight: isMobileW ? 21 : 24,
             letterSpacing: -0.1,
             maxWidth: 280,
             fontWeight: '400',
@@ -149,7 +161,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         sidebarActions: {
             flexDirection: 'row',
             gap: spacing.sm,
-            marginTop: spacing.lg,
+            marginTop: isMobileW ? spacing.md : spacing.lg,
         },
         actionBtn: {
             flexDirection: 'row',
@@ -187,8 +199,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
 
         /* ---- City List (Premium, spacious) ---- */
         cityListSection: {
-            paddingHorizontal: spacing.lg,
-            paddingVertical: spacing.md,
+            paddingHorizontal: sectionPaddingX,
+            paddingVertical: sectionPaddingY,
         },
         cityListLabel: {
             color: colors.textMuted,
@@ -196,7 +208,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             fontWeight: '700',
             textTransform: 'uppercase',
             letterSpacing: 1.2,
-            marginBottom: spacing.md,
+            marginBottom: isMobileW ? spacing.sm : spacing.md,
             paddingHorizontal: spacing.xs,
             opacity: 0.8,
         },
@@ -204,17 +216,67 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             color: colors.text,
             fontSize: typography.sizes.sm,
             fontWeight: '700',
-            marginBottom: spacing.sm,
-            marginTop: spacing.lg,
-            paddingHorizontal: spacing.xs,
             letterSpacing: -0.2,
+        },
+        countryHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: countryGapTop,
+            marginBottom: isMobileW ? spacing.xs : spacing.sm,
+            paddingHorizontal: spacing.xs,
+            paddingVertical: isMobileW ? spacing.xxs : spacing.xs,
+            borderRadius: radii.md,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
+                } as any,
+            }),
+        },
+        countryHeaderActions: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+        },
+        countryCount: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.xs,
+            fontWeight: '700',
+        },
+        countryToolsSection: {
+            paddingHorizontal: sectionPaddingX,
+            paddingTop: spacing.xs,
+            paddingBottom: spacing.xs,
+        },
+        collapseAllBtn: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            alignSelf: 'flex-start',
+            gap: spacing.xxs,
+            backgroundColor: colors.backgroundSecondary,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
+            borderRadius: radii.full,
+            ...Platform.select({
+                web: {
+                    cursor: 'pointer',
+                    transition: 'opacity 0.2s ease',
+                } as any,
+            }),
+        },
+        collapseAllBtnText: {
+            color: colors.textMuted,
+            fontSize: typography.sizes.xs,
+            fontWeight: '700',
+            letterSpacing: 0.2,
         },
         cityItem: {
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingVertical: spacing.sm + 2,
-            paddingHorizontal: spacing.md,
+            paddingVertical: cityItemVertical,
+            paddingHorizontal: isMobileW ? spacing.sm : spacing.md,
             borderRadius: radii.lg,
             marginBottom: spacing.xxs,
             ...Platform.select({
@@ -236,12 +298,12 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         cityItemLeft: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: spacing.md,
+            gap: isMobileW ? spacing.sm : spacing.md,
             flex: 1,
         },
         cityItemIcon: {
-            width: 40,
-            height: 40,
+            width: cityIconSize,
+            height: cityIconSize,
             borderRadius: radii.md,
             backgroundColor: colors.backgroundSecondary,
             alignItems: 'center',
@@ -260,7 +322,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         cityItemText: {
             color: colors.text,
-            fontSize: typography.sizes.md,
+            fontSize: isMobileW ? typography.sizes.sm : typography.sizes.md,
             fontWeight: '500',
             letterSpacing: -0.2,
         },
@@ -299,9 +361,9 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             alignItems: 'center',
             flexWrap: 'wrap',
             gap: spacing.sm,
-            paddingHorizontal: spacing.lg,
-            paddingBottom: spacing.lg,
-            paddingTop: spacing.sm,
+            paddingHorizontal: sectionPaddingX,
+            paddingBottom: isMobileW ? spacing.md : spacing.lg,
+            paddingTop: isMobileW ? spacing.xs : spacing.sm,
         },
         radiusLabel: {
             color: colors.textMuted,
@@ -359,9 +421,9 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'flex-start',
-            paddingHorizontal: spacing.xl,
-            paddingTop: spacing.xxl,
-            paddingBottom: spacing.lg,
+            paddingHorizontal: headerPadding,
+            paddingTop: headerTopPadding,
+            paddingBottom: isMobileW ? spacing.md : spacing.lg,
             borderBottomWidth: 0,
             borderBottomColor: colors.borderLight,
             backgroundColor: colors.background,
@@ -378,10 +440,10 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         contentTitle: {
             color: colors.text,
-            fontSize: isMobileW ? 28 : 36,
+            fontSize: isMobileW ? 24 : 36,
             fontWeight: '800',
             letterSpacing: -0.8,
-            lineHeight: isMobileW ? 34 : 44,
+            lineHeight: isMobileW ? 30 : 44,
         },
         contentCount: {
             color: colors.textMuted,
@@ -390,8 +452,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             fontWeight: '500',
         },
         contentBody: {
-            padding: spacing.xl,
-            paddingTop: spacing.lg,
+            padding: isMobileW ? spacing.lg : spacing.xl,
+            paddingTop: isMobileW ? spacing.md : spacing.lg,
         },
         mapSection: {
             width: '100%',
@@ -720,6 +782,7 @@ export default function QuestsScreen() {
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+    const [collapsedCountryCodes, setCollapsedCountryCodes] = useState<Record<string, boolean>>({});
 
     // API data
     const { quests: ALL_QUESTS, cityQuestsIndex: CITY_QUESTS, loading: questsLoading } = useQuestsList();
@@ -938,6 +1001,39 @@ export default function QuestsScreen() {
         }));
     }, [visibleCities]);
 
+    useEffect(() => {
+        setCollapsedCountryCodes((prev) => {
+            const next: Record<string, boolean> = {};
+            for (const group of citiesByCountry) {
+                next[group.code] = prev[group.code] ?? false;
+            }
+            return next;
+        });
+    }, [citiesByCountry]);
+
+    const handleToggleCountryGroup = useCallback((code: string) => {
+        setCollapsedCountryCodes((prev) => ({
+            ...prev,
+            [code]: !prev[code],
+        }));
+    }, []);
+
+    const areAllCountryGroupsCollapsed = useMemo(
+        () => citiesByCountry.length > 0 && citiesByCountry.every((group) => collapsedCountryCodes[group.code]),
+        [citiesByCountry, collapsedCountryCodes],
+    );
+
+    const handleToggleAllCountryGroups = useCallback(() => {
+        const nextValue = !areAllCountryGroupsCollapsed;
+        setCollapsedCountryCodes(() => {
+            const next: Record<string, boolean> = {};
+            for (const group of citiesByCountry) {
+                next[group.code] = nextValue;
+            }
+            return next;
+        });
+    }, [areAllCountryGroupsCollapsed, citiesByCountry]);
+
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!selectedCityId || !dataLoaded) return [];
         if (selectedCityId === NEARBY_ID) {
@@ -1067,83 +1163,128 @@ export default function QuestsScreen() {
                 </View>
             </View>
 
-            {/* Nearby option - adventure themed */}
-            <View style={s.cityListSection as ViewStyle}>
-                <Text style={s.cityListLabel as TextStyle}>Начни путешествие</Text>
-                <Pressable
-                    onPress={() => handleSelectCity(NEARBY_ID)}
-                    style={[s.cityItem as ViewStyle, selectedCityId === NEARBY_ID && (s.cityItemActive as ViewStyle)]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Рядом, ${pluralizeQuest(cityQuestCountById[NEARBY_ID] || 0)}`}
-                    accessibilityState={{ selected: selectedCityId === NEARBY_ID }}
-                >
-                    <View style={s.cityItemLeft as ViewStyle}>
-                        <View style={[s.cityItemIcon as ViewStyle, selectedCityId === NEARBY_ID && (s.cityItemIconActive as ViewStyle)]}>
-                            <Feather name="navigation" size={18} color={selectedCityId === NEARBY_ID ? colors.textOnPrimary : colors.textMuted} />
+            <ScrollView
+                style={s.sidebarScroll as ViewStyle}
+                contentContainerStyle={{ paddingBottom: spacing.xl }}
+                showsVerticalScrollIndicator
+            >
+                {/* Nearby option - adventure themed */}
+                <View style={s.cityListSection as ViewStyle}>
+                    <Text style={s.cityListLabel as TextStyle}>Начни путешествие</Text>
+                    <Pressable
+                        onPress={() => handleSelectCity(NEARBY_ID)}
+                        style={[s.cityItem as ViewStyle, selectedCityId === NEARBY_ID && (s.cityItemActive as ViewStyle)]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Рядом, ${pluralizeQuest(cityQuestCountById[NEARBY_ID] || 0)}`}
+                        accessibilityState={{ selected: selectedCityId === NEARBY_ID }}
+                    >
+                        <View style={s.cityItemLeft as ViewStyle}>
+                            <View style={[s.cityItemIcon as ViewStyle, selectedCityId === NEARBY_ID && (s.cityItemIconActive as ViewStyle)]}>
+                                <Feather name="navigation" size={18} color={selectedCityId === NEARBY_ID ? colors.textOnPrimary : colors.textMuted} />
+                            </View>
+                            <Text style={[s.cityItemText as TextStyle, selectedCityId === NEARBY_ID && (s.cityItemTextActive as TextStyle)]}>
+                                Тайны рядом
+                            </Text>
                         </View>
-                        <Text style={[s.cityItemText as TextStyle, selectedCityId === NEARBY_ID && (s.cityItemTextActive as TextStyle)]}>
-                            Тайны рядом
-                        </Text>
-                    </View>
-                </Pressable>
-            </View>
-
-            {/* Cities grouped by country - adventure themed */}
-            {citiesByCountry.map((group) => (
-                <View key={group.code} style={s.cityListSection as ViewStyle}>
-                    {group.name ? <Text style={s.countryLabel as TextStyle}>{group.name}</Text> : null}
-                    {group.cities.map((city) => {
-                        const isActive = selectedCityId === city.id;
-                        const count = cityQuestCountById[city.id] || 0;
-                        return (
-                            <Pressable
-                                key={city.id}
-                                onPress={() => handleSelectCity(city.id)}
-                                style={[s.cityItem as ViewStyle, isActive && (s.cityItemActive as ViewStyle)]}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${city.name}, ${pluralizeQuest(count)}`}
-                                accessibilityState={{ selected: isActive }}
-                            >
-                                <View style={s.cityItemLeft as ViewStyle}>
-                                    <View style={[s.cityItemIcon as ViewStyle, isActive && (s.cityItemIconActive as ViewStyle)]}>
-                                        <Feather name={isActive ? 'compass' : 'map-pin'} size={18} color={isActive ? colors.textOnPrimary : colors.textMuted} />
-                                    </View>
-                                    <Text style={[s.cityItemText as TextStyle, isActive && (s.cityItemTextActive as TextStyle)]}>
-                                        {city.name}
-                                    </Text>
-                                </View>
-                                {count > 0 && (
-                                    <View style={[s.cityItemCount as ViewStyle, isActive && (s.cityItemCountActive as ViewStyle)]}>
-                                        <Text style={[s.cityItemCountText as TextStyle, isActive && (s.cityItemCountTextActive as TextStyle)]}>
-                                            {count}
-                                        </Text>
-                                    </View>
-                                )}
-                            </Pressable>
-                        );
-                    })}
+                    </Pressable>
                 </View>
-            ))}
 
-            {/* Radius selector for Nearby */}
-            {selectedCityId === NEARBY_ID && (
-                <View style={s.radiusSection as ViewStyle}>
-                    <Text style={s.radiusLabel as TextStyle}>Радиус:</Text>
-                    {[5, 10, 15, 20, 30].map((km) => (
+                {citiesByCountry.length > 0 && (
+                    <View style={s.countryToolsSection as ViewStyle}>
                         <Pressable
-                            key={km}
-                            onPress={() => handleSetRadius(km)}
-                            style={[s.radiusChip as ViewStyle, nearbyRadiusKm === km && (s.radiusChipActive as ViewStyle)]}
+                            onPress={handleToggleAllCountryGroups}
+                            style={s.collapseAllBtn as ViewStyle}
                             accessibilityRole="button"
-                            accessibilityLabel={`Радиус ${km} км`}
+                            accessibilityLabel={areAllCountryGroupsCollapsed ? 'Развернуть все страны' : 'Свернуть все страны'}
                         >
-                            <Text style={[s.radiusChipText as TextStyle, nearbyRadiusKm === km && (s.radiusChipTextActive as TextStyle)]}>
-                                {km} км
+                            <Feather
+                                name={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}
+                                size={14}
+                                color={colors.textMuted}
+                            />
+                            <Text style={s.collapseAllBtnText as TextStyle}>
+                                {areAllCountryGroupsCollapsed ? 'Развернуть все' : 'Свернуть все'}
                             </Text>
                         </Pressable>
-                    ))}
-                </View>
-            )}
+                    </View>
+                )}
+
+                {/* Cities grouped by country - adventure themed */}
+                {citiesByCountry.map((group) => {
+                    const isCollapsed = collapsedCountryCodes[group.code] ?? false;
+                    return (
+                        <View key={group.code} style={s.cityListSection as ViewStyle}>
+                            <Pressable
+                                onPress={() => handleToggleCountryGroup(group.code)}
+                                style={s.countryHeader as ViewStyle}
+                                accessibilityRole="button"
+                                accessibilityLabel={`${isCollapsed ? 'Развернуть' : 'Свернуть'} группу ${group.name || group.code}`}
+                                accessibilityState={{ expanded: !isCollapsed }}
+                            >
+                                <Text style={s.countryLabel as TextStyle}>{group.name}</Text>
+                                <View style={s.countryHeaderActions as ViewStyle}>
+                                    <Text style={s.countryCount as TextStyle}>{group.cities.length}</Text>
+                                    <Feather
+                                        name={isCollapsed ? 'chevron-right' : 'chevron-down'}
+                                        size={16}
+                                        color={colors.textMuted}
+                                    />
+                                </View>
+                            </Pressable>
+                            {!isCollapsed && group.cities.map((city) => {
+                                const isActive = selectedCityId === city.id;
+                                const count = cityQuestCountById[city.id] || 0;
+                                return (
+                                    <Pressable
+                                        key={city.id}
+                                        onPress={() => handleSelectCity(city.id)}
+                                        style={[s.cityItem as ViewStyle, isActive && (s.cityItemActive as ViewStyle)]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`${city.name}, ${pluralizeQuest(count)}`}
+                                        accessibilityState={{ selected: isActive }}
+                                    >
+                                        <View style={s.cityItemLeft as ViewStyle}>
+                                            <View style={[s.cityItemIcon as ViewStyle, isActive && (s.cityItemIconActive as ViewStyle)]}>
+                                                <Feather name={isActive ? 'compass' : 'map-pin'} size={18} color={isActive ? colors.textOnPrimary : colors.textMuted} />
+                                            </View>
+                                            <Text style={[s.cityItemText as TextStyle, isActive && (s.cityItemTextActive as TextStyle)]}>
+                                                {city.name}
+                                            </Text>
+                                        </View>
+                                        {count > 0 && (
+                                            <View style={[s.cityItemCount as ViewStyle, isActive && (s.cityItemCountActive as ViewStyle)]}>
+                                                <Text style={[s.cityItemCountText as TextStyle, isActive && (s.cityItemCountTextActive as TextStyle)]}>
+                                                    {count}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    );
+                })}
+
+                {/* Radius selector for Nearby */}
+                {selectedCityId === NEARBY_ID && (
+                    <View style={s.radiusSection as ViewStyle}>
+                        <Text style={s.radiusLabel as TextStyle}>Радиус:</Text>
+                        {[5, 10, 15, 20, 30].map((km) => (
+                            <Pressable
+                                key={km}
+                                onPress={() => handleSetRadius(km)}
+                                style={[s.radiusChip as ViewStyle, nearbyRadiusKm === km && (s.radiusChipActive as ViewStyle)]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Радиус ${km} км`}
+                            >
+                                <Text style={[s.radiusChipText as TextStyle, nearbyRadiusKm === km && (s.radiusChipTextActive as TextStyle)]}>
+                                    {km} км
+                                </Text>
+                            </Pressable>
+                        ))}
+                    </View>
+                )}
+            </ScrollView>
         </View>
     );
 

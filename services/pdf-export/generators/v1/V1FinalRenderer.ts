@@ -115,6 +115,9 @@ export class V1FinalRenderer {
           margin-bottom: 6mm;
           letter-spacing: -0.02em;
           font-family: ${typography.headingFont};
+          color: ${colors.cover.text};
+          line-height: ${typography.h1.lineHeight};
+          text-shadow: 0 8px 24px rgba(0,0,0,0.18);
         ">Спасибо за путешествие!</h2>
         <p style="
           max-width: 120mm;

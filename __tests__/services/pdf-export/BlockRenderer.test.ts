@@ -18,4 +18,54 @@ describe('BlockRenderer', () => {
 
     expect(html).toContain('images.weserv.nl/?url=example.com/photo.jpg')
   })
+
+  it('renders editorial mixed pair layout for print', () => {
+    const renderer = new BlockRenderer(minimalTheme)
+    const html = renderer.renderBlocks([
+      {
+        type: 'image-gallery',
+        layout: 'pair-mixed',
+        columns: 2,
+        images: [
+          { src: 'wide.jpg', width: 1200, height: 700 },
+          { src: 'tall.jpg', width: 700, height: 1200 },
+        ],
+      } as any,
+    ])
+
+    expect(html).toContain('grid-template-columns: 0.92fr 1.08fr')
+    expect(html).toContain('transform: translateY(3mm)')
+    expect(html).toContain('transform: translateY(-2mm)')
+  })
+
+  it('renders editorial grid layouts with dominant spans for print', () => {
+    const renderer = new BlockRenderer(minimalTheme)
+    const html = renderer.renderBlocks([
+      {
+        type: 'image-gallery',
+        layout: 'editorial-grid',
+        columns: 3,
+        images: [
+          { src: '1.jpg', width: 1200, height: 700 },
+          { src: '2.jpg', width: 900, height: 700 },
+          { src: '3.jpg', width: 900, height: 700 },
+        ],
+      } as any,
+      {
+        type: 'image-gallery',
+        layout: 'quilt-4',
+        columns: 6,
+        images: [
+          { src: '4.jpg', width: 1200, height: 700 },
+          { src: '5.jpg', width: 900, height: 700 },
+          { src: '6.jpg', width: 900, height: 700 },
+          { src: '7.jpg', width: 1200, height: 700 },
+        ],
+      } as any,
+    ])
+
+    expect(html).toContain('grid-column: span 2')
+    expect(html).toContain('grid-column: span 4')
+    expect(html).toContain('min-height: 56mm; max-height: 70mm;')
+  })
 })

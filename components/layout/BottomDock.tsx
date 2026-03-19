@@ -18,7 +18,6 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 import { hapticSelection } from "@/utils/haptics";
 
-// AND-27: Native bottom sheet for "More" menu (native only)
 let GorhomBottomSheet: any = null;
 let GorhomBottomSheetView: any = null;
 let GorhomBottomSheetBackdrop: any = null;
@@ -29,7 +28,7 @@ if (Platform.OS !== 'web') {
     GorhomBottomSheetView = mod.BottomSheetView;
     GorhomBottomSheetBackdrop = mod.BottomSheetBackdrop;
   } catch {
-    // @gorhom/bottom-sheet not available — fallback to no sheet on native
+    // Fallback to web/native inline logic when bottom sheet lib is unavailable.
   }
 }
 
@@ -40,6 +39,7 @@ type BottomDockProps = {
 type DockItem = {
   key: string;
   label: string;
+  accessibilityLabel: string;
   route: Href;
   icon: React.ReactNode;
   isMore?: boolean;
@@ -51,9 +51,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const { isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
   const [showMore, setShowMore] = useState(false);
-  // NAV-02: slide-up анимация — отдельный флаг для CSS transition
   const [sheetVisible, setSheetVisible] = useState(false);
-  // AND-27: ref for native @gorhom/bottom-sheet
   const nativeSheetRef = useRef<any>(null);
   const nativeSnapPoints = useMemo(() => ['45%'], []);
   const colors = useThemedColors();
@@ -65,16 +63,13 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   // На web используем фиксированную высоту без insets
   const safeBottomPadding = Platform.OS === 'web' ? 0 : Math.max(0, insets.bottom);
 
-  // AND-07: Close "More" sheet on Android back press
   const handleDismissSheet = useCallbackReact(() => {
-    if (showMore) {
-      setShowMore(false);
-      if (Platform.OS !== 'web' && nativeSheetRef.current) {
-        nativeSheetRef.current.close();
-      }
-      return true;
+    if (!showMore) return false;
+    setShowMore(false);
+    if (Platform.OS !== 'web' && nativeSheetRef.current) {
+      nativeSheetRef.current.close();
     }
-    return false;
+    return true;
   }, [showMore]);
   useAndroidBackHandler(handleDismissSheet);
 
@@ -96,21 +91,15 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     return normalized;
   }, [pathname]);
 
-  // NAV-02: Управление slide-up анимацией для moreSheet
-  // При открытии: сначала монтируем (showMore=true), потом через RAF делаем visible
-  // При закрытии: сначала убираем visible, ждём transition, потом размонтируем
   useEffect(() => {
     if (!showMore) {
       setSheetVisible(false);
       return;
     }
-    // Монтируем → через RAF выставляем visible чтобы CSS transition сработал
     const raf = requestAnimationFrame(() => setSheetVisible(true));
     return () => cancelAnimationFrame(raf);
   }, [showMore]);
 
-
-  // NAV-13: Swipe-to-close для moreSheet
   const swipeStartY = useRef<number | null>(null);
   const handleSwipeStart = (e: React.PointerEvent | React.TouchEvent) => {
     const y = 'touches' in e ? (e as React.TouchEvent).touches[0]?.clientY : (e as React.PointerEvent).clientY;
@@ -127,6 +116,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
 
   const DockButton = memo(function DockButton({
     label,
+    accessibilityLabel,
     href,
     children,
     testID,
@@ -135,6 +125,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     isActive = false,
   }: {
     label: string;
+    accessibilityLabel: string;
     href: Href;
     children: React.ReactNode;
     testID?: string;
@@ -156,7 +147,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           router.push(href as any);
         }}
         accessibilityRole="tab"
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel}
         accessibilityState={{ selected: isActive }}
         hitSlop={6}
         testID={testID}
@@ -207,8 +198,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   }, [isMobile, onDockHeight]);
 
   useEffect(() => {
-    if (Platform.OS !== "web") return;
-    if (typeof document === "undefined") return;
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
     const body = document.body;
     if (!body) return;
     if (showMore) {
@@ -223,11 +213,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
 
   const dockItemDefs = useMemo(
     () => [
-      { key: "home", label: "Идеи поездок", route: "/search" as any, iconName: "compass" as const },
-      { key: "search", label: "Беларусь", route: "/travelsby" as any, iconName: "map" as const },
-      { key: "map", label: "Карта", route: "/map" as any, iconName: "map-pin" as const },
-      { key: "favorites", label: "Профиль", route: "/profile" as any, iconName: "user" as const },
-      { key: "more", label: "Ещё", route: "/more" as any, iconName: "more-horizontal" as const, isMore: true },
+      { key: "home", label: "Идеи", accessibilityLabel: "Идеи поездок", route: "/search" as any, iconName: "compass" as const },
+      { key: "search", label: "Бел.", accessibilityLabel: "Беларусь", route: "/travelsby" as any, iconName: "map" as const },
+      { key: "map", label: "Карта", accessibilityLabel: "Карта", route: "/map" as any, iconName: "map-pin" as const },
+      { key: "quests", label: "Квесты", accessibilityLabel: "Квесты", route: "/quests" as any, iconName: "flag" as const },
+      { key: "favorites", label: "Я", accessibilityLabel: "Профиль", route: "/profile" as any, iconName: "user" as const },
+      { key: "more", label: "Ещё", accessibilityLabel: "Ещё", route: "/more" as any, iconName: "more-horizontal" as const, isMore: true },
     ],
     []
   );
@@ -235,11 +226,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
   const items: DockItem[] = useMemo(
     () =>
       dockItemDefs.map((def) => {
-        const isActive = !def.isMore && activePath === String(def.route);
+        const isActive = activePath === String(def.route);
         const iconColor = isActive ? colors.primary : colors.textMuted;
         return {
           key: def.key,
           label: def.label,
+          accessibilityLabel: def.accessibilityLabel,
           route: def.route,
           icon: <Feather name={def.iconName} size={22} color={iconColor} />,
           isMore: def.isMore,
@@ -276,6 +268,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   testID={`footer-item-${item.key}`}
                   href={item.route}
                   label={item.label}
+                  accessibilityLabel={item.accessibilityLabel}
                   showLabel
                   onPress={item.isMore ? () => {
                     if (Platform.OS !== 'web' && GorhomBottomSheet && nativeSheetRef.current) {
@@ -308,14 +301,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               role: 'dialog',
               'aria-modal': 'true',
               'aria-label': 'Дополнительное меню',
-              // NAV-13: swipe-to-close handlers
               onPointerDown: handleSwipeStart,
               onPointerUp: handleSwipeEnd,
               onTouchStart: handleSwipeStart,
               onTouchEnd: handleSwipeEnd,
             } as any)}
           >
-            {/* NAV-02: drag-indicator для bottom sheet */}
             <View style={styles.sheetHandle} accessible={false} importantForAccessibility="no" />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Ещё</Text>
@@ -329,88 +320,32 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               </Pressable>
             </View>
             <View testID="footer-more-list" style={styles.moreList}>
-              <Pressable
-                onPress={() => {
-                  setShowMore(false);
-                  router.push("/roulette" as any);
-                }}
-                style={[styles.moreItem, globalFocusStyles.focusable]}
-                accessibilityRole="link"
-                accessibilityLabel="Случайная поездка"
-              >
+              <Pressable onPress={() => { setShowMore(false); router.push("/roulette" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Случайная поездка">
                 <Feather name="shuffle" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Случайная поездка</Text>
               </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowMore(false);
-                  router.push("/travel/new" as any);
-                }}
-                style={[styles.moreItem, globalFocusStyles.focusable]}
-                accessibilityRole="link"
-                accessibilityLabel="Создать маршрут"
-              >
+              <Pressable onPress={() => { setShowMore(false); router.push("/travel/new" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Создать маршрут">
                 <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Создать маршрут</Text>
               </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowMore(false);
-                  router.push("/export" as any);
-                }}
-                style={[styles.moreItem, globalFocusStyles.focusable]}
-                accessibilityRole="link"
-                accessibilityLabel="Книга путешествий"
-              >
+              <Pressable onPress={() => { setShowMore(false); router.push("/export" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Книга путешествий">
                 <Feather name="book-open" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Книга путешествий</Text>
               </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowMore(false);
-                  router.push("/profile" as any);
-                }}
-                style={[styles.moreItem, globalFocusStyles.focusable]}
-                accessibilityRole="link"
-                accessibilityLabel="Профиль"
-              >
+              <Pressable onPress={() => { setShowMore(false); router.push("/profile" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Профиль">
                 <Feather name="user" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Профиль</Text>
               </Pressable>
               <View style={styles.moreDivider} />
-              <Pressable
-                onPress={() => {
-                  setShowMore(false);
-                  router.push("/privacy" as any);
-                }}
-                style={[styles.moreItem, globalFocusStyles.focusable]}
-                accessibilityRole="link"
-                accessibilityLabel="Политика конфиденциальности"
-              >
+              <Pressable onPress={() => { setShowMore(false); router.push("/privacy" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Политика конфиденциальности">
                 <Feather name="shield" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
                 <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Политика конфиденциальности</Text>
               </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowMore(false);
-                  router.push("/cookies" as any);
-                }}
-                style={[styles.moreItem, globalFocusStyles.focusable]}
-                accessibilityRole="link"
-                accessibilityLabel="Настройки cookies"
-              >
+              <Pressable onPress={() => { setShowMore(false); router.push("/cookies" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Настройки cookies">
                 <Feather name="settings" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
                 <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Настройки cookies</Text>
               </Pressable>
-              <Pressable
-                onPress={() => {
-                  setShowMore(false);
-                  router.push("/about" as any);
-                }}
-                style={[styles.moreItem, globalFocusStyles.focusable]}
-                accessibilityRole="link"
-                accessibilityLabel="Связаться с нами"
-              >
+              <Pressable onPress={() => { setShowMore(false); router.push("/about" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Связаться с нами">
                 <Feather name="mail" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
                 <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Связаться с нами</Text>
               </Pressable>
@@ -418,7 +353,6 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           </View>
         </>
       )}
-      {/* AND-27: Native bottom sheet for "More" menu (Android/iOS) */}
       {Platform.OS !== 'web' && GorhomBottomSheet && (
         <GorhomBottomSheet
           ref={nativeSheetRef}
@@ -428,12 +362,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           onClose={() => setShowMore(false)}
           backdropComponent={(props: any) =>
             GorhomBottomSheetBackdrop ? (
-              <GorhomBottomSheetBackdrop
-                {...props}
-                disappearsOnIndex={-1}
-                appearsOnIndex={0}
-                opacity={0.5}
-              />
+              <GorhomBottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} opacity={0.5} />
             ) : null
           }
           handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}
@@ -445,54 +374,24 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                 <Text style={styles.sheetTitle}>Ещё</Text>
               </View>
               <View style={styles.moreList}>
-                <Pressable
-                  onPress={() => { nativeSheetRef.current?.close(); router.push("/roulette" as any); }}
-                  style={styles.moreItem}
-                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Случайная поездка"
-                >
+                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/roulette" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Случайная поездка">
                   <Feather name="shuffle" size={18} color={colors.primary} style={styles.moreItemIcon} />
                   <Text style={styles.moreItemText}>Случайная поездка</Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => { nativeSheetRef.current?.close(); router.push("/travel/new" as any); }}
-                  style={styles.moreItem}
-                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Создать маршрут"
-                >
+                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/travel/new" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Создать маршрут">
                   <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
                   <Text style={styles.moreItemText}>Создать маршрут</Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => { nativeSheetRef.current?.close(); router.push("/export" as any); }}
-                  style={styles.moreItem}
-                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Книга путешествий"
-                >
+                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/export" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Книга путешествий">
                   <Feather name="book-open" size={18} color={colors.primary} style={styles.moreItemIcon} />
                   <Text style={styles.moreItemText}>Книга путешествий</Text>
                 </Pressable>
-                <Pressable
-                  onPress={() => { nativeSheetRef.current?.close(); router.push("/profile" as any); }}
-                  style={styles.moreItem}
-                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Профиль"
-                >
+                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/profile" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Профиль">
                   <Feather name="user" size={18} color={colors.primary} style={styles.moreItemIcon} />
                   <Text style={styles.moreItemText}>Профиль</Text>
                 </Pressable>
                 <View style={styles.moreDivider} />
-                <Pressable
-                  onPress={() => { nativeSheetRef.current?.close(); router.push("/about" as any); }}
-                  style={styles.moreItem}
-                  android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-                  accessibilityRole="link"
-                  accessibilityLabel="Связаться с нами"
-                >
+                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/about" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Связаться с нами">
                   <Feather name="mail" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
                   <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Связаться с нами</Text>
                 </Pressable>
@@ -516,9 +415,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     zIndex: 11000,
   },
   dockWrapper: {
-    paddingTop: 6,
-    paddingBottom: Platform.select({ web: 8, default: Math.max(6, safeBottomPadding + 4) }),
-    paddingHorizontal: 6,
+    paddingTop: 4,
+    paddingBottom: Platform.select({ web: 6, default: Math.max(4, safeBottomPadding + 2) }),
+    paddingHorizontal: 4,
     backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
@@ -530,7 +429,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     elevation: 12,
     ...Platform.select({
       web: {
-        maxHeight: 72,
+        maxHeight: 64,
         backdropFilter: "blur(14px)",
         boxShadow: DESIGN_TOKENS.shadows.medium,
       } as any,
@@ -546,14 +445,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     justifyContent: "center",
     flexGrow: 1,
     flexBasis: 0,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-    minHeight: 48, // AND-26: Material Design 3 minimum touch target
-    borderRadius: 10,
+    paddingHorizontal: 2,
+    paddingVertical: 4,
+    minHeight: 44,
+    borderRadius: 8,
   },
   itemActive: {
     backgroundColor: colors.primarySoft,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   pressed: { opacity: 0.7 },
   itemInner: {
@@ -569,9 +468,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
   },
   itemText: {
     color: colors.textMuted,
-    fontSize: 11,
-    lineHeight: 14,
-    marginTop: 2,
+    fontSize: 9,
+    lineHeight: 11,
+    marginTop: 1,
     textAlign: "center",
   },
   itemTextActive: {
@@ -586,7 +485,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     inset: 0,
     backgroundColor: colors.overlay,
     zIndex: 10900,
-    // NAV-02: fade-in backdrop
     transition: 'opacity 0.28s ease',
   } as any,
   moreBackdropHidden: {
@@ -604,14 +502,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     padding: 16,
     zIndex: 11000,
     boxShadow: DESIGN_TOKENS.shadows.modal,
-    // NAV-02: slide-up анимация
     transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
     transform: 'translateY(0)',
   } as any,
   moreSheetHidden: {
     transform: 'translateY(100%)',
   } as any,
-  // NAV-02: drag indicator + заголовок sheet
   sheetHandle: {
     width: 40,
     height: 4,
@@ -649,7 +545,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, safeBottomPadd
     paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 48, // AND-26: Material Design 3 minimum touch target
+    minHeight: 48,
     borderRadius: 8,
   },
   moreItemIcon: {

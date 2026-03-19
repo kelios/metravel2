@@ -419,6 +419,7 @@ export class EnhancedPdfGenerator {
    */
   private renderTocPage(meta: TravelSectionMeta[], pageNumber: number): string {
     const { colors, typography, spacing } = this.theme;
+    const isCompactToc = meta.length <= 2;
     const tocItems = meta
       .map((item, index) => {
         const travel = item.travel;
@@ -431,6 +432,11 @@ export class EnhancedPdfGenerator {
         const thumbUrl = this.buildSafeImageUrl(
           travel.travel_image_thumb_url || travel.travel_image_url
         );
+        const previewSize = isCompactToc ? 56 : 40;
+        const cardPadding = isCompactToc ? '16px 18px' : '12px 16px';
+        const titleFontSize = isCompactToc ? '14pt' : '13pt';
+        const metaFontSize = isCompactToc ? '10pt' : '9.5pt';
+        const badgeSize = isCompactToc ? 36 : 32;
 
         return `
           <div style="
@@ -444,8 +450,8 @@ export class EnhancedPdfGenerator {
           ">
             ${thumbUrl ? `
               <div style="
-                width: 56px;
-                min-height: 56px;
+                width: ${previewSize}px;
+                min-height: ${previewSize}px;
                 flex-shrink: 0;
                 position: relative;
                 overflow: hidden;
@@ -458,8 +464,8 @@ export class EnhancedPdfGenerator {
               </div>
             ` : `
               <div style="
-                width: 56px;
-                min-height: 56px;
+                width: ${previewSize}px;
+                min-height: ${previewSize}px;
                 flex-shrink: 0;
                 background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
                 display: flex;
@@ -478,7 +484,7 @@ export class EnhancedPdfGenerator {
             <div style="
               flex: 1;
               min-width: 0;
-              padding: 12px 16px;
+              padding: ${cardPadding};
               display: flex;
               align-items: center;
               justify-content: space-between;
@@ -487,7 +493,7 @@ export class EnhancedPdfGenerator {
               <div style="flex: 1; min-width: 0;">
                 <div style="
                   font-weight: 600;
-                  font-size: 13pt;
+                  font-size: ${titleFontSize};
                   margin-bottom: 3px;
                   color: ${colors.text};
                   line-height: 1.3;
@@ -498,7 +504,7 @@ export class EnhancedPdfGenerator {
                 ">${this.escapeHtml(travel.name)}</div>
                 ${metaLine ? `
                   <div style="
-                    font-size: 9.5pt;
+                    font-size: ${metaFontSize};
                     color: ${colors.textMuted};
                     font-family: ${typography.bodyFont};
                     line-height: 1.4;
@@ -506,8 +512,8 @@ export class EnhancedPdfGenerator {
                 ` : ''}
               </div>
               <div style="
-                width: 32px;
-                height: 32px;
+                width: ${badgeSize}px;
+                height: ${badgeSize}px;
                 border-radius: 999px;
                 background: ${colors.accentSoft};
                 color: ${colors.accent};
@@ -529,11 +535,13 @@ export class EnhancedPdfGenerator {
       <section class="pdf-page toc-page" style="
         padding: ${spacing.pagePadding};
         background: ${colors.background};
+        display: flex;
+        flex-direction: column;
       ">
         <div style="
           text-align: center;
-          margin-top: 20mm;
-          margin-bottom: 14mm;
+          margin-top: ${isCompactToc ? '14mm' : '20mm'};
+          margin-bottom: ${isCompactToc ? '10mm' : '14mm'};
         ">
           <div style="
             display: inline-flex;
@@ -569,7 +577,16 @@ export class EnhancedPdfGenerator {
             border-radius: 999px;
           "></div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="
+          display: flex;
+          flex-direction: column;
+          gap: ${isCompactToc ? '12px' : '8px'};
+          justify-content: ${isCompactToc ? 'center' : 'flex-start'};
+          flex: 1;
+          max-width: ${isCompactToc ? '156mm' : '100%'};
+          width: 100%;
+          margin: 0 auto;
+        ">
           ${tocItems}
         </div>
         <div style="
@@ -760,33 +777,48 @@ export class EnhancedPdfGenerator {
           ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
           <div style="
             position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-              linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.65) 100%);
-            padding: 16mm 18mm 14mm 18mm;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(15,23,42,0.02) 0%, rgba(15,23,42,0.16) 100%);
+          "></div>
+          <div style="
+            position: absolute;
+            left: 14mm;
+            right: 14mm;
+            bottom: 14mm;
+            padding: 12mm 14mm 11mm 14mm;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(255,255,255,0.72);
+            box-shadow: 0 18px 42px rgba(15,23,42,0.16);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
           ">
-              <h1 style="
-                color: #ffffff;
-                font-size: ${typography.h1.size};
-                margin: 0 0 5mm 0;
-                font-weight: ${typography.h1.weight};
-                line-height: ${typography.h1.lineHeight};
-                text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.3);
-                font-family: ${typography.headingFont};
-                overflow-wrap: anywhere;
-                word-break: break-word;
-                hyphens: auto;
-              ">${this.escapeHtml(travel.name)}</h1>
+            <div style="
+              width: 22mm;
+              height: 3px;
+              border-radius: 999px;
+              margin-bottom: 5mm;
+              background: linear-gradient(90deg, ${colors.accent}, ${colors.accentStrong});
+            "></div>
+            <h1 style="
+              color: ${colors.text};
+              font-size: ${typography.h1.size};
+              margin: 0 0 4mm 0;
+              font-weight: ${typography.h1.weight};
+              line-height: ${typography.h1.lineHeight};
+              font-family: ${typography.headingFont};
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              hyphens: auto;
+            ">${this.escapeHtml(travel.name)}</h1>
             ${metaHtml ? `
               <div style="
-                color: rgba(255,255,255,0.92);
+                color: ${colors.textMuted};
                 font-size: 11pt;
                 display: block;
                 font-weight: 500;
-                text-shadow: 0 1px 4px rgba(0,0,0,0.5);
                 font-family: ${typography.bodyFont};
+                line-height: 1.45;
               ">
                 ${metaHtml}
               </div>
@@ -1546,8 +1578,9 @@ export class EnhancedPdfGenerator {
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>${this.escapeHtml((settings.title || '').trim() || 'MeTravel')}</title>
   
-  <!-- Пустой манифест: предотвращает Chrome от загрузки иконок родительского origin -->
-  <link rel="manifest" href="data:application/json,%7B%7D">
+  <!-- Изолированный manifest/favicon для print preview без лишних запросов к родительскому origin -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"MeTravel Print Preview","short_name":"MeTravel","display":"standalone","icons":[]}' />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
   
   <!-- Google Fonts для улучшенной типографики -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2275,7 +2308,7 @@ export class EnhancedPdfGenerator {
     const extra = opts?.extraStyle || '';
     return `
       <img src="${this.escapeHtml(src)}" alt="" aria-hidden="true"
-        style="position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
+        style="position:absolute;inset:-8px;width:calc(100% + 16px);height:calc(100% + 16px);object-fit:cover;filter:blur(14px);opacity:0.28;transform:scale(1.03);display:block;pointer-events:none;"
         crossorigin="anonymous" />
       <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
         style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}${extra}"

@@ -125,12 +125,13 @@ export class V1GalleryRenderer {
               <img src="${escapeHtml(photo)}" alt="" aria-hidden="true"
                 style="
                   position: absolute;
-                  inset: -10px;
-                  width: calc(100% + 20px);
-                  height: calc(100% + 20px);
+                  inset: -8px;
+                  width: calc(100% + 16px);
+                  height: calc(100% + 16px);
                   object-fit: cover;
-                  filter: blur(18px);
-                  opacity: 0.45;
+                  filter: blur(14px);
+                  opacity: 0.28;
+                  transform: scale(1.03);
                   display: block;
                   pointer-events: none;
                 "

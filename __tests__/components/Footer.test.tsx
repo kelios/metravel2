@@ -47,6 +47,7 @@ describe('Footer', () => {
     expect(getByTestId('footer-item-search')).toBeTruthy()
     expect(getByTestId('footer-item-map')).toBeTruthy()
     expect(getByTestId('footer-item-favorites')).toBeTruthy()
+    expect(getByTestId('footer-item-quests')).toBeTruthy()
     expect(getByTestId('footer-item-more')).toBeTruthy()
   })
 
@@ -98,4 +99,3 @@ describe('Footer', () => {
     }
   })
 })
-
