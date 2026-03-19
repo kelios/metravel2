@@ -26,10 +26,11 @@ export const commentsApi = {
         `/travel-comment-threads/main/?travel_id=${travelId}`
       );
     } catch (error) {
-      // Backend can return 404 when a main thread doesn't exist yet (no comments).
-      // Treat this as an empty state rather than a hard error.
+      // Some deployments return 404/400 when a main thread doesn't exist yet
+      // (or when the backend rejects travel_id lookup before creating one).
+      // Treat both as an empty state rather than a hard error.
       const status = getErrorStatus(error);
-      if (status === 404) {
+      if (status === 404 || status === 400) {
         return null;
       }
       // Some deployments protect thread metadata behind auth while still allowing

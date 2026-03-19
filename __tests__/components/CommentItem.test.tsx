@@ -449,7 +449,8 @@ describe('CommentItem', () => {
       fireEvent.press(menuButton);
 
       // Кнопка удаления отображается как иконка, проверяем по accessibility label
-      expect(screen.getByLabelText('Удалить комментарий')).toBeTruthy();
+      expect(screen.getByLabelText('Удалить комментарий (Админ)')).toBeTruthy();
+      expect(screen.getByText('Удалить (Админ)')).toBeTruthy();
     });
 
     it('should not show edit button for other users comments', () => {
@@ -480,7 +481,7 @@ describe('CommentItem', () => {
       const menuButton = screen.getByLabelText('Действия с комментарием');
       fireEvent.press(menuButton);
 
-      const deleteButton = screen.getByLabelText('Удалить комментарий');
+      const deleteButton = screen.getByLabelText('Удалить комментарий (Админ)');
       fireEvent.press(deleteButton);
 
       await waitFor(() => {

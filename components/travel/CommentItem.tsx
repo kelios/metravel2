@@ -30,6 +30,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
   const canDelete = isAuthor || isSuperuser;
   const canEdit = isAuthor;
   const isLiked = !!comment.is_liked;
+  const showsAdminDeleteLabel = isSuperuser && !isAuthor;
 
   const handleLikeToggle = () => {
     // Предотвращаем клик во время выполнения мутации
@@ -127,7 +128,9 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
               onPress={handleDelete}
               style={styles.actionButton}
               disabled={deleteComment.isPending}
-              accessibilityLabel="Удалить комментарий"
+              accessibilityLabel={
+                showsAdminDeleteLabel ? 'Удалить комментарий (Админ)' : 'Удалить комментарий'
+              }
               testID="comment-actions-delete"
             >
               {deleteComment.isPending ? (
@@ -137,7 +140,12 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
                   color={colors.danger}
                 />
               ) : (
-                <Feather name="trash-2" size={18} color={colors.danger} />
+                <>
+                  <Feather name="trash-2" size={18} color={colors.danger} />
+                  {showsAdminDeleteLabel && (
+                    <Text style={styles.deleteAdminLabel}>Удалить (Админ)</Text>
+                  )}
+                </>
               )}
             </Pressable>
           )}
@@ -286,6 +294,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         transition: 'all 0.15s ease',
       } as any,
     }),
+  },
+  deleteAdminLabel: {
+    color: colors.danger,
+    fontSize: 13,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   footer: {
     flexDirection: 'row',

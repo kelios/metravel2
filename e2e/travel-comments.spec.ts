@@ -2,6 +2,22 @@ import { test, expect } from './fixtures';
 import { preacceptCookies, tid } from './helpers/navigation';
 import { loginAsUser, loginAsAdmin } from './helpers/e2eApi';
 
+async function openCommentActionsMenu(page: any, comment: any) {
+  const trigger = comment
+    .locator('[data-testid="comment-actions-trigger"]')
+    .or(comment.getByRole('button', { name: /действия с комментарием/i }))
+    .first();
+
+  await expect(trigger).toBeVisible({ timeout: 15_000 });
+  await trigger.scrollIntoViewIfNeeded().catch(() => null);
+
+  try {
+    await trigger.click({ timeout: 10_000 });
+  } catch {
+    await trigger.evaluate((node: HTMLElement) => node.click());
+  }
+}
+
 test.describe('Travel Comments', () => {
   const slug = 'e2e-travel-comments';
 
@@ -481,7 +497,7 @@ test.describe('Travel Comments', () => {
       if (await shouldSkipAuthCommentActions(page)) return;
       
       // Find first comment
-      const firstComment = page.locator('[data-testid="comment-item"]').first();
+      let firstComment = page.locator('[data-testid="comment-item"]').first();
       const commentExists = await firstComment.isVisible().catch(() => false);
       if (!commentExists) return;
       await firstComment.scrollIntoViewIfNeeded();
@@ -506,17 +522,21 @@ test.describe('Travel Comments', () => {
 
       if (await shouldSkipAuthCommentActions(page)) return;
       
-      const firstComment = page.locator('[data-testid="comment-item"]').first();
+      let firstComment = page.locator('[data-testid="comment-item"]').first();
       const commentExists = await firstComment.isVisible().catch(() => false);
       if (!commentExists) return;
       await firstComment.scrollIntoViewIfNeeded();
       
       // Like the comment first
-      const likeButton = firstComment.locator('[data-testid="comment-like"]');
+      let likeButton = firstComment.locator('[data-testid="comment-like"]');
       await likeButton.click();
       await page.waitForLoadState('domcontentloaded').catch(() => null);
       
       // Unlike
+      firstComment = page.locator('[data-testid="comment-item"]').first();
+      await firstComment.scrollIntoViewIfNeeded().catch(() => null);
+      likeButton = firstComment.locator('[data-testid="comment-like"]');
+      await expect(likeButton).toBeVisible();
       await likeButton.click();
       await page.waitForLoadState('domcontentloaded').catch(() => null);
       
@@ -869,12 +889,13 @@ test.describe('Travel Comments', () => {
           });
           return;
         }
-        await moreButton.first().click();
+        await openCommentActionsMenu(page, firstComment);
         
         // Should see delete button with admin label
         const deleteButtonWithLabel = page.getByRole('button', { name: /удалить.*админ/i });
         const deleteButton = page.getByTestId('comment-actions-delete').or(deleteButtonWithLabel);
         await expect(deleteButton.first()).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByText('Удалить (Админ)')).toBeVisible({ timeout: 15_000 });
 
         const deleteResponsePromise = page.waitForResponse((resp) => {
           if (resp.request().method() !== 'DELETE') return false;
@@ -900,40 +921,6 @@ test.describe('Travel Comments', () => {
       }
     });
 
-    test('should see admin label on delete button for other users comments', async ({ page }) => {
-      await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
-      await page.waitForSelector(tid('travel-details-page'), { timeout: 30_000 });
-      
-      // Create a comment as regular user first (in separate session)
-      // Then verify admin can see special delete button
-      
-      const firstComment = page.locator('[data-testid="comment-item"]').first();
-      const commentExists = await firstComment.isVisible().catch(() => false);
-      
-      if (commentExists) {
-        await firstComment.scrollIntoViewIfNeeded();
-        
-        const moreButton = firstComment
-          .locator('[data-testid="comment-actions-trigger"]')
-          .or(firstComment.getByRole('button', { name: /действия с комментарием/i }));
-        const moreVisible = await moreButton.first().isVisible().catch(() => false);
-        if (!moreVisible) {
-          test.info().annotations.push({
-            type: 'note',
-            description: 'Comment actions trigger is not visible in current layout; skipping admin-label assertion',
-          });
-          return;
-        }
-        await moreButton.first().click();
-        
-        // Should see "Удалить (Админ)" for other users' comments
-        const adminDeleteButton = page.getByText(/удалить.*админ/i);
-        const hasAdminLabel = await adminDeleteButton.isVisible().catch(() => false);
-        
-        // This should be true if the comment is not created by admin
-        expect(typeof hasAdminLabel).toBe('boolean');
-      }
-    });
   });
 
   test.describe('Comments threading', () => {

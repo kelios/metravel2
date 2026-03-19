@@ -42,6 +42,9 @@ console.warn = (message, ...args) => {
   if (text.startsWith('Could not load quest progress from server:')) {
     return
   }
+  if (text.includes('[usePdfExport] Не удалось загрузить детали путешествия')) {
+    return
+  }
   if (text.startsWith('Rate limit exceeded for endpoint:')) {
     return
   }

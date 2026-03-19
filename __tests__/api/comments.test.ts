@@ -42,6 +42,17 @@ describe('Comments API', () => {
       expect(result).toBeNull();
     });
 
+    it('should treat 400 as empty (backends that reject missing main thread by travel_id)', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 400 } });
+
+      const result = await commentsApi.getMainThread(123);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comment-threads/main/?travel_id=123'
+      );
+      expect(result).toBeNull();
+    });
+
     it('should treat 401 as empty (thread metadata can be protected)', async () => {
       mockedApiClient.get.mockRejectedValueOnce({ response: { status: 401 } });
 
