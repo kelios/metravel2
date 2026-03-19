@@ -10,6 +10,7 @@ export interface SliderProps {
   images: SliderImage[];
   showArrows?: boolean;
   showDots?: boolean;
+  controlsVisible?: boolean;
   hideArrowsOnMobile?: boolean;
   aspectRatio?: number;
   fit?: 'cover' | 'contain';

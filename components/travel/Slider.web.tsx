@@ -201,6 +201,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     images,
     showArrows = true,
     showDots = true,
+    controlsVisible = true,
     hideArrowsOnMobile = true,
     aspectRatio = DEFAULT_AR,
     fit = 'contain',
@@ -540,7 +541,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           </View>
         </View>
 
-        {showArrows && imagesLen > 1 && (
+        {controlsVisible && showArrows && imagesLen > 1 && (
           <NavArrows
             imagesLen={imagesLen}
             isMobile={isMobile}
@@ -553,7 +554,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           />
         )}
 
-        {imagesLen > 1 && (
+        {controlsVisible && imagesLen > 1 && (
           <View style={[styles.counter, isMobile && styles.counterMobile, { pointerEvents: 'none' }]}>
             <View style={styles.counterContainer}>
               <Text style={styles.counterText}>
@@ -563,7 +564,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           </View>
         )}
 
-        {showDots && imagesLen > 1 && (
+        {controlsVisible && showDots && imagesLen > 1 && (
           <PaginationDots total={imagesLen} currentIndex={currentIndex} isMobile={isMobile} styles={styles} />
         )}
       </View>

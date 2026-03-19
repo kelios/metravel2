@@ -20,15 +20,47 @@ export type InstagramPublicationDraft = {
   imageUrls: string[];
   countryLabels: string[];
   pointLabels: string[];
+  suggestedLabels: string[];
 };
 
 const DEFAULT_DESCRIPTION_FALLBACK = 'Новое путешествие на Metravel.';
+export const INSTAGRAM_CAPTION_MAX_LENGTH = 2200;
+export const INSTAGRAM_HASHTAG_MAX_COUNT = 30;
 
 const STOP_WORDS = new Set([
   'и', 'в', 'во', 'на', 'по', 'из', 'от', 'до', 'для', 'под', 'над', 'при', 'к', 'ко', 'с', 'со',
   'у', 'о', 'об', 'обо', 'а', 'но', 'или', 'не', 'за', 'the', 'a', 'an', 'of', 'in', 'on', 'at',
   'to', 'from', 'by', 'for', 'with', 'and', 'or',
 ]);
+
+const ADMINISTRATIVE_WORDS = new Set([
+  'польша', 'польске', 'polska', 'poland',
+  'малопольское', 'малопольскоевоеводство', 'малопольша',
+  'małopolskie', 'malopolskie', 'województwo', 'wojewodztwo',
+  'область', 'район', 'powiat', 'gmina', 'voivodeship',
+]);
+
+const SERVICE_WORDS = new Set([
+  'inpost', 'paczkomat', 'parking', 'парковка', 'lotnisko', 'аэропорт',
+  'airport', 'stacja', 'station', 'остановка', 'przystanek', 'hotel',
+  'restauracja', 'restaurant', 'sklep', 'магазин',
+]);
+
+const POI_HINT_WORDS = new Set([
+  'jaskinia', 'пещера', 'dolina', 'долина', 'zamek', 'замок',
+  'skałki', 'skalki', 'скалки', 'kaplica', 'каплица', 'most', 'мост',
+  'rezerwat', 'заповедник', 'rodnik', 'родник',
+]);
+
+const PRIORITY_TEXT_PATTERNS: RegExp[] = [
+  /\bjaskinia\s+na\s+łopiankach\b/iu,
+  /\bdolina\s+mnikowska\b/iu,
+  /\bmników\b/iu,
+  /\bmnikiw\b/iu,
+  /\bskałki\b/iu,
+  /krak[oó]w[a]?/iu,
+  /краков[а]?/iu,
+];
 
 const decodeHtmlEntities = (value: string): string =>
   value
@@ -70,18 +102,37 @@ const getGalleryUrl = (item: GalleryItem): string => {
   return normalizeMediaUrl(item.url);
 };
 
-const buildHashtagToken = (value: string): string => {
-  const words = value
+const tokenizeHashtagSource = (value: string): string[] =>
+  value
     .normalize('NFKC')
+    .toLowerCase()
     .split(/[^\p{L}\p{N}]+/u)
-    .map((word) => word.trim().toLowerCase())
-    .filter((word) => word.length >= 2 && !STOP_WORDS.has(word));
+    .map((word) => word.trim())
+    .filter(Boolean);
+
+const buildHashtagToken = (value: string): string => {
+  const words = tokenizeHashtagSource(value)
+    .filter((word) => !/\d/.test(word))
+    .filter((word) => word.length >= 2)
+    .filter((word) => !STOP_WORDS.has(word) && !ADMINISTRATIVE_WORDS.has(word) && !SERVICE_WORDS.has(word));
 
   if (words.length === 0) return '';
   return words.slice(0, 3).join('');
 };
 
+const buildCountryHashtagToken = (value: string): string => {
+  const words = tokenizeHashtagSource(value)
+    .filter((word) => !/\d/.test(word))
+    .filter((word) => word.length >= 2)
+    .filter((word) => !STOP_WORDS.has(word) && !SERVICE_WORDS.has(word));
+
+  if (words.length === 0) return '';
+  return words.slice(0, 2).join('');
+};
+
 const unique = <T,>(values: T[]): T[] => Array.from(new Set(values));
+
+const normalizeLabelSpacing = (value: string): string => value.replace(/\s{2,}/g, ' ').trim();
 
 const getCountryLabel = (countryId: string, countries: CountryOption[]): string => {
   const match = countries.find((country) => String(country.country_id) === String(countryId));
@@ -92,13 +143,88 @@ const getCountryLabel = (countryId: string, countries: CountryOption[]): string 
 const getPointLabel = (point: unknown): string => {
   if (!point || typeof point !== 'object') return '';
   const record = point as Record<string, unknown>;
-  return String(
+  const raw = String(
     record.address ??
       record.title ??
       record.name ??
       record.description ??
       ''
   ).trim();
+  if (!raw) return '';
+
+  const firstSegment = raw.split(/[|,;/()]/)[0]?.trim() || raw;
+  const rawTokens = tokenizeHashtagSource(firstSegment);
+  if (rawTokens.length === 0) return '';
+
+  const hasPoiHint = rawTokens.some((token) => POI_HINT_WORDS.has(token));
+  const hasServiceWord = rawTokens.some((token) => SERVICE_WORDS.has(token));
+  if (hasServiceWord && !hasPoiHint) return '';
+
+  const cleanedTokens = rawTokens
+    .filter((token) => !/\d/.test(token))
+    .filter((token) => token.length >= 3)
+    .filter((token) => !STOP_WORDS.has(token))
+    .filter((token) => !ADMINISTRATIVE_WORDS.has(token))
+    .filter((token) => !SERVICE_WORDS.has(token));
+
+  if (cleanedTokens.length === 0) return '';
+
+  const maxWords = hasPoiHint ? 2 : 1;
+  return normalizeLabelSpacing(cleanedTokens.slice(0, maxWords).join(' '));
+};
+
+const extractPriorityLabelsFromText = (value: string): string[] => {
+  const source = normalizeLabelSpacing(value);
+  if (!source) return [];
+
+  return PRIORITY_TEXT_PATTERNS
+    .map((pattern) => source.match(pattern)?.[0] ?? '')
+    .map((match) => normalizeLabelSpacing(match))
+    .filter(Boolean);
+};
+
+export const buildFinalInstagramText = (caption: string, hashtags: string[]): string =>
+  [caption.trim(), hashtags.join(' ').trim()].filter(Boolean).join('\n\n').trim();
+
+export const clampInstagramCaption = (
+  caption: string,
+  hashtags: string[],
+  maxLength: number = INSTAGRAM_CAPTION_MAX_LENGTH
+): string => {
+  const normalizedCaption = caption.trim();
+  const hashtagsText = hashtags.join(' ').trim();
+  const separatorLength = normalizedCaption && hashtagsText ? 2 : 0;
+  const availableCaptionLength = maxLength - hashtagsText.length - separatorLength;
+
+  if (availableCaptionLength <= 0) return '';
+  if (normalizedCaption.length <= availableCaptionLength) return normalizedCaption;
+
+  const ellipsis = '…';
+  const safeLength = Math.max(availableCaptionLength - ellipsis.length, 0);
+  let nextCaption = normalizedCaption.slice(0, safeLength).trimEnd();
+
+  const lastWhitespaceIndex = nextCaption.lastIndexOf(' ');
+  if (lastWhitespaceIndex >= Math.floor(safeLength * 0.6)) {
+    nextCaption = nextCaption.slice(0, lastWhitespaceIndex).trimEnd();
+  }
+
+  const withEllipsis = `${nextCaption}${ellipsis}`.trim();
+  return withEllipsis.length <= availableCaptionLength
+    ? withEllipsis
+    : normalizedCaption.slice(0, availableCaptionLength).trimEnd();
+};
+
+export const parseInstagramHashtags = (value: string): string[] => {
+  const rawTags = value
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => (part.startsWith('#') ? part : `#${part}`))
+    .map((part) => `#${part.slice(1).replace(/[^\p{L}\p{N}_]+/gu, '').toLowerCase()}`)
+    .filter((part) => part.length > 1);
+
+  const normalized = unique(['#metravelby', ...rawTags]);
+  return normalized.slice(0, INSTAGRAM_HASHTAG_MAX_COUNT);
 };
 
 export const getInstagramAccountOptions = (raw: string | undefined): InstagramAccountOption[] => {
@@ -144,9 +270,8 @@ export const buildInstagramPublicationDraft = ({
   formData: TravelFormData;
   countries?: CountryOption[];
 }): InstagramPublicationDraft => {
-  const coverUrl = normalizeMediaUrl(formData.travel_image_thumb_small_url ?? formData.travel_image_thumb_url ?? '');
   const galleryUrls = Array.isArray(formData.gallery) ? formData.gallery.map(getGalleryUrl).filter(Boolean) : [];
-  const imageUrls = unique([coverUrl, ...galleryUrls].filter(Boolean));
+  const imageUrls = unique(galleryUrls).slice(0, 10);
 
   const countryLabels = unique(
     (Array.isArray(formData.countries) ? formData.countries : [])
@@ -158,17 +283,29 @@ export const buildInstagramPublicationDraft = ({
     (Array.isArray(formData.coordsMeTravel) ? formData.coordsMeTravel : [])
       .map(getPointLabel)
       .filter(Boolean)
+  ).slice(0, 4);
+
+  const priorityLabels = extractPriorityLabelsFromText(
+    [formData.name ?? '', stripHtmlToInstagramCaption(formData.description)].filter(Boolean).join(' ')
   );
+
+  const suggestedLabels = unique([
+    ...countryLabels,
+    ...priorityLabels,
+    ...pointLabels,
+  ]);
 
   const hashtagTokens = unique([
     'metravelby',
-    ...countryLabels.map(buildHashtagToken),
+    ...countryLabels.map(buildCountryHashtagToken),
+    ...priorityLabels.map(buildHashtagToken),
     ...pointLabels.map(buildHashtagToken),
   ]).filter(Boolean);
 
-  const hashtags = hashtagTokens.slice(0, 15).map((token) => `#${token}`);
-  const caption = stripHtmlToInstagramCaption(formData.description) || formData.name?.trim() || DEFAULT_DESCRIPTION_FALLBACK;
-  const finalText = [caption, hashtags.join(' ')].filter(Boolean).join('\n\n').trim();
+  const hashtags = hashtagTokens.slice(0, INSTAGRAM_HASHTAG_MAX_COUNT).map((token) => `#${token}`);
+  const rawCaption = stripHtmlToInstagramCaption(formData.description) || formData.name?.trim() || DEFAULT_DESCRIPTION_FALLBACK;
+  const caption = clampInstagramCaption(rawCaption, hashtags);
+  const finalText = buildFinalInstagramText(caption, hashtags);
 
   return {
     caption,
@@ -177,5 +314,6 @@ export const buildInstagramPublicationDraft = ({
     imageUrls,
     countryLabels,
     pointLabels,
+    suggestedLabels,
   };
 };

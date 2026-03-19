@@ -1,6 +1,8 @@
 // E11: Refactored — state/logic extracted to useTravelHeroState hook
 import React, {
   Suspense,
+  useEffect,
+  useState,
 } from 'react'
 import {
   Platform,
@@ -44,6 +46,9 @@ function TravelHeroSectionInner({
   deferExtras?: boolean
 }) {
   const styles = useTravelDetailsHeroStyles()
+  const [webSliderChromeVisible, setWebSliderChromeVisible] = useState(
+    Platform.OS !== 'web',
+  )
 
   const {
     firstImg,
@@ -83,6 +88,20 @@ function TravelHeroSectionInner({
     webHeroLoaded,
   })
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!overlayUnmounted) {
+      setWebSliderChromeVisible(false)
+      return
+    }
+    const revealTimer = window.setTimeout(() => {
+      setWebSliderChromeVisible(true)
+    }, 0)
+    return () => {
+      window.clearTimeout(revealTimer)
+    }
+  }, [overlayUnmounted])
+
   return (
     <>
       {firstImg ? (
@@ -112,18 +131,31 @@ function TravelHeroSectionInner({
             {shouldRenderWebOptimizedHero ? (
             <>
               {shouldRenderWebSlider ? (
-                <Suspense fallback={null}>
-                  <TravelHeroInteractiveSlider
-                    visible
-                    galleryImages={heroSliderImages}
-                    isMobile={isMobile}
-                    aspectRatio={aspectRatio as number}
-                    preloadCount={1}
-                    onFirstImageLoad={handleSliderImageLoad}
-                    firstImagePreloaded={webHeroLoaded}
-                    onImagePress={handleImagePress}
-                  />
-                </Suspense>
+                <View
+                  style={[
+                    { position: 'absolute', inset: 0 } as any,
+                    {
+                      opacity: overlayUnmounted ? 1 : 0,
+                      pointerEvents: overlayUnmounted ? 'auto' : 'none',
+                      transition: `opacity ${OVERLAY_TRANSITION_MS}ms ease`,
+                    },
+                  ]}
+                  collapsable={false}
+                >
+                  <Suspense fallback={null}>
+                    <TravelHeroInteractiveSlider
+                      visible
+                      galleryImages={heroSliderImages}
+                      isMobile={isMobile}
+                      aspectRatio={aspectRatio as number}
+                      preloadCount={1}
+                      controlsVisible={webSliderChromeVisible}
+                      onFirstImageLoad={handleSliderImageLoad}
+                      firstImagePreloaded={webHeroLoaded}
+                      onImagePress={handleImagePress}
+                    />
+                  </Suspense>
+                </View>
               ) : null}
               {!overlayUnmounted && (
                 <View

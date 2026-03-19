@@ -7,7 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { useThemedColors } from '@/hooks/useTheme';
 import { openExternalUrl } from '@/utils/externalLinks';
-import { groupConsecutiveImages } from '@/utils/richTextImageLayout';
+import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
 type LazyInstagramProps = { url: string };
 type LightboxImage = { src: string; alt: string };
@@ -329,7 +329,7 @@ const prepareHtml = (html: string) => {
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>');
   const truncated = truncateInstagramCaptions(demoted);
-  return decorateRichImageFrames(groupConsecutiveImages(truncated));
+  return decorateRichImageFrames(applySmartImageLayout(truncated));
 };
 
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
@@ -343,6 +343,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   line-height: 1.58;
   letter-spacing: -0.003em;
   color: ${colors.textMuted};
+  --travel-rich-breakout-width: min(1080px, calc(100vw - 420px));
   width: 100%;
   max-width: 680px;
   margin: 0 auto;
@@ -517,6 +518,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px;
+  width: min(1080px, calc(100vw - 420px));
+  max-width: none;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
   margin: 2em 0 2.35em;
   clear: both;
   align-items: stretch;
@@ -586,13 +592,22 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 
 /* Portrait pair - taller images */
 .${WEB_RICH_TEXT_CLASS} .img-row-2-portrait img {
-  height: 320px !important;
-  max-height: 320px !important;
+  height: 100% !important;
+  max-height: none !important;
   aspect-ratio: auto !important;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-pair-portraits {
-  grid-template-columns: minmax(0, 0.96fr) minmax(0, 1.04fr);
+  width: min(1080px, calc(100vw - 420px));
+  grid-template-columns: minmax(260px, 360px) minmax(240px, 320px);
+  justify-content: center;
+  gap: 24px;
+  align-items: end;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-portraits p {
+  align-self: end;
+  aspect-ratio: 3 / 4;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-pair-portraits > p:first-child {
@@ -600,7 +615,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-pair-portraits > p:last-child {
-  transform: translateY(-18px);
+  transform: translateY(-6px);
 }
 
 /* Mixed pair - portrait + landscape, auto height to respect aspect ratios */
@@ -628,6 +643,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
+  width: min(1080px, calc(100vw - 420px));
+  max-width: none;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
   margin: 2em 0 2.4em;
   clear: both;
   align-items: stretch;
@@ -669,17 +689,46 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-pair-grid {
-  grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+  width: min(1080px, calc(100vw - 420px));
+  grid-template-columns: minmax(380px, 1fr) minmax(240px, 320px);
+  justify-content: center;
+  grid-auto-rows: auto;
+  gap: 18px 24px;
+  align-items: stretch;
 }
 
-.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(1),
-.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(4) {
-  transform: translateY(12px);
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(1) {
+  grid-row: 1 / span 2;
+  grid-column: 1;
+  aspect-ratio: 4 / 5;
 }
 
-.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(2),
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(2) {
+  grid-row: 1;
+  grid-column: 2;
+  transform: none;
+  aspect-ratio: 3 / 4;
+}
+
 .${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(3) {
-  transform: translateY(-12px);
+  grid-row: 2;
+  grid-column: 2;
+  transform: none;
+  aspect-ratio: 3 / 4;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid > p:nth-child(4) {
+  grid-column: 1 / span 2;
+  grid-row: 3;
+  width: auto;
+  justify-self: stretch;
+  aspect-ratio: 16 / 7;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-pair-grid img {
+  min-height: 100% !important;
+  max-height: none !important;
+  height: 100% !important;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt {
@@ -712,6 +761,11 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   display: grid;
   grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
   gap: 18px;
+  width: min(1080px, calc(100vw - 420px));
+  max-width: none;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
   margin: 2em 0 2.4em;
   clear: both;
   align-items: stretch;
@@ -773,25 +827,81 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 }
 
 /* ===== PORTRAIT-HEAVY GRID ===== */
-/* Multiple portraits - use 2 columns with taller cells */
+/* Multiple portraits - editorial magazine layout */
 .${WEB_RICH_TEXT_CLASS} .img-grid-portrait {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(1080px, calc(100vw - 420px));
+  grid-template-columns: repeat(2, minmax(260px, 320px));
+  justify-content: center;
+  gap: 18px 24px;
 }
 .${WEB_RICH_TEXT_CLASS} .img-column-portraits {
-  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  width: min(1080px, calc(100vw - 420px));
+  grid-template-columns: repeat(2, minmax(260px, 320px));
+  justify-content: center;
+  gap: 18px 24px;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-column-portraits > p:nth-child(odd) {
-  transform: translateY(12px);
+  transform: none;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-column-portraits > p:nth-child(even) {
-  transform: translateY(-12px);
+  transform: none;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
-  min-height: 280px;
-  max-height: 420px;
+  min-height: 100%;
+  max-height: none;
+  height: 100% !important;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-triptych {
+  width: min(1080px, calc(100vw - 420px));
+  grid-template-columns: minmax(300px, 380px) minmax(240px, 300px);
+  justify-content: center;
+  grid-auto-rows: 190px;
+  gap: 18px 24px;
+  align-items: stretch;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-triptych > p:nth-child(1) {
+  grid-row: span 2;
+  aspect-ratio: 3 / 4;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-triptych > p:nth-child(2) {
+  aspect-ratio: 3 / 4;
+  transform: none;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-triptych > p:nth-child(3) {
+  aspect-ratio: 3 / 4;
+  transform: none;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-triptych img {
+  min-height: 100% !important;
+  max-height: none !important;
+  height: 100% !important;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-quartet {
+  width: min(1080px, calc(100vw - 420px));
+  grid-template-columns: repeat(2, minmax(260px, 320px));
+  justify-content: center;
+  grid-auto-rows: 420px;
+  gap: 18px 24px;
+  align-items: stretch;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-quartet > p:nth-child(1) {
+  grid-row: auto;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-quartet img {
+  min-height: 100% !important;
+  max-height: none !important;
+  height: 100% !important;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-editorial-grid {
@@ -997,6 +1107,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   .${WEB_RICH_TEXT_CLASS} {
     font-size: 17px;
     line-height: 1.52;
+    --travel-rich-breakout-width: 100%;
     padding: 0 ${DESIGN_TOKENS.spacing.sm}px 32px;
   }
   .${WEB_RICH_TEXT_CLASS} img {
@@ -1025,6 +1136,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   }
   /* Mobile: 2 images still side by side but smaller */
   .${WEB_RICH_TEXT_CLASS} .img-row-2 {
+    width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
     gap: 8px;
   }
   .${WEB_RICH_TEXT_CLASS} .img-row-2 img {
@@ -1043,6 +1158,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   .${WEB_RICH_TEXT_CLASS} .img-pair-balanced,
   .${WEB_RICH_TEXT_CLASS} .img-pair-portraits,
   .${WEB_RICH_TEXT_CLASS} .img-pair-mixed {
+    width: 100%;
     grid-template-columns: 1fr 1fr;
   }
   .${WEB_RICH_TEXT_CLASS} .img-stack-landscape > p,
@@ -1055,6 +1171,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   .${WEB_RICH_TEXT_CLASS} .img-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+    width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid img {
     min-height: 140px !important;
@@ -1064,6 +1184,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed {
     grid-template-columns: 1fr;
     gap: 8px;
+    width: 100%;
+    position: static;
+    left: auto;
+    transform: none;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-quilt,
   .${WEB_RICH_TEXT_CLASS} .img-grid-balanced {
@@ -1072,7 +1196,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   }
   .${WEB_RICH_TEXT_CLASS} .img-pair-grid,
   .${WEB_RICH_TEXT_CLASS} .img-column-portraits,
-  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid {
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-quartet {
+    width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
@@ -1082,14 +1209,24 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   }
   .${WEB_RICH_TEXT_CLASS} .img-pair-grid > p,
   .${WEB_RICH_TEXT_CLASS} .img-column-portraits > p,
-  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p {
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych > p,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-quartet > p {
     grid-column: auto !important;
+    grid-row: auto !important;
+    width: auto;
     transform: none !important;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-quilt img,
   .${WEB_RICH_TEXT_CLASS} .img-grid-balanced img {
     min-height: 150px !important;
     max-height: 220px !important;
+  }
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych img,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-quartet img {
+    min-height: 170px !important;
+    max-height: 220px !important;
+    height: 170px !important;
   }
   .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack {
     flex-direction: row;

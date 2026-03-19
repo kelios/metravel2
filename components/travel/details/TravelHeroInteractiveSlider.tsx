@@ -24,6 +24,7 @@ export default function TravelHeroInteractiveSlider({
   isMobile,
   aspectRatio,
   preloadCount,
+  controlsVisible = true,
   firstImagePreloaded,
   onFirstImageLoad,
   onImagePress,
@@ -36,6 +37,7 @@ export default function TravelHeroInteractiveSlider({
   isMobile: boolean;
   aspectRatio: number;
   preloadCount: number;
+  controlsVisible?: boolean;
   firstImagePreloaded: boolean;
   onFirstImageLoad: () => void;
   onImagePress: (index: number) => void;
@@ -54,6 +56,7 @@ export default function TravelHeroInteractiveSlider({
           <Slider
             images={galleryImages}
             showArrows={shouldShowHeroSliderArrows(isMobile)}
+            controlsVisible={controlsVisible}
             hideArrowsOnMobile={shouldHideHeroSliderArrowsOnMobile}
             showDots={isMobile}
             autoPlay={false}

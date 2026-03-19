@@ -115,7 +115,14 @@ describe('richTextImageLayout', () => {
     it('wraps 3 images with 2+ portraits in img-grid-portrait', () => {
       const html = '<p>Text</p><p><img src="1.jpg" width="600" height="800"></p><p><img src="2.jpg" width="600" height="800"></p><p><img src="3.jpg" width="800" height="600"></p><p>Text</p>';
       const result = groupConsecutiveImages(html);
-      expect(result).toContain('img-column-portraits');
+      expect(result).toContain('img-portrait-triptych');
+      expect(result).toContain('img-grid-portrait');
+    });
+
+    it('wraps 4 portrait-heavy images in an editorial portrait quartet', () => {
+      const html = '<p>Text</p><p><img src="1.jpg" width="600" height="900"></p><p><img src="2.jpg" width="640" height="900"></p><p><img src="3.jpg" width="620" height="900"></p><p><img src="4.jpg" width="610" height="900"></p><p>Text</p>';
+      const result = groupConsecutiveImages(html);
+      expect(result).toContain('img-portrait-quartet');
       expect(result).toContain('img-grid-portrait');
     });
 
@@ -177,6 +184,13 @@ describe('richTextImageLayout', () => {
       const result = applySmartImageLayout(html);
       // Should still have img-row-2 after reprocessing
       expect(result).toContain('img-row-2');
+    });
+
+    it('does not keep nested duplicate wrappers when content already has image layout classes', () => {
+      const html = '<p>Before</p><div class="img-pair-portraits img-row-2 img-row-2-portrait"><div class="img-pair-portraits img-row-2 img-row-2-portrait"><p><img src="1.jpg" width="600" height="900"></p><p><img src="2.jpg" width="600" height="900"></p></div></div><p>After</p>';
+      const result = applySmartImageLayout(html);
+      expect(result).toContain('img-pair-portraits');
+      expect(result.match(/img-pair-portraits/g)?.length).toBe(1);
     });
 
     it('handles null/undefined gracefully', () => {

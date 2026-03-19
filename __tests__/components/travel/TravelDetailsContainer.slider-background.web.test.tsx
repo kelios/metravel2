@@ -192,6 +192,111 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(lastProps).toBeTruthy()
     expect(lastProps.blurBackground).toBe(true)
     expect(lastProps.preloadCount).toBe(1)
+    expect(lastProps.controlsVisible).toBe(false)
+  })
+
+  it('keeps the interactive web slider hidden until the LCP overlay handoff finishes', async () => {
+    const travel: any = {
+      id: 7,
+      name: 'Hidden until handoff travel',
+      gallery: [
+        {
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        },
+        {
+          url: 'https://cdn.example.com/img-2.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-02',
+          id: 2,
+        },
+      ],
+      travelAddress: [],
+    }
+
+    const anchors: any = {
+      gallery: { current: null },
+      video: { current: null },
+      description: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      map: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    const hiddenWrapper = (tree as any).root.findAll(
+      (node: any) =>
+        Array.isArray(node.props?.style) &&
+        node.props.style.some((style: any) => style?.opacity === 0),
+    )[0]
+
+    expect(hiddenWrapper).toBeTruthy()
+    expect(hiddenWrapper.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ opacity: 0, pointerEvents: 'none' }),
+      ]),
+    )
+
+    mockUseTravelHeroState.mockReturnValue({
+      ...(mockUseTravelHeroState.mock.results[0]?.value || {}),
+      overlayUnmounted: true,
+    } as any)
+
+    await act(async () => {
+      tree!.update(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    let lastArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]
+    let lastProps = (lastArgs as any)?.[0]
+    expect(lastProps.controlsVisible).toBe(false)
+
+    await act(async () => {
+      jest.advanceTimersByTime(34)
+      await Promise.resolve()
+    })
+
+    lastArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]
+    lastProps = (lastArgs as any)?.[0]
+    expect(lastProps.controlsVisible).toBe(true)
   })
 
   it('updates hero container width from web layout events', async () => {

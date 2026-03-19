@@ -145,7 +145,7 @@ function buildBalancedFourImageLayout(images: string[]): string | null {
 
   const composition = analyzeImageGroup(images);
   if (composition.portrait >= 3) {
-    return wrapImageGroup('img-column-portraits img-grid img-grid-portrait', images);
+    return wrapImageGroup('img-portrait-quartet img-grid img-grid-portrait', images);
   }
 
   if (composition.landscape >= 3) {
@@ -154,6 +154,23 @@ function buildBalancedFourImageLayout(images: string[]): string | null {
 
   if (composition.landscape === 2 && composition.portrait === 2) {
     return wrapImageGroup('img-pair-grid img-grid img-grid-balanced', images);
+  }
+
+  return null;
+}
+
+function buildPortraitStoryLayout(images: string[]): string | null {
+  const composition = analyzeImageGroup(images);
+  if (composition.portrait < images.length - composition.portrait) {
+    return null;
+  }
+
+  if (images.length === 3) {
+    return wrapImageGroup('img-portrait-triptych img-grid img-grid-portrait', images);
+  }
+
+  if (images.length === 4) {
+    return wrapImageGroup('img-portrait-quartet img-grid img-grid-portrait', images);
   }
 
   return null;
@@ -193,6 +210,12 @@ function appendUniformImageGroup(result: string[], images: string[], floatDirect
   const balancedFourLayout = buildBalancedFourImageLayout(images);
   if (balancedFourLayout) {
     result.push(balancedFourLayout);
+    return floatDirection;
+  }
+
+  const portraitStoryLayout = buildPortraitStoryLayout(images);
+  if (portraitStoryLayout) {
+    result.push(portraitStoryLayout);
     return floatDirection;
   }
 
@@ -258,9 +281,14 @@ export function removeImageLayoutClasses(html: string): string {
   result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid-mixed\b[^"]*\bimg-grid-mixed-reverse\b[^"]*"[^>]*><p>([\s\S]*?)<\/p><div\b[^>]*class="[^"]*\bimg-grid-mixed-stack\b[^"]*"[^>]*>([\s\S]*?)<\/div><\/div>/gi, '<p>$1</p>$2');
   result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid-mixed\b[^"]*"[^>]*><div\b[^>]*class="[^"]*\bimg-grid-mixed-stack\b[^"]*"[^>]*>([\s\S]*?)<\/div><p>([\s\S]*?)<\/p><\/div>/gi, '$1<p>$2</p>');
 
-  // Remove wrapper divs for image groups, keeping inner content
-  result = result.replace(/<div\b[^>]*class="[^"]*\bimg-row-2\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
-  result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
+  // Remove wrapper divs for image groups, keeping inner content.
+  // Stored HTML may already contain nested smart-layout wrappers from a previous pass.
+  let previous = '';
+  while (result !== previous) {
+    previous = result;
+    result = result.replace(/<div\b[^>]*class="[^"]*\bimg-row-2\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
+    result = result.replace(/<div\b[^>]*class="[^"]*\bimg-grid\b[^"]*"[^>]*>([\s\S]*?)<\/div>/gi, '$1');
+  }
 
   const stripParagraphClasses = (value: string, classesToStrip: string[]) =>
     value.replace(/<p([^>]*)class="([^"]*)"([^>]*)>/gi, (match, before = '', classValue = '', after = '') => {

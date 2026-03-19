@@ -1,5 +1,7 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
+import { Share } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { TravelFormData } from '@/types/types';
@@ -41,7 +43,7 @@ const baseFormData: TravelFormData = {
   minus: null,
   recommendation: null,
   youtube_link: null,
-  gallery: [],
+  gallery: [{ id: 1, url: 'https://example.com/gallery-1.jpg' }],
   categories: ['1'],
   countryIds: [],
   travelAddressIds: [],
@@ -63,6 +65,10 @@ const baseFormData: TravelFormData = {
 };
 
 describe('TravelWizardStepPublish - moderation submit', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders publish step basics (smoke)', () => {
     const { getByText } = render(
       <TravelWizardStepPublish
@@ -189,7 +195,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: false,
     };
 
-    const { getByText } = render(
+    const { getByText, getAllByTestId } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -206,6 +212,42 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(getByText('Одобрить модерацию')).toBeTruthy();
     expect(getByText('Отклонить')).toBeTruthy();
     expect(getByText('Instagram публикация')).toBeTruthy();
+    expect(getAllByTestId('instagram-preview-image')).toHaveLength(1);
+  });
+
+  it('shows manual instagram share button for regular user and opens native share flow', async () => {
+    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+
+    const { getByLabelText, queryByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        countries={[{ country_id: '1', title_ru: 'Беларусь' }]}
+        setFormData={jest.fn()}
+        isSuperAdmin={false}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    expect(getByLabelText('Поделиться в свой Instagram')).toBeTruthy();
+    expect(queryByText('Аккаунт для публикации')).toBeNull();
+    expect(queryByText('Опубликовать в Instagram')).toBeNull();
+
+    await act(async () => {
+      fireEvent.press(getByLabelText('Поделиться в свой Instagram'));
+    });
+
+    expect(Clipboard.setStringAsync).toHaveBeenCalled();
+    expect(shareSpy).toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'success',
+        text1: 'Текст скопирован',
+      })
+    );
   });
 
   it('publishes to instagram for superadmin with generated payload', async () => {
@@ -246,7 +288,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
           travelId: 640,
           accountKey: 'metravelby',
           hashtags: expect.arrayContaining(['#metravelby', '#беларусь', '#минск', '#несвиж']),
-          imageUrls: expect.arrayContaining(['https://example.com/cover.jpg']),
+          imageUrls: ['https://example.com/gallery-1.jpg'],
         })
       );
       expect(showToast).toHaveBeenCalledWith(
@@ -255,6 +297,198 @@ describe('TravelWizardStepPublish - moderation submit', () => {
           text1: 'Публикация запущена',
         })
       );
+    } finally {
+      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
+    }
+  });
+
+  it('allows editing instagram caption and hashtags before publishing', async () => {
+    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
+    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
+      { key: 'metravelby', label: '@metravelby' },
+    ]);
+
+    try {
+      const { getByLabelText, getByText } = render(
+        <TravelWizardStepPublish
+          currentStep={6}
+          totalSteps={6}
+          formData={{
+            ...baseFormData,
+            name: 'Jaskinia na Łopiankach',
+            countries: ['1'],
+          }}
+          countries={[{ country_id: '1', title_ru: 'Польша' }]}
+          setFormData={jest.fn()}
+          isSuperAdmin={true}
+          onManualSave={jest.fn()}
+          onGoBack={jest.fn()}
+          onFinish={jest.fn()}
+        />
+      );
+
+      await act(async () => {
+        fireEvent.changeText(getByLabelText('Текст поста для Instagram'), 'Новый caption');
+        fireEvent.changeText(getByLabelText('Хэштеги для Instagram'), '#metravelby #польша #краков');
+      });
+
+      await act(async () => {
+        fireEvent.press(getByText('Опубликовать в Instagram'));
+      });
+
+      expect(publishTravelToInstagram).toHaveBeenCalledWith(
+        expect.objectContaining({
+          caption: 'Новый caption',
+          hashtags: ['#metravelby', '#польша', '#краков'],
+        })
+      );
+    } finally {
+      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
+    }
+  });
+
+  it('publishes instagram images in manually reordered sequence', async () => {
+    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
+    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
+      { key: 'metravelby', label: '@metravelby' },
+    ]);
+
+    try {
+      const { getByTestId, getByText } = render(
+        <TravelWizardStepPublish
+          currentStep={6}
+          totalSteps={6}
+          formData={{
+            ...baseFormData,
+            gallery: [
+              { id: 1, url: 'https://example.com/gallery-1.jpg' },
+              { id: 2, url: 'https://example.com/gallery-2.jpg' },
+              { id: 3, url: 'https://example.com/gallery-3.jpg' },
+            ],
+          }}
+          countries={[{ country_id: '1', title_ru: 'Польша' }]}
+          setFormData={jest.fn()}
+          isSuperAdmin={true}
+          onManualSave={jest.fn()}
+          onGoBack={jest.fn()}
+          onFinish={jest.fn()}
+        />
+      );
+
+      await act(async () => {
+        fireEvent.press(getByTestId('instagram-move-right-0'));
+      });
+
+      await act(async () => {
+        fireEvent.press(getByText('Опубликовать в Instagram'));
+      });
+
+      expect(publishTravelToInstagram).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageUrls: [
+            'https://example.com/gallery-2.jpg',
+            'https://example.com/gallery-1.jpg',
+            'https://example.com/gallery-3.jpg',
+          ],
+        })
+      );
+    } finally {
+      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
+    }
+  });
+
+  it('excludes selected instagram image from publication payload', async () => {
+    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
+    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
+      { key: 'metravelby', label: '@metravelby' },
+    ]);
+
+    try {
+      const { getByTestId, getAllByTestId, getByText } = render(
+        <TravelWizardStepPublish
+          currentStep={6}
+          totalSteps={6}
+          formData={{
+            ...baseFormData,
+            gallery: [
+              { id: 1, url: 'https://example.com/gallery-1.jpg' },
+              { id: 2, url: 'https://example.com/gallery-2.jpg' },
+              { id: 3, url: 'https://example.com/gallery-3.jpg' },
+            ],
+          }}
+          countries={[{ country_id: '1', title_ru: 'Польша' }]}
+          setFormData={jest.fn()}
+          isSuperAdmin={true}
+          onManualSave={jest.fn()}
+          onGoBack={jest.fn()}
+          onFinish={jest.fn()}
+        />
+      );
+
+      expect(getAllByTestId('instagram-preview-image')).toHaveLength(3);
+
+      await act(async () => {
+        fireEvent.press(getByTestId('instagram-remove-1'));
+      });
+
+      expect(getAllByTestId('instagram-preview-image')).toHaveLength(2);
+
+      await act(async () => {
+        fireEvent.press(getByText('Опубликовать в Instagram'));
+      });
+
+      expect(publishTravelToInstagram).toHaveBeenCalledWith(
+        expect.objectContaining({
+          imageUrls: [
+            'https://example.com/gallery-1.jpg',
+            'https://example.com/gallery-3.jpg',
+          ],
+        })
+      );
+    } finally {
+      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
+    }
+  });
+
+  it('auto-clamps instagram caption to publish-ready length', async () => {
+    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
+    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
+      { key: 'metravelby', label: '@metravelby' },
+    ]);
+    (publishTravelToInstagram as jest.Mock).mockClear();
+    (showToast as jest.Mock).mockClear();
+
+    try {
+      const { getByLabelText, getByText } = render(
+        <TravelWizardStepPublish
+          currentStep={6}
+          totalSteps={6}
+          formData={{
+            ...baseFormData,
+            gallery: [
+              { id: 1, url: 'https://example.com/gallery-1.jpg' },
+            ],
+          }}
+          countries={[{ country_id: '1', title_ru: 'Польша' }]}
+          setFormData={jest.fn()}
+          isSuperAdmin={true}
+          onManualSave={jest.fn()}
+          onGoBack={jest.fn()}
+          onFinish={jest.fn()}
+        />
+      );
+
+      const tooLongCaption = 'а'.repeat(2201);
+
+      await act(async () => {
+        fireEvent.changeText(getByLabelText('Текст поста для Instagram'), tooLongCaption);
+      });
+
+      expect(getByText('2200/2200 символов')).toBeTruthy();
+
+      expect(publishTravelToInstagram).not.toHaveBeenCalled();
+      expect(getByLabelText('Опубликовать в Instagram').props.accessibilityState.disabled).toBe(false);
+      expect(showToast).not.toHaveBeenCalled();
     } finally {
       process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
     }
