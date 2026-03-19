@@ -1575,6 +1575,12 @@ export const createHomeHeroStyles = ({
       paddingHorizontal: 0,
       justifyContent: 'flex-start',
       flexWrap: 'nowrap' as const,
+      ...Platform.select({
+        web: {
+          minWidth: 'max-content',
+          paddingBottom: 4,
+        } as any,
+      }),
     },
     moodChip: {
       flexDirection: 'row' as const,
@@ -1638,7 +1644,17 @@ export const createHomeHeroStyles = ({
       letterSpacing: 1.6,
       ...Platform.select({ web: { fontFamily: sansSerif } as any }),
     },
-    popularScrollContent: { flexDirection: 'row', gap: 16, paddingRight: 16 },
+    popularScrollContent: {
+      flexDirection: 'row',
+      gap: 16,
+      paddingRight: 16,
+      ...Platform.select({
+        web: {
+          minWidth: 'max-content',
+          paddingBottom: 4,
+        } as any,
+      }),
+    },
 
     // -- Featured card (mobile hero image) --
     featuredCard: {

@@ -33,6 +33,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={Platform.OS === 'web' ? (styles.scroll as any) : undefined}
         contentContainerStyle={styles.scrollContent}
       >
         {filters.map((f) => (
@@ -81,7 +82,18 @@ const getStyles = (colors: ThemedColors) =>
       gap: 4,
       alignItems: 'center',
       ...(Platform.OS === 'web'
-        ? ({ touchAction: 'pan-x' } as any)
+        ? ({ minWidth: 'max-content', touchAction: 'pan-x pan-y' } as any)
+        : null),
+    },
+    scroll: {
+      ...(Platform.OS === 'web'
+        ? ({
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            overscrollBehaviorX: 'contain',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-x pan-y',
+          } as any)
         : null),
     },
     chip: {

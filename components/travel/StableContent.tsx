@@ -445,25 +445,29 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 /* ===== SINGLE IMAGE WITH FLOAT (desktop, vertical/square images only) ===== */
 @media (min-width: 769px) {
   .${WEB_RICH_TEXT_CLASS} .img-float-right {
-    float: right;
-    max-width: 45%;
-    margin: 0.5em 0 1em 1.5em;
-    clear: right;
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    max-width: 100%;
+    margin: 1.25em 0;
+    clear: both;
   }
   .${WEB_RICH_TEXT_CLASS} .img-float-right img {
-    width: 100%;
+    width: min(100%, 420px);
     max-height: 70vh;
     object-fit: contain;
     margin: 0;
   }
   .${WEB_RICH_TEXT_CLASS} .img-float-left {
-    float: left;
-    max-width: 45%;
-    margin: 0.5em 1.5em 1em 0;
-    clear: left;
+    display: flex;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    margin: 1.25em 0;
+    clear: both;
   }
   .${WEB_RICH_TEXT_CLASS} .img-float-left img {
-    width: 100%;
+    width: min(100%, 420px);
     max-height: 70vh;
     object-fit: contain;
     margin: 0;

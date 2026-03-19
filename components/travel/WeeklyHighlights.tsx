@@ -194,9 +194,10 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                     web: {
                         overflowX: 'auto',
                         overflowY: 'hidden',
+                        overscrollBehaviorX: 'contain',
                         width: '100%',
                         WebkitOverflowScrolling: 'touch',
-                        touchAction: 'pan-x',
+                        touchAction: 'pan-x pan-y',
                     } as any,
                     default: {},
                 })}
@@ -326,6 +327,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         gap: 12,
+        ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : {}),
     },
 });
 

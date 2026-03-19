@@ -193,14 +193,16 @@ const getStyles = (colors: ThemedColors) =>
     scrollContent: {
       paddingRight: 16,
       gap: 10,
+      ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : null),
     },
     scroll: {
       ...(Platform.OS === 'web'
         ? ({
             overflowX: 'auto',
             overflowY: 'hidden',
+            overscrollBehaviorX: 'contain',
             WebkitOverflowScrolling: 'touch',
-            touchAction: 'pan-x',
+            touchAction: 'pan-x pan-y',
           } as any)
         : null),
     },

@@ -13,7 +13,13 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
-const WEB_HORIZONTAL_SCROLL_STYLE = { WebkitOverflowScrolling: 'touch' as const, touchAction: 'pan-x' as const };
+const WEB_HORIZONTAL_SCROLL_STYLE = {
+  WebkitOverflowScrolling: 'touch' as const,
+  overflowX: 'auto' as const,
+  overflowY: 'hidden' as const,
+  overscrollBehaviorX: 'contain' as const,
+  touchAction: 'pan-x pan-y' as const,
+};
 const WEB_CARD_SHADOW_STYLE = { boxShadow: DESIGN_TOKENS.shadows.card };
 const WEB_CURSOR_POINTER_STYLE = { cursor: 'pointer' as const };
 
@@ -192,7 +198,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     travelsLoading: { paddingHorizontal: 14, paddingBottom: 14 },
     noTravels: { paddingHorizontal: 14, paddingBottom: 14, fontSize: 13, color: colors.textMuted, fontStyle: 'italic' },
-    travelsScroll: { paddingHorizontal: 14, paddingBottom: 14, gap: 12 },
+    travelsScroll: {
+      paddingHorizontal: 14,
+      paddingBottom: 14,
+      gap: 12,
+      ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : {}),
+    },
     travelCardWrap: { width: 240 },
     travelCard: { width: '100%' },
     showMoreCard: {

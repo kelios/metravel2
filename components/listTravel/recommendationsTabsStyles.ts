@@ -26,7 +26,7 @@ export const createRecommendationsTabsStyles = (
   },
   tabsScroll: {
     flex: 1,
-    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' } as any, default: {} }) as any),
+    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' } as any, default: {} }) as any),
   },
   tabsContainer: { paddingHorizontal: 0, paddingVertical: 10, alignItems: 'center' },
   tab: {
@@ -95,7 +95,7 @@ export const createRecommendationsTabsStyles = (
   errorText: { marginTop: 12, fontSize: 15, color: colors.textMuted, textAlign: 'center' },
   horizontalList: { marginBottom: 8 },
   webHorizontalScroll: {
-    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' } as any, default: {} }) as any),
+    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' } as any, default: {} }) as any),
   },
   webHorizontalScrollContent: {
     flexDirection: 'row', alignItems: 'stretch', paddingHorizontal: 4, paddingBottom: 6,
@@ -125,4 +125,3 @@ export const createRecommendationsTabsStyles = (
   },
   favoritesClearButtonText: { fontSize: 13, fontWeight: '600', color: colors.danger },
 });
-

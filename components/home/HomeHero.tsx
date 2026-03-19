@@ -954,10 +954,11 @@ const HomeHero = memo(function HomeHero({
                   style={
                     isWeb
                       ? ({
-                          touchAction: 'pan-x',
+                          touchAction: 'pan-x pan-y',
                           WebkitOverflowScrolling: 'touch',
                           overflowX: 'auto',
                           overflowY: 'hidden',
+                          overscrollBehaviorX: 'contain',
                         } as any)
                       : undefined
                   }
@@ -1040,14 +1041,17 @@ const HomeHero = memo(function HomeHero({
               style={
                 isWeb
                   ? ({
-                      touchAction: 'pan-x',
+                      touchAction: 'pan-x pan-y',
                       WebkitOverflowScrolling: 'touch',
                       overflowX: 'auto',
                       overflowY: 'hidden',
+                      overscrollBehaviorX: 'contain',
                     } as any)
                   : undefined
               }
               contentContainerStyle={styles.popularScrollContent}
+              directionalLockEnabled={Platform.OS === 'ios'}
+              nestedScrollEnabled={Platform.OS === 'android'}
             >
               {BOOK_IMAGES.map((image) => (
                 <Pressable
@@ -1065,7 +1069,7 @@ const HomeHero = memo(function HomeHero({
                     width={isMobile ? 195 : 215}
                     height={isMobile ? 130 : 148}
                     borderRadius={0}
-                    fit="contain"
+                    fit="cover"
                     blurBackground
                     allowCriticalWebBlur
                     quality={85}

@@ -413,15 +413,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingHorizontal: 4,
         paddingVertical: 4,
         gap: 12,
+        ...(Platform.OS === 'web' ? ({ minWidth: 'max-content' } as any) : {}),
     },
     webHorizontalScroll: {
         ...Platform.select({
             web: {
                 overflowX: 'auto',
                 overflowY: 'hidden',
+                overscrollBehaviorX: 'contain',
                 width: '100%',
                 WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-x',
+                touchAction: 'pan-x pan-y',
             } as any,
             default: {},
         }),

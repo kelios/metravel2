@@ -54,7 +54,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        style={styles.scroll}
+        style={[styles.scroll, Platform.OS === 'web' && styles.scrollWeb]}
       >
         {visible.map((cat) => {
           const isSelected = selectedCategories.includes(cat.name);
@@ -104,11 +104,22 @@ const getStyles = (colors: ThemedColors) =>
     scroll: {
       flexGrow: 0,
     },
+    scrollWeb: {
+      ...(Platform.OS === 'web'
+        ? ({
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            overscrollBehaviorX: 'contain',
+            touchAction: 'pan-x pan-y',
+            WebkitOverflowScrolling: 'touch',
+          } as any)
+        : null),
+    },
     scrollContent: {
       gap: 10,
       paddingRight: 10,
       ...(Platform.OS === 'web'
-        ? ({ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' } as any)
+        ? ({ minWidth: 'max-content', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' } as any)
         : null),
     },
     chip: {
