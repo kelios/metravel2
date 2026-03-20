@@ -162,7 +162,7 @@ describe('TravelPageGenerator', () => {
 
       expect(html).toContain('grid-template-columns: repeat(3, 1fr)')
       expect(html).toContain('grid-column: span 2')
-      expect(html).toContain('padding: 3.5mm')
+      expect(html).toContain('padding: 2.5mm')
     });
 
   });
