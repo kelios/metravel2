@@ -153,7 +153,7 @@ function TravelHeroSectionInner({
                       onFirstImageLoad={handleSliderImageLoad}
                       firstImagePreloaded={webHeroLoaded}
                       onImagePress={handleImagePress}
-                      skipFirstSlideImage={false}
+                      skipFirstSlideImage={!overlayUnmounted}
                     />
                   </Suspense>
                 </View>
