@@ -728,15 +728,39 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   min-height: 100% !important;
   max-height: none !important;
   height: 100% !important;
+  object-fit: contain;
+  border-radius: 14px;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto minmax(200px, 280px) auto;
+  grid-template-rows: auto 1fr auto;
   gap: 14px;
   width: 100%;
   max-width: 100%;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: ${colors.backgroundSecondary};
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(1),
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(4) {
+  aspect-ratio: 16 / 9;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(2),
+.${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(3) {
+  aspect-ratio: 1 / 1;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-quilt-4 {
@@ -767,6 +791,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   width: 100%;
   height: 100% !important;
   object-fit: contain;
+  border-radius: 14px;
 }
 
 /* ===== MIXED GRID: 1 portrait + 2 landscape ===== */
@@ -864,18 +889,31 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   min-height: 100%;
   max-height: none;
   height: 100% !important;
+  object-fit: contain;
+  border-radius: 14px;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych {
   width: 100%;
   max-width: 100%;
   display: grid;
-  grid-template-columns: minmax(280px, 1.1fr) minmax(200px, 0.9fr);
+  grid-template-columns: 1.2fr 0.8fr;
   grid-template-rows: 1fr 1fr;
   justify-content: center;
   gap: 14px;
   align-items: stretch;
-  min-height: 380px;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-portrait-triptych > p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: ${colors.backgroundSecondary};
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych > p:nth-child(1) {
@@ -897,6 +935,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   width: 100%;
   height: 100% !important;
   object-fit: contain;
+  border-radius: 14px;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-portrait-quartet {
@@ -917,14 +956,27 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   min-height: 100% !important;
   max-height: none !important;
   height: 100% !important;
+  object-fit: contain;
+  border-radius: 14px;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-editorial-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 0.8fr 1.2fr;
   grid-template-rows: 1fr 1fr;
   gap: 14px;
-  min-height: 380px;
+}
+
+.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: ${colors.backgroundSecondary};
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(1) {
@@ -946,6 +998,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   width: 100%;
   height: 100% !important;
   object-fit: contain;
+  border-radius: 14px;
 }
 
 /* ===== CLEARFIX ===== */

@@ -8,6 +8,7 @@ import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
 } from '@/utils/imageOptimization';
+import { markUriLoaded } from '@/components/travel/sliderParts/imageLoadCache';
 
 type ImgLike = {
   url: string;
@@ -166,11 +167,14 @@ function OptimizedLCPHeroInner({
       }
 
       if (!el.complete || el.naturalWidth <= 0 || didNotifyLoadRef.current) return;
+
+      // Mark URI as loaded so Slider knows this image is already cached
+      markUriLoaded(srcWithRetry);
     }
 
     didNotifyLoadRef.current = true;
     onLoad?.();
-  }, [onLoad]);
+  }, [onLoad, srcWithRetry]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;

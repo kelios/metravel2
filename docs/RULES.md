@@ -12,7 +12,10 @@
 - Before deploying to production, validate the local code in production-like conditions:
   - build a production web export (`dist/prod`)
   - run checks against that build (not against a dev server)
-- After each logical change, run:
+- After each logical change, run checks that match the scope of the change:
+  - точечные, локальные изменения: запускай только релевантные проверки для затронутой области;
+  - средние изменения: запускай релевантные тесты и линт для затронутых файлов/модулей;
+  - крупные или сквозные изменения: обязательно запускай полный прогон:
 
 ```bash
 npm run lint
@@ -33,7 +36,9 @@ npm run test:run
   - do not treat this alone as a frontend bug and do not change app code only to “fix” dev-only missing production media;
   - fix real frontend regressions instead, such as broken navigation, scrollspy/highlight logic, rendering bugs, or invalid URL normalization introduced by frontend code.
  
-- Always run `npm run lint` and `npm run test:run` at the end of a task to verify nothing broke.
+- Always verify the changed scope before finishing the task.
+  - For small, isolated changes, this can be a targeted lint/test check instead of the full suite.
+  - For larger changes, use the full `npm run lint` and `npm run test:run` pass.
 - For performance checks (Lighthouse), run against a production web export:
 
 ```bash
@@ -285,3 +290,6 @@ npx serve dist/prod -l 3000 -s
 
 - Project documentation lives in `docs/`.
 - Keep docs minimal: prefer updating `docs/README.md` and `docs/RULES.md` instead of creating many one-off reports.
+- Keep instructions compact and operational:
+  - prefer scope-based rules over repeated global commands;
+  - avoid duplicate guidance when a single authoritative rule already covers the same behavior.

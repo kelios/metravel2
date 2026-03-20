@@ -9,7 +9,16 @@ if (Platform.OS === 'web') {
   injectSliderGlobalStyles();
 }
 
-const loadedSlideUriCache = new Set<string>();
+import {
+  loadedSlideUriCache,
+  isBaseUriLoaded,
+  markBaseUriLoaded,
+  markUriLoaded,
+} from './imageLoadCache';
+
+// Re-export for use by LCP Hero
+export { markBaseUriLoaded, loadedSlideUriCache } from './imageLoadCache';
+
 const MEDIA_PATH_WITH_API_PREFIX = /^\/api\/(gallery|travel-image|travel-description-image|address-image)(\/|$)/i;
 
 const isPrivateOrLocalHost = (host: string): boolean => {
@@ -104,12 +113,25 @@ const Slide = memo(function Slide({
 }: SlideProps) {
   const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(() => loadedSlideUriCache.has(uri));
+  const isFirstSlide = index === 0;
+  // If firstImagePreloaded is true for the first slide, treat it as already loaded
+  // and add URI to cache so ImageCardMedia also gets showImmediately=true
+  // Also check base URI cache to detect same image with different optimization params
+  const [isLoaded, setIsLoaded] = useState(() => {
+    if (loadedSlideUriCache.has(uri) || isBaseUriLoaded(uri)) {
+      loadedSlideUriCache.add(uri);
+      return true;
+    }
+    if (isFirstSlide && firstImagePreloaded && Platform.OS === 'web') {
+      loadedSlideUriCache.add(uri);
+      markBaseUriLoaded(uri);
+      return true;
+    }
+    return false;
+  });
   const firstLoadReportedRef = useRef(false);
   const slideLoadReportedRef = useRef(false);
   const fallbackTriedRef = useRef(false);
-
-  const isFirstSlide = index === 0;
   const shouldEagerLoad =
     Platform.OS === 'web'
       ? isFirstSlide || isActive || !!preloadPriority
@@ -155,9 +177,19 @@ const Slide = memo(function Slide({
       firstLoadReportedRef.current = false;
       slideLoadReportedRef.current = false;
       setHasError(false);
-      setIsLoaded(loadedSlideUriCache.has(resolvedUri));
+      // Check exact URI cache first, then base URI cache, then firstImagePreloaded
+      if (loadedSlideUriCache.has(resolvedUri) || isBaseUriLoaded(resolvedUri)) {
+        loadedSlideUriCache.add(resolvedUri);
+        setIsLoaded(true);
+      } else if (isFirstSlide && firstImagePreloaded && Platform.OS === 'web') {
+        loadedSlideUriCache.add(resolvedUri);
+        markBaseUriLoaded(resolvedUri);
+        setIsLoaded(true);
+      } else {
+        setIsLoaded(false);
+      }
     }
-  }, [resolvedUri, index, isFirstSlide, firstImagePreloaded]);
+  }, [resolvedUri, isFirstSlide, firstImagePreloaded]);
 
   const reportSlideLoad = useCallback(() => {
     if (slideLoadReportedRef.current) return;
@@ -166,7 +198,7 @@ const Slide = memo(function Slide({
   }, [index, onSlideLoad]);
 
   const handleLoad = useCallback(() => {
-    loadedSlideUriCache.add(resolvedUri);
+    markUriLoaded(resolvedUri);
     setHasError(false);
     setIsLoaded(true);
     reportSlideLoad();
@@ -188,7 +220,7 @@ const Slide = memo(function Slide({
         fallbackTriedRef.current = true;
         setResolvedUri(fallback);
         setHasError(false);
-        setIsLoaded(loadedSlideUriCache.has(fallback));
+        setIsLoaded(loadedSlideUriCache.has(fallback) || isBaseUriLoaded(fallback));
         return;
       }
       fallbackTriedRef.current = true;
