@@ -121,7 +121,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     jest.useRealTimers()
   })
 
-  it('passes blurBackground=true to Slider on web immediately after hero runtime is ready', async () => {
+  it('passes blurBackground=false to Slider on web immediately after hero runtime is ready', async () => {
     const travel: any = {
       id: 1,
       name: 'Demo travel',
@@ -190,9 +190,10 @@ describe('TravelHeroSection slider background regression (web)', () => {
     const lastArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]
     const lastProps = (lastArgs as any)?.[0]
     expect(lastProps).toBeTruthy()
-    expect(lastProps.blurBackground).toBe(true)
+    expect(lastProps.blurBackground).toBe(false)
     expect(lastProps.preloadCount).toBe(1)
     expect(lastProps.controlsVisible).toBe(false)
+    expect(lastProps.skipFirstSlideImage).toBe(false)
   })
 
   it('keeps the interactive web slider hidden until the LCP overlay handoff finishes', async () => {

@@ -50,6 +50,8 @@ export default function TravelHeroInteractiveSlider({
 }) {
   const Slider = getSliderComponent();
   const FullscreenGallery = getFullscreenGallery();
+  const shouldBlurBackground = Platform.OS !== 'web';
+  const handleCloseFullscreen = onCloseFullscreen ?? (() => undefined);
 
   return (
     <>
@@ -63,7 +65,7 @@ export default function TravelHeroInteractiveSlider({
             showDots={isMobile}
             autoPlay={false}
             preloadCount={preloadCount}
-            blurBackground
+            blurBackground={shouldBlurBackground}
             aspectRatio={aspectRatio}
             fillContainer
             fit="contain"
@@ -83,7 +85,7 @@ export default function TravelHeroInteractiveSlider({
               .filter((img) => !!img.url)
               .map((img) => ({ url: img.url! }))}
             initialIndex={fullscreenIndex}
-            onClose={onCloseFullscreen}
+            onClose={handleCloseFullscreen}
           />
         </Suspense>
       ) : null}

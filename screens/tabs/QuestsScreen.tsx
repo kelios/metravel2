@@ -1217,18 +1217,19 @@ export default function QuestsScreen() {
                 {/* Cities grouped by country - adventure themed */}
                 {citiesByCountry.map((group) => {
                     const isCollapsed = collapsedCountryCodes[group.code] ?? false;
+                    const countryQuestCount = group.cities.reduce((acc, city) => acc + (cityQuestCountById[city.id] || 0), 0);
                     return (
                         <View key={group.code} style={s.cityListSection as ViewStyle}>
                             <Pressable
                                 onPress={() => handleToggleCountryGroup(group.code)}
                                 style={s.countryHeader as ViewStyle}
                                 accessibilityRole="button"
-                                accessibilityLabel={`${isCollapsed ? 'Развернуть' : 'Свернуть'} группу ${group.name || group.code}`}
+                                accessibilityLabel={`${isCollapsed ? 'Развернуть' : 'Свернуть'} группу ${group.name || group.code}, ${pluralizeQuest(countryQuestCount)}`}
                                 accessibilityState={{ expanded: !isCollapsed }}
                             >
                                 <Text style={s.countryLabel as TextStyle}>{group.name}</Text>
                                 <View style={s.countryHeaderActions as ViewStyle}>
-                                    <Text style={s.countryCount as TextStyle}>{group.cities.length}</Text>
+                                    <Text style={s.countryCount as TextStyle}>{pluralizeQuest(countryQuestCount)}</Text>
                                     <Feather
                                         name={isCollapsed ? 'chevron-right' : 'chevron-down'}
                                         size={16}
