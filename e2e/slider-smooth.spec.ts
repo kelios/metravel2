@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
+import { preacceptCookies, gotoWithRetry, waitForMainListRender } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
 /**
@@ -10,7 +10,8 @@ async function navigateToTravelWithSlider(
   maxCards = 5
 ): Promise<boolean> {
   await gotoWithRetry(page, getTravelsListPath());
-  const cards = page.locator('[data-testid="travel-card-link"]');
+  await waitForMainListRender(page);
+  const cards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
   await cards.first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
   const count = await cards.count();
   if (count === 0) return false;
@@ -18,6 +19,7 @@ async function navigateToTravelWithSlider(
   for (let i = 0; i < Math.min(count, maxCards); i++) {
     if (i > 0) {
       await gotoWithRetry(page, getTravelsListPath());
+      await waitForMainListRender(page);
       await cards.first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
     }
 
@@ -48,10 +50,15 @@ test.describe('@smoke Slider smoothness', () => {
 
     const hasSlider = await navigateToTravelWithSlider(page);
     if (!hasSlider) {
-      const cards = page.locator('[data-testid="travel-card-link"]');
+      const cards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
       const hasAnyCard = (await cards.count()) > 0;
       if (!hasAnyCard) {
-        await expect(page.locator('text=/Пока нет путешествий|Найдено:\\s*0/i').first()).toBeVisible();
+        await Promise.any([
+          page.waitForSelector('text=Пока нет путешествий', { timeout: 15_000 }),
+          page.waitForSelector('text=Ничего не найдено', { timeout: 15_000 }),
+          page.waitForSelector('[data-testid="results-count-wrapper"], [testID="results-count-wrapper"]', { timeout: 15_000 }),
+          page.waitForSelector('text=Результаты', { timeout: 15_000 }),
+        ]);
         return;
       }
 

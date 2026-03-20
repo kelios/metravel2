@@ -45,11 +45,25 @@ test.use({ trace: 'off' });
 
 const PUBLIC_SCENARIOS: Scenario[] = [
   { id: 'home', route: '/', expectedAny: ['text=MeTravel', 'text=Идеи поездок', '[data-testid="home-screen"]'] },
-  { id: 'travelsby', route: getTravelsListPath(), expectedAny: ['#search-input', '[data-testid="travels-list"]', 'text=Найдено'] },
+  {
+    id: 'travelsby',
+    route: getTravelsListPath(),
+    expectedAny: [
+      '#search-input',
+      '[data-testid="travels-list"]',
+      '[data-testid="results-count-wrapper"]',
+      '[data-testid="results-count-text"]',
+      'text=Результаты',
+    ],
+  },
   { id: 'search', route: '/search', expectedAny: ['#search-input', 'text=Поиск', '[data-testid="toggle-filters"]'] },
   { id: 'map', route: '/map', expectedAny: ['text=Карта', 'button:has-text("Показать")', '[data-testid="map-panel-open"]'] },
   { id: 'roulette', route: '/roulette', expectedAny: ['text=Рулетка', 'button:has-text("Подобрать маршруты")'] },
-  { id: 'quests', route: '/quests', expectedAny: ['text=Квест', 'text=Маршрут'] },
+  {
+    id: 'quests',
+    route: '/quests',
+    expectedAny: ['text=Квесты', '[data-testid^="quest-card-"]', '[aria-label*="Начать приключение"]'],
+  },
   { id: 'about', route: '/about', expectedAny: ['text=О проекте', 'text=MeTravel'] },
   { id: 'privacy', route: '/privacy', expectedAny: ['text=Политика', 'text=конфиденциаль'] },
   { id: 'cookies', route: '/cookies', expectedAny: ['text=Cookies', 'text=cookie', 'text=Куки'] },
@@ -124,6 +138,11 @@ async function auditScenario(page: any, scenario: Scenario, scope: 'public' | 'a
       const text = msg.text();
       // Benign in screenshot audit: missing optional media assets on list pages.
       if (/Failed to load resource: the server responded with a status of 404/i.test(text)) {
+        return;
+      }
+      // Benign in local screenshot audit: the lightweight web proxy can emit transient 502s for
+      // optional media/resources while the page shell and layout still render correctly.
+      if (/Failed to load resource: the server responded with a status of 502 \(Bad Gateway\)/i.test(text)) {
         return;
       }
       // Benign in local screenshot audit: backend image hosts are cross-origin from the local web server

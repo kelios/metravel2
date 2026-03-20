@@ -4,7 +4,7 @@ import { LAYOUT } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
-  const panelWidth = isMobile ? '100%' : Math.max(Math.min(windowWidth - 24, 480), 280);
+  const panelWidth = isMobile ? '100%' : Math.max(Math.min(windowWidth - 32, 420), 280);
   const windowHeight = Dimensions.get('window').height;
   const bottomDockReserve = Platform.OS === 'web' && isMobile ? (LAYOUT?.tabBarHeight ?? 56) : 0;
 
@@ -12,7 +12,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     card: {
       backgroundColor: colors.surface,
       borderRadius: isMobile ? 0 : 20,
-      padding: isMobile ? 0 : 16,
+      padding: isMobile ? 0 : 12,
       width: panelWidth,
       maxWidth: '100%',
       height: '100%',
@@ -164,7 +164,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexGrow: 1,
     },
     contentContainer: {
-      paddingBottom: 72 + bottomDockReserve,
+      paddingBottom: 64 + bottomDockReserve,
       paddingTop: isMobile ? 4 : 0,
       paddingHorizontal: isMobile ? 10 : 0,
       flexGrow: 1,
@@ -178,32 +178,32 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     sectionCard: {
       backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
-      gap: 12,
+      borderRadius: 14,
+      padding: isMobile ? 16 : 12,
+      marginBottom: 10,
+      gap: 10,
       borderWidth: 0,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            boxShadow: '0 1px 8px rgba(0,0,0,0.05)',
             transition: 'box-shadow 0.2s ease',
           } as any)
         : DESIGN_TOKENS.shadowsNative.light),
     },
     blockHeader: {
-      gap: 3,
+      gap: 2,
       marginBottom: 0,
     },
     blockTitle: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '800',
       color: colors.text,
       letterSpacing: -0.3,
     },
     blockHint: {
-      fontSize: 11,
+      fontSize: 10,
       color: colors.textMuted,
-      lineHeight: 15,
+      lineHeight: 13,
     },
     dualInputRow: {
       flexDirection: 'row',
@@ -289,15 +289,15 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       lineHeight: 15,
     },
     input: {
-      height: 40,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      fontSize: 14,
+      height: 36,
+      borderRadius: 9,
+      paddingHorizontal: 10,
+      fontSize: 13,
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
       ...DESIGN_TOKENS.shadowsNative.light,
     },
     chipsContainer: {
-      marginTop: 8,
+      marginTop: 6,
     },
     chipsContent: {
       alignItems: 'center',
@@ -307,11 +307,11 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.backgroundSecondary,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
-      maxWidth: 140,
-      marginRight: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 18,
+      maxWidth: 128,
+      marginRight: 6,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
@@ -367,15 +367,15 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     radiusQuickOptions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 10,
-      marginTop: 8,
+      gap: 8,
+      marginTop: 6,
     },
     radiusOptionButton: {
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      minHeight: 44,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      minHeight: 38,
       minWidth: 56,
-      borderRadius: 22,
+      borderRadius: 18,
       borderWidth: 0,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
@@ -392,12 +392,12 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       ...(Platform.OS === 'web'
         ? ({
             boxShadow: '0 4px 16px rgba(255, 146, 43, 0.35)',
-            transform: 'scale(1.05)',
+            transform: 'scale(1.03)',
           } as any)
         : null),
     },
     radiusOptionText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '700',
       color: colors.textMuted,
     },
@@ -407,10 +407,10 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     transportTabs: {
       flexDirection: 'row',
       backgroundColor: colors.backgroundSecondary,
-      borderRadius: 14,
-      padding: 4,
+      borderRadius: 12,
+      padding: 3,
       borderWidth: 0,
-      gap: 4,
+      gap: 3,
       ...(Platform.OS === 'web'
         ? ({
             boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
@@ -428,8 +428,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     routeInfo: {
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
-      borderRadius: 10,
-      padding: 12,
+      borderRadius: 9,
+      padding: 10,
       ...DESIGN_TOKENS.shadowsNative.light,
     },
     routeInfoRow: {
@@ -759,27 +759,27 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontSize: 13,
     },
     accordionHeader: {
-      marginTop: 4,
-      marginBottom: 6,
-      paddingVertical: 10,
+      marginTop: 2,
+      marginBottom: 4,
+      paddingVertical: 8,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
     accordionTitle: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
       color: colors.text,
     },
     mapControlsRow: {
       flexDirection: 'row',
       flexWrap: 'nowrap',
-      gap: 8,
+      gap: 6,
       alignItems: 'center',
-      marginTop: 8,
+      marginTop: 6,
     },
     mapLayersSection: {
-      marginTop: 10,
+      marginTop: 8,
     },
     mapLayersLabel: {
       fontSize: 12,
@@ -794,20 +794,20 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginTop: 8,
     },
     mapToggleList: {
-      gap: 6,
-      marginTop: 6,
+      gap: 5,
+      marginTop: 5,
     },
     mapToggleRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      gap: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 9,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      gap: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 11,
       backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
     mapToggleRowPressed: {
       backgroundColor: colors.surfaceMuted ?? colors.backgroundSecondary,

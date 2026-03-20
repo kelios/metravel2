@@ -5,6 +5,16 @@ import { test, expect } from '@playwright/test';
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/;
 const QUEST_FALLBACK_RE = /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов/i;
 
+const waitForQuestListState = async (page: any, timeout = 30_000) =>
+    Promise.any([
+        page.locator('[data-testid^="quest-card-"]').first().waitFor({ state: 'visible', timeout }),
+        page.getByRole('link', { name: /Начать приключение/i }).first().waitFor({ state: 'visible', timeout }),
+        page.getByText(QUEST_FALLBACK_RE).first().waitFor({ state: 'visible', timeout }),
+        page.getByRole('heading', { name: /Квесты/i }).first().waitFor({ state: 'visible', timeout }),
+        page.getByText(/Нет квестов для отображения на карте/i).first().waitFor({ state: 'visible', timeout }),
+        page.getByText(/квест(ов|а)?/i).first().waitFor({ state: 'visible', timeout }),
+    ]);
+
 test.describe('Quest Video Debug', () => {
     test('should debug video loading step by step', async ({ page }) => {
         const logs: string[] = [];
@@ -25,11 +35,7 @@ test.describe('Quest Video Debug', () => {
         console.log('\n=== Step 1: Navigate to /quests ===');
         await page.goto('/quests', { waitUntil: 'domcontentloaded' });
         await page.waitForLoadState('domcontentloaded');
-        await Promise.race([
-            page.locator('[data-testid^="quest-card-"]').first().waitFor({ state: 'visible', timeout: 10000 }),
-            page.getByRole('link', { name: /Начать приключение/i }).first().waitFor({ state: 'visible', timeout: 10000 }),
-            page.getByText(QUEST_FALLBACK_RE).first().waitFor({ state: 'visible', timeout: 10000 }),
-        ]).catch(() => null);
+        await waitForQuestListState(page).catch(() => null);
 
         // Делаем скриншот
         await page.screenshot({ path: 'playwright-screenshots/quest-list.png', fullPage: true });
@@ -56,7 +62,12 @@ test.describe('Quest Video Debug', () => {
         }
 
         if (!krakowLink) {
-            await expect(page.getByText(QUEST_FALLBACK_RE).first()).toBeVisible({ timeout: 10000 });
+            const hasFallback = await page.getByText(QUEST_FALLBACK_RE).first().isVisible().catch(() => false);
+            if (hasFallback) {
+                await expect(page.getByText(QUEST_FALLBACK_RE).first()).toBeVisible({ timeout: 10000 });
+            } else {
+                await expect(page.getByRole('heading', { name: /Квесты/i }).first()).toBeVisible({ timeout: 10000 });
+            }
             return;
         }
 

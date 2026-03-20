@@ -1,7 +1,5 @@
 import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
-import { Share } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
 import { TravelFormData } from '@/types/types';
@@ -195,7 +193,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: false,
     };
 
-    const { getByText, getAllByTestId } = render(
+    const { getByText } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -212,18 +210,16 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(getByText('Одобрить модерацию')).toBeTruthy();
     expect(getByText('Отклонить')).toBeTruthy();
     expect(getByText('Instagram публикация')).toBeTruthy();
-    expect(getAllByTestId('instagram-preview-image')).toHaveLength(1);
+    expect(getByText('Скопировать текст')).toBeTruthy();
+    expect(getByText('Опубликовать в Instagram')).toBeTruthy();
   });
 
-  it('shows manual instagram share button for regular user and opens native share flow', async () => {
-    const shareSpy = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
-
-    const { getByLabelText, queryByText } = render(
+  it('hides the instagram publication block for regular users', () => {
+    const { queryByText } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
         formData={baseFormData}
-        countries={[{ country_id: '1', title_ru: 'Беларусь' }]}
         setFormData={jest.fn()}
         isSuperAdmin={false}
         onManualSave={jest.fn()}
@@ -232,22 +228,9 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    expect(getByLabelText('Поделиться в свой Instagram')).toBeTruthy();
-    expect(queryByText('Аккаунт для публикации')).toBeNull();
+    expect(queryByText('Instagram публикация')).toBeNull();
+    expect(queryByText('Скопировать текст')).toBeNull();
     expect(queryByText('Опубликовать в Instagram')).toBeNull();
-
-    await act(async () => {
-      fireEvent.press(getByLabelText('Поделиться в свой Instagram'));
-    });
-
-    expect(Clipboard.setStringAsync).toHaveBeenCalled();
-    expect(shareSpy).toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'success',
-        text1: 'Текст скопирован',
-      })
-    );
   });
 
   it('publishes to instagram for superadmin with generated payload', async () => {

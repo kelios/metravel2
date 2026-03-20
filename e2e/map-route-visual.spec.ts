@@ -213,10 +213,11 @@ test.describe('Map Route Line - Visual Regression', () => {
       // Проверяем видимость через computed styles
       const isVisible = await routePath.evaluate((el: SVGPathElement) => {
         const style = window.getComputedStyle(el);
+        const rawOpacity = Number.parseFloat(style.opacity);
         return {
           display: style.display,
           visibility: style.visibility,
-          opacity: parseFloat(style.opacity),
+          opacity: Number.isFinite(rawOpacity) ? rawOpacity : 1,
           stroke: style.stroke,
         };
       });

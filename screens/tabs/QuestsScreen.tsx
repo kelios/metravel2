@@ -88,13 +88,13 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
     const isMobileW = screenWidth < 768;
     const isTablet = screenWidth >= 768 && screenWidth < 1024;
     const SIDEBAR_WIDTH = isTablet ? 300 : 340;
-    const headerPadding = isMobileW ? spacing.lg : spacing.xl;
-    const headerTopPadding = isMobileW ? spacing.xl : spacing.xxl;
-    const sectionPaddingX = isMobileW ? spacing.md : spacing.lg;
-    const sectionPaddingY = isMobileW ? spacing.sm : spacing.md;
-    const countryGapTop = isMobileW ? spacing.md : spacing.lg;
-    const cityItemVertical = isMobileW ? spacing.xs + 2 : spacing.sm + 2;
-    const cityIconSize = isMobileW ? 34 : 40;
+    const headerPadding = isMobileW ? spacing.md : spacing.lg;
+    const headerTopPadding = isMobileW ? spacing.lg : spacing.xl;
+    const sectionPaddingX = isMobileW ? spacing.sm : spacing.md;
+    const sectionPaddingY = isMobileW ? spacing.xxs : spacing.xs;
+    const countryGapTop = isMobileW ? spacing.xs : spacing.sm;
+    const cityItemVertical = isMobileW ? spacing.xxs : spacing.xs;
+    const cityIconSize = isMobileW ? 28 : 32;
     
     return StyleSheet.create({
         /* ---- Root Layout (Two-column, Premium) ---- */
@@ -133,7 +133,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         sidebarHeader: {
             padding: headerPadding,
             paddingTop: headerTopPadding,
-            paddingBottom: isMobileW ? spacing.lg : spacing.xl,
+            paddingBottom: isMobileW ? spacing.md : spacing.lg,
             borderBottomWidth: 0,
             borderBottomColor: colors.borderLight,
             ...Platform.select({
@@ -144,16 +144,16 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         sidebarTitle: {
             color: colors.text,
-            fontSize: isMobileW ? 24 : 32,
+            fontSize: isMobileW ? 20 : 26,
             fontWeight: '800',
-            marginBottom: isMobileW ? spacing.xs : spacing.sm,
-            letterSpacing: -0.8,
-            lineHeight: isMobileW ? 30 : 38,
+            marginBottom: spacing.xxs,
+            letterSpacing: -0.6,
+            lineHeight: isMobileW ? 26 : 32,
         },
         sidebarSubtitle: {
             color: colors.textMuted,
-            fontSize: isMobileW ? typography.sizes.sm : typography.sizes.md,
-            lineHeight: isMobileW ? 21 : 24,
+            fontSize: isMobileW ? typography.sizes.xs : typography.sizes.sm,
+            lineHeight: isMobileW ? 18 : 20,
             letterSpacing: -0.1,
             maxWidth: 280,
             fontWeight: '400',
@@ -161,14 +161,14 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         sidebarActions: {
             flexDirection: 'row',
             gap: spacing.sm,
-            marginTop: isMobileW ? spacing.md : spacing.lg,
+            marginTop: isMobileW ? spacing.sm : spacing.md,
         },
         actionBtn: {
             flexDirection: 'row',
-            gap: spacing.sm,
+            gap: spacing.xs,
             backgroundColor: colors.brand,
-            paddingHorizontal: spacing.lg,
-            paddingVertical: spacing.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
             borderRadius: radii.full,
             alignItems: 'center',
             justifyContent: 'center',
@@ -191,7 +191,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         actionBtnText: {
             color: colors.textOnPrimary,
             fontWeight: '600',
-            fontSize: typography.sizes.md,
+            fontSize: typography.sizes.sm,
         },
         actionBtnTextSecondary: {
             color: colors.text,
@@ -204,11 +204,11 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         cityListLabel: {
             color: colors.textMuted,
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: '700',
             textTransform: 'uppercase',
-            letterSpacing: 1.2,
-            marginBottom: isMobileW ? spacing.sm : spacing.md,
+            letterSpacing: 1.0,
+            marginBottom: spacing.xs,
             paddingHorizontal: spacing.xs,
             opacity: 0.8,
         },
@@ -223,9 +223,9 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             alignItems: 'center',
             justifyContent: 'space-between',
             marginTop: countryGapTop,
-            marginBottom: isMobileW ? spacing.xs : spacing.sm,
+            marginBottom: spacing.xxs,
             paddingHorizontal: spacing.xs,
-            paddingVertical: isMobileW ? spacing.xxs : spacing.xs,
+            paddingVertical: spacing.xxs,
             borderRadius: radii.md,
             ...Platform.select({
                 web: {
@@ -276,9 +276,9 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingVertical: cityItemVertical,
-            paddingHorizontal: isMobileW ? spacing.sm : spacing.md,
-            borderRadius: radii.lg,
-            marginBottom: spacing.xxs,
+            paddingHorizontal: isMobileW ? spacing.xs : spacing.sm,
+            borderRadius: radii.md,
+            marginBottom: 2,
             ...Platform.select({
                 web: { 
                     cursor: 'pointer', 
@@ -298,7 +298,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         cityItemLeft: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: isMobileW ? spacing.sm : spacing.md,
+            gap: spacing.xs,
             flex: 1,
         },
         cityItemIcon: {
@@ -322,7 +322,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         cityItemText: {
             color: colors.text,
-            fontSize: isMobileW ? typography.sizes.sm : typography.sizes.md,
+            fontSize: typography.sizes.sm,
             fontWeight: '500',
             letterSpacing: -0.2,
         },
@@ -332,10 +332,10 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         cityItemCount: {
             backgroundColor: colors.backgroundTertiary,
-            paddingHorizontal: spacing.sm,
-            paddingVertical: spacing.xxs,
+            paddingHorizontal: spacing.xs,
+            paddingVertical: 2,
             borderRadius: radii.full,
-            minWidth: 28,
+            minWidth: 24,
             alignItems: 'center',
         },
         cityItemCountActive: {
@@ -360,10 +360,10 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             flexDirection: 'row',
             alignItems: 'center',
             flexWrap: 'wrap',
-            gap: spacing.sm,
+            gap: spacing.xs,
             paddingHorizontal: sectionPaddingX,
-            paddingBottom: isMobileW ? spacing.md : spacing.lg,
-            paddingTop: isMobileW ? spacing.xs : spacing.sm,
+            paddingBottom: spacing.sm,
+            paddingTop: spacing.xs,
         },
         radiusLabel: {
             color: colors.textMuted,
@@ -372,13 +372,13 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             marginRight: spacing.xs,
         },
         radiusChip: {
-            paddingHorizontal: spacing.md,
-            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.sm,
+            paddingVertical: spacing.xs,
             borderRadius: radii.full,
             backgroundColor: colors.backgroundSecondary,
             borderWidth: 0,
-            minWidth: 56,
-            minHeight: 36,
+            minWidth: 48,
+            minHeight: 30,
             alignItems: 'center',
             justifyContent: 'center',
             ...Platform.select({
@@ -399,7 +399,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         radiusChipText: {
             color: colors.textMuted,
-            fontSize: typography.sizes.sm,
+            fontSize: typography.sizes.xs,
             fontWeight: '600',
         },
         radiusChipTextActive: {
@@ -422,8 +422,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             justifyContent: 'space-between',
             alignItems: 'flex-start',
             paddingHorizontal: headerPadding,
-            paddingTop: headerTopPadding,
-            paddingBottom: isMobileW ? spacing.md : spacing.lg,
+            paddingTop: isMobileW ? spacing.lg : spacing.xl,
+            paddingBottom: isMobileW ? spacing.sm : spacing.md,
             borderBottomWidth: 0,
             borderBottomColor: colors.borderLight,
             backgroundColor: colors.background,
@@ -440,20 +440,20 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         contentTitle: {
             color: colors.text,
-            fontSize: isMobileW ? 24 : 36,
+            fontSize: isMobileW ? 20 : 28,
             fontWeight: '800',
-            letterSpacing: -0.8,
-            lineHeight: isMobileW ? 30 : 44,
+            letterSpacing: -0.6,
+            lineHeight: isMobileW ? 26 : 34,
         },
         contentCount: {
             color: colors.textMuted,
-            fontSize: typography.sizes.md,
-            marginTop: spacing.xs,
+            fontSize: typography.sizes.sm,
+            marginTop: 2,
             fontWeight: '500',
         },
         contentBody: {
-            padding: isMobileW ? spacing.lg : spacing.xl,
-            paddingTop: isMobileW ? spacing.md : spacing.lg,
+            padding: isMobileW ? spacing.md : spacing.lg,
+            paddingTop: isMobileW ? spacing.sm : spacing.md,
         },
         mapSection: {
             width: '100%',
@@ -1155,9 +1155,9 @@ export default function QuestsScreen() {
                         accessibilityLabel={viewMode === 'map' ? 'Показать квесты списком' : 'Показать квесты на карте'}
                         onPress={() => setViewMode((prev) => (prev === 'map' ? 'list' : 'map'))}
                     >
-                        <Feather name={viewMode === 'map' ? 'list' : 'compass'} size={16} color={viewMode === 'map' ? colors.text : colors.textOnPrimary} />
+                        <Feather name={viewMode === 'map' ? 'list' : 'map'} size={16} color={viewMode === 'map' ? colors.text : colors.textOnPrimary} />
                         <Text style={[s.actionBtnText as TextStyle, viewMode === 'map' && (s.actionBtnTextSecondary as TextStyle)]}>
-                            {viewMode === 'map' ? 'Списком' : 'Карта тайн'}
+                            {viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
                         </Text>
                     </Pressable>
                 </View>
@@ -1165,12 +1165,12 @@ export default function QuestsScreen() {
 
             <ScrollView
                 style={s.sidebarScroll as ViewStyle}
-                contentContainerStyle={{ paddingBottom: spacing.xl }}
+                contentContainerStyle={{ paddingBottom: spacing.md }}
                 showsVerticalScrollIndicator
             >
                 {/* Nearby option - adventure themed */}
                 <View style={s.cityListSection as ViewStyle}>
-                    <Text style={s.cityListLabel as TextStyle}>Начни путешествие</Text>
+                    <Text style={s.cityListLabel as TextStyle}>Выбор местоположения</Text>
                     <Pressable
                         onPress={() => handleSelectCity(NEARBY_ID)}
                         style={[s.cityItem as ViewStyle, selectedCityId === NEARBY_ID && (s.cityItemActive as ViewStyle)]}
@@ -1183,7 +1183,7 @@ export default function QuestsScreen() {
                                 <Feather name="navigation" size={18} color={selectedCityId === NEARBY_ID ? colors.textOnPrimary : colors.textMuted} />
                             </View>
                             <Text style={[s.cityItemText as TextStyle, selectedCityId === NEARBY_ID && (s.cityItemTextActive as TextStyle)]}>
-                                Тайны рядом
+                                Рядом со мной
                             </Text>
                         </View>
                     </Pressable>
@@ -1597,11 +1597,8 @@ function QuestCard({
                 {/* Gradient overlay for text readability */}
                 <View style={[s.questCardGradient as ViewStyle, { pointerEvents: 'none' }]} />
                 
-                {/* Magical glow at bottom (visible on hover) */}
-                <View style={[
-                    s.questCardMagicGlow as ViewStyle,
-                    isHovered && (s.questCardMagicGlowVisible as ViewStyle),
-                ]} />
+                {/* Magical glow at bottom */}
+                <View style={s.questCardMagicGlow as ViewStyle} />
                 
                 {/* Distance badge (for nearby mode) */}
                 {distanceText && (

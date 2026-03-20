@@ -20,11 +20,14 @@ test.describe('Filters', () => {
     await page.waitForTimeout(800);
 
     // The app may show cards, skeletons, or empty state depending on data.
-    await Promise.race([
-      page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }),
-      page.waitForSelector('[data-testid="travel-card-skeleton"]', { timeout: 30_000 }),
+    await Promise.any([
+      page.waitForSelector('[data-testid="travel-card-link"], [testID="travel-card-link"]', { timeout: 30_000 }),
+      page.waitForSelector('[data-testid="travel-card-skeleton"], [testID="travel-card-skeleton"]', { timeout: 30_000 }),
       page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
-      page.waitForSelector('text=Найдено', { timeout: 30_000 }),
+      page.waitForSelector('text=Ничего не найдено', { timeout: 30_000 }),
+      page.waitForSelector('[data-testid="results-count-wrapper"], [testID="results-count-wrapper"]', { timeout: 30_000 }),
+      page.waitForSelector('[data-testid="results-count-text"], [testID="results-count-text"]', { timeout: 30_000 }),
+      page.waitForSelector('text=Результаты', { timeout: 30_000 }),
     ]);
 
     await expect(yearInput).toHaveValue('2024');

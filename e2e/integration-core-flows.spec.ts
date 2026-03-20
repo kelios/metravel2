@@ -56,6 +56,10 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
       .then(() => true)
       .catch(() => null),
     page
+      .waitForSelector('text=Ничего не найдено', { timeout })
+      .then(() => true)
+      .catch(() => null),
+    page
       // Map page often shows "0 мест" in the list tab header when no items match.
       .waitForSelector('text=/\\b0\\s+мест\\b/i', { timeout })
       .then(() => true)
@@ -66,16 +70,15 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
       .then(() => true)
       .catch(() => null),
     page
-      .waitForSelector('text=Найдено: 0', { timeout })
+      .waitForSelector('[data-testid="results-count-wrapper"], [testID="results-count-wrapper"]', { timeout })
       .then(() => true)
       .catch(() => null),
     page
-      .waitForSelector('text=Найдено: 0 путешествия', { timeout })
+      .waitForSelector('[data-testid="results-count-text"], [testID="results-count-text"]', { timeout })
       .then(() => true)
       .catch(() => null),
     page
-      // Generic "Найдено:" header rendered by the map travels tab.
-      .waitForSelector('text=/Найдено:\\s*\\d+/i', { timeout })
+      .waitForSelector('text=Результаты', { timeout })
       .then(() => true)
       .catch(() => null),
     page

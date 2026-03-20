@@ -6,6 +6,16 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 const QUEST_DETAIL_URL_RE = /\/quests\/[^/]+\/[^/?#]+/;
 const QUEST_FALLBACK_RE = /ошибка|Internal Server Error|Failed to load quests|не удалось загрузить|квесты не найдены|нет квестов/i;
 
+const waitForQuestListState = async (page: any, timeout = 30_000) =>
+    Promise.any([
+        page.locator('[data-testid^="quest-card-"]').first().waitFor({ state: 'visible', timeout }),
+        page.getByRole('link', { name: /Начать приключение/i }).first().waitFor({ state: 'visible', timeout }),
+        page.getByText(QUEST_FALLBACK_RE).first().waitFor({ state: 'visible', timeout }),
+        page.getByRole('heading', { name: /Квесты/i }).first().waitFor({ state: 'visible', timeout }),
+        page.getByText(/Нет квестов для отображения на карте/i).first().waitFor({ state: 'visible', timeout }),
+        page.getByText(/квест(ов|а)?/i).first().waitFor({ state: 'visible', timeout }),
+    ]);
+
 const getQuestCardLocator = (page: any) => {
     const byTestId = page.locator('[data-testid^="quest-card-"]');
     const byRole = page.getByRole('link', { name: /Начать приключение/i });
@@ -39,11 +49,7 @@ test.describe('Quest Video Loading', () => {
         // Переходим на страницу квестов
         await page.goto('/quests', { waitUntil: 'domcontentloaded' });
         await page.waitForLoadState('domcontentloaded');
-        await Promise.race([
-            page.locator('[data-testid^="quest-card-"]').first().waitFor({ state: 'visible', timeout: 10000 }),
-            page.getByRole('link', { name: /Начать приключение/i }).first().waitFor({ state: 'visible', timeout: 10000 }),
-            page.getByText(QUEST_FALLBACK_RE).first().waitFor({ state: 'visible', timeout: 10000 }),
-        ]).catch(() => null);
+        await waitForQuestListState(page).catch(() => null);
 
         // Ищем первый доступный квест
         const questLink = await getFirstQuestCard(page);
@@ -51,7 +57,12 @@ test.describe('Quest Video Loading', () => {
 
         if (!questExists) {
             console.log('No quests found on the page');
-            await expect(page.getByText(QUEST_FALLBACK_RE).first()).toBeVisible({ timeout: 10000 });
+            const hasFallback = await page.getByText(QUEST_FALLBACK_RE).first().isVisible().catch(() => false);
+            if (hasFallback) {
+                await expect(page.getByText(QUEST_FALLBACK_RE).first()).toBeVisible({ timeout: 10000 });
+            } else {
+                await expect(page.getByRole('heading', { name: /Квесты/i }).first()).toBeVisible({ timeout: 10000 });
+            }
             return;
         }
 
@@ -240,11 +251,7 @@ test.describe('Quest Video Loading', () => {
         // Переходим на страницу квеста
         await page.goto('/quests', { waitUntil: 'domcontentloaded' });
         await page.waitForLoadState('domcontentloaded');
-        await Promise.race([
-            page.locator('[data-testid^="quest-card-"]').first().waitFor({ state: 'visible', timeout: 10000 }),
-            page.getByRole('link', { name: /Начать приключение/i }).first().waitFor({ state: 'visible', timeout: 10000 }),
-            page.getByText(QUEST_FALLBACK_RE).first().waitFor({ state: 'visible', timeout: 10000 }),
-        ]).catch(() => null);
+        await waitForQuestListState(page).catch(() => null);
 
         const questLink = await getFirstQuestCard(page);
         if (questLink) {

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
+import { gotoWithRetry, preacceptCookies, waitForMainListRender } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
 type WebVitalsResult = {
@@ -31,6 +31,20 @@ const INP_MAX_MS = process.env.CI
   ? getNumberEnv('E2E_INP_MAX_MS', 200)
   : getNumberEnv('E2E_INP_MAX_MS', 500);
 const NETWORKIDLE_TIMEOUT_MS = getNumberEnv('E2E_WEB_VITALS_NETWORKIDLE_TIMEOUT_MS', 8000);
+
+async function recoverTravelsListLoadError(page: any) {
+  const errorTitle = page.getByText('Ошибка загрузки', { exact: true }).first();
+  const retryButton = page.getByRole('button', { name: 'Повторить' }).first();
+
+  if (!(await errorTitle.isVisible().catch(() => false))) {
+    return;
+  }
+
+  if (await retryButton.isVisible().catch(() => false)) {
+    await retryButton.click();
+    await waitForMainListRender(page);
+  }
+}
 
 test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
   test('travels page stays stable and fast', async ({ page }: any) => {
@@ -169,17 +183,8 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
     // NOTE: In this app, the travels list route is '/'.
     // '/travels/[param]' is the details page.
     await gotoWithRetry(page, getTravelsListPath());
-
-    // Wait for some travel cards or skeletons to render.
-    // The list can be empty in local/dev environments.
-    // So we treat either (cards/skeleton) OR (empty state) as a successful "page rendered" signal.
-    await Promise.race([
-      page.waitForSelector('[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"]', {
-        timeout: 30_000,
-      }),
-      page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
-      page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
-    ]);
+    await waitForMainListRender(page);
+    await recoverTravelsListLoadError(page);
 
     // Give LCP observer some time to settle.
     await page.waitForLoadState('networkidle', { timeout: NETWORKIDLE_TIMEOUT_MS }).catch(() => null);
