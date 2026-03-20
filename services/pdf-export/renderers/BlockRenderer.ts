@@ -14,22 +14,22 @@ export class BlockRenderer {
     switch (layout) {
       case 'float-left':
         return `
-          width: 62%;
-          max-width: 62%;
-          margin: calc(${this.theme.spacing.blockSpacing} * 1.15) auto calc(${this.theme.spacing.blockSpacing} * 1.3) 0;
+          width: 56%;
+          max-width: 56%;
+          margin: calc(${this.theme.spacing.blockSpacing} * 0.9) auto calc(${this.theme.spacing.blockSpacing} * 1.0) 0;
         `;
       case 'float-right':
         return `
-          width: 62%;
-          max-width: 62%;
-          margin: calc(${this.theme.spacing.blockSpacing} * 1.15) 0 calc(${this.theme.spacing.blockSpacing} * 1.3) auto;
+          width: 56%;
+          max-width: 56%;
+          margin: calc(${this.theme.spacing.blockSpacing} * 0.9) 0 calc(${this.theme.spacing.blockSpacing} * 1.0) auto;
         `;
       case 'single-wide':
       default:
         return `
           width: 100%;
           max-width: 100%;
-          margin: calc(${this.theme.spacing.blockSpacing} * 1.2) auto calc(${this.theme.spacing.blockSpacing} * 1.35);
+          margin: calc(${this.theme.spacing.blockSpacing} * 0.95) auto calc(${this.theme.spacing.blockSpacing} * 1.05);
         `;
     }
   }
@@ -56,8 +56,8 @@ export class BlockRenderer {
         page-break-inside: avoid;
         break-inside: avoid;
         margin-bottom: 0;
-        padding: 3.5mm;
-        border-radius: calc(${this.theme.blocks.borderRadius} * 1.6);
+        padding: 2.5mm;
+        border-radius: calc(${this.theme.blocks.borderRadius} * 1.4);
         background: ${this.theme.colors.surfaceAlt};
         border: 1px solid ${this.theme.colors.borderLight};
         box-shadow: ${this.theme.blocks.shadow};
@@ -72,7 +72,7 @@ export class BlockRenderer {
             width: 100%;
             height: auto;
             display: block;
-            border-radius: ${this.theme.blocks.borderRadius};
+            border-radius: calc(${this.theme.blocks.borderRadius} * 0.9);
             box-shadow: ${this.theme.blocks.shadow};
             object-fit: contain;
             ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
@@ -331,12 +331,12 @@ export class BlockRenderer {
         const stackHtml = supporting
           .map((img) =>
             this.renderGalleryImageCard(img, {
-              imageStyle: 'min-height: 42mm; max-height: 52mm;',
+              imageStyle: 'min-height: 36mm; max-height: 44mm;',
             })
           )
           .join('');
         const portraitHtml = this.renderGalleryImageCard(portrait, {
-          imageStyle: 'min-height: 96mm; max-height: 112mm;',
+          imageStyle: 'min-height: 80mm; max-height: 96mm;',
         });
 
         return `
@@ -344,7 +344,7 @@ export class BlockRenderer {
             display: grid;
             grid-template-columns: ${layout === 'grid-mixed-reverse' ? '1.08fr 0.92fr' : '0.92fr 1.08fr'};
             gap: ${this.theme.spacing.elementSpacing};
-            margin: calc(${this.theme.spacing.blockSpacing} * 1.1) 0 calc(${this.theme.spacing.blockSpacing} * 1.35);
+            margin: calc(${this.theme.spacing.blockSpacing} * 0.9) 0 calc(${this.theme.spacing.blockSpacing} * 1.05);
             page-break-inside: avoid;
             break-inside: avoid;
             align-items: stretch;
@@ -360,8 +360,8 @@ export class BlockRenderer {
       const cards = images
         .map((img, index) =>
           this.renderGalleryImageCard(img, {
-            containerStyle: index === 0 ? 'transform: translateY(4mm);' : 'transform: translateY(-4mm);',
-            imageStyle: 'min-height: 66mm; max-height: 74mm;',
+            containerStyle: index === 0 ? 'transform: translateY(3mm);' : 'transform: translateY(-3mm);',
+            imageStyle: 'min-height: 54mm; max-height: 64mm;',
           })
         )
         .join('');
@@ -371,7 +371,7 @@ export class BlockRenderer {
           display: grid;
           grid-template-columns: 1.14fr 0.86fr;
           gap: ${this.theme.spacing.elementSpacing};
-          margin: calc(${this.theme.spacing.blockSpacing} * 1.1) 0 calc(${this.theme.spacing.blockSpacing} * 1.35);
+          margin: calc(${this.theme.spacing.blockSpacing} * 0.9) 0 calc(${this.theme.spacing.blockSpacing} * 1.05);
           page-break-inside: avoid;
           break-inside: avoid;
           align-items: start;
@@ -385,45 +385,45 @@ export class BlockRenderer {
         let imageStyle = '';
 
         if (layout === 'pair-portraits') {
-          imageStyle = 'min-height: 82mm; max-height: 96mm;';
-          containerStyle = index === 0 ? 'transform: translateY(5mm);' : 'transform: translateY(-5mm);';
+          imageStyle = 'min-height: 68mm; max-height: 82mm;';
+          containerStyle = index === 0 ? 'transform: translateY(4mm);' : 'transform: translateY(-4mm);';
         } else if (layout === 'pair-mixed') {
           imageStyle = index === 0
-            ? 'min-height: 70mm; max-height: 80mm;'
-            : 'min-height: 78mm; max-height: 92mm;';
-          containerStyle = index === 0 ? 'transform: translateY(3mm);' : 'transform: translateY(-2mm);';
+            ? 'min-height: 58mm; max-height: 68mm;'
+            : 'min-height: 64mm; max-height: 76mm;';
+          containerStyle = index === 0 ? 'transform: translateY(2mm);' : 'transform: translateY(-2mm);';
         } else if (layout === 'pair-balanced') {
-          imageStyle = 'min-height: 68mm; max-height: 78mm;';
-          containerStyle = index === 0 ? 'transform: translateY(3mm);' : 'transform: translateY(-3mm);';
+          imageStyle = 'min-height: 56mm; max-height: 66mm;';
+          containerStyle = index === 0 ? 'transform: translateY(2mm);' : 'transform: translateY(-2mm);';
         } else if (layout === 'row-2-landscape' || layout === 'row-2-balanced') {
-          imageStyle = 'min-height: 64mm; max-height: 72mm;';
+          imageStyle = 'min-height: 52mm; max-height: 62mm;';
         } else if (layout === 'row-2-portrait') {
-          imageStyle = 'min-height: 78mm; max-height: 90mm;';
+          imageStyle = 'min-height: 64mm; max-height: 76mm;';
         } else if (layout === 'row-2-mixed') {
-          imageStyle = 'min-height: 72mm; max-height: 84mm;';
+          imageStyle = 'min-height: 58mm; max-height: 70mm;';
         } else if (layout === 'column-portraits') {
-          imageStyle = 'min-height: 76mm; max-height: 94mm;';
-          containerStyle = index % 2 === 0 ? 'transform: translateY(3mm);' : 'transform: translateY(-3mm);';
+          imageStyle = 'min-height: 62mm; max-height: 78mm;';
+          containerStyle = index % 2 === 0 ? 'transform: translateY(2mm);' : 'transform: translateY(-2mm);';
         } else if (layout === 'pair-grid') {
-          imageStyle = 'min-height: 62mm; max-height: 78mm;';
-          containerStyle = index === 0 || index === 3 ? 'transform: translateY(3mm);' : 'transform: translateY(-3mm);';
+          imageStyle = 'min-height: 50mm; max-height: 64mm;';
+          containerStyle = index === 0 || index === 3 ? 'transform: translateY(2mm);' : 'transform: translateY(-2mm);';
         } else if (layout === 'editorial-grid') {
-          containerStyle = index === 0 ? 'grid-column: span 2;' : index === 1 || index === 4 ? 'transform: translateY(3mm);' : 'transform: translateY(-2mm);';
+          containerStyle = index === 0 ? 'grid-column: span 2;' : index === 1 || index === 4 ? 'transform: translateY(2mm);' : 'transform: translateY(-2mm);';
           imageStyle = index === 0
-            ? 'min-height: 62mm; max-height: 78mm;'
-            : 'min-height: 50mm; max-height: 62mm;';
+            ? 'min-height: 50mm; max-height: 64mm;'
+            : 'min-height: 42mm; max-height: 52mm;';
         } else if (layout === 'grid-portrait') {
-          imageStyle = 'min-height: 72mm; max-height: 92mm;';
+          imageStyle = 'min-height: 58mm; max-height: 76mm;';
         } else if (layout === 'grid-balanced') {
-          imageStyle = 'min-height: 62mm; max-height: 78mm;';
+          imageStyle = 'min-height: 50mm; max-height: 64mm;';
         } else if (layout === 'grid-quilt' || layout === 'quilt-4') {
           const span = index === 0 || index === 3 ? 4 : 2;
           containerStyle = `grid-column: span ${span};`;
           imageStyle = span === 4
-            ? 'min-height: 56mm; max-height: 70mm;'
-            : 'min-height: 44mm; max-height: 54mm;';
+            ? 'min-height: 46mm; max-height: 58mm;'
+            : 'min-height: 36mm; max-height: 46mm;';
         } else {
-          imageStyle = 'min-height: 54mm; max-height: 76mm;';
+          imageStyle = 'min-height: 44mm; max-height: 62mm;';
         }
 
         return this.renderGalleryImageCard(img, {
@@ -446,7 +446,7 @@ export class BlockRenderer {
           : `repeat(${columns}, 1fr)`
         };
         gap: ${this.theme.spacing.elementSpacing};
-        margin: calc(${this.theme.spacing.blockSpacing} * 1.1) 0 calc(${this.theme.spacing.blockSpacing} * 1.35);
+        margin: calc(${this.theme.spacing.blockSpacing} * 0.9) 0 calc(${this.theme.spacing.blockSpacing} * 1.05);
         page-break-inside: avoid;
         break-inside: avoid;
         align-items: start;

@@ -75,7 +75,7 @@ describe('BlockRenderer', () => {
       ],
     } as any)
     expect(mixedGallery).toContain('grid-template-columns: 0.92fr 1.08fr')
-    expect(mixedGallery).toContain('min-height: 96mm')
+    expect(mixedGallery).toContain('min-height: 80mm')
 
     const quiltGallery = renderer.renderBlock({
       type: 'image-gallery',
@@ -104,7 +104,7 @@ describe('BlockRenderer', () => {
       layout: 'float-right',
     } as any)
 
-    expect(floated).toContain('width: 62%')
+    expect(floated).toContain('width: 56%')
     expect(floated).toContain('margin:')
     expect(floated).toContain('auto')
   })

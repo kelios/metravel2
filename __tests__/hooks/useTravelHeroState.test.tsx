@@ -153,29 +153,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages).toHaveLength(0)
   })
 
-  it('caps web hero height at 70 percent of the viewport for tall media', () => {
-    const onFirstImageLoad = jest.fn()
-    const travel = {
-      id: 45,
-      name: 'Capped web hero',
-      gallery: [
-        {
-          id: 1,
-          url: 'https://example.com/tall-gallery.jpg',
-          width: 900,
-          height: 1600,
-        },
-      ],
-    } as any
-
-    const { result } = renderHook(() =>
-      useTravelHeroState(travel, false, onFirstImageLoad, false),
-    )
-
-    expect(result.current.heroHeight).toBe(Math.round(1000 * 0.7))
-  })
-
-  it('uses aspect-ratio height on web when the image is wider than the 70vh cap', () => {
+  it('uses a fixed 70 percent viewport height on web even for wide media', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 47,
@@ -194,7 +172,7 @@ describe('useTravelHeroState', () => {
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
-    expect(result.current.heroHeight).toBe(540)
+    expect(result.current.heroHeight).toBe(Math.round(1000 * 0.7))
   })
 
   it('waits for an explicit hero-ready signal instead of auto-unblocking on a timer', () => {

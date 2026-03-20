@@ -65,14 +65,7 @@ function useHeroMediaModel(
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
     if (Platform.OS === 'web') {
-      const maxWebHeroHeight = Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
-      const arHeight = resolvedWidth
-        ? Math.round(resolvedWidth / aspectRatio)
-        : maxWebHeroHeight
-      return Math.max(
-        HERO_HEIGHT.desktopMin,
-        Math.min(arHeight, maxWebHeroHeight),
-      )
+      return Math.round(winH * HERO_HEIGHT.webViewportCapRatio)
     }
     const minViewportHeight = Math.round(winH * HERO_HEIGHT.mobileViewportRatio)
     const arHeight = resolvedWidth

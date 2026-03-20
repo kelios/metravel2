@@ -63,7 +63,10 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
             width: width as any,
             ...(Platform.OS === 'web'
               ? ({
-                  background: `linear-gradient(90deg, ${colors.primary} 0%, ${colors.accent} 100%)`,
+                  backgroundColor: colors.primary,
+                  backgroundImage: `linear-gradient(90deg, ${colors.primary} 0%, ${colors.accent} 100%)`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '100% 100%',
                   boxShadow: `0 0 12px ${colors.primary}40`,
                 } as any)
               : null),

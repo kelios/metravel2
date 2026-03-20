@@ -34,7 +34,7 @@ describe('BlockRenderer', () => {
     ])
 
     expect(html).toContain('grid-template-columns: 0.92fr 1.08fr')
-    expect(html).toContain('transform: translateY(3mm)')
+    expect(html).toContain('transform: translateY(2mm)')
     expect(html).toContain('transform: translateY(-2mm)')
   })
 
@@ -66,6 +66,6 @@ describe('BlockRenderer', () => {
 
     expect(html).toContain('grid-column: span 2')
     expect(html).toContain('grid-column: span 4')
-    expect(html).toContain('min-height: 56mm; max-height: 70mm;')
+    expect(html).toContain('min-height: 46mm; max-height: 58mm;')
   })
 })

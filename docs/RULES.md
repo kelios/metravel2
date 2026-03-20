@@ -215,7 +215,8 @@ npx serve dist/prod -l 3000 -s
 - For web content images that intentionally use `contain + blurBackground` in cards, popups, inline rich-text media, map previews, and similar surfaces, enable the shared-source blur mode (`allowCriticalWebBlur` in `ImageCardMedia`, or `mediaProps.allowCriticalWebBlur` in `UnifiedTravelCard`).
   - The visible image and the blur backdrop must use the same effective image source whenever possible.
   - Sibling sections that use the same card/media pattern must not render different backdrop strength or timing.
-- On web, travel hero/gallery media and description images must not exceed `70vh`.
+- On web, travel hero/gallery media and description images must use the canonical `70vh` height contract.
+  - The travel hero slider container on web must resolve to `70vh` and keep that height stable across the first paint and slider handoff.
   - Apply the limit at the authoritative container/layout level, not via ad-hoc per-page overrides.
   - Keep `contain` rendering and blurred surround inside that bounded area.
 - For critical web hero/slider media, the blurred surround must reuse the same effective image source as the visible image whenever possible.
