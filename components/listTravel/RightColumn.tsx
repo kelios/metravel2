@@ -65,6 +65,7 @@ interface RightColumnProps {
   total: number
   contentPadding: number
   showInitialLoading: boolean
+  isSearchPending?: boolean
   isError: boolean
   showEmptyState: boolean
   getEmptyStateMessage: any
@@ -99,6 +100,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      total,
      contentPadding,
      showInitialLoading,
+     isSearchPending = false,
      isError,
      showEmptyState,
      getEmptyStateMessage,
@@ -476,6 +478,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             onToggleRecommendations={handleRecommendationsToggle}
             isRecommendationsVisible={showRecommendations}
             hasActiveFilters={activeFiltersCount > 0}
+            isSearchPending={isSearchPending}
             resultsCount={total}
             activeFiltersCount={activeFiltersCount}
             onClearAll={onClearAll ?? (() => setSearch(''))}
@@ -612,6 +615,7 @@ export default memo(RightColumn, (prev, next) => {
     prev.gridColumns === next.gridColumns &&
     prev.isMobile === next.isMobile &&
     prev.showInitialLoading === next.showInitialLoading &&
+    prev.isSearchPending === next.isSearchPending &&
     prev.isError === next.isError &&
     prev.showNextPageLoading === next.showNextPageLoading &&
     prev.activeFiltersCount === next.activeFiltersCount &&

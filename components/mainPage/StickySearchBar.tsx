@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect, memo, useMemo } from 'react';
 import {
+  ActivityIndicator,
   View,
   TextInput,
   StyleSheet,
@@ -29,6 +30,7 @@ interface StickySearchBarProps {
   onSearchChange: (value: string) => void;
   onFiltersPress?: () => void;
   hasActiveFilters: boolean;
+  isSearchPending?: boolean;
   flush?: boolean;
   resultsCount?: number;
   placeholder?: string;
@@ -259,6 +261,17 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
+  pendingStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 20,
+  },
+  pendingStatusText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
   actionsMobile: {
     flexShrink: 0,
     justifyContent: 'flex-start',
@@ -413,6 +426,7 @@ function StickySearchBar({
   onSearchChange,
   onFiltersPress,
   hasActiveFilters,
+  isSearchPending = false,
   flush = false,
   resultsCount,
   placeholder = 'Найти путешествия...',
@@ -441,9 +455,9 @@ function StickySearchBar({
   const filterIconSize = isMobile ? 14 : 16;
   const isMac = Platform.OS === 'web' && typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
   const shortcutLabel = isMac ? '⌘K' : 'Ctrl+K';
+  const showPendingState = !!isSearchPending;
 
-  // UX УЛУЧШЕНИЕ: Показываем счетчик только если есть результаты
-  const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile;
+  const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile && !showPendingState;
   const shouldReserveDesktopResultsSlot = Platform.OS === 'web' && !isMobile;
   const shouldReserveDesktopClearAllSlot = Platform.OS === 'web' && !isMobile && !!onClearAll;
   const showClearAll = !!onClearAll && (hasActiveFilters || search.length > 0) && !isMobile;
@@ -525,6 +539,11 @@ function StickySearchBar({
               </View>
             </Pressable>
           )}
+          {showPendingState && (
+            <View style={styles.inlineIconSlot} testID="search-pending-indicator">
+              <ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Ищем маршруты" />
+            </View>
+          )}
           {!isMobile && Platform.OS === 'web' && (
             <View style={[styles.shortcutHint, styles.shortcutHintDesktop]}>
               <Text style={styles.shortcutText}>{shortcutLabel}</Text>
@@ -534,19 +553,28 @@ function StickySearchBar({
 
           {/* Действия */}
           <View style={[styles.actions, !isMobile && styles.actionsDesktop, isMobile && styles.actionsMobile]}>
-          {(showResultsCount || shouldReserveDesktopResultsSlot) && (
+          {(showPendingState || showResultsCount || shouldReserveDesktopResultsSlot) && (
             <View
               style={[
                 styles.resultsInline,
-                !showResultsCount ? ({ opacity: 0 } as any) : null,
-                ({ pointerEvents: showResultsCount ? 'auto' : 'none' } as any),
+                !showPendingState && !showResultsCount ? ({ opacity: 0 } as any) : null,
+                ({ pointerEvents: showPendingState || showResultsCount ? 'auto' : 'none' } as any),
               ]}
               testID="results-count-wrapper"
             >
-              <Text style={styles.resultsLabel}>Результаты</Text>
-              <Text style={styles.resultsText} testID="results-count-text">
-                {resultsCount ?? 0} {getTravelLabel(resultsCount ?? 0)}
-              </Text>
+              {showPendingState ? (
+                <View style={styles.pendingStatusRow} testID="search-pending-status">
+                  <ActivityIndicator size="small" color={colors.primary} accessibilityLabel="Ищем маршруты" />
+                  <Text style={styles.pendingStatusText}>Ищем...</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={styles.resultsLabel}>Результаты</Text>
+                  <Text style={styles.resultsText} testID="results-count-text">
+                    {resultsCount ?? 0} {getTravelLabel(resultsCount ?? 0)}
+                  </Text>
+                </>
+              )}
             </View>
           )}
 

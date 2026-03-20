@@ -988,7 +988,17 @@ function ListTravelBase({
     
     const showInitialLoading = isInitialLoading || isUserIdLoading;
     const showNextPageLoading = isNextPageLoading;
-    const showEmptyState = !isUserIdLoading && isEmpty;
+    const normalizedSearchValue = search.trim();
+    const normalizedDebouncedSearchValue = debSearch.trim();
+    const isSearchInputPending = normalizedSearchValue !== normalizedDebouncedSearchValue;
+    const isSearchFetchPending =
+      !showInitialLoading &&
+      !showNextPageLoading &&
+      normalizedSearchValue.length > 0 &&
+      normalizedSearchValue === normalizedDebouncedSearchValue &&
+      _isFetching;
+    const isSearchPending = !isUserIdLoading && (isSearchInputPending || isSearchFetchPending);
+    const showEmptyState = !isUserIdLoading && !isSearchPending && isEmpty;
 
 
     const handleListEndReached = useCallback(() => {
@@ -1201,6 +1211,7 @@ function ListTravelBase({
         total={total}
         contentPadding={contentPadding}
         showInitialLoading={showInitialLoading}
+        isSearchPending={isSearchPending}
         isError={isError}
         showEmptyState={showEmptyState}
         getEmptyStateMessage={getEmptyStateMessage}

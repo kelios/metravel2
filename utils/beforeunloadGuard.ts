@@ -21,7 +21,8 @@ export function isUnloadAllowed(): boolean {
     }
 
     // Check Permissions Policy
-    const permissionsPolicy = (document as any).permissionsPolicy
+    const permissionsPolicy =
+      (document as any).permissionsPolicy || (document as any).featurePolicy
     if (!permissionsPolicy?.allowsFeature) {
       // Old browser - assume allowed
       return true

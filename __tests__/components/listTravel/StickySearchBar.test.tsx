@@ -269,4 +269,25 @@ describe('StickySearchBar Component', () => {
     const results = screen.getByTestId('results-count-text');
     expect(String((results.props as any).children)).toContain('25');
   });
+
+  it('shows a pending search status while search is in progress', () => {
+    renderWithProviders(
+      <StickySearchBar
+        search="брест"
+        onSearchChange={mockOnSearchChange}
+        onFiltersPress={mockOnFiltersPress}
+        onToggleRecommendations={mockOnToggleRecommendations}
+        isRecommendationsVisible={false}
+        hasActiveFilters={false}
+        isSearchPending={true}
+        resultsCount={25}
+        activeFiltersCount={0}
+        onClearAll={mockOnClearAll}
+      />
+    );
+
+    expect(screen.getByTestId('search-pending-indicator')).toBeTruthy();
+    expect(screen.getByTestId('search-pending-status')).toBeTruthy();
+    expect(screen.queryByTestId('results-count-text')).toBeNull();
+  });
 });
