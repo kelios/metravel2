@@ -812,13 +812,6 @@ export default function QuestsScreen() {
     const { width, isPhone } = useResponsive();
     const isMobile = isPhone;
     const s = useMemo(() => getStyles(colors, width), [colors, width]);
-    const questCardWidth = useMemo(() => {
-        if (isMobile) {
-            return Math.max(280, width - spacing.lg * 2);
-        }
-        const estimatedContentWidth = Math.max(320, width - 340 - spacing.xl * 2);
-        return Math.min(760, estimatedContentWidth);
-    }, [isMobile, width]);
 
     // ── Persistent city selection ──
     useEffect(() => {
@@ -1045,6 +1038,18 @@ export default function QuestsScreen() {
         }
         return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
     }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded]);
+
+    const questCardWidth = useMemo(() => {
+        if (isMobile) {
+            return Math.max(280, width - spacing.lg * 2);
+        }
+        const estimatedContentWidth = Math.max(320, width - 340 - spacing.xl * 2);
+        if (questsAll.length >= 2) {
+            const twoColumnWidth = Math.floor((estimatedContentWidth - spacing.lg) / 2);
+            return Math.max(280, Math.min(420, twoColumnWidth));
+        }
+        return Math.min(760, estimatedContentWidth);
+    }, [isMobile, questsAll.length, width]);
 
     const mapPoints = useMemo<MapPoint[]>(() => {
         if (!dataLoaded || !selectedCityId) return [];
@@ -1444,9 +1449,9 @@ export default function QuestsScreen() {
                             {/* Quest cards grid */}
                             {dataLoaded && questsAll.length > 0 && (
                                 <View style={s.questsGrid as ViewStyle}>
-                                    {questsAll.map((quest) => (
+                                    {questsAll.map((quest, index) => (
                                         <QuestCard
-                                            key={quest.id}
+                                            key={`${quest.id}-${index}`}
                                             cityId={selectedCityId === NEARBY_ID ? (quest.cityId || '') : (selectedCityId || '')}
                                             quest={quest}
                                             nearby={selectedCityId === NEARBY_ID}
