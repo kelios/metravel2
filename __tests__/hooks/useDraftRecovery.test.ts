@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
 
@@ -31,14 +32,28 @@ const AsyncStorage = require('@react-native-async-storage/async-storage').defaul
 describe('useDraftRecovery', () => {
   const travelId = '443';
   const draftKey = `metravel_travel_draft_${travelId}`;
+  const originalPlatform = Platform.OS;
+
+  const setPlatformOs = (os: string) => {
+    Object.defineProperty(Platform, 'OS', {
+      value: os,
+      configurable: true,
+    });
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
+    setPlatformOs('ios');
+    localStorage.clear();
     void AsyncStorage.clear();
   });
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  afterAll(() => {
+    setPlatformOs(originalPlatform);
   });
 
   it('shows pending draft when storage has a recent draft different from currentData', async () => {
@@ -171,5 +186,28 @@ describe('useDraftRecovery', () => {
     expect(result.current.hasPendingDraft).toBe(false);
 
     // timers restored in afterEach
+  });
+
+  it('flushes the latest draft on web pagehide', async () => {
+    setPlatformOs('web');
+
+    renderHook(() =>
+      useDraftRecovery({
+        travelId,
+        isNew: false,
+        enabled: true,
+        currentData: { name: 'draft-on-hide', optional: undefined } as any,
+      })
+    );
+
+    act(() => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
+
+    await waitFor(() => {
+      const stored = localStorage.getItem(draftKey);
+      expect(stored).toBeTruthy();
+      expect(JSON.parse(stored as string).data).toEqual({ name: 'draft-on-hide' });
+    });
   });
 });

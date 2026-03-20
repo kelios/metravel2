@@ -183,8 +183,7 @@ describe('useTravelWizard beforeunload guard (web)', () => {
     setPlatformOs('web');
   });
 
-  // ✅ REFACTORED: Tests now verify useBeforeUnload hook is called correctly
-  it('calls useBeforeUnload with handler when hasUnsavedChanges=true', () => {
+  it('disables beforeunload on web even when hasUnsavedChanges=true', () => {
     const { useBeforeUnload } = require('@/utils/beforeunloadGuard');
 
     renderHook(() =>
@@ -198,11 +197,11 @@ describe('useTravelWizard beforeunload guard (web)', () => {
 
     expect(useBeforeUnload).toHaveBeenCalledWith(
       expect.any(Function),
-      true
+      false
     );
   });
 
-  it('calls useBeforeUnload with enabled=false when hasUnsavedChanges=false', () => {
+  it('keeps beforeunload disabled on web when hasUnsavedChanges=false', () => {
     const { useBeforeUnload } = require('@/utils/beforeunloadGuard');
 
     renderHook(() =>

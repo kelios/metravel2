@@ -351,7 +351,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       e.preventDefault();
       e.returnValue = '';
     },
-    hasUnsavedChanges
+    Platform.OS !== 'web' && hasUnsavedChanges
   );
 
   useEffect(() => {

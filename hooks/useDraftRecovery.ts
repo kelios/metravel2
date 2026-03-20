@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import isEqual from 'fast-deep-equal';
 import type { TravelFormData } from '@/types/types';
+import { addPageHideListener, addVisibilityChangeListener } from '@/utils/beforeunloadGuard';
 
 function stripUndefinedDeep<T>(value: T): T {
   if (Array.isArray(value)) {
@@ -67,7 +68,12 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkedDraftKeyRef = useRef<string | null>(null);
+  const currentDataRef = useRef<TravelFormData | null | undefined>(currentData);
   const draftKey = `${DRAFT_STORAGE_KEY}_${isNew ? 'new' : travelId}`;
+
+  useEffect(() => {
+    currentDataRef.current = currentData;
+  }, [currentData]);
 
   // Check for existing draft on mount
   useEffect(() => {
@@ -139,6 +145,39 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
       }
     }, DRAFT_DEBOUNCE_MS);
   }, [draftKey, enabled]);
+
+  const flushDraft = useCallback(async () => {
+    if (!enabled) return;
+    if (Platform.OS !== 'web') return;
+    if (!currentDataRef.current) return;
+
+    try {
+      const draftData = {
+        data: stripUndefinedDeep(currentDataRef.current),
+        timestamp: Date.now(),
+      };
+      await setStorageItem(draftKey, JSON.stringify(draftData));
+    } catch (error) {
+      console.warn('Failed to flush draft:', error);
+    }
+  }, [draftKey, enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (Platform.OS !== 'web') return;
+
+    const cleanupPageHide = addPageHideListener(() => {
+      void flushDraft();
+    });
+    const cleanupVisibilityChange = addVisibilityChangeListener(() => {
+      void flushDraft();
+    });
+
+    return () => {
+      cleanupPageHide?.();
+      cleanupVisibilityChange?.();
+    };
+  }, [enabled, flushDraft]);
 
   // Recover draft
   const recoverDraft = useCallback(async (): Promise<TravelFormData | null> => {
