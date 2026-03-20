@@ -217,6 +217,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     onImagePress,
     firstImagePreloaded,
     fillContainer = false,
+    skipFirstSlideImage = false,
   } = props;
 
   const sliderInstanceId = useId();
@@ -463,36 +464,42 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     } as any,
                   ]}
                 >
-                  {images.map((_, idx) => (
-                    <View
-                      key={`blur-${idx}`}
-                      pointerEvents="none"
-                      style={[
-                        {
-                          width: imagesLen === 1 ? '100%' : (layoutMeasured ? renderedSlideWidth : `${100 / imagesLen}%`),
-                          height: '100%',
-                          flexShrink: 0,
-                        },
-                      ]}
-                    >
-                      <ImageCardMedia
-                        src={getUri(idx)}
-                        width={renderedSlideWidth}
-                        height={computedH}
-                        fit={fit}
-                        blurBackground
-                        blurOnly
-                        blurRadius={12}
-                        priority={idx === 0 ? 'high' : 'low'}
-                        loading={idx === 0 ? 'eager' : 'lazy'}
-                        transition={0}
-                        showImmediately={idx === 0}
-                        allowCriticalWebBlur
-                        style={styles.img}
-                        testID={idx === 0 ? 'slider-shared-blur-backdrop' : undefined}
-                      />
-                    </View>
-                  ))}
+                  {images.map((_, idx) => {
+                    // Skip rendering first slide blur when LCP Hero overlay covers it
+                    const shouldSkipImage = skipFirstSlideImage && idx === 0;
+                    return (
+                      <View
+                        key={`blur-${idx}`}
+                        pointerEvents="none"
+                        style={[
+                          {
+                            width: imagesLen === 1 ? '100%' : (layoutMeasured ? renderedSlideWidth : `${100 / imagesLen}%`),
+                            height: '100%',
+                            flexShrink: 0,
+                          },
+                        ]}
+                      >
+                        {!shouldSkipImage && (
+                          <ImageCardMedia
+                            src={getUri(idx)}
+                            width={renderedSlideWidth}
+                            height={computedH}
+                            fit={fit}
+                            blurBackground
+                            blurOnly
+                            blurRadius={12}
+                            priority={idx === 0 ? 'high' : 'low'}
+                            loading={idx === 0 ? 'eager' : 'lazy'}
+                            transition={0}
+                            showImmediately={idx === 0}
+                            allowCriticalWebBlur
+                            style={styles.img}
+                            testID={idx === 0 ? 'slider-shared-blur-backdrop' : undefined}
+                          />
+                        )}
+                      </View>
+                    );
+                  })}
                 </View>
               ) : null}
 
@@ -533,6 +540,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       preloadPriority={preloadPriority}
                       fit={fit}
                       onSlideLoad={handleSlideLoad}
+                      skipImage={skipFirstSlideImage && index === 0}
                     />
                   </View>
                 );

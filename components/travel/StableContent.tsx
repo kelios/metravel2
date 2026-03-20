@@ -735,7 +735,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto auto auto;
   gap: 14px;
   width: 100%;
   max-width: 100%;
@@ -760,7 +760,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(2),
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p:nth-child(3) {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 3;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-quilt-4 {
@@ -789,7 +789,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 
 .${WEB_RICH_TEXT_CLASS} .img-grid-quilt img {
   width: 100%;
-  height: 100% !important;
+  height: auto;
+  max-height: 100%;
   object-fit: contain;
   border-radius: 14px;
 }
@@ -962,8 +963,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 
 .${WEB_RICH_TEXT_CLASS} .img-editorial-grid {
   display: grid;
-  grid-template-columns: 0.8fr 1.2fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: minmax(200px, auto);
   gap: 14px;
 }
 
@@ -977,26 +978,13 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   border-radius: 14px;
   overflow: hidden;
   background: ${colors.backgroundSecondary};
-}
-
-.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(1) {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(2) {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p:nth-child(3) {
-  grid-column: 2;
-  grid-row: 1 / span 2;
+  aspect-ratio: 4 / 3;
 }
 
 .${WEB_RICH_TEXT_CLASS} .img-editorial-grid img {
   width: 100%;
-  height: 100% !important;
+  height: auto;
+  max-height: 100%;
   object-fit: contain;
   border-radius: 14px;
 }

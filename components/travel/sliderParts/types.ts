@@ -28,6 +28,8 @@ export interface SliderProps {
   firstImagePreloaded?: boolean;
   /** When true, slider fills parent container height instead of computing from aspect ratio */
   fillContainer?: boolean;
+  /** When true, skip rendering the first slide image (LCP Hero overlay covers it). */
+  skipFirstSlideImage?: boolean;
 }
 
 export interface SliderRef {

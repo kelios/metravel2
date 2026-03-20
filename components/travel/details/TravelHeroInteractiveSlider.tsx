@@ -32,6 +32,7 @@ export default function TravelHeroInteractiveSlider({
   fullscreenVisible = false,
   fullscreenIndex = 0,
   onCloseFullscreen,
+  skipFirstSlideImage = false,
 }: {
   galleryImages: GalleryImage[];
   isMobile: boolean;
@@ -45,6 +46,7 @@ export default function TravelHeroInteractiveSlider({
   fullscreenVisible?: boolean;
   fullscreenIndex?: number;
   onCloseFullscreen?: () => void;
+  skipFirstSlideImage?: boolean;
 }) {
   const Slider = getSliderComponent();
   const FullscreenGallery = getFullscreenGallery();
@@ -68,6 +70,7 @@ export default function TravelHeroInteractiveSlider({
             onFirstImageLoad={onFirstImageLoad}
             firstImagePreloaded={firstImagePreloaded}
             onImagePress={onImagePress}
+            skipFirstSlideImage={skipFirstSlideImage}
           />
         </View>
       ) : null}

@@ -89,6 +89,8 @@ interface SlideProps {
   fit?: 'cover' | 'contain';
   onSlideLoad?: (index: number) => void;
   prepareBlur?: boolean;
+  /** When true, skip rendering the image (LCP Hero overlay covers it). */
+  skipImage?: boolean;
 }
 
 const Slide = memo(function Slide({
@@ -110,6 +112,7 @@ const Slide = memo(function Slide({
   fit = 'contain',
   onSlideLoad,
   prepareBlur = false,
+  skipImage = false,
 }: SlideProps) {
   const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
@@ -157,6 +160,15 @@ const Slide = memo(function Slide({
     setResolvedUri(uri);
     fallbackTriedRef.current = false;
   }, [uri]);
+
+  // When skipImage is true and firstImagePreloaded is true, immediately report load
+  // This ensures the slider upgrade happens even though we skip rendering the image
+  useEffect(() => {
+    if (skipImage && isFirstSlide && firstImagePreloaded && !firstLoadReportedRef.current) {
+      firstLoadReportedRef.current = true;
+      onFirstImageLoad?.();
+    }
+  }, [skipImage, isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
 
   // Track base URI (without query params) to avoid resetting loaded state
   // when only optimization params change but the source image is the same
@@ -241,7 +253,10 @@ const Slide = memo(function Slide({
       ]}
     >
       {/* Main image with integrated blur background */}
-      {hasError ? (
+      {skipImage ? (
+        // Empty placeholder when LCP Hero overlay covers this slide
+        <View style={{ width: '100%', height: '100%' }} />
+      ) : hasError ? (
         <View
           style={styles.neutralPlaceholder}
           testID={`slider-neutral-placeholder-${index}`}

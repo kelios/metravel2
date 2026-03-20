@@ -34,24 +34,6 @@ async function getFirstGroupFilterCheckbox(page: any) {
   return checkboxes.first();
 }
 
-async function getUncheckedGroupFilterCheckbox(page: any) {
-  const checkboxes = page.getByRole('checkbox');
-  const count = await checkboxes.count();
-
-  for (let i = 0; i < count; i++) {
-    const option = checkboxes.nth(i);
-    const label = String((await option.getAttribute('aria-label')) || '');
-    if (/Только на модерации/i.test(label)) continue;
-
-    const checked = await option.getAttribute('aria-checked');
-    if (checked !== 'true') {
-      return option;
-    }
-  }
-
-  return getFirstGroupFilterCheckbox(page);
-}
-
 function getFilterGroupToggle(page: any) {
   return page.getByRole('button', { name: EXPAND_GROUP_RE }).first();
 }
