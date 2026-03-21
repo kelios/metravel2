@@ -18,9 +18,15 @@ export class OSMParser {
     } else {
       // React Native DocumentPickerAsset
       const asset = file as DocumentPickerAsset;
-      const response = await fetch(asset.uri);
-      text = await response.text();
-      fileName = asset.name;
+      const webFile = this.getAssetFile(asset);
+      if (webFile) {
+        text = await webFile.text();
+        fileName = webFile.name;
+      } else {
+        const response = await fetch(asset.uri);
+        text = await response.text();
+        fileName = asset.name;
+      }
     }
 
     const extension = fileName.split('.').pop()?.toLowerCase();
@@ -210,6 +216,14 @@ export class OSMParser {
     return m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim();
   }
   
+  private static getAssetFile(asset: DocumentPickerAsset): File | null {
+    const webFile = (asset as DocumentPickerAsset & { file?: File }).file;
+    if (webFile && typeof webFile.text === 'function') {
+      return webFile;
+    }
+    return null;
+  }
+
   private static generateId(): string {
     return `point_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }

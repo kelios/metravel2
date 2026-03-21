@@ -153,4 +153,57 @@ describe('Google Maps Parser', () => {
       expect(result).toHaveLength(0);
     });
   });
+
+  describe('DocumentPickerAsset web file handling', () => {
+    it('should read text from asset.file without fetching blob uri', async () => {
+      const previousFetch = (global as any).fetch;
+      const fetchMock = jest.fn();
+      (global as any).fetch = fetchMock;
+
+      try {
+        const text = '{"features":[]}';
+        const file = {
+          name: 'Saved Places.json',
+          text: jest.fn().mockResolvedValue(text),
+        };
+        const asset = {
+          uri: 'blob:https://metravel.by/test',
+          name: 'Saved Places.json',
+          file,
+        };
+
+        await expect((GoogleMapsParser as any).readText(asset)).resolves.toBe(text);
+        expect(file.text).toHaveBeenCalledTimes(1);
+        expect(fetchMock).not.toHaveBeenCalled();
+      } finally {
+        (global as any).fetch = previousFetch;
+      }
+    });
+
+    it('should read arrayBuffer from asset.file without fetching blob uri', async () => {
+      const previousFetch = (global as any).fetch;
+      const fetchMock = jest.fn();
+      (global as any).fetch = fetchMock;
+
+      try {
+        const arrayBuffer = new TextEncoder().encode('kmz').buffer;
+        const file = {
+          name: 'Saved Places.kmz',
+          text: jest.fn(),
+          arrayBuffer: jest.fn().mockResolvedValue(arrayBuffer),
+        };
+        const asset = {
+          uri: 'blob:https://metravel.by/test',
+          name: 'Saved Places.kmz',
+          file,
+        };
+
+        await expect((GoogleMapsParser as any).readArrayBuffer(asset)).resolves.toBe(arrayBuffer);
+        expect(file.arrayBuffer).toHaveBeenCalledTimes(1);
+        expect(fetchMock).not.toHaveBeenCalled();
+      } finally {
+        (global as any).fetch = previousFetch;
+      }
+    });
+  });
 });

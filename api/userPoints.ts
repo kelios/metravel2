@@ -161,24 +161,53 @@ export const userPointsApi = {
       return originalName;
     };
 
+    const getAssetFile = (asset: DocumentPickerAsset): File | null => {
+      const webFile = (asset as DocumentPickerAsset & { file?: File }).file;
+      if (webFile) {
+        return webFile;
+      }
+      return null;
+    };
+
     // file upload handling for web/native
     if ('uri' in file) {
       const asset = file as DocumentPickerAsset;
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      const webFile = getAssetFile(asset);
 
-      const isKmz = String(asset.name || '').toLowerCase().endsWith('.kmz');
-      if (isKmz) {
-        try {
-          const buffer = await blob.arrayBuffer();
-          const kmlText = await extractKmlFromKmz(buffer);
-          const kmlBlob = new Blob([kmlText], { type: 'application/vnd.google-earth.kml+xml' });
-          formData.append('file', kmlBlob, toKmlName(asset.name));
-        } catch {
-          formData.append('file', blob, asset.name);
+      if (webFile) {
+        const isKmz = String(webFile.name || '').toLowerCase().endsWith('.kmz');
+
+        if (isKmz && typeof webFile.arrayBuffer === 'function') {
+          try {
+            const buffer = await webFile.arrayBuffer();
+            const kmlText = await extractKmlFromKmz(buffer);
+            const kmlFile = new File([kmlText], toKmlName(webFile.name), {
+              type: 'application/vnd.google-earth.kml+xml',
+            });
+            formData.append('file', kmlFile);
+          } catch {
+            formData.append('file', webFile);
+          }
+        } else {
+          formData.append('file', webFile);
         }
       } else {
-        formData.append('file', blob, asset.name);
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+
+        const isKmz = String(asset.name || '').toLowerCase().endsWith('.kmz');
+        if (isKmz) {
+          try {
+            const buffer = await blob.arrayBuffer();
+            const kmlText = await extractKmlFromKmz(buffer);
+            const kmlBlob = new Blob([kmlText], { type: 'application/vnd.google-earth.kml+xml' });
+            formData.append('file', kmlBlob, toKmlName(asset.name));
+          } catch {
+            formData.append('file', blob, asset.name);
+          }
+        } else {
+          formData.append('file', blob, asset.name);
+        }
       }
     } else {
       const webFile = file as File;

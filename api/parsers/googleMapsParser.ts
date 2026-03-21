@@ -280,11 +280,23 @@ export class GoogleMapsParser {
     return m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim();
   }
 
+  private static getAssetFile(asset: DocumentPickerAsset): File | null {
+    const webFile = (asset as DocumentPickerAsset & { file?: File }).file;
+    if (webFile && typeof webFile.text === 'function') {
+      return webFile;
+    }
+    return null;
+  }
+
   private static async readText(file: FileInput): Promise<string> {
     if ('text' in file && typeof (file as { text?: unknown }).text === 'function') {
       return await (file as File).text();
     }
     const asset = file as DocumentPickerAsset;
+    const webFile = this.getAssetFile(asset);
+    if (webFile) {
+      return await webFile.text();
+    }
     const response = await fetch(asset.uri);
     return await response.text();
   }
@@ -294,6 +306,10 @@ export class GoogleMapsParser {
       return await (file as File).arrayBuffer();
     }
     const asset = file as DocumentPickerAsset;
+    const webFile = this.getAssetFile(asset);
+    if (webFile) {
+      return await webFile.arrayBuffer();
+    }
     const response = await fetch(asset.uri);
     return await response.arrayBuffer();
   }

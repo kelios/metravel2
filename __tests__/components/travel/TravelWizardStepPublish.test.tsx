@@ -20,12 +20,26 @@ jest.mock('@/utils/toast', () => ({
 jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/api/instagramPublish', () => ({
-  publishTravelToInstagram: jest.fn().mockResolvedValue({ status: 'queued' }),
+jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrl: jest.fn().mockResolvedValue(true),
+}));
+jest.mock('@/utils/instagramOAuth', () => ({
+  buildInstagramOAuthUrl: jest.fn(() => 'https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app'),
+  getInstagramOAuthResolution: jest.fn(() => ({
+    isConfigured: true,
+    reason: '',
+    config: {
+      appId: 'test-app',
+      authorizeUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
+      redirectUri: 'https://api.metravel.by/auth/instagram/callback',
+      scopes: ['instagram_basic', 'instagram_content_publish', 'pages_read_engagement'],
+    },
+  })),
 }));
 
 import { showToast } from '@/utils/toast';
-import { publishTravelToInstagram } from '@/api/instagramPublish';
+import { openExternalUrl } from '@/utils/externalLinks';
+import { buildInstagramOAuthUrl, getInstagramOAuthResolution } from '@/utils/instagramOAuth';
 
 const baseFormData: TravelFormData = {
   id: '640',
@@ -233,248 +247,169 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(queryByText('Опубликовать в Instagram')).toBeNull();
   });
 
-  it('publishes to instagram for superadmin with generated payload', async () => {
-    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
-    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
-      { key: 'metravelby', label: '@metravelby' },
-    ]);
-
-    try {
-      const { getByText } = render(
-        <TravelWizardStepPublish
-          currentStep={6}
-          totalSteps={6}
-          formData={{
-            ...baseFormData,
-            name: 'Минск и Несвиж',
-            countries: ['1'],
-            coordsMeTravel: [
-              { lat: 53.9, lng: 27.56, address: 'Минск', categories: [] },
-              { lat: 53.22, lng: 26.68, address: 'Несвиж', categories: [] },
-            ],
-          }}
-          countries={[{ country_id: '1', title_ru: 'Беларусь' }]}
-          setFormData={jest.fn()}
-          isSuperAdmin={true}
-          onManualSave={jest.fn()}
-          onGoBack={jest.fn()}
-          onFinish={jest.fn()}
-        />
-      );
-
-      await act(async () => {
-        fireEvent.press(getByText('Опубликовать в Instagram'));
-      });
-
-      expect(publishTravelToInstagram).toHaveBeenCalledWith(
-        expect.objectContaining({
-          travelId: 640,
-          accountKey: 'metravelby',
-          hashtags: expect.arrayContaining(['#metravelby', '#беларусь', '#минск', '#несвиж']),
-          imageUrls: ['https://example.com/gallery-1.jpg'],
-        })
-      );
-      expect(showToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'success',
-          text1: 'Публикация запущена',
-        })
-      );
-    } finally {
-      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
-    }
-  });
-
-  it('allows editing instagram caption and hashtags before publishing', async () => {
-    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
-    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
-      { key: 'metravelby', label: '@metravelby' },
-    ]);
-
-    try {
-      const { getByLabelText, getByText } = render(
-        <TravelWizardStepPublish
-          currentStep={6}
-          totalSteps={6}
-          formData={{
-            ...baseFormData,
-            name: 'Jaskinia na Łopiankach',
-            countries: ['1'],
-          }}
-          countries={[{ country_id: '1', title_ru: 'Польша' }]}
-          setFormData={jest.fn()}
-          isSuperAdmin={true}
-          onManualSave={jest.fn()}
-          onGoBack={jest.fn()}
-          onFinish={jest.fn()}
-        />
-      );
-
-      await act(async () => {
-        fireEvent.changeText(getByLabelText('Текст поста для Instagram'), 'Новый caption');
-        fireEvent.changeText(getByLabelText('Хэштеги для Instagram'), '#metravelby #польша #краков');
-      });
-
-      await act(async () => {
-        fireEvent.press(getByText('Опубликовать в Instagram'));
-      });
-
-      expect(publishTravelToInstagram).toHaveBeenCalledWith(
-        expect.objectContaining({
-          caption: 'Новый caption',
-          hashtags: ['#metravelby', '#польша', '#краков'],
-        })
-      );
-    } finally {
-      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
-    }
-  });
-
-  it('publishes instagram images in manually reordered sequence', async () => {
-    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
-    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
-      { key: 'metravelby', label: '@metravelby' },
-    ]);
-
-    try {
-      const { getByTestId, getByText } = render(
-        <TravelWizardStepPublish
-          currentStep={6}
-          totalSteps={6}
-          formData={{
-            ...baseFormData,
-            gallery: [
-              { id: 1, url: 'https://example.com/gallery-1.jpg' },
-              { id: 2, url: 'https://example.com/gallery-2.jpg' },
-              { id: 3, url: 'https://example.com/gallery-3.jpg' },
-            ],
-          }}
-          countries={[{ country_id: '1', title_ru: 'Польша' }]}
-          setFormData={jest.fn()}
-          isSuperAdmin={true}
-          onManualSave={jest.fn()}
-          onGoBack={jest.fn()}
-          onFinish={jest.fn()}
-        />
-      );
-
-      await act(async () => {
-        fireEvent.press(getByTestId('instagram-move-right-0'));
-      });
-
-      await act(async () => {
-        fireEvent.press(getByText('Опубликовать в Instagram'));
-      });
-
-      expect(publishTravelToInstagram).toHaveBeenCalledWith(
-        expect.objectContaining({
-          imageUrls: [
-            'https://example.com/gallery-2.jpg',
-            'https://example.com/gallery-1.jpg',
-            'https://example.com/gallery-3.jpg',
+  it('opens Meta OAuth when superadmin presses publish to instagram', async () => {
+    const { getByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{
+          ...baseFormData,
+          name: 'Минск и Несвиж',
+          countries: ['1'],
+          coordsMeTravel: [
+            { lat: 53.9, lng: 27.56, address: 'Минск', categories: [] },
+            { lat: 53.22, lng: 26.68, address: 'Несвиж', categories: [] },
           ],
-        })
-      );
-    } finally {
-      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
-    }
+        }}
+        countries={[{ country_id: '1', title_ru: 'Беларусь' }]}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText('Опубликовать в Instagram'));
+    });
+
+    expect(buildInstagramOAuthUrl).toHaveBeenCalled();
+    expect(openExternalUrl).toHaveBeenCalledWith('https://www.facebook.com/v19.0/dialog/oauth?client_id=test-app');
+    expect(showToast).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+      })
+    );
   });
 
-  it('excludes selected instagram image from publication payload', async () => {
-    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
-    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
-      { key: 'metravelby', label: '@metravelby' },
-    ]);
+  it('allows editing instagram caption and hashtags before oauth launch', async () => {
+    const { getByLabelText, getByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{
+          ...baseFormData,
+          name: 'Jaskinia na Łopiankach',
+          countries: ['1'],
+        }}
+        countries={[{ country_id: '1', title_ru: 'Польша' }]}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
 
-    try {
-      const { getByTestId, getAllByTestId, getByText } = render(
-        <TravelWizardStepPublish
-          currentStep={6}
-          totalSteps={6}
-          formData={{
-            ...baseFormData,
-            gallery: [
-              { id: 1, url: 'https://example.com/gallery-1.jpg' },
-              { id: 2, url: 'https://example.com/gallery-2.jpg' },
-              { id: 3, url: 'https://example.com/gallery-3.jpg' },
-            ],
-          }}
-          countries={[{ country_id: '1', title_ru: 'Польша' }]}
-          setFormData={jest.fn()}
-          isSuperAdmin={true}
-          onManualSave={jest.fn()}
-          onGoBack={jest.fn()}
-          onFinish={jest.fn()}
-        />
-      );
+    await act(async () => {
+      fireEvent.changeText(getByLabelText('Текст поста для Instagram'), 'Новый caption');
+      fireEvent.changeText(getByLabelText('Хэштеги для Instagram'), '#metravelby #польша #краков');
+    });
 
-      expect(getAllByTestId('instagram-preview-image')).toHaveLength(3);
+    expect(getByLabelText('Текст поста для Instagram').props.value).toBe('Новый caption');
+    expect(getByLabelText('Хэштеги для Instagram').props.value).toBe('#metravelby #польша #краков');
+    expect(getByText('Текст: 13 символов. Итоговый caption с тегами должен быть не длиннее 2200 символов.')).toBeTruthy();
+  });
 
-      await act(async () => {
-        fireEvent.press(getByTestId('instagram-remove-1'));
-      });
-
-      expect(getAllByTestId('instagram-preview-image')).toHaveLength(2);
-
-      await act(async () => {
-        fireEvent.press(getByText('Опубликовать в Instagram'));
-      });
-
-      expect(publishTravelToInstagram).toHaveBeenCalledWith(
-        expect.objectContaining({
-          imageUrls: [
-            'https://example.com/gallery-1.jpg',
-            'https://example.com/gallery-3.jpg',
+  it('keeps manual instagram image reorder controls working', async () => {
+    const { getByTestId } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{
+          ...baseFormData,
+          gallery: [
+            { id: 1, url: 'https://example.com/gallery-1.jpg' },
+            { id: 2, url: 'https://example.com/gallery-2.jpg' },
+            { id: 3, url: 'https://example.com/gallery-3.jpg' },
           ],
-        })
-      );
-    } finally {
-      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
-    }
+        }}
+        countries={[{ country_id: '1', title_ru: 'Польша' }]}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('instagram-move-right-0'));
+    });
+
+    expect(getByTestId('instagram-move-left-1')).toBeTruthy();
   });
 
-  it('auto-clamps instagram caption to publish-ready length', async () => {
-    const previousAccounts = process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS;
-    process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = JSON.stringify([
-      { key: 'metravelby', label: '@metravelby' },
-    ]);
-    (publishTravelToInstagram as jest.Mock).mockClear();
-    (showToast as jest.Mock).mockClear();
+  it('keeps instagram image removal controls working', async () => {
+    const { getByTestId, getAllByTestId } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{
+          ...baseFormData,
+          gallery: [
+            { id: 1, url: 'https://example.com/gallery-1.jpg' },
+            { id: 2, url: 'https://example.com/gallery-2.jpg' },
+            { id: 3, url: 'https://example.com/gallery-3.jpg' },
+          ],
+        }}
+        countries={[{ country_id: '1', title_ru: 'Польша' }]}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
 
-    try {
-      const { getByLabelText, getByText } = render(
-        <TravelWizardStepPublish
-          currentStep={6}
-          totalSteps={6}
-          formData={{
-            ...baseFormData,
-            gallery: [
-              { id: 1, url: 'https://example.com/gallery-1.jpg' },
-            ],
-          }}
-          countries={[{ country_id: '1', title_ru: 'Польша' }]}
-          setFormData={jest.fn()}
-          isSuperAdmin={true}
-          onManualSave={jest.fn()}
-          onGoBack={jest.fn()}
-          onFinish={jest.fn()}
-        />
-      );
+    expect(getAllByTestId('instagram-preview-image')).toHaveLength(3);
 
-      const tooLongCaption = 'а'.repeat(2201);
+    await act(async () => {
+      fireEvent.press(getByTestId('instagram-remove-1'));
+    });
 
-      await act(async () => {
-        fireEvent.changeText(getByLabelText('Текст поста для Instagram'), tooLongCaption);
-      });
+    expect(getAllByTestId('instagram-preview-image')).toHaveLength(2);
+  });
 
-      expect(getByText('2200/2200 символов')).toBeTruthy();
+  it('shows config error when oauth is not configured', async () => {
+    ;(buildInstagramOAuthUrl as jest.Mock).mockReturnValueOnce(null)
+    ;(getInstagramOAuthResolution as jest.Mock).mockReturnValueOnce({
+      isConfigured: false,
+      reason: 'Укажите EXPO_PUBLIC_META_APP_ID для подключения Instagram через Meta OAuth.',
+      config: null,
+    })
 
-      expect(publishTravelToInstagram).not.toHaveBeenCalled();
-      expect(getByLabelText('Опубликовать в Instagram').props.accessibilityState.disabled).toBe(false);
-      expect(showToast).not.toHaveBeenCalled();
-    } finally {
-      process.env.EXPO_PUBLIC_INSTAGRAM_PUBLISH_ACCOUNTS = previousAccounts;
-    }
+    const { getByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={{
+          ...baseFormData,
+          gallery: [
+            { id: 1, url: 'https://example.com/gallery-1.jpg' },
+          ],
+        }}
+        countries={[{ country_id: '1', title_ru: 'Польша' }]}
+        setFormData={jest.fn()}
+        isSuperAdmin={true}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.press(getByText('Опубликовать в Instagram'));
+    });
+
+    expect(openExternalUrl).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+        text1: 'Instagram OAuth не настроен',
+      })
+    );
   });
 
   it('hides status switch when already sent to moderation', () => {

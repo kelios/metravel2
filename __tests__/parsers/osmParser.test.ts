@@ -181,4 +181,47 @@ describe('OSM Parser', () => {
       expect(result[0].categoryIds).toEqual([]);
     });
   });
+
+  describe('DocumentPickerAsset web file handling', () => {
+    it('should parse using asset.file without fetching blob uri', async () => {
+      const previousFetch = (global as any).fetch;
+      const fetchMock = jest.fn();
+      (global as any).fetch = fetchMock;
+
+      const geoJsonText = JSON.stringify({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [30.5234, 50.4501],
+            },
+            properties: {
+              name: 'Web file point',
+            },
+          },
+        ],
+      });
+
+      const file = {
+        name: 'points.geojson',
+        text: jest.fn().mockResolvedValue(geoJsonText),
+      };
+      const asset = {
+        uri: 'blob:https://metravel.by/test',
+        name: 'points.geojson',
+        file,
+      };
+
+      const result = await OSMParser.parse(asset as any);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Web file point');
+      expect(file.text).toHaveBeenCalledTimes(1);
+      expect(fetchMock).not.toHaveBeenCalled();
+
+      (global as any).fetch = previousFetch;
+    });
+  });
 });
