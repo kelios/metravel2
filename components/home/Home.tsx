@@ -120,13 +120,21 @@ function Home() {
     },
   }), [colors, isMobile]);
 
+  const webScrollStyle = isWeb
+    ? ({
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+        overscrollBehaviorY: 'contain',
+      } as any)
+    : undefined;
+
   // Responsive skeleton padding — reduce on mobile to match tighter layout
   const skeletonPadH = isMobile ? 8 : 24;
   const skeletonPadVLarge = isMobile ? 36 : 64;
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, webScrollStyle]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={isWeb ? 32 : 16}

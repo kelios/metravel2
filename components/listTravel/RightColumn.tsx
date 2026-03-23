@@ -554,7 +554,13 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 ref={listRef as any}
                 onScroll={webScrollHandler}
                 scrollEventThrottle={32}
-                style={{ flex: 1, minHeight: 0 }}
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-y',
+                  overscrollBehaviorY: 'contain',
+                } as any}
                 contentContainerStyle={webContentContainerStyle}
                 testID="right-column-scrollview"
               >
