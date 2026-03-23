@@ -15,7 +15,8 @@ describe('V1MapRenderer', () => {
       travelName: 'Поездка в Париж',
       snapshotDataUrl: 'data:image/png;base64,ABC',
       mapSvg: '<svg></svg>',
-      locationListHtml: '<div>Location 1</div>',
+      locationCards: ['<div>Location 1</div>'],
+      locationCount: 1,
       pageNumber: 8,
     });
 
@@ -24,7 +25,7 @@ describe('V1MapRenderer', () => {
     expect(html).toContain('Поездка в Париж');
     expect(html).toContain('data:image/png;base64,ABC');
     expect(html).toContain('Location 1');
-    expect(html).toContain('0 точек');
+    expect(html).toContain('1 точка');
     expect(html).toContain('>8<');
   });
 
@@ -33,7 +34,8 @@ describe('V1MapRenderer', () => {
       travelName: 'Тест',
       snapshotDataUrl: null,
       mapSvg: '<svg viewBox="0 0 100 60">test-svg</svg>',
-      locationListHtml: '',
+      locationCards: [],
+      locationCount: 0,
       pageNumber: 3,
     });
 
@@ -46,7 +48,8 @@ describe('V1MapRenderer', () => {
       travelName: '<script>alert(1)</script>',
       snapshotDataUrl: null,
       mapSvg: '',
-      locationListHtml: '',
+      locationCards: [],
+      locationCount: 0,
       pageNumber: 1,
     });
 
@@ -59,12 +62,36 @@ describe('V1MapRenderer', () => {
       travelName: 'Путешествие',
       snapshotDataUrl: null,
       mapSvg: '',
-      locationListHtml: '',
+      locationCards: [],
+      locationCount: 0,
       pageNumber: 15,
     });
 
     // Running header contains travel name and page number
     expect(html).toContain('Путешествие');
     expect(html).toContain('>15<');
+  });
+
+  it('должен разбивать длинный список точек на несколько страниц', () => {
+    const cards = Array.from({ length: 10 }, (_, i) => `<div class="map-location-card">Point ${i + 1}</div>`);
+    const html = renderer.render({
+      travelName: 'Длинный маршрут',
+      snapshotDataUrl: null,
+      mapSvg: '',
+      locationCards: cards,
+      locationCount: 10,
+      pageNumber: 5,
+    });
+
+    // First page should have map + first 6 cards
+    expect(html).toContain('Point 1');
+    expect(html).toContain('Point 6');
+    // Continuation page should have remaining cards with "продолжение" header
+    expect(html).toContain('Point 7');
+    expect(html).toContain('Point 10');
+    expect(html).toContain('продолжение');
+    // Should have at least 2 map-page sections
+    const pageCount = (html.match(/class="pdf-page map-page"/g) || []).length;
+    expect(pageCount).toBe(2);
   });
 });

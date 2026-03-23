@@ -46,34 +46,38 @@ export class V1FinalRenderer {
       <div style="
         display: flex;
         justify-content: center;
-        gap: 7mm;
-        margin-bottom: 12mm;
+        gap: 8mm;
+        margin-bottom: 14mm;
         flex-wrap: wrap;
       ">
         ${stats.map((s) => `
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 8px 12px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.12);
-            min-width: 56px;
+            padding: 8px 18px;
+            min-width: 60px;
           ">
             <div style="
-              font-size: 24pt;
+              font-size: 26pt;
               font-weight: 800;
               color: ${colors.cover.text};
               font-family: ${typography.headingFont};
               line-height: 1.1;
+              margin-bottom: 3mm;
             ">${s.value}</div>
+            <div style="
+              width: 16px;
+              height: 2px;
+              background: rgba(255,255,255,0.35);
+              border-radius: 999px;
+              margin: 0 auto 3mm auto;
+            "></div>
             <div style="
               font-size: ${typography.caption.size};
               text-transform: uppercase;
-              letter-spacing: 0.08em;
+              letter-spacing: 0.1em;
               color: ${colors.cover.textSecondary};
-              margin-top: 2mm;
               font-family: ${typography.bodyFont};
-              opacity: 0.8;
+              opacity: 0.75;
             ">${escapeHtml(s.label)}</div>
           </div>
         `).join('')}
@@ -121,17 +125,22 @@ export class V1FinalRenderer {
           border: 1px solid rgba(255,255,255,0.14);
           box-shadow: 0 18px 42px rgba(0,0,0,0.2);
         ">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 6mm auto; display: block; opacity: 0.7;">
+            <circle cx="12" cy="12" r="10"/>
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)"/>
+          </svg>
+
           <div style="
             width: 38mm;
             height: 2px;
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
             border-radius: 999px;
-            margin: 0 auto 9mm auto;
+            margin: 0 auto 8mm auto;
           "></div>
 
           <h2 style="
             font-size: ${typography.h1.size};
-            margin-bottom: 5mm;
+            margin-bottom: 4mm;
             letter-spacing: -0.02em;
             font-family: ${typography.headingFont};
             color: ${colors.cover.text};
@@ -140,10 +149,10 @@ export class V1FinalRenderer {
           ">Спасибо за путешествие!</h2>
           <p style="
             max-width: 112mm;
-            margin: 0 auto 10mm auto;
+            margin: 0 auto 12mm auto;
             font-size: ${typography.body.size};
             line-height: ${typography.body.lineHeight};
-            opacity: 0.85;
+            opacity: 0.8;
             font-family: ${typography.bodyFont};
           ">
             Пусть эта книга напоминает о самых тёплых эмоциях
@@ -152,33 +161,47 @@ export class V1FinalRenderer {
           ${statsHtml}
           ${finalQuote ? `
             <div style="
+              width: 24mm;
+              height: 1px;
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+              margin: 0 auto 8mm auto;
+            "></div>
+            <div style="
               max-width: 112mm;
               margin: 0 auto;
-              padding: 10px 14px;
-              background: rgba(255,255,255,0.04);
-              border-radius: 16px;
-              border: 1px solid rgba(255,255,255,0.1);
+              padding: 10px 0;
+              position: relative;
             ">
+              <div style="
+                font-size: 32pt;
+                line-height: 1;
+                opacity: 0.2;
+                font-family: Georgia, serif;
+                position: absolute;
+                top: -4mm;
+                left: -3mm;
+              ">“</div>
               <p style="
                 margin: 0 0 4mm 0;
                 font-size: 10.5pt;
-                line-height: 1.6;
-                opacity: 0.9;
+                line-height: 1.65;
+                opacity: 0.88;
                 font-style: italic;
                 font-family: ${typography.bodyFont};
+                padding: 0 6mm;
               ">
-                «${escapeHtml(finalQuote.text)}»
+                ${escapeHtml(finalQuote.text)}
               </p>
               <p style="
                 margin: 0;
                 font-size: 8.5pt;
                 line-height: 1.4;
-                opacity: 0.65;
-                letter-spacing: 0.06em;
+                opacity: 0.55;
+                letter-spacing: 0.08em;
                 text-transform: uppercase;
                 font-family: ${typography.bodyFont};
               ">
-                ${escapeHtml(finalQuote.author || 'MeTravel.by')}
+                — ${escapeHtml(finalQuote.author || 'MeTravel.by')}
               </p>
             </div>
           ` : ''}

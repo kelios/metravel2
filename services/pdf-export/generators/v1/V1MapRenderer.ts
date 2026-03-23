@@ -15,7 +15,7 @@ export interface V1MapPageData {
   travelName: string;
   snapshotDataUrl: string | null;
   mapSvg: string;
-  locationListHtml: string;
+  locationCards: string[];
   locationCount: number;
   pageNumber: number;
   routeInfo?: string;
@@ -24,6 +24,11 @@ export interface V1MapPageData {
 
 export class V1MapRenderer {
   constructor(private ctx: V1RenderContext) {}
+
+  /** Maximum location cards to show on the first page alongside the map */
+  private static readonly FIRST_PAGE_MAX_CARDS = 6;
+  /** Maximum location cards per continuation page */
+  private static readonly CONTINUATION_PAGE_MAX_CARDS = 10;
 
   render(data: V1MapPageData): string {
     const { colors, typography, spacing } = this.ctx.theme;
@@ -34,7 +39,14 @@ export class V1MapRenderer {
       ? this.renderElevationProfile(data.routePreview)
       : '';
 
-    return `
+    const allCards = data.locationCards;
+    const firstPageCards = allCards.slice(0, V1MapRenderer.FIRST_PAGE_MAX_CARDS);
+    const remainingCards = allCards.slice(V1MapRenderer.FIRST_PAGE_MAX_CARDS);
+
+    const routeHeaderHtml = this.renderRouteHeader(data, locationCount);
+
+    // First page: map + elevation + header + first chunk of cards
+    let pages = `
       <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
         ${buildRunningHeader(this.ctx, data.travelName, data.pageNumber)}
         <div style="margin-bottom: 4mm; page-break-inside: avoid; break-inside: avoid;">
@@ -61,41 +73,89 @@ export class V1MapRenderer {
         </div>
         ${elevationProfileHtml}
         <div>
-          <div style="
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 6px 8px;
-            margin-bottom: 4mm;
-          ">
-            <h2 style="
-              font-size: ${typography.h2.size};
-              margin: 0;
-              font-family: ${typography.headingFont};
-              page-break-after: avoid;
-            ">Маршрут</h2>
-            <span style="
-              display: inline-flex;
-              align-items: center;
-              padding: 4px 10px;
-              border-radius: 999px;
-              background: ${colors.accentSoft};
-              color: ${colors.accentStrong};
-              font-size: ${typography.caption.size};
-              font-weight: 700;
-              font-family: ${typography.bodyFont};
-            ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
-          </div>
-          <p style="
-            color: ${colors.textMuted};
-            margin-bottom: 4mm;
-            font-size: 9pt;
-            font-family: ${typography.bodyFont};
-            line-height: 1.45;
-          ">${escapeHtml(data.routeInfo || data.travelName)}</p>
-          <div style="column-count: 1;">${data.locationListHtml}</div>
+          ${routeHeaderHtml}
+          <div style="column-count: 1;">${firstPageCards.join('')}</div>
         </div>
       </section>
+    `;
+
+    // Continuation pages for remaining cards
+    let continuationPageNum = data.pageNumber + 1;
+    for (let i = 0; i < remainingCards.length; i += V1MapRenderer.CONTINUATION_PAGE_MAX_CARDS) {
+      const chunk = remainingCards.slice(i, i + V1MapRenderer.CONTINUATION_PAGE_MAX_CARDS);
+      pages += `
+        <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
+          ${buildRunningHeader(this.ctx, data.travelName, continuationPageNum)}
+          <div>
+            <h2 style="
+              font-size: ${typography.h2.size};
+              margin: 0 0 4mm 0;
+              font-family: ${typography.headingFont};
+              page-break-after: avoid;
+            ">Маршрут <span style="
+              font-size: ${typography.small.size};
+              font-weight: 400;
+              color: ${colors.textMuted};
+            ">(продолжение)</span></h2>
+            <div style="column-count: 1;">${chunk.join('')}</div>
+          </div>
+        </section>
+      `;
+      continuationPageNum += 1;
+    }
+
+    return pages;
+  }
+
+  private renderRouteHeader(data: V1MapPageData, locationCount: number): string {
+    const { colors, typography } = this.ctx.theme;
+    return `
+      <div style="
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        margin-bottom: 4mm;
+      ">
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          background: ${colors.accentSoft};
+          flex-shrink: 0;
+        ">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+        </span>
+        <h2 style="
+          font-size: ${typography.h2.size};
+          margin: 0;
+          font-family: ${typography.headingFont};
+          page-break-after: avoid;
+        ">Маршрут</h2>
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: ${colors.accentSoft};
+          color: ${colors.accentStrong};
+          font-size: ${typography.caption.size};
+          font-weight: 700;
+          font-family: ${typography.bodyFont};
+        ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
+      </div>
+      <p style="
+        color: ${colors.textMuted};
+        margin-bottom: 4mm;
+        font-size: 9pt;
+        font-family: ${typography.bodyFont};
+        line-height: 1.45;
+      ">${escapeHtml(data.routeInfo || data.travelName)}</p>
     `;
   }
 
@@ -156,6 +216,16 @@ export class V1MapRenderer {
         ">Профиль высот</div>
         <div style="display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;">
           <svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width: 100%; max-width: 120mm; height: 30mm; flex-shrink: 0;">
+            <defs>
+              <linearGradient id="elev-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="${colors.accent}" stop-opacity="0.2"/>
+                <stop offset="100%" stop-color="${colors.accent}" stop-opacity="0.02"/>
+              </linearGradient>
+            </defs>
+            <polygon
+              points="${padding},${chartHeight} ${polylinePoints} ${chartWidth - padding},${chartHeight}"
+              fill="url(#elev-fill)"
+            />
             <polyline
               points="${polylinePoints}"
               fill="none"
@@ -165,46 +235,39 @@ export class V1MapRenderer {
               stroke-linecap="round"
             />
           </svg>
-          <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 8pt; color: ${colors.textMuted}; font-family: ${typography.bodyFont};">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 8pt; color: ${colors.textMuted}; font-family: ${typography.bodyFont};">
             <div style="
-              padding: 4px 8px;
-              background: ${colors.surface};
-              border-radius: 4px;
-              border: 1px solid ${colors.border};
+              padding: 4px 10px;
+              background: ${colors.accentSoft};
+              border-radius: 999px;
+              color: ${colors.accentStrong};
+              font-weight: 600;
             ">
-              <span style="font-weight: 600;">Дистанция:</span> ${round(totalDistanceKm)} км
+              ${round(totalDistanceKm)} км
             </div>
             <div style="
-              padding: 4px 8px;
+              padding: 4px 10px;
               background: ${colors.surface};
-              border-radius: 4px;
+              border-radius: 999px;
               border: 1px solid ${colors.border};
             ">
-              <span style="font-weight: 600;">Набор:</span> +${Math.round(ascent)} м
+              <span style="color: #16a34a; font-weight: 600;">↑</span> ${Math.round(ascent)} м
             </div>
             <div style="
-              padding: 4px 8px;
+              padding: 4px 10px;
               background: ${colors.surface};
-              border-radius: 4px;
+              border-radius: 999px;
               border: 1px solid ${colors.border};
             ">
-              <span style="font-weight: 600;">Сброс:</span> -${Math.round(descent)} м
+              <span style="color: #dc2626; font-weight: 600;">↓</span> ${Math.round(descent)} м
             </div>
             <div style="
-              padding: 4px 8px;
+              padding: 4px 10px;
               background: ${colors.surface};
-              border-radius: 4px;
+              border-radius: 999px;
               border: 1px solid ${colors.border};
             ">
-              <span style="font-weight: 600;">Мин:</span> ${Math.round(minElevation)} м
-            </div>
-            <div style="
-              padding: 4px 8px;
-              background: ${colors.surface};
-              border-radius: 4px;
-              border: 1px solid ${colors.border};
-            ">
-              <span style="font-weight: 600;">Макс:</span> ${Math.round(maxElevation)} м
+              ${Math.round(minElevation)}–${Math.round(maxElevation)} м
             </div>
           </div>
         </div>
@@ -244,9 +307,9 @@ export class V1MapRenderer {
 
   private getMapHeightMm(locationCount: number): number {
     if (locationCount <= 1) return 125;
-    if (locationCount === 2) return 96;
-    if (locationCount === 3) return 86;
-    if (locationCount === 4) return 78;
-    return 72;
+    if (locationCount === 2) return 100;
+    if (locationCount === 3) return 92;
+    if (locationCount === 4) return 86;
+    return 90;
   }
 }

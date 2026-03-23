@@ -113,7 +113,7 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(mapPage).toContain('map-location-card')
     expect(mapPage).toContain('height: 125mm')
     expect(mapPage).not.toContain('height: 135mm')
-    expect(mapPage).toContain('alt="QR"')
+    expect(mapPage).not.toContain('alt="QR"')
   })
 
   it('builds inline gallery and safe URLs', () => {

@@ -77,9 +77,51 @@ export class V1GalleryRenderer {
           : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm; align-items: stretch;`;
 
       const pageNumber = startPageNumber + pageIndex;
+      const isFirstGalleryPage = pageIndex === 0;
+      const galleryHeaderHtml = isFirstGalleryPage ? `
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 4mm;
+        ">
+          <span style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: ${colors.accentSoft};
+            flex-shrink: 0;
+          ">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </span>
+          <span style="
+            font-size: 13pt;
+            font-weight: 700;
+            color: ${colors.text};
+            font-family: ${this.ctx.theme.typography.headingFont};
+          ">Фотогалерея</span>
+          <span style="
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: ${colors.accentSoft};
+            color: ${colors.accentStrong};
+            font-size: 8pt;
+            font-weight: 700;
+            font-family: ${this.ctx.theme.typography.bodyFont};
+          ">${photos.length} фото</span>
+        </div>
+      ` : '';
       return `
       <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; height: 285mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
         ${buildRunningHeader(this.ctx, travel.name, pageNumber)}
+        ${galleryHeaderHtml}
         <div style="${gridContainerStyle}">
           ${pagePhotos
             .map((photo, index) => {
@@ -115,21 +157,22 @@ export class V1GalleryRenderer {
               overflow: hidden;
               position: relative;
               box-shadow: ${this.ctx.theme.blocks.shadow};
-              background: ${layout === 'polaroid' ? '#fff' : `linear-gradient(180deg, ${colors.background} 0%, ${colors.surfaceAlt} 100%)`};
+              background: ${layout === 'polaroid' ? '#fff' : colors.surfaceAlt};
               ${polaroidStyle}
               ${wrapperMinHeight}
               display: flex;
               align-items: center;
               justify-content: center;
-              ${layout === 'polaroid' ? '' : 'padding: 2.5mm;'}
+              ${layout === 'polaroid' ? '' : 'padding: 0;'}
             ">
               <img src="${escapeHtml(photo)}" alt="Фото ${index + 1}"
                 style="
                   width: 100%;
                   ${imgHeightStyle}
-                  object-fit: contain;
+                  object-fit: ${forceCover ? 'cover' : 'contain'};
                   display: block;
                   position: relative;
+                  border-radius: ${this.ctx.theme.blocks.borderRadius};
                   ${getImageFilterStyle(this.ctx)}
                 "
                 crossorigin="anonymous"

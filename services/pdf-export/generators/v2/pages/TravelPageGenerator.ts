@@ -5,7 +5,6 @@ import { BasePageGenerator } from './PageGenerator';
 import type { PageContext } from '../types';
 import { ContentParser } from '@/services/pdf-export/parsers/ContentParser';
 import { BlockRenderer } from '@/services/pdf-export/renderers/BlockRenderer';
-import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
 /**
  * Генератор страницы путешествия с контентом
@@ -152,13 +151,10 @@ export class TravelPageGenerator extends BasePageGenerator {
     const { colors, typography, spacing } = theme;
     const qrCode = metadata?.qrCode || '';
 
-    // Применяем умную раскладку изображений и парсим контент
-    const formattedDescription = travel.description
-      ? applySmartImageLayout(travel.description)
+    // Описание рендерим через renderRichText (с умной раскладкой изображений)
+    const descriptionHtml = travel.description
+      ? this.renderRichText(travel.description, theme)
       : '';
-    const descriptionBlocks = formattedDescription
-      ? this.parser.parse(formattedDescription)
-      : [];
     const recommendationBlocks = travel.recommendation
       ? this.parser.parse(travel.recommendation)
       : [];
@@ -188,7 +184,7 @@ export class TravelPageGenerator extends BasePageGenerator {
           }
         </style>
         
-        ${descriptionBlocks.length > 0 ? `
+        ${descriptionHtml ? `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
             <div style="
               display: flex;
@@ -212,7 +208,7 @@ export class TravelPageGenerator extends BasePageGenerator {
               line-height: ${typography.body.lineHeight};
               color: ${colors.text};
               font-family: ${typography.bodyFont};
-            ">${this.renderBlocks(descriptionBlocks, theme)}</div>
+            ">${descriptionHtml}</div>
           </div>
         ` : `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
@@ -373,10 +369,24 @@ export class TravelPageGenerator extends BasePageGenerator {
   }
 
   /**
+   * Рендерит сырой rich-text HTML через BlockRenderer (с умной раскладкой изображений)
+   */
+  private renderRichText(rawHtml: string, theme: any): string {
+    if (typeof document !== 'undefined') {
+      const blockRenderer = new BlockRenderer(theme);
+      return blockRenderer.renderRichText(rawHtml);
+    }
+    // Fallback для серверной среды
+    return rawHtml
+      .split('\n\n')
+      .map(para => `<p>${this.escapeHtml(para)}</p>`)
+      .join('');
+  }
+
+  /**
    * Рендерит блоки контента
    */
   private renderBlocks(blocks: any[], theme: any): string {
-    // Создаем BlockRenderer с темой из context
     if (typeof document !== 'undefined') {
       const blockRenderer = new BlockRenderer(theme);
       return blockRenderer.renderBlocks(blocks);

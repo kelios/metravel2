@@ -12,7 +12,7 @@ import { pickRandomQuote } from '../quotes/travelQuotes';
 import { CoverPageGenerator } from './pages/CoverPageGenerator';
 import { escapeHtml as sharedEscapeHtml } from '../utils/htmlUtils';
 import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../utils/pluralize';
-import { applySmartImageLayout } from '@/utils/richTextImageLayout';
+
 import { V1FinalRenderer } from './v1/V1FinalRenderer';
 import { V1GalleryRenderer } from './v1/V1GalleryRenderer';
 import { V1MapRenderer } from './v1/V1MapRenderer';
@@ -851,13 +851,10 @@ export class EnhancedPdfGenerator {
     const { colors, typography, spacing } = this.theme;
     const parser = this.getParserSync();
     
-    // Применяем умную раскладку изображений и парсим контент
-    const formattedDescription = travel.description
-      ? applySmartImageLayout(travel.description)
+    // Описание рендерим через renderRichText (с умной раскладкой изображений)
+    const descriptionHtml = this.blockRenderer && travel.description
+      ? this.blockRenderer.renderRichText(travel.description)
       : '';
-    const descriptionBlocks = formattedDescription
-      ? parser.parse(formattedDescription)
-      : [];
     const recommendationBlocks = travel.recommendation
       ? parser.parse(travel.recommendation)
       : [];
@@ -901,7 +898,7 @@ export class EnhancedPdfGenerator {
 
         ${this.buildStatsMiniCard(travel, colors, typography, spacing)}
 
-        ${descriptionBlocks.length > 0 ? `
+        ${descriptionHtml ? `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
             <div style="
               display: flex;
@@ -934,7 +931,7 @@ export class EnhancedPdfGenerator {
               line-height: ${typography.body.lineHeight};
               color: ${colors.text};
               font-family: ${typography.bodyFont};
-            ">${this.renderBlocks(descriptionBlocks)}</div>
+            ">${descriptionHtml}</div>
           </div>
         ` : ''}
 
@@ -1085,7 +1082,8 @@ export class EnhancedPdfGenerator {
             border-radius: 20px;
             background: linear-gradient(135deg, ${colors.accentLight} 0%, ${colors.surface} 100%);
             border: 1px solid ${colors.border};
-            box-shadow: ${this.theme.blocks.shadow};
+            border-top: 3px solid ${colors.accent};
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
           ">
             ${qrCode ? `
               <div style="
@@ -1093,12 +1091,13 @@ export class EnhancedPdfGenerator {
                 height: 31mm;
                 padding: 3mm;
                 border-radius: 16px;
-                background: ${colors.surface};
+                background: white;
                 border: 1px solid ${colors.border};
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
               ">
                 <img src="${this.escapeHtml(qrCode)}" alt="QR" style="
                   width: 100%;
@@ -1115,6 +1114,9 @@ export class EnhancedPdfGenerator {
               min-width: 0;
             ">
               <div style="
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
                 text-transform: uppercase;
                 letter-spacing: 0.1em;
                 font-weight: 700;
@@ -1122,7 +1124,10 @@ export class EnhancedPdfGenerator {
                 color: ${colors.accent};
                 font-size: ${typography.caption.size};
                 font-family: ${typography.headingFont};
-              ">Онлайн-версия</div>
+              ">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${colors.accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                Онлайн-версия
+              </div>
               <div style="
                 font-size: ${typography.h4.size};
                 line-height: 1.25;
@@ -1140,7 +1145,7 @@ export class EnhancedPdfGenerator {
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                padding: 4px 10px;
+                padding: 5px 12px;
                 border-radius: 999px;
                 background: ${colors.surface};
                 border: 1px solid ${colors.border};
@@ -1264,14 +1269,13 @@ export class EnhancedPdfGenerator {
       }
     }
 
-    const locationQRCodes = await this.generateLocationQRCodes(locations);
-    const locationListHtml = this.buildLocationList(locations, locationQRCodes);
+    const locationCards = this.buildLocationCards(locations);
 
     return this.mapRenderer.render({
       travelName: travel.name,
       snapshotDataUrl,
       mapSvg,
-      locationListHtml,
+      locationCards,
       locationCount: locations.length,
       pageNumber,
       routeInfo,
@@ -1485,6 +1489,11 @@ export class EnhancedPdfGenerator {
         overflow: hidden;
         border-radius: 2px;
       }
+      @media print {
+        .pdf-page.travel-content-page {
+          min-height: auto;
+        }
+      }
       /* Разрыв страницы ПЕРЕД каждой следующей .pdf-page (кроме первой) */
       .pdf-page + .pdf-page {
         page-break-before: always;
@@ -1574,14 +1583,30 @@ export class EnhancedPdfGenerator {
         object-fit: cover;
         border-radius: 4pt;
       }
+      .img-single-wide {
+        margin: 12pt 0;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .img-single-wide img {
+        width: 100%;
+        height: auto;
+        max-height: 220pt;
+        object-fit: contain;
+        border-radius: 6pt;
+      }
       .img-float-right,
       .img-float-left {
         margin: 8pt 0;
+        page-break-inside: avoid;
+        break-inside: avoid;
       }
       .img-float-right img,
       .img-float-left img {
         max-width: 100%;
         height: auto;
+        max-height: 200pt;
+        object-fit: contain;
         border-radius: 6pt;
       }
       @media print {
@@ -1678,6 +1703,10 @@ export class EnhancedPdfGenerator {
         gap: 6px;
         margin-bottom: ${spacing.sectionSpacing};
         align-items: center;
+        padding: 10px 14px;
+        background: ${colors.surfaceAlt};
+        border-radius: ${this.theme.blocks.borderRadius};
+        border-left: 3px solid ${colors.accent};
       ">
         ${items.map((item) => `
           <span style="
@@ -1686,7 +1715,7 @@ export class EnhancedPdfGenerator {
             gap: 5px;
             white-space: nowrap;
             padding: 5px 10px;
-            background: ${colors.surfaceAlt};
+            background: ${colors.surface};
             border: 1px solid ${colors.border};
             border-radius: 999px;
             font-size: ${typography.caption.size};
@@ -1740,13 +1769,13 @@ export class EnhancedPdfGenerator {
 
         ${thumbUrl ? `
           <div style="
-            width: 80px;
-            height: 80px;
+            width: 88px;
+            height: 88px;
             border-radius: 999px;
             overflow: hidden;
-            margin-bottom: 10mm;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-            border: 3px solid ${colors.surface};
+            margin-bottom: 6mm;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.14);
+            border: 4px solid ${colors.surface};
             outline: 2px solid ${colors.accentSoft};
             background: ${colors.surfaceAlt};
           ">
@@ -1769,8 +1798,17 @@ export class EnhancedPdfGenerator {
           font-size: 18pt;
           font-weight: 800;
           font-family: ${typography.headingFont};
-          margin-bottom: 8mm;
+          margin-bottom: 4mm;
         ">${travelIndex}</div>
+
+        <div style="
+          width: 20mm;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, ${colors.accent}, transparent);
+          border-radius: 999px;
+          margin-bottom: 6mm;
+          opacity: 0.4;
+        "></div>
 
         <h2 style="
           font-size: ${typography.h1.size};
@@ -1808,16 +1846,25 @@ export class EnhancedPdfGenerator {
 
         <div style="
           position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, ${colors.accentSoft}, ${colors.accent}, ${colors.accentSoft});
+        "></div>
+
+        <div style="
+          position: absolute;
           bottom: 22mm;
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
           font-size: ${typography.caption.size};
           color: ${colors.textMuted};
           font-family: ${typography.bodyFont};
           opacity: 0.6;
         ">
-          <span>${travelIndex}</span>
+          <span style="font-weight: 600;">${travelIndex}</span>
           <span style="color: ${colors.border};">/</span>
           <span>${totalTravels}</span>
         </div>
@@ -1837,19 +1884,35 @@ export class EnhancedPdfGenerator {
         align-items: center;
         padding-bottom: 4mm;
         margin-bottom: 6mm;
-        border-bottom: 0.5pt solid ${colors.border};
+        border-bottom: 1px solid ${colors.border};
         font-size: ${typography.caption.size};
         color: ${colors.textMuted};
         font-family: ${typography.bodyFont};
         letter-spacing: 0.02em;
       ">
         <span style="
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
           max-width: 70%;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-        ">${this.escapeHtml(travelName)}</span>
-        <span>${pageNumber}</span>
+        ">
+          <span style="
+            width: 5px;
+            height: 5px;
+            border-radius: 999px;
+            background: ${colors.accent};
+            flex-shrink: 0;
+            opacity: 0.7;
+          "></span>
+          ${this.escapeHtml(travelName)}
+        </span>
+        <span style="
+          font-weight: 600;
+          color: ${colors.textSecondary};
+        ">${pageNumber}</span>
       </div>
     `;
   }
@@ -2124,7 +2187,7 @@ export class EnhancedPdfGenerator {
     );
   }
 
-  private buildLocationList(locations: NormalizedLocation[], qrCodes: string[]): string {
+  private buildLocationCards(locations: NormalizedLocation[]): string[] {
     const { colors, typography } = this.theme;
     return locations
       .map(
@@ -2134,22 +2197,22 @@ export class EnhancedPdfGenerator {
           const title = titlePart.trim();
           const subtitle = rest.join(',').trim();
 
-          const showCoordinates = this.currentSettings?.showCoordinatesOnMapPage !== false;
-          const qr = qrCodes[index] || '';
-          const mapsUrl = this.buildGoogleMapsUrl(location);
+          const showCoordinates = this.currentSettings?.showCoordinatesOnMapPage === true;
 
           return `
         <div class="map-location-card" style="
           display: flex;
           gap: 8px;
           align-items: flex-start;
-          padding: 7px 8px;
+          padding: 7px 10px 7px 8px;
           border: 1px solid ${colors.border};
-          background: ${colors.surface};
+          border-left: 3px solid ${colors.accent};
+          background: ${index % 2 === 0 ? colors.surface : colors.surfaceAlt};
           border-radius: 14px;
-          margin-bottom: 4px;
+          margin-bottom: 5px;
           break-inside: avoid;
           page-break-inside: avoid;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         ">
           ${location.thumbnailUrl ? `
             <div style="
@@ -2159,7 +2222,7 @@ export class EnhancedPdfGenerator {
               overflow: hidden;
               flex-shrink: 0;
               box-shadow: ${this.theme.blocks.shadow};
-              background: linear-gradient(180deg, ${colors.background} 0%, ${colors.surfaceAlt} 100%);
+              background: ${colors.surfaceAlt};
             ">
               <img src="${this.escapeHtml(location.thumbnailUrl)}" alt="Точка ${index + 1}"
                 style="width: 100%; height: 100%; object-fit: cover; display: block; ${this.getImageFilterStyle()}" />
@@ -2205,27 +2268,6 @@ export class EnhancedPdfGenerator {
                 ">${this.escapeHtml(subtitle)}</div>
                 ` : ''}
               </div>
-              ${qr && mapsUrl ? `
-                <a href="${this.escapeHtml(mapsUrl)}" target="_blank" rel="noreferrer" style="
-                  width: 11mm;
-                  height: 11mm;
-                  padding: 1.2mm;
-                  border-radius: 8px;
-                  background: ${colors.surface};
-                  border: 1px solid ${colors.border};
-                  display: inline-flex;
-                  align-items: center;
-                  justify-content: center;
-                  flex-shrink: 0;
-                  margin-left: auto;
-                ">
-                  <img src="${this.escapeHtml(qr)}" alt="QR" style="
-                    width: 100%;
-                    height: 100%;
-                    display: block;
-                  "/>
-                </a>
-              ` : ''}
             </div>
             <div style="
               display: flex;
@@ -2262,7 +2304,7 @@ export class EnhancedPdfGenerator {
       `;
         }
       )
-      .join('');
+      ;
   }
 
   private formatDays(days?: number | null): string {
@@ -2395,7 +2437,7 @@ export class EnhancedPdfGenerator {
     const extra = opts?.extraStyle || '';
     return `
       <div aria-hidden="true"
-        style="position:absolute;inset:0;background:linear-gradient(180deg, ${this.theme.colors.background} 0%, ${bg} 100%);">
+        style="position:absolute;inset:0;background:${bg};">
       </div>
       <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
         style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}${extra}"

@@ -3,6 +3,8 @@
 
 import type { PdfThemeConfig } from '../themes/PdfThemeConfig';
 import type { ParsedContentBlock } from '../parsers/ContentParser';
+import { ContentParser } from '../parsers/ContentParser';
+import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
 /**
  * Рендерер блоков контента
@@ -91,6 +93,18 @@ export class BlockRenderer {
    */
   renderBlocks(blocks: ParsedContentBlock[]): string {
     return blocks.map((block) => this.renderBlock(block)).join('\n');
+  }
+
+  /**
+   * Рендерит сырой rich-text HTML: применяет умную раскладку изображений,
+   * парсит в блоки и рендерит. Централизует паттерн applySmartImageLayout → parse → render.
+   */
+  renderRichText(rawHtml: string): string {
+    if (!rawHtml) return '';
+    const formatted = applySmartImageLayout(rawHtml);
+    const parser = new ContentParser();
+    const blocks = parser.parse(formatted);
+    return this.renderBlocks(blocks);
   }
 
   /**
