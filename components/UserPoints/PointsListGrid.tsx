@@ -577,7 +577,7 @@ export const PointsListGrid: React.FC<{
             </View>
           )
         }}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item: { id?: string | number }) => String(item.id ?? '')}
         {...({ estimatedItemSize: 120 } as any)}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={!isLoading ? renderEmpty : null}

@@ -48,7 +48,7 @@ function computeCircleBounds(
 }
 
 interface Point {
-  id?: number;
+  id?: string | number;
   coord: string;
   address: string;
 }

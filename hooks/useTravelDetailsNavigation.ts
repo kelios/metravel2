@@ -368,9 +368,10 @@ export function useTravelDetailsNavigation({
 
       return () => {
         cancelled = true
-        timers.forEach((timer) => clearTimeout(timer))
+        timers.forEach(clearTimeout)
       }
     }
+    return undefined
   }, [resetWebScrollTop, scrollRef, setActiveSection, slug])
 
   return useMemo(() => ({

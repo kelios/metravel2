@@ -12,6 +12,43 @@ const SERVER_FAVORITES_CACHE_KEY = 'metravel_favorites_server';
 const getFavoritesApi = async () => import('@/api/travelsFavorites');
 const getUserApi = async () => import('@/api/user');
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeCachedFavoriteItem = (item: unknown): FavoriteItem | null => {
+    if (!isRecord(item)) return null;
+
+    const id = item.id;
+    const type = item.type;
+    const title = item.title;
+    const url = item.url;
+    const addedAt = Number(item.addedAt);
+
+    if ((typeof id !== 'string' && typeof id !== 'number') || (type !== 'travel' && type !== 'article')) {
+        return null;
+    }
+
+    if (typeof title !== 'string' || typeof url !== 'string' || !Number.isFinite(addedAt)) {
+        return null;
+    }
+
+    return {
+        id,
+        type,
+        title,
+        url,
+        addedAt,
+        imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
+        country:
+            typeof item.country === 'string'
+                ? item.country
+                : typeof item.countryName === 'string'
+                  ? item.countryName
+                  : undefined,
+        city: typeof item.city === 'string' ? item.city : undefined,
+    };
+};
+
 export type FavoriteItem = {
     id: string | number;
     type: 'travel' | 'article';
@@ -200,10 +237,9 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             const raw = await AsyncStorage.getItem(key);
             if (raw) {
                 const parsed = safeJsonParseString(raw, []);
-                const normalized = (Array.isArray(parsed) ? parsed : []).filter(Boolean).map((item: unknown) => ({
-                    ...item,
-                    country: item.country ?? item.countryName ?? undefined,
-                }));
+                const normalized = (Array.isArray(parsed) ? parsed : [])
+                    .map(normalizeCachedFavoriteItem)
+                    .filter((item): item is FavoriteItem => item !== null);
                 set({ favorites: normalized });
             }
         } catch (error) {

@@ -32,9 +32,9 @@ export interface UseSmoothScrollReturn {
 }
 
 interface ScrollableElement {
-  scrollTo?: (options: { x?: number; y?: number; animated?: boolean }) => void;
-  addEventListener?: (event: string, handler: () => void, options?: { passive?: boolean }) => void;
-  removeEventListener?: (event: string, handler: () => void) => void;
+  scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => void;
+  addEventListener: (event: string, handler: () => void, options?: { passive?: boolean }) => void;
+  removeEventListener: (event: string, handler: () => void) => void;
 }
 
 export function useSmoothScroll(
@@ -77,10 +77,14 @@ export function useSmoothScroll(
             useNativeDriver: true,
           }).start(() => {
             isScrolling.current = false
-            scrollViewRef.current?.scrollTo({ y: targetY, animated: false })
+            if (scrollViewRef.current) {
+              scrollViewRef.current.scrollTo({ y: targetY, animated: false })
+            }
           })
         } else {
-          scrollViewRef.current?.scrollTo({ y: targetY, animated: false })
+          if (scrollViewRef.current) {
+            scrollViewRef.current.scrollTo({ y: targetY, animated: false })
+          }
         }
       }
     },

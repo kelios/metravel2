@@ -51,7 +51,7 @@ export function useVirtualizedList<T>(
 
   const [scrollY, setScrollY] = useState(0)
   const [containerHeight, setContainerHeight] = useState(initialHeight || 600)
-  const rafId = useRef<number>()
+  const rafId = useRef<number | null>(null)
 
   /**
    * Calculate visible range based on scroll position

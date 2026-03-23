@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Animated } from 'react-native'
+import { Animated, type LayoutChangeEvent } from 'react-native'
 
 export interface UseTravelDetailsScrollStateReturn {
   scrollY: Animated.Value
   contentHeight: number
   viewportHeight: number
   handleContentSizeChange: (_w: number, h: number) => void
-  handleLayout: (e: unknown) => void
+  handleLayout: (e: LayoutChangeEvent) => void
 }
 
 export function useTravelDetailsScrollState(): UseTravelDetailsScrollStateReturn {
@@ -18,7 +18,7 @@ export function useTravelDetailsScrollState(): UseTravelDetailsScrollStateReturn
     setContentHeight(h)
   }, [])
 
-  const handleLayout = useCallback((e: unknown) => {
+  const handleLayout = useCallback((e: LayoutChangeEvent) => {
     setViewportHeight(e.nativeEvent.layout.height)
   }, [])
 

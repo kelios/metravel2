@@ -34,6 +34,51 @@ import { calculateColumns } from './utils/listTravelHelpers'
 import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { deleteTravel } from '@/api/travelsApi'
 import { fetchTravelFacets } from '@/api/travelListQueries'
+import type { FilterOptions } from './utils/listTravelTypes'
+
+const normalizeNamedOptions = (items: unknown): Array<{ id: string; name: string }> => {
+  if (!Array.isArray(items)) return []
+  return items
+    .map((item) => {
+      if (typeof item === 'string' || typeof item === 'number') {
+        const value = String(item)
+        return { id: value, name: value }
+      }
+      if (item && typeof item === 'object') {
+        const record = item as Record<string, unknown>
+        const rawId = record.id
+        const rawName = record.name
+        if ((typeof rawId === 'string' || typeof rawId === 'number') && typeof rawName === 'string') {
+          return { id: String(rawId), name: rawName }
+        }
+      }
+      return null
+    })
+    .filter((item): item is { id: string; name: string } => item !== null)
+}
+
+const normalizeCountryOptions = (items: unknown): Array<{ country_id?: number; id?: string | number; title_ru?: string; name?: string }> => {
+  if (!Array.isArray(items)) return []
+  return items
+    .map((item) => {
+      if (typeof item === 'string' || typeof item === 'number') {
+        const value = String(item)
+        return { id: value, name: value, title_ru: value } as { country_id?: number; id?: string | number; title_ru?: string; name?: string }
+      }
+      if (item && typeof item === 'object') {
+        const record = item as Record<string, unknown>
+        const countryId = typeof record.country_id === 'number' ? record.country_id : undefined
+        const id = typeof record.id === 'string' || typeof record.id === 'number' ? record.id : undefined
+        const titleRu = typeof record.title_ru === 'string' ? record.title_ru : undefined
+        const name = typeof record.name === 'string' ? record.name : undefined
+        if (countryId !== undefined || id !== undefined || titleRu || name) {
+          return { country_id: countryId, id, title_ru: titleRu, name } as { country_id?: number; id?: string | number; title_ru?: string; name?: string }
+        }
+      }
+      return null
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+}
 
 // ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
@@ -690,21 +735,20 @@ function ListTravelBase({
     });
 
     // ✅ ОПТИМИЗАЦИЯ: Упрощенная трансформация данных - убраны тяжелые операции
-    const options = useMemo((): import('./utils/listTravelTypes').FilterOptions | undefined => {
-        if (!rawOptions) return undefined;
+    const options = useMemo((): FilterOptions | undefined => {
+       if (!rawOptions) return undefined;
 
-        // ✅ ОПТИМИЗАЦИЯ: Прямое копирование без сложных трансформаций
-        return {
-            countries: rawOptions.countries || [],
-            categories: rawOptions.categories || [],
-            transports: rawOptions.transports || [],
-            categoryTravelAddress: rawOptions.categoryTravelAddress || [],
-            companions: rawOptions.companions || [],
-            complexity: rawOptions.complexity || [],
-            month: rawOptions.month || [],
-            over_nights_stay: rawOptions.over_nights_stay || [],
-            sortings: rawOptions.sortings || [],
-        };
+       return {
+           countries: normalizeCountryOptions(rawOptions.countries),
+           categories: normalizeNamedOptions(rawOptions.categories),
+           transports: normalizeNamedOptions(rawOptions.transports),
+           categoryTravelAddress: normalizeNamedOptions(rawOptions.categoryTravelAddress),
+           companions: normalizeNamedOptions(rawOptions.companions),
+           complexity: normalizeNamedOptions(rawOptions.complexity),
+           month: normalizeNamedOptions(rawOptions.month),
+           over_nights_stay: normalizeNamedOptions(rawOptions.over_nights_stay),
+           sortings: rawOptions.sortings || [],
+       };
     }, [rawOptions]); // ✅ ОПТИМИЗАЦИЯ: Только rawOptions в зависимостях
 
     const {

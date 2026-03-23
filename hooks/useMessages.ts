@@ -17,6 +17,8 @@ import { devError } from '@/utils/logger';
 
 const THREADS_POLL_INTERVAL = 30_000;
 const MESSAGES_POLL_INTERVAL = 10_000;
+const getErrorMessage = (error: unknown, fallback: string): string =>
+    error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
 
 // ---- useThreads ----
 
@@ -46,7 +48,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
         } catch (e: unknown) {
             devError('useThreads load error:', e);
             if (mountedRef.current) {
-                setError(e?.message || 'Ошибка загрузки сообщений');
+                setError(getErrorMessage(e, 'Ошибка загрузки сообщений'));
             }
         } finally {
             if (mountedRef.current) setLoading(false);
@@ -125,7 +127,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
         } catch (e: unknown) {
             devError('useThreadMessages load error:', e);
             if (mountedRef.current) {
-                setError(e?.message || 'Ошибка загрузки сообщений');
+                setError(getErrorMessage(e, 'Ошибка загрузки сообщений'));
             }
         } finally {
             if (mountedRef.current) setLoading(false);
@@ -208,7 +210,7 @@ export function useSendMessage() {
             return true;
         } catch (e: unknown) {
             devError('useSendMessage error:', e);
-            setError(e?.message || 'Ошибка отправки сообщения');
+            setError(getErrorMessage(e, 'Ошибка отправки сообщения'));
             return false;
         } finally {
             setSending(false);

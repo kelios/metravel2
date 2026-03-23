@@ -26,26 +26,26 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
     if (typeof document === 'undefined') return
 
     const handler = (e: KeyboardEvent) => {
-      const target = (e as unknown).target as HTMLElement | null
-      const targetTag = String((target as unknown)?.tagName || '').toLowerCase()
+      const target = e.target instanceof HTMLElement ? e.target : null
+      const targetTag = String(target?.tagName || '').toLowerCase()
       const isEditableTarget =
         targetTag === 'input' ||
         targetTag === 'textarea' ||
-        (target as unknown)?.isContentEditable === true
+        target?.isContentEditable === true
 
       if (isEditableTarget) return
 
-      const pressedKey = String((e as unknown).key || '').toLowerCase()
+      const pressedKey = String(e.key || '').toLowerCase()
 
       for (const shortcut of shortcuts) {
         if (!shortcut) continue
         const expectedKey = String(shortcut.key || '').toLowerCase()
         if (!expectedKey || pressedKey !== expectedKey) continue
 
-        const ctrlPressed = !!(e as unknown).ctrlKey
-        const metaPressed = !!(e as unknown).metaKey
-        const shiftPressed = !!(e as unknown).shiftKey
-        const altPressed = !!(e as unknown).altKey
+        const ctrlPressed = !!e.ctrlKey
+        const metaPressed = !!e.metaKey
+        const shiftPressed = !!e.shiftKey
+        const altPressed = !!e.altKey
 
         if (shortcut.ctrlKey !== undefined && ctrlPressed !== !!shortcut.ctrlKey) continue
         if (shortcut.metaKey !== undefined && metaPressed !== !!shortcut.metaKey) continue
@@ -57,9 +57,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
         if (shortcut.shiftKey === undefined && shiftPressed) continue
         if (shortcut.altKey === undefined && altPressed) continue
 
-        if (typeof (e as unknown).preventDefault === 'function') {
-          ;(e as unknown).preventDefault()
-        }
+        e.preventDefault()
 
         shortcut.action()
         return

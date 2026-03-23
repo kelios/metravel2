@@ -14,6 +14,10 @@ import { buildCanonicalUrl } from '@/utils/seo';
 
 const HEADER_HEIGHT_WEB = 88;
 
+type MapPanelStateResult = ReturnType<typeof useMapPanelState>;
+type ThemedColors = ReturnType<typeof useThemedColors>;
+type MapScreenStyles = ReturnType<typeof getStyles>;
+
 interface UseMapUIControllerResult {
   /**
    * Is screen focused
@@ -68,32 +72,32 @@ interface UseMapUIControllerResult {
   /**
    * Panel animation style
    */
-  panelStyle: unknown;
+  panelStyle: MapPanelStateResult['panelStyle'];
 
   /**
    * Overlay animation style
    */
-  overlayStyle: unknown;
+  overlayStyle: MapPanelStateResult['overlayStyle'];
 
   /**
    * Filters tab ref
    */
-  filtersTabRef: unknown;
+  filtersTabRef: MapPanelStateResult['filtersTabRef'];
 
   /**
    * Panel ref
    */
-  panelRef: unknown;
+  panelRef: MapPanelStateResult['panelRef'];
 
   /**
    * Themed colors
    */
-  themedColors: unknown;
+  themedColors: ThemedColors;
 
   /**
    * Component styles
    */
-  styles: unknown;
+  styles: MapScreenStyles;
 
   /**
    * Canonical URL for SEO

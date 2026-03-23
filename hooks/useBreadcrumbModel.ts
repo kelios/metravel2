@@ -2,21 +2,32 @@ import { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import type { Travel } from '@/types/types';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
-import { fetchQuestByQuestId } from '@/api/quests';
-import { fetchUserProfile } from '@/api/user';
+import { fetchQuestByQuestId, type ApiQuestBundle } from '@/api/quests';
+import { fetchUserProfile, type UserProfileDto } from '@/api/user';
 import { queryKeys } from '@/queryKeys';
 
-const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
+type SearchParamsWithReturnTo = { returnTo?: string | string[] };
+
+const readGlobalSearchParams =
   typeof useGlobalSearchParams === 'function'
     ? useGlobalSearchParams
-    : (((_opts?: unknown) => ({}) as unknown) as unknown);
+    : (<T extends SearchParamsWithReturnTo>() => ({} as T));
 
-const useLocalSearchParamsSafe: typeof useLocalSearchParams =
+const readLocalSearchParams =
   typeof useLocalSearchParams === 'function'
     ? useLocalSearchParams
-    : (((_opts?: unknown) => ({}) as unknown) as unknown);
+    : (<T extends SearchParamsWithReturnTo>() => ({} as T));
+
+function useGlobalSearchParamsSafe(): SearchParamsWithReturnTo {
+  return readGlobalSearchParams<SearchParamsWithReturnTo>() ?? {};
+}
+
+function useLocalSearchParamsSafe(): SearchParamsWithReturnTo {
+  return readLocalSearchParams<SearchParamsWithReturnTo>() ?? {};
+}
 
 export type BreadcrumbModelItem = {
   label: string;
@@ -64,10 +75,10 @@ function normalizePathname(pathname: string | null | undefined) {
   return pathname;
 }
 
- function normalizeSlugPart(value: string | null) {
-   if (!value) return null;
-   return String(value).trim().split('#')[0].split('%23')[0] || null;
- }
+function normalizeSlugPart(value: string | null) {
+  if (!value) return null;
+  return String(value).trim().split('#')[0].split('%23')[0] || null;
+}
 
 function getResolvedPathname(pathname: string | null | undefined) {
   const normalized = normalizePathname(pathname);
@@ -120,9 +131,9 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   const resolvedPathname = getResolvedPathname(pathname);
   // expo-router mocks in unit tests often provide only useLocalSearchParams.
   // Prefer global search params when available; otherwise fall back to local params.
-  const globalParams = useGlobalSearchParamsSafe<{ returnTo?: string | string[] }>();
-  const localParams = useLocalSearchParamsSafe<{ returnTo?: string | string[] }>();
-  const returnTo = (globalParams as unknown)?.returnTo ?? (localParams as unknown)?.returnTo;
+  const globalParams = useGlobalSearchParamsSafe();
+  const localParams = useLocalSearchParamsSafe();
+  const returnTo = globalParams.returnTo ?? localParams.returnTo;
 
   const normalizedReturnToParam = useMemo(() => {
     if (typeof returnTo === 'string') return returnTo;
@@ -146,9 +157,9 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return isId ? idNum : travelSlug;
   }, [travelSlug]);
 
-  const { data: travelData } = useQuery({
-    queryKey: queryKeys.travel(travelCacheKey as unknown),
-    queryFn: ({ signal } = {} as unknown) => {
+  const { data: travelData } = useQuery<Travel | null>({
+    queryKey: travelCacheKey != null ? queryKeys.travel(travelCacheKey) : ['travel', 'missing'],
+    queryFn: ({ signal }) => {
       if (!travelSlug) return null;
       const idNum = Number(travelSlug);
       const isId = !Number.isNaN(idNum);
@@ -167,7 +178,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return parts.length >= 3 ? parts[2] : null;
   }, [resolvedPathname]);
 
-  const { data: questApiData } = useQuery({
+  const { data: questApiData } = useQuery<ApiQuestBundle | null>({
     queryKey: ['quest-bundle', questSlugForBreadcrumb],
     queryFn: () => questSlugForBreadcrumb ? fetchQuestByQuestId(questSlugForBreadcrumb) : null,
     enabled: !!questSlugForBreadcrumb,
@@ -187,7 +198,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return Number.isFinite(n) && n > 0 ? raw : null;
   }, [resolvedPathname]);
 
-  const { data: userProfileData } = useQuery({
+  const { data: userProfileData } = useQuery<UserProfileDto | null>({
     queryKey: ['user-profile', userIdForBreadcrumb],
     queryFn: () => userIdForBreadcrumb ? fetchUserProfile(userIdForBreadcrumb) : null,
     enabled: !!userIdForBreadcrumb,

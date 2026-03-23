@@ -7,6 +7,43 @@ import type { FavoriteItem } from '@/stores/favoritesStore';
 const SERVER_RECOMMENDATIONS_CACHE_KEY = 'metravel_recommendations_server';
 const getUserApi = async () => import('@/api/user');
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeCachedRecommendation = (item: unknown): FavoriteItem | null => {
+    if (!isRecord(item)) return null;
+
+    const id = item.id;
+    const type = item.type;
+    const title = item.title;
+    const url = item.url;
+    const addedAt = Number(item.addedAt);
+
+    if ((typeof id !== 'string' && typeof id !== 'number') || (type !== 'travel' && type !== 'article')) {
+        return null;
+    }
+
+    if (typeof title !== 'string' || typeof url !== 'string' || !Number.isFinite(addedAt)) {
+        return null;
+    }
+
+    return {
+        id,
+        type,
+        title,
+        url,
+        addedAt,
+        imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
+        country:
+            typeof item.country === 'string'
+                ? item.country
+                : typeof item.countryName === 'string'
+                  ? item.countryName
+                  : undefined,
+        city: typeof item.city === 'string' ? item.city : undefined,
+    };
+};
+
 interface RecommendationsState {
     recommended: FavoriteItem[];
     _fetched: boolean;
@@ -38,10 +75,9 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
             const raw = await AsyncStorage.getItem(key);
             if (raw) {
                 const parsed = safeJsonParseString(raw, []);
-                const normalized = (Array.isArray(parsed) ? parsed : []).filter(Boolean).map((item: unknown) => ({
-                    ...item,
-                    country: item.country ?? item.countryName ?? undefined,
-                }));
+                const normalized = (Array.isArray(parsed) ? parsed : [])
+                    .map(normalizeCachedRecommendation)
+                    .filter((item): item is FavoriteItem => item !== null);
                 set({ recommended: normalized });
             }
         } catch (error) {

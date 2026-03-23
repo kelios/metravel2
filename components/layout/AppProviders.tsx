@@ -15,16 +15,16 @@ interface AppProvidersProps {
 }
 
 const EmptyFallback = () => null;
-const safeLazy = <T extends React.ComponentType<any>>(
-  loader: () => Promise<{ default?: T; FavoritesProvider?: T }>,
+const safeLazy = (
+  loader: () => Promise<{ default?: React.ComponentType<any>; FavoritesProvider?: React.ComponentType<any> }>,
   name?: string
 ) =>
   React.lazy(() =>
     loader()
-      .then((mod) => ({ default: (mod.default ?? mod.FavoritesProvider ?? EmptyFallback) as T }))
+      .then((mod) => ({ default: mod.default ?? mod.FavoritesProvider ?? EmptyFallback }))
       .catch((err) => {
         if (__DEV__) console.error(`[safeLazy] Failed to load ${name || 'component'}:`, err);
-        return { default: EmptyFallback as T };
+        return { default: EmptyFallback };
       })
   );
 

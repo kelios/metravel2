@@ -22,6 +22,19 @@ import type { QuestMeta, FrontendQuestBundle } from '@/utils/questAdapters';
 export type { QuestMeta, FrontendQuestBundle };
 export { adaptBundle, adaptMeta };
 
+type PendingQuestProgressData = {
+    currentIndex: number;
+    unlockedIndex: number;
+    answers: Record<string, string>;
+    attempts: Record<string, number>;
+    hints: Record<string, boolean>;
+    showMap: boolean;
+    completed?: boolean;
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+    error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
+
 // ===================== ХУКИ =====================
 
 /** Хук для загрузки списка квестов */
@@ -43,8 +56,9 @@ export function useQuestsList() {
             })
             .catch((err) => {
                 if (cancelled) return;
-                console.warn('Failed to load quests list:', err?.message);
-                setError(err?.message || 'Ошибка загрузки квестов');
+                const message = getErrorMessage(err, 'Ошибка загрузки квестов');
+                console.warn('Failed to load quests list:', message);
+                setError(message);
                 setLoading(false);
             });
 
@@ -138,8 +152,9 @@ export function useQuestBundle(questId: string | undefined) {
             })
             .catch((err) => {
                 if (cancelled) return;
-                console.warn('Failed to load quest bundle:', err?.message);
-                setError(err?.message || 'Квест не найден');
+                const message = getErrorMessage(err, 'Квест не найден');
+                console.warn('Failed to load quest bundle:', message);
+                setError(message);
                 setLoading(false);
             });
 
@@ -158,7 +173,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     const [progressLoading, setProgressLoading] = useState(isAuthenticated && !!questId);
     const progressIdRef = useRef<number | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const pendingDataRef = useRef<unknown>(null);
+    const pendingDataRef = useRef<PendingQuestProgressData | null>(null);
 
     // Загрузка прогресса при маунте
     useEffect(() => {
@@ -223,15 +238,7 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
     }, []);
 
     // Сохранение прогресса на сервер (с дебаунсом 2 сек)
-    const saveProgress = useCallback((data: {
-        currentIndex: number;
-        unlockedIndex: number;
-        answers: Record<string, string>;
-        attempts: Record<string, number>;
-        hints: Record<string, boolean>;
-        showMap: boolean;
-        completed?: boolean;
-    }) => {
+    const saveProgress = useCallback((data: PendingQuestProgressData) => {
         if (!isAuthenticated || !progressIdRef.current) return;
 
         pendingDataRef.current = data;

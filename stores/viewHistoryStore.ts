@@ -8,6 +8,43 @@ const SERVER_HISTORY_CACHE_KEY = 'metravel_view_history_server';
 const MAX_HISTORY_ITEMS = 50;
 const getUserApi = async () => import('@/api/user');
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeCachedHistoryItem = (item: unknown): ViewHistoryItem | null => {
+    if (!isRecord(item)) return null;
+
+    const id = item.id;
+    const type = item.type;
+    const title = item.title;
+    const url = item.url;
+    const viewedAt = Number(item.viewedAt);
+
+    if ((typeof id !== 'string' && typeof id !== 'number') || (type !== 'travel' && type !== 'article')) {
+        return null;
+    }
+
+    if (typeof title !== 'string' || typeof url !== 'string' || !Number.isFinite(viewedAt)) {
+        return null;
+    }
+
+    return {
+        id,
+        type,
+        title,
+        url,
+        viewedAt,
+        imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : undefined,
+        country:
+            typeof item.country === 'string'
+                ? item.country
+                : typeof item.countryName === 'string'
+                  ? item.countryName
+                  : undefined,
+        city: typeof item.city === 'string' ? item.city : undefined,
+    };
+};
+
 export type ViewHistoryItem = {
     id: string | number;
     type: 'travel' | 'article';
@@ -81,7 +118,10 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
             const data = await AsyncStorage.getItem(key);
             if (data) {
                 const parsed = safeJsonParseString(data, []);
-                set({ viewHistory: Array.isArray(parsed) ? parsed : [] });
+                const normalized = (Array.isArray(parsed) ? parsed : [])
+                    .map(normalizeCachedHistoryItem)
+                    .filter((item): item is ViewHistoryItem => item !== null);
+                set({ viewHistory: normalized });
             }
         } catch (error) {
             devError('Ошибка загрузки истории:', error);
@@ -95,10 +135,9 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
             const raw = await AsyncStorage.getItem(key);
             if (raw) {
                 const parsed = safeJsonParseString(raw, []);
-                const normalized = (Array.isArray(parsed) ? parsed : []).filter(Boolean).map((item: unknown) => ({
-                    ...item,
-                    country: item.country ?? item.countryName ?? undefined,
-                }));
+                const normalized = (Array.isArray(parsed) ? parsed : [])
+                    .map(normalizeCachedHistoryItem)
+                    .filter((item): item is ViewHistoryItem => item !== null);
                 set({ viewHistory: normalized });
             }
         } catch (error) {

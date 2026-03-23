@@ -118,10 +118,11 @@ export const saveFormData = async (
     }
 
     // ✅ FIX: Валидация массивов (предотвращение отправки невалидных данных)
+    const dataRecord = data as unknown as Record<string, unknown>;
     const arrayFields = ['countries', 'categories', 'transports', 'companions',
                          'complexity', 'month', 'over_nights_stay'];
     arrayFields.forEach(field => {
-      const value = (data as Record<string, unknown>)[field];
+      const value = dataRecord[field];
       if (value && !Array.isArray(value)) {
         throw new Error(`Поле ${field} должно быть массивом`);
       }
@@ -271,7 +272,11 @@ export const deleteTravelMainImage = async (travelId: string | number) => {
 export const uploadImage = async (
   data: FormData,
   onProgress?: (percent: number) => void,
-): Promise<Record<string, unknown>> => {
+): Promise<{
+  data?: { url?: string };
+  url?: string;
+  [key: string]: unknown;
+}> => {
   const token = await getSecureItem('userToken');
   if (!token) {
     throw new Error('Пользователь не авторизован');

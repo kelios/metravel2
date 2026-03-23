@@ -5,7 +5,7 @@
  */
 
 import React, { useMemo } from 'react'
-import { Image, View, StyleSheet, Platform, ImageStyle, ViewStyle } from 'react-native'
+import { Image, View, StyleSheet, Platform, ImageStyle, ViewStyle, type DimensionValue } from 'react-native'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useProgressiveImage, generateLQIP } from '@/hooks/useProgressiveImage'
 
@@ -15,9 +15,9 @@ export interface ProgressiveImageProps {
   /** Alternative text for accessibility */
   alt?: string
   /** Image width */
-  width?: number | string
+  width?: DimensionValue
   /** Image height */
-  height?: number | string
+  height?: DimensionValue
   /** Aspect ratio (width/height) */
   aspectRatio?: number
   /** Custom styles */

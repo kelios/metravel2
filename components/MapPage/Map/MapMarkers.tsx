@@ -3,11 +3,11 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
 
 interface Point {
-  id?: number;
+  id?: string | number;
   coord: string;
   address: string;
-  travelImageThumbUrl: string;
-  categoryName: string;
+  travelImageThumbUrl?: string;
+  categoryName?: string | { name?: string } | Array<string | { name?: string }>;
   articleUrl?: string;
   urlTravel?: string;
 }

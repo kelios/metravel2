@@ -102,11 +102,14 @@ export const buildTravelFilterGroups = ({
       key: 'countries',
       title: 'Страны',
       options: (options?.countries || [])
-        .filter((country) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'countries', 'countries', country.country_id ?? country.id))
+        .filter((country) => {
+          const countryKey = country.country_id ?? country.id;
+          return countryKey !== undefined && shouldIncludeFacetOption(facetCounts, selectedFilters, 'countries', 'countries', countryKey);
+        })
         .map((country) => ({
           id: String(country.country_id ?? country.id),
           name: country.title_ru || (country as { name?: string }).name || '',
-          count: getFacetCount(facetCounts, 'countries', country.country_id ?? country.id),
+          count: getFacetCount(facetCounts, 'countries', (country.country_id ?? country.id) as string | number),
         })),
       multiSelect: true,
       icon: 'globe',

@@ -42,6 +42,38 @@ describe('StableContent (web) link styles', () => {
     }
   });
 
+  it('scrolls to internal hash anchors on click', async () => {
+    const StableContent = (await import('@/components/travel/StableContent')).default;
+
+    const scrollIntoView = jest.fn();
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    try {
+      const { container } = render(
+        <StableContent
+          html={'<p><a href="#section-1">Перейти</a></p><h2><span id="section-1">Секция 1</span></h2>'}
+          contentWidth={700}
+        />
+      );
+
+      await waitFor(() => {
+        expect(container.querySelector('.travel-rich-text a[href="#section-1"]')).toBeTruthy();
+        expect(container.querySelector('#section-1')).toBeTruthy();
+      });
+
+      const anchor = container.querySelector('.travel-rich-text a[href="#section-1"]') as HTMLAnchorElement | null;
+      expect(anchor).toBeTruthy();
+
+      fireEvent.click(anchor!);
+
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+      expect(window.location.hash).toBe('#section-1');
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    }
+  });
+
   it('injects CSS styles synchronously and keeps <a> tag in rendered HTML', async () => {
     const StableContent = (await import('@/components/travel/StableContent')).default;
 

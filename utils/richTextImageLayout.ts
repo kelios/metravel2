@@ -91,7 +91,7 @@ function analyzeImageGroup(images: string[]): { landscape: number; portrait: num
 function appendClassToParagraph(paragraphHtml: string, className: string): string {
   return paragraphHtml.replace(/<p([^>]*)>/i, (match, attrs = '') => {
     if (/\bclass="/i.test(attrs)) {
-      return `<p${attrs.replace(/class="([^"]*)"/i, (_, current) => {
+      return `<p${attrs.replace(/class="([^"]*)"/i, (_match: string, current: string) => {
         const merged = `${current} ${className}`
           .split(/\s+/)
           .filter(Boolean)
@@ -295,7 +295,7 @@ export function removeImageLayoutClasses(html: string): string {
       const nextClasses = classValue
         .split(/\s+/)
         .filter(Boolean)
-        .filter((className) => !classesToStrip.includes(className));
+        .filter((className: string) => !classesToStrip.includes(className));
 
       const classAttr = nextClasses.length ? ` class="${nextClasses.join(' ')}"` : '';
       return `<p${before}${classAttr}${after}>`;

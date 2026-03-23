@@ -1,23 +1,54 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
+type SpeechRecognitionAlternativeLike = {
+  transcript?: string;
+};
+
+type SpeechRecognitionResultLike = {
+  0?: SpeechRecognitionAlternativeLike;
+  isFinal?: boolean;
+};
+
+type SpeechRecognitionResultListLike = {
+  length: number;
+  [index: number]: SpeechRecognitionResultLike | undefined;
+};
+
+type SpeechRecognitionEventLike = {
+  results?: SpeechRecognitionResultListLike;
+  resultIndex?: number;
+};
+
+type SpeechRecognitionErrorEventLike = {
+  error?: string;
+};
+
 type SpeechRecognitionLike = {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
   start: () => void;
   stop: () => void;
-  onresult: ((event: unknown) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onend: (() => void) | null;
-  onerror: ((event: unknown) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
 };
 
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionCtor;
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
+
 function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   if (Platform.OS !== 'web') return null;
   if (typeof window === 'undefined') return null;
-  const w = window as unknown;
+  const w = window as SpeechRecognitionWindow;
   return (w.SpeechRecognition || w.webkitSpeechRecognition || null) as SpeechRecognitionCtor | null;
 }
 
@@ -48,12 +79,12 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     recognition.continuous = continuous;
     recognition.interimResults = true;
 
-    recognition.onresult = (event: unknown) => {
+    recognition.onresult = (event: SpeechRecognitionEventLike) => {
       try {
         let interim = '';
         let finalText = '';
-        const results = event?.results;
-        const startIndex = Number.isFinite(event?.resultIndex) ? Number(event.resultIndex) : 0;
+        const results = event.results;
+        const startIndex = Number.isFinite(event.resultIndex) ? Number(event.resultIndex) : 0;
         if (results && typeof results.length === 'number') {
           for (let i = startIndex; i < results.length; i += 1) {
             const res = results[i];
@@ -70,7 +101,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
           onFinalTextRef.current(cleanedFinal);
         }
       } catch (e: unknown) {
-        setError(e?.message ? String(e.message) : 'Ошибка распознавания речи');
+        setError(getErrorMessage(e, 'Ошибка распознавания речи'));
       }
     };
 
@@ -79,17 +110,17 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
       setInterimText('');
     };
 
-    recognition.onerror = (event: unknown) => {
-      const message = typeof event?.error === 'string' ? event.error : 'Ошибка распознавания речи';
+    recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
+      const message = typeof event.error === 'string' ? event.error : 'Ошибка распознавания речи';
       setError(message);
       setIsListening(false);
     };
 
     return () => {
       try {
-        recognition.onresult = null as unknown;
-        recognition.onend = null as unknown;
-        recognition.onerror = null as unknown;
+        recognition.onresult = null;
+        recognition.onend = null;
+        recognition.onerror = null;
         recognition.stop();
       } catch {
         // noop
@@ -107,7 +138,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
       recognitionRef.current.start();
       setIsListening(true);
     } catch (e: unknown) {
-      setError(e?.message ? String(e.message) : 'Не удалось запустить диктовку');
+      setError(getErrorMessage(e, 'Не удалось запустить диктовку'));
       setIsListening(false);
     }
   }, []);

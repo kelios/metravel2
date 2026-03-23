@@ -5,6 +5,7 @@ import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { FiltersProvider } from '@/context/MapFiltersContext';
 import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
+import type { TravelCoords } from '@/types/types';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -119,7 +120,7 @@ export function useMapScreenController() {
   const buildRouteToRef = useRef(buildRouteTo);
   buildRouteToRef.current = buildRouteTo;
 
-  const buildRouteToStable = useCallback((item: unknown) => {
+  const buildRouteToStable = useCallback((item: TravelCoords) => {
     return buildRouteToRef.current?.(item);
   }, []);
 

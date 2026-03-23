@@ -8,6 +8,8 @@ import { ExportBar } from './ExportBar';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
 import { createStyles } from './listTravelStyles';
 
+type ExportBarStyles = ReturnType<typeof createStyles>;
+
 type Props = {
   isMobile: boolean;
   travels: Travel[];
@@ -22,7 +24,7 @@ type Props = {
   lastSettings: BookSettings;
   settingsSummary: string;
   setLastSettings: React.Dispatch<React.SetStateAction<BookSettings>>;
-  styles: ReturnType<typeof createStyles>;
+  styles: Record<string, unknown>;
 };
 
 function ListTravelExportControls({
@@ -99,7 +101,7 @@ function ListTravelExportControls({
         progress={pdfExport.progress}
         settingsSummary={settingsSummary}
         hasSelection={hasSelection}
-        styles={styles}
+        styles={styles as ExportBarStyles}
       />
     </>
   );

@@ -149,7 +149,7 @@ const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) =>
       <FlashList
         data={notifications}
         renderItem={renderNotification}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item: Notification) => item.id}
         {...({ estimatedItemSize: 80 } as any)}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}

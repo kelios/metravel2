@@ -5,24 +5,28 @@
 
 import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import type { TravelCoords } from '@/types/types';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import type { Coordinates } from './useMapCoordinates';
+import type { FiltersData } from './useMapFilters';
+import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 import { useMapTravels } from './useMapTravels';
 
 interface UseMapDataControllerOptions {
   /**
    * Current map coordinates
    */
-  coordinates: { latitude: number; longitude: number } | null;
+  coordinates: Coordinates | null;
 
   /**
    * Current filter values
    */
-  filterValues: unknown;
+  filterValues: MapFilterValues;
 
   /**
    * Available filters
    */
-  filters: unknown;
+  filters: FiltersData;
 
   /**
    * Map mode (radius or route)
@@ -49,12 +53,12 @@ interface UseMapDataControllerResult {
   /**
    * All travels data (unfiltered)
    */
-  allTravelsData: unknown[];
+  allTravelsData: TravelCoords[];
 
   /**
    * Filtered travels data
    */
-  travelsData: unknown[];
+  travelsData: TravelCoords[];
 
   /**
    * Is loading initial data

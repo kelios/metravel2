@@ -15,13 +15,16 @@ const showToastMessage = async (payload: any) => {
 const getGlobalNavigator = () =>
     (globalThis as typeof globalThis & { navigator?: { onLine?: boolean } }).navigator;
 
+const hasOfflineFlag = (value: unknown): boolean =>
+    typeof value === 'object' && value !== null && (value as { offline?: unknown }).offline === true;
+
 export const isNetworkError = (error: any): boolean => {
     if (!error) return false;
 
     // Проверка для ApiError
     if (error instanceof ApiError) {
         // ApiError с status 0 обычно означает сетевую ошибку
-        if (error.status === 0 || error.data?.offline) {
+        if (error.status === 0 || hasOfflineFlag(error.data)) {
             return true;
         }
     }
@@ -99,7 +102,7 @@ export const getUserFriendlyNetworkError = (error: any): string => {
 
     // Если это ApiError, используем его сообщение
     if (error instanceof ApiError) {
-        if (error.data?.offline || error.status === 0) {
+        if (hasOfflineFlag(error.data) || error.status === 0) {
             return 'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.';
         }
         if (error.status === 401) {

@@ -17,6 +17,16 @@ interface UseAvatarUploadOptions {
     onSuccess?: (updated: UserProfileDto) => void;
 }
 
+type WebFileInputLike = {
+    click: () => void;
+};
+
+type WebFileSelectionEvent = {
+    target?: {
+        files?: ArrayLike<File> | null;
+    } | null;
+};
+
 /**
  * Shared hook for avatar pick + upload logic.
  * Used by both profile.tsx (quick upload) and settings.tsx (pick then upload).
@@ -27,7 +37,7 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
     const [avatarFile, setAvatarFile] = useState<UploadUserProfileAvatarFile | null>(null);
     const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
     const [isUploading, setIsUploading] = useState(false);
-    const webFileInputRef = useRef<unknown>(null);
+    const webFileInputRef = useRef<WebFileInputLike | null>(null);
 
     const syncAvatar = useCallback(
         (avatarRaw: unknown) => {
@@ -83,8 +93,8 @@ export function useAvatarUpload(options?: UseAvatarUploadOptions) {
         }
     }, []);
 
-    const handleWebFileSelected = useCallback((e: unknown) => {
-        const file = e?.target?.files?.[0];
+    const handleWebFileSelected = useCallback((e: WebFileSelectionEvent) => {
+        const file = e.target?.files?.[0];
         if (!file) return;
         setAvatarFile(file);
         try {

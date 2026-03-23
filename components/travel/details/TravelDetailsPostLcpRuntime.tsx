@@ -111,7 +111,9 @@ export default function TravelDetailsPostLcpRuntime({
         scrollToMapSection={scrollToMapSection}
       />
     ) : (
-      <SectionSkeleton style={PLACEHOLDER_STYLE} />
+      <View style={PLACEHOLDER_STYLE}>
+        <SectionSkeleton />
+      </View>
     )
   );
 
@@ -129,7 +131,7 @@ export default function TravelDetailsPostLcpRuntime({
         <View style={styles.sectionTabsContainer}>
           <TravelSectionsSheet
             links={sectionLinks}
-            activeSection={activeSection}
+            activeSection={activeSection ?? ''}
             onNavigate={onNavigate}
             testID="travel-sections-sheet-wrapper"
           />

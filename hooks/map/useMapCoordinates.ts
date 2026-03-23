@@ -77,7 +77,7 @@ export function useMapCoordinates() {
         return;
       }
 
-      const handleSuccess = (position: unknown) => {
+      const handleSuccess = (position: GeolocationPosition) => {
         if (signal?.aborted) {
           resolve();
           return;

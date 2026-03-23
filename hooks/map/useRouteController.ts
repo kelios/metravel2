@@ -10,6 +10,8 @@ import { useRouteStore } from '@/stores/routeStore';
 import { logMessage } from '@/utils/logger';
 import { showRoutePointAddedToast } from '@/utils/mapToasts';
 import type { MapUiApi } from '@/types/mapUi';
+import type { LatLng } from '@/types/coordinates';
+import type { RoutePoint } from '@/types/route';
 import type { TravelCoords } from '@/types/types';
 
 interface UseRouteControllerOptions {
@@ -48,7 +50,7 @@ interface UseRouteControllerResult {
   /**
    * Route store points (with metadata)
    */
-  routeStorePoints: unknown[];
+  routeStorePoints: RoutePoint[];
 
   /**
    * Start address
@@ -88,7 +90,7 @@ interface UseRouteControllerResult {
   /**
    * Set route points
    */
-  setRoutePoints: (points: [number, number][], options?: unknown) => void;
+  setRoutePoints: (points: [number, number][], options?: { force?: boolean }) => void;
 
   /**
    * Set route distance
@@ -118,7 +120,7 @@ interface UseRouteControllerResult {
   /**
    * Handle address select
    */
-  handleAddressSelect: (address: string, coords: unknown, isStart: boolean) => void;
+  handleAddressSelect: (address: string, coords: LatLng, isStart: boolean) => void;
 
   /**
    * Handle address clear

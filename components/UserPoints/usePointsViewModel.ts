@@ -30,6 +30,11 @@ export const usePointsViewModel = ({
   statusLabels,
   openRecommendations,
 }: Params) => {
+  const normalizedFilters = useMemo(
+    () => ({ ...filters, radiusKm: filters.radiusKm ?? undefined }),
+    [filters]
+  );
+
   const visibleFilteredPoints = useMemo(() => {
     if (showingRecommendations && recommendedPointIds.length > 0) {
       const recommended = new Set(recommendedPointIds);
@@ -40,8 +45,8 @@ export const usePointsViewModel = ({
   }, [activePreset, filteredPoints, recommendedPointIds, resolveCategoryIdsByNames, showingRecommendations]);
 
   const hasActiveFilters = useMemo(
-    () => computeHasActiveFilters({ activePresetId, filters, searchQuery }),
-    [activePresetId, filters, searchQuery]
+    () => computeHasActiveFilters({ activePresetId, filters: normalizedFilters, searchQuery }),
+    [activePresetId, normalizedFilters, searchQuery]
   );
 
   const activeFilterChips = useMemo(
@@ -49,11 +54,11 @@ export const usePointsViewModel = ({
       buildActiveFilterChips({
         activePreset,
         categoryIdToName,
-        filters,
+        filters: normalizedFilters,
         searchQuery,
         statusLabels,
       }),
-    [activePreset, categoryIdToName, filters, searchQuery, statusLabels]
+    [activePreset, categoryIdToName, normalizedFilters, searchQuery, statusLabels]
   );
 
   const handleOpenRecommendations = useCallback(

@@ -1,4 +1,4 @@
-type ToastPayload = {
+export type ToastPayload = {
   text1?: string;
   text2?: string;
   type?: string;

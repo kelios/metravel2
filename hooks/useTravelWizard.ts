@@ -4,10 +4,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
-import { showToast } from '@/utils/toast';
+import { showToast, type ToastPayload } from '@/utils/toast';
 import { useBeforeUnload } from '@/utils/beforeunloadGuard';
 
-async function showToastMessage(payload: unknown) {
+type WizardSaveResult = {
+  publish?: boolean;
+  moderation?: boolean;
+} | null | undefined;
+
+type BeforeRemoveEventLike = {
+  preventDefault: () => void;
+  data: {
+    action: unknown;
+  };
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
+
+async function showToastMessage(payload: ToastPayload) {
   await showToast(payload);
 }
 
@@ -75,7 +90,7 @@ interface UseTravelWizardOptions {
   totalSteps?: number;
   hasUnsavedChanges: boolean;
   canSave: boolean;
-  onSave: () => Promise<unknown>;
+  onSave: () => Promise<WizardSaveResult>;
   stepStorageKey?: string;
   stepStorageTtlMs?: number;
 }
@@ -268,8 +283,8 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
     setTimeout(() => {
       const el = document.getElementById(anchorId);
-      if (el && typeof (el as unknown).scrollIntoView === 'function') {
-        (el as unknown).scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       pendingIssueNavRef.current = null;
       setFocusAnchorId(null);
@@ -323,7 +338,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
                       await showToastMessage({
                         type: 'error',
                         text1: 'Не удалось сохранить',
-                        text2: e?.message || 'Попробуйте ещё раз',
+                        text2: getErrorMessage(e, 'Попробуйте ещё раз'),
                       });
                     }
                   },
@@ -358,13 +373,13 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     if (Platform.OS === 'web') return;
     if (!navigation?.addListener) return;
 
-    const unsubscribe = navigation.addListener('beforeRemove', (e: unknown) => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: BeforeRemoveEventLike) => {
       if (!hasUnsavedChanges) return;
       e.preventDefault();
 
       void confirmLeaveWizard(
-        () => navigation.dispatch(e.data.action),
-        () => navigation.dispatch(e.data.action)
+        () => navigation.dispatch(e.data.action as Parameters<typeof navigation.dispatch>[0]),
+        () => navigation.dispatch(e.data.action as Parameters<typeof navigation.dispatch>[0])
       );
     });
 
@@ -388,7 +403,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   }, [hasUnsavedChanges, confirmLeaveWizard, router]);
 
   const handleFinishWizard = useCallback(async () => {
-    const saved: unknown = await onSave();
+    const saved = await onSave();
     const shouldClear = Boolean(saved?.publish || saved?.moderation);
     if (shouldClear) {
       await clearPersistedStep();

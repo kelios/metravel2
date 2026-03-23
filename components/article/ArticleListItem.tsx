@@ -21,15 +21,15 @@ const DEFAULT_IMAGE =
 const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   const { id, name, description, article_image_thumb_url, article_type } = article;
   const colors = useThemedColors();
-  const articleRoute = useMemo<Href>(() => {
+  const articleRoute = useMemo<string>(() => {
     const rawUrl = typeof article.url === 'string' ? article.url.trim() : '';
     if (rawUrl.startsWith('/article/')) {
-      return rawUrl.split('?')[0].split('#')[0] as Href;
+      return rawUrl.split('?')[0].split('#')[0];
     }
     if (typeof article.slug === 'string' && article.slug.trim()) {
-      return `/article/${article.slug.trim()}` as Href;
+      return `/article/${article.slug.trim()}`;
     }
-    return `/article/${id}` as Href;
+    return `/article/${id}`;
   }, [article.url, article.slug, id]);
 
   // ✅ МИГРАЦИЯ: Мемоизация стилей для производительности
@@ -58,7 +58,7 @@ const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   return (
       <View style={styles.container}>
         <Pressable
-          onPress={() => router.push(articleRoute)}
+          onPress={() => router.push(articleRoute as Href)}
           {...({
             onClick: handleWebOpenInNewTab,
             onAuxClick: handleWebOpenInNewTab,

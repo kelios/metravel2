@@ -18,6 +18,7 @@ const ABSOLUTE_FILL_STYLE = { position: 'absolute', inset: 0 } as any;
 const shouldShowHeroSliderArrows = (isMobile: boolean) =>
   Platform.OS === 'web' || !isMobile;
 const shouldHideHeroSliderArrowsOnMobile = Platform.OS !== 'web';
+const noop = () => {};
 
 export default function TravelHeroInteractiveSlider({
   galleryImages,
@@ -83,7 +84,7 @@ export default function TravelHeroInteractiveSlider({
               .filter((img) => !!img.url)
               .map((img) => ({ url: img.url! }))}
             initialIndex={fullscreenIndex}
-            onClose={onCloseFullscreen}
+            onClose={onCloseFullscreen ?? noop}
           />
         </Suspense>
       ) : null}

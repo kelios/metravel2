@@ -15,6 +15,11 @@ import {
   optimisticAppendComment,
 } from '@/utils/commentCacheHelpers';
 
+type CachedQueryEntry = [readonly unknown[], unknown];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 export const commentKeys = {
   all: ['comments'] as const,
   threads: () => [...commentKeys.all, 'threads'] as const,
@@ -116,8 +121,8 @@ export function useCreateComment() {
     },
     onError: (err, variables, context) => {
       if (context?.previous) {
-        (context.previous as Array<[unknown, unknown]>).forEach(([key, value]) => {
-          queryClient.setQueryData(key as unknown, value);
+        (context.previous as CachedQueryEntry[]).forEach(([key, value]) => {
+          queryClient.setQueryData(key, value);
         });
       }
     },
@@ -155,7 +160,7 @@ export function useDeleteComment() {
         if (Array.isArray(old)) {
           return (old as TravelComment[]).filter((c) => c?.id !== _commentId);
         }
-        if (typeof old === 'object' && (old as unknown)?.id === _commentId) {
+        if (isRecord(old) && old.id === _commentId) {
           return undefined;
         }
         return old;
@@ -218,8 +223,8 @@ export function useReplyToComment() {
     },
     onError: (err, variables, context) => {
       if (context?.previous) {
-        (context.previous as Array<[unknown, unknown]>).forEach(([key, value]) => {
-          queryClient.setQueryData(key as unknown, value);
+        (context.previous as CachedQueryEntry[]).forEach(([key, value]) => {
+          queryClient.setQueryData(key, value);
         });
       }
     },

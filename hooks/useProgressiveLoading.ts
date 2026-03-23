@@ -69,7 +69,7 @@ export function ProgressiveWrapper({
 
     return React.createElement(
       View,
-      { ref: elementRef as unknown, style: { minHeight: 100 } },
+      { style: { minHeight: 100 } },
       fallback
     );
   }

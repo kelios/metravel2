@@ -4,15 +4,15 @@
 // без тяжёлой зависимости formik (~45KB gzipped).
 
 import { useState, useCallback, useRef, useMemo } from 'react';
-import type { ObjectSchema } from 'yup';
+import { ValidationError, type AnyObject, type ObjectSchema } from 'yup';
 
-interface UseYupFormOptions<T extends Record<string, unknown>> {
+interface UseYupFormOptions<T extends AnyObject> {
     initialValues: T;
-    validationSchema: ObjectSchema<unknown>;
+    validationSchema: ObjectSchema<T>;
     onSubmit: (values: T, helpers: { setSubmitting: (v: boolean) => void; resetForm: () => void }) => void | Promise<void>;
 }
 
-export function useYupForm<T extends Record<string, unknown>>({ initialValues, validationSchema, onSubmit }: UseYupFormOptions<T>) {
+export function useYupForm<T extends AnyObject>({ initialValues, validationSchema, onSubmit }: UseYupFormOptions<T>) {
     const [values, setValues] = useState<T>(initialValues);
     const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
     const [touched, setTouched] = useState<Partial<Record<keyof T, boolean>>>({});
@@ -44,8 +44,9 @@ export function useYupForm<T extends Record<string, unknown>>({ initialValues, v
             return true;
         } catch (err: unknown) {
             const fieldErrors: Partial<Record<keyof T, string>> = {};
-            if (err?.inner) {
-                for (const e of err.inner) {
+            const validationError = err instanceof ValidationError ? err : null;
+            if (validationError?.inner) {
+                for (const e of validationError.inner) {
                     if (e.path && !fieldErrors[e.path as keyof T]) {
                         fieldErrors[e.path as keyof T] = e.message;
                     }

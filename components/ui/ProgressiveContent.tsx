@@ -84,6 +84,7 @@ export const ProgressiveContent: React.FC<ProgressiveContentProps> = ({
       return () => clearTimeout(timer);
     } else {
       startTransition();
+      return undefined;
     }
   }, [isReady, fadeAnim, transitionDuration, onTransitionComplete, minSkeletonTime]);
 
@@ -159,7 +160,7 @@ export function useProgressiveLoad<T>(
     minSkeletonTime?: number;
   }
 ) {
-  const { readyWhen = (d) => Boolean(d), minSkeletonTime = MIN_SKELETON_TIME } = options ?? {};
+  const { readyWhen = (d: T | undefined | null) => Boolean(d), minSkeletonTime = MIN_SKELETON_TIME } = options ?? {};
   
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const mountTimeRef = useRef(Date.now());
@@ -180,6 +181,7 @@ export function useProgressiveLoad<T>(
       return () => clearTimeout(timer);
     } else {
       setPhase('ready');
+      return undefined;
     }
   }, [isReady, minSkeletonTime]);
 

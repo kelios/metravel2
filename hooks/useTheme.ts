@@ -12,6 +12,15 @@ export { getThemedColors };
 
 export type Theme = 'light' | 'dark' | 'auto';
 
+type ThemeGlobalBag = typeof globalThis & {
+  [THEME_CONTEXT_GLOBAL_KEY]?: Context<ThemeContextType | undefined>;
+  [THEME_PROVIDER_WARNED_GLOBAL_KEY]?: boolean;
+};
+
+function getThemeGlobalBag(): ThemeGlobalBag | undefined {
+  return typeof globalThis !== 'undefined' ? (globalThis as ThemeGlobalBag) : undefined;
+}
+
 export interface ThemeContextType {
   theme: Theme;
   isDark: boolean;
@@ -23,9 +32,9 @@ const THEME_CONTEXT_GLOBAL_KEY = '__metravelThemeContext_v1';
 const THEME_PROVIDER_WARNED_GLOBAL_KEY = '__metravelThemeProviderWarned_v1';
 
 function getSingletonThemeContext(): Context<ThemeContextType | undefined> {
-  const g: unknown = typeof globalThis !== 'undefined' ? globalThis : undefined;
-  if (g && g[THEME_CONTEXT_GLOBAL_KEY]) {
-    return g[THEME_CONTEXT_GLOBAL_KEY] as Context<ThemeContextType | undefined>;
+  const g = getThemeGlobalBag();
+  if (g?.[THEME_CONTEXT_GLOBAL_KEY]) {
+    return g[THEME_CONTEXT_GLOBAL_KEY];
   }
 
   const ctx = createContext<ThemeContextType | undefined>(undefined);
@@ -43,8 +52,8 @@ export function useTheme(): ThemeContextType {
 
   if (!context) {
     if (__DEV__) {
-      const g: unknown = typeof globalThis !== 'undefined' ? globalThis : undefined;
-      const alreadyWarned = Boolean(g && g[THEME_PROVIDER_WARNED_GLOBAL_KEY]);
+      const g = getThemeGlobalBag();
+      const alreadyWarned = Boolean(g?.[THEME_PROVIDER_WARNED_GLOBAL_KEY]);
       if (!alreadyWarned) {
         if (g) g[THEME_PROVIDER_WARNED_GLOBAL_KEY] = true;
         console.error(

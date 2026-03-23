@@ -265,7 +265,7 @@ function SearchAutocomplete({
           ref={listRef}
           data={suggestions}
           renderItem={renderItem}
-          keyExtractor={(item, index) => `${item.text}-${index}`}
+          keyExtractor={(item: Suggestion, index: number) => `${item.text}-${index}`}
           {...({ estimatedItemSize: 44 } as any)}
           keyboardShouldPersistTaps="handled"
           style={styles.list}

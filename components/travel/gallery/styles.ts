@@ -11,12 +11,9 @@ export const createGalleryStyles = (colors: ReturnType<typeof useThemedColors>) 
       // ✅ УЛУЧШЕНИЕ: Добавлен фон для галереи
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
-      ...Platform.select({
-        web: {
-          boxShadow: colors.boxShadows.light,
-        },
-        default: colors.shadows.light,
-      }),
+      ...(Platform.OS === 'web'
+        ? ({ boxShadow: colors.boxShadows.light } as any)
+        : colors.shadows.light),
     },
     headerContainer: {
       flexDirection: 'row',

@@ -1,12 +1,19 @@
 import { useCallback } from 'react'
 import { Platform } from 'react-native'
 
+type TdTraceWindow = Window & {
+  __METRAVEL_TD_TRACE?: boolean
+  __METRAVEL_TD_TRACE_START?: number
+}
+
+const traceWindow = typeof window !== 'undefined' ? (window as TdTraceWindow) : null
+
 const tdTraceEnabled =
   Platform.OS === 'web' &&
   typeof window !== 'undefined' &&
   (
     process.env.EXPO_PUBLIC_TD_TRACE === '1' ||
-    (window as unknown).__METRAVEL_TD_TRACE === true ||
+    traceWindow?.__METRAVEL_TD_TRACE === true ||
     (typeof window.location?.search === 'string' && /(?:\?|&)tdtrace=1(?:&|$)/.test(window.location.search))
   )
 
@@ -15,13 +22,15 @@ export function useTdTrace() {
     (event: string, data?: unknown) => {
       if (!tdTraceEnabled) return
       try {
-        const perf = (window as unknown).performance
+        const perf = traceWindow?.performance
         const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
 
         const base =
-          (window as unknown).__METRAVEL_TD_TRACE_START ??
+          traceWindow?.__METRAVEL_TD_TRACE_START ??
           (typeof perf?.now === 'function' ? perf.now() : now)
-        ;(window as unknown).__METRAVEL_TD_TRACE_START = base
+        if (traceWindow) {
+          traceWindow.__METRAVEL_TD_TRACE_START = base
+        }
 
         const delta = Math.round(now - base)
         // eslint-disable-next-line no-console

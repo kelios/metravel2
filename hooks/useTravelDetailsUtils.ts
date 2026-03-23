@@ -6,6 +6,28 @@
 import { useEffect, useRef, MutableRefObject, useCallback, useState } from "react";
 import { Platform } from "react-native";
 
+type IdleDeadlineLike = {
+  didTimeout: boolean;
+  timeRemaining: () => number;
+};
+
+type IdleCallbackWindow = Window & {
+  requestIdleCallback?: (
+    callback: (deadline: IdleDeadlineLike) => void,
+    options?: { timeout?: number }
+  ) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+type DOMRefLike = {
+  _nativeNode?: unknown;
+  _domNode?: unknown;
+  getBoundingClientRect?: () => DOMRect;
+};
+
+const isDOMRefLike = (value: unknown): value is DOMRefLike =>
+  typeof value === "object" && value !== null;
+
 /**
  * Hook for safe setTimeout cleanup
  */
@@ -53,7 +75,7 @@ export function useDOMElement(
     }
 
     const getDOMElement = (): HTMLElement | null => {
-      const current = ref.current;
+      const current = ref.current as DOMRefLike | null;
       if (!current) return null;
 
       // React Native Web exposes DOM node via these properties
@@ -63,7 +85,7 @@ export function useDOMElement(
         current; // Already a DOM node
 
       // Validate it's a DOM element
-      if (domNode && typeof domNode.getBoundingClientRect === "function") {
+      if (isDOMRefLike(domNode) && typeof domNode.getBoundingClientRect === "function") {
         return domNode as HTMLElement;
       }
 
@@ -105,15 +127,16 @@ export function useIdleCallback(
 
   useEffect(() => {
     if (!enabled || Platform.OS !== "web") return;
+    const idleWindow = window as IdleCallbackWindow;
 
     const hasRequestIdleCallback =
-      typeof (window as unknown)?.requestIdleCallback === "function";
+      typeof idleWindow.requestIdleCallback === "function";
 
     if (hasRequestIdleCallback) {
-      const id = (window as unknown).requestIdleCallback(callback, { timeout });
+      const id = idleWindow.requestIdleCallback!(callback, { timeout });
       return () => {
         try {
-          (window as unknown).cancelIdleCallback?.(id);
+          idleWindow.cancelIdleCallback?.(id);
         } catch {
           // noop
         }

@@ -117,7 +117,7 @@ const ActivityFeed = ({ userId, limit = 20, showHeader = true }: ActivityFeedPro
       <FlashList
         data={activities}
         renderItem={renderActivity}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item: Activity) => item.id}
         {...({ estimatedItemSize: 80 } as any)}
         contentContainerStyle={styles.list}
         refreshControl={

@@ -20,7 +20,7 @@ const ReanimatedEasing = Reanimated?.Easing;
 interface SkeletonLoaderProps {
   testID?: string;
   width?: number | string;
-  height?: number;
+  height?: number | string;
   borderRadius?: number;
   style?: any;
 }

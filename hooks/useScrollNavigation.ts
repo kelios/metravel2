@@ -4,8 +4,52 @@
  */
 
 import { useMemo, useRef, useCallback } from 'react';
-import { View, ScrollView, Platform } from 'react-native';
+import { View, ScrollView, Platform, findNodeHandle } from 'react-native';
 import React from 'react';
+
+type RecordUnknown = Record<string, unknown>;
+
+type DOMNodeLike = RecordUnknown & {
+  _nativeNode?: unknown;
+  _domNode?: unknown;
+  getBoundingClientRect?: () => DOMRect;
+  setAttribute?: (name: string, value: string) => void;
+  getAttribute?: (name: string) => string | null;
+  scrollTo?: (options: {
+    top?: number;
+    left?: number;
+    x?: number;
+    y?: number;
+    behavior?: ScrollBehavior;
+    animated?: boolean;
+  }) => void;
+  scrollTop?: number;
+  scrollHeight?: number;
+  clientHeight?: number;
+  parentElement?: HTMLElement | null;
+};
+
+type ScrollViewRefLike = RecordUnknown & {
+  getScrollableNode?: () => unknown;
+  _scrollNode?: unknown;
+  _innerViewNode?: unknown;
+  _nativeNode?: unknown;
+  _domNode?: unknown;
+};
+
+type DocumentLike = Document & {
+  body?: HTMLElement | null;
+  documentElement?: HTMLElement | null;
+};
+
+const isRecord = (value: unknown): value is RecordUnknown =>
+  typeof value === 'object' && value !== null;
+
+const asDOMNodeLike = (value: unknown): DOMNodeLike | null =>
+  isRecord(value) ? (value as DOMNodeLike) : null;
+
+const asScrollViewRefLike = (value: unknown): ScrollViewRefLike | null =>
+  isRecord(value) ? (value as ScrollViewRefLike) : null;
 
 export interface UseScrollNavigationReturn {
   anchors: Record<string, React.RefObject<View | null>>;
@@ -61,9 +105,12 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
           // Fallback: by ref (useful when the section mounted lazily and attribute is not yet assigned)
           try {
-            const refAny: unknown = (anchors as unknown)?.[k];
-            const current: unknown = refAny?.current;
-            const node: unknown = current?._nativeNode || current?._domNode || current;
+            const refAny = anchors[k];
+            const current = asDOMNodeLike(refAny?.current);
+            const node =
+              asDOMNodeLike(current?._nativeNode) ||
+              asDOMNodeLike(current?._domNode) ||
+              current;
             if (!node) return null;
             if (typeof node.getBoundingClientRect !== 'function') return null;
 
@@ -74,7 +121,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
               }
             }
 
-            return node as HTMLElement;
+            return node as unknown as HTMLElement;
           } catch {
             return null;
           }
@@ -98,8 +145,8 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
         const isDocumentScrollContainer = (node: unknown): boolean => {
           if (!node) return false;
-          const docAny = document as unknown;
-          const scrollingEl = (document.scrollingElement || docAny.documentElement || docAny.body) as unknown;
+          const docAny = document as DocumentLike;
+          const scrollingEl = document.scrollingElement || docAny.documentElement || docAny.body || null;
           return node === window || node === document || node === docAny.body || node === docAny.documentElement || node === scrollingEl;
         };
 
@@ -112,8 +159,9 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             if (isDocumentScrollContainer(container)) return true;
 
             // For nested scroll containers, apply offset only when the container is under the header.
-            if (container && typeof container.getBoundingClientRect === 'function') {
-              const rect = container.getBoundingClientRect();
+            const containerNode = asDOMNodeLike(container);
+            if (containerNode && typeof containerNode.getBoundingClientRect === 'function') {
+              const rect = containerNode.getBoundingClientRect();
               const top = Number(rect?.top ?? 0);
               // If container starts below the header, don't offset.
               return top < headerH - 4;
@@ -125,10 +173,11 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         };
 
         const canScrollNode = (node: unknown): node is HTMLElement => {
-          if (!node) return false;
-          if (typeof node.getBoundingClientRect !== 'function') return false;
-          const sh = Number((node as unknown).scrollHeight ?? 0);
-          const ch = Number((node as unknown).clientHeight ?? 0);
+          const domNode = asDOMNodeLike(node);
+          if (!domNode) return false;
+          if (typeof domNode.getBoundingClientRect !== 'function') return false;
+          const sh = Number(domNode.scrollHeight ?? 0);
+          const ch = Number(domNode.clientHeight ?? 0);
           const canScrollBySize = sh > ch + 2;
           return canScrollBySize;
         };
@@ -154,14 +203,15 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
         {
           const safeScrollTo = (node: unknown, top: number): boolean => {
-            if (!node) return false;
-            const before = Number(node.scrollTop ?? 0);
+            const scrollNode = asDOMNodeLike(node);
+            if (!scrollNode) return false;
+            const before = Number(scrollNode.scrollTop ?? 0);
             let didCall = false;
 
             // 1) Standard DOM signature: scrollTo({ top, behavior })
             try {
-              if (typeof node.scrollTo === 'function') {
-                node.scrollTo({ top, behavior: 'smooth' });
+              if (typeof scrollNode.scrollTo === 'function') {
+                scrollNode.scrollTo({ top, behavior: 'smooth' });
                 didCall = true;
               }
             } catch {
@@ -170,9 +220,9 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
             // If scrollTop didn't change, RNW/webview polyfills may expect x/y/animated object signature
             try {
-              const afterObj = Number(node.scrollTop ?? 0);
-              if (typeof node.scrollTo === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
-                node.scrollTo({ x: 0, y: top, animated: true });
+              const afterObj = Number(scrollNode.scrollTop ?? 0);
+              if (typeof scrollNode.scrollTo === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
+                scrollNode.scrollTo({ x: 0, y: top, animated: true });
                 didCall = true;
               }
             } catch {
@@ -181,9 +231,9 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
             // Final fallback: assign scrollTop
             try {
-              const afterNum = Number(node.scrollTop ?? 0);
+              const afterNum = Number(scrollNode.scrollTop ?? 0);
               if (Math.abs(afterNum - before) < 1) {
-                node.scrollTop = top;
+                scrollNode.scrollTop = top;
                 didCall = true;
               }
             } catch {
@@ -193,13 +243,13 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             return didCall;
           };
 
-          const scrollViewAny = scrollRef.current as unknown;
+          const scrollViewAny = asScrollViewRefLike(scrollRef.current);
           const scrollNode: HTMLElement | null =
-            (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
-            scrollViewAny?._scrollNode ||
-            scrollViewAny?._innerViewNode ||
-            scrollViewAny?._nativeNode ||
-            scrollViewAny?._domNode ||
+            (typeof scrollViewAny?.getScrollableNode === 'function' && (asDOMNodeLike(scrollViewAny.getScrollableNode()) as HTMLElement | null)) ||
+            (asDOMNodeLike(scrollViewAny?._scrollNode) as HTMLElement | null) ||
+            (asDOMNodeLike(scrollViewAny?._innerViewNode) as HTMLElement | null) ||
+            (asDOMNodeLike(scrollViewAny?._nativeNode) as HTMLElement | null) ||
+            (asDOMNodeLike(scrollViewAny?._domNode) as HTMLElement | null) ||
             null;
 
           const bestScrollContainer =
@@ -209,13 +259,13 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           if (bestScrollContainer && typeof bestScrollContainer.getBoundingClientRect === 'function') {
             const containerRect = bestScrollContainer.getBoundingClientRect();
             const elRect = el.getBoundingClientRect();
-            const currentTop = (bestScrollContainer as unknown).scrollTop ?? 0;
+            const currentTop = bestScrollContainer.scrollTop ?? 0;
             const HEADER_OFFSET = getHeaderOffset();
             const adjustment = shouldApplyHeaderOffset(bestScrollContainer) ? HEADER_OFFSET : 0;
             const targetTopRaw = currentTop + (elRect.top - containerRect.top) - adjustment;
             const targetTop = Math.max(0, Math.round(targetTopRaw));
 
-            if (safeScrollTo(bestScrollContainer as unknown, targetTop)) {
+            if (safeScrollTo(bestScrollContainer, targetTop)) {
               return true;
             }
           }
@@ -224,7 +274,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           {
             const HEADER_OFFSET = getHeaderOffset();
             const elRect = el.getBoundingClientRect();
-            const win = (typeof window !== 'undefined' ? window : undefined) as unknown;
+            const win = typeof window !== 'undefined' ? window : undefined;
             if (win && typeof win.scrollTo === 'function') {
               const currentScrollY = win.pageYOffset ?? win.scrollY ?? 0;
               const targetY = Math.max(0, Math.round(currentScrollY + elRect.top - HEADER_OFFSET));
@@ -268,9 +318,18 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       }
 
       const anchor = anchors[key];
-      if (anchor?.current && scrollRef.current) {
+      const scrollTarget = scrollRef.current;
+      let scrollHandle: ReturnType<typeof findNodeHandle> | null = null;
+      if (scrollTarget) {
+        try {
+          scrollHandle = findNodeHandle(scrollTarget);
+        } catch {
+          scrollHandle = scrollTarget as any;
+        }
+      }
+      if (anchor?.current && scrollHandle != null) {
         anchor.current.measureLayout(
-          scrollRef.current as unknown,
+          scrollHandle,
           (_x, y) => {
             scrollRef.current?.scrollTo({ y, animated: true });
           },

@@ -28,7 +28,9 @@ export function useThemeColor(
 ) {
   const themeContext = useContext(ThemeContext);
   const systemTheme = useColorScheme() ?? 'light';
-  const theme = themeContext ? (themeContext.isDark ? 'dark' : 'light') : systemTheme;
+  const theme = themeContext
+    ? (themeContext.isDark ? 'dark' : 'light')
+    : (systemTheme === 'dark' ? 'dark' : 'light');
   const colorFromProps = props[theme];
   const colors = useThemedColors();
 

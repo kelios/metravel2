@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
+import type { UserProfileDto } from '@/api/user';
 
 const getAuthApi = async () => import('@/api/auth');
 const getUserApi = async () => import('@/api/user');
@@ -171,7 +172,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 await setSecureItem('refreshToken', userData.refresh);
             }
 
-            let profile: unknown = null;
+            let profile: UserProfileDto | null = null;
             try {
                 const { fetchUserProfile } = await getUserApi();
                 profile = await fetchUserProfile(String(userData.id));
@@ -236,7 +237,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 await setSecureItem('refreshToken', userData.refresh);
             }
 
-            let profile: unknown = null;
+            let profile: UserProfileDto | null = null;
             try {
                 const { fetchUserProfile } = await getUserApi();
                 profile = await fetchUserProfile(String(userData.id));

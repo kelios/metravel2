@@ -9,7 +9,7 @@ import { createLeafletLayer } from '@/utils/mapWebLayers';
 import type { OsmPoiCategory } from '@/utils/overpass';
 
 interface Point {
-  id?: number;
+  id?: string | number;
   coord: string;
   address: string;
 }

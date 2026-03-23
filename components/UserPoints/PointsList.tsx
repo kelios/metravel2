@@ -214,6 +214,18 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     resolveCategoryIdsForEdit,
     queryClient,
   });
+  const manualCoordsValue = useMemo(
+    () => {
+      if (typeof manualCoords === 'string') return manualCoords;
+      if (manualCoords && typeof manualCoords === 'object') {
+        const lat = 'lat' in manualCoords ? String(manualCoords.lat ?? '') : '';
+        const lng = 'lng' in manualCoords ? String(manualCoords.lng ?? '') : '';
+        return lat && lng ? `${lat},${lng}` : '';
+      }
+      return '';
+    },
+    [manualCoords]
+  );
 
   const { pointToDelete, setPointToDelete, requestDeletePoint, confirmDeletePoint } = usePointsDeletePoint({
     queryClient,
@@ -443,7 +455,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
           setManualName(v);
         }}
         manualError={manualError}
-        manualCoords={manualCoords}
+        manualCoords={manualCoordsValue}
         manualLat={manualLat}
         onChangeLat={(v) => {
           setManualLat(v);

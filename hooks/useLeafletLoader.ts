@@ -10,6 +10,20 @@ import { DESIGN_COLORS } from '@/constants/designSystem';
 import { ensureLeafletCss as ensureLeafletCssOverrides } from '@/utils/ensureLeafletCss';
 import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 
+type LeafletRuntime = typeof import('leaflet');
+type ReactLeafletRuntime = typeof import('react-leaflet');
+
+interface ProcessLike {
+  env?: {
+    NODE_ENV?: string;
+  };
+}
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout?: number }) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
 interface UseLeafletLoaderOptions {
   /**
    * Enable Leaflet loading
@@ -40,12 +54,12 @@ interface UseLeafletLoaderResult {
   /**
    * Leaflet library instance (null until loaded)
    */
-  L: unknown | null;
+  L: LeafletRuntime | null;
 
   /**
    * React-Leaflet library instance (null until loaded)
    */
-  RL: unknown | null;
+  RL: ReactLeafletRuntime | null;
 
   /**
    * Loading state
@@ -63,8 +77,8 @@ interface UseLeafletLoaderResult {
   ready: boolean;
 }
 
-const isTestEnv = typeof process !== 'undefined' &&
-  (process as unknown).env?.NODE_ENV === 'test';
+const runtimeProcess = typeof process !== 'undefined' ? (process as ProcessLike) : undefined;
+const isTestEnv = runtimeProcess?.env?.NODE_ENV === 'test';
 
 const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 
@@ -261,8 +275,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     fallbackDelay = 600,
   } = options;
 
-  const [L, setL] = useState<unknown>(null);
-  const [RL, setRL] = useState<unknown>(null);
+  const [L, setL] = useState<LeafletRuntime | null>(null);
+  const [RL, setRL] = useState<ReactLeafletRuntime | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   // When idle callback is disabled and delay is 0, start loading immediately (no extra render cycle).
@@ -290,16 +304,17 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     if (shouldLoad) return;
 
     let cancelled = false;
-    let idleHandle: unknown = null;
+    let idleHandle: number | null = null;
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const idleWindow = typeof window !== 'undefined' ? (window as IdleWindow) : undefined;
 
     const enableLoading = () => {
       if (cancelled) return;
       setShouldLoad(true);
     };
 
-    if (useIdleCallback && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleHandle = (window as unknown).requestIdleCallback(enableLoading, { timeout: idleTimeout });
+    if (useIdleCallback && idleWindow?.requestIdleCallback) {
+      idleHandle = idleWindow.requestIdleCallback(enableLoading, { timeout: idleTimeout });
     } else {
       timeoutHandle = setTimeout(enableLoading, fallbackDelay);
     }
@@ -307,8 +322,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     return () => {
       cancelled = true;
       try {
-        if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-          (window as unknown).cancelIdleCallback(idleHandle);
+        if (idleHandle != null) {
+          idleWindow?.cancelIdleCallback?.(idleHandle);
         }
       } catch {
         // Ignore cancellation errors

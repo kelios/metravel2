@@ -4,6 +4,17 @@
 import { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 
+interface NetInfoStateLike {
+  isConnected?: boolean | null;
+  isInternetReachable?: boolean | null;
+  type?: string | null;
+}
+
+interface NetInfoModuleLike {
+  fetch: () => Promise<NetInfoStateLike>;
+  addEventListener: (listener: (state: NetInfoStateLike) => void) => () => void;
+}
+
 export interface NetworkStatus {
   isConnected: boolean;
   isInternetReachable: boolean | null;
@@ -52,10 +63,10 @@ export function useNetworkStatus(): NetworkStatus {
 
     // Для native используем NetInfo (требует установки @react-native-community/netinfo)
     try {
-      const NetInfo = require('@react-native-community/netinfo');
+      const NetInfo = require('@react-native-community/netinfo') as NetInfoModuleLike;
 
       // Устанавливаем начальное состояние
-      NetInfo.fetch().then((state: unknown) => {
+      NetInfo.fetch().then((state: NetInfoStateLike) => {
         setNetworkStatus({
           isConnected: state.isConnected ?? false,
           isInternetReachable: state.isInternetReachable ?? null,
@@ -64,7 +75,7 @@ export function useNetworkStatus(): NetworkStatus {
       });
 
       // Подписываемся на изменения
-      const unsubscribe = NetInfo.addEventListener((state: unknown) => {
+      const unsubscribe = NetInfo.addEventListener((state: NetInfoStateLike) => {
         setNetworkStatus({
           isConnected: state.isConnected ?? false,
           isInternetReachable: state.isInternetReachable ?? null,

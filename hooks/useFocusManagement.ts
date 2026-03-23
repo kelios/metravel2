@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Platform, AccessibilityInfo } from 'react-native'
+import { Platform, AccessibilityInfo, findNodeHandle } from 'react-native'
 
 export interface FocusOptions {
   /** Auto-focus on mount */
@@ -60,6 +60,7 @@ export function useFocusManagement(
     if (Platform.OS === 'web') {
       // Check for screen reader on web
       setIsScreenReaderEnabled(false) // Can't reliably detect on web
+      return undefined
     } else {
       // Native: use AccessibilityInfo
       AccessibilityInfo.isScreenReaderEnabled().then(setIsScreenReaderEnabled)
@@ -100,7 +101,10 @@ export function useFocusManagement(
     if (Platform.OS === 'web') {
       ref.current.focus?.()
     } else {
-      AccessibilityInfo.setAccessibilityFocus(ref.current)
+      const nodeHandle = findNodeHandle(ref.current as never)
+      if (nodeHandle != null) {
+        AccessibilityInfo.setAccessibilityFocus(nodeHandle)
+      }
     }
 
     setFocusedId(id)
@@ -167,7 +171,7 @@ export function useFocusManagement(
 
     // Save previous focus
     if (restoreFocus && Platform.OS === 'web') {
-      previousFocusRef.current = document.activeElement
+      previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     }
 
     // Focus initial element
@@ -175,7 +179,10 @@ export function useFocusManagement(
       if (Platform.OS === 'web') {
         initialFocusRef.current.focus()
       } else {
-        AccessibilityInfo.setAccessibilityFocus(initialFocusRef.current)
+        const nodeHandle = findNodeHandle(initialFocusRef.current as never)
+        if (nodeHandle != null) {
+          AccessibilityInfo.setAccessibilityFocus(nodeHandle)
+        }
       }
     } else {
       focusFirst()

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useContext } from 'react';
 import isEqual from 'fast-deep-equal';
-import { useRouter } from 'expo-router';
-import { QueryClientContext } from '@tanstack/react-query';
+import { useRouter, type Href } from 'expo-router';
+import { QueryClientContext, type QueryClient } from '@tanstack/react-query';
 import { fetchTravel } from '@/api/travelsApi';
 import { saveFormData, uploadImage } from '@/api/misc';
+import { ApiError } from '@/api/client';
 import { TravelFormData, Travel, MarkerData } from '@/types/types';
 import { useFormState } from '@/hooks/useFormState';
 import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
@@ -16,8 +17,6 @@ import {
   checkTravelEditAccess,
   stripMarkerCoverFallbacks,
 } from '@/utils/travelFormUtils';
-import { showToast } from '@/utils/toast';
-import { ApiError } from '@/api/client';
 import {
   mergeMarkersPreserveImages,
   ensureRequiredDraftFields,
@@ -36,12 +35,48 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
-async function showToastMessage(payload: unknown) {
+import { showToast, type ToastPayload } from '@/utils/toast';
+
+async function showToastMessage(payload: ToastPayload) {
   await showToast(payload);
 }
 
 type ToastAwareError = Error & { toastShown?: boolean };
 const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
+
+type UploadImageResponse = Record<string, unknown> & {
+  url?: unknown;
+  data?: Record<string, unknown>;
+  path?: unknown;
+  file_url?: unknown;
+};
+
+type MonitoringWindow = Window & {
+  Sentry?: {
+    captureException: (error: unknown, context?: Record<string, unknown>) => void;
+  };
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const getErrorMessage = (error: unknown, fallback = ''): string => {
+  if (error instanceof Error && typeof error.message === 'string') return error.message;
+  if (isRecord(error) && typeof error.message === 'string') return error.message;
+  return fallback;
+};
+
+const getErrorName = (error: unknown): string | null => {
+  if (error instanceof Error && typeof error.name === 'string') return error.name;
+  if (isRecord(error) && typeof error.name === 'string') return error.name;
+  return null;
+};
+
+const extractUploadUrl = (response: UploadImageResponse): string => {
+  const nestedData = isRecord(response.data) ? response.data : null;
+  const uploadedUrlRaw = response.url ?? nestedData?.url ?? response.path ?? response.file_url;
+  return uploadedUrlRaw ? normalizeMediaUrl(String(uploadedUrlRaw)) : '';
+};
 
 interface UseTravelFormDataOptions {
   travelId: string | null;
@@ -54,7 +89,7 @@ interface UseTravelFormDataOptions {
 }
 
 async function invalidateTravelCollections(
-  queryClient: { invalidateQueries?: (filters: unknown) => Promise<unknown> | unknown } | null | undefined,
+  queryClient: QueryClient | null | undefined,
   userId: string | null,
 ) {
   if (!queryClient?.invalidateQueries) return;
@@ -83,7 +118,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const formDataRef = useRef<TravelFormData>(initialFormData);
   const saveAbortControllerRef = useRef<AbortController | null>(null);
 
-
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -95,7 +129,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const manualSaveInFlightRef = useRef(false);
   const manualSavePromiseRef = useRef<Promise<TravelFormData | void> | null>(null);
   const suppressAutosaveErrorToastRef = useRef(false);
-  const mountedRef = useRef(true); // ✅ FIX: Защита от memory leak
+  const mountedRef = useRef(true);
   const initialLoadKeyRef = useRef<string | null>(null);
   const pendingBaselineRef = useRef<TravelFormData | null>(null);
   const didInvalidateAfterCreateRef = useRef(false);
@@ -114,7 +148,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   useEffect(() => {
     const pending = pendingBaselineRef.current;
     if (!pending) return;
-    // Only update baseline once the reset payload is actually reflected in state.
     if (formState.data !== pending) return;
     updateBaselineRef.current?.(pending);
     pendingBaselineRef.current = null;
@@ -149,7 +182,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       formDataRef.current = nextFormData;
       setMarkers(updatedMarkers);
-      formState.updateField('coordsMeTravel', updatedMarkers as unknown);
+      formState.updateField('coordsMeTravel', updatedMarkers);
       updateBaselineRef.current?.(nextFormData);
     },
     [formState]
@@ -169,9 +202,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (!needsMarkerIds) return null;
 
       try {
-        // Some backend deployments persist the new point but do not return its id
-        // in the immediate upsert response. We re-fetch once and merge by id/lat-lng
-        // so the deferred point-photo upload still has a concrete point id.
         const freshTravel = await fetchTravel(Number(resolvedTravelId));
         const transformed = normalizeDraftPlaceholders(transformTravelToFormData(freshTravel));
         const serverMarkers = Array.isArray(transformed.coordsMeTravel)
@@ -220,9 +250,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
             formData.append('collection', 'travelImageAddress');
             formData.append('id', String(markerId));
 
-            const response = await uploadImage(formData);
-            const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
-            const uploadedUrl = uploadedUrlRaw ? normalizeMediaUrl(String(uploadedUrlRaw)) : '';
+            const response = (await uploadImage(formData)) as UploadImageResponse;
+            const uploadedUrl = extractUploadUrl(response);
             if (!uploadedUrl) {
               throw new Error('Upload did not return URL');
             }
@@ -264,7 +293,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         ((normalizedGallery?.[0] as Record<string, unknown> | undefined)?.url as string | undefined) ??
         normalizeMediaUrl(DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE);
       const normalizedMarkers = normalizeMarkersForSave(
-        (mergedData as unknown).coordsMeTravel as Record<string, unknown>[],
+        mergedData.coordsMeTravel as Record<string, unknown>[],
         markerFallbackImage,
       );
       const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
@@ -307,8 +336,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       return result;
     } catch (error) {
-      const errAny: unknown = error;
-      const isAbort = abortController.signal.aborted || errAny?.name === 'AbortError';
+      const isAbort = abortController.signal.aborted || getErrorName(error) === 'AbortError';
       if (isAbort) {
         // Нормализуем отмену, чтобы выше по цепочке можно было её корректно игнорировать.
         throw new Error('Request aborted');
@@ -336,12 +364,16 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         (sourceData as TravelFormData | undefined) ??
         (formDataRef.current as TravelFormData) ??
         (formState.data as TravelFormData);
-      const hadId = normalizeTravelId((currentDataSnapshot as unknown)?.id) != null;
-      const hasId = normalizeTravelId((normalizedSavedData as unknown)?.id) != null;
+      const hadId = normalizeTravelId(currentDataSnapshot.id) != null;
+      const hasId = normalizeTravelId(normalizedSavedData.id) != null;
 
       // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
       const kf = (key: keyof TravelFormData, mode: Parameters<typeof keepCurrentField>[3]) =>
         keepCurrentField(normalizedSavedData, currentDataSnapshot, key, mode);
+
+      const assignCurrentEditableField = <K extends 'name' | 'description' | 'plus' | 'minus' | 'recommendation' | 'youtube_link'>(key: K) => {
+        normalizedSavedData[key] = currentDataSnapshot[key];
+      };
 
       (['description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach(k => {
         kf(k, 'emptyString');
@@ -351,9 +383,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       kf('name', 'emptyString');
 
       if (options?.preserveEditingState) {
-        (['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach((key) => {
-          normalizedSavedData[key] = currentDataSnapshot[key];
-        });
+        (['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach(assignCurrentEditableField);
       }
 
       // If backend returns empty arrays for filter fields, don't wipe user selections.
@@ -367,20 +397,20 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       // If user explicitly deleted cover (set to null) but server returned old URL, keep null.
       if (currentDataSnapshot.travel_image_thumb_url == null && normalizedSavedData.travel_image_thumb_url != null) {
-        normalizedSavedData.travel_image_thumb_url = null as unknown;
+        normalizedSavedData.travel_image_thumb_url = null;
       }
       if (currentDataSnapshot.travel_image_thumb_small_url == null && normalizedSavedData.travel_image_thumb_small_url != null) {
-        normalizedSavedData.travel_image_thumb_small_url = null as unknown;
+        normalizedSavedData.travel_image_thumb_small_url = null;
       }
 
       kf('gallery', 'emptyArray');
       kf('gallery', 'nilArray');
 
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
-        ? (normalizedSavedData.coordsMeTravel as unknown)
+        ? (normalizedSavedData.coordsMeTravel as MarkerData[])
         : [];
       const currentMarkers = Array.isArray(currentDataSnapshot.coordsMeTravel)
-        ? (currentDataSnapshot.coordsMeTravel as unknown)
+        ? (currentDataSnapshot.coordsMeTravel as MarkerData[])
         : [];
       // Если бэкенд не вернул точки (например, черновик без coords в ответе), сохраняем локальные маркеры.
       const effectiveMarkersRaw = markersFromResponse.length > 0
@@ -419,7 +449,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         pendingBaselineRef.current = null;
       }
 
-      const travelIdForRefresh = normalizeTravelId((finalData as unknown)?.id) ?? stableTravelId;
+      const travelIdForRefresh = normalizeTravelId(finalData.id) ?? stableTravelId;
       void (async () => {
         let markersForUpload = effectiveMarkers as MarkerData[];
         const refreshedMarkers = await rehydrateMarkerIdsFromServer(travelIdForRefresh, effectiveMarkers as MarkerData[]);
@@ -434,7 +464,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           };
           formDataRef.current = refreshedData;
           setMarkers(refreshedMarkers);
-          formState.updateField('coordsMeTravel', refreshedMarkers as unknown);
+          formState.updateField('coordsMeTravel', refreshedMarkers);
           updateBaselineRef.current?.(refreshedData);
         }
         await uploadPendingMarkerImages(markersForUpload);
@@ -498,8 +528,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       console.error('Autosave error (detailed):', errorDetails);
 
       // В продакшене можно отправить в систему мониторинга (Sentry, LogRocket и т.д.)
-      if (typeof window !== 'undefined' && (window as unknown).Sentry) {
-        (window as unknown).Sentry.captureException(error, {
+      const sentryWindow = typeof window !== 'undefined' ? (window as MonitoringWindow) : undefined;
+      if (sentryWindow?.Sentry) {
+        sentryWindow.Sentry.captureException(error, {
           tags: { component: 'useTravelFormData', action: 'autosave' },
           extra: errorDetails,
         });
@@ -527,8 +558,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       isAuthenticated &&
       hasAccess &&
       !isManualSaveInFlight &&
-      !(formState.data as unknown)?.moderation &&
-      !(formState.data as unknown)?.publish,
+      !formState.data.moderation &&
+      !formState.data.publish,
   });
 
   const handleManualSave = useCallback(async (dataOverride?: TravelFormData) => {
@@ -542,7 +573,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       try {
         // Если пользователь меняет статус на "отправить на модерацию" / "опубликовать",
         // то после успешного сохранения он уходит со страницы, и тосты автосейва больше не нужны.
-        const wantsToLeaveSoon = !!(dataOverride as unknown)?.publish || !!(dataOverride as unknown)?.moderation;
+        const wantsToLeaveSoon = Boolean(dataOverride?.publish) || Boolean(dataOverride?.moderation);
         if (wantsToLeaveSoon) {
           suppressAutosaveErrorToastRef.current = true;
         }
@@ -572,11 +603,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         if ((error as Error)?.message === 'Request aborted') {
           throw error;
         }
-        const errAny: unknown = error;
         const details =
-          errAny instanceof ApiError
-            ? errAny.message
-            : (typeof errAny?.message === 'string' ? errAny.message : null);
+          error instanceof ApiError
+            ? error.message
+            : getErrorMessage(error);
 
         void showToastMessage({
           type: 'error',
@@ -600,7 +630,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, [applySavedData, autosave, cleanAndSave, showToast]);
 
   // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure
-  const updateBaselineRef = useRef<((data: unknown) => void) | null>(null);
+  const updateBaselineRef = useRef<((data: TravelFormData) => void) | null>(null);
   useEffect(() => {
     updateBaselineRef.current = autosave.updateBaseline;
   }, [autosave.updateBaseline]);
@@ -631,7 +661,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         }
 
         const transformed = normalizeDraftPlaceholders(transformTravelToFormData(travelData));
-        const markersFromData = (transformed.coordsMeTravel as unknown) || [];
+        const markersFromData = Array.isArray(transformed.coordsMeTravel)
+          ? (transformed.coordsMeTravel as MarkerData[])
+          : [];
         const syncedCountries = syncCountriesFromMarkers(markersFromData, transformed.countries || []);
 
         const finalData = {
@@ -668,7 +700,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           setHasAccess(false);
           setLoadError({ status, message });
           const redirect = `/travel/${encodeURIComponent(String(id))}`;
-          router.replace(`/login?redirect=${encodeURIComponent(redirect)}&intent=edit-travel` as unknown);
+          router.replace(`/login?redirect=${encodeURIComponent(redirect)}&intent=edit-travel` as Href);
           return;
         }
 
@@ -791,7 +823,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     (updatedMarkers: MarkerData[]) => {
       setHasUserInteracted(true);
       setMarkers(updatedMarkers);
-      formState.updateField('coordsMeTravel', updatedMarkers as unknown);
+      formState.updateField('coordsMeTravel', updatedMarkers);
     },
     [formState]
   );

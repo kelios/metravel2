@@ -74,6 +74,8 @@ export function useSubscription(targetUserId: string | number | null | undefined
                     instagram: '',
                     twitter: '',
                     vk: '',
+                    email_notify_comments: false,
+                    email_notify_messages: false,
                     avatar: '',
                     user: Number(normalizedTargetId) || 0,
                 };
