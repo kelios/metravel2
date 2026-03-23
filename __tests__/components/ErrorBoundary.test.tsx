@@ -99,7 +99,7 @@ describe('ErrorBoundary', () => {
     console.error = consoleError;
   });
 
-  it('shows reload button on web and triggers location.reload', () => {
+  it('shows retry button on web and uses local reset instead of reload', () => {
     const consoleError = console.error;
     console.error = jest.fn();
     Platform.OS = 'web';
@@ -110,24 +110,24 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
 
-    fireEvent.press(getByLabelText('Перезагрузить страницу'));
-    expect(mockReload).toHaveBeenCalledTimes(1);
+    fireEvent.press(getByLabelText('Попробовать снова'));
+    expect(mockReload).not.toHaveBeenCalled();
 
     console.error = consoleError;
   });
 
-  it('hides reload button on native platforms', () => {
+  it('renders retry button on native platforms', () => {
     const consoleError = console.error;
     console.error = jest.fn();
     Platform.OS = 'ios';
 
-    const { queryByLabelText } = render(
+    const { getByLabelText } = render(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
     );
 
-    expect(queryByLabelText('Перезагрузить страницу')).toBeNull();
+    expect(getByLabelText('Попробовать снова')).toBeTruthy();
     console.error = consoleError;
   });
 });

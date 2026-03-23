@@ -16,6 +16,7 @@ import { fetchMySubscriptions, fetchMySubscribers, type UserProfileDto } from '@
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
 import SubscribeButton from '@/components/ui/SubscribeButton';
+import { webTouchScrollStyle } from '@/utils';
 
 export default function PublicUserProfileScreen() {
   const router = useRouter();
@@ -123,7 +124,7 @@ export default function PublicUserProfileScreen() {
           ogType="website"
         />
       )}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView style={[styles.scrollView, webTouchScrollStyle]} contentContainerStyle={styles.content}>
         {Platform.OS === 'web' && (
             <h1 style={{
                 position: 'absolute' as const,

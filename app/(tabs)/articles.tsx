@@ -14,6 +14,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import { queryKeys } from '@/queryKeys'
 import { useIsFocused } from '@react-navigation/native'
+import { webTouchScrollStyle } from '@/utils'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 
@@ -149,7 +150,7 @@ export default function TabOneScreen() {
             )}
             {Platform.OS === 'web' ? (
               <ScrollView
-                style={{ flex: 1, alignSelf: 'stretch' }}
+                style={[{ flex: 1, alignSelf: 'stretch' }, webTouchScrollStyle]}
                 refreshControl={
                   <RefreshControl refreshing={isFetching} onRefresh={() => refetch()} />
                 }

@@ -12,6 +12,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from '@react-navigation/native';
@@ -189,6 +190,7 @@ export default function HistoryScreen() {
 
             {Platform.OS === 'web' ? (
                 <ScrollView
+                    style={webTouchScrollStyle}
                     contentContainerStyle={[styles.gridContent, numColumns > 1 && { flexDirection: 'row', flexWrap: 'wrap' }]}
                 >
                     {data.map((item: any, index: number) => {

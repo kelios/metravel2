@@ -2,9 +2,9 @@
  * @jest-environment jsdom
  */
 
-import renderer from 'react-test-renderer'
-import { Platform } from 'react-native'
-import ImageCardMedia from '@/components/ui/ImageCardMedia'
+const renderer = require('react-test-renderer')
+const { Platform } = require('react-native')
+const { default: ImageCardMedia, isIOSSafariUserAgent } = require('@/components/ui/ImageCardMedia')
 
 describe('ImageCardMedia blur background (web)', () => {
   const originalPlatform = Platform.OS
@@ -27,7 +27,7 @@ describe('ImageCardMedia blur background (web)', () => {
   })
 
   it('shows blur background immediately for lazy web media (before image load)', () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: any
     renderer.act(() => {
       tree = renderer.create(
         <ImageCardMedia
@@ -60,8 +60,24 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainLayers[0].props.style?.opacity).toBe(0)
   })
 
+  it('recognizes iPhone Safari user agents for the lazy-to-eager fallback', () => {
+    expect(
+      isIOSSafariUserAgent(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        5
+      )
+    ).toBe(true)
+
+    expect(
+      isIOSSafariUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        0
+      )
+    ).toBe(false)
+  })
+
   it('keeps the main image visible on first frame for eager critical web media', () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: any
     renderer.act(() => {
       tree = renderer.create(
         <ImageCardMedia
@@ -87,7 +103,7 @@ describe('ImageCardMedia blur background (web)', () => {
   })
 
   it('can keep eager critical web media hidden until load when revealOnLoadOnly is enabled', () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: any
     renderer.act(() => {
       tree = renderer.create(
         <ImageCardMedia
@@ -126,7 +142,7 @@ describe('ImageCardMedia blur background (web)', () => {
   })
 
   it('keeps blur background for eager high-priority image when explicitly allowed', () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: any
     renderer.act(() => {
       tree = renderer.create(
         <ImageCardMedia
@@ -155,7 +171,7 @@ describe('ImageCardMedia blur background (web)', () => {
   })
 
   it('keeps contain-mode web backdrop strongly blurred so side fill does not read like adjacent slides', () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: any
     renderer.act(() => {
       tree = renderer.create(
         <ImageCardMedia
@@ -182,7 +198,7 @@ describe('ImageCardMedia blur background (web)', () => {
   })
 
   it('does not apply extra css blur when backdrop source is already server-blurred', () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: any
     renderer.act(() => {
       tree = renderer.create(
         <ImageCardMedia
@@ -218,7 +234,7 @@ describe('ImageCardMedia blur background (web)', () => {
   it('keeps a previously loaded web image visible after remount', () => {
     const src = 'https://example.com/photo-remount.jpg'
 
-    let firstTree: renderer.ReactTestRenderer
+    let firstTree: any
     renderer.act(() => {
       firstTree = renderer.create(
         <ImageCardMedia
@@ -245,7 +261,7 @@ describe('ImageCardMedia blur background (web)', () => {
       firstTree!.unmount()
     })
 
-    let secondTree: renderer.ReactTestRenderer
+    let secondTree: any
     renderer.act(() => {
       secondTree = renderer.create(
         <ImageCardMedia

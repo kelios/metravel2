@@ -26,6 +26,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import { webTouchScrollStyle } from '@/utils';
 
 interface LoginFormValues {
     email: string;
@@ -185,6 +186,7 @@ export default function Login() {
                     />
                 )}
                 <ScrollView
+                    style={webTouchScrollStyle}
                     contentContainerStyle={styles.scrollViewContent}
                     keyboardShouldPersistTaps="handled"
                 >

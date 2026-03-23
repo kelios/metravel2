@@ -27,6 +27,24 @@ const resolveBaseImageKey = (value: string | null | undefined): string | null =>
   }
 };
 
+export const isIOSSafariUserAgent = (userAgent: string, maxTouchPoints = 0): boolean => {
+  const normalizedUserAgent = String(userAgent || '');
+  const isIOSDevice = /iPad|iPhone|iPod/i.test(normalizedUserAgent) || (
+    /Macintosh/i.test(normalizedUserAgent) && maxTouchPoints > 1
+  );
+  const isSafari = /Safari/i.test(normalizedUserAgent) && !/(Chrome|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Chromium|Firefox)/i.test(normalizedUserAgent);
+
+  return isIOSDevice && isSafari;
+};
+
+const isIOSSafariWeb = (): boolean => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+
+  const userAgent = String(navigator.userAgent || '');
+  const maxTouchPoints = typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0;
+  return isIOSSafariUserAgent(userAgent, maxTouchPoints);
+};
+
 
 type WebMainImageProps = {
   src: string;
@@ -324,6 +342,13 @@ function ImageCardMedia({
     if (!uri) return false;
     return !/^(data:|blob:)/i.test(uri);
   }, [disableRemoteImages, resolvedSource]);
+
+  const resolvedLoading = useMemo(() => {
+    if (Platform.OS !== 'web') return loading;
+    if (loading !== 'lazy') return loading;
+    return isIOSSafariWeb() ? 'eager' : loading;
+  }, [loading]);
+
   // Stabilize width/height for image optimization to prevent URL changes on scroll
   // Only update when change is significant (>50px) to avoid re-fetching images
   const stableWidthRef = useRef<number | undefined>(typeof width === 'number' ? width : undefined);
@@ -470,8 +495,8 @@ function ImageCardMedia({
     if (Platform.OS !== 'web') return showImmediately;
     if (revealOnLoadOnly) return showImmediately;
     if (blurSharesMainUrl) return true;
-    return showImmediately || loading === 'eager' || priority === 'high';
-  }, [showImmediately, loading, priority, revealOnLoadOnly, blurSharesMainUrl]);
+    return showImmediately || resolvedLoading === 'eager' || priority === 'high';
+  }, [showImmediately, resolvedLoading, priority, revealOnLoadOnly, blurSharesMainUrl]);
 
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;
@@ -535,10 +560,10 @@ function ImageCardMedia({
   const shouldAddWebPrefetchHint = useMemo(() => {
     if (Platform.OS !== 'web') return false;
     if (!prefetch) return false;
-    if (loading !== 'lazy') return false;
+    if (resolvedLoading !== 'lazy') return false;
     if (priority !== 'low') return false;
     return true;
-  }, [prefetch, loading, priority]);
+  }, [prefetch, resolvedLoading, priority]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -600,7 +625,7 @@ function ImageCardMedia({
               height={typeof height === 'number' ? height : 300}
               fit={fit}
               borderRadius={resolvedBorderRadius}
-              loading={loading}
+              loading={resolvedLoading}
               priority={priority}
               hasBlurBehind={shouldRenderWebBlurBackground}
               loaded={webLoaded}
@@ -622,7 +647,7 @@ function ImageCardMedia({
               borderRadius={borderRadius}
               placeholder={placeholderBlurhash || DESIGN_TOKENS.defaultBlurhash}
               priority={priority}
-              loading={loading}
+              loading={resolvedLoading}
               alt={alt}
               transition={transition}
               cachePolicy={cachePolicy}

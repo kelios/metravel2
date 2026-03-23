@@ -75,6 +75,7 @@ function HomeScreen() {
 
     // Track content ready state for smooth transition
     const [contentReady, setContentReady] = useState(false);
+    const [errorBoundaryRetryKey, setErrorBoundaryRetryKey] = useState(0);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     // Handle sidebar section navigation (scroll to section when clicked in skeleton)
@@ -84,6 +85,12 @@ function HomeScreen() {
             element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }, []);
+
+    const handleHomeRetry = useCallback(() => {
+        setContentReady(false);
+        setErrorBoundaryRetryKey((value) => value + 1);
+        fadeAnim.setValue(0);
+    }, [fadeAnim]);
 
     // Animate content fade-in when ready
     useEffect(() => {
@@ -144,15 +151,12 @@ function HomeScreen() {
                     React.createElement('h1', { style: styles.srOnly as any }, SEO_TITLE)
                 )}
                 <ErrorBoundary
+                    key={errorBoundaryRetryKey}
                     fallback={
                         <View style={styles.errorContainer}>
                             <ErrorDisplay
                                 message="Не удалось загрузить главную страницу"
-                                onRetry={() => {
-                                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                                        window.location.reload();
-                                    }
-                                }}
+                                onRetry={handleHomeRetry}
                                 variant="error"
                             />
                         </View>

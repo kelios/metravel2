@@ -14,6 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { buildCanonicalUrl } from '@/utils/seo'
 import { stripToDescription } from '@/components/travel/utils/travelHelpers'
+import { webTouchScrollStyle } from '@/utils'
 
 export default function ArticleDetails() {
   const colors = useThemedColors()
@@ -151,7 +152,7 @@ export default function ArticleDetails() {
       <>
         {seoBlock}
         <SafeAreaView style={{ flex: 1 }}>
-          <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
+          <ScrollView style={[styles.container, webTouchScrollStyle]} contentContainerStyle={styles.centerContent}>
             <Title style={styles.errorTitle}>Статья не найдена</Title>
             <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
           </ScrollView>
@@ -164,7 +165,7 @@ export default function ArticleDetails() {
     <>
       {seoBlock}
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <ScrollView style={[styles.container, webTouchScrollStyle]} contentContainerStyle={styles.contentContainer}>
           <Stack.Screen options={{ headerTitle: article.name }} />
           {article.description && (
             <Card style={styles.card}>

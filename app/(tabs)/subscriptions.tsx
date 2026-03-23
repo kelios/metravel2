@@ -16,6 +16,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 
@@ -253,7 +254,7 @@ export default function SubscriptionsScreen() {
         description="Ваши подписки и подписчики"
         canonical={buildCanonicalUrl('/subscriptions')} robots="noindex, nofollow"
       />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
         {headerBlock}
         {renderTabBar()}
         {activeTab === 'subscriptions' ? renderSubscriptionsTab() : renderSubscribersTab()}

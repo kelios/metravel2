@@ -33,6 +33,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { confirmAction } from '@/utils/confirmAction';
+import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from '@react-navigation/native';
@@ -740,7 +741,7 @@ export default function ProfileScreen() {
       )}
       {Platform.OS === 'web' ? (
         <ScrollView
-          style={scrollViewStyle}
+          style={[scrollViewStyle, webTouchScrollStyle]}
           contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
           onScroll={handleWebScroll}
           scrollEventThrottle={32}

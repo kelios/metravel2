@@ -4,6 +4,7 @@ import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
+import { webTouchScrollStyle } from '@/utils';
 
 export default function PrivacyScreen() {
   const pathname = usePathname();
@@ -28,7 +29,7 @@ export default function PrivacyScreen() {
           ogType="website"
         />
       )}
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.container}>
         {Platform.OS === 'web' && (
             <h1 style={{
                 position: 'absolute' as const,

@@ -28,6 +28,7 @@ import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+import { webTouchScrollStyle } from '@/utils';
 
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
@@ -148,7 +149,7 @@ export default function RegisterForm() {
                         resizeMode="cover"
                     />
                 )}
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+                <ScrollView style={webTouchScrollStyle} contentContainerStyle={{ flexGrow: 1 }}>
                     <View style={styles.bg}>
                                 <View style={styles.center}>
                                     <View style={styles.card}>

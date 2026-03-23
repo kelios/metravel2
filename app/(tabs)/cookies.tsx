@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
+import { webTouchScrollStyle } from '@/utils';
 const CONSENT_KEY = 'metravel_consent_v1';
 
 interface ConsentState {
@@ -112,7 +113,7 @@ export default function CookieSettingsScreen() {
           robots="noindex, nofollow"
         />
       )}
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.container}>
         <Text style={styles.heading}>Настройки cookies и аналитики</Text>
         <Text style={styles.paragraph}>
           На этом экране вы можете изменить свой выбор относительно использования аналитических инструментов

@@ -16,6 +16,7 @@ import { calculateColumns } from '@/components/listTravel/utils/listTravelHelper
 import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { cleanTravelTitle } from '@/utils/cleanTravelTitle';
@@ -228,6 +229,7 @@ export default function FavoritesScreen() {
 
             {Platform.OS === 'web' ? (
                 <ScrollView
+                    style={webTouchScrollStyle}
                     contentContainerStyle={styles.listContent}
                 >
                     <View style={[styles.cardsGrid, { gap: gapSize, rowGap: gapSize, columnGap: gapSize }]}>

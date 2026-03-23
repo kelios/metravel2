@@ -954,7 +954,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                                 transition={150}
                                             />
                                             <View style={styles.instagramGalleryDragHandle}>
-                                                <Feather name="move" size={18} color="#374151" />
+                                                <Feather name="move" size={18} color={colors.textSecondary} />
                                             </View>
                                             <Pressable
                                                 onPress={() => handleRemoveInstagramImage(index)}
@@ -962,7 +962,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                                 testID={`instagram-remove-${index}`}
                                                 accessibilityLabel={`Исключить фото ${index + 1} из публикации`}
                                             >
-                                                <Feather name="x" size={18} color="#FFFFFF" />
+                                                <Feather name="x" size={18} color={colors.textInverse} />
                                             </Pressable>
                                             <View style={styles.instagramGalleryControls}>
                                                 <Pressable
@@ -975,7 +975,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                                     testID={`instagram-move-left-${index}`}
                                                     accessibilityLabel={`Переместить фото ${index + 1} влево`}
                                                 >
-                                                    <Feather name="chevron-left" size={20} color="#374151" />
+                                                    <Feather name="chevron-left" size={20} color={colors.textSecondary} />
                                                 </Pressable>
                                                 <Pressable
                                                     onPress={() => handleMoveInstagramImage(index, 1)}
@@ -987,7 +987,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                                     testID={`instagram-move-right-${index}`}
                                                     accessibilityLabel={`Переместить фото ${index + 1} вправо`}
                                                 >
-                                                    <Feather name="chevron-right" size={20} color="#374151" />
+                                                    <Feather name="chevron-right" size={20} color={colors.textSecondary} />
                                                 </Pressable>
                                             </View>
                                         </div>
@@ -1038,7 +1038,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             transition={150}
                                         />
                                         <View style={styles.instagramGalleryDragHandle}>
-                                            <Feather name="move" size={16} color="#374151" />
+                                            <Feather name="move" size={16} color={colors.textSecondary} />
                                         </View>
                                         <Pressable
                                             onPress={() => handleRemoveInstagramImage(index)}
@@ -1046,7 +1046,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             testID={`instagram-remove-${index}`}
                                             accessibilityLabel={`Исключить фото ${index + 1} из публикации`}
                                         >
-                                            <Feather name="x" size={16} color="#FFFFFF" />
+                                            <Feather name="x" size={16} color={colors.textInverse} />
                                         </Pressable>
                                         <View style={styles.instagramGalleryControls}>
                                             <Pressable
@@ -1059,7 +1059,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                                 testID={`instagram-move-left-${index}`}
                                                 accessibilityLabel={`Переместить фото ${index + 1} влево`}
                                             >
-                                                <Feather name="chevron-left" size={18} color="#374151" />
+                                                <Feather name="chevron-left" size={18} color={colors.textSecondary} />
                                             </Pressable>
                                             <Pressable
                                                 onPress={() => handleMoveInstagramImage(index, 1)}
@@ -1071,7 +1071,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                                 testID={`instagram-move-right-${index}`}
                                                 accessibilityLabel={`Переместить фото ${index + 1} вправо`}
                                             >
-                                                <Feather name="chevron-right" size={18} color="#374151" />
+                                                <Feather name="chevron-right" size={18} color={colors.textSecondary} />
                                             </Pressable>
                                         </View>
                                     </View>

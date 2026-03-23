@@ -23,6 +23,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { useBiometricAuth } from '@/hooks/useBiometricAuth';
+import { webTouchScrollStyle } from '@/utils';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -288,7 +289,7 @@ export default function SettingsScreen() {
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container}>
-                <ScrollView contentContainerStyle={styles.scrollContent}>
+                <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
                     <View style={styles.pageContainer}>
                         <View style={styles.header}>
                             <View style={styles.headerRow}>
@@ -337,7 +338,7 @@ export default function SettingsScreen() {
                     robots="noindex, nofollow"
                 />
             )}
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scrollContent}>
                 <View style={styles.pageContainer}>
                     <View style={styles.header}>
                         <View style={styles.headerRow}>

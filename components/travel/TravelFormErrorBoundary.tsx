@@ -77,7 +77,7 @@ class TravelFormErrorBoundary extends Component<Props, State> {
           <View style={styles.content}>
             <Text style={styles.title}>Что-то пошло не так</Text>
             <Text style={styles.message}>
-              При создании путешествия произошла ошибка. Попробуйте обновить страницу или начать заново.
+              При создании путешествия произошла ошибка. Попробуйте ещё раз или начните заново.
             </Text>
             
             {__DEV__ && this.state.error && (
@@ -102,19 +102,6 @@ class TravelFormErrorBoundary extends Component<Props, State> {
                 size="md"
                 style={[styles.button, styles.retryButton]}
                 accessibilityLabel="Попробовать снова"
-              />
-              
-              <Button
-                label="Обновить страницу"
-                onPress={() => {
-                  if (typeof window !== 'undefined') {
-                    window.location.reload();
-                  }
-                }}
-                variant="primary"
-                size="md"
-                style={[styles.button, styles.refreshButton]}
-                accessibilityLabel="Обновить страницу"
               />
             </View>
           </View>
@@ -182,9 +169,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   retryButton: {
     backgroundColor: colors.primary,
-  },
-  refreshButton: {
-    backgroundColor: colors.success,
   },
 });
 

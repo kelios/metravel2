@@ -95,15 +95,6 @@ export default class ErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
-  private reloadPage = () => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    try {
-      window.location.reload();
-    } catch {
-      // noop
-    }
-  };
-
   render() {
     if (this.state.hasError) {
       const colors = getThemedColors(this.context?.isDark ?? false);
@@ -127,14 +118,6 @@ export default class ErrorBoundary extends Component<Props, State> {
               styles={styles}
               primary
             />
-            {Platform.OS === 'web' && (
-              <ErrorActionButton
-                label="Перезагрузить страницу"
-                onPress={this.reloadPage}
-                accessibilityLabel="Перезагрузить страницу"
-                styles={styles}
-              />
-            )}
           </View>
         </View>
       );

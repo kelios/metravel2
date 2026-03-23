@@ -14,6 +14,7 @@ import { useAboutStyles } from '@/components/about/aboutStyles'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { showToast } from '@/utils/toast'
 import { openExternalUrl } from '@/utils/externalLinks'
+import { webTouchScrollStyle } from '@/utils'
 
 const EMAIL = 'metraveldev@gmail.com'
 const MAIL_SUBJECT = 'Info metravel.by'
@@ -174,7 +175,7 @@ function ContactScreen() {
         />
       )}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView style={webTouchScrollStyle} contentContainerStyle={{ flexGrow: 1 }}>
           <View style={styles.backgroundImage}>
             <View style={styles.container}>
               {Platform.OS === 'web' && (

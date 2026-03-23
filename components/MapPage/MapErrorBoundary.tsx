@@ -61,14 +61,6 @@ class MapErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = () => {
-    // Module resolution errors cannot be fixed by resetting React state.
-    if (this.isModuleError(this.state.error)) {
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
-      return;
-    }
-
     // ✅ ИСПРАВЛЕНИЕ: Очищаем все контейнеры Leaflet перед сбросом ошибки
     if (typeof document !== 'undefined' && typeof window !== 'undefined') {
       try {
@@ -113,7 +105,7 @@ class MapErrorBoundary extends Component<Props, State> {
   private getFriendlyMessage(): string {
     const msg = String(this.state.error?.message ?? '');
     if (this.isModuleError(this.state.error)) {
-      return 'Модуль карты не загрузился. Попробуйте перезагрузить страницу.';
+      return 'Модуль карты не загрузился. Попробуйте ещё раз.';
     }
     if (msg.includes('reused by another instance')) {
       return 'Контейнер карты был переиспользован. Попробуйте снова.';
@@ -143,7 +135,7 @@ class MapErrorBoundary extends Component<Props, State> {
               {this.getFriendlyMessage()}
             </Text>
             <Button
-              label={this.isModuleError(this.state.error) ? 'Перезагрузить страницу' : 'Попробовать снова'}
+              label="Попробовать снова"
               icon={<Feather name="rotate-cw" size={20} color={colors.textOnPrimary} />}
               onPress={this.handleReset}
               variant="primary"
