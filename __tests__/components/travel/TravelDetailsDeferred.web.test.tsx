@@ -104,7 +104,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     ;(window as any).IntersectionObserver = originalIntersectionObserver
   })
 
-  it('renders author card immediately on web (high priority)', async () => {
+  it('skips author card on desktop web (author is in sidebar)', async () => {
     const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
 
     const travel: any = {
@@ -153,8 +153,9 @@ describe('TravelDeferredSections (web author defer)', () => {
       await Promise.resolve()
     })
 
-    // High-priority author section renders immediately on web
-    expect(mockAuthorCardSpy).toHaveBeenCalled()
+    // On desktop, author is shown in the sidebar (CompactSideBarTravel),
+    // so DesktopAuthorSection returns null and AuthorCard is not rendered here.
+    expect(mockAuthorCardSpy).not.toHaveBeenCalled()
   })
 
   it('keeps map, sidebar, comments and footer deferred during the early no-interaction window', async () => {

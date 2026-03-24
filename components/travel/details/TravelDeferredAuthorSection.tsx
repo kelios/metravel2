@@ -9,22 +9,11 @@ import { useTravelDetailsStyles } from './TravelDetailsStyles'
 
 const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
 
-const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function DesktopAuthorSection({ travel }) {
-  const styles = useTravelDetailsStyles()
-  return (
-    <View
-      testID="travel-details-author"
-      accessibilityRole={'region' as any}
-      accessibilityLabel="Автор маршрута"
-      style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
-    >
-      <Text style={styles.sectionHeaderText}>Автор</Text>
-      <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-      <View style={PLACEHOLDER_MT_12}>
-        <AuthorCard travel={travel} />
-      </View>
-    </View>
-  )
+const DesktopAuthorSection: React.FC<{ travel: Travel }> = memo(function DesktopAuthorSection(_props) {
+  // На десктопе автор уже показан в сайдбаре (CompactSideBarTravel),
+  // а ShareButtons — в TravelDetailsFooterSection.
+  // Не дублируем ни то, ни другое.
+  return null
 })
 
 const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(function MobileAuthorShareSection({ travel }) {

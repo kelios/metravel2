@@ -391,12 +391,19 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   border-radius: 14px;
   background: transparent;
   cursor: zoom-in;
+  margin-top: 1.2em;
+  margin-bottom: 1.2em;
 }
 
 .${WEB_RICH_TEXT_CLASS} p > img + img,
 .${WEB_RICH_TEXT_CLASS} p > img + br + img,
 .${WEB_RICH_TEXT_CLASS} p > br + img {
   margin-top: 18px !important;
+}
+
+.${WEB_RICH_TEXT_CLASS} p + img,
+.${WEB_RICH_TEXT_CLASS} img + p {
+  margin-top: 1.6em;
 }
 
 .${WEB_RICH_TEXT_CLASS} .rich-image-frame {

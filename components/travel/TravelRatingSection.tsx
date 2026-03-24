@@ -4,6 +4,7 @@
 
 import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
@@ -143,6 +144,53 @@ function TravelRatingSection({
                 )}
             </View>
 
+            {ratingCount === 0 && (userRating == null || userRating === 0) ? (
+                <View style={styles.emptyStateBox}>
+                    <Feather name="star" size={32} color={colors.warningAlpha40 ?? colors.borderStrong} />
+                    <Text style={styles.emptyStateTitle}>Пока нет оценок</Text>
+                    <Text style={styles.emptyStateSubtext}>
+                        {canRate ? 'Будьте первым, кто оценит этот маршрут' : 'Войдите, чтобы оценить маршрут'}
+                    </Text>
+                    {canRate && (
+                        <View style={styles.emptyStateStars}>
+                            <StarRating
+                                rating={0}
+                                userRating={userRating}
+                                interactive
+                                onRate={handleRate}
+                                disabled={isSubmitting || isLoading}
+                                size="large"
+                                showValue={false}
+                                showCount={false}
+                            />
+                        </View>
+                    )}
+                    {isSubmitting && (
+                        <View style={styles.statusRow}>
+                            <Animated.View style={[styles.spinner, { transform: [{ rotate: spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]} />
+                            <Text style={styles.savingText}>Сохранение...</Text>
+                        </View>
+                    )}
+                    {!isSubmitting && showSuccess && (
+                        <Animated.View
+                            style={[
+                                styles.successRow,
+                                {
+                                    opacity: successPulseAnim,
+                                    transform: [{
+                                        translateY: successPulseAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [10, 0],
+                                        })
+                                    }]
+                                }
+                            ]}
+                        >
+                            <Text style={styles.successText}>Спасибо за оценку!</Text>
+                        </Animated.View>
+                    )}
+                </View>
+            ) : (
             <View style={styles.contentRow}>
                 <Animated.View
                     style={[
@@ -197,7 +245,7 @@ function TravelRatingSection({
                                         }
                                     ]}
                                 >
-                                    <Text style={styles.successText}>✓ Спасибо за оценку!</Text>
+                                    <Text style={styles.successText}>Спасибо за оценку!</Text>
                                 </Animated.View>
                             )}
                         </>
@@ -206,6 +254,7 @@ function TravelRatingSection({
                     )}
                 </View>
             </View>
+            )}
         </View>
     );
 }
@@ -327,6 +376,29 @@ const createStyles = (colors: any) =>
             fontSize: 14,
             color: colors.textMuted,
             fontStyle: 'italic',
+        },
+        emptyStateBox: {
+            alignItems: 'center',
+            paddingVertical: 20,
+            paddingHorizontal: 16,
+            borderRadius: DESIGN_TOKENS.radii.sm,
+            backgroundColor: colors.backgroundSecondary,
+            gap: 8,
+        },
+        emptyStateTitle: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.textMuted,
+            marginTop: 4,
+        },
+        emptyStateSubtext: {
+            fontSize: 14,
+            color: colors.textTertiary ?? colors.textMuted,
+            textAlign: 'center',
+            lineHeight: 20,
+        },
+        emptyStateStars: {
+            marginTop: 8,
         },
         yourRatingText: {
             fontSize: 12,

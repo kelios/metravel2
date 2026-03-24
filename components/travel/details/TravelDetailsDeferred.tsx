@@ -61,20 +61,24 @@ export const TravelDeferredSections: React.FC<{
         forceOpenKey={forceOpenKey}
       />
 
-      {/* Full author details stay below the hero shell on every platform. */}
-      <View
-        ref={setAuthorSectionRef}
-        collapsable={false}
-      >
-        {shouldLoadAuthor ? (
-          <TravelDeferredAuthorSection travel={travel} isMobile={isMobile} />
-        ) : (
-          <>
-            <View style={PLACEHOLDER_MIN_H_160} />
-            {isMobile && <View style={PLACEHOLDER_MIN_H_56} />}
-          </>
-        )}
-      </View>
+      {/* Author details: on mobile — full card + share; on desktop — null (sidebar has author). */}
+      {isMobile ? (
+        <View
+          ref={setAuthorSectionRef}
+          collapsable={false}
+        >
+          {shouldLoadAuthor ? (
+            <TravelDeferredAuthorSection travel={travel} isMobile={isMobile} />
+          ) : (
+            <>
+              <View style={PLACEHOLDER_MIN_H_160} />
+              <View style={PLACEHOLDER_MIN_H_56} />
+            </>
+          )}
+        </View>
+      ) : (
+        <View ref={setAuthorSectionRef} collapsable={false} />
+      )}
 
       {/* Рейтинг и интерактивные блоки остаются после контентного слоя. */}
       <View

@@ -506,6 +506,11 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       }),
       flexShrink: 1,
     },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
     sectionSubtitle: {
       fontSize: Platform.select({ default: 13, web: 14 }),
       color: colors.textMuted,

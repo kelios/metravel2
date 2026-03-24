@@ -1,10 +1,12 @@
 import React from 'react'
 import { Platform, Text, View } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
+import { useThemedColors } from '@/hooks/useTheme'
 import NavigationArrows from '@/components/travel/NavigationArrows'
 import NearTravelList from '@/components/travel/NearTravelList'
 import PopularTravelList from '@/components/travel/PopularTravelList'
@@ -26,6 +28,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   forceOpenKey: _forceOpenKey = null,
 }) => {
   const styles = useTravelDetailsStyles()
+  const colors = useThemedColors()
   const {
     handleTravelsLoaded,
     hasValidTravelId,
@@ -54,7 +57,10 @@ export const TravelDetailsSidebarSection: React.FC<{
         accessibilityLabel="Рядом можно посмотреть"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'near' } : {})}
       >
-        <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Feather name="map-pin" size={18} color={colors.primary} />
+          <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
+        </View>
         <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {hasValidTravelId && (
@@ -93,7 +99,10 @@ export const TravelDetailsSidebarSection: React.FC<{
         accessibilityLabel="Популярные маршруты"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'popular' } : {})}
       >
-        <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Feather name="trending-up" size={18} color={colors.primary} />
+          <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
+        </View>
         <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           <View testID="travel-details-popular-loaded">
