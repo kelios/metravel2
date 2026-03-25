@@ -276,6 +276,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     overlayVisible,
     handleSlideLoad,
     onBeforeNavigate,
+    loadedSlideIndicesRef,
   } = useSliderTransitionOverlay({
     images,
     getUri,
@@ -284,6 +285,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     blurBackground,
     firstImagePreloaded,
   });
+
+  const isSlideLoaded = useCallback(
+    (index: number) => loadedSlideIndicesRef.current.has(index),
+    [loadedSlideIndicesRef],
+  );
 
   // --- Track animation + width ---
   const {
@@ -491,7 +497,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                             priority={idx === 0 ? 'high' : 'low'}
                             loading={idx === 0 ? 'eager' : 'lazy'}
                             transition={0}
-                            showImmediately={idx === 0}
+                            showImmediately={isSlideLoaded(idx)}
                             allowCriticalWebBlur
                             style={styles.img}
                             testID={idx === 0 ? 'slider-shared-blur-backdrop' : undefined}

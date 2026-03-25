@@ -183,6 +183,35 @@ describe('Slider (web) blur background', () => {
     expect(sharedBackdrop).toBeTruthy()
     expect(sharedBackdrop.props.blurOnly).toBe(true)
     expect(sharedBackdrop.props.allowCriticalWebBlur).toBe(true)
+    expect(sharedBackdrop.props.showImmediately).toBe(false)
+  })
+
+  it('reveals the shared blur backdrop only after the matching slide is loaded', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+        />,
+      )
+    })
+
+    const sharedBackdropBeforeLoad = tree.root.findByProps({ testID: 'slider-shared-blur-backdrop' })
+    const firstSlideImage = tree.root.findByProps({ testID: 'slider-image-0' })
+
+    expect(sharedBackdropBeforeLoad.props.showImmediately).toBe(false)
+
+    await act(async () => {
+      firstSlideImage.props.onLoad()
+    })
+
+    const sharedBackdropAfterLoad = tree.root.findByProps({ testID: 'slider-shared-blur-backdrop' })
+    expect(sharedBackdropAfterLoad.props.showImmediately).toBe(true)
   })
 
   it('shows the previous loaded frame as overlay while the next slide is not loaded yet', async () => {

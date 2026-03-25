@@ -9,7 +9,6 @@ export interface UseSliderTransitionOverlayOptions {
   getUri: (idx: number) => string;
   indexRef: React.MutableRefObject<number>;
   currentIndex: number;
-  blurBackground: boolean;
   firstImagePreloaded?: boolean;
 }
 
@@ -22,6 +21,7 @@ export interface UseSliderTransitionOverlayResult {
   /** Call from animateToIndex's onBeforeNavigate to manage overlay state. */
   onBeforeNavigate: (fromIdx: number, toIdx: number) => void;
   loadedSlideIndicesRef: React.MutableRefObject<Set<number>>;
+  loadedSlidesVersion: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -38,11 +38,12 @@ export interface UseSliderTransitionOverlayResult {
 export function useSliderTransitionOverlay(
   options: UseSliderTransitionOverlayOptions,
 ): UseSliderTransitionOverlayResult {
-  const { images, getUri, indexRef, firstImagePreloaded, blurBackground } = options;
+  const { images, getUri, indexRef, firstImagePreloaded } = options;
 
   // Transition overlay (always mounted in DOM, visibility via CSS opacity)
   const [overlayUri, setOverlayUri] = useState<string | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
+  const [loadedSlidesVersion, setLoadedSlidesVersion] = useState(0);
 
   const loadedSlideIndicesRef = useRef<Set<number>>(new Set(firstImagePreloaded ? [0] : []));
   const overlayUriRef = useRef<string | null>(null);
@@ -66,6 +67,7 @@ export function useSliderTransitionOverlay(
 
   useEffect(() => {
     loadedSlideIndicesRef.current = new Set<number>(firstImagePreloaded ? [0] : []);
+    setLoadedSlidesVersion(0);
     setOverlayUri(null);
     setOverlayVisible(false);
     overlayUriRef.current = null;
@@ -87,18 +89,6 @@ export function useSliderTransitionOverlay(
 
   const onBeforeNavigate = useCallback(
     (fromIdx: number, toIdx: number) => {
-      if (blurBackground) {
-        setOverlayVisible(false);
-        setOverlayUri(null);
-        overlayUriRef.current = null;
-        if (overlayFadeTimerRef.current) {
-          clearTimeout(overlayFadeTimerRef.current);
-          overlayFadeTimerRef.current = null;
-        }
-        clearOverlayRevealFrame();
-        return;
-      }
-
       const fromLoaded = loadedSlideIndicesRef.current.has(fromIdx);
       const toLoaded = loadedSlideIndicesRef.current.has(toIdx);
 
@@ -115,7 +105,7 @@ export function useSliderTransitionOverlay(
       // If target is already loaded — no overlay needed; backdrop blur scrolls
       // in sync via the shared track transform.
     },
-    [blurBackground, clearOverlayRevealFrame, getUri],
+    [clearOverlayRevealFrame, getUri],
   );
 
   // ---------------------------------------------------------------------------
@@ -128,6 +118,7 @@ export function useSliderTransitionOverlay(
         const next = new Set(loadedSlideIndicesRef.current);
         next.add(index);
         loadedSlideIndicesRef.current = next;
+        setLoadedSlidesVersion((value) => value + 1);
       }
 
       if (index === indexRef.current && overlayUriRef.current) {
@@ -177,5 +168,6 @@ export function useSliderTransitionOverlay(
     handleSlideLoad,
     onBeforeNavigate,
     loadedSlideIndicesRef,
+    loadedSlidesVersion,
   };
 }
