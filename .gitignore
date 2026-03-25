@@ -63,6 +63,11 @@ lighthouse-reports/
 lighthouse-reports/local-*.json
 lighthouse-reports/local-*.html
 lighthouse-reports/local-*.png
+tmp-*.png
+tmp-*.jpg
+tmp-*.jpeg
+tmp-*.webp
+tmp-*.gif
 yarn-error.log
 output/
 tmp/

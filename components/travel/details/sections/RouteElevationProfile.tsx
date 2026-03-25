@@ -547,7 +547,7 @@ export default function RouteElevationProfile({
           {(pointCards.length > 0 || transportHints.length > 0) ? (
             <View style={styles.tagsRow}>
               {pointCards.length > 0 ? (
-                <View style={styles.pointCardsGrid}>
+                <View style={[styles.pointCardsGrid, isCompactLayout && styles.pointCardsGridCompact]}>
                   {pointCards.map((point) => (
                     <View key={point.key} style={[styles.pointCard, isCompactLayout && styles.pointCardCompact]}>
                       <View style={styles.pointCardHeader}>
@@ -560,7 +560,7 @@ export default function RouteElevationProfile({
                       </View>
                       <Text style={styles.pointCardValue}>{point.value}</Text>
                       <Text style={styles.pointCardCaption} numberOfLines={isCompactLayout ? 1 : 2}>
-                        {point.caption}
+                        {isCompactLayout ? point.caption.split(' • ')[0] : point.caption}
                       </Text>
                     </View>
                   ))}
@@ -786,6 +786,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: DESIGN_TOKENS.spacing.xs,
+    },
+    pointCardsGridCompact: {
+      flexDirection: 'column',
     },
     pointCard: {
       minWidth: 150,

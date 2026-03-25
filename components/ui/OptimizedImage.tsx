@@ -398,6 +398,7 @@ function OptimizedImage({
       {!blurOnly && validSource && !webBlobOrDataUri && !shouldDisableNetwork && (
         <ExpoImage
           {...(imageProps as any)}
+          recyclingKey={recyclingKey}
           source={activeSource as any}
           contentFit={contentFit}
           placeholder={placeholder}
