@@ -118,17 +118,11 @@ describe('useTravelDetailsPerformance', () => {
       result.current.setLcpLoaded(true)
     })
 
-    expect(result.current.sliderReady).toBe(false)
-
-    await act(async () => {
-      jest.advanceTimersByTime(400)
-    })
-
-    expect(result.current.deferAllowed).toBe(true)
     await act(async () => {
       await Promise.resolve()
     })
 
+    expect(result.current.deferAllowed).toBe(true)
     expect(result.current.sliderReady).toBe(true)
   })
 

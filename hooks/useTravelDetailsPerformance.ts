@@ -43,14 +43,11 @@ export function useTravelDetailsPerformance({
 
     let cancelled = false
 
-    const preloadSlider = () => {
-      preloadTravelHeroSliderRuntime()
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled) setSliderReady(true)
-        })
-    }
-    rIC(preloadSlider, 300)
+    preloadTravelHeroSliderRuntime()
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSliderReady(true)
+      })
 
     return () => {
       cancelled = true
@@ -137,25 +134,6 @@ export function useTravelDetailsPerformance({
     }
     return undefined
   }, [isLoading, travel])
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!travel) return
-    if (!postLcpRuntimeReady) return
-    const connection = (window as { navigator?: { connection?: { effectiveType?: string; saveData?: boolean } } })?.navigator?.connection
-    const effectiveType = String(connection?.effectiveType || '')
-    const saveData = Boolean(connection?.saveData)
-    const isConstrained =
-      saveData || effectiveType.includes('2g') || effectiveType.includes('slow-2g')
-
-    if (isConstrained) return
-
-    // Prefetch the Slider chunk after idle so it doesn't compete with hero
-    // image paint for main thread time. The 800ms timeout is a safety net.
-    rIC(() => {
-      preloadTravelHeroSliderRuntime().catch(() => {})
-    }, 800)
-  }, [travel, postLcpRuntimeReady])
 
   return useMemo(() => ({
     lcpLoaded,
