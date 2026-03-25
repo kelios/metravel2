@@ -217,7 +217,7 @@ describe('ArticleEditor.web anchors', () => {
     expect(openSpy).toHaveBeenCalledWith(
       `${window.location.origin}/travels/733`,
       '_blank',
-      'noopener,noreferrer'
+      'noopener'
     );
 
     openSpy.mockRestore();

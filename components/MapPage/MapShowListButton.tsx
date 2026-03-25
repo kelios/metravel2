@@ -14,6 +14,8 @@ interface MapShowListButtonProps {
   bottomOffset?: number;
 }
 
+const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
+
 export const MapShowListButton: React.FC<MapShowListButtonProps> = React.memo(({
   count,
   onPress,
@@ -52,7 +54,10 @@ const getStyles = (colors: ThemedColors, bottomOffset: number = 0) =>
   StyleSheet.create({
     button: {
       position: 'absolute',
-      bottom: 60 + bottomOffset,
+      bottom:
+        Platform.OS === 'web'
+          ? (`calc(${60 + bottomOffset}px + env(safe-area-inset-bottom) + ${MOBILE_WEB_BOTTOM_CHROME_GAP}px)` as any)
+          : 60 + bottomOffset,
       alignSelf: 'center',
       flexDirection: 'row',
       alignItems: 'center',

@@ -276,20 +276,12 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     overlayVisible,
     handleSlideLoad,
     onBeforeNavigate,
-    loadedSlideIndicesRef,
   } = useSliderTransitionOverlay({
     images,
     getUri,
     indexRef,
-    currentIndex,
-    blurBackground,
     firstImagePreloaded,
   });
-
-  const isSlideLoaded = useCallback(
-    (index: number) => loadedSlideIndicesRef.current.has(index),
-    [loadedSlideIndicesRef],
-  );
 
   // --- Track animation + width ---
   const {
@@ -418,14 +410,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 width={renderedSlideWidth}
                 height={computedH}
                 fit={fit}
-                blurBackground={blurBackground}
+                blurBackground={false}
                 blurRadius={12}
                 priority="high"
                 loading="eager"
                 transition={0}
                 style={styles.img}
                 showImmediately
-                allowCriticalWebBlur={blurBackground}
               />
             ) : null}
           </View>
@@ -453,66 +444,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 },
               ]}
             >
-              {/* Blur backdrop slides — inside the track so they share the
-                  same CSS transform and scroll perfectly in sync with photos. */}
-              {blurBackground ? (
-                <View
-                  pointerEvents="none"
-                  style={[
-                    {
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      flexDirection: 'row',
-                      zIndex: 0,
-                    } as any,
-                  ]}
-                >
-                  {images.map((_, idx) => {
-                    // Skip rendering first slide blur when LCP Hero overlay covers it
-                    const shouldSkipImage = skipFirstSlideImage && idx === 0;
-                    return (
-                      <View
-                        key={`blur-${idx}`}
-                        pointerEvents="none"
-                        style={[
-                          {
-                            width: imagesLen === 1 ? '100%' : (layoutMeasured ? renderedSlideWidth : `${100 / imagesLen}%`),
-                            height: '100%',
-                            flexShrink: 0,
-                          },
-                        ]}
-                      >
-                        {!shouldSkipImage && (
-                          <ImageCardMedia
-                            src={getUri(idx)}
-                            width={renderedSlideWidth}
-                            height={computedH}
-                            fit={fit}
-                            blurBackground
-                            blurOnly
-                            blurRadius={12}
-                            priority={idx === 0 ? 'high' : 'low'}
-                            loading={idx === 0 ? 'eager' : 'lazy'}
-                            transition={0}
-                            showImmediately={isSlideLoaded(idx)}
-                            allowCriticalWebBlur
-                            style={styles.img}
-                            testID={idx === 0 ? 'slider-shared-blur-backdrop' : undefined}
-                          />
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              ) : null}
-
               {images.map((item, index) => {
                 const distanceToCurrent = Math.abs(index - currentIndex);
                 const preloadPriority =
                   prefetchEnabled && distanceToCurrent <= (isMobile ? 2 : 1);
+                const prepareBlur = blurBackground && distanceToCurrent <= 1;
 
                 return (
                   <View
@@ -537,7 +473,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       slideHeightPx={computedH}
                       imagesLength={imagesLen}
                       styles={styles}
-                      blurBackground={false}
+                      blurBackground={blurBackground}
                       isActive={index === currentIndex}
                       imageProps={imageProps}
                       onFirstImageLoad={onFirstImageLoad}
@@ -546,6 +482,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       preloadPriority={preloadPriority}
                       fit={fit}
                       onSlideLoad={handleSlideLoad}
+                      prepareBlur={prepareBlur}
                       skipImage={skipFirstSlideImage && index === 0}
                     />
                   </View>

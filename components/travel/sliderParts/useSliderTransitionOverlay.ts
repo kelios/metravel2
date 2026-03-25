@@ -8,7 +8,6 @@ export interface UseSliderTransitionOverlayOptions {
   images: { id: number | string; url: string }[];
   getUri: (idx: number) => string;
   indexRef: React.MutableRefObject<number>;
-  currentIndex: number;
   firstImagePreloaded?: boolean;
 }
 
@@ -21,7 +20,6 @@ export interface UseSliderTransitionOverlayResult {
   /** Call from animateToIndex's onBeforeNavigate to manage overlay state. */
   onBeforeNavigate: (fromIdx: number, toIdx: number) => void;
   loadedSlideIndicesRef: React.MutableRefObject<Set<number>>;
-  loadedSlidesVersion: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,7 +41,6 @@ export function useSliderTransitionOverlay(
   // Transition overlay (always mounted in DOM, visibility via CSS opacity)
   const [overlayUri, setOverlayUri] = useState<string | null>(null);
   const [overlayVisible, setOverlayVisible] = useState(false);
-  const [loadedSlidesVersion, setLoadedSlidesVersion] = useState(0);
 
   const loadedSlideIndicesRef = useRef<Set<number>>(new Set(firstImagePreloaded ? [0] : []));
   const overlayUriRef = useRef<string | null>(null);
@@ -67,7 +64,6 @@ export function useSliderTransitionOverlay(
 
   useEffect(() => {
     loadedSlideIndicesRef.current = new Set<number>(firstImagePreloaded ? [0] : []);
-    setLoadedSlidesVersion(0);
     setOverlayUri(null);
     setOverlayVisible(false);
     overlayUriRef.current = null;
@@ -102,10 +98,9 @@ export function useSliderTransitionOverlay(
           overlayFadeTimerRef.current = null;
         }
       }
-      // If target is already loaded — no overlay needed; backdrop blur scrolls
-      // in sync via the shared track transform.
+      // If target is already loaded, no overlay is needed.
     },
-    [clearOverlayRevealFrame, getUri],
+    [getUri],
   );
 
   // ---------------------------------------------------------------------------
@@ -118,7 +113,6 @@ export function useSliderTransitionOverlay(
         const next = new Set(loadedSlideIndicesRef.current);
         next.add(index);
         loadedSlideIndicesRef.current = next;
-        setLoadedSlidesVersion((value) => value + 1);
       }
 
       if (index === indexRef.current && overlayUriRef.current) {
@@ -168,6 +162,5 @@ export function useSliderTransitionOverlay(
     handleSlideLoad,
     onBeforeNavigate,
     loadedSlideIndicesRef,
-    loadedSlidesVersion,
   };
 }

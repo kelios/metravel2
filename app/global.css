@@ -263,6 +263,11 @@ html {
   min-height: 100%;
   scrollbar-gutter: stable;
   background-color: var(--color-background);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
 }
 
 /* On mobile viewports, scrollbar-gutter wastes horizontal space */
@@ -277,8 +282,12 @@ body {
   min-height: 100%;
   margin: 0;
   overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: scroll;
   background-color: var(--color-background);
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-x: none;
 }
 
 /* Prevent body scroll on map page (mobile) — Leaflet popups can extend beyond the
@@ -292,6 +301,10 @@ body:has([data-testid="map-mobile-layout"][data-active="true"]) {
   height: 100%;
   min-height: 100%;
   background-color: var(--color-background);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 * {

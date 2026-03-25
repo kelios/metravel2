@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Line, Polyline } from 'react-native-svg';
+import { LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Polyline, Rect, Stop } from 'react-native-svg';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { ParsedRoutePreview } from '@/types/travelRoutes';
@@ -29,6 +29,7 @@ const CHART_PADDING = 8;
 
 const round = (value: number): number => Math.round(value * 10) / 10;
 const formatKm = (value: number): string => `${round(value)} км`;
+const formatMeters = (value: number): string => `${Math.round(value)} м`;
 
 export default function RouteElevationProfile({
   title = 'Профиль высот',
@@ -45,6 +46,8 @@ export default function RouteElevationProfile({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const chartLineColor = lineColor || colors.primary;
   const [width, setWidth] = useState(0);
+  const [activeSampleIndex, setActiveSampleIndex] = useState<number | null>(null);
+  const isCompactLayout = width > 0 && width < 520;
 
   const metrics = useMemo(() => {
     const samples = Array.isArray(preview?.elevationProfile) ? preview.elevationProfile : [];
@@ -166,25 +169,36 @@ export default function RouteElevationProfile({
     };
   }, [keyPointLabels?.finishName, keyPointLabels?.peakName, keyPointLabels?.startName, placeHints, preview]);
 
-  const polylinePoints = useMemo(() => {
+  const chartPoints = useMemo(() => {
     const samples = Array.isArray(preview?.elevationProfile) ? preview.elevationProfile : [];
-    if (!metrics || !metrics.hasElevation || width <= 0 || samples.length < 2) return '';
+    if (!metrics || !metrics.hasElevation || width <= 0 || samples.length < 2) return [];
 
     const chartW = Math.max(1, width - CHART_PADDING * 2);
     const chartH = CHART_HEIGHT - CHART_PADDING * 2;
     const totalDistance = Math.max(0.001, metrics.totalDistanceKm);
     const minElevation = metrics.minElevation ?? 0;
 
-    return samples
-      .map((sample) => {
-        const x = CHART_PADDING + (sample.distanceKm / totalDistance) * chartW;
-        const y =
-          CHART_PADDING +
-          (1 - (sample.elevationM - minElevation) / metrics.elevationRange) * chartH;
-        return `${x},${y}`;
-      })
-      .join(' ');
+    return samples.map((sample, index) => ({
+      index,
+      sample,
+      x: CHART_PADDING + (sample.distanceKm / totalDistance) * chartW,
+      y: CHART_PADDING + (1 - (sample.elevationM - minElevation) / metrics.elevationRange) * chartH,
+    }));
   }, [metrics, preview, width]);
+
+  const polylinePoints = useMemo(
+    () => chartPoints.map((point) => `${point.x},${point.y}`).join(' '),
+    [chartPoints]
+  );
+
+  const areaPath = useMemo(() => {
+    if (chartPoints.length < 2) return '';
+    const baselineY = CHART_HEIGHT - CHART_PADDING;
+    const first = chartPoints[0];
+    const last = chartPoints[chartPoints.length - 1];
+    const pointPath = chartPoints.map((point) => `${point.x},${point.y}`).join(' ');
+    return `M ${first.x} ${baselineY} L ${pointPath} L ${last.x} ${baselineY} Z`;
+  }, [chartPoints]);
 
   const keyPoints = useMemo(() => {
     const samples = Array.isArray(preview?.elevationProfile) ? preview.elevationProfile : [];
@@ -211,44 +225,114 @@ export default function RouteElevationProfile({
     };
   }, [metrics, preview, width]);
 
-  const pointTitles = useMemo(() => {
-    const startElevation = metrics.startSample ? `${Math.round(metrics.startSample.elevationM)} м` : null;
-    const peakElevation = metrics.peakSample ? `${Math.round(metrics.peakSample.elevationM)} м` : null;
-    const peakDistance = metrics.peakSample ? formatKm(metrics.peakSample.distanceKm) : null;
-    const finishElevation = metrics.finishSample ? `${Math.round(metrics.finishSample.elevationM)} м` : null;
+  const activePoint = useMemo(() => {
+    if (activeSampleIndex == null) return null;
+    return chartPoints[activeSampleIndex] ?? null;
+  }, [activeSampleIndex, chartPoints]);
 
-    const startName = locationLabels.startName ?? '';
-    const peakName = locationLabels.peakName ?? '';
-    const finishName = locationLabels.finishName ?? '';
+  const yAxisGuides = useMemo(() => {
+    if (!metrics.hasElevation || width <= 0) return [];
+    const guideCount = isCompactLayout ? 2 : 3;
+    const chartWidth = Math.max(1, width - CHART_PADDING * 2);
+    return Array.from({ length: guideCount }, (_, index) => {
+      const progress = index / (guideCount - 1);
+      const elevation = (metrics.maxElevation ?? 0) - (metrics.elevationRange * progress);
+      const y = CHART_PADDING + (CHART_HEIGHT - CHART_PADDING * 2) * progress;
+      return {
+        key: `guide-${index}`,
+        y,
+        x1: CHART_PADDING,
+        x2: CHART_PADDING + chartWidth,
+        label: formatMeters(elevation),
+      };
+    });
+  }, [isCompactLayout, metrics, width]);
 
+  const tooltipText = useMemo(() => {
+    if (!activePoint) return null;
     return {
-      start: [startName, startElevation ? `(${startElevation})` : null].filter(Boolean).join(' '),
-      peak: [peakName, peakElevation ? `(${peakElevation}${peakDistance ? `, ${peakDistance}` : ''})` : null]
-        .filter(Boolean)
-        .join(' '),
-      finish: [finishName, finishElevation ? `(${finishElevation})` : null].filter(Boolean).join(' '),
+      title: `${formatMeters(activePoint.sample.elevationM)} • ${formatKm(activePoint.sample.distanceKm)}`,
+      subtitle:
+        activePoint.sample.distanceKm <= 0.05
+          ? 'Старт маршрута'
+          : activePoint.sample.distanceKm >= metrics.totalDistanceKm - 0.05
+            ? 'Финиш маршрута'
+            : 'Точка профиля',
     };
-  }, [locationLabels.finishName, locationLabels.peakName, locationLabels.startName, metrics.finishSample, metrics.peakSample, metrics.startSample]);
+  }, [activePoint, metrics.totalDistanceKm]);
 
   const summaryCards = useMemo(() => {
     if (!metrics.hasElevation) {
       return [
-        { label: 'Дистанция', value: `${round(metrics.totalDistanceKm)} км` },
-        { label: 'Высоты', value: 'Не найдены' },
+        { label: 'Дистанция', value: formatKm(metrics.totalDistanceKm), icon: 'move', accent: true },
+        { label: 'Высоты', value: 'Не найдены', icon: 'slash', accent: false },
       ];
     }
     const cards = [
-      { label: 'Дистанция', value: `${round(metrics.totalDistanceKm)} км` },
-      { label: 'Набор', value: `+${Math.round(metrics.ascent)} м` },
-      { label: 'Сброс', value: `-${Math.round(metrics.descent)} м` },
-      { label: 'Мин высота', value: `${Math.round(metrics.minElevation ?? 0)} м` },
-      { label: 'Макс высота', value: `${Math.round(metrics.maxElevation ?? 0)} м` },
+      { label: 'Дистанция', value: formatKm(metrics.totalDistanceKm), icon: 'move', accent: true },
+      { label: 'Набор', value: `+${formatMeters(metrics.ascent)}`, icon: 'trending-up', accent: true },
+      { label: 'Сброс', value: `-${formatMeters(metrics.descent)}`, icon: 'trending-down', accent: false },
+      { label: 'Мин высота', value: formatMeters(metrics.minElevation ?? 0), icon: 'corner-down-left', accent: false },
+      { label: 'Макс высота', value: formatMeters(metrics.maxElevation ?? 0), icon: 'corner-up-right', accent: false },
+      { label: 'Перепад', value: formatMeters(metrics.elevationRange), icon: 'activity', accent: false },
     ];
-    if (Number.isFinite(metrics.avgClimbMPerKm as number)) {
-      cards.push({ label: 'Средний набор', value: `${Math.round(metrics.avgClimbMPerKm as number)} м/км` });
-    }
     return cards;
   }, [metrics]);
+
+  const profileSummary = useMemo(() => {
+    if (!metrics.hasElevation) {
+      return `Маршрут ${formatKm(metrics.totalDistanceKm)} без данных о высотах`;
+    }
+    const summaryParts = [
+      formatKm(metrics.totalDistanceKm),
+      `+${Math.round(metrics.ascent)} м набора`,
+      `пик ${formatMeters(metrics.maxElevation ?? 0)}`,
+    ];
+    if (Number.isFinite(metrics.avgClimbMPerKm as number)) {
+      summaryParts.push(`${Math.round(metrics.avgClimbMPerKm as number)} м/км`);
+    }
+    return summaryParts.join(' • ');
+  }, [metrics]);
+
+  const pointCards = useMemo(() => {
+    if (!metrics.hasElevation) return [];
+
+    const buildCaption = (name: string, fallback: string, distanceKm?: number | null) => {
+      const parts = [name || fallback];
+      if (!isCompactLayout && Number.isFinite(distanceKm as number)) {
+        parts.push(formatKm(distanceKm as number));
+      }
+      return parts.join(' • ');
+    };
+
+    return [
+      {
+        key: 'start',
+        label: 'Старт',
+        icon: 'play',
+        value: metrics.startSample ? formatMeters(metrics.startSample.elevationM) : '—',
+        caption: buildCaption(locationLabels.startName ?? '', isCompactLayout ? 'Начало' : 'Начало маршрута'),
+      },
+      {
+        key: 'peak',
+        label: 'Высшая точка',
+        icon: 'triangle',
+        value: metrics.peakSample ? formatMeters(metrics.peakSample.elevationM) : '—',
+        caption: buildCaption(
+          locationLabels.peakName ?? '',
+          isCompactLayout ? 'Высшая точка' : 'Самая высокая точка',
+          metrics.peakSample?.distanceKm ?? null
+        ),
+      },
+      {
+        key: 'finish',
+        label: 'Финиш',
+        icon: 'flag',
+        value: metrics.finishSample ? formatMeters(metrics.finishSample.elevationM) : '—',
+        caption: buildCaption(locationLabels.finishName ?? '', isCompactLayout ? 'Финиш' : 'Конец маршрута'),
+      },
+    ];
+  }, [isCompactLayout, locationLabels.finishName, locationLabels.peakName, locationLabels.startName, metrics]);
 
   if (!metrics) {
     return null;
@@ -261,10 +345,27 @@ export default function RouteElevationProfile({
     }
   };
 
+  const updateActivePoint = (locationX: number) => {
+    if (chartPoints.length < 2) return;
+    let nextIndex = 0;
+    let minDistance = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < chartPoints.length; i += 1) {
+      const distance = Math.abs(chartPoints[i].x - locationX);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nextIndex = i;
+      }
+    }
+    setActiveSampleIndex(nextIndex);
+  };
+
   return (
-    <View style={styles.container} onLayout={handleLayout}>
+    <View testID="route-elevation-profile" style={styles.container} onLayout={handleLayout}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>{title}</Text>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{profileSummary}</Text>
+        </View>
         {canDownloadTrack && onDownloadTrack ? (
           <Pressable
             onPress={() => void onDownloadTrack()}
@@ -284,7 +385,17 @@ export default function RouteElevationProfile({
 
       <View style={styles.summaryGrid}>
         {summaryCards.map((card) => (
-          <View key={`${card.label}-${card.value}`} style={styles.summaryCard}>
+          <View
+            key={`${card.label}-${card.value}`}
+            style={[styles.summaryCard, card.accent && styles.summaryCardAccent]}
+          >
+            <View style={[styles.summaryIconWrap, card.accent && styles.summaryIconWrapAccent]}>
+              <Feather
+                name={card.icon as React.ComponentProps<typeof Feather>['name']}
+                size={14}
+                color={card.accent ? colors.primary : colors.textMuted}
+              />
+            </View>
             <Text style={styles.summaryLabel}>{card.label}</Text>
             <Text style={styles.summaryValue}>{card.value}</Text>
           </View>
@@ -293,7 +404,59 @@ export default function RouteElevationProfile({
 
       {metrics.hasElevation && width > 0 ? (
         <View style={styles.chartWrap}>
+          <View style={styles.chartMetaRow}>
+            <View style={[styles.chartMetaBadge, isCompactLayout && styles.chartMetaBadgeCompact]}>
+              {!isCompactLayout ? <Text style={styles.chartMetaLabel}>Мин</Text> : null}
+              <Text style={styles.chartMetaValue}>{formatMeters(metrics.minElevation ?? 0)}</Text>
+            </View>
+            <View style={[styles.chartMetaBadge, styles.chartMetaBadgePeak, isCompactLayout && styles.chartMetaBadgeCompact]}>
+              {!isCompactLayout ? <Text style={styles.chartMetaLabel}>Пик</Text> : null}
+              <Text style={styles.chartMetaValue}>{formatMeters(metrics.maxElevation ?? 0)}</Text>
+            </View>
+          </View>
+          {activePoint && tooltipText ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.tooltip,
+                {
+                  left: Math.max(8, Math.min(activePoint.x - (isCompactLayout ? 44 : 52), width - (isCompactLayout ? 98 : 116))),
+                  top: Math.max(8, activePoint.y - (isCompactLayout ? 34 : 44)),
+                },
+              ]}
+            >
+              <Text style={styles.tooltipTitle}>{tooltipText.title}</Text>
+              {!isCompactLayout ? <Text style={styles.tooltipSubtitle}>{tooltipText.subtitle}</Text> : null}
+            </View>
+          ) : null}
           <Svg width={width} height={CHART_HEIGHT}>
+            <Defs>
+              <LinearGradient id="routeElevationFill" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0%" stopColor={chartLineColor} stopOpacity="0.22" />
+                <Stop offset="100%" stopColor={chartLineColor} stopOpacity="0.02" />
+              </LinearGradient>
+            </Defs>
+            {yAxisGuides.map((guide) => (
+              <Line
+                key={guide.key}
+                x1={guide.x1}
+                y1={guide.y}
+                x2={guide.x2}
+                y2={guide.y}
+                stroke={colors.borderLight}
+                strokeWidth={1}
+                strokeDasharray="2 4"
+                opacity={0.75}
+              />
+            ))}
+            <Rect
+              x={0}
+              y={0}
+              width={width}
+              height={CHART_HEIGHT}
+              fill="transparent"
+              onPressIn={(event) => updateActivePoint(event.nativeEvent.locationX)}
+            />
             {keyPoints?.peak ? (
               <Line
                 x1={keyPoints.peak.x}
@@ -306,6 +469,7 @@ export default function RouteElevationProfile({
                 opacity={0.7}
               />
             ) : null}
+            {areaPath ? <Path d={areaPath} fill="url(#routeElevationFill)" /> : null}
             <Polyline
               points={polylinePoints}
               fill="none"
@@ -323,28 +487,90 @@ export default function RouteElevationProfile({
             {keyPoints?.finish ? (
               <Circle cx={keyPoints.finish.x} cy={keyPoints.finish.y} r={3.5} fill={colors.primaryDark} />
             ) : null}
+            {activePoint ? (
+              <>
+                <Line
+                  x1={activePoint.x}
+                  y1={CHART_PADDING}
+                  x2={activePoint.x}
+                  y2={CHART_HEIGHT - CHART_PADDING}
+                  stroke={colors.primary}
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                  opacity={0.45}
+                />
+                <Circle
+                  cx={activePoint.x}
+                  cy={activePoint.y}
+                  r={5}
+                  fill={colors.surface}
+                  stroke={colors.primary}
+                  strokeWidth={2}
+                />
+              </>
+            ) : null}
           </Svg>
+          <View pointerEvents="none" style={styles.yAxisLabels}>
+            {yAxisGuides.map((guide) => (
+              <Text
+                key={`${guide.key}-label`}
+                style={[
+                  styles.yAxisText,
+                  isCompactLayout && styles.yAxisTextCompact,
+                  {
+                    top: guide.y - 8,
+                  },
+                ]}
+              >
+                {guide.label}
+              </Text>
+            ))}
+          </View>
+          <View
+            style={styles.chartHitArea}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={(event) => updateActivePoint(event.nativeEvent.locationX)}
+            onResponderMove={(event) => updateActivePoint(event.nativeEvent.locationX)}
+            onResponderRelease={() => setActiveSampleIndex(null)}
+            {...(Platform.OS === 'web'
+              ? {
+                  onPointerMove: (event: React.PointerEvent<View>) => updateActivePoint(event.nativeEvent.locationX),
+                  onPointerLeave: () => setActiveSampleIndex(null),
+                }
+              : null)}
+          />
           <View style={styles.axisLabels}>
             <Text style={styles.axisText}>0 км</Text>
             <Text style={styles.axisText}>{formatKm(metrics.totalDistanceKm)}</Text>
           </View>
-          {(locationLabels.startName || locationLabels.peakName || locationLabels.finishName || transportHints.length > 0) ? (
+          {(pointCards.length > 0 || transportHints.length > 0) ? (
             <View style={styles.tagsRow}>
-              {(locationLabels.startName || locationLabels.peakName || locationLabels.finishName) ? (
-                <View style={styles.namedPlacesRow}>
-                  <Text style={[styles.placeName, styles.placeNameStart]} numberOfLines={1}>
-                    {pointTitles.start}
-                  </Text>
-                  <Text style={[styles.placeName, styles.placeNamePeak]} numberOfLines={1}>
-                    {pointTitles.peak}
-                  </Text>
-                  <Text style={[styles.placeName, styles.placeNameFinish]} numberOfLines={1}>
-                    {pointTitles.finish}
-                  </Text>
+              {pointCards.length > 0 ? (
+                <View style={styles.pointCardsGrid}>
+                  {pointCards.map((point) => (
+                    <View key={point.key} style={[styles.pointCard, isCompactLayout && styles.pointCardCompact]}>
+                      <View style={styles.pointCardHeader}>
+                        <Feather
+                          name={point.icon as React.ComponentProps<typeof Feather>['name']}
+                          size={13}
+                          color={point.key === 'peak' ? colors.info : colors.primary}
+                        />
+                        <Text style={styles.pointCardLabel}>{point.label}</Text>
+                      </View>
+                      <Text style={styles.pointCardValue}>{point.value}</Text>
+                      <Text style={styles.pointCardCaption} numberOfLines={isCompactLayout ? 1 : 2}>
+                        {point.caption}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               ) : null}
               {transportHints.length > 0 ? (
-                <Text style={styles.tagItem}>Транспорт: {transportHints.join(', ')}</Text>
+                <View style={styles.transportWrap}>
+                  <Feather name="navigation" size={13} color={colors.textMuted} />
+                  <Text style={styles.tagItem}>Транспорт: {transportHints.join(', ')}</Text>
+                </View>
               ) : null}
             </View>
           ) : null}
@@ -369,11 +595,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontWeight: '700',
       color: colors.text,
     },
+    subtitle: {
+      marginTop: 2,
+      fontSize: 12,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
     headerRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: DESIGN_TOKENS.spacing.xs,
+      gap: DESIGN_TOKENS.spacing.sm,
+      marginBottom: DESIGN_TOKENS.spacing.sm,
+    },
+    headerTextWrap: {
+      flex: 1,
     },
     downloadBtn: {
       width: 30,
@@ -399,13 +635,30 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       marginBottom: DESIGN_TOKENS.spacing.sm,
     },
     summaryCard: {
-      minWidth: 128,
+      minWidth: 124,
+      flexGrow: 1,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surfaceMuted,
-      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
+    },
+    summaryCardAccent: {
+      backgroundColor: colors.backgroundSecondary,
+      borderColor: colors.border,
+    },
+    summaryIconWrap: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      marginBottom: 8,
+    },
+    summaryIconWrapAccent: {
+      backgroundColor: colors.primarySoft,
     },
     summaryLabel: {
       fontSize: 11,
@@ -418,11 +671,99 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       fontWeight: '700',
     },
     chartWrap: {
+      position: 'relative',
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.backgroundSecondary,
       overflow: 'hidden',
+    },
+    chartMetaRow: {
+      position: 'absolute',
+      top: DESIGN_TOKENS.spacing.xs,
+      left: DESIGN_TOKENS.spacing.sm,
+      right: DESIGN_TOKENS.spacing.sm,
+      zIndex: 2,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      pointerEvents: 'none',
+    },
+    chartMetaBadge: {
+      borderRadius: 999,
+      backgroundColor: colors.surfaceAlpha40,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    chartMetaBadgePeak: {
+      backgroundColor: colors.primaryAlpha30,
+      borderColor: colors.primaryAlpha40,
+    },
+    chartMetaBadgeCompact: {
+      paddingHorizontal: 6,
+      minHeight: 24,
+    },
+    chartMetaLabel: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontWeight: '600',
+    },
+    chartMetaValue: {
+      fontSize: 11,
+      color: colors.text,
+      fontWeight: '700',
+    },
+    tooltip: {
+      position: 'absolute',
+      zIndex: 3,
+      width: 104,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceElevated,
+      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: 6,
+    },
+    tooltipTitle: {
+      fontSize: 11,
+      color: colors.text,
+      fontWeight: '700',
+      marginBottom: 2,
+    },
+    tooltipSubtitle: {
+      fontSize: 10,
+      color: colors.textMuted,
+    },
+    chartHitArea: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 4,
+    },
+    yAxisLabels: {
+      position: 'absolute',
+      top: 0,
+      left: DESIGN_TOKENS.spacing.sm,
+      width: 56,
+      height: CHART_HEIGHT,
+      zIndex: 1,
+      pointerEvents: 'none',
+    },
+    yAxisText: {
+      position: 'absolute',
+      left: 0,
+      fontSize: 10,
+      color: colors.textSubtle,
+      backgroundColor: colors.surfaceAlpha40,
+      paddingHorizontal: 4,
+      borderRadius: 6,
+      overflow: 'hidden',
+    },
+    yAxisTextCompact: {
+      fontSize: 9,
+      paddingHorizontal: 2,
     },
     axisLabels: {
       marginTop: 2,
@@ -436,41 +777,67 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.textMuted,
     },
     tagsRow: {
-      marginTop: 2,
+      marginTop: 4,
       marginBottom: DESIGN_TOKENS.spacing.xs,
       marginHorizontal: DESIGN_TOKENS.spacing.sm,
       gap: DESIGN_TOKENS.spacing.xs,
     },
-    namedPlacesRow: {
+    pointCardsGrid: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexWrap: 'wrap',
       gap: DESIGN_TOKENS.spacing.xs,
     },
-    placeName: {
+    pointCard: {
+      minWidth: 150,
+      flex: 1,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      padding: DESIGN_TOKENS.spacing.sm,
+    },
+    pointCardCompact: {
+      minWidth: 0,
+      flexBasis: '100%',
+      paddingVertical: DESIGN_TOKENS.spacing.xs,
+    },
+    pointCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 6,
+    },
+    pointCardLabel: {
       fontSize: 12,
       color: colors.textMuted,
       fontWeight: '700',
-      flex: 1,
     },
-    placeNameStart: {
-      textAlign: 'left',
+    pointCardValue: {
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      color: colors.text,
+      fontWeight: '700',
+      marginBottom: 4,
     },
-    placeNamePeak: {
-      textAlign: 'center',
+    pointCardCaption: {
+      fontSize: 12,
+      color: colors.textMuted,
+      lineHeight: 16,
     },
-    placeNameFinish: {
-      textAlign: 'right',
+    transportWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      alignSelf: 'flex-start',
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surfaceMuted,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      paddingVertical: 6,
     },
     tagItem: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.text,
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: 4,
       fontWeight: '600',
     },
   });

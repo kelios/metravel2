@@ -28,6 +28,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isMobile = width < METRICS.breakpoints.tablet;
+    const isMobileWeb = Platform.OS === 'web' && isMobile;
     const colors = useThemedColors(); // ✅ МИГРАЦИЯ: Добавлен useThemedColors
 
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -125,9 +126,10 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     country: (item as any).country ?? null,
                 }}
                 onPress={() => handleItemPress(item.url)}
+                layout={isMobile && !isMobileWeb ? 'grid' : 'horizontal'}
             />
         );
-    }, [handleItemPress]);
+    }, [handleItemPress, isMobile, isMobileWeb]);
 
     const hasFavorites = !onlyRecommendations && favorites && favorites.length > 0;
     const hasHistory = !onlyRecommendations && viewHistory && viewHistory.length > 0;
@@ -423,7 +425,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 overscrollBehaviorX: 'contain',
                 width: '100%',
                 WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-x pan-y',
+                touchAction: 'pan-x',
             } as any,
             default: {},
         }),

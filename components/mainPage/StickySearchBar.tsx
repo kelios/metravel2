@@ -60,8 +60,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
       web: {
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        backgroundColor: 'rgba(255, 255, 255, 0.72)',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+        backgroundColor: colors.surfaceElevated,
+        boxShadow: colors.boxShadows.card,
       } as any,
     }),
   },
@@ -102,7 +102,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderColor: colors.primary,
     ...Platform.select({
       web: {
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 0 3px rgba(59, 130, 246, 0.12)',
+        boxShadow: `${colors.boxShadows.card}, 0 0 0 3px ${colors.primaryAlpha30}`,
       } as any,
     }),
   },

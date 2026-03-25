@@ -15,6 +15,8 @@ interface MapControlsProps {
   alignLeft?: boolean;
 }
 
+const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
+
 const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
   width: '44px',
   height: '44px',
@@ -82,7 +84,10 @@ const MapControls: React.FC<MapControlsProps> = ({
 
   const controlsStyle = useMemo(() => ({
     position: 'absolute' as const,
-    bottom: Math.max(18, bottomOffset),
+    bottom:
+      Platform.OS === 'web'
+        ? (`calc(${Math.max(18, bottomOffset)}px + env(safe-area-inset-bottom) + ${MOBILE_WEB_BOTTOM_CHROME_GAP}px)` as any)
+        : Math.max(18, bottomOffset),
     ...(shouldAlignLeft ? { left: 10 } : { right: 10 }),
     zIndex: 40,
     display: 'flex',

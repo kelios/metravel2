@@ -171,156 +171,163 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         shouldReserveSpace && { minHeight: reserveMinHeight },
       ]}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Feather name="filter" size={20} color={colors.primary} />
-          <Text style={styles.headerTitle}>Фильтры</Text>
+      <View
+        style={[
+          styles.topChrome,
+          (Platform.OS !== 'web' || isNarrowWeb) && styles.topChromeCompact,
+        ]}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Feather name="filter" size={20} color={colors.primary} />
+            <Text style={styles.headerTitle}>Фильтры</Text>
+          </View>
+          <View style={styles.headerRight}>
+            {activeFiltersCount > 0 && (
+              <Pressable
+                onPress={onClearAll}
+                style={styles.clearButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Очистить все фильтры (${activeFiltersCount})`}
+              >
+                <Text style={styles.clearButtonText}>
+                  Очистить ({activeFiltersCount})
+                </Text>
+              </Pressable>
+            )}
+            {onClose && (
+              <Pressable
+                onPress={onClose}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть фильтры"
+              >
+                <Feather name="x" size={20} color={colors.textSecondary} />
+              </Pressable>
+            )}
+          </View>
         </View>
-        <View style={styles.headerRight}>
-          {activeFiltersCount > 0 && (
+
+        {/* Mobile/Narrow web: explicit clear-all button */}
+        {activeFiltersCount > 0 && (Platform.OS !== 'web' || isNarrowWeb) && (
+          <Pressable
+            onPress={onClearAll}
+            style={styles.clearAllMobileButton}
+            accessibilityRole="button"
+            accessibilityLabel="Очистить все фильтры"
+            hitSlop={8}
+          >
+            <Feather name="x-circle" size={16} color={colors.primary} />
+            <Text style={styles.clearAllMobileButtonText}>Очистить все фильтры</Text>
+          </Pressable>
+        )}
+
+        {/* Toggle all groups */}
+        <Pressable
+          testID="toggle-all-groups"
+          onPress={() => {
+            const allKeys = groupsWithoutSort.map((g) => g.key);
+            const allExpanded = allKeys.every((key) => expandedGroups.has(key));
+            const next = new Set<string>();
+
+            allKeys.forEach((key) => {
+              if (!animatedValues[key]) {
+                animatedValues[key] = new Animated.Value(allExpanded ? 1 : 0);
+              }
+              const animated = animatedValues[key];
+              Animated.timing(animated, {
+                toValue: allExpanded ? 0 : 1,
+                duration: DESIGN_TOKENS.animations.duration.normal,
+                useNativeDriver: false,
+              }).start();
+
+              if (!allExpanded) {
+                next.add(key);
+              }
+            });
+
+            if (allExpanded) {
+              setExpandedGroups(new Set());
+            } else {
+              setExpandedGroups(next);
+            }
+          }}
+          style={styles.toggleAllButton}
+          accessibilityRole="button"
+          accessibilityLabel={areAllGroupsExpanded ? 'Свернуть все группы фильтров' : 'Развернуть все группы фильтров'}
+        >
+          <View style={styles.toggleAllButtonInner}>
+            <View style={styles.iconSlot16}>
+              <Feather
+                name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
+                size={16}
+                color={colors.textSecondary}
+              />
+            </View>
+            <Text style={styles.toggleAllButtonText}>
+              {areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все'}
+            </Text>
+          </View>
+        </Pressable>
+
+        {/* Moderation (admin) */}
+        <View style={styles.extraFilters}>
+          {showModeration && onToggleModeration && (
             <Pressable
-              onPress={onClearAll}
-              style={styles.clearButton}
-              accessibilityRole="button"
-              accessibilityLabel={`Очистить все фильтры (${activeFiltersCount})`}
+              onPress={onToggleModeration}
+              style={[
+                styles.moderationRow,
+                moderationValue === 0 && styles.moderationRowSelected,
+              ]}
+              accessibilityRole="checkbox"
+              accessibilityLabel="Только на модерации"
+              accessibilityState={{ checked: moderationValue === 0 }}
+              {...(Platform.OS === 'web'
+                ? ({
+                    title: 'Показывать только путешествия, ожидающие модерации',
+                  } as any)
+                : null)}
             >
-              <Text style={styles.clearButtonText}>
-                Очистить ({activeFiltersCount})
+              <FilterCheckbox checked={moderationValue === 0} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
+              <Text
+                style={[
+                  styles.moderationLabel,
+                  moderationValue === 0 && styles.moderationLabelSelected,
+                ]}
+              >
+                Только на модерации
               </Text>
             </Pressable>
           )}
-          {onClose && (
-            <Pressable
-              onPress={onClose}
-              style={styles.closeButton}
-              accessibilityRole="button"
-              accessibilityLabel="Закрыть фильтры"
-            >
-              <Feather name="x" size={20} color={colors.textSecondary} />
-            </Pressable>
-          )}
         </View>
-      </View>
 
-      {/* Mobile/Narrow web: explicit clear-all button */}
-      {activeFiltersCount > 0 && (Platform.OS !== 'web' || isNarrowWeb) && (
-        <Pressable
-          onPress={onClearAll}
-          style={styles.clearAllMobileButton}
-          accessibilityRole="button"
-          accessibilityLabel="Очистить все фильтры"
-          hitSlop={8}
-        >
-          <Feather name="x-circle" size={16} color={colors.primary} />
-          <Text style={styles.clearAllMobileButtonText}>Очистить все фильтры</Text>
-        </Pressable>
-      )}
-
-      {/* Toggle all groups */}
-      <Pressable
-        testID="toggle-all-groups"
-        onPress={() => {
-          const allKeys = groupsWithoutSort.map((g) => g.key);
-          const allExpanded = allKeys.every((key) => expandedGroups.has(key));
-          const next = new Set<string>();
-
-          allKeys.forEach((key) => {
-            if (!animatedValues[key]) {
-              animatedValues[key] = new Animated.Value(allExpanded ? 1 : 0);
-            }
-            const animated = animatedValues[key];
-            Animated.timing(animated, {
-              toValue: allExpanded ? 0 : 1,
-              duration: DESIGN_TOKENS.animations.duration.normal,
-              useNativeDriver: false,
-            }).start();
-
-            if (!allExpanded) {
-              next.add(key);
-            }
-          });
-
-          if (allExpanded) {
-            setExpandedGroups(new Set());
-          } else {
-            setExpandedGroups(next);
-          }
-        }}
-        style={styles.toggleAllButton}
-        accessibilityRole="button"
-        accessibilityLabel={areAllGroupsExpanded ? 'Свернуть все группы фильтров' : 'Развернуть все группы фильтров'}
-      >
-        <View style={styles.toggleAllButtonInner}>
-          <View style={styles.iconSlot16}>
+        {/* Results Count Badge */}
+        {(showResultsBadge || shouldReserveResultsBadge) && (
+          <View style={styles.resultsBadge}>
             <Feather
-              name={areAllGroupsExpanded ? 'chevrons-up' : 'chevrons-down'}
-              size={16}
-              color={colors.textSecondary}
+              name="search"
+              size={14}
+              color={colors.textMuted}
+              style={!showResultsBadge ? ({ opacity: 0 } as any) : null}
             />
-          </View>
-          <Text style={styles.toggleAllButtonText}>
-            {areAllGroupsExpanded ? 'Свернуть все' : 'Развернуть все'}
-          </Text>
-        </View>
-      </Pressable>
-
-      {/* Moderation (admin) */}
-      <View style={styles.extraFilters}>
-        {showModeration && onToggleModeration && (
-          <Pressable
-            onPress={onToggleModeration}
-            style={[
-              styles.moderationRow,
-              moderationValue === 0 && styles.moderationRowSelected,
-            ]}
-            accessibilityRole="checkbox"
-            accessibilityLabel="Только на модерации"
-            accessibilityState={{ checked: moderationValue === 0 }}
-            {...(Platform.OS === 'web'
-              ? ({
-                  title: 'Показывать только путешествия, ожидающие модерации',
-                } as any)
-              : null)}
-          >
-            <FilterCheckbox checked={moderationValue === 0} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
-            <Text
-              style={[
-                styles.moderationLabel,
-                moderationValue === 0 && styles.moderationLabelSelected,
-              ]}
-            >
-              Только на модерации
+            <Text style={styles.resultsBadgeText}>
+              {showResultsBadge ? resultsText : 'Найдено 000 путешествий'}
             </Text>
-          </Pressable>
+          </View>
+        )}
+
+        {/* Sort (collapsible dropdown) */}
+        {sortGroup && (
+          <SortDropdown
+            sortGroup={sortGroup}
+            selectedFilters={selectedFilters}
+            onFilterChange={onFilterChange}
+            styles={styles}
+            colors={colors}
+          />
         )}
       </View>
-
-      {/* Results Count Badge */}
-      {(showResultsBadge || shouldReserveResultsBadge) && (
-        <View style={styles.resultsBadge}>
-          <Feather
-            name="search"
-            size={14}
-            color={colors.textMuted}
-            style={!showResultsBadge ? ({ opacity: 0 } as any) : null}
-          />
-          <Text style={styles.resultsBadgeText}>
-            {showResultsBadge ? resultsText : 'Найдено 000 путешествий'}
-          </Text>
-        </View>
-      )}
-
-      {/* Sort (collapsible dropdown) */}
-      {sortGroup && (
-        <SortDropdown
-          sortGroup={sortGroup}
-          selectedFilters={selectedFilters}
-          onFilterChange={onFilterChange}
-          styles={styles}
-          colors={colors}
-        />
-      )}
 
       {/* Filter Groups */}
       <ScrollView

@@ -1,8 +1,20 @@
-import { createTravelArticleJsonLd, stripHtmlForSeo } from '@/utils/travelSeo';
+import {
+  buildTravelSeoTitle,
+  createTravelArticleJsonLd,
+  getTravelSeoDescription,
+  stripHtmlForSeo,
+} from '@/utils/travelSeo';
 
 describe('travelSeo', () => {
   it('strips html for seo descriptions', () => {
     expect(stripHtmlForSeo('<p>Hello <strong>world</strong></p>')).toBe('Hello world');
+  });
+
+  it('builds stable travel seo title and description fallbacks', () => {
+    expect(buildTravelSeoTitle('  Очень длинный   заголовок маршрута   '.repeat(4))).toMatch(/ \| Metravel$/);
+    expect(buildTravelSeoTitle('')).toBe('Metravel');
+    expect(getTravelSeoDescription('<p>Hello <strong>world</strong></p>')).toBe('Hello world');
+    expect(getTravelSeoDescription('')).toBe('Найди место для путешествия и поделись своим опытом.');
   });
 
   it('creates article json-ld for travel pages', () => {

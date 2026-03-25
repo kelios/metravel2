@@ -270,6 +270,7 @@ type Props = {
   style?: any;
   onLoad?: () => void;
   onError?: () => void;
+  recyclingKey?: string;
   /** Show image immediately without waiting for load (for cached images). */
   showImmediately?: boolean;
   /** Allow blurred web backdrop even for eager/high-priority images. */
@@ -302,6 +303,7 @@ function ImageCardMedia({
   style,
   onLoad,
   onError,
+  recyclingKey,
   showImmediately = false,
   allowCriticalWebBlur = false,
   revealOnLoadOnly = false,
@@ -312,6 +314,7 @@ function ImageCardMedia({
     __DEV__ && process.env.EXPO_PUBLIC_DISABLE_REMOTE_IMAGES === 'true';
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const isSafariWeb = useMemo(() => isIOSSafariWeb(), []);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
   const resolvedSource = useMemo(() => {
     if (source) return source;
@@ -443,6 +446,7 @@ function ImageCardMedia({
 
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
+    if (isSafariWeb) return undefined;
     if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
     // Skip srcset for local assets
     if (typeof resolvedSource === 'string') return undefined;
@@ -464,15 +468,16 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [resolvedSource, contentFit, quality, stableWidth]);
+  }, [resolvedSource, contentFit, isSafariWeb, quality, stableWidth]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
+    if (isSafariWeb) return undefined;
     if (typeof width === 'number' && Number.isFinite(width) && width > 0) {
       return `${Math.round(width)}px`;
     }
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
-  }, [width]);
+  }, [isSafariWeb, width]);
 
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
@@ -649,16 +654,17 @@ function ImageCardMedia({
               showImmediately={shouldShowWebImageImmediately}
             />
           ) : !blurOnly && (
-            <OptimizedImage
-              source={
-                Platform.OS === 'web' && webOptimizedSource
-                  ? { uri: webOptimizedSource }
-                  : resolvedSource
-              }
-              contentFit={contentFit}
-              blurBackground={Platform.OS === 'web' ? false : blurBackground}
-              blurBackgroundRadius={blurRadius}
-              blurOnly={blurOnly}
+          <OptimizedImage
+            source={
+              Platform.OS === 'web' && webOptimizedSource
+                ? { uri: webOptimizedSource }
+                : resolvedSource
+            }
+            recyclingKey={recyclingKey}
+            contentFit={contentFit}
+            blurBackground={Platform.OS === 'web' ? false : blurBackground}
+            blurBackgroundRadius={blurRadius}
+            blurOnly={blurOnly}
               borderRadius={borderRadius}
               placeholder={placeholderBlurhash || DESIGN_TOKENS.defaultBlurhash}
               priority={priority}

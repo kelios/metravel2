@@ -440,7 +440,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: {
         overflowX: 'auto' as any,
         overflowY: 'hidden' as any,
+        overscrollBehaviorX: 'contain' as any,
         WebkitOverflowScrolling: 'touch' as any,
+        touchAction: 'pan-x pan-y' as any,
       },
     }),
   },
@@ -449,6 +451,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.md,
     paddingBottom: DESIGN_TOKENS.spacing.md,
     paddingHorizontal: 4,
+    ...Platform.select({
+      web: {
+        minWidth: 'max-content' as any,
+        alignItems: 'stretch' as any,
+      },
+    }),
   },
 
   // ✅ УЛУЧШЕНИЕ: Адаптивные колонки с одинаковой высотой карточек
@@ -472,7 +480,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%' 
   },
   colHorizontal: {
-    width: 320,
+    width: Platform.select({
+      web: 'min(320px, calc(100vw - 40px))' as any,
+      default: 320,
+    }),
     flexShrink: 0,
   },
 

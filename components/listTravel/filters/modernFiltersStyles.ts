@@ -1,9 +1,12 @@
 import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedColors>) => {
   const { spacing, typography, radii } = DESIGN_TOKENS;
+  const mobileWebTopReserve = (LAYOUT?.headerHeight ?? 56) * 2;
+  const mobileWebBottomReserve = (LAYOUT?.tabBarHeight ?? 56) + spacing.lg;
 
   return StyleSheet.create({
     container: {
@@ -53,11 +56,12 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     containerWebFull: {
       width: '100%',
       maxWidth: '100%',
-      height: '100vh' as any,
+      height: `calc(100dvh - ${mobileWebTopReserve}px)` as any,
       borderRadius: 0,
       position: 'relative',
       top: 0,
-      maxHeight: '100vh' as any,
+      minHeight: 0,
+      maxHeight: `calc(100dvh - ${mobileWebTopReserve}px)` as any,
       boxShadow: 'none' as any,
       display: 'flex' as any,
       flexDirection: 'column' as any,
@@ -110,6 +114,21 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     },
     closeButton: {
       padding: spacing.xs,
+    },
+    topChrome: {
+      backgroundColor: colors.surface,
+      zIndex: 3,
+    },
+    topChromeCompact: {
+      ...Platform.select({
+        web: {
+          position: 'sticky' as any,
+          top: 0,
+          paddingTop: spacing.xs,
+          paddingBottom: spacing.xs,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        } as any,
+      }),
     },
     toggleAllButton: {
       marginBottom: spacing.xs,
@@ -410,6 +429,11 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     scrollContent: {
       flexGrow: 1,
       paddingBottom: spacing.lg,
+      ...Platform.select({
+        web: {
+          paddingBottom: spacing.lg + mobileWebBottomReserve,
+        } as any,
+      }),
     },
     filterGroup: {
       marginBottom: spacing.sm,
@@ -613,6 +637,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
           gap: spacing.xs,
           position: 'sticky' as any,
           bottom: 0,
+          paddingBottom: `calc(${spacing.md}px + env(safe-area-inset-bottom) + ${mobileWebBottomReserve}px)` as any,
           boxShadow: '0 -2px 6px rgba(0,0,0,0.04)',
         } as any,
       }),

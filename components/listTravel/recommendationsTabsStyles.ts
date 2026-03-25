@@ -26,9 +26,21 @@ export const createRecommendationsTabsStyles = (
   },
   tabsScroll: {
     flex: 1,
-    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' } as any, default: {} }) as any),
+    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' } as any, default: {} }) as any),
   },
-  tabsContainer: { paddingHorizontal: 0, paddingVertical: 10, alignItems: 'center' },
+  tabsContainer: {
+    paddingHorizontal: 0,
+    paddingVertical: 10,
+    alignItems: 'center',
+    flexDirection: 'row',
+    ...Platform.select({
+      web: {
+        width: 'max-content',
+        minWidth: '100%',
+        paddingRight: 8,
+      } as any,
+    }),
+  },
   tab: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 7,
     borderRadius: 999, marginRight: 8, minHeight: 34, borderWidth: 1, borderColor: 'transparent',
@@ -95,7 +107,7 @@ export const createRecommendationsTabsStyles = (
   errorText: { marginTop: 12, fontSize: 15, color: colors.textMuted, textAlign: 'center' },
   horizontalList: { marginBottom: 8 },
   webHorizontalScroll: {
-    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' } as any, default: {} }) as any),
+    ...(Platform.select({ web: { overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', width: '100%', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' } as any, default: {} }) as any),
   },
   webHorizontalScrollContent: {
     flexDirection: 'row', alignItems: 'stretch', paddingHorizontal: 4, paddingBottom: 6,

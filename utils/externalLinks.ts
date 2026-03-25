@@ -56,7 +56,9 @@ export async function openExternalUrlInNewTab(
   if (Platform.OS === 'web') {
     const openedWindow = openWebWindow(normalized, {
       target: '_blank',
-      windowFeatures: options.windowFeatures ?? 'noopener,noreferrer',
+      // Keep noopener by default for security, but preserve the referrer
+      // unless a caller explicitly asks for noreferrer.
+      windowFeatures: options.windowFeatures ?? 'noopener',
       onError: options.onError,
     });
     return Boolean(openedWindow);
@@ -74,7 +76,7 @@ export async function openExternalUrlInNewTab(
 export function openWebWindow(rawUrl: string, options: OpenWebWindowOptions = {}): Window | null {
   if (typeof window === 'undefined' || typeof window.open !== 'function') return null;
   try {
-    const openedWindow = window.open(rawUrl, options.target ?? '_blank', options.windowFeatures ?? 'noopener,noreferrer');
+    const openedWindow = window.open(rawUrl, options.target ?? '_blank', options.windowFeatures ?? 'noopener');
     if (!openedWindow) return null;
     try {
       openedWindow.opener = null;

@@ -76,4 +76,36 @@ describe('TravelRatingSection', () => {
       expect(mockRateTravel).toHaveBeenCalledWith({ travelId: 503, rating: 5 });
     });
   });
+
+  it('updates the empty state immediately after the first rating is submitted', async () => {
+    const queryClient = createTestQueryClient();
+    mockGetUserTravelRating.mockResolvedValue(null);
+    mockRateTravel.mockResolvedValue({
+      rating: '5.0',
+      rating_count: '1',
+      user_rating: null,
+    });
+
+    const { getByLabelText, queryByText, findByText } = render(
+      <QueryClientProvider client={queryClient}>
+        <TravelRatingSection
+          travelId={504}
+          initialRating={null}
+          initialCount={0}
+          initialUserRating={null}
+        />
+      </QueryClientProvider>
+    );
+
+    expect(queryByText('Пока нет оценок')).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Оценить на 5 из 5'));
+
+    await waitFor(() => {
+      expect(mockRateTravel).toHaveBeenCalledWith({ travelId: 504, rating: 5 });
+    });
+
+    expect(await findByText('Ваша оценка')).toBeTruthy();
+    expect(queryByText('Пока нет оценок')).toBeNull();
+  });
 });

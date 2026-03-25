@@ -28,6 +28,15 @@ type UseTravelRatingReturn = {
     error: Error | null;
 };
 
+const parseFiniteNumber = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
 export function useTravelRating({
     travelId,
     initialRating = null,
@@ -65,11 +74,17 @@ export function useTravelRating({
 
             // Сохраняем предыдущее состояние
             const previousUserRating = queryClient.getQueryData<number | null>(['travelUserRating', travelId]);
+            const previousAggregateRating = serverRating ?? initialRating ?? 0;
+            const previousAggregateCount = serverCount ?? initialCount;
 
             // Обновляем кэш оптимистично
             queryClient.setQueryData(['travelUserRating', travelId], newRating);
 
-            return { previousUserRating };
+            return {
+                previousUserRating,
+                previousAggregateRating,
+                previousAggregateCount,
+            };
         },
         onError: (_error, _newRating, context) => {
             // Откатываем к предыдущему состоянию
@@ -82,16 +97,48 @@ export function useTravelRating({
                 type: 'error',
             });
         },
-        onSuccess: (data) => {
+        onSuccess: (data, submittedRating, context) => {
+            const nextUserRating = parseFiniteNumber(data.user_rating) ?? submittedRating;
+            const fallbackRating = calculateNewRating(
+                context?.previousAggregateRating ?? (serverRating ?? initialRating ?? 0),
+                context?.previousAggregateCount ?? (serverCount ?? initialCount),
+                nextUserRating,
+                context?.previousUserRating ?? initialUserRating ?? null
+            );
+            const fallbackCount =
+                (context?.previousUserRating ?? initialUserRating ?? null) == null ||
+                (context?.previousUserRating ?? initialUserRating ?? null) === 0
+                    ? (context?.previousAggregateCount ?? (serverCount ?? initialCount)) + 1
+                    : (context?.previousAggregateCount ?? (serverCount ?? initialCount));
+            const nextAggregateRating = parseFiniteNumber(data.rating) ?? fallbackRating;
+            const nextAggregateCount = parseFiniteNumber(data.rating_count) ?? fallbackCount;
+
             // Обновляем кэш user rating
             setOptimisticRating(null);
-            queryClient.setQueryData(['travelUserRating', travelId], data.user_rating ?? null);
+            queryClient.setQueryData(['travelUserRating', travelId], nextUserRating);
 
             // Сохраняем агрегатный рейтинг из ответа сервера
-            if (typeof data.rating === 'number') setServerRating(data.rating);
-            if (typeof data.rating_count === 'number') setServerCount(data.rating_count);
+            setServerRating(nextAggregateRating);
+            setServerCount(nextAggregateCount);
 
-            // Инвалидируем кэш путешествия, чтобы обновить рейтинг в списках
+            queryClient.setQueriesData({ queryKey: ['travel'] }, (current) => {
+                if (!current || typeof current !== 'object') return current;
+
+                const currentTravel = current as Record<string, unknown>;
+                const currentId = parseFiniteNumber(currentTravel.id);
+                if (currentId !== travelId) return current;
+
+                return {
+                    ...currentTravel,
+                    rating: nextAggregateRating,
+                    rating_count: nextAggregateCount,
+                    user_rating: nextUserRating,
+                };
+            });
+
+            // Инвалидируем travel-кэш без exact matching: детальная страница может быть закэширована по slug.
+            queryClient.invalidateQueries({ queryKey: ['travel'] });
+            // Сохраняем старое поведение для id-ключа на случай прямого входа по id.
             queryClient.invalidateQueries({ queryKey: queryKeys.travel(travelId!) });
 
             showToast({

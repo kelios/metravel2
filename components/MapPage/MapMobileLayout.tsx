@@ -46,6 +46,8 @@ interface MapMobileLayoutProps {
   onExpandRadius?: () => void;
 }
 
+const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
+
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   mapComponent,
   travelsData,
@@ -729,7 +731,12 @@ const getStyles = (
       paddingBottom: 2,
     },
     fab: {
-      bottom: options.isNarrow ? 116 : 128,
+      bottom:
+        Platform.OS === 'web'
+          ? (`calc(${options.isNarrow ? 116 : 128}px + env(safe-area-inset-bottom) + ${MOBILE_WEB_BOTTOM_CHROME_GAP}px)` as any)
+          : options.isNarrow
+            ? 116
+            : 128,
       right: options.isNarrow ? 12 : 14,
     },
   });

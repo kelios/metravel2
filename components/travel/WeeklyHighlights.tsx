@@ -26,6 +26,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
     const { viewHistory } = useFavorites();
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
+    const isMobileWeb = Platform.OS === 'web' && isMobile;
 
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
@@ -183,7 +184,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                     <Text style={[styles.subtitle, { color: colors.textMuted }]}>Самые популярные маршруты этого месяца</Text>
                 </>
             )}
-            {isMobile ? (
+            {isMobile && !isMobileWeb ? (
                 <View style={styles.mobileGrid}>
                     {highlights.map((item) => (
                         <View key={item.id} style={styles.mobileGridItem}>
@@ -222,7 +223,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                             overscrollBehaviorX: 'contain',
                             width: '100%',
                             WebkitOverflowScrolling: 'touch',
-                            touchAction: 'pan-x pan-y',
+                            touchAction: 'pan-x',
                         } as any,
                         default: {},
                     })}

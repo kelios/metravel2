@@ -287,9 +287,7 @@ export const createHomeHeroStyles = ({
                 minWidth: 0,
               } as any)
             : ({
-                backgroundColor: isMobile
-                  ? 'rgba(255,255,255,0.85)'
-                  : 'transparent',
+                backgroundColor: isMobile ? colors.surfaceMuted : 'transparent',
                 borderRadius: isMobile ? 8 : 0,
               } as any),
       }),

@@ -149,6 +149,7 @@ const RecommendationsTabs = memo(
     const [activeTab, setActiveTab] = useState<TabType>('highlights');
     const [collapsed, setCollapsed] = useState(false);
     const { isMobile } = useResponsive();
+    const isMobileWeb = Platform.OS === 'web' && isMobile;
 
     const router = useRouter();
     const { favorites = [], viewHistory = [], clearFavorites, clearHistory, ensureServerData } = useFavorites() as any;
@@ -270,7 +271,7 @@ const RecommendationsTabs = memo(
         keyFactory: (item: any) => string,
         cardFactory: (item: any) => React.ReactNode,
       ) => {
-        if (isMobile) {
+        if (isMobile && !isMobileWeb) {
           return (
             <View style={styles.mobileGrid}>
               {items.map((item) => (
@@ -298,6 +299,7 @@ const RecommendationsTabs = memo(
       [
         handleHorizontalWheel,
         isMobile,
+        isMobileWeb,
         styles.horizontalList,
         styles.horizontalListContent,
         styles.mobileGrid,
@@ -410,7 +412,7 @@ const RecommendationsTabs = memo(
                         country: item.country ?? (item as any).countryName ?? null,
                       }}
                       onPress={() => router.push(item.url as any)}
-                      layout={isMobile ? 'grid' : 'horizontal'}
+                      layout={isMobile && !isMobileWeb ? 'grid' : 'horizontal'}
                     />
                   )
                 )}
@@ -483,7 +485,7 @@ const RecommendationsTabs = memo(
                         iconColor: colors.textOnDark,
                       }}
                       onPress={() => router.push(item.url as any)}
-                      layout={isMobile ? 'grid' : 'horizontal'}
+                      layout={isMobile && !isMobileWeb ? 'grid' : 'horizontal'}
                     />
                   )
                 )}

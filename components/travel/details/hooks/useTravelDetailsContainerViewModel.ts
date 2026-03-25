@@ -2,26 +2,12 @@ import { useCallback, useMemo } from 'react'
 import { Animated, Platform } from 'react-native'
 
 import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
-import { createTravelArticleJsonLd, stripHtmlForSeo } from '@/utils/travelSeo'
+import {
+  buildTravelSeoTitle,
+  createTravelArticleJsonLd,
+  getTravelSeoDescription,
+} from '@/utils/travelSeo'
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
-
-const SEO_TITLE_MAX_LENGTH = 60
-const SEO_TITLE_SUFFIX = ' | Metravel'
-
-const stripToDescription = (html?: string) => stripHtmlForSeo(html).slice(0, 160)
-
-const buildSeoTitle = (base: string): string => {
-  const normalized = String(base || '').replace(/\s+/g, ' ').trim()
-  if (!normalized) return 'Metravel'
-
-  const maxBaseLength = Math.max(10, SEO_TITLE_MAX_LENGTH - SEO_TITLE_SUFFIX.length)
-  const clippedBase =
-    normalized.length > maxBaseLength
-      ? `${normalized.slice(0, maxBaseLength - 1).trimEnd()}…`
-      : normalized
-
-  return `${clippedBase}${SEO_TITLE_SUFFIX}`
-}
 
 type UseTravelDetailsContainerViewModelArgs = {
   closeMenu: () => void
@@ -69,9 +55,11 @@ export function useTravelDetailsContainerViewModel({
 
   const seo = useMemo(() => {
     const title = travel?.name
-      ? buildSeoTitle(travel.name)
-      : 'Загрузка... | Metravel'
-    const desc = stripToDescription(travel?.description) || 'Путешествие на Metravel.'
+      ? buildTravelSeoTitle(travel.name)
+      : slug
+        ? buildTravelSeoTitle(slug.replace(/-/g, ' '))
+        : 'Путешествие | Metravel'
+    const desc = getTravelSeoDescription(travel?.description)
     const canonical =
       typeof travel?.slug === 'string' && travel.slug
         ? buildCanonicalUrl(`/travels/${travel.slug}`)

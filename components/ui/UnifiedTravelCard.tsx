@@ -52,6 +52,7 @@ type Props = {
     blurRadius?: number;
     blurBackground?: boolean;
     allowCriticalWebBlur?: boolean;
+    recyclingKey?: string;
     priority?: 'low' | 'normal' | 'high';
     loading?: 'lazy' | 'eager';
     prefetch?: boolean;
@@ -67,6 +68,7 @@ type Props = {
   webPressableProps?: any;
   visualVariant?: 'default' | 'featured';
   webHoverScale?: boolean;
+  webTouchAction?: string;
 };
 
 
@@ -101,6 +103,7 @@ function UnifiedTravelCard({
   webAsView = false,
   visualVariant = 'default',
   webHoverScale = true,
+  webTouchAction,
 }: Props) {
   const isWeb =
     Platform.OS === 'web' ||
@@ -184,7 +187,7 @@ function UnifiedTravelCard({
               transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
               display: 'flex',
               flexDirection: 'column',
-              touchAction: 'pan-y',
+              touchAction: webTouchAction ?? 'pan-y',
               contain: 'layout style',
             } as any,
             default: DESIGN_TOKENS.shadowsNative.light,
@@ -373,7 +376,7 @@ function UnifiedTravelCard({
           flex: 1,
         },
       }),
-    [colors, isWeb, webHoverScale],
+    [colors, isWeb, webHoverScale, webTouchAction],
   );
 
   // On web we avoid rendering <button> because cards often contain interactive children
@@ -469,6 +472,7 @@ function UnifiedTravelCard({
             allowCriticalWebBlur={mediaProps?.allowCriticalWebBlur ?? false}
             blurRadius={mediaProps?.blurRadius ?? 16}
             placeholderBlurhash={mediaProps?.placeholderBlurhash}
+            recyclingKey={mediaProps?.recyclingKey}
             style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
             loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
             priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}

@@ -63,6 +63,11 @@ type PointListCardRendererProps = {
 };
 
 const POINT_CARD_MARGIN_STYLE = { marginRight: 16 };
+const MOBILE_WEB_PLACE_CARD_STYLE = {
+  width: 'min(320px, calc(100vw - 40px))',
+  maxWidth: 'min(320px, calc(100vw - 40px))',
+  marginRight: 16,
+} as const;
 
 const PointListCardRenderer = React.memo(function PointListCardRenderer({
   colors,
@@ -81,6 +86,8 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
   responsive,
   styles,
 }: PointListCardRendererProps) {
+  const isMobileWeb = Platform.OS === 'web' && isMobile;
+
   return (
     <View
       style={[
@@ -101,11 +108,14 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
           mapActions={itemModel.mapActions}
           inlineActions={itemModel.inlineActions}
           onAddPoint={itemModel.handleAddPointClick}
+          addLabel={isMobileWeb ? 'В мои точки' : 'Мои точки'}
           addDisabled={itemModel.addDisabled}
           isAdding={itemModel.isAdding}
-          imageHeight={180}
-          width={300}
-          style={POINT_CARD_MARGIN_STYLE}
+          imageHeight={isMobileWeb ? 164 : 180}
+          width={isMobileWeb ? undefined : 300}
+          style={isMobileWeb ? MOBILE_WEB_PLACE_CARD_STYLE : POINT_CARD_MARGIN_STYLE}
+          webTouchAction={isMobileWeb ? 'pan-x pan-y' : undefined}
+          compact={isMobileWeb}
           testID={`travel-point-card-${item.id}`}
         />
       ) : (

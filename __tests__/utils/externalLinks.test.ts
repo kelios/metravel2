@@ -38,7 +38,7 @@ describe('externalLinks', () => {
     expect(onError).toHaveBeenCalledWith(openError);
   });
 
-  it('opens a safe url in new web tab with noopener,noreferrer', async () => {
+  it('opens a safe url in new web tab with noopener by default', async () => {
     const originalPlatform = Platform.OS;
     const originalOpen = window.open;
     try {
@@ -47,6 +47,24 @@ describe('externalLinks', () => {
       (window as any).open = windowOpen;
 
       await expect(openExternalUrlInNewTab('metravel.by')).resolves.toBe(true);
+      expect(windowOpen).toHaveBeenCalledWith('https://metravel.by/', '_blank', 'noopener');
+    } finally {
+      (window as any).open = originalOpen;
+      (Platform.OS as any) = originalPlatform;
+    }
+  });
+
+  it('allows callers to opt into noreferrer explicitly', async () => {
+    const originalPlatform = Platform.OS;
+    const originalOpen = window.open;
+    try {
+      (Platform.OS as any) = 'web';
+      const windowOpen = jest.fn().mockReturnValue({ opener: {} });
+      (window as any).open = windowOpen;
+
+      await expect(
+        openExternalUrlInNewTab('metravel.by', { windowFeatures: 'noopener,noreferrer' }),
+      ).resolves.toBe(true);
       expect(windowOpen).toHaveBeenCalledWith('https://metravel.by/', '_blank', 'noopener,noreferrer');
     } finally {
       (window as any).open = originalOpen;

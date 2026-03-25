@@ -1,6 +1,10 @@
 /* eslint-disable no-empty, no-unused-vars */
 (function(){
   try {
+    var SITE_ORIGIN = 'https://metravel.by';
+    var DEFAULT_OG_IMAGE = SITE_ORIGIN + '/og-default.png';
+    var FALLBACK_DESCRIPTION = 'Путешествие на Metravel.';
+
     var host = window.location && window.location.hostname;
     function isPrivateHost(h){
       try {
@@ -50,6 +54,160 @@
     var endpoint = isId
       ? apiOrigin + '/api/travels/' + encodeURIComponent(slug) + '/'
       : apiOrigin + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
+
+    function stripHtml(raw) {
+      try {
+        return String(raw || '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#x27;/g, "'")
+          .replace(/\s+/g, ' ')
+          .trim();
+      } catch (_e) {
+        return '';
+      }
+    }
+
+    function normalizeText(raw) {
+      try {
+        return String(raw || '').replace(/\s+/g, ' ').trim();
+      } catch (_e) {
+        return '';
+      }
+    }
+
+    function buildTitle(base) {
+      var normalized = normalizeText(base);
+      if (!normalized) return 'Путешествие | Metravel';
+      var suffix = ' | Metravel';
+      var maxBaseLength = Math.max(10, 60 - suffix.length);
+      if (normalized.length > maxBaseLength) {
+        normalized = normalized.slice(0, maxBaseLength - 3).trimEnd() + '...';
+      }
+      return normalized + suffix;
+    }
+
+    function buildDescription(raw) {
+      var normalized = stripHtml(raw);
+      if (!normalized) return FALLBACK_DESCRIPTION;
+      return normalized.slice(0, 160) || FALLBACK_DESCRIPTION;
+    }
+
+    function toAbsoluteUrl(rawUrl) {
+      try {
+        if (!rawUrl) return null;
+        var resolved = new URL(String(rawUrl), SITE_ORIGIN);
+        if (resolved.protocol === 'http:') {
+          resolved.protocol = 'https:';
+        }
+        return resolved.toString();
+      } catch (_e) {
+        return null;
+      }
+    }
+
+    function getTravelImage(data) {
+      try {
+        var ogImgUrl = data && data.travel_image_thumb_url ? data.travel_image_thumb_url : '';
+        if (!ogImgUrl && data && data.gallery && data.gallery.length) {
+          var gFirst = data.gallery[0];
+          ogImgUrl = typeof gFirst === 'string' ? gFirst : (gFirst && gFirst.url) || '';
+        }
+        return toAbsoluteUrl(ogImgUrl) || DEFAULT_OG_IMAGE;
+      } catch (_e) {
+        return DEFAULT_OG_IMAGE;
+      }
+    }
+
+    function upsertMeta(selector, attributeName, content, createAttrs) {
+      try {
+        if (!content) return null;
+        var el = document.querySelector(selector);
+        if (!el) {
+          el = document.createElement('meta');
+          var attrs = createAttrs || {};
+          for (var key in attrs) {
+            if (Object.prototype.hasOwnProperty.call(attrs, key)) {
+              el.setAttribute(key, attrs[key]);
+            }
+          }
+          document.head.appendChild(el);
+        }
+        el.setAttribute(attributeName, content);
+        return el;
+      } catch (_e) {
+        return null;
+      }
+    }
+
+    function upsertLink(selector, attrs) {
+      try {
+        var el = document.querySelector(selector);
+        if (!el) {
+          el = document.createElement('link');
+          document.head.appendChild(el);
+        }
+        for (var key in attrs) {
+          if (Object.prototype.hasOwnProperty.call(attrs, key)) {
+            el.setAttribute(key, attrs[key]);
+          }
+        }
+        return el;
+      } catch (_e) {
+        return null;
+      }
+    }
+
+    function upsertJsonLd(id, payload) {
+      try {
+        if (!payload) return;
+        var el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement('script');
+          el.type = 'application/ld+json';
+          el.id = id;
+          document.head.appendChild(el);
+        }
+        el.textContent = JSON.stringify(payload);
+      } catch (_e) {}
+    }
+
+    function buildArticleJsonLd(data, correctUrl, title, description, imageUrl) {
+      var payload = {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: title.replace(/\s+\|\s+Metravel$/, ''),
+        description: description,
+        url: correctUrl,
+        image: imageUrl ? [imageUrl] : undefined,
+        publisher: {
+          '@type': 'Organization',
+          name: 'MeTravel',
+          url: SITE_ORIGIN
+        }
+      };
+
+      var createdAt = data && data.created_at ? String(data.created_at) : '';
+      var updatedAtRaw = data && data.updated_at ? String(data.updated_at) : '';
+      if (createdAt && !isNaN(Date.parse(createdAt))) payload.datePublished = createdAt;
+      if (updatedAtRaw && !isNaN(Date.parse(updatedAtRaw))) payload.dateModified = updatedAtRaw;
+
+      var authorName = normalizeText(data && data.user && (data.user.name || data.user.first_name));
+      if (authorName) {
+        payload.author = {
+          '@type': 'Person',
+          name: authorName
+        };
+      }
+
+      return payload;
+    }
 
     // Must match optimizeImageUrl() + buildVersionedImageUrl() behavior.
     function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, dpr) {
@@ -118,78 +276,33 @@
 
         // ── SEO: patch meta tags BEFORE React hydration so crawlers see real data ──
         try {
-          var siteOrigin = 'https://metravel.by';
-
-          function patchMeta(sel, attr, val) {
-            try {
-              var el = document.querySelector(sel);
-              if (el) { el.setAttribute(attr, val); }
-            } catch (_e2) {}
-          }
-
-          function upsertJsonLd(id, payload) {
-            try {
-              if (!payload) return;
-              var el = document.getElementById(id);
-              if (!el) {
-                el = document.createElement('script');
-                el.type = 'application/ld+json';
-                el.id = id;
-                document.head.appendChild(el);
-              }
-              el.textContent = JSON.stringify(payload);
-            } catch (_e3) {}
-          }
-
-          // Title
-          var travelName = data.name || data.title || '';
-          if (travelName) {
-            var fullTitle = travelName + ' | MeTravel';
-            try { document.title = fullTitle; } catch (_e2) {}
-            patchMeta('meta[property="og:title"]', 'content', fullTitle);
-            patchMeta('meta[name="twitter:title"]', 'content', fullTitle);
-            var titleEl = document.querySelector('title');
-            if (titleEl) titleEl.textContent = fullTitle;
-          }
-
-          // Description — strip HTML tags
-          var rawDesc = data.description || '';
-          if (rawDesc) {
-            var plainDesc = rawDesc.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 160);
-            if (plainDesc) {
-              patchMeta('meta[name="description"]', 'content', plainDesc);
-              patchMeta('meta[property="og:description"]', 'content', plainDesc);
-              patchMeta('meta[name="twitter:description"]', 'content', plainDesc);
-            }
-          }
-
-          // Image — must be absolute URL for Google/social crawlers
-          var ogImgUrl = data.travel_image_thumb_url || '';
-          if (!ogImgUrl && data.gallery && data.gallery.length) {
-            var gFirst = data.gallery[0];
-            ogImgUrl = typeof gFirst === 'string' ? gFirst : (gFirst && gFirst.url) || '';
-          }
-          if (ogImgUrl) {
-            // Make absolute
-            if (ogImgUrl.indexOf('http') !== 0) {
-              ogImgUrl = siteOrigin + (ogImgUrl.charAt(0) === '/' ? '' : '/') + ogImgUrl;
-            }
-            // Force HTTPS
-            ogImgUrl = ogImgUrl.replace(/^http:\/\//, 'https://');
-            patchMeta('meta[property="og:image"]', 'content', ogImgUrl);
-            patchMeta('meta[name="twitter:image"]', 'content', ogImgUrl);
-          }
+          var fallbackName = slug.replace(/-/g, ' ');
+          var travelName = normalizeText(data && (data.name || data.title)) || fallbackName;
+          var fullTitle = buildTitle(travelName);
+          var plainDesc = buildDescription(data && data.description);
+          var ogImgUrl = getTravelImage(data);
 
           // Canonical & og:url — fix [param] placeholder or create if missing
           var correctPath = '/travels/' + slug;
-          var correctUrl = siteOrigin + correctPath;
-          var ogUrlEl = document.querySelector('meta[property="og:url"]');
-          if (ogUrlEl) { ogUrlEl.setAttribute('content', correctUrl); }
-          else { ogUrlEl = document.createElement('meta'); ogUrlEl.setAttribute('property', 'og:url'); ogUrlEl.setAttribute('content', correctUrl); document.head.appendChild(ogUrlEl); }
+          var correctUrl = SITE_ORIGIN + correctPath;
+          try { document.title = fullTitle; } catch (_e2) {}
+          var titleEl = document.querySelector('title');
+          if (titleEl) titleEl.textContent = fullTitle;
+
+          upsertMeta('meta[name="description"]', 'content', plainDesc, { name: 'description' });
+          upsertMeta('meta[property="og:title"]', 'content', fullTitle, { property: 'og:title' });
+          upsertMeta('meta[property="og:description"]', 'content', plainDesc, { property: 'og:description' });
+          upsertMeta('meta[property="og:url"]', 'content', correctUrl, { property: 'og:url' });
+          upsertMeta('meta[property="og:image"]', 'content', ogImgUrl, { property: 'og:image' });
+          upsertMeta('meta[property="og:type"]', 'content', 'article', { property: 'og:type' });
+          upsertMeta('meta[name="twitter:title"]', 'content', fullTitle, { name: 'twitter:title' });
+          upsertMeta('meta[name="twitter:description"]', 'content', plainDesc, { name: 'twitter:description' });
+          upsertMeta('meta[name="twitter:image"]', 'content', ogImgUrl, { name: 'twitter:image' });
+
           // Remove ALL existing canonical links to prevent duplicates (react-helmet-async may inject a second one)
           var canEls = document.querySelectorAll('link[rel="canonical"]');
           for (var ci = canEls.length - 1; ci >= 0; ci--) { canEls[ci].parentNode && canEls[ci].parentNode.removeChild(canEls[ci]); }
-          var canEl = document.createElement('link'); canEl.rel = 'canonical'; canEl.href = correctUrl; document.head.appendChild(canEl);
+          upsertLink('link[rel="canonical"]', { rel: 'canonical', href: correctUrl });
           // Watch for react-helmet-async injecting a duplicate canonical after hydration
           if (typeof MutationObserver !== 'undefined') {
             var canObs = new MutationObserver(function() {
@@ -203,11 +316,9 @@
             setTimeout(function() { try { canObs.disconnect(); } catch (_e5) {} }, 1000);
           }
 
-          // og:type for travel pages
-          patchMeta('meta[property="og:type"]', 'content', 'article');
-
           // Breadcrumb structured data for travel pages
           var breadcrumbName = travelName || 'Путешествие';
+          upsertJsonLd('travel-article-jsonld', buildArticleJsonLd(data, correctUrl, fullTitle, plainDesc, ogImgUrl));
           upsertJsonLd('travel-breadcrumb-jsonld', {
             "@context": 'https://schema.org',
             "@type": 'BreadcrumbList',
@@ -216,13 +327,13 @@
                 "@type": 'ListItem',
                 position: 1,
                 name: 'Главная',
-                item: siteOrigin + '/',
+                item: SITE_ORIGIN + '/',
               },
               {
                 "@type": 'ListItem',
                 position: 2,
                 name: 'Путешествия',
-                item: siteOrigin + '/travelsby',
+                item: SITE_ORIGIN + '/travelsby',
               },
               {
                 "@type": 'ListItem',

@@ -129,12 +129,12 @@ describe('PointList (web coordinates list uses popup template)', () => {
       expect(openSpy).toHaveBeenCalledWith(
         'https://www.google.com/maps/search/?api=1&query=50,20',
         '_blank',
-        'noopener,noreferrer'
+        'noopener'
       );
     }).then(() => {
       fireEvent.press(getByLabelText('Открыть в Apple Maps'));
       return waitFor(() => {
-        expect(openSpy).toHaveBeenCalledWith('https://maps.apple.com/?q=50%2C20', '_blank', 'noopener,noreferrer');
+        expect(openSpy).toHaveBeenCalledWith('https://maps.apple.com/?q=50%2C20', '_blank', 'noopener');
       });
     }).then(() => {
       fireEvent.press(getByLabelText('Открыть в Яндекс Картах'));
@@ -142,7 +142,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
         expect(openSpy).toHaveBeenCalledWith(
           'https://yandex.ru/maps/?pt=20%2C50&z=16&l=map',
           '_blank',
-          'noopener,noreferrer'
+          'noopener'
         );
       });
     }).then(() => {
@@ -151,7 +151,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
         expect(openSpy).toHaveBeenCalledWith(
           'https://www.openstreetmap.org/?mlat=50&mlon=20#map=16/50/20',
           '_blank',
-          'noopener,noreferrer'
+          'noopener'
         );
       });
     }).then(() => {
@@ -167,7 +167,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
       }).then(() => {
         fireEvent.press(getByLabelText('Открыть статью'));
         return waitFor(() => {
-          expect(openSpy).toHaveBeenCalledWith(baseUrl, '_blank', 'noopener,noreferrer');
+          expect(openSpy).toHaveBeenCalledWith(baseUrl, '_blank', 'noopener');
         }).then(() => {
           (Platform as any).OS = prevOs;
         });
