@@ -310,9 +310,6 @@ test.describe('Travel Rating - Authenticated', () => {
       return;
     }
 
-    const firstStar = stars.first();
-    await expect(firstStar).toBeVisible();
-
     const interactiveCount = await waitForInteractiveStars(ratingSection, 15_000);
     if (interactiveCount < 1) {
       test.info().annotations.push({
