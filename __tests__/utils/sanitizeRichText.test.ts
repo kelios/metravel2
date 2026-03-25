@@ -67,6 +67,25 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('id="day-3"')
   })
 
+  it('assigns numbered heading ids from existing hash links in the table of contents', () => {
+    const html = [
+      '<ul>',
+      '<li><a href="#kobylanska">Кобылянская</a></li>',
+      '<li><a href="#bolechowicka">Болеховицкая</a></li>',
+      '<li><a href="#bedkowska">Бендковская</a></li>',
+      '</ul>',
+      '<h2>1. Кобылянская долина / Dolina Kobylańska</h2>',
+      '<h2>2. Болеховицкая долина / Dolina Bolechowicka</h2>',
+      '<h2>3. Бендковская долина / Dolina Będkowska</h2>',
+    ].join('')
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).toContain('<h2 id="kobylanska">1. Кобылянская долина / Dolina Kobylańska</h2>')
+    expect(sanitized).toContain('<h2 id="bolechowicka">2. Болеховицкая долина / Dolina Bolechowicka</h2>')
+    expect(sanitized).toContain('<h2 id="bedkowska">3. Бендковская долина / Dolina Będkowska</h2>')
+  })
+
   it('upgrades insecure first-party media urls to https', () => {
     const html = [
       '<p><img src="http://metravel.by/travel-description-image/548/description/a06feb1a8ba0433db10535734e618ebc.PNG.webp"></p>',

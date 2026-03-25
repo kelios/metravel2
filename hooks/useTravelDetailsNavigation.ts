@@ -21,6 +21,30 @@ export interface UseTravelDetailsNavigationReturn {
   forceOpenKey: string | null
 }
 
+export function normalizeMalformedTravelHashUrl(rawHref: string): string | null {
+  const href = String(rawHref || '').trim()
+  if (!href) return null
+
+  try {
+    const url = new URL(href, 'https://metravel.by')
+    const rawHash = String(url.hash || '')
+    if (!rawHash.startsWith('#') || !rawHash.includes('?') || url.search) {
+      return null
+    }
+
+    const [hashIdRaw, queryRaw] = rawHash.slice(1).split('?', 2)
+    const hashId = String(hashIdRaw || '').trim()
+    const query = String(queryRaw || '').trim()
+    if (!hashId || !query) return null
+
+    url.hash = `#${hashId}`
+    url.search = query.startsWith('?') ? query : `?${query}`
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return null
+  }
+}
+
 export function useTravelDetailsNavigation({
   headerOffset,
   slug,
@@ -32,6 +56,18 @@ export function useTravelDetailsNavigation({
   const [scrollRootEl, setScrollRootEl] = useState<HTMLElement | null>(null)
   const { activeSection, setActiveSection } = useActiveSection(anchors, headerOffset, scrollRootEl)
   const [forceOpenKey, setForceOpenKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return
+    const normalizedUrl = normalizeMalformedTravelHashUrl(window.location.href)
+    if (!normalizedUrl) return
+
+    try {
+      window.history.replaceState(window.history.state ?? {}, '', normalizedUrl)
+    } catch {
+      // noop
+    }
+  }, [slug])
 
   const isDocumentScrollEl = useCallback((node: unknown): boolean => {
     try {
@@ -98,6 +134,9 @@ export function useTravelDetailsNavigation({
 
   const resetWebScrollTop = useCallback(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof document === 'undefined') {
+      return false
+    }
+    if (window.location.hash) {
       return false
     }
 

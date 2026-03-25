@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
-import { useTravelDetailsNavigation } from '@/hooks/useTravelDetailsNavigation'
+import { normalizeMalformedTravelHashUrl, useTravelDetailsNavigation } from '@/hooks/useTravelDetailsNavigation'
 
 jest.mock('@/hooks/useScrollNavigation', () => ({
   useScrollNavigation: jest.fn(),
@@ -29,6 +29,20 @@ describe('useTravelDetailsNavigation', () => {
     Platform.OS = originalOS
     Platform.select = originalSelect
     jest.useRealTimers()
+  })
+
+  it('normalizes malformed travel URL where query accidentally lands inside hash', () => {
+    expect(
+      normalizeMalformedTravelHashUrl(
+        'http://localhost:8081/travels/krakovskie-dolinki#bedkowska?returnTo=%2Fsearch',
+      ),
+    ).toBe('/travels/krakovskie-dolinki?returnTo=%2Fsearch#bedkowska')
+
+    expect(
+      normalizeMalformedTravelHashUrl(
+        'http://localhost:8081/travels/krakovskie-dolinki?returnTo=%2Fsearch#bedkowska',
+      ),
+    ).toBeNull()
   })
 
   it('scrolls to section after open-section event', () => {
@@ -220,5 +234,71 @@ describe('useTravelDetailsNavigation', () => {
     expect(window.scrollTo).toHaveBeenCalled()
 
     window.scrollTo = originalWindowScrollTo
+  })
+
+  it('does not reset web scroll to top when the current URL already contains a hash', () => {
+    const scrollTo = jest.fn()
+    const scrollContainer = document.createElement('div') as any
+    scrollContainer.setAttribute('data-testid', 'travel-details-scroll')
+    scrollContainer.scrollHeight = 1200
+    scrollContainer.clientHeight = 400
+    scrollContainer.scrollTop = 240
+    scrollContainer.getBoundingClientRect = jest.fn(() => ({ top: 0, bottom: 400 } as any))
+    scrollContainer.scrollTo = jest.fn()
+
+    const docScrollEl = document.documentElement as any
+    Object.defineProperty(docScrollEl, 'scrollTop', { value: 180, writable: true })
+    Object.defineProperty(document, 'scrollingElement', {
+      configurable: true,
+      value: docScrollEl,
+    })
+
+    const originalWindowScrollTo = window.scrollTo
+    window.scrollTo = jest.fn() as any
+    window.history.replaceState(null, '', '/travels/minsk?returnTo=%2Fsearch#section-1')
+
+    const scrollRef = {
+      current: {
+        scrollTo: jest.fn(),
+        getScrollableNode: () => null,
+      },
+    }
+
+    useScrollNavigation.mockReturnValue({
+      anchors: { gallery: { current: null } },
+      scrollTo,
+      scrollRef,
+    })
+
+    const setActiveSection = jest.fn()
+    useActiveSection.mockReturnValue({
+      activeSection: 'gallery',
+      setActiveSection,
+    })
+
+    jest.spyOn(window, 'getComputedStyle').mockImplementation((el: any) => {
+      if (el === scrollContainer) {
+        return { overflowY: 'auto' } as any
+      }
+      return { overflowY: 'visible' } as any
+    })
+
+    const startTransition = (cb: () => void) => cb()
+
+    renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
+
+    act(() => {
+      jest.advanceTimersByTime(40)
+      document.body.appendChild(scrollContainer)
+      jest.advanceTimersByTime(320)
+    })
+
+    expect(scrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 0, animated: false })
+    expect(scrollContainer.scrollTo).not.toHaveBeenCalled()
+    expect(docScrollEl.scrollTop).toBe(180)
+    expect(window.scrollTo).not.toHaveBeenCalled()
+
+    window.scrollTo = originalWindowScrollTo
+    window.history.replaceState(null, '', '/')
   })
 })

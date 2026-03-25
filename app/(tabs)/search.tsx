@@ -9,7 +9,7 @@
  * - No empty screens or heavy first render
  */
 import { Suspense, lazy, memo, useCallback, useMemo, useState, useEffect, useRef } from 'react'
-import { StyleSheet, View, Platform, Animated } from 'react-native'
+import { StyleSheet, View, Platform } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from '@react-navigation/native'
 
@@ -30,9 +30,6 @@ const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'))
 const SEO_TITLE = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel'
 const SEO_DESCRIPTION = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.'
 
-/** Transition duration for skeleton → content fade */
-const TRANSITION_MS = 200
-
 function SearchScreen() {
   const pathname = usePathname()
   const router = useRouter()
@@ -40,10 +37,10 @@ function SearchScreen() {
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth()
 
-  // Track content ready state for smooth transition
-  // Start with skeleton visible, transition to content when Suspense resolves
+  // The skeleton already fully covers the content layer.
+  // Fading the mounted list from opacity 0 to 1 creates a second visual frame
+  // that looks like image re-rendering on the search grid.
   const [contentReady, setContentReady] = useState(false)
-  const fadeAnim = useRef(new Animated.Value(0)).current
 
   // Handle sidebar section navigation (scroll to filter section when clicked in skeleton)
   const handleSectionPress = useCallback((sectionKey: string) => {
@@ -52,21 +49,6 @@ function SearchScreen() {
       element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }, [])
-
-  // Animate content fade-in when ready
-  useEffect(() => {
-    if (contentReady) {
-      if (Platform.OS === 'web') {
-        // CSS handles transition on web
-        return
-      }
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: TRANSITION_MS,
-        useNativeDriver: true,
-      }).start()
-    }
-  }, [contentReady, fadeAnim])
 
   const styles = useMemo(
     () =>
@@ -110,18 +92,6 @@ function SearchScreen() {
     [colors],
   )
 
-  // Web-specific styles for CSS transitions
-  const webSkeletonStyle = Platform.OS === 'web' ? {
-    opacity: contentReady ? 0 : 1,
-    pointerEvents: contentReady ? 'none' as const : 'auto' as const,
-    transition: `opacity ${TRANSITION_MS}ms ease-out`,
-  } : {}
-
-  const webContentStyle = Platform.OS === 'web' ? {
-    opacity: contentReady ? 1 : 0,
-    transition: `opacity ${TRANSITION_MS}ms ease-out`,
-  } : {}
-
   return (
     <>
       {isFocused && Platform.OS === 'web' && (
@@ -151,7 +121,7 @@ function SearchScreen() {
             {/* Skeleton layer - visible instantly, fades out when content ready */}
             {!contentReady && (
               <View 
-                style={[styles.skeletonLayer, webSkeletonStyle as any]}
+                style={styles.skeletonLayer}
                 testID="search-skeleton-layer"
               >
                 <SearchPageSkeleton 
@@ -162,21 +132,11 @@ function SearchScreen() {
             )}
 
             {/* Content layer - renders behind skeleton, fades in when ready */}
-            {Platform.OS === 'web' ? (
-              <View style={[styles.contentLayer, webContentStyle as any]}>
-                <Suspense 
-                  fallback={<SearchPageSkeleton showSidebarNavigation={false} />}
-                >
-                  <ListTravelWithReadyCallback onReady={() => setContentReady(true)} />
-                </Suspense>
-              </View>
-            ) : (
-              <Animated.View style={[styles.contentLayer, { opacity: fadeAnim }]}>
-                <Suspense fallback={<SearchPageSkeleton />}>
-                  <ListTravelWithReadyCallback onReady={() => setContentReady(true)} />
-                </Suspense>
-              </Animated.View>
-            )}
+            <View style={styles.contentLayer}>
+              <Suspense fallback={<SearchPageSkeleton showSidebarNavigation={false} />}>
+                <ListTravelWithReadyCallback onReady={() => setContentReady(true)} />
+              </Suspense>
+            </View>
           </View>
         </ErrorBoundary>
 

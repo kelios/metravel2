@@ -102,6 +102,55 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage.props.style?.opacity).toBe(1)
   })
 
+  it('keeps lazy shared-blur web media hidden until the main image is loaded', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/photo-ready-card.jpg"
+          height={200}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          priority="low"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    const blurLayer = tree!.root.findAll((node: any) => {
+      return node?.props?.['data-blur-backdrop'] === 'true'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.style?.opacity).toBe(0)
+    expect(blurLayer).toBeTruthy()
+    expect(blurLayer.props.style?.opacity).toBe(0)
+
+    renderer.act(() => {
+      mainImage.props.onLoad()
+    })
+
+    const loadedMainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    const loadedBlurLayer = tree!.root.findAll((node: any) => {
+      return node?.props?.['data-blur-backdrop'] === 'true'
+    })[0]
+
+    expect(loadedMainImage.props.style?.opacity).toBe(1)
+    expect(loadedBlurLayer.props.style?.opacity).toBe(0.95)
+  })
+
   it('can keep eager critical web media hidden until load when revealOnLoadOnly is enabled', () => {
     let tree: any
     renderer.act(() => {

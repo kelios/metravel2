@@ -282,6 +282,11 @@ function removeReactNativeComponents(html: string): string {
 
 function injectAutoHeadingAnchors(html: string): string {
   if (!html) return html
+  const orderedHashIds = Array.from(
+    html.matchAll(/<a\b[^>]*href=(["'])#([^"'#?]+)\1[^>]*>/gi),
+    (match) => String(match[2] || '').trim(),
+  ).filter(Boolean)
+  const uniqueOrderedHashIds = orderedHashIds.filter((id, index) => orderedHashIds.indexOf(id) === index)
   const decode = (value: string) =>
     value
       .replace(/&nbsp;/gi, ' ')
@@ -297,9 +302,10 @@ function injectAutoHeadingAnchors(html: string): string {
     if (/\bid\s*=\s*"[^"]+"/i.test(attrs)) return full
 
     const innerText = decode(String(inner || '').replace(/<[^>]+>/g, '').trim())
-    const m = innerText.match(/^(\d{1,3})\)\s+/)
+    const m = innerText.match(/^(\d{1,3})[.)]\s+/)
     if (!m) return full
-    const id = `part${m[1]}`
+    const orderedId = uniqueOrderedHashIds[Number(m[1]) - 1]
+    const id = orderedId || `part${m[1]}`
 
     const nextAttrs = attrs ? `${attrs} id="${id}"` : ` id="${id}"`
     return `<h${level}${nextAttrs}>${inner}</h${level}>`

@@ -16,6 +16,7 @@ const mockSafeJsonParse = jest.fn()
 const mockValidateImageFile = jest.fn()
 const mockValidateAIMessage = jest.fn()
 const mockSanitizeInput = jest.fn((...args: any[]) => args[0])
+const mockSanitizeRichText = jest.fn((...args: any[]) => args[0])
 const mockDevError = jest.fn()
 const mockApiClientPut = jest.fn()
 const mockApiClientUploadFormData = jest.fn()
@@ -45,6 +46,10 @@ jest.mock('@/utils/security', () => ({
 
 jest.mock('@/utils/htmlUtils', () => ({
   stripBase64Images: (html: string) => html?.replace(/<img\s[^>]*src\s*=\s*["']data:[^"']+["'][^>]*\/?>/gi, '') ?? '',
+}))
+
+jest.mock('@/utils/sanitizeRichText', () => ({
+  sanitizeRichText: (...args: any[]) => mockSanitizeRichText(...args),
 }))
 
 jest.mock('@/utils/logger', () => ({
@@ -90,6 +95,8 @@ const baseForm = ({
 describe('api/misc', () => {
   beforeEach(() => {
     jest.resetAllMocks()
+    mockSanitizeInput.mockImplementation((...args: any[]) => args[0])
+    mockSanitizeRichText.mockImplementation((...args: any[]) => args[0])
     ;(global as any).File = class FakeFile {}
   })
 
@@ -109,6 +116,28 @@ describe('api/misc', () => {
     const result = await saveFormData(baseForm)
     expect(result.id).toBe(2)
     expect(mockApiClientRequest).toHaveBeenCalled()
+  })
+
+  it('saveFormData sanitizes rich-text description without stripping supported embeds', async () => {
+    mockGetSecureItem.mockResolvedValue('token')
+    mockApiClientRequest.mockResolvedValue({ ...baseForm, id: 2 })
+    mockSanitizeRichText.mockImplementation((value: string) => value)
+
+    const description =
+      '<p>Intro</p><iframe src="https://www.youtube.com/embed/Bk_gnrqrDww" width="560" height="315"></iframe>'
+
+    await saveFormData({
+      ...baseForm,
+      description,
+    })
+
+    expect(mockSanitizeRichText).toHaveBeenCalledWith(description)
+    expect(mockSanitizeInput).not.toHaveBeenCalledWith(description)
+
+    const requestOptions = mockApiClientRequest.mock.calls[0][1]
+    const body = JSON.parse(requestOptions.body)
+    expect(body.description).toContain('<iframe')
+    expect(body.description).toContain('youtube.com/embed/Bk_gnrqrDww')
   })
 
   it('saveFormData keeps duplicated array-reference fields in serialized payload', async () => {

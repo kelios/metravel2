@@ -142,6 +142,7 @@ type WebBlurBackdropProps = {
   borderRadius: number;
   fit: 'contain' | 'cover';
   useCssBackdrop?: boolean;
+  visible?: boolean;
 };
 
 const WebBlurBackdrop = memo(function WebBlurBackdrop({
@@ -152,6 +153,7 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
   borderRadius,
   fit,
   useCssBackdrop = false,
+  visible = true,
 }: WebBlurBackdropProps) {
   const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
   const backdropFit = 'cover';
@@ -186,11 +188,12 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
           filter: backdropFilter,
-          opacity: 0.95,
+          opacity: visible ? 0.95 : 0,
           contain: 'paint',
-          willChange: 'transform',
+          willChange: 'transform, opacity',
           backfaceVisibility: 'hidden',
           pointerEvents: 'none',
+          transition: 'opacity 0.15s ease-in',
         }}
       />
     );
@@ -494,7 +497,12 @@ function ImageCardMedia({
   const shouldShowWebImageImmediately = useMemo(() => {
     if (Platform.OS !== 'web') return showImmediately;
     if (revealOnLoadOnly) return showImmediately;
-    if (blurSharesMainUrl) return true;
+    if (blurSharesMainUrl) {
+      // For lazy list/card media we keep the whole card hidden until the main
+      // image is decoded. Otherwise CSS blur paints first and the sharp image
+      // "catches up" a frame later, which reads as flicker on the search page.
+      return showImmediately || resolvedLoading === 'eager' || priority === 'high';
+    }
     return showImmediately || resolvedLoading === 'eager' || priority === 'high';
   }, [showImmediately, resolvedLoading, priority, revealOnLoadOnly, blurSharesMainUrl]);
 
@@ -502,6 +510,12 @@ function ImageCardMedia({
     if (Platform.OS !== 'web') return true;
     return shouldShowWebImageImmediately || webLoaded;
   }, [shouldShowWebImageImmediately, webLoaded]);
+
+  const shouldShowWebBlurBackdrop = useMemo(() => {
+    if (Platform.OS !== 'web') return true;
+    if (!blurSharesMainUrl) return true;
+    return shouldRevealWebMedia;
+  }, [blurSharesMainUrl, shouldRevealWebMedia]);
 
   const shouldRenderWebSkeleton = useMemo(() => {
     if (Platform.OS !== 'web') return false;
@@ -613,6 +627,7 @@ function ImageCardMedia({
               borderRadius={resolvedBorderRadius}
               fit={fit}
               useCssBackdrop={allowCriticalWebBlur && !revealOnLoadOnly}
+              visible={shouldShowWebBlurBackdrop}
             />
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (

@@ -74,6 +74,49 @@ describe('StableContent (web) link styles', () => {
     }
   });
 
+  it('restores direct travel hash navigation with returnTo query on first render', async () => {
+    const StableContent = (await import('@/components/travel/StableContent')).default;
+
+    const scrollIntoView = jest.fn();
+    const originalScrollIntoView = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scrollIntoView;
+    window.history.replaceState(null, '', '/travels/krakovskie-dolinki?returnTo=%2Fsearch#bedkowska');
+
+    try {
+      const html = [
+        '<ul>',
+        '<li><a href="#kobylanska">Кобылянская долина</a></li>',
+        '<li><a href="#bolechowicka">Болеховицкая долина</a></li>',
+        '<li><a href="#bedkowska">Бендковская долина</a></li>',
+        '</ul>',
+        '<h2>1. Кобылянская долина / Dolina Kobylańska</h2>',
+        '<h2>2. Болеховицкая долина / Dolina Bolechowicka</h2>',
+        '<h2>3. Бендковская долина / Dolina Będkowska</h2>',
+      ].join('');
+
+      const { container } = render(
+        <StableContent html={html} contentWidth={700} />
+      );
+
+      await waitFor(() => {
+        expect(container.querySelector('#bedkowska')).toBeTruthy();
+      });
+
+      await waitFor(() => {
+        expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+      });
+
+      expect(window.location.search).toBe('?returnTo=%2Fsearch');
+      expect(window.location.hash).toBe('#bedkowska');
+
+      const heading = container.querySelector('#bedkowska');
+      expect(heading?.textContent).toContain('Бендковская долина');
+    } finally {
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('injects CSS styles synchronously and keeps <a> tag in rendered HTML', async () => {
     const StableContent = (await import('@/components/travel/StableContent')).default;
 

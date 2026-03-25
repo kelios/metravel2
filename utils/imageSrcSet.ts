@@ -18,7 +18,11 @@ export function generateSrcSet(
   if (!baseUrl) return '';
   if (Platform.OS !== 'web') return baseUrl;
 
-  const resolvedFormat = options.format ?? getPreferredImageFormat();
+  // Keep srcset candidates aligned with the main src default:
+  // prefer backend/content negotiation unless the caller explicitly forces
+  // a format. This avoids generating `f=webp`/`f=avif` URLs for media
+  // conversions that may only exist in the original format.
+  const resolvedFormat = options.format ?? 'auto';
   const resolvedDpr = options.dpr ?? 1;
   const srcset = sizes
     .map((size) => {
@@ -175,4 +179,3 @@ export function shouldLoadEager(index: number, containerWidth?: number): boolean
   if (containerWidth && containerWidth < 300) return false;
   return index < 3;
 }
-
