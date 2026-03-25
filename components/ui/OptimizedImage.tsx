@@ -160,6 +160,7 @@ function OptimizedImage({
   onLoad,
   onError,
   style,
+  recyclingKey,
 }: OptimizedImageProps) {
   const disableRemoteImages =
     __DEV__ && process.env.EXPO_PUBLIC_DISABLE_REMOTE_IMAGES === 'true';
