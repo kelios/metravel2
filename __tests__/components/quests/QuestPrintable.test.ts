@@ -45,7 +45,7 @@ describe('QuestPrintable', () => {
 
     const html = mockOpenBookPreviewWindow.mock.calls[0][0];
     expect(html).toContain('class="cover has-cover-image"');
-    expect(html).toContain('class="cover-image"');
+    expect(html).toContain('class="cover-image-backdrop"');
     expect(html).toContain('https://img.example.com/cover.jpg');
   });
 });

@@ -144,10 +144,26 @@ export function useQuestBundle(questId: string | undefined) {
         setError(null);
         setBundle(null);
 
-        fetchQuestByQuestId(questId)
-            .then((data) => {
+        Promise.allSettled([fetchQuestByQuestId(questId), fetchQuestsList()])
+            .then(([bundleResult, questListResult]) => {
                 if (cancelled) return;
-                setBundle(adaptBundle(data));
+
+                if (bundleResult.status !== 'fulfilled') {
+                    throw bundleResult.reason;
+                }
+
+                const adaptedBundle = adaptBundle(bundleResult.value);
+                if (!adaptedBundle.coverUrl && questListResult.status === 'fulfilled') {
+                    const matchedMeta = Array.isArray(questListResult.value)
+                        ? questListResult.value.find((quest) => String(quest?.quest_id) === questId)
+                        : null;
+                    const coverFallback = matchedMeta ? adaptMeta(matchedMeta).cover : undefined;
+                    if (coverFallback) {
+                        adaptedBundle.coverUrl = coverFallback;
+                    }
+                }
+
+                setBundle(adaptedBundle);
                 setLoading(false);
             })
             .catch((err) => {

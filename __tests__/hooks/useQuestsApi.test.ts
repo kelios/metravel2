@@ -27,6 +27,7 @@ jest.mock('@/utils/questAdapters', () => ({
     cityId: m.city_id,
     lat: parseFloat(String(m.lat)),
     lng: parseFloat(String(m.lng)),
+    cover: m.cover_url ?? undefined,
   }),
   adaptBundle: (b: any) => ({
     title: b.title,
@@ -34,6 +35,7 @@ jest.mock('@/utils/questAdapters', () => ({
     finale: { text: '' },
     storageKey: b.storage_key,
     city: { name: b.city?.name, lat: 0, lng: 0 },
+    coverUrl: b.cover_url ?? undefined,
   }),
 }));
 
@@ -169,6 +171,7 @@ describe('useQuestsApi hooks', () => {
   describe('useQuestBundle', () => {
     it('loads bundle from API', async () => {
       mockFetchQuestByQuestId.mockResolvedValueOnce(API_BUNDLE);
+      mockFetchQuestsList.mockResolvedValueOnce([]);
 
       const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
 
@@ -182,6 +185,7 @@ describe('useQuestsApi hooks', () => {
 
     it('sets error when API fails (no fallback)', async () => {
       mockFetchQuestByQuestId.mockRejectedValueOnce(new Error('Not found'));
+      mockFetchQuestsList.mockResolvedValueOnce([]);
 
       const { result } = renderHook(() => useQuestBundle('nonexistent'));
 
@@ -205,6 +209,9 @@ describe('useQuestsApi hooks', () => {
       mockFetchQuestByQuestId
         .mockResolvedValueOnce({ ...API_BUNDLE, title: 'Тайна дракона (v1)' })
         .mockResolvedValueOnce({ ...API_BUNDLE, title: 'Тайна дракона (v2)' });
+      mockFetchQuestsList
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
       const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
 
@@ -219,6 +226,19 @@ describe('useQuestsApi hooks', () => {
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.bundle?.title).toBe('Тайна дракона (v2)');
       expect(mockFetchQuestByQuestId).toHaveBeenCalledTimes(2);
+    });
+
+    it('falls back to quest meta cover when bundle has no coverUrl', async () => {
+      mockFetchQuestByQuestId.mockResolvedValueOnce(API_BUNDLE);
+      mockFetchQuestsList.mockResolvedValueOnce([
+        { ...API_META, cover_url: 'https://img.com/cover.jpg' },
+      ]);
+
+      const { result } = renderHook(() => useQuestBundle('krakow-dragon'));
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.bundle?.coverUrl).toBe('https://img.com/cover.jpg');
     });
   });
 

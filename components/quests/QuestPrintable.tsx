@@ -263,6 +263,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
     const mapPoints = buildPrintableMapPoints(validSteps);
     const coverImageUri = resolveStepImageUri(coverUrl);
+    const coverLead = extractCoverLead(intro?.story);
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
     const bookPreviewWindow = await loadBookPreviewWindowModule();
     const previewWindow = bookPreviewWindow.openPendingBookPreviewWindow();
@@ -428,7 +429,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     .sheet {
         max-width: 900px;
         margin: 0 auto;
-        padding: 36px 24px 56px;
+        padding: 40px 28px 60px;
         background: ${PRINT_COLORS.white};
         min-height: 100vh;
     }
@@ -436,27 +437,41 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     /* ─── COVER ──────────────────────────────────────── */
     .cover {
         position: relative;
-        border-radius: 20px;
+        border-radius: 24px;
         overflow: hidden;
         margin-bottom: 32px;
-        min-height: 400px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        background: linear-gradient(150deg, ${PRINT_COLORS.coverDark} 0%, ${PRINT_COLORS.brandDark} 55%, ${PRINT_COLORS.brand} 100%);
-        box-shadow: 0 20px 60px rgba(7, 26, 40, 0.28), 0 4px 12px rgba(7,26,40,0.15);
+        min-height: 456px;
+        background:
+            linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 34%),
+            linear-gradient(145deg, ${PRINT_COLORS.coverDark} 0%, ${PRINT_COLORS.brandDark} 42%, ${PRINT_COLORS.brand} 100%);
+        box-shadow: 0 24px 70px rgba(7, 26, 40, 0.26), 0 6px 18px rgba(7,26,40,0.12);
         page-break-after: avoid;
     }
-    .cover.has-cover-image .cover-inner {
-        padding-right: 332px;
+    .cover-image-backdrop {
+        position: absolute;
+        inset: 0;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        transform: scale(1.04);
+        transform-origin: center;
+    }
+    .cover-image-backdrop::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(90deg, rgba(7,26,40,0.82) 0%, rgba(7,26,40,0.7) 34%, rgba(7,26,40,0.3) 68%, rgba(7,26,40,0.52) 100%),
+            linear-gradient(180deg, rgba(7,26,40,0.18) 0%, rgba(7,26,40,0.08) 20%, rgba(7,26,40,0.42) 100%);
+        pointer-events: none;
     }
     .cover-bg-pattern {
         position: absolute;
         inset: 0;
         background-image:
-            radial-gradient(ellipse at 75% 15%, rgba(58,155,191,0.45) 0%, transparent 55%),
-            radial-gradient(ellipse at 10% 90%, rgba(232,160,32,0.2) 0%, transparent 45%),
-            radial-gradient(ellipse at 50% 50%, rgba(15,76,98,0.3) 0%, transparent 70%);
+            radial-gradient(ellipse at 82% 18%, rgba(58,155,191,0.52) 0%, transparent 42%),
+            radial-gradient(ellipse at 14% 88%, rgba(232,160,32,0.18) 0%, transparent 36%),
+            radial-gradient(ellipse at 48% 44%, rgba(15,76,98,0.28) 0%, transparent 70%);
         pointer-events: none;
     }
     .cover-grid {
@@ -469,116 +484,127 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         );
         pointer-events: none;
     }
-    .cover-image-glow {
-        position: absolute;
-        right: 56px;
-        top: 46px;
-        width: 240px;
-        height: 240px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(58,155,191,0.34) 0%, rgba(58,155,191,0.12) 38%, rgba(58,155,191,0) 72%);
-        filter: blur(18px);
-        pointer-events: none;
-    }
-    .cover-image-wrap {
-        position: absolute;
-        top: 36px;
-        right: 40px;
-        bottom: 36px;
-        width: 252px;
-        border-radius: 18px;
-        overflow: hidden;
-        border: 1px solid rgba(255,255,255,0.14);
-        background: rgba(255,255,255,0.08);
-        box-shadow: 0 18px 40px rgba(0,0,0,0.24);
-        z-index: 1;
-    }
-    .cover-image {
-        display: block;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
     .cover-inner {
         position: relative;
         z-index: 2;
-        padding: 44px 48px 44px;
+        padding: 34px 36px 34px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 20px;
+        min-height: 456px;
+    }
+    .cover-copy {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        padding: 2px 0 8px;
+    }
+    .cover-copy-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+        max-width: 560px;
+        padding: 24px 28px 24px;
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(8,24,36,0.3) 0%, rgba(8,24,36,0.2) 100%);
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 18px 44px rgba(0,0,0,0.18);
+        backdrop-filter: blur(5px);
+    }
+    .cover-side {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: stretch;
+        gap: 16px;
+        padding: 6px 0;
     }
     .cover-top-row {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-        margin-bottom: 48px;
+        margin-bottom: 40px;
     }
     .cover-badge {
         display: inline-flex;
         align-items: center;
         gap: 7px;
         font-family: Inter, sans-serif;
-        font-size: 7.5pt;
+        font-size: 7pt;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 1.9px;
         color: ${PRINT_COLORS.accent};
-        background: rgba(232,160,32,0.12);
-        border: 1px solid rgba(232,160,32,0.35);
+        background: rgba(232,160,32,0.13);
+        border: 1px solid rgba(232,160,32,0.28);
         border-radius: 999px;
-        padding: 5px 14px;
+        padding: 7px 14px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
     }
     .cover-brand-top {
         font-family: Inter, sans-serif;
-        font-size: 8pt;
-        color: rgba(255,255,255,0.3);
-        font-weight: 500;
-        letter-spacing: 1px;
+        font-size: 7.2pt;
+        color: rgba(255,255,255,0.34);
+        font-weight: 700;
+        letter-spacing: 1.4px;
         text-transform: uppercase;
     }
     .cover h1 {
-        font-size: 34pt;
-        font-weight: 700;
+        font-size: 33pt;
+        font-weight: 800;
         color: ${PRINT_COLORS.white};
-        line-height: 1.12;
-        letter-spacing: -0.5px;
-        margin-bottom: 16px;
-        max-width: 600px;
-        text-shadow: 0 3px 16px rgba(0,0,0,0.35);
+        line-height: 1.02;
+        letter-spacing: -1.1px;
+        margin-bottom: 18px;
+        max-width: 500px;
+        text-wrap: balance;
+        text-shadow: 0 4px 16px rgba(0,0,0,0.28);
+    }
+    .cover-lead {
+        max-width: 430px;
+        margin-bottom: 20px;
+        font-size: 10.2pt;
+        line-height: 1.65;
+        color: rgba(255,255,255,0.74);
+        font-weight: 500;
     }
     .cover-meta {
         display: flex;
         align-items: center;
-        gap: 14px;
-        margin-bottom: 28px;
+        gap: 10px;
+        margin-bottom: 18px;
         flex-wrap: wrap;
     }
     .cover-meta-chip {
         font-family: Inter, sans-serif;
-        font-size: 8.5pt;
-        color: rgba(255,255,255,0.8);
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
+        font-size: 7.6pt;
+        color: rgba(255,255,255,0.88);
+        background: rgba(255,255,255,0.11);
+        border: 1px solid rgba(255,255,255,0.14);
         border-radius: 999px;
-        padding: 3px 12px;
+        padding: 5px 11px;
         display: flex;
         align-items: center;
         gap: 5px;
+        backdrop-filter: blur(4px);
     }
     .cover-accent-line {
-        width: 56px;
+        width: 68px;
         height: 3px;
         background: linear-gradient(90deg, ${PRINT_COLORS.coverAccentLine}, rgba(232,160,32,0.3));
         border-radius: 99px;
-        margin-bottom: 28px;
+        margin-bottom: 22px;
     }
     .cover-bottom {
         display: flex;
         align-items: flex-end;
         justify-content: space-between;
         gap: 24px;
+        margin-top: auto;
     }
     .cover-for-block {
         flex: 1;
+        max-width: 320px;
     }
     .cover-for-label {
         font-family: Inter, sans-serif;
@@ -592,42 +618,61 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     .cover-for-line {
         display: block;
         border-bottom: 1px solid rgba(255,255,255,0.25);
-        width: 220px;
-        height: 28px;
+        width: 260px;
+        height: 30px;
+    }
+    .cover-stamp {
+        align-self: flex-end;
+        min-width: 150px;
+        padding: 16px 18px;
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.08) 100%);
+        border: 1px solid rgba(255,255,255,0.16);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(0,0,0,0.16);
+        text-align: left;
+        font-size: 7pt;
+        line-height: 1.45;
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        color: rgba(255,255,255,0.88);
+        font-weight: 700;
+        backdrop-filter: blur(5px);
     }
     .cover-qr-block {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 7px;
-        background: rgba(255,255,255,0.08);
+        gap: 9px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.07) 100%);
         border: 1px solid rgba(255,255,255,0.16);
-        border-radius: 14px;
-        padding: 12px 14px 10px;
+        border-radius: 20px;
+        padding: 16px 16px 14px;
         backdrop-filter: blur(4px);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
     }
     .cover-qr-block img {
-        border-radius: 8px;
+        border-radius: 10px;
         background: ${PRINT_COLORS.white};
         display: block;
-        padding: 4px;
+        padding: 5px;
     }
     .cover-qr-label {
-        font-size: 6.5pt;
-        color: rgba(255,255,255,0.5);
+        font-size: 6.6pt;
+        color: rgba(255,255,255,0.74);
         font-family: Inter, sans-serif;
         text-align: center;
         line-height: 1.4;
         text-transform: uppercase;
-        letter-spacing: 0.8px;
+        letter-spacing: 1px;
+        font-weight: 700;
     }
 
     /* ─── INTRO ──────────────────────────────────────── */
     .intro-section {
         margin-bottom: 32px;
         display: grid;
-        grid-template-columns: 3px 1fr;
-        gap: 0 18px;
+        grid-template-columns: 4px 1fr;
+        gap: 0 20px;
         page-break-inside: avoid;
     }
     .intro-bar {
@@ -635,29 +680,30 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         border-radius: 99px;
     }
     .intro-content {
-        padding: 20px 22px;
-        background: ${PRINT_COLORS.brandSoft};
-        border-radius: 14px;
+        padding: 24px 26px;
+        background: linear-gradient(180deg, rgba(235,245,250,0.78) 0%, rgba(255,255,255,0.96) 100%);
+        border-radius: 18px;
         border: 1px solid ${PRINT_COLORS.introBorder};
+        box-shadow: 0 8px 24px rgba(15,52,80,0.06);
     }
     .intro-section h2 {
-        font-size: 13pt;
+        font-size: 15pt;
         color: ${PRINT_COLORS.brandDark};
-        margin-bottom: 10px;
+        margin-bottom: 14px;
     }
     .intro-section p {
-        font-size: 9.5pt;
+        font-size: 9.7pt;
         color: ${PRINT_COLORS.introText};
-        line-height: 1.7;
+        line-height: 1.82;
     }
     .intro-note {
-        margin-top: 14px;
-        padding-top: 12px;
+        margin-top: 18px;
+        padding: 12px 14px 0 0;
         border-top: 1px dashed ${PRINT_COLORS.introBorder};
-        font-size: 8.5pt;
+        font-size: 8.4pt;
         color: ${PRINT_COLORS.brandDark};
         font-weight: 500;
-        line-height: 1.5;
+        line-height: 1.6;
     }
 
     /* ─── SECTION LABEL ──────────────────────────────── */
@@ -758,19 +804,19 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     /* ─── STEP ───────────────────────────────────────── */
     .step {
         page-break-inside: avoid;
-        margin-bottom: 20px;
+        margin-bottom: 22px;
         border: 1px solid ${PRINT_COLORS.stepBorder};
-        border-radius: 16px;
+        border-radius: 18px;
         overflow: hidden;
         background: ${PRINT_COLORS.white};
-        box-shadow: 0 3px 12px rgba(15,52,80,0.07), 0 1px 3px rgba(15,52,80,0.04);
+        box-shadow: 0 6px 20px rgba(15,52,80,0.05), 0 1px 2px rgba(15,52,80,0.03);
     }
     .step-eyebrow {
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 9px 18px;
-        background: ${PRINT_COLORS.stepHeaderBg};
+        padding: 11px 20px;
+        background: linear-gradient(90deg, ${PRINT_COLORS.stepHeaderBg} 0%, ${PRINT_COLORS.brandDark} 100%);
     }
     .step-num-badge {
         display: inline-flex;
@@ -809,13 +855,13 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     }
     .step-body {
         display: grid;
-        grid-template-columns: 200px 1fr;
+        grid-template-columns: 220px 1fr;
     }
     .step-body.no-photo {
         grid-template-columns: 1fr;
     }
     .step-photo-wrap {
-        width: 200px;
+        width: 220px;
         overflow: hidden;
         background: ${PRINT_COLORS.stepPhotoBg};
         border-right: 1px solid ${PRINT_COLORS.stepBorder};
@@ -823,39 +869,39 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     }
     .step-photo {
         display: block;
-        width: 200px;
+        width: 220px;
         height: 100%;
-        min-height: 200px;
+        min-height: 216px;
         object-fit: cover;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
     .step-content {
-        padding: 16px 18px 14px;
+        padding: 18px 20px 16px;
         min-width: 0;
     }
     .step-title {
-        font-size: 13pt;
+        font-size: 13.5pt;
         color: ${PRINT_COLORS.title};
-        margin-bottom: 7px;
-        line-height: 1.25;
+        margin-bottom: 9px;
+        line-height: 1.22;
         font-weight: 700;
     }
     .story {
-        font-size: 9pt;
+        font-size: 9.2pt;
         color: ${PRINT_COLORS.story};
-        line-height: 1.7;
-        margin-bottom: 12px;
+        line-height: 1.74;
+        margin-bottom: 14px;
     }
 
     /* ─── TASK BOX ───────────────────────────────────── */
     .task-box {
-        background: ${PRINT_COLORS.taskBg};
+        background: linear-gradient(180deg, ${PRINT_COLORS.taskBg} 0%, ${PRINT_COLORS.taskInset} 100%);
         border: 1px solid ${PRINT_COLORS.taskBorder};
         border-left: 3px solid ${PRINT_COLORS.accent};
-        padding: 10px 13px;
-        border-radius: 8px;
-        margin-bottom: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        margin-bottom: 14px;
     }
     .task-label-row {
         display: flex;
@@ -913,10 +959,10 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 12px;
-        padding: 8px 10px;
+        margin-bottom: 14px;
+        padding: 10px 12px;
         background: ${PRINT_COLORS.soft};
-        border-radius: 10px;
+        border-radius: 12px;
         border: 1px solid ${PRINT_COLORS.line};
     }
     .qr-nav-label {
@@ -1003,7 +1049,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         .toolbar { display: none !important; }
         body { background: ${PRINT_COLORS.white}; font-size: 10pt; }
         .sheet { max-width: none; margin: 0; padding: 0; background: ${PRINT_COLORS.white}; box-shadow: none; }
-        .cover { border-radius: 12px; box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .cover { border-radius: 14px; box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .step { box-shadow: none; }
         .doc-footer { background: transparent; }
     }
@@ -1025,35 +1071,38 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
 
     <!-- ══════════ COVER ══════════ -->
     <div class="cover${coverImageUri ? ' has-cover-image' : ''}">
+        ${coverImageUri ? `<div class="cover-image-backdrop" style="background-image:url('${escInline(coverImageUri)}')"></div>` : ''}
         <div class="cover-bg-pattern"></div>
         <div class="cover-grid"></div>
-        ${coverImageUri ? `
-        <div class="cover-image-glow"></div>
-        <div class="cover-image-wrap">
-            <img class="cover-image" src="${escInline(coverImageUri)}" alt="Обложка квеста" loading="eager" referrerpolicy="no-referrer" />
-        </div>
-        ` : ''}
         <div class="cover-inner">
-            <div class="cover-top-row">
-                <span class="cover-badge">&#10022; Подарочный квест</span>
-                <span class="cover-brand-top">metravel.by</span>
-            </div>
-            <h1>${escHtml(title)}</h1>
-            <div class="cover-meta">
-                <span class="cover-meta-chip">&#9673; ${steps.length} шагов</span>
-                <span class="cover-meta-chip">&#9654; Городское приключение</span>
-                <span class="cover-meta-chip">${today}</span>
-            </div>
-            <div class="cover-accent-line"></div>
-            <div class="cover-bottom">
-                <div class="cover-for-block">
-                    <div class="cover-for-label">Для</div>
-                    <span class="cover-for-line"></span>
+            <div class="cover-copy">
+                <div class="cover-copy-panel">
+                    <div class="cover-top-row">
+                        <span class="cover-badge">&#10022; Подарочный квест</span>
+                        <span class="cover-brand-top">metravel.by</span>
+                    </div>
+                    <h1>${escHtml(title)}</h1>
+                    ${coverLead ? `<p class="cover-lead">${escHtml(coverLead)}</p>` : ''}
+                    <div class="cover-meta">
+                        <span class="cover-meta-chip">&#9673; ${steps.length} шагов</span>
+                        <span class="cover-meta-chip">&#9654; Городское приключение</span>
+                        <span class="cover-meta-chip">${today}</span>
+                    </div>
+                    <div class="cover-accent-line"></div>
+                    <div class="cover-bottom">
+                        <div class="cover-for-block">
+                            <div class="cover-for-label">Для</div>
+                            <span class="cover-for-line"></span>
+                        </div>
+                    </div>
                 </div>
+            </div>
+            <div class="cover-side">
+                <div class="cover-stamp">Коллекционный<br>печатный выпуск</div>
                 ${siteQr ? `
                 <div class="cover-qr-block">
                     <img src="${siteQr}" width="${QR_SITE}" height="${QR_SITE}" alt="QR на квест">
-                    <span class="cover-qr-label">Пройти онлайн</span>
+                    <span class="cover-qr-label">Открыть онлайн-версию</span>
                 </div>
                 ` : ''}
             </div>
@@ -1137,6 +1186,20 @@ function resolveStepImageUri(image: unknown): string {
         }
     }
     return '';
+}
+
+function extractCoverLead(story?: string): string {
+    const raw = String(story || '')
+        .replace(/\*\*/g, '')
+        .replace(/\*/g, '')
+        .replace(/[_`>#-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!raw) return '';
+
+    const firstSentence = raw.match(/.+?[.!?](?:\s|$)/)?.[0]?.trim() || raw;
+    return firstSentence.slice(0, 180).trim();
 }
 
 function escInline(str: string): string {
