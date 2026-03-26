@@ -53,4 +53,3 @@ export const buildTravelSectionLinks = (
 
   return links
 }
-

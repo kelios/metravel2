@@ -39,20 +39,6 @@ const normalizeGalleryImage = (
         id: (item as Record<string, unknown>).id || fallbackId,
       } as GalleryImage)
 
-const buildCoverImage = (travel: Travel): GalleryImage | null => {
-  const coverUrl =
-    typeof travel?.travel_image_thumb_url === 'string'
-      ? travel.travel_image_thumb_url.trim()
-      : ''
-  if (!coverUrl) return null
-
-  return {
-    url: coverUrl,
-    id: travel?.id ?? 'travel-cover',
-    updated_at: travel?.updated_at ?? null,
-  }
-}
-
 function useHeroMediaModel(
   travel: Travel,
   isMobile: boolean,
@@ -73,10 +59,8 @@ function useHeroMediaModel(
   }, [travel.gallery])
 
   const heroSliderImages = useMemo(() => {
-    if (galleryImages.length > 0) return galleryImages
-    const coverImage = buildCoverImage(travel)
-    return coverImage ? [coverImage] : []
-  }, [galleryImages, travel])
+    return galleryImages
+  }, [galleryImages])
 
   const firstImg = useMemo(() => {
     return heroSliderImages[0] ?? null

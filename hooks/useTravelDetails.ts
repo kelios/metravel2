@@ -52,8 +52,19 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
     Array.isArray(travel.gallery) &&
     Array.isArray(travel.travelAddress) &&
     Array.isArray(travel.coordsMeTravel);
+  const hasMeaningfulDescription =
+    typeof travel.description === 'string' && travel.description.replace(/<[^>]*>/g, ' ').trim().length > 0;
+  const hasDetailCollections =
+    travel.gallery.length > 0 || travel.travelAddress.length > 0 || travel.coordsMeTravel.length > 0;
+  const hasMeaningfulDetailSignal = hasMeaningfulDescription || hasDetailCollections;
 
-  return hasIdentity && hasName && hasAnyDetailField && hasStableDetailContract;
+  return (
+    hasIdentity &&
+    hasName &&
+    hasAnyDetailField &&
+    hasStableDetailContract &&
+    hasMeaningfulDetailSignal
+  );
 }
 
 /**

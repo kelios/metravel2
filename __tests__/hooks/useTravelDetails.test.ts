@@ -95,7 +95,7 @@ describe('useTravelDetails', () => {
     expect(data).toEqual({ slug: 'awesome-trip' });
   });
 
-  it('uses preloaded travel as initialData on web (no extra await needed)', () => {
+  it('uses meaningful preloaded travel as initialData on web (no extra await needed)', () => {
     (Platform.OS as any) = 'web';
     (global as any).window = {
       __metravelTravelPreload: {
@@ -103,9 +103,9 @@ describe('useTravelDetails', () => {
           id: 498,
           slug: 'awesome-trip',
           name: 'Trip',
-          description: '',
+          description: '<p>Full text</p>',
           gallery: [],
-          travelAddress: [],
+          travelAddress: [{ id: 1, name: 'Point' }],
           coordsMeTravel: [],
         },
         slug: 'awesome-trip',
@@ -135,9 +135,9 @@ describe('useTravelDetails', () => {
       id: 498,
       slug: 'awesome-trip',
       name: 'Trip',
-      description: '',
+      description: '<p>Full text</p>',
       gallery: [],
-      travelAddress: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
       coordsMeTravel: [],
     });
 
@@ -207,9 +207,9 @@ describe('useTravelDetails', () => {
           id: 503,
           slug: 'awesome-trip',
           name: 'Trip',
-          description: '',
+          description: '<p>Bootstrap detail text</p>',
           gallery: [],
-          travelAddress: [],
+          travelAddress: [{ id: 1, name: 'Point' }],
           coordsMeTravel: [],
         },
         slug: 'awesome-trip',
@@ -230,9 +230,9 @@ describe('useTravelDetails', () => {
       id: 503,
       slug: 'awesome-trip',
       name: 'Trip',
-      description: '',
+      description: '<p>Bootstrap detail text</p>',
       gallery: [],
-      travelAddress: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
       coordsMeTravel: [],
     });
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
@@ -320,6 +320,54 @@ describe('useTravelDetails', () => {
       travelAddress: [{ id: 1, name: 'Point' }],
       coordsMeTravel: [{ id: 1, lat: 49.25, lng: 20.1 }],
     });
+  });
+
+  it('falls back to fetchTravelBySlug when preload is structurally complete but content-empty', async () => {
+    (Platform.OS as any) = 'web';
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 439,
+          slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+          name: 'Аккаунты в instagram о путешествиях по Беларуси',
+          description: '',
+          gallery: [],
+          travelAddress: [],
+          coordsMeTravel: [],
+        },
+        slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+        isId: false,
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({
+      id: 439,
+      slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+      name: 'Аккаунты в instagram о путешествиях по Беларуси',
+      description: '<p>Full text</p>',
+      gallery: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
+      coordsMeTravel: [{ id: 1, lat: 53.9, lng: 27.56 }],
+    });
+
+    renderHook(() => useTravelDetails());
+
+    const data = await capturedQueryFn!();
+    expect(fetchTravelBySlug).toHaveBeenCalledWith(
+      'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+      { signal: undefined }
+    );
+    expect(data).toEqual({
+      id: 439,
+      slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+      name: 'Аккаунты в instagram о путешествиях по Беларуси',
+      description: '<p>Full text</p>',
+      gallery: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
+      coordsMeTravel: [{ id: 1, lat: 53.9, lng: 27.56 }],
+    });
+    expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
   it('exposes refetch function from react-query result', () => {

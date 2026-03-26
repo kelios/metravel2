@@ -135,7 +135,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
   })
 
-  it('uses the cover as hero media when gallery is empty', () => {
+  it('does not build hero media from cover when gallery is empty', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 44,
@@ -148,10 +148,28 @@ describe('useTravelHeroState', () => {
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
-    expect(result.current.firstImg?.url).toBe('https://example.com/cover.jpg?updated=1')
+    expect(result.current.firstImg).toBeNull()
     expect(result.current.galleryImages).toHaveLength(0)
-    expect(result.current.heroSliderImages).toHaveLength(1)
-    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
+    expect(result.current.heroSliderImages).toHaveLength(0)
+  })
+
+  it('does not build hero media from small cover when gallery is empty and main cover is missing', () => {
+    const onFirstImageLoad = jest.fn()
+    const travel = {
+      id: 45,
+      name: 'Small cover fallback travel',
+      travel_image_thumb_url: '',
+      travel_image_thumb_small_url: 'https://example.com/cover-small.jpg?updated=1',
+      gallery: [],
+    } as any
+
+    const { result } = renderHook(() =>
+      useTravelHeroState(travel, false, onFirstImageLoad, false),
+    )
+
+    expect(result.current.firstImg).toBeNull()
+    expect(result.current.galleryImages).toHaveLength(0)
+    expect(result.current.heroSliderImages).toHaveLength(0)
   })
 
   it('uses a fixed 70 percent viewport height on web even for wide media', () => {
