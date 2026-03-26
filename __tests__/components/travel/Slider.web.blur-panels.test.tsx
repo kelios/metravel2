@@ -267,7 +267,7 @@ describe('Slider (web) blur background', () => {
     expect(firstImage.props.allowCriticalWebBlur).toBe(false)
   })
 
-  it('shows the previous loaded frame as overlay while the next slide is not loaded yet', async () => {
+  it('keeps only the in-track previous frame after navigating without duplicating overlay media', async () => {
     let tree: renderer.ReactTestRenderer
     await act(async () => {
       tree = renderer.create(
@@ -296,10 +296,10 @@ describe('Slider (web) blur background', () => {
         node.props.src.includes('img-1.jpg'),
     )
 
-    expect(previousFrameInstances.length).toBeGreaterThan(1)
+    expect(previousFrameInstances).toHaveLength(1)
   })
 
-  it('keeps previous-frame overlay behavior even when blur background mode is enabled', async () => {
+  it('does not add a duplicate previous-frame overlay when blur background mode is enabled', async () => {
     let tree: renderer.ReactTestRenderer
     await act(async () => {
       tree = renderer.create(
@@ -328,7 +328,7 @@ describe('Slider (web) blur background', () => {
         node.props.src.includes('img-1.jpg'),
     )
 
-    expect(previousFrameInstances.length).toBe(2)
+    expect(previousFrameInstances).toHaveLength(1)
   })
 
   it('does not report the first slide as loaded before the actual image onLoad fires', async () => {

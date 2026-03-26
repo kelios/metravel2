@@ -143,62 +143,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     blurBg: {
       ...StyleSheet.absoluteFillObject,
     },
-    pageTurnOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      zIndex: 5,
-      overflow: 'hidden',
-      opacity: 0,
-      ...Platform.select<any>({
-        web: {
-          willChange: 'transform, opacity',
-        },
-        default: {},
-      }),
-    },
-    pageTurnShadow: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      width: '42%',
-      left: '29%',
-      backgroundColor: 'rgba(10,14,24,0.22)',
-      ...Platform.select<any>({
-        web: {
-          filter: 'blur(18px)',
-          transform: 'skewX(-10deg)',
-        },
-        default: {},
-      }),
-    },
-    pageTurnHighlight: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      width: '28%',
-      left: '36%',
-      ...(Platform.OS === 'web'
-        ? ({
-            backgroundImage:
-              'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.12) 35%, rgba(255,255,255,0.28) 52%, rgba(255,255,255,0.08) 72%, rgba(255,255,255,0) 100%)',
-            transform: 'skewX(-12deg)',
-          } as any)
-        : {}),
-    },
-    pageTurnSpine: {
-      position: 'absolute',
-      top: 0,
-      bottom: 0,
-      left: '49.7%',
-      width: 1,
-      backgroundColor: 'rgba(255,255,255,0.22)',
-      ...Platform.select<any>({
-        web: {
-          boxShadow:
-            '0 0 0 1px rgba(255,255,255,0.03), 0 0 18px rgba(255,255,255,0.12)',
-        },
-        default: {},
-      }),
-    },
     img: {
       width: '100%',
       height: '100%',

@@ -5,8 +5,6 @@ import React, {
   useId,
   useImperativeHandle,
   useMemo,
-  useRef,
-  useState,
   forwardRef,
 } from 'react';
 import {
@@ -17,14 +15,12 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import type { SliderProps, SliderRef } from './sliderParts/types';
 import { buildUriWeb, SLIDER_MAX_WIDTH, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
 import { createSliderStyles, MAX_VISIBLE_DOTS } from './sliderParts/styles';
 import Slide from './sliderParts/Slide';
 import { useSliderCore } from './sliderParts/useSliderCore';
 import { useSliderTrack } from './sliderParts/useSliderTrack';
-import { useSliderTransitionOverlay } from './sliderParts/useSliderTransitionOverlay';
 import { useSliderPointerDrag } from './sliderParts/useSliderPointerDrag';
 
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
@@ -52,38 +48,6 @@ if (typeof document !== 'undefined') {
       [aria-label="Previous slide"]:active,
       [aria-label="Next slide"]:active {
         transform: scale(0.95) !important;
-      }
-      @keyframes sliderPageTurnForward {
-        0% {
-          opacity: 0;
-          transform: translateX(-5%) scaleX(0.96);
-        }
-        18% {
-          opacity: 1;
-        }
-        100% {
-          opacity: 0;
-          transform: translateX(9%) scaleX(1.04);
-        }
-      }
-      @keyframes sliderPageTurnBackward {
-        0% {
-          opacity: 0;
-          transform: translateX(5%) scaleX(0.96);
-        }
-        18% {
-          opacity: 1;
-        }
-        100% {
-          opacity: 0;
-          transform: translateX(-9%) scaleX(1.04);
-        }
-      }
-      .slider-page-turn-forward {
-        animation: sliderPageTurnForward 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-      }
-      .slider-page-turn-backward {
-        animation: sliderPageTurnBackward 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
     `;
     document.head.appendChild(style);
@@ -303,30 +267,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const maxIndex = Math.max(0, images.length - 1);
   const slideHeight = fillContainer ? '100%' : computedH;
   const imagesLen = images.length;
-  const prevIndexRef = useRef(currentIndex);
-  const [pageTurnDirection, setPageTurnDirection] = useState<'forward' | 'backward'>('forward');
-  const [pageTurnKey, setPageTurnKey] = useState(0);
   const navOffset = isMobile ? 8 : isTablet ? 12 : Math.max(44, 16 + Math.max(insets.left || 0, insets.right || 0));
-
-  useEffect(() => {
-    if (currentIndex === prevIndexRef.current) return;
-    setPageTurnDirection(currentIndex > prevIndexRef.current ? 'forward' : 'backward');
-    setPageTurnKey((value) => value + 1);
-    prevIndexRef.current = currentIndex;
-  }, [currentIndex]);
-
-  // --- Transition overlay ---
-  const {
-    overlayUri,
-    overlayVisible,
-    handleSlideLoad,
-    onBeforeNavigate,
-  } = useSliderTransitionOverlay({
-    images,
-    getUri,
-    indexRef,
-    firstImagePreloaded,
-  });
 
   // --- Track animation + width ---
   const {
@@ -346,7 +287,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     maxIndex,
     renderedSlideWidth: containerW,
     setContainerWidth,
-    onBeforeNavigate,
   });
 
   // --- Pointer drag + keyboard ---
@@ -433,58 +373,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip} testID="slider-clip">
-          {imagesLen > 1 && pageTurnKey > 0 ? (
-            <View
-              key={`${pageTurnDirection}-${pageTurnKey}`}
-              pointerEvents="none"
-              style={[
-                styles.pageTurnOverlay,
-              ]}
-              {...({
-                className:
-                  pageTurnDirection === 'forward'
-                    ? 'slider-page-turn-forward'
-                    : 'slider-page-turn-backward',
-              } as any)}
-            >
-              <View style={styles.pageTurnShadow} />
-              <View style={styles.pageTurnHighlight} />
-              <View style={styles.pageTurnSpine} />
-            </View>
-          ) : null}
-
-          {/* Transition overlay — always mounted, visibility via CSS opacity.
-              Covers viewport while the target slide's image is loading. */}
-          <View
-            pointerEvents="none"
-            style={[
-              {
-                position: 'absolute',
-                inset: 0,
-                zIndex: 6,
-                opacity: overlayVisible ? 1 : 0,
-                transition: 'opacity 300ms ease',
-                willChange: overlayUri ? 'opacity' : 'auto',
-              } as any,
-            ]}
-          >
-            {overlayUri ? (
-              <ImageCardMedia
-                src={overlayUri}
-                width={renderedSlideWidth}
-                height={computedH}
-                fit={fit}
-                blurBackground={false}
-                blurRadius={12}
-                priority="high"
-                loading="eager"
-                transition={0}
-                style={styles.img}
-                showImmediately
-              />
-            ) : null}
-          </View>
-
           {/* Carousel viewport + track */}
           <View
             ref={viewportRef}
@@ -546,7 +434,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       preloadPriority={preloadPriority}
                       fit={fit}
                       contentAspectRatio={contentAspectRatio ?? aspectRatio}
-                      onSlideLoad={handleSlideLoad}
                       prepareBlur={prepareBlur}
                       skipImage={skipFirstSlideImage && index === 0}
                     />
