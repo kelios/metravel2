@@ -55,6 +55,8 @@ describe('BlockRenderer', () => {
     expect(image).toContain('Описание')
     expect(image).not.toContain('Изображение недоступно')
     expect(image).toContain("onerror=\"this.style.display='none';\"")
+    expect(image).toContain('filter: blur(18px) saturate(1.06)')
+    expect(image).toContain('object-fit: contain')
 
     const gallery = renderer.renderBlock({
       type: 'image-gallery',
@@ -63,6 +65,7 @@ describe('BlockRenderer', () => {
     } as any)
     expect(gallery).toContain('grid-template-columns: repeat(3')
     expect(gallery).toContain('a.jpg')
+    expect(gallery).toContain('filter: blur(18px) saturate(1.06)')
 
     const mixedGallery = renderer.renderBlock({
       type: 'image-gallery',
@@ -107,6 +110,23 @@ describe('BlockRenderer', () => {
     expect(floated).toContain('width: 56%')
     expect(floated).toContain('margin:')
     expect(floated).toContain('auto')
+  })
+
+  it('keeps short paragraph captions together with the following media block', () => {
+    const renderer = new BlockRenderer(theme)
+
+    const html = renderer.renderBlocks([
+      { type: 'paragraph', text: 'Папин Др апрель 2019 год на реке Зеленуха' } as any,
+      {
+        type: 'image-gallery',
+        layout: 'pair-balanced',
+        columns: 2,
+        images: [{ src: '1.jpg' }, { src: '2.jpg' }],
+      } as any,
+    ])
+
+    expect(html).toContain('page-break-after: avoid; break-after: avoid-page;')
+    expect(html).toContain('grid-template-columns: 1.02fr 0.98fr')
   })
 
   it('normalizes relative image URLs so they can be fetched in print/PDF context', () => {

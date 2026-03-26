@@ -33,6 +33,41 @@ export interface CoverPageData {
 export class CoverPageGenerator {
   constructor(private theme: PdfThemeConfig) {}
 
+  private getCoverTitleStyle(title: string): {
+    fontSize: string;
+    lineHeight: number;
+    maxWidth: string;
+    letterSpacing: string;
+  } {
+    const normalized = (title || '').trim();
+    const length = normalized.length;
+
+    if (length >= 100) {
+      return {
+        fontSize: '24pt',
+        lineHeight: 1.08,
+        maxWidth: '128mm',
+        letterSpacing: '0',
+      };
+    }
+
+    if (length >= 75) {
+      return {
+        fontSize: '27pt',
+        lineHeight: 1.08,
+        maxWidth: '124mm',
+        letterSpacing: '0.01em',
+      };
+    }
+
+    return {
+      fontSize: '32pt',
+      lineHeight: 1.08,
+      maxWidth: '108mm',
+      letterSpacing: '0.02em',
+    };
+  }
+
   /**
    * Генерирует HTML для обложки с умным затемнением
    */
@@ -161,8 +196,8 @@ export class CoverPageGenerator {
         z-index: 2;
       ">
         <div class="cover-story-panel" style="
-          width: min(126mm, 100%);
-          padding: ${hasImage ? '13mm 14mm 12mm 14mm' : '0'};
+          width: min(138mm, 100%);
+          padding: ${hasImage ? '14mm 16mm 13mm 16mm' : '0'};
           border-radius: 22px;
           background: ${panelBackground};
           border: ${hasImage ? `1px solid ${panelBorder}` : 'none'};
@@ -228,6 +263,7 @@ export class CoverPageGenerator {
 
     const safeTitle = (title || '').trim();
     if (!safeTitle) return '';
+    const titleStyle = this.getCoverTitleStyle(safeTitle);
     
     return `
       <div style="
@@ -239,17 +275,18 @@ export class CoverPageGenerator {
       "></div>
       <h1 style="
         color: ${color};
-        font-size: 32pt;
+        font-size: ${titleStyle.fontSize};
         font-weight: 800;
-        line-height: 1.08;
+        line-height: ${titleStyle.lineHeight};
         margin: 0;
         text-shadow: 0 6px 18px rgba(15,23,42,0.2);
-        letter-spacing: 0.02em;
+        letter-spacing: ${titleStyle.letterSpacing};
         font-family: ${typography.headingFont};
-        overflow-wrap: anywhere;
-        word-break: break-word;
+        overflow-wrap: break-word;
+        word-break: normal;
         hyphens: auto;
-        max-width: 108mm;
+        max-width: ${titleStyle.maxWidth};
+        text-wrap: balance;
       ">${this.escapeHtml(safeTitle)}</h1>
     `;
   }

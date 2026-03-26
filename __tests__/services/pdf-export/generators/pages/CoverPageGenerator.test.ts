@@ -171,9 +171,25 @@ describe('CoverPageGenerator', () => {
 
       const html = await generator.generate(data);
 
-      expect(html).toContain('overflow-wrap: anywhere');
-      expect(html).toContain('word-break: break-word');
+      expect(html).toContain('overflow-wrap: break-word');
+      expect(html).toContain('word-break: normal');
       expect(html).toContain('hyphens: auto');
+    });
+
+    it('расширяет текстовую панель и уменьшает title для очень длинного названия обложки', async () => {
+      const data = {
+        title: 'Путешествие Вязынка: путешествие в сердце белорусской поэзии и истории с длинным зимним маршрутом по усадьбам, реке и старым деревням',
+        userName: 'Julia',
+        travelCount: 5,
+        coverImage: 'https://example.com/cover.jpg',
+      };
+
+      const html = await generator.generate(data);
+
+      expect(html).toContain('width: min(138mm, 100%)');
+      expect(html).toContain('font-size: 24pt');
+      expect(html).toContain('text-wrap: balance');
+      expect(html).toContain('max-width: 128mm');
     });
 
     it('не должен содержать невалидные псевдоселекторы в inline-style', async () => {

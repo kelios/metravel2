@@ -174,6 +174,8 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(html).toContain('toc-page')
     expect(html).toContain('travel-content-page')
     expect(html).toContain('travel-online-card')
+    expect(html).toContain('page-break-inside: avoid;')
+    expect(html).toContain('break-inside: avoid;')
     expect(html).toContain('final-page')
     expect(html).toContain('final-summary-tile')
 

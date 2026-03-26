@@ -12,6 +12,95 @@ import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 export class BlockRenderer {
   constructor(private theme: PdfThemeConfig) {}
 
+  private isShortTextBlock(block: ParsedContentBlock): boolean {
+    if (block.type === 'heading') {
+      return block.text.trim().length <= 120;
+    }
+
+    if (block.type === 'paragraph') {
+      const text = block.text.trim();
+      if (!text) return false;
+      const lineCount = text.split(/\n+/).length;
+      return text.length <= 140 && lineCount <= 2;
+    }
+
+    return false;
+  }
+
+  private shouldKeepWithNext(
+    block: ParsedContentBlock,
+    nextBlock?: ParsedContentBlock
+  ): boolean {
+    if (!nextBlock) return false;
+
+    if (block.type === 'heading') {
+      return ['paragraph', 'image', 'image-gallery', 'list', 'quote'].includes(nextBlock.type);
+    }
+
+    if (block.type === 'paragraph' && this.isShortTextBlock(block)) {
+      return ['image', 'image-gallery', 'heading'].includes(nextBlock.type);
+    }
+
+    return false;
+  }
+
+  private renderContainImageWithBackdrop(
+    src: string,
+    alt: string,
+    options: { minHeight?: string; maxHeight?: string; borderRadius?: string } = {}
+  ): string {
+    const { minHeight, maxHeight, borderRadius } = options;
+    const radius = borderRadius || `calc(${this.theme.blocks.borderRadius} * 0.9)`;
+
+    return `
+      <div style="
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        border-radius: ${radius};
+        background: ${this.theme.colors.surfaceAlt};
+        ${minHeight ? `min-height: ${minHeight};` : ''}
+        ${maxHeight ? `max-height: ${maxHeight};` : ''}
+      ">
+        <img
+          src="${this.escapeHtml(src)}"
+          alt=""
+          aria-hidden="true"
+          style="
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: blur(18px) saturate(1.06);
+            transform: scale(1.08);
+            opacity: 0.88;
+            ${this.theme.imageFilter ? `filter: blur(18px) saturate(1.06) ${this.theme.imageFilter};` : ''}
+          "
+          onerror="this.style.display='none';"
+          crossorigin="anonymous"
+        />
+        <img
+          src="${this.escapeHtml(src)}"
+          alt="${this.escapeHtml(alt)}"
+          style="
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            height: auto;
+            min-height: inherit;
+            max-height: inherit;
+            display: block;
+            object-fit: contain;
+            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+          "
+          onerror="this.style.display='none';"
+          crossorigin="anonymous"
+        />
+      </div>
+    `;
+  }
+
   private getImageAlignmentStyle(layout?: 'single-wide' | 'float-left' | 'float-right'): string {
     switch (layout) {
       case 'float-left':
@@ -53,6 +142,10 @@ export class BlockRenderer {
     img: { src: string; alt?: string; caption?: string; width?: number; height?: number },
     options: { containerStyle?: string; imageStyle?: string } = {}
   ): string {
+    const safeSrc = this.buildSafeImageUrl(img.src);
+    const minHeightMatch = options.imageStyle?.match(/min-height:\s*([^;]+);?/i);
+    const maxHeightMatch = options.imageStyle?.match(/max-height:\s*([^;]+);?/i);
+
     return `
       <div style="
         page-break-inside: avoid;
@@ -65,24 +158,11 @@ export class BlockRenderer {
         box-shadow: ${this.theme.blocks.shadow};
         ${options.containerStyle || ''}
       ">
-        <img
-          src="${this.escapeHtml(this.buildSafeImageUrl(img.src))}"
-          alt="${this.escapeHtml(img.alt || '')}"
-          ${img.width ? `width="${img.width}"` : ''}
-          ${img.height ? `height="${img.height}"` : ''}
-          style="
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: calc(${this.theme.blocks.borderRadius} * 0.9);
-            box-shadow: ${this.theme.blocks.shadow};
-            object-fit: contain;
-            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-            ${options.imageStyle || ''}
-          "
-          onerror="this.style.display='none';"
-          crossorigin="anonymous"
-        />
+        ${this.renderContainImageWithBackdrop(safeSrc, img.alt || '', {
+          minHeight: minHeightMatch?.[1]?.trim(),
+          maxHeight: maxHeightMatch?.[1]?.trim(),
+          borderRadius: `calc(${this.theme.blocks.borderRadius} * 0.9)`,
+        })}
         ${this.renderGalleryCaption(img.caption)}
       </div>
     `;
@@ -92,7 +172,13 @@ export class BlockRenderer {
    * Рендерит массив блоков в HTML
    */
   renderBlocks(blocks: ParsedContentBlock[]): string {
-    return blocks.map((block) => this.renderBlock(block)).join('\n');
+    return blocks
+      .map((block, index) =>
+        this.renderBlock(block, {
+          keepWithNext: this.shouldKeepWithNext(block, blocks[index + 1]),
+        })
+      )
+      .join('\n');
   }
 
   /**
@@ -110,12 +196,12 @@ export class BlockRenderer {
   /**
    * Рендерит один блок
    */
-  renderBlock(block: ParsedContentBlock): string {
+  renderBlock(block: ParsedContentBlock, options: { keepWithNext?: boolean } = {}): string {
     switch (block.type) {
       case 'heading':
-        return this.renderHeading(block);
+        return this.renderHeading(block, options);
       case 'paragraph':
-        return this.renderParagraph(block);
+        return this.renderParagraph(block, options);
       case 'list':
         return this.renderList(block);
       case 'quote':
@@ -143,7 +229,10 @@ export class BlockRenderer {
   /**
    * Рендерит заголовок
    */
-  private renderHeading(block: ParsedContentBlock & { type: 'heading' }): string {
+  private renderHeading(
+    block: ParsedContentBlock & { type: 'heading' },
+    options: { keepWithNext?: boolean } = {}
+  ): string {
     const { level, text } = block;
     const style = this.theme.typography[`h${level}` as keyof typeof this.theme.typography] as {
       size: string;
@@ -161,6 +250,7 @@ export class BlockRenderer {
         color: ${this.theme.colors.text};
         font-family: ${this.theme.typography.headingFont};
         page-break-after: avoid;
+        ${options.keepWithNext ? 'break-after: avoid-page;' : ''}
         orphans: 3;
         widows: 3;
         overflow-wrap: anywhere;
@@ -173,7 +263,10 @@ export class BlockRenderer {
   /**
    * Рендерит параграф
    */
-  private renderParagraph(block: ParsedContentBlock & { type: 'paragraph' }): string {
+  private renderParagraph(
+    block: ParsedContentBlock & { type: 'paragraph' },
+    options: { keepWithNext?: boolean } = {}
+  ): string {
     const { text, html } = block;
     const style = this.theme.typography.body;
 
@@ -188,6 +281,7 @@ export class BlockRenderer {
         color: ${this.theme.colors.text};
         font-family: ${this.theme.typography.bodyFont};
         text-align: justify;
+        ${options.keepWithNext ? 'page-break-after: avoid; break-after: avoid-page;' : ''}
         orphans: 2;
         widows: 2;
         overflow-wrap: anywhere;
@@ -266,29 +360,23 @@ export class BlockRenderer {
   private renderImage(block: ParsedContentBlock & { type: 'image' }): string {
     const { src, alt, caption, width, height, layout } = block;
     const safeSrc = this.buildSafeImageUrl(src);
-
-    const imageStyle = `
-      max-width: 100%;
-      height: auto;
-      display: block;
-      border-radius: calc(${this.theme.blocks.borderRadius} * 1.65);
-      box-shadow: ${this.theme.blocks.shadow};
-      page-break-inside: avoid;
-      object-fit: contain;
-      ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-    `;
     const wrapperStyle = this.getImageAlignmentStyle(layout);
 
     const imageTag = `
-      <img 
-        src="${this.escapeHtml(safeSrc)}" 
-        alt="${this.escapeHtml(alt || '')}"
-        ${width ? `width="${width}"` : ''}
-        ${height ? `height="${height}"` : ''}
-        style="${imageStyle}"
-        onerror="this.style.display='none';"
-        crossorigin="anonymous"
-      />
+      <div
+        ${width ? `data-width="${width}"` : ''}
+        ${height ? `data-height="${height}"` : ''}
+        style="
+          border-radius: calc(${this.theme.blocks.borderRadius} * 1.65);
+          box-shadow: ${this.theme.blocks.shadow};
+          page-break-inside: avoid;
+          overflow: hidden;
+        "
+      >
+        ${this.renderContainImageWithBackdrop(safeSrc, alt || '', {
+          borderRadius: `calc(${this.theme.blocks.borderRadius} * 1.65)`,
+        })}
+      </div>
     `;
 
     if (caption) {

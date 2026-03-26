@@ -1084,6 +1084,8 @@ export class EnhancedPdfGenerator {
             border: 1px solid ${colors.border};
             border-top: 3px solid ${colors.accent};
             box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            break-inside: avoid;
+            page-break-inside: avoid;
           ">
             ${qrCode ? `
               <div style="

@@ -64,8 +64,32 @@ describe('BlockRenderer', () => {
       } as any,
     ])
 
+    expect(html).toContain('grid-template-columns: repeat(3, 1fr)')
     expect(html).toContain('grid-column: span 2')
     expect(html).toContain('grid-column: span 4')
-    expect(html).toContain('min-height: 46mm; max-height: 58mm;')
+    expect(html).toContain('filter: blur(18px) saturate(1.06)')
+  })
+
+  it('keeps five-image editorial groups on the same pdf page without splitting them apart', () => {
+    const renderer = new BlockRenderer(minimalTheme)
+    const html = renderer.renderBlocks([
+      {
+        type: 'image-gallery',
+        layout: 'editorial-grid',
+        columns: 3,
+        images: [
+          { src: '1.jpg', width: 1200, height: 700 },
+          { src: '2.jpg', width: 700, height: 1100 },
+          { src: '3.jpg', width: 900, height: 700 },
+          { src: '4.jpg', width: 900, height: 700 },
+          { src: '5.jpg', width: 900, height: 700 },
+        ],
+      } as any,
+    ])
+
+    expect(html).toContain('grid-template-columns: repeat(3, 1fr)')
+    expect(html).toContain('page-break-inside: avoid;')
+    expect(html).toContain('break-inside: avoid;')
+    expect((html.match(/padding: 2.5mm/g) || []).length).toBe(5)
   })
 })
