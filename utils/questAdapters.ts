@@ -262,6 +262,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
         intro,
         storageKey: apiBundle.storage_key,
         city: adaptCity(apiBundle.city),
+        coverUrl: fixMediaUrl(apiBundle.cover_url),
     };
 }
 

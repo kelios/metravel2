@@ -27,55 +27,74 @@ type MapImageGeneratorModule = typeof import('@/utils/mapImageGenerator');
 type BookPreviewWindowModule = typeof import('@/utils/openBookPreviewWindow');
 
 const PRINT_COLORS = {
-    brand: 'rgb(31, 111, 139)',
-    brandDark: 'rgb(15, 76, 98)',
-    success: 'rgb(45, 106, 79)',
-    white: 'rgb(255, 255, 255)',
-    whiteSoft: 'rgba(255, 255, 255, 0.7)',
-    whiteGlass: 'rgba(255, 255, 255, 0.85)',
-    ink: 'rgb(29, 36, 48)',
-    muted: 'rgb(94, 106, 120)',
-    soft: 'rgb(237, 242, 247)',
-    line: 'rgb(212, 221, 232)',
-    brandSoft: 'rgb(236, 246, 250)',
-    accent: 'rgb(255, 183, 3)',
-    paperBg: 'rgb(243, 247, 251)',
-    panelBorder: 'rgb(205, 216, 229)',
-    panelBgStart: 'rgb(245, 250, 255)',
-    panelBgEnd: 'rgb(255, 248, 234)',
-    brandLine: 'rgb(185, 213, 225)',
-    title: 'rgb(21, 63, 82)',
-    lineMuted: 'rgb(174, 183, 196)',
-    introBorder: 'rgb(205, 228, 238)',
-    introText: 'rgb(52, 67, 85)',
-    mapBorder: 'rgb(215, 228, 239)',
-    mapBg: 'rgb(250, 253, 255)',
-    mapGridBg: 'rgb(238, 247, 251)',
-    mapGridBgEnd: 'rgb(247, 251, 255)',
-    mapGridStroke: 'rgb(220, 233, 242)',
-    chipBorder: 'rgb(212, 226, 238)',
-    chipText: 'rgb(56, 80, 106)',
-    tableBorder: 'rgb(154, 180, 195)',
-    tableText: 'rgb(60, 79, 99)',
-    tableRow: 'rgb(237, 240, 244)',
-    tableMuted: 'rgb(111, 124, 141)',
-    stepBorder: 'rgb(215, 226, 238)',
-    stepBgEnd: 'rgb(251, 253, 255)',
-    location: 'rgb(62, 92, 116)',
-    story: 'rgb(62, 75, 91)',
-    taskBg: 'rgb(248, 250, 252)',
-    taskBorder: 'rgb(223, 231, 241)',
-    taskInset: 'rgb(242, 245, 248)',
-    taskText: 'rgb(34, 48, 66)',
-    hint: 'rgb(107, 118, 133)',
-    qrBorder: 'rgb(215, 227, 238)',
-    qrImgBorder: 'rgb(217, 226, 238)',
-    qrText: 'rgb(93, 109, 126)',
-    answerBorder: 'rgb(200, 211, 225)',
-    answerText: 'rgb(106, 119, 137)',
-    answerLine: 'rgb(142, 160, 182)',
-    footerBorder: 'rgb(217, 225, 236)',
-    footerText: 'rgb(118, 131, 151)',
+    brand: '#1a6b8a',
+    brandDark: '#0f4c62',
+    brandMid: '#2480a4',
+    brandLight: '#3a9bbf',
+    success: '#2d6a4f',
+    white: '#ffffff',
+    whiteSoft: 'rgba(255,255,255,0.72)',
+    whiteGlass: 'rgba(255,255,255,0.88)',
+    ink: '#1a2030',
+    inkSoft: '#2c3548',
+    muted: '#5e6a7a',
+    soft: '#f0f4f8',
+    line: '#dde4ed',
+    brandSoft: '#ebf5fa',
+    accent: '#e8a020',
+    accentDark: '#c4841a',
+    accentSoft: '#fef8ec',
+    paperBg: '#f5f7fa',
+    panelBorder: '#cdd8e8',
+    panelBgStart: '#f4f9fd',
+    panelBgEnd: '#fdf8f0',
+    brandLine: '#b3d4e6',
+    title: '#0f3650',
+    titleDark: '#091e2e',
+    lineMuted: '#a8b4c4',
+    introBorder: '#bcd8e8',
+    introText: '#34445a',
+    mapBorder: '#c8d9ea',
+    mapBg: '#f8fbfe',
+    mapGridBg: '#deeef8',
+    mapGridBgEnd: '#eaf4fc',
+    mapGridStroke: '#c0d4e4',
+    chipBorder: '#c8d8ea',
+    chipText: '#3a5068',
+    tableBorder: '#8aafcc',
+    tableText: '#3a4f64',
+    tableRow: '#eff3f8',
+    tableRowAlt: '#f8fafc',
+    tableMuted: '#6b7c90',
+    stepBorder: '#d0dcea',
+    stepBgEnd: '#fafcff',
+    location: '#3a5c78',
+    story: '#3a4b5c',
+    taskBg: '#fffbf0',
+    taskBorder: '#e8d4a0',
+    taskInset: '#fef3dc',
+    taskText: '#1e3045',
+    hint: '#6a7888',
+    qrBorder: '#c8d6e4',
+    qrImgBorder: '#d0dcea',
+    qrText: '#5a6c80',
+    answerBorder: '#bfccda',
+    answerText: '#6a7888',
+    answerLine: '#8aa0b8',
+    footerBorder: '#d0d9e4',
+    footerText: '#8090a4',
+    coverDark: '#071a28',
+    coverMid: '#0d2e46',
+    coverAccentLine: '#e8a020',
+    badgeBg: 'rgba(255,255,255,0.14)',
+    badgeBorder: 'rgba(255,255,255,0.28)',
+    sectionDivider: '#e2eaf4',
+    stepPhotoBg: '#e8eef5',
+    pageNumColor: '#7a90a8',
+    introBorderLeft: '#1a6b8a',
+    hintIcon: '#8aafcc',
+    stepHeaderBg: '#0f4c62',
+    stepNumBg: 'rgba(255,255,255,0.15)',
 } as const;
 
 function qrUrl(data: string, size = QR_NAV): string {
@@ -165,14 +184,6 @@ async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[]): Pro
     }
 }
 
-function buildPrintableMapLegend(points: PrintableMapPoint[]): string {
-    if (!points.length) return '';
-
-    return points.map((point) => {
-        return `<span class="map-chip"><b>${point.num}.</b> ${escInline(point.location)}</span>`;
-    }).join('');
-}
-
 function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
 
     if (!points.length) return '';
@@ -256,7 +267,7 @@ export async function generatePrintableQuest({ title, steps, intro, questUrl }: 
     const mapLeafletDataUrl = await buildPrintableLeafletMapDataUrl(mapPoints);
     const mapStaticUrl = mapLeafletDataUrl || await buildPrintableStaticMapUrl(mapPoints);
     const mapSvg = buildPrintableMapSvg(mapPoints);
-    const mapLegend = buildPrintableMapLegend(mapPoints);
+
     const mapHtml = mapStaticUrl ? `
         <div class="map-card">
             <img
@@ -277,294 +288,812 @@ export async function generatePrintableQuest({ title, steps, intro, questUrl }: 
 
     const stepsHtml = steps.map((step, i) => {
         const hasCoords = Number.isFinite(step.lat) && Number.isFinite(step.lng) && (step.lat !== 0 || step.lng !== 0);
+        const stepImageUri = resolveStepImageUri(step.image);
         return `
         <div class="step">
-            <div class="step-top">
-                <div class="step-header">
-                    <span class="step-num">${i + 1}</span>
-                    <div>
-                        <h3>${escHtml(step.title)}</h3>
-                        <p class="location">${escHtml(step.location)}</p>
-                    </div>
-                </div>
-                ${hasCoords ? `
-                <div class="qr-nav">
-                    <div class="qr-item"><img src="${qrUrl(googleMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}"><span>Google</span></div>
-                    <div class="qr-item"><img src="${qrUrl(yandexMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}"><span>Yandex</span></div>
-                    <div class="qr-item"><img src="${qrUrl(organicMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}"><span>Organic</span></div>
+            <div class="step-eyebrow">
+                <span class="step-num-badge">${i + 1}</span>
+                <span class="step-eyebrow-divider"></span>
+                <span class="step-location-label">${escHtml(step.location)}</span>
+                ${hasCoords ? `<span class="step-coords-label">${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}</span>` : ''}
+            </div>
+            <div class="step-body${stepImageUri ? '' : ' no-photo'}">
+                ${stepImageUri ? `
+                <div class="step-photo-wrap">
+                    <img class="step-photo" src="${escInline(stepImageUri)}" alt="${escInline(step.title)}" loading="eager" referrerpolicy="no-referrer" />
                 </div>
                 ` : ''}
-            </div>
-            <p class="story">${escHtml(step.story)}</p>
-            <div class="task-box">
-                <p class="task">${escHtml(step.task)}</p>
-                ${step.hint ? `<p class="hint">${escHtml(step.hint)}</p>` : ''}
-            </div>
-            <div class="answer-box">
-                <span class="answer-label">Ответ:</span>
-                <div class="answer-line"></div>
+                <div class="step-content">
+                    <h3 class="step-title">${escHtml(step.title)}</h3>
+                    <p class="story">${escHtml(step.story)}</p>
+                    <div class="task-box">
+                        <div class="task-label-row">
+                            <span class="task-label-icon">?</span>
+                            <span class="task-label-text">Задание</span>
+                        </div>
+                        <p class="task">${escHtml(step.task)}</p>
+                        ${step.hint ? `
+                        <div class="hint-row">
+                            <span class="hint-icon">💡</span>
+                            <p class="hint">${escHtml(step.hint)}</p>
+                        </div>` : ''}
+                    </div>
+                    ${hasCoords ? `
+                    <div class="qr-nav">
+                        <span class="qr-nav-label">Навигация</span>
+                        <div class="qr-items-row">
+                            <div class="qr-item">
+                                <img src="${qrUrl(googleMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}" alt="Google Maps">
+                                <span>Google Maps</span>
+                            </div>
+                            <div class="qr-item">
+                                <img src="${qrUrl(yandexMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}" alt="Yandex Maps">
+                                <span>Яндекс</span>
+                            </div>
+                            <div class="qr-item">
+                                <img src="${qrUrl(organicMapsUrl(step.lat, step.lng))}" width="${QR_NAV}" height="${QR_NAV}" alt="Organic Maps">
+                                <span>Organic Maps</span>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div class="answer-box">
+                        <div class="answer-header">
+                            <span class="answer-label">Мой ответ</span>
+                            <span class="answer-label-line"></span>
+                        </div>
+                        <div class="answer-lines">
+                            <div class="answer-line"></div>
+                            <div class="answer-line"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>`;
     }).join('');
+
+    const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 
     const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>${escHtml(title)} — Подарочная версия</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escHtml(title)} — Подарочная книга квеста</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    :root {
-        --ink: ${PRINT_COLORS.ink};
-        --muted: ${PRINT_COLORS.muted};
-        --soft: ${PRINT_COLORS.soft};
-        --line: ${PRINT_COLORS.line};
-        --brand: ${PRINT_COLORS.brand};
-        --brand-soft: ${PRINT_COLORS.brandSoft};
-        --accent: ${PRINT_COLORS.accent};
+    @page {
+        margin: 14mm 13mm 14mm 13mm;
+        size: A4;
+        @bottom-right {
+            content: counter(page);
+            font-family: Inter, sans-serif;
+            font-size: 7.5pt;
+            color: ${PRINT_COLORS.pageNumColor};
+        }
     }
-    @page { margin: 14mm 10mm; size: A4; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Avenir Next', 'Segoe UI', sans-serif; color: var(--ink); line-height: 1.55; font-size: 10.5pt; background: ${PRINT_COLORS.paperBg}; }
-    h1, h2, h3 { font-family: 'Merriweather', 'Georgia', serif; }
-    .sheet {
-        max-width: 860px;
-        margin: 0 auto;
-        padding: 18px 10px 28px;
-        background: ${PRINT_COLORS.white};
+    body {
+        font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+        color: ${PRINT_COLORS.ink};
+        line-height: 1.6;
+        font-size: 10pt;
+        background: ${PRINT_COLORS.paperBg};
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    h1, h2, h3, .serif {
+        font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
     }
 
-    .cover {
-        text-align: center;
-        padding: 34px 22px 28px;
-        border-radius: 16px;
-        margin-bottom: 18px;
-        border: 1px solid ${PRINT_COLORS.panelBorder};
-        background: linear-gradient(160deg, ${PRINT_COLORS.panelBgStart} 0%, ${PRINT_COLORS.white} 55%, ${PRINT_COLORS.panelBgEnd} 100%);
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 10px 28px rgba(18, 45, 67, 0.08);
+    /* ─── TOOLBAR ────────────────────────────────────── */
+    .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 11px 28px;
+        background: ${PRINT_COLORS.titleDark};
+        color: ${PRINT_COLORS.white};
+        font-family: Inter, sans-serif;
+        font-size: 13px;
+        gap: 16px;
+        border-bottom: 2px solid ${PRINT_COLORS.brand};
     }
-    .cover::after {
-        content: '';
+    .toolbar-title { font-weight: 500; opacity: 0.8; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+    .toolbar-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: ${PRINT_COLORS.accent};
+        color: ${PRINT_COLORS.titleDark};
+        border: none;
+        padding: 9px 24px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        letter-spacing: 0.2px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(232,160,32,0.35);
+    }
+    .toolbar-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ─── SHEET ──────────────────────────────────────── */
+    .sheet {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 36px 24px 56px;
+        background: ${PRINT_COLORS.white};
+        min-height: 100vh;
+    }
+
+    /* ─── COVER ──────────────────────────────────────── */
+    .cover {
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 32px;
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        background: linear-gradient(150deg, ${PRINT_COLORS.coverDark} 0%, ${PRINT_COLORS.brandDark} 55%, ${PRINT_COLORS.brand} 100%);
+        box-shadow: 0 20px 60px rgba(7, 26, 40, 0.28), 0 4px 12px rgba(7,26,40,0.15);
+        page-break-after: avoid;
+    }
+    .cover-bg-pattern {
         position: absolute;
-        width: 280px;
-        height: 280px;
-        right: -120px;
-        top: -160px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(31,111,139,0.12) 0%, rgba(31,111,139,0) 70%);
+        inset: 0;
+        background-image:
+            radial-gradient(ellipse at 75% 15%, rgba(58,155,191,0.45) 0%, transparent 55%),
+            radial-gradient(ellipse at 10% 90%, rgba(232,160,32,0.2) 0%, transparent 45%),
+            radial-gradient(ellipse at 50% 50%, rgba(15,76,98,0.3) 0%, transparent 70%);
         pointer-events: none;
     }
-    .cover .gift-label {
-        display: inline-block;
-        font-size: 8.5pt;
+    .cover-grid {
+        position: absolute;
+        inset: 0;
+        background-image: repeating-linear-gradient(
+            0deg, transparent, transparent 44px, rgba(255,255,255,0.03) 44px, rgba(255,255,255,0.03) 45px
+        ), repeating-linear-gradient(
+            90deg, transparent, transparent 44px, rgba(255,255,255,0.03) 44px, rgba(255,255,255,0.03) 45px
+        );
+        pointer-events: none;
+    }
+    .cover-inner {
+        position: relative;
+        z-index: 2;
+        padding: 44px 48px 44px;
+    }
+    .cover-top-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 48px;
+    }
+    .cover-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-family: Inter, sans-serif;
+        font-size: 7.5pt;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 1.4px;
-        color: var(--brand);
-        border: 1px solid ${PRINT_COLORS.brandLine};
-        background: ${PRINT_COLORS.whiteSoft};
+        letter-spacing: 2px;
+        color: ${PRINT_COLORS.accent};
+        background: rgba(232,160,32,0.12);
+        border: 1px solid rgba(232,160,32,0.35);
         border-radius: 999px;
-        padding: 3px 11px;
+        padding: 5px 14px;
+    }
+    .cover-brand-top {
+        font-family: Inter, sans-serif;
+        font-size: 8pt;
+        color: rgba(255,255,255,0.3);
+        font-weight: 500;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+    .cover h1 {
+        font-size: 34pt;
+        font-weight: 700;
+        color: ${PRINT_COLORS.white};
+        line-height: 1.12;
+        letter-spacing: -0.5px;
+        margin-bottom: 16px;
+        max-width: 600px;
+        text-shadow: 0 3px 16px rgba(0,0,0,0.35);
+    }
+    .cover-meta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 28px;
+        flex-wrap: wrap;
+    }
+    .cover-meta-chip {
+        font-family: Inter, sans-serif;
+        font-size: 8.5pt;
+        color: rgba(255,255,255,0.8);
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 999px;
+        padding: 3px 12px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .cover-accent-line {
+        width: 56px;
+        height: 3px;
+        background: linear-gradient(90deg, ${PRINT_COLORS.coverAccentLine}, rgba(232,160,32,0.3));
+        border-radius: 99px;
+        margin-bottom: 28px;
+    }
+    .cover-bottom {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+    }
+    .cover-for-block {
+        flex: 1;
+    }
+    .cover-for-label {
+        font-family: Inter, sans-serif;
+        font-size: 7pt;
+        color: rgba(255,255,255,0.4);
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .cover-for-line {
+        display: block;
+        border-bottom: 1px solid rgba(255,255,255,0.25);
+        width: 220px;
+        height: 28px;
+    }
+    .cover-qr-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 7px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.16);
+        border-radius: 14px;
+        padding: 12px 14px 10px;
+        backdrop-filter: blur(4px);
+    }
+    .cover-qr-block img {
+        border-radius: 8px;
+        background: ${PRINT_COLORS.white};
+        display: block;
+        padding: 4px;
+    }
+    .cover-qr-label {
+        font-size: 6.5pt;
+        color: rgba(255,255,255,0.5);
+        font-family: Inter, sans-serif;
+        text-align: center;
+        line-height: 1.4;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
+    /* ─── INTRO ──────────────────────────────────────── */
+    .intro-section {
+        margin-bottom: 32px;
+        display: grid;
+        grid-template-columns: 3px 1fr;
+        gap: 0 18px;
+        page-break-inside: avoid;
+    }
+    .intro-bar {
+        background: linear-gradient(180deg, ${PRINT_COLORS.brand}, ${PRINT_COLORS.brandLight});
+        border-radius: 99px;
+    }
+    .intro-content {
+        padding: 20px 22px;
+        background: ${PRINT_COLORS.brandSoft};
+        border-radius: 14px;
+        border: 1px solid ${PRINT_COLORS.introBorder};
+    }
+    .intro-section h2 {
+        font-size: 13pt;
+        color: ${PRINT_COLORS.brandDark};
         margin-bottom: 10px;
     }
-    .cover h1 { font-size: 23pt; color: ${PRINT_COLORS.title}; margin-bottom: 6px; line-height: 1.24; }
-    .cover .subtitle { font-size: 10pt; color: var(--muted); margin-bottom: 12px; letter-spacing: 0.1px; }
-    .cover .gift-line { width: 76px; height: 3px; background: var(--accent); margin: 0 auto 14px; border-radius: 99px; }
-    .cover .site-qr { display: inline-block; }
-    .cover .site-qr img { border-radius: 10px; border: 1px solid rgb(214, 220, 229); background: ${PRINT_COLORS.white}; }
-    .cover .site-qr p { font-size: 8pt; color: var(--muted); margin-top: 6px; }
-    .cover .for-line { margin-top: 16px; font-size: 10pt; color: var(--muted); }
-    .cover .for-line span { display: inline-block; border-bottom: 1px solid ${PRINT_COLORS.lineMuted}; min-width: 210px; margin-left: 6px; }
-
-    .intro {
-        background: var(--brand-soft);
-        border: 1px solid ${PRINT_COLORS.introBorder};
-        border-radius: 12px;
-        padding: 14px 16px;
-        margin-bottom: 18px;
+    .intro-section p {
+        font-size: 9.5pt;
+        color: ${PRINT_COLORS.introText};
+        line-height: 1.7;
     }
-    .intro h2 { font-size: 11.5pt; color: ${PRINT_COLORS.brandDark}; margin-bottom: 6px; }
-    .intro p { font-size: 9.5pt; color: ${PRINT_COLORS.introText}; }
-    .intro .note { margin-top: 8px; font-weight: 600; color: ${PRINT_COLORS.brandDark}; font-size: 9pt; }
+    .intro-note {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px dashed ${PRINT_COLORS.introBorder};
+        font-size: 8.5pt;
+        color: ${PRINT_COLORS.brandDark};
+        font-weight: 500;
+        line-height: 1.5;
+    }
 
+    /* ─── SECTION LABEL ──────────────────────────────── */
+    .section-label {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+        margin-top: 4px;
+    }
+    .section-label-text {
+        font-family: Inter, sans-serif;
+        font-size: 7pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        color: ${PRINT_COLORS.brand};
+        white-space: nowrap;
+        padding: 3px 10px;
+        background: ${PRINT_COLORS.brandSoft};
+        border-radius: 999px;
+        border: 1px solid ${PRINT_COLORS.brandLine};
+    }
+    .section-label-line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, ${PRINT_COLORS.brandLine}, transparent);
+    }
+
+    /* ─── MAP SECTION ────────────────────────────────── */
     .map-section {
-        margin-bottom: 18px;
+        margin-bottom: 36px;
         page-break-inside: avoid;
-        border: 1px solid ${PRINT_COLORS.mapBorder};
-        border-radius: 12px;
-        background: ${PRINT_COLORS.mapBg};
-        padding: 13px;
     }
-    .map-section h2 { font-size: 11.5pt; color: ${PRINT_COLORS.brandDark}; margin-bottom: 8px; }
     .map-card {
-        border: 1px solid var(--line);
-        border-radius: 10px;
+        border-radius: 16px;
         overflow: hidden;
         background: ${PRINT_COLORS.white};
-        box-shadow: inset 0 0 0 1px rgb(247, 249, 252);
+        border: 1px solid ${PRINT_COLORS.mapBorder};
+        box-shadow: 0 6px 24px rgba(15,52,80,0.09);
+        margin-bottom: 0;
     }
     .map-image {
         display: block;
         width: 100%;
         height: auto;
-        min-height: 220px;
+        min-height: 260px;
         object-fit: cover;
-        background: rgb(238, 243, 248);
+        background: ${PRINT_COLORS.mapGridBg};
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
     .map-fallback { display: none; }
-    .map-svg { display: block; width: 100%; height: auto; min-height: 220px; }
-    .map-svg {
+    .map-svg { display: block; width: 100%; height: auto; min-height: 260px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .map-table-wrap {
+        border: 1px solid ${PRINT_COLORS.mapBorder};
+        border-top: none;
+        border-radius: 0 0 16px 16px;
+        overflow: hidden;
+        margin-bottom: 0;
+    }
+    .map-route-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8pt;
+        font-family: Inter, sans-serif;
+    }
+    .map-route-table th {
+        text-align: left;
+        padding: 8px 12px;
+        background: ${PRINT_COLORS.brandDark};
+        color: rgba(255,255,255,0.7);
+        font-size: 6.5pt;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        font-weight: 700;
+    }
+    .map-route-table tr:nth-child(odd) td { background: ${PRINT_COLORS.white}; }
+    .map-route-table tr:nth-child(even) td { background: ${PRINT_COLORS.tableRow}; }
+    .map-route-table td {
+        padding: 6px 12px;
+        border-bottom: 1px solid ${PRINT_COLORS.line};
+        color: ${PRINT_COLORS.story};
+        font-size: 8pt;
+    }
+    .map-route-table .num-cell {
+        width: 32px;
+        font-weight: 800;
+        color: ${PRINT_COLORS.brand};
+        font-size: 9pt;
+    }
+    .map-route-table .mono {
+        font-family: 'Menlo', 'Consolas', monospace;
+        font-size: 7pt;
+        color: ${PRINT_COLORS.tableMuted};
+    }
+
+    /* ─── STEP ───────────────────────────────────────── */
+    .step {
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+        border: 1px solid ${PRINT_COLORS.stepBorder};
+        border-radius: 16px;
+        overflow: hidden;
+        background: ${PRINT_COLORS.white};
+        box-shadow: 0 3px 12px rgba(15,52,80,0.07), 0 1px 3px rgba(15,52,80,0.04);
+    }
+    .step-eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 18px;
+        background: ${PRINT_COLORS.stepHeaderBg};
+    }
+    .step-num-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: ${PRINT_COLORS.accent};
+        color: ${PRINT_COLORS.titleDark};
+        font-weight: 800;
+        font-size: 10pt;
+        font-family: Inter, sans-serif;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .step-eyebrow-divider {
+        width: 1px;
+        height: 18px;
+        background: rgba(255,255,255,0.18);
+        flex-shrink: 0;
+    }
+    .step-location-label {
+        font-size: 8.5pt;
+        font-weight: 600;
+        color: rgba(255,255,255,0.9);
+        font-family: Inter, sans-serif;
+        flex: 1;
+        letter-spacing: 0.2px;
+    }
+    .step-coords-label {
+        font-size: 6.5pt;
+        font-family: 'Menlo', 'Consolas', monospace;
+        color: rgba(255,255,255,0.35);
+        flex-shrink: 0;
+    }
+    .step-body {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+    }
+    .step-body.no-photo {
+        grid-template-columns: 1fr;
+    }
+    .step-photo-wrap {
+        width: 200px;
+        overflow: hidden;
+        background: ${PRINT_COLORS.stepPhotoBg};
+        border-right: 1px solid ${PRINT_COLORS.stepBorder};
+        flex-shrink: 0;
+    }
+    .step-photo {
+        display: block;
+        width: 200px;
+        height: 100%;
+        min-height: 200px;
+        object-fit: cover;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    .map-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 9px;
+    .step-content {
+        padding: 16px 18px 14px;
+        min-width: 0;
     }
-    .map-chip {
-        font-size: 7.8pt;
-        border: 1px solid ${PRINT_COLORS.chipBorder};
-        border-radius: 999px;
-        padding: 3px 8px;
-        background: ${PRINT_COLORS.white};
-        color: ${PRINT_COLORS.chipText};
+    .step-title {
+        font-size: 13pt;
+        color: ${PRINT_COLORS.title};
+        margin-bottom: 7px;
+        line-height: 1.25;
+        font-weight: 700;
     }
-    .coords-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 10px; border-radius: 8px; overflow: hidden; }
-    .coords-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid ${PRINT_COLORS.tableBorder}; color: ${PRINT_COLORS.tableText}; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.6px; }
-    .coords-table td { padding: 5px 8px; border-bottom: 1px solid ${PRINT_COLORS.tableRow}; }
-    .coords-table .mono { font-family: 'Menlo', 'Consolas', monospace; font-size: 7.5pt; color: ${PRINT_COLORS.tableMuted}; }
-
-    .step {
-        page-break-inside: avoid;
+    .story {
+        font-size: 9pt;
+        color: ${PRINT_COLORS.story};
+        line-height: 1.7;
         margin-bottom: 12px;
-        border: 1px solid ${PRINT_COLORS.stepBorder};
-        border-radius: 12px;
-        padding: 14px 14px 13px;
-        background: linear-gradient(180deg, ${PRINT_COLORS.white} 0%, ${PRINT_COLORS.stepBgEnd} 100%);
-        box-shadow: 0 3px 12px rgba(17, 45, 66, 0.05);
     }
-    .step-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 14px; }
-    .step-header { display: flex; align-items: flex-start; gap: 10px; flex: 1; }
-    .step-num {
-        display: flex; align-items: center; justify-content: center;
-        width: 30px; height: 30px; border-radius: 50%;
-        background: var(--brand); color: ${PRINT_COLORS.white}; font-weight: 700; font-size: 12pt; flex-shrink: 0;
-    }
-    .step-header h3 { font-size: 11.2pt; color: var(--ink); margin-bottom: 2px; line-height: 1.24; }
-    .location { font-size: 8.8pt; color: ${PRINT_COLORS.location}; font-weight: 600; }
-    .story { font-size: 9.35pt; color: ${PRINT_COLORS.story}; margin-bottom: 10px; }
+
+    /* ─── TASK BOX ───────────────────────────────────── */
     .task-box {
         background: ${PRINT_COLORS.taskBg};
         border: 1px solid ${PRINT_COLORS.taskBorder};
-        border-left: 4px solid var(--accent);
-        padding: 9px 11px;
+        border-left: 3px solid ${PRINT_COLORS.accent};
+        padding: 10px 13px;
         border-radius: 8px;
-        margin-bottom: 11px;
-        box-shadow: inset 0 0 0 1px ${PRINT_COLORS.taskInset};
+        margin-bottom: 12px;
     }
-    .task { font-size: 9.8pt; font-weight: 700; color: ${PRINT_COLORS.taskText}; }
-    .hint { font-size: 8.4pt; color: ${PRINT_COLORS.hint}; margin-top: 5px; font-style: italic; }
-
-    .qr-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; min-width: 262px; }
-    .qr-item {
+    .task-label-row {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 3px;
-        padding: 5px 4px 4px;
-        border: 1px solid ${PRINT_COLORS.qrBorder};
-        border-radius: 8px;
-        background: ${PRINT_COLORS.whiteGlass};
+        gap: 6px;
+        margin-bottom: 5px;
     }
-    .qr-item img { border-radius: 6px; border: 1px solid ${PRINT_COLORS.qrImgBorder}; background: ${PRINT_COLORS.white}; }
-    .qr-item span { font-size: 7pt; color: ${PRINT_COLORS.qrText}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .task-label-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: ${PRINT_COLORS.accent};
+        color: ${PRINT_COLORS.white};
+        font-weight: 900;
+        font-size: 8pt;
+        font-family: Inter, sans-serif;
+        flex-shrink: 0;
+    }
+    .task-label-text {
+        font-size: 6.5pt;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.8px;
+        color: ${PRINT_COLORS.accentDark};
+        font-family: Inter, sans-serif;
+    }
+    .task {
+        font-size: 10pt;
+        font-weight: 600;
+        color: ${PRINT_COLORS.taskText};
+        line-height: 1.5;
+        font-family: Inter, sans-serif;
+    }
+    .hint-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 6px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed rgba(196,132,26,0.3);
+    }
+    .hint-icon { font-size: 9pt; flex-shrink: 0; line-height: 1.5; opacity: 0.7; }
+    .hint {
+        font-size: 8pt;
+        color: ${PRINT_COLORS.hint};
+        font-style: italic;
+        line-height: 1.55;
+    }
 
-    .answer-box {
+    /* ─── QR NAV ─────────────────────────────────────── */
+    .qr-nav {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        padding: 8px 10px;
+        background: ${PRINT_COLORS.soft};
+        border-radius: 10px;
+        border: 1px solid ${PRINT_COLORS.line};
+    }
+    .qr-nav-label {
+        font-size: 6.5pt;
+        color: ${PRINT_COLORS.muted};
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-family: Inter, sans-serif;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        white-space: nowrap;
+        opacity: 0.7;
+    }
+    .qr-items-row {
         display: flex;
         align-items: center;
         gap: 8px;
-        border-top: 1px dashed ${PRINT_COLORS.answerBorder};
-        padding-top: 8px;
+        flex: 1;
     }
-    .answer-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; color: ${PRINT_COLORS.answerText}; font-weight: 700; white-space: nowrap; }
-    .answer-line { flex: 1; border-bottom: 1px solid ${PRINT_COLORS.answerLine}; height: 22px; }
+    .qr-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px 4px 4px;
+        border: 1px solid ${PRINT_COLORS.qrBorder};
+        border-radius: 8px;
+        background: ${PRINT_COLORS.white};
+    }
+    .qr-item img { border-radius: 4px; background: ${PRINT_COLORS.white}; display: block; flex-shrink: 0; }
+    .qr-item span { font-size: 6.5pt; color: ${PRINT_COLORS.qrText}; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; font-family: Inter, sans-serif; }
 
-    .footer { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px solid ${PRINT_COLORS.footerBorder}; font-size: 8pt; color: ${PRINT_COLORS.footerText}; }
+    /* ─── ANSWER BOX ─────────────────────────────────── */
+    .answer-box {
+        padding: 10px 12px;
+        border: 1px dashed ${PRINT_COLORS.answerBorder};
+        border-radius: 8px;
+        background: ${PRINT_COLORS.soft};
+        margin-top: 4px;
+    }
+    .answer-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .answer-label {
+        font-size: 6.5pt;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: ${PRINT_COLORS.answerText};
+        font-weight: 700;
+        font-family: Inter, sans-serif;
+    }
+    .answer-label-line {
+        flex: 1;
+        height: 1px;
+        background: ${PRINT_COLORS.answerBorder};
+    }
+    .answer-lines { display: flex; flex-direction: column; gap: 8px; }
+    .answer-line { border-bottom: 1px solid ${PRINT_COLORS.answerLine}; height: 24px; }
 
+    /* ─── FOOTER ─────────────────────────────────────── */
+    .doc-footer {
+        text-align: center;
+        margin-top: 40px;
+        padding: 16px 20px;
+        border-top: 1px solid ${PRINT_COLORS.footerBorder};
+        font-size: 7.5pt;
+        color: ${PRINT_COLORS.footerText};
+        font-family: Inter, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: ${PRINT_COLORS.soft};
+        border-radius: 12px;
+    }
+    .doc-footer-dot { width: 3px; height: 3px; border-radius: 50%; background: ${PRINT_COLORS.lineMuted}; display: inline-block; vertical-align: middle; }
+    .doc-footer-brand { font-weight: 700; color: ${PRINT_COLORS.brand}; font-size: 8pt; }
+
+    /* ─── PRINT OVERRIDES ────────────────────────────── */
     @media print {
-        .no-print { display: none !important; }
-        body { font-size: 10pt; }
-        .sheet {
-            max-width: none;
-            margin: 0;
-            padding: 0;
-            background: ${PRINT_COLORS.white};
-        }
-        .cover,
-        .step {
-            box-shadow: none;
-        }
+        .toolbar { display: none !important; }
+        body { background: ${PRINT_COLORS.white}; font-size: 10pt; }
+        .sheet { max-width: none; margin: 0; padding: 0; background: ${PRINT_COLORS.white}; box-shadow: none; }
+        .cover { border-radius: 12px; box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .step { box-shadow: none; }
+        .doc-footer { background: transparent; }
+    }
+
+    @media screen {
+        .sheet { box-shadow: 0 0 0 1px ${PRINT_COLORS.line}, 0 8px 32px rgba(0,0,0,0.06); }
     }
 </style>
 </head>
 <body>
-    <div class="no-print" style="text-align:center;padding:14px;background:${PRINT_COLORS.title};color:${PRINT_COLORS.white};font-family:'Avenir Next','Segoe UI',sans-serif;">
-        <button onclick="window.print()" style="background:${PRINT_COLORS.white};color:${PRINT_COLORS.title};border:none;padding:12px 28px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer;margin-right:12px;">
-            Распечатать / Сохранить PDF
+    <div class="toolbar no-print">
+        <span class="toolbar-title">${escHtml(title)}</span>
+        <button class="toolbar-btn" onclick="window.print()">
+            &#128438; Сохранить PDF
         </button>
     </div>
 
     <main class="sheet">
+
+    <!-- ══════════ COVER ══════════ -->
     <div class="cover">
-        <p class="gift-label">Подарочный квест</p>
-        <h1>${escHtml(title)}</h1>
-        <p class="subtitle">${steps.length} шагов · Приключение ждёт!</p>
-        <div class="gift-line"></div>
-        ${siteQr ? `
-        <div class="site-qr">
-            <img src="${siteQr}" width="${QR_SITE}" height="${QR_SITE}" alt="QR на квест">
-            <p>Сканируйте, чтобы пройти квест онлайн</p>
+        <div class="cover-bg-pattern"></div>
+        <div class="cover-grid"></div>
+        <div class="cover-inner">
+            <div class="cover-top-row">
+                <span class="cover-badge">&#10022; Подарочный квест</span>
+                <span class="cover-brand-top">metravel.by</span>
+            </div>
+            <h1>${escHtml(title)}</h1>
+            <div class="cover-meta">
+                <span class="cover-meta-chip">&#9673; ${steps.length} шагов</span>
+                <span class="cover-meta-chip">&#9654; Городское приключение</span>
+                <span class="cover-meta-chip">${today}</span>
+            </div>
+            <div class="cover-accent-line"></div>
+            <div class="cover-bottom">
+                <div class="cover-for-block">
+                    <div class="cover-for-label">Для</div>
+                    <span class="cover-for-line"></span>
+                </div>
+                ${siteQr ? `
+                <div class="cover-qr-block">
+                    <img src="${siteQr}" width="${QR_SITE}" height="${QR_SITE}" alt="QR на квест">
+                    <span class="cover-qr-label">Пройти онлайн</span>
+                </div>
+                ` : ''}
+            </div>
         </div>
-        ` : ''}
-        <p class="for-line">Для:<span></span></p>
     </div>
 
+    <!-- ══════════ INTRO ══════════ -->
     ${intro ? `
-    <div class="intro">
-        <h2>Как пройти квест</h2>
-        <p>${escHtml(intro.story)}</p>
-        <p class="note">Записывайте ответы от руки. Проверить их можно позднее на сайте, отсканировав QR-код на обложке.</p>
+    <div class="intro-section">
+        <div class="intro-bar"></div>
+        <div class="intro-content">
+            <h2>Как пройти квест</h2>
+            <p>${escHtml(intro.story)}</p>
+            <p class="intro-note">✏️ Записывайте ответы от руки. Проверить их можно позднее на сайте, отсканировав QR-код на обложке.</p>
+        </div>
     </div>
     ` : ''}
 
+    <!-- ══════════ MAP ══════════ -->
     ${validSteps.length > 0 ? `
     <div class="map-section">
-        <h2>Карта маршрута</h2>
+        <div class="section-label">
+            <span class="section-label-text">Карта маршрута</span>
+            <span class="section-label-line"></span>
+        </div>
         ${mapHtml}
-        <div class="map-legend">${mapLegend}</div>
-        <table class="coords-table">
-            <thead><tr><th>#</th><th>Локация</th><th>Координаты</th></tr></thead>
+        <div class="map-table-wrap">
+        <table class="map-route-table">
+            <thead>
+                <tr>
+                    <th class="num-cell">#</th>
+                    <th>Локация</th>
+                    <th>Координаты</th>
+                </tr>
+            </thead>
             <tbody>
-                ${validSteps.map((s, i) => `<tr><td><b>${i + 1}</b></td><td>${escHtml(s.location)}</td><td class="mono">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</td></tr>`).join('')}
+                ${validSteps.map((s, i) => `
+                <tr>
+                    <td class="num-cell">${i + 1}</td>
+                    <td>${escHtml(s.location)}</td>
+                    <td class="mono">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</td>
+                </tr>`).join('')}
             </tbody>
         </table>
+        </div>
     </div>
     ` : ''}
 
+    <!-- ══════════ STEPS ══════════ -->
+    <div class="section-label" style="margin-bottom: 20px;">
+        <span class="section-label-text">Шаги квеста</span>
+        <span class="section-label-line"></span>
+    </div>
     ${stepsHtml}
 
-    <div class="footer">
-        ${escHtml(title)} · metravel.by · ${new Date().toLocaleDateString('ru-RU')}
+    <!-- ══════════ FOOTER ══════════ -->
+    <div class="doc-footer">
+        <span class="doc-footer-brand">metravel.by</span>
+        <span class="doc-footer-dot"></span>
+        <span>${escHtml(title)}</span>
+        <span class="doc-footer-dot"></span>
+        <span>${today}</span>
     </div>
+
     </main>
 </body>
 </html>`;
 
     bookPreviewWindow.openBookPreviewWindow(html, previewWindow);
+}
+
+function resolveStepImageUri(image: unknown): string {
+    if (!image) return '';
+    if (typeof image === 'string') return image;
+    if (typeof image === 'object' && image !== null) {
+        const obj = image as Record<string, unknown>;
+        if (typeof obj['uri'] === 'string') return obj['uri'];
+        if (typeof obj['default'] === 'object' && obj['default'] !== null) {
+            const def = obj['default'] as Record<string, unknown>;
+            if (typeof def['uri'] === 'string') return def['uri'];
+        }
+    }
+    return '';
 }
 
 function escInline(str: string): string {

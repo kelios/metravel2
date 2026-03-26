@@ -237,6 +237,7 @@ export default function QuestByIdScreen() {
                     intro={bundle.intro}
                     storageKey={bundle.storageKey}
                     city={bundle.city}
+                    coverUrl={bundle.coverUrl}
                     onProgressChange={handleProgressChange}
                     onProgressReset={handleProgressReset}
                     initialProgress={initialProgress}

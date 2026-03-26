@@ -92,6 +92,7 @@ export type QuestFinale = { text: string; video?: any; poster?: any; };
 export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
     storageKey?: string; city?: QuestCity;
+    coverUrl?: string;
     /** Callback для синхронизации прогресса с бэкендом */
     onProgressChange?: (data: {
         currentIndex: number; unlockedIndex: number;
@@ -461,7 +462,7 @@ const StepCard = memo((props: StepCardProps) => {
 });
 
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry }: QuestWizardProps) {
     const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
@@ -715,6 +716,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         return uri;
     }, [finale.video]);
     const posterUri = useMemo(() => resolveUri(finale.poster), [finale.poster]);
+    const coverUri = useMemo(() => resolveUri(coverUrl), [coverUrl]);
     const youtubeEmbedUri = useMemo(() => {
         if (!videoUri) {
             console.info('[QuestWizard] No video URI for YouTube check');
@@ -963,7 +965,26 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         <View style={styles.compactShell}>
                             <View style={styles.compactSidebar}>
                                 <View style={styles.compactSidebarHeader}>
-                                    <Text style={styles.compactSidebarTitle}>{title}</Text>
+                                    <View style={styles.compactSidebarIdentity}>
+                                        {coverUri ? (
+                                            <View style={styles.compactSidebarCover}>
+                                                <ImageCardMedia
+                                                    src={coverUri}
+                                                    alt={`Обложка квеста ${title}`}
+                                                    height={88}
+                                                    width={88}
+                                                    fit="contain"
+                                                    blurBackground
+                                                    allowCriticalWebBlur
+                                                    borderRadius={18}
+                                                    style={styles.compactSidebarCover}
+                                                    priority="high"
+                                                    loading="eager"
+                                                />
+                                            </View>
+                                        ) : null}
+                                        <Text style={styles.compactSidebarTitle}>{title}</Text>
+                                    </View>
                                     <View style={styles.compactSidebarActions}>
                                         <Pressable
                                             onPress={handlePrintDownload}
@@ -1072,7 +1093,26 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                             {/* Шапка */}
                             <View style={styles.header}>
                                 <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
-                                    {!isMobile && <Text style={styles.title}>{title}</Text>}
+                                    <View style={styles.headerIdentity}>
+                                        {coverUri ? (
+                                            <View style={[styles.headerCover, isMobile && styles.headerCoverMobile]}>
+                                                <ImageCardMedia
+                                                    src={coverUri}
+                                                    alt={`Обложка квеста ${title}`}
+                                                    height={isMobile ? 72 : 88}
+                                                    width={isMobile ? 72 : 128}
+                                                    fit="contain"
+                                                    blurBackground
+                                                    allowCriticalWebBlur
+                                                    borderRadius={18}
+                                                    style={[styles.headerCover, isMobile && styles.headerCoverMobile]}
+                                                    priority="high"
+                                                    loading="eager"
+                                                />
+                                            </View>
+                                        ) : null}
+                                        <Text style={[styles.title, isMobile && styles.titleMobile]}>{title}</Text>
+                                    </View>
                                     <Pressable onPress={resetQuest} style={styles.resetButton} hitSlop={6}>
                                         <Text style={styles.resetText}>Сбросить</Text>
                                     </Pressable>
@@ -1220,8 +1260,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: SPACING.md,
     },
     headerRowMobile: {
-        justifyContent: 'flex-end',
+        alignItems: 'flex-start',
         marginBottom: SPACING.md,
+    },
+    headerIdentity: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.md,
+    },
+    headerCover: {
+        width: 128,
+        height: 88,
+        borderRadius: 18,
+        overflow: 'hidden',
+        backgroundColor: colors.backgroundSecondary,
+        flexShrink: 0,
+    },
+    headerCoverMobile: {
+        width: 72,
+        height: 72,
+        borderRadius: 16,
     },
     title: { 
         fontSize: QUEST_DESIGN.titleSize, 
@@ -1230,6 +1290,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1, 
         letterSpacing: -0.8, 
         lineHeight: 34,
+    },
+    titleMobile: {
+        fontSize: 22,
+        lineHeight: 28,
     },
     resetButton: {
         paddingHorizontal: SPACING.md,
@@ -1439,6 +1503,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         justifyContent: 'space-between',
         gap: SPACING.sm,
         marginBottom: SPACING.md,
+    },
+    compactSidebarIdentity: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.sm,
+    },
+    compactSidebarCover: {
+        width: 88,
+        height: 88,
+        borderRadius: 18,
+        overflow: 'hidden',
+        backgroundColor: colors.backgroundSecondary,
+        flexShrink: 0,
     },
     compactSidebarActions: {
         flexDirection: 'row',

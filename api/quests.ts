@@ -69,6 +69,7 @@ export type ApiQuestBundle = {
     id: number;
     quest_id: string;
     title: string;
+    cover_url?: string | null;
     steps: string; // JSON string — массив ApiQuestStep[]
     finale: ApiQuestFinale;
     intro: string | null; // JSON string — ApiQuestStep | null
@@ -107,6 +108,7 @@ function normalizeQuestBundle(bundle: ApiQuestBundle): ApiQuestBundle {
 
     return {
         ...bundle,
+        cover_url: bundle.cover_url ? normalizeMediaUrl(bundle.cover_url) : bundle.cover_url,
         steps: normalizedSteps,
         intro: normalizedIntro,
         finale: bundle.finale
