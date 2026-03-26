@@ -46,31 +46,27 @@ export class V1FinalRenderer {
       <div style="
         display: flex;
         justify-content: center;
-        gap: 8mm;
+        gap: 6mm;
         margin-bottom: 14mm;
         flex-wrap: wrap;
       ">
         ${stats.map((s) => `
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 8px 18px;
-            min-width: 60px;
+            padding: 10px 16px;
+            min-width: 50px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
           ">
             <div style="
-              font-size: 26pt;
+              font-size: 22pt;
               font-weight: 800;
               color: ${colors.cover.text};
               font-family: ${typography.headingFont};
               line-height: 1.1;
-              margin-bottom: 3mm;
+              margin-bottom: 2mm;
             ">${s.value}</div>
-            <div style="
-              width: 16px;
-              height: 2px;
-              background: rgba(255,255,255,0.35);
-              border-radius: 999px;
-              margin: 0 auto 3mm auto;
-            "></div>
             <div style="
               font-size: ${typography.caption.size};
               text-transform: uppercase;
@@ -114,14 +110,28 @@ export class V1FinalRenderer {
             radial-gradient(circle at 50% 80%, rgba(217,115,85,0.16), transparent 32%);
           pointer-events: none;
         "></div>
+        <svg class="final-route-line" viewBox="0 0 320 120" aria-hidden="true" style="
+          position: absolute;
+          top: 28mm;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 132mm;
+          height: auto;
+          opacity: 0.2;
+        ">
+          <path d="M18 90 C60 30, 98 102, 136 58 S214 18, 252 56 S292 108, 306 34" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="18" cy="90" r="4" fill="rgba(255,255,255,0.85)"/>
+          <circle cx="136" cy="58" r="4" fill="rgba(255,255,255,0.55)"/>
+          <circle cx="306" cy="34" r="4" fill="rgba(255,255,255,0.85)"/>
+        </svg>
 
         <div style="
           position: relative;
           z-index: 1;
           width: 148mm;
-          padding: 22mm 18mm 18mm;
+          padding: 26mm 18mm 18mm;
           border-radius: 26px;
-          background: rgba(255,255,255,0.06);
+          background: rgba(255,255,255,0.05);
           border: 1px solid rgba(255,255,255,0.14);
           box-shadow: 0 18px 42px rgba(0,0,0,0.2);
         ">

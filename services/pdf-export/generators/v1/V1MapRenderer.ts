@@ -49,6 +49,7 @@ export class V1MapRenderer {
     let pages = `
       <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
         ${buildRunningHeader(this.ctx, data.travelName, data.pageNumber)}
+        ${this.renderRouteSummary(data, locationCount)}
         <div style="margin-bottom: 4mm; page-break-inside: avoid; break-inside: avoid;">
           <div style="
             background: linear-gradient(135deg, ${colors.surfaceAlt} 0%, ${colors.surface} 100%);
@@ -92,7 +93,7 @@ export class V1MapRenderer {
               margin: 0 0 4mm 0;
               font-family: ${typography.headingFont};
               page-break-after: avoid;
-            ">Маршрут <span style="
+            ">Продолжение маршрута <span style="
               font-size: ${typography.small.size};
               font-weight: 400;
               color: ${colors.textMuted};
@@ -105,6 +106,109 @@ export class V1MapRenderer {
     }
 
     return pages;
+  }
+
+  private renderRouteSummary(data: V1MapPageData, locationCount: number): string {
+    const { colors, typography } = this.ctx.theme;
+    const metrics = [
+      { value: locationCount, label: locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек' },
+      { value: data.routePreview ? `${Math.round(this.calculateRouteDistanceKm(data.routePreview.linePoints) * 10) / 10} км` : 'Карта', label: 'маршрут' },
+      { value: data.routePreview?.elevationProfile?.length ? 'Профиль' : 'GPS', label: 'данные' },
+    ];
+
+    return `
+      <div style="
+        margin-bottom: 5mm;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: ${colors.surface};
+        border: 1px solid ${colors.border};
+        box-shadow: ${this.ctx.theme.blocks.shadow};
+        page-break-inside: avoid;
+        break-inside: avoid;
+      ">
+        <div style="
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 8px;
+        ">
+          <div>
+            <div style="
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              margin-bottom: 4px;
+              font-size: ${typography.caption.size};
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              font-weight: 700;
+              color: ${colors.accent};
+              font-family: ${typography.bodyFont};
+            ">Маршрут</div>
+            <h2 style="
+              margin: 0;
+              font-size: ${typography.h2.size};
+              line-height: 1.15;
+              color: ${colors.text};
+              font-family: ${typography.headingFont};
+            ">Карта и ключевые точки</h2>
+          </div>
+          <span style="
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: ${colors.accentSoft};
+            color: ${colors.accentStrong};
+            font-size: ${typography.caption.size};
+            font-weight: 700;
+            font-family: ${typography.bodyFont};
+            white-space: nowrap;
+          ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
+        </div>
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin-bottom: 6px;
+        ">
+          ${metrics.map((metric) => `
+            <div style="
+              padding: 8px 10px;
+              border-radius: 14px;
+              background: ${colors.surfaceAlt};
+              border: 1px solid ${colors.border};
+            ">
+              <div style="
+                font-size: 12pt;
+                font-weight: 700;
+                color: ${colors.text};
+                font-family: ${typography.headingFont};
+                line-height: 1.15;
+                margin-bottom: 2px;
+              ">${escapeHtml(String(metric.value))}</div>
+              <div style="
+                font-size: ${typography.caption.size};
+                line-height: 1.35;
+                color: ${colors.textMuted};
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                font-family: ${typography.bodyFont};
+              ">${escapeHtml(metric.label)}</div>
+            </div>
+          `).join('')}
+        </div>
+        <p style="
+          margin: 0;
+          color: ${colors.textMuted};
+          font-size: ${typography.caption.size};
+          line-height: 1.5;
+          font-family: ${typography.bodyFont};
+        ">${escapeHtml(data.routeInfo || data.travelName)}</p>
+      </div>
+    `;
   }
 
   private renderRouteHeader(data: V1MapPageData, locationCount: number): string {
@@ -306,10 +410,10 @@ export class V1MapRenderer {
   }
 
   private getMapHeightMm(locationCount: number): number {
-    if (locationCount <= 1) return 125;
-    if (locationCount === 2) return 100;
-    if (locationCount === 3) return 92;
-    if (locationCount === 4) return 86;
-    return 90;
+    if (locationCount <= 1) return 132;
+    if (locationCount === 2) return 112;
+    if (locationCount === 3) return 104;
+    if (locationCount === 4) return 98;
+    return 96;
   }
 }

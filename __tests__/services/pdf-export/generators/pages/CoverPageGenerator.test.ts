@@ -26,6 +26,7 @@ describe('CoverPageGenerator', () => {
       expect(html).toContain('pdf-page');
       expect(html).toContain('cover-page');
       expect(html).toContain('cover-story-panel');
+      expect(html).toContain('Travel book');
       expect(html).toContain('cover-footer-rail');
     });
 
@@ -186,10 +187,10 @@ describe('CoverPageGenerator', () => {
 
       const html = await generator.generate(data);
 
-      expect(html).toContain('width: min(138mm, 100%)');
-      expect(html).toContain('font-size: 24pt');
+      expect(html).toContain('width: min(126mm, 100%)');
+      expect(html).toContain('font-size: 23pt');
       expect(html).toContain('text-wrap: balance');
-      expect(html).toContain('max-width: 128mm');
+      expect(html).toContain('max-width: 118mm');
     });
 
     it('не должен содержать невалидные псевдоселекторы в inline-style', async () => {

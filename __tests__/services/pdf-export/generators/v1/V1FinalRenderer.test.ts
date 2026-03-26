@@ -26,6 +26,7 @@ describe('V1FinalRenderer', () => {
     expect(html).toContain('final-page');
     expect(html).toContain('Спасибо за путешествие!');
     expect(html).toContain('MeTravel.by');
+    expect(html).toContain('final-route-line');
   });
 
   it('должен отображать номер страницы', () => {
@@ -97,6 +98,6 @@ describe('V1FinalRenderer', () => {
   it('не должен отображать статистику если travels пуст', () => {
     const html = renderer.render(10, []);
 
-    expect(html).not.toContain('font-size: 28pt');
+    expect(html).not.toContain('final-summary-tile');
   });
 });

@@ -540,8 +540,8 @@ export class EnhancedPdfGenerator {
       ">
         <div style="
           text-align: center;
-          margin-top: ${isCompactToc ? '14mm' : '20mm'};
-          margin-bottom: ${isCompactToc ? '10mm' : '14mm'};
+          margin-top: ${isCompactToc ? '10mm' : '14mm'};
+          margin-bottom: ${isCompactToc ? '8mm' : '10mm'};
         ">
           <div style="
             display: inline-flex;
@@ -567,7 +567,7 @@ export class EnhancedPdfGenerator {
             color: ${colors.textMuted};
             font-size: ${typography.body.size};
             font-family: ${typography.bodyFont};
-            margin: 0 0 10px 0;
+            margin: 0 0 6px 0;
           ">${meta.length} ${this.getTravelLabel(meta.length)}</p>
           <div style="
             width: 40mm;
@@ -1078,19 +1078,19 @@ export class EnhancedPdfGenerator {
             gap: ${spacing.blockSpacing};
             align-items: center;
             margin-top: ${spacing.sectionSpacing};
-            padding: ${spacing.blockSpacing};
-            border-radius: 20px;
-            background: linear-gradient(135deg, ${colors.accentLight} 0%, ${colors.surface} 100%);
+            padding: 16px 18px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, ${colors.accentLight} 0%, ${colors.surface} 72%);
             border: 1px solid ${colors.border};
             border-top: 3px solid ${colors.accent};
-            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            box-shadow: 0 8px 24px rgba(15,23,42,0.08);
             break-inside: avoid;
             page-break-inside: avoid;
           ">
             ${qrCode ? `
               <div style="
-                width: 31mm;
-                height: 31mm;
+                width: 34mm;
+                height: 34mm;
                 padding: 3mm;
                 border-radius: 16px;
                 background: white;
@@ -1131,18 +1131,18 @@ export class EnhancedPdfGenerator {
                 Онлайн-версия
               </div>
               <div style="
-                font-size: ${typography.h4.size};
-                line-height: 1.25;
+                font-size: ${typography.h3.size};
+                line-height: 1.2;
                 color: ${colors.text};
                 font-weight: ${typography.h4.weight};
-                margin-bottom: 5px;
+                margin-bottom: 4px;
                 font-family: ${typography.headingFont};
-              ">Открыть маршрут на MeTravel</div>
+              ">Маршрут онлайн</div>
               <div style="
                 line-height: 1.5;
                 color: ${colors.textSecondary};
                 margin-bottom: 8px;
-              ">Сканируйте QR, чтобы посмотреть полную историю, фотографии и маршрут в браузере.</div>
+              ">Сканируйте QR, чтобы сразу открыть маршрут.</div>
               <div style="
                 display: inline-flex;
                 align-items: center;
@@ -1271,7 +1271,8 @@ export class EnhancedPdfGenerator {
       }
     }
 
-    const locationCards = this.buildLocationCards(locations);
+    const locationQRCodes = await this.generateLocationQRCodes(locations);
+    const locationCards = this.buildLocationCards(locations, locationQRCodes);
 
     return this.mapRenderer.render({
       travelName: travel.name,
@@ -2189,7 +2190,7 @@ export class EnhancedPdfGenerator {
     );
   }
 
-  private buildLocationCards(locations: NormalizedLocation[]): string[] {
+  private buildLocationCards(locations: NormalizedLocation[], qrCodes: string[] = []): string[] {
     const { colors, typography } = this.theme;
     return locations
       .map(
@@ -2198,6 +2199,7 @@ export class EnhancedPdfGenerator {
           const [titlePart, ...rest] = rawAddress.split(',');
           const title = titlePart.trim();
           const subtitle = rest.join(',').trim();
+          const qrCode = qrCodes[index];
 
           const showCoordinates = this.currentSettings?.showCoordinatesOnMapPage === true;
 
@@ -2302,6 +2304,23 @@ export class EnhancedPdfGenerator {
               ` : ''}
             </div>
           </div>
+          ${qrCode ? `
+            <div style="
+              width: 54px;
+              height: 54px;
+              padding: 4px;
+              border-radius: 10px;
+              background: ${colors.surface};
+              border: 1px solid ${colors.border};
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-shrink: 0;
+            ">
+              <img src="${this.escapeHtml(qrCode)}" alt="QR точки ${index + 1}"
+                style="width: 100%; height: 100%; display: block;" />
+            </div>
+          ` : ''}
         </div>
       `;
         }

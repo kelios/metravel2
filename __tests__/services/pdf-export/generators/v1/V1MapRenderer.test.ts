@@ -25,6 +25,7 @@ describe('V1MapRenderer', () => {
     expect(html).toContain('Поездка в Париж');
     expect(html).toContain('data:image/png;base64,ABC');
     expect(html).toContain('Location 1');
+    expect(html).toContain('Карта и ключевые точки');
     expect(html).toContain('1 точка');
     expect(html).toContain('>8<');
   });
@@ -86,10 +87,10 @@ describe('V1MapRenderer', () => {
     // First page should have map + first 6 cards
     expect(html).toContain('Point 1');
     expect(html).toContain('Point 6');
-    // Continuation page should have remaining cards with "продолжение" header
+    // Continuation page should have remaining cards with explicit continuation header
     expect(html).toContain('Point 7');
     expect(html).toContain('Point 10');
-    expect(html).toContain('продолжение');
+    expect(html).toContain('Продолжение маршрута');
     // Should have at least 2 map-page sections
     const pageCount = (html.match(/class="pdf-page map-page"/g) || []).length;
     expect(pageCount).toBe(2);

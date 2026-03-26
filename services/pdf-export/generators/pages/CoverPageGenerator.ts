@@ -44,26 +44,26 @@ export class CoverPageGenerator {
 
     if (length >= 100) {
       return {
-        fontSize: '24pt',
+        fontSize: '23pt',
         lineHeight: 1.08,
-        maxWidth: '128mm',
+        maxWidth: '118mm',
         letterSpacing: '0',
       };
     }
 
     if (length >= 75) {
       return {
-        fontSize: '27pt',
+        fontSize: '26pt',
         lineHeight: 1.08,
-        maxWidth: '124mm',
+        maxWidth: '114mm',
         letterSpacing: '0.01em',
       };
     }
 
     return {
-      fontSize: '32pt',
+      fontSize: '30pt',
       lineHeight: 1.08,
-      maxWidth: '108mm',
+      maxWidth: '102mm',
       letterSpacing: '0.02em',
     };
   }
@@ -175,14 +175,14 @@ export class CoverPageGenerator {
     const panelBackground =
       hasImage
         ? textColor === '#000000'
-          ? 'rgba(255,255,255,0.82)'
-          : 'rgba(15,23,42,0.34)'
+          ? 'rgba(255,255,255,0.88)'
+          : 'rgba(15,23,42,0.48)'
         : 'transparent';
     const panelBorder =
       textColor === '#000000'
-        ? 'rgba(255,255,255,0.65)'
-        : 'rgba(255,255,255,0.18)';
-    const panelShadow = hasImage ? '0 18px 44px rgba(15,23,42,0.22)' : 'none';
+        ? 'rgba(255,255,255,0.72)'
+        : 'rgba(255,255,255,0.22)';
+    const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.24)' : 'none';
 
     return `
       <div style="
@@ -196,21 +196,81 @@ export class CoverPageGenerator {
         z-index: 2;
       ">
         <div class="cover-story-panel" style="
-          width: min(138mm, 100%);
-          padding: ${hasImage ? '14mm 16mm 13mm 16mm' : '0'};
-          border-radius: 22px;
+          width: min(126mm, 100%);
+          padding: ${hasImage ? '11mm 13mm 11mm 13mm' : '0'};
+          border-radius: 18px;
           background: ${panelBackground};
           border: ${hasImage ? `1px solid ${panelBorder}` : 'none'};
           box-shadow: ${panelShadow};
-          backdrop-filter: ${hasImage ? 'blur(10px)' : 'none'};
-          -webkit-backdrop-filter: ${hasImage ? 'blur(10px)' : 'none'};
+          backdrop-filter: ${hasImage ? 'blur(8px)' : 'none'};
+          -webkit-backdrop-filter: ${hasImage ? 'blur(8px)' : 'none'};
           text-align: left;
         ">
+          ${this.renderKicker(textColor)}
           ${this.renderTitle(data.title, textColor)}
           ${data.subtitle ? this.renderSubtitle(data.subtitle, textColor) : ''}
-          ${this.renderUserName(data.userName, textColor)}
+          ${this.renderMetaStrip(data, textColor)}
           ${data.quote ? this.renderQuote(data.quote, textColor) : ''}
         </div>
+      </div>
+    `;
+  }
+
+  private renderKicker(textColor?: string): string {
+    return `
+      <div style="
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 5mm;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: ${textColor === '#000000' ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
+        border: 1px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
+        font-size: 9pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: ${textColor || 'rgba(255,255,255,0.84)'};
+        font-family: ${this.theme.typography.bodyFont};
+      ">
+        <span>Travel book</span>
+      </div>
+    `;
+  }
+
+  private renderMetaStrip(data: CoverPageData, textColor?: string): string {
+    const travelLabel = this.getTravelLabel(data.travelCount);
+    const items = [
+      data.userName ? this.escapeHtml(data.userName) : null,
+      Number.isFinite(data.travelCount) ? `${this.escapeHtml(String(data.travelCount))} ${travelLabel}` : null,
+      data.yearRange ? this.escapeHtml(data.yearRange) : null,
+    ].filter(Boolean);
+
+    if (!items.length) return '';
+
+    return `
+      <div style="
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 5mm;
+      ">
+        ${items.map((item) => `
+          <span style="
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: ${textColor === '#000000' ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
+            border: 1px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
+            color: ${textColor || 'rgba(255,255,255,0.9)'};
+            font-size: 9pt;
+            line-height: 1.2;
+            font-weight: 600;
+            font-family: ${this.theme.typography.bodyFont};
+          ">${item}</span>
+        `).join('')}
       </div>
     `;
   }
