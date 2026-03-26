@@ -10,6 +10,7 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { queryKeys } from '@/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
+import { isIOSSafariUserAgent } from "@/components/ui/ImageCardMedia";
 import CardActionPressable from "@/components/ui/CardActionPressable";
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 
@@ -107,6 +108,13 @@ function TravelListItem({
     const colors = useThemedColors();
     const styles = useMemo(() => createTravelListItemStyles(colors), [colors]);
     const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
+    const isMobileSafariFirstCard = useMemo(() => {
+        if (!isWeb || !isMobile || !isFirst || typeof navigator === 'undefined') return false;
+        return isIOSSafariUserAgent(
+            String(navigator.userAgent || ''),
+            typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0,
+        );
+    }, [isFirst, isMobile, isWeb]);
     const tagIconColor = colors.textSecondary;
 
     const {
@@ -739,6 +747,7 @@ const unifiedCard = (
       placeholderBlurhash: PLACEHOLDER_BLURHASH,
       blurBackground: true,
       allowCriticalWebBlur: Platform.OS === 'web',
+      revealOnLoadOnly: isMobileSafariFirstCard,
       recyclingKey: travelKey,
       priority: Platform.OS === 'web' ? (isFirst ? 'high' : 'low') : 'normal',
       loading: Platform.OS === 'web' ? (isFirst ? 'eager' : 'lazy') : 'lazy',

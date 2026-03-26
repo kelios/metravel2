@@ -124,6 +124,92 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage.props.sizes).toBe('320px')
   })
 
+  it('uses a full-width sizes fallback for iPhone Safari auto-width cards', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg"
+          height={220}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.sizes).toBe('(min-width: 768px) 50vw, 100vw')
+    expect(String(mainImage.props.srcSet)).toContain('1200w')
+  })
+
+  it('keeps iPhone Safari shared-blur cards hidden until the main image finishes loading', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/544/gallery/photo.JPG?v=3567&w=320&h=168&q=52&fit=contain"
+          width={320}
+          height={168}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          priority="low"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.loading).toBe('eager')
+    expect(mainImage.props.style?.opacity).toBe(0)
+
+    renderer.act(() => {
+      mainImage.props.onLoad()
+    })
+
+    const loadedMainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(loadedMainImage.props.style?.opacity).toBe(1)
+  })
+
   it('keeps the main image visible on first frame for eager critical web media', () => {
     let tree: any
     renderer.act(() => {
@@ -216,6 +302,7 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.srcSet).toBeTruthy()
     expect(String(mainImage.props.srcSet)).toContain('640w')
+    expect(String(mainImage.props.srcSet)).toContain('960w')
   })
 
   it('keeps the exact pre-optimized shared-blur source on non-Safari browsers by default', () => {

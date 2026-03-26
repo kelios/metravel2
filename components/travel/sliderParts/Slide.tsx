@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
 
@@ -116,6 +116,15 @@ const Slide = memo(function Slide({
   prepareBlur = false,
   skipImage = false,
 }: SlideProps) {
+  const disableSliderBlurForSafari =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    isIOSSafariUserAgent(
+      String(navigator.userAgent || ''),
+      typeof navigator.maxTouchPoints === 'number'
+        ? navigator.maxTouchPoints
+        : 0,
+    );
   const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
   const isFirstSlide = index === 0;
@@ -152,10 +161,11 @@ const Slide = memo(function Slide({
 
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
+  const effectiveBlurBackground = shouldBlur && !disableSliderBlurForSafari;
   const shouldDelayWebRevealUntilLoad =
     Platform.OS === 'web' &&
     isActive &&
-    shouldBlur &&
+    effectiveBlurBackground &&
     !isFirstSlide;
 
   useEffect(() => {
@@ -284,10 +294,11 @@ const Slide = memo(function Slide({
           )}
           <ImageCardMedia
             src={resolvedUri}
+            recyclingKey={`slider-slide-${index}-${resolvedUri}`}
             width={containerW}
             height={slideHeightPx}
             fit={mainFit}
-            blurBackground={shouldBlur}
+            blurBackground={effectiveBlurBackground}
             blurRadius={12}
             priority={mainPriority as any}
             prefetch={Platform.OS === 'web' ? (isFirstSlide || isActive || !!preloadPriority) : false}
@@ -312,7 +323,7 @@ const Slide = memo(function Slide({
             onLoad={handleLoad}
             onError={handleError}
             showImmediately={loadedSlideUriCache.has(resolvedUri)}
-            allowCriticalWebBlur={shouldBlur}
+            allowCriticalWebBlur={effectiveBlurBackground}
             revealOnLoadOnly={shouldDelayWebRevealUntilLoad}
             contentAspectRatio={
               typeof item?.width === 'number' &&

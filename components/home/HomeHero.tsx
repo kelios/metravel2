@@ -17,9 +17,10 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
-import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks'
+import { optimizeImageUrl } from '@/utils/imageOptimization'
 import { createHomeHeroStyles } from './homeHeroStyles'
 
 interface HomeHeroProps {
@@ -133,6 +134,30 @@ const getSlideRemoteUri = (
   return null
 }
 
+export const buildHomeHeroSlidePreloadUrl = (
+  source: { uri?: string } | number | null | undefined,
+  width: number,
+  height: number,
+): string | null => {
+  const remoteUri = getSlideRemoteUri(source)
+  if (!remoteUri) return null
+
+  return (
+    optimizeImageUrl(remoteUri, {
+      width,
+      height,
+      quality: 90,
+      fit: 'contain',
+      format: 'auto',
+    }) ?? remoteUri
+  )
+}
+
+export const shouldDisableHomeHeroSliderBlur = (
+  userAgent: string,
+  maxTouchPoints = 0,
+): boolean => isIOSSafariUserAgent(userAgent, maxTouchPoints)
+
 const preloadWebImage = async (uri: string): Promise<boolean> => {
   if (!uri || Platform.OS !== 'web') return false
   if (typeof window === 'undefined' || typeof window.Image === 'undefined')
@@ -243,6 +268,17 @@ const HomeHero = memo(function HomeHero({
   const isMobile = isSmallPhone || isPhone || isLargePhone
   const isLandscape = !isPortrait && isMobile // RESP-05
   const isWeb = Platform.OS === 'web'
+  const disableHeroSliderBlur = useMemo(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false
+    const maxTouchPoints =
+      typeof navigator.maxTouchPoints === 'number'
+        ? navigator.maxTouchPoints
+        : 0
+    return shouldDisableHomeHeroSliderBlur(
+      String(navigator.userAgent || ''),
+      maxTouchPoints,
+    )
+  }, [])
   const isNarrowLayout =
     isMobile || (isWeb && width < HOME_HERO_BOOK_LAYOUT_MIN_WIDTH)
   const showSideSlider =
@@ -342,7 +378,11 @@ const HomeHero = memo(function HomeHero({
     let cancelled = false
     const preloadSlide = async (slideIndex: number) => {
       if (loadedSlides.has(slideIndex)) return
-      const remoteUri = getSlideRemoteUri(BOOK_IMAGES[slideIndex]?.source)
+      const remoteUri = buildHomeHeroSlidePreloadUrl(
+        BOOK_IMAGES[slideIndex]?.source,
+        sliderMediaWidth,
+        sliderHeight,
+      )
       if (!remoteUri) {
         if (!cancelled) markSlideAsLoaded(slideIndex)
         return
@@ -360,7 +400,7 @@ const HomeHero = memo(function HomeHero({
     return () => {
       cancelled = true
     }
-  }, [activeSlide, loadedSlides, markSlideAsLoaded, totalSlides])
+  }, [activeSlide, loadedSlides, markSlideAsLoaded, sliderHeight, sliderMediaWidth, totalSlides])
 
   useEffect(() => {
     if (loadedSlides.has(activeSlide)) {
@@ -815,12 +855,13 @@ const HomeHero = memo(function HomeHero({
                           >
                             <ImageCardMedia
                               source={slide.source}
+                              recyclingKey={`home-hero-slide-${slideIndex}`}
                               width={sliderMediaWidth}
                               height={sliderHeight}
                               borderRadius={0}
                               fit="contain"
-                              blurBackground
-                              allowCriticalWebBlur
+                              blurBackground={!disableHeroSliderBlur}
+                              allowCriticalWebBlur={!disableHeroSliderBlur}
                               quality={90}
                               alt={slide.alt}
                               loading={isSlideLoaded ? 'eager' : 'lazy'}

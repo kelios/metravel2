@@ -538,12 +538,16 @@ function ImageCardMedia({
     if (isRootRelativeUrl(uri)) return undefined;
     if (shouldPreserveProvidedOptimizedUrl(uri)) return undefined;
     // Use stable width to prevent srcset changes on scroll
-    const baseWidth = stableWidth ?? 320;
+    const baseWidth = stableWidth ?? (isSafariWeb ? 400 : 320);
+    const maxResponsiveMultiplier = isSafariWeb ? 3 : 2;
     const srcSetWidths = [
       Math.max(160, Math.round(baseWidth * 0.5)),
       Math.max(320, Math.round(baseWidth)),
       Math.max(480, Math.round(baseWidth * 1.5)),
       Math.max(640, Math.round(baseWidth * 2)),
+      ...(maxResponsiveMultiplier > 2
+        ? [Math.max(720, Math.round(baseWidth * maxResponsiveMultiplier))]
+        : []),
     ];
     const uniqueSortedWidths = Array.from(new Set(srcSetWidths)).sort((a, b) => a - b);
     return (
@@ -552,15 +556,18 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [resolvedSource, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth]);
+  }, [resolvedSource, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth, isSafariWeb]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     if (typeof width === 'number' && Number.isFinite(width) && width > 0) {
       return `${Math.round(width)}px`;
     }
+    if (isSafariWeb) {
+      return '(min-width: 768px) 50vw, 100vw';
+    }
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
-  }, [width]);
+  }, [width, isSafariWeb]);
 
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
@@ -596,14 +603,22 @@ function ImageCardMedia({
   const shouldShowWebImageImmediately = useMemo(() => {
     if (Platform.OS !== 'web') return showImmediately;
     if (revealOnLoadOnly) return showImmediately;
-    if (blurSharesMainUrl) {
-      // For lazy list/card media we keep the whole card hidden until the main
-      // image is decoded. Otherwise CSS blur paints first and the sharp image
-      // "catches up" a frame later, which reads as flicker on the search page.
-      return showImmediately || resolvedLoading === 'eager' || priority === 'high';
+    if (isSafariWeb && allowCriticalWebBlur && !preserveOptimizedWebSrc && priority !== 'high') {
+      // iPhone Safari tends to paint a visibly blurry progressive frame when
+      // contain-mode shared-blur cards reveal the main image before onLoad.
+      // Keep the blurred surround visible, but wait for the sharp image decode.
+      return showImmediately;
     }
     return showImmediately || resolvedLoading === 'eager' || priority === 'high';
-  }, [showImmediately, resolvedLoading, priority, revealOnLoadOnly, blurSharesMainUrl]);
+  }, [
+    allowCriticalWebBlur,
+    isSafariWeb,
+    preserveOptimizedWebSrc,
+    priority,
+    revealOnLoadOnly,
+    resolvedLoading,
+    showImmediately,
+  ]);
 
   const shouldRevealWebMedia = useMemo(() => {
     if (Platform.OS !== 'web') return true;
@@ -622,6 +637,13 @@ function ImageCardMedia({
     if (!webMainSrc) return false;
     return !shouldRevealWebMedia;
   }, [blurOnly, shouldRevealWebMedia, webMainSrc]);
+  const webMediaInstanceKey = useMemo(() => {
+    if (recyclingKey) return recyclingKey;
+    if (currentBaseImageKey) return currentBaseImageKey;
+    if (webMainSrc) return webMainSrc;
+    if (webBlurSrc) return webBlurSrc;
+    return 'web-media';
+  }, [currentBaseImageKey, recyclingKey, webBlurSrc, webMainSrc]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -719,6 +741,7 @@ function ImageCardMedia({
         <>
           {Platform.OS === 'web' && shouldRenderWebBlurBackground && webBlurSrc ? (
             <WebBlurBackdrop
+              key={`blur-${webMediaInstanceKey}`}
               src={webBlurSrc}
               alt={alt || ''}
               width={typeof width === 'number' ? width : 400}
@@ -732,6 +755,7 @@ function ImageCardMedia({
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
             <WebMainImage
+              key={`main-${webMediaInstanceKey}`}
               src={webMainSrc}
               srcSet={webSrcSet}
               sizes={webSizes}

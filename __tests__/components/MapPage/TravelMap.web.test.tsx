@@ -43,8 +43,17 @@ const { useLeafletIcons } = require('@/components/MapPage/Map/useLeafletIcons');
 const { createMapPopupComponent } = require('@/components/MapPage/Map/createMapPopupComponent');
 
 describe('TravelMap (web)', () => {
+  const originalWindowDimensions = require('react-native').useWindowDimensions;
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    require('react-native').useWindowDimensions = jest.fn(() => ({
+      width: 1024,
+      height: 768,
+      scale: 1,
+      fontScale: 1,
+    }));
 
     // Default: leaflets ready
     useLeafletLoader.mockReturnValue({
@@ -75,6 +84,10 @@ describe('TravelMap (web)', () => {
     useLeafletIcons.mockReturnValue({
       meTravel: {},
     });
+  });
+
+  afterEach(() => {
+    require('react-native').useWindowDimensions = originalWindowDimensions;
   });
 
   it('renders a stable container with data-testid="travel-map" on web when ready', () => {
@@ -192,6 +205,35 @@ describe('TravelMap (web)', () => {
     expect(props.popupProps.eventHandlers).toEqual(
       expect.objectContaining({
         popupopen: expect.any(Function),
+      })
+    );
+  });
+
+  it('uses a smaller popup shell on very narrow compact mobile viewports', () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({
+      width: 360,
+      height: 740,
+      scale: 1,
+      fontScale: 1,
+    }));
+
+    render(
+      <TravelMap
+        travelData={[{ coord: '53.9, 27.56' }]}
+        compact
+        height={320}
+      />
+    );
+
+    expect(mockMapMarkers).toHaveBeenCalled();
+    const props = mockMapMarkers.mock.calls[0]?.[0];
+    expect(props).toBeTruthy();
+    expect(props.popupProps).toEqual(
+      expect.objectContaining({
+        maxWidth: 248,
+        minWidth: 220,
+        autoPanPaddingTopLeft: [8, 56],
+        autoPanPaddingBottomRight: [8, 104],
       })
     );
   });

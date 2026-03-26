@@ -505,7 +505,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     const isVeryNarrow = viewportWidth <= 480;
     const maxWidth = compact
       ? isVeryNarrow
-        ? Math.min(272, Math.max(228, viewportWidth - 24))
+        ? Math.min(248, Math.max(212, viewportWidth - 20))
         : isNarrowViewport
           ? Math.min(300, Math.max(248, viewportWidth - 28))
           : Math.min(320, Math.max(264, viewportWidth - 32))
@@ -516,7 +516,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           : Math.min(436, Math.max(320, viewportWidth - 40));
     const minWidth = compact
       ? isVeryNarrow
-        ? 220
+        ? Math.min(220, Math.max(196, maxWidth - 20))
         : isNarrowViewport
           ? Math.min(248, Math.max(220, maxWidth - 36))
           : Math.min(264, Math.max(240, maxWidth - 56))
@@ -532,8 +532,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       className: 'metravel-place-popup',
       maxWidth,
       minWidth,
-      autoPanPaddingTopLeft: compact ? [12, 72] : isNarrowViewport ? [12, 72] : [24, 140],
-      autoPanPaddingBottomRight: compact ? [12, 72] : isNarrowViewport ? [12, 72] : [24, 140],
+      autoPanPaddingTopLeft: compact
+        ? (isVeryNarrow ? [8, 56] : [12, 72])
+        : isNarrowViewport
+          ? [12, 72]
+          : [24, 140],
+      autoPanPaddingBottomRight: compact
+        ? (isVeryNarrow ? [8, 104] : [12, 72])
+        : isNarrowViewport
+          ? [12, 72]
+          : [24, 140],
       eventHandlers: {
         popupopen: handlePopupOpen,
       },

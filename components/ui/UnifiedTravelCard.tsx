@@ -52,6 +52,7 @@ type Props = {
     blurRadius?: number;
     blurBackground?: boolean;
     allowCriticalWebBlur?: boolean;
+    revealOnLoadOnly?: boolean;
     recyclingKey?: string;
     priority?: 'low' | 'normal' | 'high';
     loading?: 'lazy' | 'eager';
@@ -467,9 +468,12 @@ function UnifiedTravelCard({
           <ImageCardMedia
             src={optimizedImageUrl}
             alt={title}
+            width={typeof width === 'number' ? width : undefined}
+            height={typeof imageHeight === 'number' ? imageHeight : undefined}
             fit={mediaFit}
             blurBackground={mediaProps?.blurBackground ?? true}
             allowCriticalWebBlur={mediaProps?.allowCriticalWebBlur ?? false}
+            revealOnLoadOnly={mediaProps?.revealOnLoadOnly ?? false}
             blurRadius={mediaProps?.blurRadius ?? 16}
             placeholderBlurhash={mediaProps?.placeholderBlurhash}
             recyclingKey={mediaProps?.recyclingKey}

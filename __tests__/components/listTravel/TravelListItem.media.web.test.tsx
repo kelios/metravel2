@@ -79,8 +79,22 @@ const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> 
 };
 
 describe('TravelListItem media props on web', () => {
+  const originalUserAgent = window.navigator.userAgent;
+  const originalMaxTouchPoints = window.navigator.maxTouchPoints;
+
   beforeEach(() => {
     mockUnifiedTravelCard.mockClear();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: originalUserAgent,
+      configurable: true,
+    });
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: originalMaxTouchPoints,
+      configurable: true,
+    });
   });
 
   it('keeps blur background enabled for default list cards', () => {
@@ -97,5 +111,31 @@ describe('TravelListItem media props on web', () => {
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
     expect(props.insetMedia).toBe(false);
+  });
+
+  it('keeps the first mobile web card hidden until onLoad only on iPhone Safari', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    });
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    });
+
+    renderItem({ isFirst: true, isMobile: true });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props).toBeTruthy();
+    expect(props.mediaProps?.revealOnLoadOnly).toBe(true);
+  });
+
+  it('keeps non-Safari or non-first cards on the existing path', () => {
+    renderItem({ isFirst: true, isMobile: true });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props).toBeTruthy();
+    expect(props.mediaProps?.revealOnLoadOnly).toBe(false);
   });
 });

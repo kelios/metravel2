@@ -65,6 +65,42 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(props.allowCriticalWebBlur).toBe(true)
   })
 
+  it('passes revealOnLoadOnly through mediaProps', () => {
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Test travel"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+          mediaProps={{ revealOnLoadOnly: true }}
+        />
+      )
+    })
+
+    const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(props).toBeTruthy()
+    expect(props.revealOnLoadOnly).toBe(true)
+  })
+
+  it('forwards explicit card media dimensions to ImageCardMedia', () => {
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Sized travel"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+          width={314}
+          imageHeight={220}
+        />
+      )
+    })
+
+    const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
+    expect(props).toBeTruthy()
+    expect(props.width).toBe(314)
+    expect(props.height).toBe(220)
+  })
+
   it('does not prefetch cross-origin card images on web', () => {
     renderer.act(() => {
       renderer.create(

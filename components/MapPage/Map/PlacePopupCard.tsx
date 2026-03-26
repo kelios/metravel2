@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -249,7 +249,7 @@ const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: nu
 };
 
 const COMPACT_LAYOUT_SPACING: Record<BreakpointKey, { radius: number; iconButtonSize: number; sectionGap: number; horizontalPadding: number; topPadding: number; bottomPadding: number; metaMinHeight: number; coordMinHeight: number; addBtnMinHeight: number }> = {
-  narrow: { radius: 10, iconButtonSize: 40, sectionGap: 10, horizontalPadding: 10, topPadding: 10, bottomPadding: 12, metaMinHeight: 28, coordMinHeight: 44, addBtnMinHeight: 44 },
+  narrow: { radius: 10, iconButtonSize: 38, sectionGap: 8, horizontalPadding: 9, topPadding: 9, bottomPadding: 11, metaMinHeight: 26, coordMinHeight: 42, addBtnMinHeight: 42 },
   compact: { radius: 11, iconButtonSize: 42, sectionGap: 11, horizontalPadding: 11, topPadding: 11, bottomPadding: 13, metaMinHeight: 28, coordMinHeight: 44, addBtnMinHeight: 44 },
   default: { radius: 12, iconButtonSize: 44, sectionGap: 12, horizontalPadding: 12, topPadding: 12, bottomPadding: 14, metaMinHeight: 28, coordMinHeight: 46, addBtnMinHeight: 46 },
 };
@@ -261,7 +261,7 @@ const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
 };
 
 const COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 248,
+  narrow: 228,
   compact: 268,
   default: 288,
 };
@@ -273,7 +273,7 @@ const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
 };
 
 const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 132,
+  narrow: 118,
   compact: 148,
   default: 156,
 };
@@ -302,6 +302,13 @@ const PlacePopupCard: React.FC<Props> = ({
 }) => {
   const colors = useThemedColors();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
+  const revealPopupImageOnLoadOnly = useMemo(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+    return isIOSSafariUserAgent(
+      String(navigator.userAgent || ''),
+      typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0,
+    );
+  }, []);
   const hasCoord = !!coord;
   const hasArticle = typeof onOpenArticle === 'function';
   const hasDrivingInfo =
@@ -324,11 +331,12 @@ const PlacePopupCard: React.FC<Props> = ({
   const _fs = FONT_SIZES[bp];
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
   const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
+  const useCompactLayout = compactLayout || viewportWidth <= 420;
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
-  const popupWidthCap = compactLayout
+  const popupWidthCap = useCompactLayout
     ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
     : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
-  const imageHeightCap = compactLayout
+  const imageHeightCap = useCompactLayout
     ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
     : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
   const maxPopupWidth = Math.min(width, popupWidthCap, safeViewportWidth);
@@ -341,7 +349,7 @@ const PlacePopupCard: React.FC<Props> = ({
     )
   );
 
-  const styles = useMemo(() => getStyles(colors, bp, heroHeight, compactLayout), [colors, bp, heroHeight, compactLayout]);
+  const styles = useMemo(() => getStyles(colors, bp, heroHeight, useCompactLayout), [colors, bp, heroHeight, useCompactLayout]);
 
   const actionBtnStyle = useMemo(
     () =>
@@ -360,7 +368,7 @@ const PlacePopupCard: React.FC<Props> = ({
   const contentSlot = useMemo(() => (
     <View style={styles.content}>
       <View style={styles.infoSection}>
-        <Text style={styles.titleText} numberOfLines={compactLayout ? 2 : bp === 'narrow' ? 3 : 2}>
+        <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 3 : 2}>
           {title}
         </Text>
 
@@ -492,7 +500,6 @@ const PlacePopupCard: React.FC<Props> = ({
     addDisabled,
     bp,
     categoryLabel,
-    compactLayout,
     colors.primary,
     colors.textMuted,
     compactLabel,
@@ -512,6 +519,7 @@ const PlacePopupCard: React.FC<Props> = ({
     onShareTelegram,
     styles,
     title,
+    useCompactLayout,
   ]);
 
   return (
@@ -530,6 +538,7 @@ const PlacePopupCard: React.FC<Props> = ({
               fit="contain"
               blurBackground
               allowCriticalWebBlur
+              revealOnLoadOnly={revealPopupImageOnLoadOnly}
               priority="high"
               loading="eager"
               width={maxPopupWidth}

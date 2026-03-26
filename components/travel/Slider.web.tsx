@@ -317,7 +317,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     renderedSlideWidth,
     applyOffset,
     snapOffsetForIndex,
-    animateToIndex,
     stopAnimation,
     scrollTo,
     pauseAutoplay,

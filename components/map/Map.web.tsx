@@ -272,10 +272,16 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   const popupContentMaxWidth = useMemo(() => {
     if (!mapPaneWidth) return 320;
+    if (mapPaneWidth <= 420) {
+      return Math.max(220, Math.min(280, mapPaneWidth - 24));
+    }
     return Math.max(220, Math.min(320, mapPaneWidth - 56));
   }, [mapPaneWidth]);
 
   const popupMinWidth = useMemo(() => {
+    if (popupContentMaxWidth <= 280) {
+      return Math.max(160, Math.min(200, popupContentMaxWidth - 24));
+    }
     return Math.max(180, Math.min(220, popupContentMaxWidth - 32));
   }, [popupContentMaxWidth]);
 

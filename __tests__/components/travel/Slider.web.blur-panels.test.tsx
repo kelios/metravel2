@@ -30,6 +30,14 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 
   return {
     __esModule: true,
+    isIOSSafariUserAgent: (userAgent: string, maxTouchPoints = 0) => {
+      const normalizedUserAgent = String(userAgent || '')
+      const isIOSDevice = /iPad|iPhone|iPod/i.test(normalizedUserAgent) || (
+        /Macintosh/i.test(normalizedUserAgent) && maxTouchPoints > 1
+      )
+      const isSafari = /Safari/i.test(normalizedUserAgent) && !/(Chrome|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Chromium|Firefox)/i.test(normalizedUserAgent)
+      return isIOSDevice && isSafari
+    },
     default: (props: any) =>
       React.createElement('mock-image-card-media', {
         ...props,
@@ -41,6 +49,8 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 
 describe('Slider (web) blur background', () => {
   const originalPlatform = Platform.OS
+  const originalUserAgent = window.navigator.userAgent
+  const originalMaxTouchPoints = window.navigator.maxTouchPoints
 
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
@@ -48,6 +58,14 @@ describe('Slider (web) blur background', () => {
 
   afterEach(() => {
     ;(Platform as any).OS = originalPlatform
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: originalUserAgent,
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: originalMaxTouchPoints,
+      configurable: true,
+    })
   })
 
   it('renders slider with blurBackground prop passed to Slide component', async () => {
@@ -187,6 +205,66 @@ describe('Slider (web) blur background', () => {
 
     const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
     expect(firstImage.props.blurBackground).toBe(true)
+  })
+
+  it('passes a per-slide recycling key so web blur backdrop remounts on slide change', async () => {
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+        />,
+      )
+    })
+
+    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    expect(firstImage.props.recyclingKey).toContain('slider-slide-0-')
+    expect(firstImage.props.recyclingKey).toContain('img-1.jpg')
+
+    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+
+    await act(async () => {
+      nextButton.props.onPress()
+    })
+
+    const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
+    expect(secondImage.props.recyclingKey).toContain('slider-slide-1-')
+    expect(secondImage.props.recyclingKey).toContain('img-2.jpg')
+  })
+
+  it('disables slide blur surround on iPhone Safari to avoid covering the sharp frame', async () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+        />,
+      )
+    })
+
+    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    expect(firstImage.props.blurBackground).toBe(false)
+    expect(firstImage.props.allowCriticalWebBlur).toBe(false)
   })
 
   it('shows the previous loaded frame as overlay while the next slide is not loaded yet', async () => {

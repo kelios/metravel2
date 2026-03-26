@@ -47,7 +47,6 @@ export interface UseSliderPointerDragOptions {
   visualOffsetRef?: React.MutableRefObject<number>;
   applyOffset: (offset: number, withTransition: boolean, durationMs?: number) => void;
   snapOffsetForIndex: (idx: number, widthOverride?: number) => number;
-  animateToIndex: (idx: number, animated?: boolean) => void;
   stopAnimation: () => void;
   scrollTo: (idx: number, animated?: boolean) => void;
   pauseAutoplay: () => void;
@@ -72,7 +71,6 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     renderedSlideWidth,
     applyOffset,
     snapOffsetForIndex,
-    animateToIndex,
     stopAnimation,
     scrollTo,
     pauseAutoplay,
@@ -223,7 +221,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
 
       resetDrag();
       if (draggedHorizontally) {
-        animateToIndex(targetIndex, true);
+        scrollTo(targetIndex, true);
       } else {
         applyOffsetTracked(snapOffsetForIndex(indexRef.current), true, 200);
       }
@@ -259,7 +257,6 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
       resetDrag();
     };
   }, [
-    animateToIndex,
     applyOffsetTracked,
     containerWRef,
     dismissSwipeHint,
@@ -271,6 +268,7 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
     pauseAutoplay,
     renderedSlideWidth,
     resumeAutoplay,
+    scrollTo,
     snapOffsetForIndex,
     stopAnimation,
     viewportRef,

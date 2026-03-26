@@ -76,12 +76,17 @@ ${cssScope} .leaflet-popup-close-button:hover {
   }
 }
 @media (max-width: 420px) {
+  ${cssScope} .leaflet-popup {
+    max-width: calc(100vw - 16px) !important;
+  }
   ${cssScope} .leaflet-popup-content-wrapper {
     max-height: 65vh !important;
   }
   ${cssScope} .leaflet-popup-content {
+    width: min(var(--metravel-popup-content-max-width, 248px), calc(100vw - 24px)) !important;
+    max-width: min(var(--metravel-popup-content-max-width, 248px), calc(100vw - 24px)) !important;
     max-height: calc(65vh - 12px) !important;
+    margin: 4px !important;
   }
 }
 `;
-
