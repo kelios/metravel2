@@ -136,7 +136,7 @@ function buildVersionedTravelImageUrl(rawUrl, updatedAt, id) {
   }
 }
 
-function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id, dpr } = {}) {
+function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id } = {}) {
   const versioned = buildVersionedTravelImageUrl(rawUrl, updatedAt, id);
   if (!versioned) return '';
 
@@ -156,7 +156,6 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id, d
 
     if (width) parsed.searchParams.set('w', String(Math.round(width)));
     if (quality) parsed.searchParams.set('q', String(Math.round(quality)));
-    if (dpr) parsed.searchParams.set('dpr', String(dpr));
     parsed.searchParams.set('fit', 'contain');
 
     return parsed.toString();
@@ -165,7 +164,7 @@ function buildOptimizedTravelImageUrl(rawUrl, { width, quality, updatedAt, id, d
   }
 }
 
-function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id, dpr } = {}) {
+function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id } = {}) {
   if (!rawUrl || !Array.isArray(widths) || widths.length === 0) return '';
 
   return widths
@@ -175,7 +174,6 @@ function buildTravelHeroSrcSet(rawUrl, widths, { quality, updatedAt, id, dpr } =
         quality,
         updatedAt,
         id,
-        dpr,
       });
       return href ? `${href} ${width}w` : '';
     })
@@ -265,15 +263,6 @@ function pickTravelSeoImage(travel, detail) {
 }
 
 function pickTravelHeroImageSource(travel, detail) {
-  const thumbUrl = String(travel?.travel_image_thumb_url || travel?.travelImageThumbUrl || '').trim();
-  if (thumbUrl) {
-    return {
-      url: thumbUrl,
-      updatedAt: travel?.updated_at || travel?.updatedAt || null,
-      id: travel?.id ?? null,
-    };
-  }
-
   const galleryFirst = detail?.gallery?.[0];
   if (galleryFirst) {
     const galleryUrl = typeof galleryFirst === 'string' ? galleryFirst : galleryFirst.url;
@@ -282,6 +271,15 @@ function pickTravelHeroImageSource(travel, detail) {
     if (galleryUrl) {
       return { url: galleryUrl, updatedAt: galleryUpdatedAt, id: galleryId };
     }
+  }
+
+  const thumbUrl = String(travel?.travel_image_thumb_url || travel?.travelImageThumbUrl || '').trim();
+  if (thumbUrl) {
+    return {
+      url: thumbUrl,
+      updatedAt: travel?.updated_at || travel?.updatedAt || null,
+      id: travel?.id ?? null,
+    };
   }
 
   return null;
@@ -296,14 +294,12 @@ function buildTravelHeroPreloadData(travel, detail) {
     quality: 35,
     updatedAt: source.updatedAt,
     id: source.id,
-    dpr: 1,
   });
   const desktopHref = buildOptimizedTravelImageUrl(source.url, {
     width: 720,
     quality: 45,
     updatedAt: source.updatedAt,
     id: source.id,
-    dpr: 1.5,
   });
 
   if (!mobileHref && !desktopHref) return null;
@@ -316,7 +312,6 @@ function buildTravelHeroPreloadData(travel, detail) {
             quality: 35,
             updatedAt: source.updatedAt,
             id: source.id,
-            dpr: 1,
           }),
           sizes: '100vw',
         }
@@ -328,7 +323,6 @@ function buildTravelHeroPreloadData(travel, detail) {
             quality: 45,
             updatedAt: source.updatedAt,
             id: source.id,
-            dpr: 1.5,
           }),
           sizes: '(max-width: 1024px) 92vw, 720px',
         }

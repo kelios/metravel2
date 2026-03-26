@@ -114,10 +114,13 @@
 
     function getTravelImage(data) {
       try {
-        var ogImgUrl = data && data.travel_image_thumb_url ? data.travel_image_thumb_url : '';
-        if (!ogImgUrl && data && data.gallery && data.gallery.length) {
+        var ogImgUrl = '';
+        if (data && data.gallery && data.gallery.length) {
           var gFirst = data.gallery[0];
           ogImgUrl = typeof gFirst === 'string' ? gFirst : (gFirst && gFirst.url) || '';
+        }
+        if (!ogImgUrl && data && data.travel_image_thumb_url) {
+          ogImgUrl = data.travel_image_thumb_url;
         }
         return toAbsoluteUrl(ogImgUrl) || DEFAULT_OG_IMAGE;
       } catch (_e) {
@@ -210,7 +213,7 @@
     }
 
     // Must match optimizeImageUrl() + buildVersionedImageUrl() behavior.
-    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, dpr) {
+    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id) {
       try {
         if (!rawUrl || /^(data:|blob:)/i.test(String(rawUrl))) {
           return rawUrl || null;
@@ -245,7 +248,6 @@
 
         if (width) resolved.searchParams.set('w', String(Math.round(width)));
         if (quality) resolved.searchParams.set('q', String(Math.round(quality)));
-        if (dpr) resolved.searchParams.set('dpr', String(dpr));
         resolved.searchParams.set('fit', 'contain');
         return resolved.toString();
       } catch (_e) {
@@ -346,18 +348,22 @@
         } catch (_e) {}
         // ── end SEO patch ──
 
-        var url = data.travel_image_thumb_url;
+        var url = '';
         var updatedAt = data.updated_at;
         var id = data.id;
+        var gallery = data.gallery;
+
+        if (gallery && gallery.length) {
+          var first = gallery[0];
+          url = typeof first === 'string' ? first : first && first.url;
+          updatedAt = typeof first === 'string' ? undefined : first.updated_at;
+          id = typeof first === 'string' ? undefined : first.id;
+        }
 
         if (!url) {
-            var gallery = data.gallery;
-            if (gallery && gallery.length) {
-                var first = gallery[0];
-                url = typeof first === 'string' ? first : first && first.url;
-                updatedAt = typeof first === 'string' ? undefined : first.updated_at;
-                id = typeof first === 'string' ? undefined : first.id;
-            }
+          url = data.travel_image_thumb_url;
+          updatedAt = data.updated_at;
+          id = data.id;
         }
 
         if (!url || typeof url !== 'string') return;
@@ -381,7 +387,6 @@
         function createPreloadLink() {
           var isMobile = (window.innerWidth || 0) < 768;
           var quality = isMobile ? 35 : 45;
-          var dpr = isMobile ? 1 : 1.5;
 
           // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [480, 720]
           var widths = isMobile ? [320, 400] : [480, 720];
@@ -389,13 +394,13 @@
           // Build srcSet entries to match buildResponsiveImageProps()
           var srcSetParts = [];
           for (var i = 0; i < widths.length; i++) {
-            var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, dpr);
+            var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id);
             if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
           }
 
           // The main src uses the widest breakpoint.
           var widest = widths[widths.length - 1];
-          var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, dpr);
+          var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id);
           if (!preloadHref) return;
 
           var preloadIsCrossOrigin = false;

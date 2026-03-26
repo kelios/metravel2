@@ -93,7 +93,7 @@ export const buildUriWeb = (
       : isMobileWidth
         ? SLIDER_MAX_WIDTH.mobile
         : SLIDER_MAX_WIDTH.desktop;
-    const cappedWidth = Math.min(containerWidth, maxWidth);
+    const targetWidth = isFirst ? maxWidth : Math.min(containerWidth, maxWidth);
     const quality = isFirst
       ? isMobileWidth
         ? 35
@@ -101,10 +101,11 @@ export const buildUriWeb = (
       : isMobileWidth
         ? 40
         : 65;
+    const format = isFirst ? undefined : PREFERRED_FORMAT;
     return (
       optimizeImageUrl(versionedUrl, {
-        width: cappedWidth,
-        format: PREFERRED_FORMAT,
+        width: targetWidth,
+        format,
         quality,
         fit: fitForUrl,
       }) || versionedUrl

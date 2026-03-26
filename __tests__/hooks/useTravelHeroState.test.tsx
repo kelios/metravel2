@@ -135,7 +135,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
   })
 
-  it('does not expose hero media when gallery is empty', () => {
+  it('uses the cover as hero media when gallery is empty', () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 44,
@@ -148,9 +148,10 @@ describe('useTravelHeroState', () => {
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
-    expect(result.current.firstImg).toBeNull()
+    expect(result.current.firstImg?.url).toBe('https://example.com/cover.jpg?updated=1')
     expect(result.current.galleryImages).toHaveLength(0)
-    expect(result.current.heroSliderImages).toHaveLength(0)
+    expect(result.current.heroSliderImages).toHaveLength(1)
+    expect(result.current.heroSliderImages[0]?.url).toBe('https://example.com/cover.jpg?updated=1')
   })
 
   it('uses a fixed 70 percent viewport height on web even for wide media', () => {

@@ -4,7 +4,7 @@ import { Platform } from 'react-native'
 import MapScreen from '@/screens/tabs/MapScreen'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 
-let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
+let mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 }
 
 const originalPlatformOS = Platform.OS
 
@@ -210,7 +210,7 @@ const renderWithClient = () => {
 describe('MapScreen (map tab)', () => {
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
-    mockResponsiveState = { isPhone: false, isLargePhone: false, width: 1024 }
+    mockResponsiveState = { isPhone: false, isLargePhone: false, isMobile: false, width: 1024 }
     useMapPanelStore.setState({ openNonce: 0 })
     mockFetchTravelsForMap.mockReset();
     mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
@@ -297,6 +297,22 @@ describe('MapScreen (map tab)', () => {
     });
 
     // Количество отображается в панели списка
+  });
+
+  it('does not render floating list pill on mobile web', async () => {
+    mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 };
+
+    const { queryByLabelText, getByTestId } = renderWithClient();
+
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('map-mobile-fab')).toBeTruthy();
+    });
+
+    expect(queryByLabelText('Показать 2 места списком')).toBeNull();
   });
 
   it('shows error display when map data loading fails', async () => {

@@ -13,6 +13,8 @@ export interface SliderProps {
   controlsVisible?: boolean;
   hideArrowsOnMobile?: boolean;
   aspectRatio?: number;
+  /** Fallback media aspect ratio when API gallery items omit width/height. */
+  contentAspectRatio?: number;
   fit?: 'cover' | 'contain';
   fullBleed?: boolean;
   autoPlay?: boolean;

@@ -39,6 +39,20 @@ const normalizeGalleryImage = (
         id: (item as Record<string, unknown>).id || fallbackId,
       } as GalleryImage)
 
+const buildCoverImage = (travel: Travel): GalleryImage | null => {
+  const coverUrl =
+    typeof travel?.travel_image_thumb_url === 'string'
+      ? travel.travel_image_thumb_url.trim()
+      : ''
+  if (!coverUrl) return null
+
+  return {
+    url: coverUrl,
+    id: travel?.id ?? 'travel-cover',
+    updated_at: travel?.updated_at ?? null,
+  }
+}
+
 function useHeroMediaModel(
   travel: Travel,
   isMobile: boolean,
@@ -51,12 +65,22 @@ function useHeroMediaModel(
     null,
   )
 
-  const firstRaw = travel?.gallery?.[0]
+  const galleryImages = useMemo(() => {
+    const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
+    return gallery.map((item: unknown, index: number) =>
+      normalizeGalleryImage(item, index),
+    )
+  }, [travel.gallery])
+
+  const heroSliderImages = useMemo(() => {
+    if (galleryImages.length > 0) return galleryImages
+    const coverImage = buildCoverImage(travel)
+    return coverImage ? [coverImage] : []
+  }, [galleryImages, travel])
+
   const firstImg = useMemo(() => {
-    if (!firstRaw) return null
-    if (typeof firstRaw === 'string') return { url: firstRaw }
-    return firstRaw
-  }, [firstRaw]) as ImgLike | null
+    return heroSliderImages[0] ?? null
+  }, [heroSliderImages]) as ImgLike | null
 
   const aspectRatio =
     (firstImg?.width && firstImg?.height
@@ -77,17 +101,6 @@ function useHeroMediaModel(
     )
     return Math.max(minViewportHeight, boundedAspectHeight)
   }, [winH, resolvedWidth, aspectRatio])
-
-  const galleryImages = useMemo(() => {
-    const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
-    return gallery.map((item: unknown, index: number) =>
-      normalizeGalleryImage(item, index),
-    )
-  }, [travel.gallery])
-
-  const heroSliderImages = useMemo(() => {
-    return galleryImages
-  }, [galleryImages])
 
   const heroAlt = travel?.name
     ? `Фотография маршрута «${travel.name}»`

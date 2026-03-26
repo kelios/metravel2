@@ -8,6 +8,11 @@ import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl, generateSrcSet } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import {
+  getBackdropSegments,
+  getContainedMediaBox,
+  type ContainedMediaBox,
+} from '@/components/ui/webBlurBackdropLayout';
 
 type Priority = 'low' | 'normal' | 'high';
 
@@ -24,6 +29,18 @@ const resolveBaseImageKey = (value: string | null | undefined): string | null =>
     return `${url.origin}${url.pathname}`;
   } catch {
     return raw.split('?')[0] || raw;
+  }
+};
+
+const hasOptimizationParams = (value: string | null | undefined): boolean => {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return false;
+
+  try {
+    const url = new URL(raw, 'https://metravel.by');
+    return ['w', 'h', 'q', 'fit', 'f', 'output'].some((key) => url.searchParams.has(key));
+  } catch {
+    return false;
   }
 };
 
@@ -143,6 +160,7 @@ type WebBlurBackdropProps = {
   fit: 'contain' | 'cover';
   useCssBackdrop?: boolean;
   visible?: boolean;
+  contentBox?: ContainedMediaBox | null;
 };
 
 const WebBlurBackdrop = memo(function WebBlurBackdrop({
@@ -154,6 +172,7 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
   fit,
   useCssBackdrop = false,
   visible = true,
+  contentBox = null,
 }: WebBlurBackdropProps) {
   const hasPreBlurredSource = /(?:\?|&)blur=\d+(?:&|$)/i.test(src);
   const backdropFit = 'cover';
@@ -163,6 +182,56 @@ const WebBlurBackdrop = memo(function WebBlurBackdrop({
     : fit === 'contain'
       ? 'blur(20px) saturate(1.04)'
       : 'blur(24px) saturate(1.15)';
+  const backdropSegments = useMemo(
+    () =>
+      useCssBackdrop && fit === 'contain'
+        ? getBackdropSegments({
+            containerWidth: width,
+            containerHeight: height,
+            contentBox,
+          })
+        : [],
+    [contentBox, fit, height, useCssBackdrop, width]
+  );
+  const shouldSplitBackdrop = useCssBackdrop && backdropSegments.length > 0;
+
+  if (shouldSplitBackdrop) {
+    return (
+      <>
+        {backdropSegments.map((segment, index) => (
+          <div
+            key={`${index}-${segment.left}-${segment.top}-${segment.width}-${segment.height}`}
+            aria-hidden="true"
+            data-blur-backdrop="true"
+            data-blur-backdrop-segment="true"
+            data-blur-backdrop-layer="true"
+            style={{
+              position: 'absolute',
+              top: segment.top,
+              left: segment.left,
+              width: segment.width,
+              height: segment.height,
+              zIndex: 0,
+              borderRadius,
+              backgroundImage: `url("${src.replace(/"/g, '\\"')}")`,
+              backgroundSize: backdropFit,
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              filter: backdropFilter,
+              transform: `scale(${backdropScale})`,
+              transformOrigin: 'center',
+              opacity: visible ? 0.95 : 0,
+              contain: 'paint',
+              willChange: 'transform, opacity',
+              backfaceVisibility: 'hidden',
+              pointerEvents: 'none',
+              transition: 'opacity 0.15s ease-in',
+            }}
+          />
+        ))}
+      </>
+    );
+  }
 
   if (useCssBackdrop) {
     return (
@@ -277,6 +346,8 @@ type Props = {
   allowCriticalWebBlur?: boolean;
   /** On web, keep main image hidden until onLoad even for eager/high-priority media. */
   revealOnLoadOnly?: boolean;
+  /** Source image aspect ratio, used to keep critical blur confined to letterbox gutters. */
+  contentAspectRatio?: number;
 };
 
 function ImageCardMedia({
@@ -307,6 +378,7 @@ function ImageCardMedia({
   showImmediately = false,
   allowCriticalWebBlur = false,
   revealOnLoadOnly = false,
+  contentAspectRatio,
 }: Props) {
   const isJest =
     typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
@@ -352,8 +424,8 @@ function ImageCardMedia({
   const resolvedLoading = useMemo(() => {
     if (Platform.OS !== 'web') return loading;
     if (loading !== 'lazy') return loading;
-    return isIOSSafariWeb() ? 'eager' : loading;
-  }, [loading]);
+    return isSafariWeb ? 'eager' : loading;
+  }, [isSafariWeb, loading]);
 
   // Stabilize width/height for image optimization to prevent URL changes on scroll
   // Only update when change is significant (>50px) to avoid re-fetching images
@@ -392,6 +464,7 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
     if (isRootRelativeUrl(uri)) return uri;
+    if (allowCriticalWebBlur && hasOptimizationParams(uri)) return uri;
     if (!stableWidth && !stableHeight) return null;
     return (
       optimizeImageUrl(uri, {
@@ -402,7 +475,7 @@ function ImageCardMedia({
         format: 'auto',
       }) ?? uri
     );
-  }, [resolvedSource, stableWidth, stableHeight, contentFit, quality]);
+  }, [allowCriticalWebBlur, resolvedSource, stableWidth, stableHeight, contentFit, quality]);
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     // For require() sources (numbers), return null to use OptimizedImage/ExpoImage
@@ -446,13 +519,13 @@ function ImageCardMedia({
 
   const webSrcSet = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
-    if (isSafariWeb) return undefined;
     if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
     // Skip srcset for local assets
     if (typeof resolvedSource === 'string') return undefined;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
     if (isRootRelativeUrl(uri)) return undefined;
+    if (allowCriticalWebBlur && hasOptimizationParams(uri)) return undefined;
     // Use stable width to prevent srcset changes on scroll
     const baseWidth = stableWidth ?? 320;
     const srcSetWidths = [
@@ -468,16 +541,15 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [resolvedSource, contentFit, isSafariWeb, quality, stableWidth]);
+  }, [allowCriticalWebBlur, resolvedSource, contentFit, quality, stableWidth]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
-    if (isSafariWeb) return undefined;
     if (typeof width === 'number' && Number.isFinite(width) && width > 0) {
       return `${Math.round(width)}px`;
     }
     return '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw';
-  }, [isSafariWeb, width]);
+  }, [width]);
 
   const shouldRenderWebBlurBackground = useMemo(() => {
     if (Platform.OS !== 'web') return false;
@@ -487,6 +559,17 @@ function ImageCardMedia({
     // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
   }, [allowCriticalWebBlur, blurBackground, loading, priority, webMainSrc]);
+  const webBackdropContentBox = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    if (fit !== 'contain') return null;
+    if (typeof width !== 'number' || typeof height !== 'number') return null;
+
+    return getContainedMediaBox({
+      containerWidth: width,
+      containerHeight: height,
+      contentAspectRatio: contentAspectRatio ?? null,
+    });
+  }, [contentAspectRatio, fit, height, width]);
 
   // When blur backdrop reuses the main image URL, both the CSS background-image
   // and the <img> share one browser cache entry. The sharp image appears as soon
@@ -633,6 +716,7 @@ function ImageCardMedia({
               fit={fit}
               useCssBackdrop={allowCriticalWebBlur && !revealOnLoadOnly}
               visible={shouldShowWebBlurBackdrop}
+              contentBox={webBackdropContentBox}
             />
           ) : null}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (

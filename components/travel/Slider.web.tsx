@@ -204,6 +204,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     controlsVisible = true,
     hideArrowsOnMobile = true,
     aspectRatio = DEFAULT_AR,
+    contentAspectRatio,
     fit = 'contain',
     fullBleed = false,
     autoPlay = true,
@@ -481,6 +482,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       firstImagePreloaded={firstImagePreloaded}
                       preloadPriority={preloadPriority}
                       fit={fit}
+                      contentAspectRatio={contentAspectRatio ?? aspectRatio}
                       onSlideLoad={handleSlideLoad}
                       prepareBlur={prepareBlur}
                       skipImage={skipFirstSlideImage && index === 0}

@@ -9,6 +9,8 @@ const { default: ImageCardMedia, isIOSSafariUserAgent } = require('@/components/
 describe('ImageCardMedia blur background (web)', () => {
   const originalPlatform = Platform.OS
   const originalJestWorkerId = process.env.JEST_WORKER_ID
+  const originalUserAgent = window.navigator.userAgent
+  const originalMaxTouchPoints = window.navigator.maxTouchPoints
 
   beforeEach(() => {
     Platform.OS = 'web'
@@ -19,6 +21,14 @@ describe('ImageCardMedia blur background (web)', () => {
 
   afterEach(() => {
     Platform.OS = originalPlatform
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value: originalUserAgent,
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: originalMaxTouchPoints,
+      configurable: true,
+    })
     if (originalJestWorkerId) {
       process.env.JEST_WORKER_ID = originalJestWorkerId
     } else {
@@ -76,6 +86,44 @@ describe('ImageCardMedia blur background (web)', () => {
     ).toBe(false)
   })
 
+  it('keeps responsive srcSet enabled on iPhone Safari while still forcing eager load', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg"
+          width={320}
+          height={200}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.loading).toBe('eager')
+    expect(mainImage.props.srcSet).toBeTruthy()
+    expect(String(mainImage.props.srcSet)).toContain('160w')
+    expect(mainImage.props.sizes).toBe('320px')
+  })
+
   it('keeps the main image visible on first frame for eager critical web media', () => {
     let tree: any
     renderer.act(() => {
@@ -100,6 +148,35 @@ describe('ImageCardMedia blur background (web)', () => {
 
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.style?.opacity).toBe(1)
+  })
+
+  it('preserves a pre-optimized critical web source instead of generating a new srcSet', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/544/gallery/photo.JPG?v=3567&w=400&q=35&fit=contain"
+          width={392}
+          height={576}
+          blurBackground
+          fit="contain"
+          loading="eager"
+          priority="high"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.src).toContain('w=400')
+    expect(mainImage.props.src).toContain('q=35')
+    expect(mainImage.props.srcSet).toBeUndefined()
   })
 
   it('keeps lazy shared-blur web media hidden until the main image is loaded', () => {
@@ -197,11 +274,13 @@ describe('ImageCardMedia blur background (web)', () => {
         <ImageCardMedia
           src="https://example.com/photo.jpg"
           height={200}
+          width={320}
           blurBackground
           fit="contain"
           loading="eager"
           priority="high"
           allowCriticalWebBlur
+          contentAspectRatio={16 / 9}
         />
       )
     })
@@ -209,13 +288,18 @@ describe('ImageCardMedia blur background (web)', () => {
     const blurLayers = tree!.root.findAll((node: any) => {
       return node?.props?.['data-blur-backdrop'] === 'true'
     })
+    const blurBackdropLayers = tree!.root.findAll((node: any) => {
+      return node?.props?.['data-blur-backdrop-layer'] === 'true'
+    })
     const mainLayers = tree!.root.findAll((node: any) => node?.type === 'img')
 
     expect(blurLayers.length).toBeGreaterThan(0)
+    expect(blurLayers.every((node: any) => node?.props?.['data-blur-backdrop-segment'] === 'true')).toBe(true)
+    expect(blurBackdropLayers.length).toBe(blurLayers.length)
     expect(mainLayers.length).toBeGreaterThan(0)
-    expect(String(blurLayers[0].props.style?.filter || '')).toContain('saturate')
+    expect(String(blurBackdropLayers[0].props.style?.filter || '')).toContain('saturate')
     expect(blurLayers[0].type).toBe('div')
-    expect(String(blurLayers[0].props.style?.backgroundImage || '')).toContain('photo.jpg')
+    expect(String(blurBackdropLayers[0].props.style?.backgroundImage || '')).toContain('photo.jpg')
     expect(mainLayers[0].props.src).toContain('photo.jpg')
   })
 
@@ -232,15 +316,20 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="eager"
           priority="high"
           allowCriticalWebBlur
+          contentAspectRatio={16 / 9}
         />
       )
     })
 
     const blurLayer = tree!.root.findAll((node: any) => {
-      return node?.props?.['data-blur-backdrop'] === 'true'
+      return node?.props?.['data-blur-backdrop-layer'] === 'true'
     })[0]
+    const blurSegments = tree!.root.findAll((node: any) => {
+      return node?.props?.['data-blur-backdrop-segment'] === 'true'
+    })
 
     expect(blurLayer).toBeTruthy()
+    expect(blurSegments.length).toBeGreaterThan(1)
     expect(blurLayer.type).toBe('div')
     expect(String(blurLayer.props.style?.filter || '')).toContain('blur(20px)')
     expect(String(blurLayer.props.style?.transform || '')).toContain('scale(1.08)')

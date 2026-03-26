@@ -87,6 +87,7 @@ interface SlideProps {
   preloadPriority?: boolean;
   /** Image fit mode. Defaults to 'contain'. */
   fit?: 'cover' | 'contain';
+  contentAspectRatio?: number;
   onSlideLoad?: (index: number) => void;
   prepareBlur?: boolean;
   /** When true, skip rendering the image (LCP Hero overlay covers it). */
@@ -94,7 +95,7 @@ interface SlideProps {
 }
 
 const Slide = memo(function Slide({
-  item: _item,
+  item,
   index,
   uri,
   containerW,
@@ -110,6 +111,7 @@ const Slide = memo(function Slide({
   firstImagePreloaded,
   preloadPriority,
   fit = 'contain',
+  contentAspectRatio,
   onSlideLoad,
   prepareBlur = false,
   skipImage = false,
@@ -312,6 +314,14 @@ const Slide = memo(function Slide({
             showImmediately={loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={shouldBlur}
             revealOnLoadOnly={shouldDelayWebRevealUntilLoad}
+            contentAspectRatio={
+              typeof item?.width === 'number' &&
+              typeof item?.height === 'number' &&
+              item.width > 0 &&
+              item.height > 0
+                ? item.width / item.height
+                : contentAspectRatio
+            }
           />
         </>
       )}

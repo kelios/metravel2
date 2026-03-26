@@ -49,6 +49,8 @@ describe('TravelDetailsContainer performance (web)', () => {
         }}
         alt='Hero image'
         isMobile={false}
+        height={600}
+        containerWidth={720}
       />,
     )
 
@@ -71,16 +73,21 @@ describe('TravelDetailsContainer performance (web)', () => {
         }}
         alt='Hero image'
         isMobile={false}
+        height={600}
+        containerWidth={720}
       />,
     )
 
     const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
     const heroBackdrop = container.querySelector('[data-hero-backdrop="true"]') as HTMLDivElement | null
+    const heroBackdropSegments = container.querySelectorAll('[data-hero-backdrop-segment="true"]')
+    const heroBackdropLayer = container.querySelector('[data-hero-backdrop-layer="true"]') as HTMLDivElement | null
 
     expect(heroBackdrop).toBeTruthy()
     expect(lcpImg).toBeTruthy()
     expect(heroBackdrop?.tagName).toBe('DIV')
-    expect(heroBackdrop?.style.backgroundImage).toContain(lcpImg?.getAttribute('src') || '')
+    expect(heroBackdropSegments.length).toBeGreaterThan(1)
+    expect(heroBackdropLayer?.style.backgroundImage).toContain(lcpImg?.getAttribute('src') || '')
 
     if (lcpImg) {
       fireEvent.load(lcpImg)

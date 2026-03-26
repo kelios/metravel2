@@ -66,6 +66,7 @@ export default function TravelHeroInteractiveSlider({
             preloadCount={preloadCount}
             blurBackground
             aspectRatio={aspectRatio}
+            contentAspectRatio={aspectRatio}
             fillContainer
             fit="contain"
             onFirstImageLoad={onFirstImageLoad}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -9,6 +9,10 @@ import {
   buildVersionedImageUrl,
 } from '@/utils/imageOptimization';
 import { markUriLoaded } from '@/components/travel/sliderParts/imageLoadCache';
+import {
+  getBackdropSegments,
+  getContainedMediaBox,
+} from '@/components/ui/webBlurBackdropLayout';
 
 type ImgLike = {
   url: string;
@@ -79,12 +83,14 @@ function OptimizedLCPHeroInner({
   onLoad,
   height,
   isMobile,
+  containerWidth,
 }: {
   img: ImgLike;
   alt?: string;
   onLoad?: () => void;
   height?: number;
   isMobile?: boolean;
+  containerWidth?: number | null;
 }) {
   const [loadError, setLoadError] = useState(false);
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null);
@@ -150,6 +156,36 @@ function OptimizedLCPHeroInner({
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc;
   const fixedHeight = height ? `${Math.round(height)}px` : '100%';
+  const backdropBox = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    if (typeof height !== 'number' || height <= 0) return null;
+
+    const resolvedWidth =
+      typeof containerWidth === 'number' && containerWidth > 0
+        ? containerWidth
+        : targetWidth;
+
+    return getContainedMediaBox({
+      containerWidth: resolvedWidth,
+      containerHeight: height,
+      contentAspectRatio: ratio,
+    });
+  }, [containerWidth, height, ratio, targetWidth]);
+  const backdropSegments = useMemo(() => {
+    if (Platform.OS !== 'web') return [];
+    if (typeof height !== 'number' || height <= 0) return [];
+
+    const resolvedWidth =
+      typeof containerWidth === 'number' && containerWidth > 0
+        ? containerWidth
+        : targetWidth;
+
+    return getBackdropSegments({
+      containerWidth: resolvedWidth,
+      containerHeight: height,
+      contentBox: backdropBox,
+    });
+  }, [backdropBox, containerWidth, height, targetWidth]);
 
   const notifyReady = useCallback(async () => {
     if (didNotifyLoadRef.current) return;
@@ -244,29 +280,61 @@ function OptimizedLCPHeroInner({
             backgroundColor: colors.backgroundSecondary,
           }}
         >
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: 'cover',
-              filter: 'blur(18px)',
-              transform: 'scale(1.08)',
-              opacity: 0,
-              transition: 'opacity 0.25s ease-in',
-              animation: 'fadeInBackdrop 0.3s ease-in 0.05s forwards',
-            }}
-            data-hero-backdrop="true"
-          >
-            <style dangerouslySetInnerHTML={{ __html: `
-              @keyframes fadeInBackdrop {
-                to { opacity: 0.9; }
-              }
-            `}} />
-          </div>
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes fadeInBackdrop {
+              to { opacity: 0.9; }
+            }
+          `}} />
+          {backdropSegments.length > 0 ? (
+            <>
+              {backdropSegments.map((segment, index) => (
+                <div
+                  key={`${index}-${segment.left}-${segment.top}-${segment.width}-${segment.height}`}
+                  aria-hidden="true"
+                  data-hero-backdrop="true"
+                  data-hero-backdrop-segment="true"
+                  data-hero-backdrop-layer="true"
+                  style={{
+                    position: 'absolute',
+                    top: segment.top,
+                    left: segment.left,
+                    width: segment.width,
+                    height: segment.height,
+                    zIndex: 0,
+                    backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: 'cover',
+                    filter: 'blur(18px)',
+                    transform: 'scale(1.08)',
+                    transformOrigin: 'center',
+                    opacity: 0,
+                    transition: 'opacity 0.25s ease-in',
+                    animation: 'fadeInBackdrop 0.3s ease-in 0.05s forwards',
+                    pointerEvents: 'none',
+                  }}
+                />
+              ))}
+            </>
+          ) : (
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `url("${srcWithRetry.replace(/"/g, '\\"')}")`,
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: 'cover',
+                filter: 'blur(18px)',
+                transform: 'scale(1.08)',
+                opacity: 0,
+                transition: 'opacity 0.25s ease-in',
+                animation: 'fadeInBackdrop 0.3s ease-in 0.05s forwards',
+              }}
+              data-hero-backdrop="true"
+            />
+          )}
           <img
             src={srcWithRetry}
             srcSet={responsive.srcSet}

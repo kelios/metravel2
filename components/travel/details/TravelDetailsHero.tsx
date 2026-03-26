@@ -182,6 +182,7 @@ function TravelHeroSectionInner({
                     alt={heroAlt}
                     height={heroHeight}
                     isMobile={isMobile}
+                    containerWidth={heroContainerWidth}
                     onLoad={handleWebHeroLoad}
                   />
                 </View>

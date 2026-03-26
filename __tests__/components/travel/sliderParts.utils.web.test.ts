@@ -35,6 +35,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     expect(src).toContain('w=720')
     expect(src).toContain('q=45')
     expect(src).toContain('fit=contain')
+    expect(src).not.toContain('f=')
   })
 
   it('keeps the first mobile slide aligned with the LCP hero image variant', () => {
@@ -49,9 +50,10 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       true,
     )
 
-    expect(src).toContain('w=390')
+    expect(src).toContain('w=400')
     expect(src).toContain('q=35')
     expect(src).toContain('fit=contain')
+    expect(src).not.toContain('f=')
   })
 
   it('still allows non-first desktop slides to use the larger slider variant', () => {

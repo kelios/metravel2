@@ -78,6 +78,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     showDots = true,
     hideArrowsOnMobile,
     aspectRatio,
+    contentAspectRatio,
     fit = 'contain',
     fullBleed = false,
     autoPlay = true,
@@ -519,10 +520,11 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           onImagePress={onImagePress}
           firstImagePreloaded={firstImagePreloaded}
           preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, preloadCount)}
+          contentAspectRatio={contentAspectRatio ?? aspectRatio}
         />
       );
     },
-    [uriMap, containerW, containerH, images.length, styles, blurBackground, currentIndex, imageProps, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount]
+    [uriMap, containerW, containerH, images.length, styles, blurBackground, currentIndex, imageProps, onFirstImageLoad, onImagePress, firstImagePreloaded, preloadCount, contentAspectRatio, aspectRatio]
   );
 
   if (!images.length) return null;
@@ -576,6 +578,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
                     onImagePress={onImagePress}
                     firstImagePreloaded={firstImagePreloaded}
                     preloadPriority={Math.abs(index - currentIndex) <= Math.max(1, preloadCount)}
+                    contentAspectRatio={contentAspectRatio ?? aspectRatio}
                   />
                 </View>
               );
