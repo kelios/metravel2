@@ -70,6 +70,7 @@ export function useSliderTrack(options: UseSliderTrackOptions): UseSliderTrackRe
   const trackRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
   const visualOffsetRef = useRef(0);
+  const measuredWidthRef = useRef<number | null>(null);
 
   const renderedSlideWidth = measuredSlideWidth ?? renderedSlideWidthProp;
 
@@ -140,19 +141,35 @@ export function useSliderTrack(options: UseSliderTrackOptions): UseSliderTrackRe
         requestAnimationFrame(() => {
           const retryWidth = wrapperNode?.getBoundingClientRect?.().width ?? 0;
           if (Number.isFinite(retryWidth) && retryWidth > 0) {
-            setMeasuredSlideWidth(retryWidth);
+            const roundedWidth = Math.round(retryWidth);
+            if (
+              measuredWidthRef.current !== null &&
+              Math.abs(measuredWidthRef.current - roundedWidth) <= 1
+            ) {
+              return;
+            }
+            measuredWidthRef.current = roundedWidth;
+            setMeasuredSlideWidth(roundedWidth);
             setLayoutMeasured(true);
-            setContainerWidth(retryWidth);
-            applyOffset(snapOffsetForIndex(indexRef.current, retryWidth), false);
+            setContainerWidth(roundedWidth);
+            applyOffset(snapOffsetForIndex(indexRef.current, roundedWidth), false);
           }
         });
       }
       return;
     }
-    setMeasuredSlideWidth(width);
+    const roundedWidth = Math.round(width);
+    if (
+      measuredWidthRef.current !== null &&
+      Math.abs(measuredWidthRef.current - roundedWidth) <= 1
+    ) {
+      return;
+    }
+    measuredWidthRef.current = roundedWidth;
+    setMeasuredSlideWidth(roundedWidth);
     setLayoutMeasured(true);
-    setContainerWidth(width);
-    applyOffset(snapOffsetForIndex(indexRef.current, width), false);
+    setContainerWidth(roundedWidth);
+    applyOffset(snapOffsetForIndex(indexRef.current, roundedWidth), false);
   }, [applyOffset, indexRef, setContainerWidth, snapOffsetForIndex]);
 
   useEffect(() => {
@@ -184,10 +201,19 @@ export function useSliderTrack(options: UseSliderTrackOptions): UseSliderTrackRe
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const width = e.nativeEvent.layout.width;
-      setMeasuredSlideWidth(width);
-      setContainerWidth(width);
+      if (!Number.isFinite(width) || width <= 0) return;
+      const roundedWidth = Math.round(width);
+      if (
+        measuredWidthRef.current !== null &&
+        Math.abs(measuredWidthRef.current - roundedWidth) <= 1
+      ) {
+        return;
+      }
+      measuredWidthRef.current = roundedWidth;
+      setMeasuredSlideWidth(roundedWidth);
+      setContainerWidth(roundedWidth);
       setLayoutMeasured(true);
-      applyOffset(snapOffsetForIndex(indexRef.current, width), false);
+      applyOffset(snapOffsetForIndex(indexRef.current, roundedWidth), false);
     },
     [applyOffset, indexRef, setContainerWidth, snapOffsetForIndex],
   );

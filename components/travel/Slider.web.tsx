@@ -5,6 +5,8 @@ import React, {
   useId,
   useImperativeHandle,
   useMemo,
+  useRef,
+  useState,
   forwardRef,
 } from 'react';
 import {
@@ -50,6 +52,38 @@ if (typeof document !== 'undefined') {
       [aria-label="Previous slide"]:active,
       [aria-label="Next slide"]:active {
         transform: scale(0.95) !important;
+      }
+      @keyframes sliderPageTurnForward {
+        0% {
+          opacity: 0;
+          transform: translateX(-5%) scaleX(0.96);
+        }
+        18% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translateX(9%) scaleX(1.04);
+        }
+      }
+      @keyframes sliderPageTurnBackward {
+        0% {
+          opacity: 0;
+          transform: translateX(5%) scaleX(0.96);
+        }
+        18% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translateX(-9%) scaleX(1.04);
+        }
+      }
+      .slider-page-turn-forward {
+        animation: sliderPageTurnForward 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      }
+      .slider-page-turn-backward {
+        animation: sliderPageTurnBackward 420ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
       }
     `;
     document.head.appendChild(style);
@@ -269,7 +303,17 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const maxIndex = Math.max(0, images.length - 1);
   const slideHeight = fillContainer ? '100%' : computedH;
   const imagesLen = images.length;
+  const prevIndexRef = useRef(currentIndex);
+  const [pageTurnDirection, setPageTurnDirection] = useState<'forward' | 'backward'>('forward');
+  const [pageTurnKey, setPageTurnKey] = useState(0);
   const navOffset = isMobile ? 8 : isTablet ? 12 : Math.max(44, 16 + Math.max(insets.left || 0, insets.right || 0));
+
+  useEffect(() => {
+    if (currentIndex === prevIndexRef.current) return;
+    setPageTurnDirection(currentIndex > prevIndexRef.current ? 'forward' : 'backward');
+    setPageTurnKey((value) => value + 1);
+    prevIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
   // --- Transition overlay ---
   const {
@@ -389,6 +433,26 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip} testID="slider-clip">
+          {imagesLen > 1 && pageTurnKey > 0 ? (
+            <View
+              key={`${pageTurnDirection}-${pageTurnKey}`}
+              pointerEvents="none"
+              style={[
+                styles.pageTurnOverlay,
+              ]}
+              {...({
+                className:
+                  pageTurnDirection === 'forward'
+                    ? 'slider-page-turn-forward'
+                    : 'slider-page-turn-backward',
+              } as any)}
+            >
+              <View style={styles.pageTurnShadow} />
+              <View style={styles.pageTurnHighlight} />
+              <View style={styles.pageTurnSpine} />
+            </View>
+          ) : null}
+
           {/* Transition overlay — always mounted, visibility via CSS opacity.
               Covers viewport while the target slide's image is loading. */}
           <View

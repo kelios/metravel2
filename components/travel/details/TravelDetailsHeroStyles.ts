@@ -98,6 +98,20 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       marginBottom: 0,
       backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.surfaceMuted,
       position: 'relative' as any,
+      borderWidth: 1,
+      borderColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.12)' : 'transparent',
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow:
+              '0 22px 60px rgba(16,24,40,0.18), 0 6px 18px rgba(16,24,40,0.1)',
+          } as any)
+        : {
+            shadowColor: colors.text,
+            shadowOpacity: 0.12,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
+          }),
     },
     heroOverlay: {
       position: 'absolute' as any,
@@ -107,29 +121,34 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       zIndex: 2,
       paddingHorizontal: Platform.select({ default: 16, web: 28 }),
       paddingBottom: Platform.select({ default: 20, web: 28 }),
-      paddingTop: Platform.select({ default: 60, web: 80 }),
+      paddingTop: Platform.select({ default: 48, web: 72 }),
       ...(Platform.OS === 'web'
         ? ({
             backgroundImage:
-              'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.35) 35%, rgba(0,0,0,0.1) 65%, transparent 100%)',
+              'linear-gradient(to top, rgba(7,12,19,0.82) 0%, rgba(7,12,19,0.34) 42%, transparent 72%)',
           } as any)
         : {}),
     },
+    heroTitleWrap: {
+      alignSelf: 'flex-start',
+      maxWidth: Platform.select({ default: '100%', web: 760 }) as any,
+    },
     heroTitle: {
-      fontSize: Platform.select({ default: 24, web: 30 }),
+      fontSize: Platform.select({ default: 26, web: 32 }),
       fontWeight: '700' as any,
       color: colors.textOnDark,
-      letterSpacing: -0.4,
-      lineHeight: Platform.select({ default: 30, web: 38 }),
+      letterSpacing: Platform.select({ default: -0.5, web: -0.7 }),
+      lineHeight: Platform.select({ default: 32, web: 40 }),
       ...(Platform.OS === 'web'
         ? ({
-            textShadow: '0 2px 12px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)',
+            textShadow: '0 2px 16px rgba(0,0,0,0.52)',
           } as any)
         : {
             textShadowColor: 'rgba(0,0,0,0.7)',
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 6,
           }),
+      maxWidth: Platform.select({ default: '100%', web: 720 }) as any,
     },
     heroFavoriteBtn: {
       position: 'absolute' as any,

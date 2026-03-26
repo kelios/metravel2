@@ -146,6 +146,7 @@ const Slide = memo(function Slide({
   const firstLoadReportedRef = useRef(false);
   const slideLoadReportedRef = useRef(false);
   const fallbackTriedRef = useRef(false);
+  const loadedStateRef = useRef(isLoaded);
   const shouldEagerLoad =
     Platform.OS === 'web'
       ? isFirstSlide || isActive || !!preloadPriority
@@ -162,16 +163,17 @@ const Slide = memo(function Slide({
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
   const effectiveBlurBackground = shouldBlur && !disableSliderBlurForSafari;
-  const shouldDelayWebRevealUntilLoad =
-    Platform.OS === 'web' &&
-    isActive &&
-    effectiveBlurBackground &&
-    !isFirstSlide;
+  const shouldRenderLoadingPlaceholder =
+    !isLoaded && (isFirstSlide || isActive || !!preloadPriority);
 
   useEffect(() => {
     setResolvedUri(uri);
     fallbackTriedRef.current = false;
   }, [uri]);
+
+  useEffect(() => {
+    loadedStateRef.current = isLoaded;
+  }, [isLoaded]);
 
   // When skipImage is true and firstImagePreloaded is true, immediately report load
   // This ensures the slider upgrade happens even though we skip rendering the image
@@ -223,14 +225,17 @@ const Slide = memo(function Slide({
 
   const handleLoad = useCallback(() => {
     markUriLoaded(resolvedUri);
-    setHasError(false);
-    setIsLoaded(true);
+    if (hasError) setHasError(false);
+    if (!loadedStateRef.current) {
+      loadedStateRef.current = true;
+      setIsLoaded(true);
+    }
     reportSlideLoad();
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
-  }, [isFirstSlide, onFirstImageLoad, reportSlideLoad, resolvedUri]);
+  }, [hasError, isFirstSlide, onFirstImageLoad, reportSlideLoad, resolvedUri]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -276,7 +281,7 @@ const Slide = memo(function Slide({
       ) : (
         <>
           {/* ✅ OPTIMIZATION: Show subtle skeleton with pulse animation */}
-          {!isLoaded && (
+          {shouldRenderLoadingPlaceholder && (
             <View
               style={[
                 {
@@ -324,7 +329,6 @@ const Slide = memo(function Slide({
             onError={handleError}
             showImmediately={loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={effectiveBlurBackground}
-            revealOnLoadOnly={shouldDelayWebRevealUntilLoad}
             contentAspectRatio={
               typeof item?.width === 'number' &&
               typeof item?.height === 'number' &&
@@ -354,6 +358,29 @@ const Slide = memo(function Slide({
   }
 
   return slideContent;
+}, (prev, next) => {
+  return (
+    prev.item === next.item &&
+    prev.index === next.index &&
+    prev.uri === next.uri &&
+    prev.containerW === next.containerW &&
+    prev.slideHeight === next.slideHeight &&
+    prev.slideHeightPx === next.slideHeightPx &&
+    prev.imagesLength === next.imagesLength &&
+    prev.styles === next.styles &&
+    prev.blurBackground === next.blurBackground &&
+    prev.isActive === next.isActive &&
+    prev.imageProps === next.imageProps &&
+    prev.onFirstImageLoad === next.onFirstImageLoad &&
+    prev.onImagePress === next.onImagePress &&
+    prev.firstImagePreloaded === next.firstImagePreloaded &&
+    prev.preloadPriority === next.preloadPriority &&
+    prev.fit === next.fit &&
+    prev.contentAspectRatio === next.contentAspectRatio &&
+    prev.onSlideLoad === next.onSlideLoad &&
+    prev.prepareBlur === next.prepareBlur &&
+    prev.skipImage === next.skipImage
+  );
 });
 
 export default Slide;

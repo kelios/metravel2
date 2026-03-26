@@ -19,11 +19,12 @@ import { useTravelDetailsHeroCompositionModel } from './hooks/useTravelDetailsHe
 import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
 import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
 import { TravelHeroExtras } from './TravelHeroExtras'
-const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
 import {
   OptimizedLCPHero,
   OVERLAY_TRANSITION_MS,
 } from './TravelDetailsOptimizedLCPHero'
+
+const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
 
 /* ---- TravelHeroSectionInner ---- */
 function TravelHeroSectionInner({
@@ -208,7 +209,7 @@ function TravelHeroSectionInner({
 
             {travel?.name ? (
               <View style={[styles.heroOverlay, { pointerEvents: 'none' }]}>
-                <View style={{ pointerEvents: 'auto' } as any}>
+                <View style={[styles.heroTitleWrap, { pointerEvents: 'auto' } as any]}>
                   <Text
                     style={styles.heroTitle}
                     numberOfLines={2}
