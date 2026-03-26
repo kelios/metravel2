@@ -348,6 +348,8 @@ type Props = {
   revealOnLoadOnly?: boolean;
   /** Source image aspect ratio, used to keep critical blur confined to letterbox gutters. */
   contentAspectRatio?: number;
+  /** Preserve the exact pre-optimized URL for critical web media that must match preload. */
+  preserveOptimizedWebSrc?: boolean;
 };
 
 function ImageCardMedia({
@@ -379,6 +381,7 @@ function ImageCardMedia({
   allowCriticalWebBlur = false,
   revealOnLoadOnly = false,
   contentAspectRatio,
+  preserveOptimizedWebSrc = false,
 }: Props) {
   const isJest =
     typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
@@ -456,6 +459,14 @@ function ImageCardMedia({
     return stableHeightRef.current;
   }, [height]);
 
+  const shouldPreserveProvidedOptimizedUrl = useCallback((uri: string): boolean => {
+    if (!allowCriticalWebBlur || !hasOptimizationParams(uri)) return false;
+    if (preserveOptimizedWebSrc) return true;
+    // Keep all non-Safari browsers on the previous behavior.
+    // iPhone Safari is the only browser where we need responsive srcSet restored.
+    return !isSafariWeb;
+  }, [allowCriticalWebBlur, isSafariWeb, preserveOptimizedWebSrc]);
+
   const webOptimizedSource = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
@@ -464,7 +475,7 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
     if (isRootRelativeUrl(uri)) return uri;
-    if (allowCriticalWebBlur && hasOptimizationParams(uri)) return uri;
+    if (shouldPreserveProvidedOptimizedUrl(uri)) return uri;
     if (!stableWidth && !stableHeight) return null;
     return (
       optimizeImageUrl(uri, {
@@ -475,7 +486,7 @@ function ImageCardMedia({
         format: 'auto',
       }) ?? uri
     );
-  }, [allowCriticalWebBlur, resolvedSource, stableWidth, stableHeight, contentFit, quality]);
+  }, [resolvedSource, shouldPreserveProvidedOptimizedUrl, stableWidth, stableHeight, contentFit, quality]);
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     // For require() sources (numbers), return null to use OptimizedImage/ExpoImage
@@ -525,7 +536,7 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
     if (isRootRelativeUrl(uri)) return undefined;
-    if (allowCriticalWebBlur && hasOptimizationParams(uri)) return undefined;
+    if (shouldPreserveProvidedOptimizedUrl(uri)) return undefined;
     // Use stable width to prevent srcset changes on scroll
     const baseWidth = stableWidth ?? 320;
     const srcSetWidths = [
@@ -541,7 +552,7 @@ function ImageCardMedia({
         fit: contentFit === 'contain' ? 'contain' : 'cover',
       }) || undefined
     );
-  }, [allowCriticalWebBlur, resolvedSource, contentFit, quality, stableWidth]);
+  }, [resolvedSource, shouldPreserveProvidedOptimizedUrl, contentFit, quality, stableWidth]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;

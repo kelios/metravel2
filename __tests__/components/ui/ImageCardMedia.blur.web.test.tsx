@@ -163,6 +163,7 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="eager"
           priority="high"
           allowCriticalWebBlur
+          preserveOptimizedWebSrc
         />
       )
     })
@@ -176,6 +177,72 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(mainImage).toBeTruthy()
     expect(mainImage.props.src).toContain('w=400')
     expect(mainImage.props.src).toContain('q=35')
+    expect(mainImage.props.srcSet).toBeUndefined()
+  })
+
+  it('keeps responsive srcSet for pre-optimized shared-blur cards on iPhone Safari', () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      configurable: true,
+    })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      value: 5,
+      configurable: true,
+    })
+
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/544/gallery/photo.JPG?v=3567&w=320&h=168&q=52&fit=contain"
+          width={320}
+          height={168}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          priority="low"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.srcSet).toBeTruthy()
+    expect(String(mainImage.props.srcSet)).toContain('640w')
+  })
+
+  it('keeps the exact pre-optimized shared-blur source on non-Safari browsers by default', () => {
+    let tree: any
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://metravel.by/gallery/544/gallery/photo.JPG?v=3567&w=320&h=168&q=52&fit=contain"
+          width={320}
+          height={168}
+          blurBackground
+          fit="contain"
+          loading="lazy"
+          priority="low"
+          allowCriticalWebBlur
+        />
+      )
+    })
+
+    const mainImage = tree!.root.findAll((node: any) => {
+      if (node?.type !== 'img') return false
+      if (node?.props?.['aria-hidden'] === true) return false
+      return String(node?.props?.style?.objectFit || '') === 'contain'
+    })[0]
+
+    expect(mainImage).toBeTruthy()
+    expect(mainImage.props.src).toContain('w=320')
     expect(mainImage.props.srcSet).toBeUndefined()
   })
 
