@@ -5,6 +5,7 @@ type PrintableProps = {
     title: string;
     steps: QuestStep[];
     intro?: QuestStep;
+    coverUrl?: string;
     questUrl?: string; // полный URL квеста на сайте
 };
 
@@ -256,11 +257,12 @@ function buildPrintableMapSvg(points: PrintableMapPoint[]): string {
  * Генерирует подарочную HTML-версию квеста для печати.
  * Включает: обложку, карту, шаги с QR-кодами навигации, QR на сайт.
  */
-export async function generatePrintableQuest({ title, steps, intro, questUrl }: PrintableProps): Promise<void> {
+export async function generatePrintableQuest({ title, steps, intro, coverUrl, questUrl }: PrintableProps): Promise<void> {
     if (Platform.OS !== 'web') return;
 
     const validSteps = steps.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat !== 0 || s.lng !== 0));
     const mapPoints = buildPrintableMapPoints(validSteps);
+    const coverImageUri = resolveStepImageUri(coverUrl);
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
     const bookPreviewWindow = await loadBookPreviewWindowModule();
     const previewWindow = bookPreviewWindow.openPendingBookPreviewWindow();
@@ -445,6 +447,9 @@ export async function generatePrintableQuest({ title, steps, intro, questUrl }: 
         box-shadow: 0 20px 60px rgba(7, 26, 40, 0.28), 0 4px 12px rgba(7,26,40,0.15);
         page-break-after: avoid;
     }
+    .cover.has-cover-image .cover-inner {
+        padding-right: 332px;
+    }
     .cover-bg-pattern {
         position: absolute;
         inset: 0;
@@ -463,6 +468,38 @@ export async function generatePrintableQuest({ title, steps, intro, questUrl }: 
             90deg, transparent, transparent 44px, rgba(255,255,255,0.03) 44px, rgba(255,255,255,0.03) 45px
         );
         pointer-events: none;
+    }
+    .cover-image-glow {
+        position: absolute;
+        right: 56px;
+        top: 46px;
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(58,155,191,0.34) 0%, rgba(58,155,191,0.12) 38%, rgba(58,155,191,0) 72%);
+        filter: blur(18px);
+        pointer-events: none;
+    }
+    .cover-image-wrap {
+        position: absolute;
+        top: 36px;
+        right: 40px;
+        bottom: 36px;
+        width: 252px;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(255,255,255,0.08);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+        z-index: 1;
+    }
+    .cover-image {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     .cover-inner {
         position: relative;
@@ -987,9 +1024,15 @@ export async function generatePrintableQuest({ title, steps, intro, questUrl }: 
     <main class="sheet">
 
     <!-- ══════════ COVER ══════════ -->
-    <div class="cover">
+    <div class="cover${coverImageUri ? ' has-cover-image' : ''}">
         <div class="cover-bg-pattern"></div>
         <div class="cover-grid"></div>
+        ${coverImageUri ? `
+        <div class="cover-image-glow"></div>
+        <div class="cover-image-wrap">
+            <img class="cover-image" src="${escInline(coverImageUri)}" alt="Обложка квеста" loading="eager" referrerpolicy="no-referrer" />
+        </div>
+        ` : ''}
         <div class="cover-inner">
             <div class="cover-top-row">
                 <span class="cover-badge">&#10022; Подарочный квест</span>

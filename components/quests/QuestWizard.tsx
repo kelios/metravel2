@@ -747,8 +747,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         const questUrl = typeof window !== 'undefined'
             ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
             : undefined;
-        void generatePrintableQuest({ title, steps, intro, questUrl });
-    }, [intro, steps, title]);
+        void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl });
+    }, [coverUrl, intro, steps, title]);
 
     useEffect(() => { 
         console.info('[QuestWizard] Video changed, resetting videoOk state');
