@@ -6,7 +6,6 @@ import React, {
     useMemo,
     useRef,
     useState,
-    lazy,
     Suspense,
 } from 'react';
 import {
@@ -20,6 +19,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
 import { generatePrintableQuest } from './QuestPrintable';
+import {
+    BelkrajWidgetLazy,
+    getQuestClipboard,
+    NativeQuestVideoLazy,
+    QuestFullMapLazy,
+    QuestWebVideo,
+} from './questWizardMedia';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS as _DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -27,59 +33,6 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { openExternalUrl } from '@/utils/externalLinks';
 import { safeGetYoutubeId } from '@/utils/travelDetailsSecure';
-
-// ⚡️ Heavy deps lazy-loaded to keep chunk small
-const BelkrajWidgetLazy = lazy(() => import("@/components/belkraj/BelkrajWidget"));
-const getClipboard = () => import('expo-clipboard');
-
-// Lazy wrapper for expo-av Video (only used on native finale)
-const NativeVideoLazy = lazy(() =>
-    import('expo-av').then((m) => ({
-        default: memo(function NativeVideo(props: {
-            source: any; posterSource?: any; usePoster?: boolean;
-            style?: any; useNativeControls?: boolean; shouldPlay?: boolean;
-            isLooping?: boolean; onError?: () => void;
-        }) {
-            return (
-                <m.Video
-                    {...props}
-                    resizeMode={m.ResizeMode.CONTAIN}
-                    // @ts-ignore -- playsInline is a web-only video attribute not in expo-av Video types
-                    playsInline
-                />
-            );
-        }),
-    }))
-);
-
-// Stable module-level web video component — must NOT be defined inside render
-const WebVideo = memo(function WebVideo({ src, poster, onError }: { src?: string; poster?: string; onError: () => void }) {
-    useEffect(() => {
-        if (src) {
-            console.info('[WebVideo] Rendering video with src:', src);
-        }
-    }, [src]);
-    
-    // @ts-ignore -- React Native Web allows direct DOM element creation via React.createElement
-    return React.createElement('video', {
-        src,
-        poster,
-        controls: true,
-        playsInline: true,
-        preload: 'metadata',
-        // @ts-ignore -- inline style object for web video element, not a RN StyleSheet type
-        style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', backgroundColor: _DESIGN_TOKENS.colors.text },
-        onError: (e: any) => {
-            console.error('[WebVideo] Video error:', e?.target?.error);
-            onError();
-        },
-        onLoadStart: () => console.info('[WebVideo] Video load started'),
-        onLoadedMetadata: () => console.info('[WebVideo] Video metadata loaded'),
-        onCanPlay: () => console.info('[WebVideo] Video can play'),
-    });
-});
-
-const QuestFullMap = lazy(() => import("@/components/quests/QuestFullMap"));
 
 // ===================== ТИПЫ =====================
 export type QuestStep = {
@@ -243,7 +196,7 @@ const StepCard = memo((props: StepCardProps) => {
         return openCandidates([urls[app]]);
     };
 
-    const copyCoords = async () => { const Clipboard = await getClipboard(); await Clipboard.setStringAsync(`${step.lat.toFixed(6)}, ${step.lng.toFixed(6)}`); notify('Координаты скопированы'); };
+    const copyCoords = async () => { const Clipboard = await getQuestClipboard(); await Clipboard.setStringAsync(`${step.lat.toFixed(6)}, ${step.lng.toFixed(6)}`); notify('Координаты скопированы'); };
 
     const shake = () => {
         shakeAnim.setValue(0);
@@ -637,7 +590,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const copyCurrentStepCoords = useCallback(async () => {
         if (!currentStep) return;
-        const Clipboard = await getClipboard();
+        const Clipboard = await getQuestClipboard();
         await Clipboard.setStringAsync(`${currentStep.lat.toFixed(6)}, ${currentStep.lng.toFixed(6)}`);
         notify('Координаты скопированы');
     }, [currentStep]);
@@ -817,7 +770,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                 )}
 
                                 <Suspense fallback={<QuestMapSkeleton />}>
-                                    <QuestFullMap
+                                    <QuestFullMapLazy
                                         steps={steps}
                                         height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
                                         title="Карта квеста"
@@ -883,7 +836,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                     title="Видео квеста"
                                                 />
                                             ) : videoOk ? (
-                                                <WebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
+                                                <QuestWebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
                                             ) : (
                                                 <>
                                                     {posterUri ? (
@@ -907,7 +860,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                             )
                                         ) : (
                                             <Suspense fallback={null}>
-                                                <NativeVideoLazy
+                                                <NativeQuestVideoLazy
                                                     source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
                                                     posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
                                                     usePoster={!!finale.poster}

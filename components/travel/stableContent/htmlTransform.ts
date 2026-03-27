@@ -97,17 +97,21 @@ export const buildWeservProxyUrl = (src: string) => {
       }
     }
 
+    let parsedUrl: URL | null = null
     try {
-      const parsed = new URL(normalized, 'https://metravel.by')
-      const host = parsed.hostname.toLowerCase()
+      parsedUrl = new URL(normalized, 'https://metravel.by')
+    } catch {
+      parsedUrl = null
+    }
+
+    if (parsedUrl) {
+      const host = parsedUrl.hostname.toLowerCase()
       if (isPrivateOrLocalHost(host)) {
         return normalized
       }
       if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
         return normalizeMetravelOwnImageUrl(stripOptimizationParams(normalized))
       }
-    } catch {
-      // Fall through to the generic proxy path for malformed/relative inputs.
     }
 
     const cleaned = stripOptimizationParams(normalized)
