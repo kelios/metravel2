@@ -50,12 +50,6 @@ export const TravelDeferredSections: React.FC<{
 
   const shouldLoadAuthor = shouldLoadAuthorSection
   const shouldLoadRatingSection = shouldLoadRating
-  const hasCommentMetadata =
-    (typeof travel?.thread_id === 'number' && travel.thread_id > 0) ||
-    (typeof travel?.comment_thread_id === 'number' && travel.comment_thread_id > 0) ||
-    Number(travel?.comment_count ?? 0) > 0 ||
-    Number(travel?.comments_count ?? 0) > 0
-
   return (
     <>
       <TravelDetailsContentSection
@@ -136,7 +130,7 @@ export const TravelDeferredSections: React.FC<{
             travelId={travel.id}
             lazyLoad
             autoload={forceOpenKey === 'comments'}
-            canLoadComments={hasCommentMetadata}
+            canLoadComments
           />
         )}
       </View>

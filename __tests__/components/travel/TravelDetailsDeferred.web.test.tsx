@@ -360,7 +360,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     expect(mockCommentsSectionSpy).toHaveBeenCalled()
   })
 
-  it('passes comment availability flag based on travel metadata', async () => {
+  it('keeps comments loadable even when travel metadata has no comment thread fields', async () => {
     const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
 
     const travel: any = {
@@ -417,7 +417,7 @@ describe('TravelDeferredSections (web author defer)', () => {
       expect.arrayContaining([
         [
           expect.objectContaining({
-            canLoadComments: false,
+            canLoadComments: true,
             lazyLoad: true,
           }),
           undefined,

@@ -219,6 +219,44 @@ describe('api/misc', () => {
     expect(result).toEqual({ ok: true })
   })
 
+  it('fetchFilters returns fallback without JSON parsing on non-ok response', async () => {
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 502, statusText: 'Bad Gateway' })
+
+    const result = await fetchFilters()
+
+    expect(result).toEqual({
+      countries: [],
+      categories: [],
+      categoryTravelAddress: [],
+      companions: [],
+      complexity: [],
+      month: [],
+      over_nights_stay: [],
+      sortings: [],
+      transports: [],
+      year: '',
+    })
+    expect(mockSafeJsonParse).not.toHaveBeenCalled()
+  })
+
+  it('fetchAllCountries returns fallback without JSON parsing on non-ok response', async () => {
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 502, statusText: 'Bad Gateway' })
+
+    const result = await fetchAllCountries()
+
+    expect(result).toEqual([])
+    expect(mockSafeJsonParse).not.toHaveBeenCalled()
+  })
+
+  it('fetchFiltersCountry returns fallback without JSON parsing on non-ok response', async () => {
+    mockFetchWithTimeout.mockResolvedValue({ ok: false, status: 502, statusText: 'Bad Gateway' })
+
+    const result = await fetchFiltersCountry()
+
+    expect(result).toEqual([])
+    expect(mockSafeJsonParse).not.toHaveBeenCalled()
+  })
+
   it('uploadImage throws error text on non-200 responses', async () => {
     mockGetSecureItem.mockResolvedValue('token')
     mockValidateImageFile.mockReturnValue({ valid: true })

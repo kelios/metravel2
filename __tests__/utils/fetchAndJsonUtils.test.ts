@@ -102,6 +102,29 @@ describe('fetchWithTimeout', () => {
       /Сетевое соединение было прервано/
     )
   })
+
+  it('retries once on 502 from local Metro API proxy', async () => {
+    const originalWindow = global.window
+    ;(global as any).window = {
+      location: {
+        origin: 'http://localhost:8081',
+        hostname: 'localhost',
+      },
+    }
+
+    const firstResponse = { status: 502 } as Response
+    const secondResponse = { status: 200, ok: true } as Response
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce(firstResponse)
+      .mockResolvedValueOnce(secondResponse)
+    global.fetch = fetchMock as any
+
+    const result = await fetchWithTimeout('http://localhost:8081/api/countries/', {}, 1000)
+
+    expect(result).toBe(secondResponse)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    ;(global as any).window = originalWindow
+  })
 })
 
 describe('safeJsonParse', () => {

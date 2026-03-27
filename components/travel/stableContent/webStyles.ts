@@ -795,14 +795,17 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
 /* Instagram wrapper - обёртка для всех Instagram embed'ов */
 .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
 .${WEB_RICH_TEXT_CLASS} .instagram-media {
-  width: min(100%, 360px) !important;
-  max-width: 360px !important;
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
   min-width: 0 !important;
-  margin: ${DESIGN_TOKENS.spacing.xs + 8}px 0 ${DESIGN_TOKENS.spacing.sm}px !important;
-  border-radius: ${DESIGN_TOKENS.radii.md}px !important;
+  margin: ${DESIGN_TOKENS.spacing.md}px auto ${DESIGN_TOKENS.spacing.lg}px !important;
+  border-radius: 22px !important;
   overflow: hidden !important;
   position: relative;
   display: block;
+  border: 1px solid ${colors.borderLight};
+  background: ${colors.surfaceMuted};
+  box-shadow: ${colors.boxShadows?.light || 'none'};
 }
 
 /* Instagram iframe - занимает всю ширину, пропорциональная высота */
@@ -841,7 +844,7 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
 
 /* Убираем лишние отступы и границы */
 .${WEB_RICH_TEXT_CLASS} .instagram-wrapper {
-  background: transparent !important;
+  background: ${colors.surface} !important;
   padding: 0 !important;
 }
 
@@ -1006,8 +1009,8 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   font-size: 14px;
   color: ${colors.textMuted};
   line-height: 1.5;
-  margin-top: 8px;
-  margin-bottom: 20px;
+  width: min(100%, 430px);
+  margin: 10px auto 22px;
   text-align: center;
 }
 .${WEB_RICH_TEXT_CLASS} .instagram-caption-text {

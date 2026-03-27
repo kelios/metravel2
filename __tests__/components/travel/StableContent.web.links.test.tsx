@@ -146,6 +146,24 @@ describe('StableContent (web) link styles', () => {
     expect(richText?.innerHTML).toContain('>Example<');
   });
 
+  it('converts standalone instagram post links into embeds in travel content', async () => {
+    const StableContent = (await import('@/components/travel/StableContent')).default;
+
+    const html =
+      '<p><a href="https://www.instagram.com/p/CScU4bJI2Ud/">https://www.instagram.com/p/CScU4bJI2Ud/</a></p>';
+
+    const { container } = render(
+      <StableContent html={html} contentWidth={700} />
+    );
+
+    await waitFor(() => {
+      const iframe = container.querySelector('.travel-rich-text iframe') as HTMLIFrameElement | null;
+      expect(iframe).toBeTruthy();
+      expect(iframe?.getAttribute('src')).toBe('https://www.instagram.com/p/CScU4bJI2Ud/embed/captioned/');
+      expect(container.querySelector('.travel-rich-text a[href*="instagram.com/p/CScU4bJI2Ud"]')).toBeNull();
+    });
+  });
+
   it('opens inline image in a lightbox on click and closes it', async () => {
     const StableContent = (await import('@/components/travel/StableContent')).default;
 

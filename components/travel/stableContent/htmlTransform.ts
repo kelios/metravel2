@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
 
+import { normalizeArticleEditorHtmlForInput } from '@/components/article/articleEditorConfig'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
 import { applySmartImageLayout } from '@/utils/richTextImageLayout'
 
@@ -306,7 +307,8 @@ const decorateRichImageFrames = (html: string) => {
 }
 
 export const prepareStableContentHtml = (html: string) => {
-  const safe = sanitizeRichText(html)
+  const normalizedEmbeds = normalizeArticleEditorHtmlForInput(html)
+  const safe = sanitizeRichText(normalizedEmbeds)
   const normalized = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
   const demoted = normalized
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')

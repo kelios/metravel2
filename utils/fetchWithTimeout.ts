@@ -13,6 +13,21 @@ export async function fetchWithTimeout(
     options: RequestInit = {},
     timeout: number = 10000
 ): Promise<Response> {
+    const shouldRetryLocalApiProxy502 = (candidateUrl: string, init: RequestInit): boolean => {
+        if (typeof window === 'undefined') return false;
+        if (window.location?.hostname !== 'localhost' && window.location?.hostname !== '127.0.0.1') {
+            return false;
+        }
+        try {
+            const parsed = new URL(candidateUrl, window.location.origin);
+            if (parsed.origin !== window.location.origin) return false;
+            if (!parsed.pathname.startsWith('/api/')) return false;
+            const method = String(init.method || 'GET').toUpperCase();
+            return ['GET', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+        } catch {
+            return false;
+        }
+    };
     const externalSignal = options.signal;
     const controller = new AbortController();
     let didTimeout = false;
@@ -32,11 +47,18 @@ export async function fetchWithTimeout(
         }
     }
 
-    try {
-        const response = await fetch(url, {
+    const runFetch = async (): Promise<Response> => {
+        return await fetch(url, {
             ...options,
             signal: controller.signal,
         });
+    };
+
+    try {
+        let response = await runFetch();
+        if (response.status === 502 && shouldRetryLocalApiProxy502(url, options)) {
+            response = await runFetch();
+        }
         return response;
     } catch (error: any) {
         const isPrematureCloseError =
