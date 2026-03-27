@@ -18,8 +18,14 @@ test.describe('@smoke Home quick filters', () => {
     // URL param key may appear as "over_nights_stay" or "over__nights__stay" depending on router serialization.
     await expect(page).toHaveURL(/over(_|__)nights(_|__)stay=1/);
 
-    // Ensure filters UI is visible and "Палатка" is selected.
-    await expect(page.getByText('Фильтры', { exact: true })).toBeVisible({ timeout: 30_000 });
+    // Wait for the skeleton layer to disappear before checking the interactive filters UI.
+    const searchSkeleton = page.getByTestId('search-skeleton');
+    if (await searchSkeleton.isVisible().catch(() => false)) {
+      await expect(searchSkeleton).toBeHidden({ timeout: 30_000 });
+    }
+
+    // Ensure the interactive filters UI is visible and "Палатка" is selected.
+    await expect(page.getByRole('button', { name: /Сортировка:/i })).toBeVisible({ timeout: 30_000 });
 
     const expandAll = page.getByText('Развернуть все', { exact: true });
     if (await expandAll.isVisible().catch(() => false)) {

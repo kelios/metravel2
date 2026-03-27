@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import * as Location from 'expo-location';
 
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -10,7 +9,7 @@ import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 import { getRoutingConfigDiagnostics, resolveRoutingApiKey } from '@/utils/routingApiKey';
 import { devWarn } from '@/utils/logger';
-import type { Coordinates, MapMode, MapProps, Point } from './Map/types';
+import type { MapMode, MapProps, Point } from './Map/types';
 import { strToLatLng } from './Map/utils';
 
 // Import modular components and hooks
@@ -24,9 +23,18 @@ import { MapLoadingOverlay, MapWebBackground, MapWebLeafletCanvas, NoPointsMessa
 // New optimized hooks
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
+import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan';
+import { useMapUserLocation } from './Map/useMapUserLocation';
+import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects';
+import {
+  buildRouteLineLatLngObjects,
+  getCircleCenter,
+  getHintCenterLatLng,
+  getSafeCenter,
+  normalizeLngLatWithHint as normalizeLngLatWithHintHelper,
+} from './Map/mapWebGeometry';
 
 type ReactLeafletNS = typeof import('react-leaflet');
-const MAP_LAYOUT_INVALIDATE_EVENT = 'metravel:map-layout-invalidate';
 
 const isTestEnv =
   typeof process !== 'undefined' &&
@@ -71,15 +79,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
   });
 
   // State
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [showInitialLoader, setShowInitialLoader] = useState(Platform.OS !== 'web');
-  const [_hasWebTilesLoaded, setHasWebTilesLoaded] = useState(false);
   const [errors, setErrors] = useState<any>({ routing: false });
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [mapInstance, setMapInstance] = useState<any>(null);
-  const [mapPaneWidth, setMapPaneWidth] = useState(0);
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
   const wrapperRef = useRef<View | null>(null);
@@ -145,112 +150,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, []);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-
-    const wrapperEl = wrapperRef.current as unknown as HTMLElement | null;
-    if (!(wrapperEl instanceof HTMLElement)) return;
-
-    const updateWidth = () => {
-      setMapPaneWidth(wrapperEl.clientWidth || 0);
-    };
-
-    updateWidth();
-
-    let resizeObserver: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        updateWidth();
-      });
-      resizeObserver.observe(wrapperEl);
-    }
-
-    window.addEventListener('resize', updateWidth);
-
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener('resize', updateWidth);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-    if (mapInstance && mapInstance === mapRef.current) return;
-    setMapInstance(mapRef.current);
-  }, [mapInstance]);
-
-  // Track first rendered tiles on web: loader overlay must disappear once tiles are visible.
-  // Use DOM polling with a safety timeout (tile load events are not consistently emitted on the map instance).
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof document === 'undefined') return;
-    if (!leafletReady) return;
-
-    // Reset on module (re)load
-    setHasWebTilesLoaded(false);
-
-    let cancelled = false;
-    let intervalId: any = null;
-    let timeoutId: any = null;
-
-    const checkLoaded = () => {
-      if (cancelled) return;
-      try {
-        const hasTile = !!document.querySelector?.('.leaflet-tile-loaded');
-        if (hasTile) {
-          setHasWebTilesLoaded(true);
-          cancelled = true;
-        }
-      } catch {
-        // noop
-      }
-
-      if (cancelled) {
-        try {
-          if (intervalId) clearInterval(intervalId);
-        } catch {
-          // noop
-        }
-        try {
-          if (timeoutId) clearTimeout(timeoutId);
-        } catch {
-          // noop
-        }
-      }
-    };
-
-    // Poll until first tile is loaded
-    intervalId = setInterval(checkLoaded, 250);
-    // Run immediately
-    checkLoaded();
-
-    // Safety: never block map interactions indefinitely
-    timeoutId = setTimeout(() => {
-      if (cancelled) return;
-      cancelled = true;
-      setHasWebTilesLoaded(true);
-      try {
-        if (intervalId) clearInterval(intervalId);
-      } catch {
-        // noop
-      }
-    }, 15_000);
-
-    return () => {
-      cancelled = true;
-      try {
-        if (intervalId) clearInterval(intervalId);
-      } catch {
-        // noop
-      }
-      try {
-        if (timeoutId) clearTimeout(timeoutId);
-      } catch {
-        // noop
-      }
-    };
-  }, [leafletReady]);
-
   // Travel data
   const travelData = useMemo(
     () => (Array.isArray(travel?.data) ? travel.data : []),
@@ -272,11 +171,23 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return radiusKm * 1000;
   }, [mode, radius]);
 
-  const userLocationLatLng = useMemo(() => {
-    if (!userLocation) return null;
-    if (!isValidCoordinate(userLocation.latitude, userLocation.longitude)) return null;
-    return { lat: userLocation.latitude, lng: userLocation.longitude };
-  }, [userLocation]);
+  const { centerOnUserLocation, userLocation, userLocationLatLng } = useMapUserLocation({
+    L,
+    rl,
+    coordinates,
+    mapContainerId: mapContainerIdRef.current,
+    mapRef,
+    onUserLocationChange,
+    isFallbackMinskCenter: useCallback((lat: number, lng: number) => {
+      const fallbackCandidates: Array<[number, number]> = [
+        [53.9006, 27.559],
+        [53.8828449, 27.7273595],
+      ];
+      return fallbackCandidates.some(([fLat, fLng]) => (
+        Math.abs(lat - fLat) < 0.02 && Math.abs(lng - fLng) < 0.02
+      ));
+    }, []),
+  });
 
   const filteredTravelData = useMemo(() => {
     if (mode !== 'radius') return travelData;
@@ -407,14 +318,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return true;
   }, []);
 
-  useEffect(() => {
-    try {
-      onUserLocationChange?.(userLocation);
-    } catch {
-      // noop
-    }
-  }, [onUserLocationChange, userLocation]);
-
   const handleMarkerZoom = useCallback((_point: Point, coords: { lat: number; lng: number }) => {
     if (!mapRef.current) return;
     if (!isValidCoordinate(coords.lat, coords.lng)) return;
@@ -477,97 +380,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletControlRef,
   });
 
-  const isFallbackMinskCenter = useCallback((lat: number, lng: number) => {
-    const fallbackCandidates: Array<[number, number]> = [
-      [53.9006, 27.559],
-      [53.8828449, 27.7273595],
-    ];
-    return fallbackCandidates.some(([fLat, fLng]) => (
-      Math.abs(lat - fLat) < 0.02 && Math.abs(lng - fLng) < 0.02
-    ));
-  }, []);
-
-
-  // Sync user location from incoming coordinates (screen-level source of truth).
-  // This removes stale fallback center while waiting for map-internal geolocation.
-  useEffect(() => {
-    const lat = Number((coordinates as any)?.latitude);
-    const lng = Number((coordinates as any)?.longitude);
-    if (!isValidCoordinate(lat, lng)) return;
-    if (isFallbackMinskCenter(lat, lng)) return;
-    setUserLocation((prev) => {
-      if (
-        prev &&
-        Math.abs(prev.latitude - lat) < 0.00001 &&
-        Math.abs(prev.longitude - lng) < 0.00001
-      ) {
-        return prev;
-      }
-      return { latitude: lat, longitude: lng };
-    });
-  }, [coordinates, isFallbackMinskCenter]);
-
-  // Get user location — gated behind first user interaction to avoid
-  // Lighthouse "geolocation-on-start" Best Practices penalty.
-  const geoRequestedRef = useRef(false);
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!L || !rl) return;
-
-    let cancelled = false;
-
-    const loadLocation = () => {
-      if (geoRequestedRef.current || cancelled) return;
-      geoRequestedRef.current = true;
-      ;(async () => {
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== 'granted' || cancelled) {
-            console.warn('[Map] Location permission not granted');
-            return;
-          }
-
-          const location = await Location.getCurrentPositionAsync({});
-          if (cancelled) return;
-
-          const lat = location.coords.latitude;
-          const lng = location.coords.longitude;
-          if (isValidCoordinate(lat, lng)) {
-            setUserLocation({ latitude: lat, longitude: lng });
-          } else {
-            console.warn('[Map] Invalid location coordinates:', { lat, lng });
-          }
-        } catch (err) {
-          console.error('[Map] Location error:', err);
-        }
-      })();
-    };
-
-    const el = document.getElementById(mapContainerIdRef.current);
-    if (!el) return;
-    const events = ['pointerdown', 'touchstart', 'keydown'] as const;
-    events.forEach((evt) => el.addEventListener(evt, loadLocation, { once: true, passive: true }));
-
-    return () => {
-      cancelled = true;
-      events.forEach((evt) => el.removeEventListener(evt, loadLocation));
-    };
-  }, [L, rl, mapContainerIdRef]);
-
-  // Center user location handler
-  const centerOnUserLocation = useCallback(() => {
-    if (!mapRef.current || !userLocationLatLng) return;
-    try {
-      mapRef.current.setView(
-        CoordinateConverter.toLeaflet(userLocationLatLng),
-        14,
-        { animate: true }
-      );
-    } catch {
-      // noop
-    }
-  }, [userLocationLatLng]);
-
   // Handle map click
   const handleMapClick = useCallback(
     (e: any) => {
@@ -582,299 +394,27 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [mode, onMapClick]
   );
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-    const raf = requestAnimationFrame(() => {
-      try {
-        map.invalidateSize?.();
-      } catch {
-        // noop
-      }
-
-      try {
-        const baseLayer = leafletBaseLayerRef.current;
-        if (baseLayer && !map.hasLayer?.(baseLayer)) {
-          baseLayer.addTo?.(map);
-        }
-      } catch {
-        // noop
-      }
-    });
-
-    return () => {
-      cancelAnimationFrame(raf);
-    };
-  }, [mode, leafletBaseLayerRef]);
-
-  // Invalidate size when the map container changes size (e.g. animated right panel).
-  // window.resize is not enough on web because layout can change without a viewport resize.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-    if (!mapRef.current) return;
-
-    const map = mapRef.current;
-    const containerId = mapContainerIdRef.current;
-
-    const safeInvalidate = () => {
-      try {
-        map.invalidateSize?.({ animate: false } as any);
-      } catch {
-        // noop
-      }
-    };
-
-    let rafId: number | null = null;
-    const scheduleInvalidate = () => {
-      if (rafId != null) {
-        cancelAnimationFrame(rafId);
-      }
-      rafId = requestAnimationFrame(() => safeInvalidate());
-    };
-
-    // Kick a few times after mount to catch late layout (fonts, panel animations, etc.)
-    const t1 = setTimeout(scheduleInvalidate, 50);
-    const t2 = setTimeout(scheduleInvalidate, 250);
-    const t3 = setTimeout(scheduleInvalidate, 1000);
-
-    const el = document.getElementById(containerId);
-    let ro: ResizeObserver | null = null;
-
-    const canUseWindow = typeof window !== 'undefined' && typeof window.addEventListener === 'function';
-    const onWindowResize = () => scheduleInvalidate();
-    const onMapLayoutInvalidate = () => scheduleInvalidate();
-
-    if (canUseWindow) {
-      try {
-        window.addEventListener(MAP_LAYOUT_INVALIDATE_EVENT, onMapLayoutInvalidate as EventListener);
-      } catch {
-        // noop
-      }
-    }
-
-    if (el && typeof (window as any).ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(() => scheduleInvalidate());
-      try {
-        ro.observe(el);
-        if (el.parentElement) ro.observe(el.parentElement);
-      } catch {
-        // noop
-      }
-    } else if (canUseWindow) {
-      try {
-        window.addEventListener('resize', onWindowResize, { passive: true } as any);
-      } catch {
-        // noop
-      }
-    }
-
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      try {
-        ro?.disconnect();
-      } catch {
-        // noop
-      }
-      if (canUseWindow) {
-        try {
-          window.removeEventListener('resize', onWindowResize as any);
-          window.removeEventListener(MAP_LAYOUT_INVALIDATE_EVENT, onMapLayoutInvalidate as EventListener);
-        } catch {
-          // noop
-        }
-      }
-      if (rafId != null) {
-        cancelAnimationFrame(rafId);
-      }
-    };
-  }, [mapContainerIdRef, mapInstance]);
-
-  // Detect tab visibility changes via IntersectionObserver.
-  // When the user switches away from the map tab and comes back, Leaflet doesn't
-  // know the container is visible again — marker pane stops rendering.
-  // IntersectionObserver fires when the container transitions from hidden to visible.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-    if (!mapRef.current) return;
-    if (typeof IntersectionObserver === 'undefined') return;
-
-    const map = mapRef.current;
-    const containerId = mapContainerIdRef.current;
-    const el = document.getElementById(containerId);
-    if (!el) return;
-
-    let wasHidden = false;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting && wasHidden) {
-            // Container just became visible again (tab switch back)
-            requestAnimationFrame(() => {
-              try {
-                map.invalidateSize?.({ animate: false } as any);
-              } catch {
-                // noop
-              }
-              // Force marker pane redraw by toggling a benign CSS property
-              try {
-                const markerPane = map.getPane?.('markerPane') as HTMLElement | undefined;
-                if (markerPane) {
-                  markerPane.style.willChange = 'transform';
-                  requestAnimationFrame(() => {
-                    try {
-                      markerPane.style.willChange = '';
-                    } catch {
-                      // noop
-                    }
-                  });
-                }
-              } catch {
-                // noop
-              }
-            });
-          }
-          wasHidden = !entry.isIntersecting;
-        }
-      },
-      { threshold: 0.01 }
-    );
-
-    observer.observe(el);
-
-    return () => {
-      try {
-        observer.disconnect();
-      } catch {
-        // noop
-      }
-    };
-  }, [mapContainerIdRef, mapInstance]);
-
-  // invalidateSize on browser tab visibility change and bfcache restore.
-  // When the user switches browser tabs or navigates away and back (bfcache),
-  // Leaflet may render tiles with gray gaps because it missed container size changes.
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof document === 'undefined') return;
-
-    const invalidate = () => {
-      const map = mapRef.current;
-      if (!map) return;
-      requestAnimationFrame(() => {
-        try {
-          map.invalidateSize?.({ animate: false } as any);
-        } catch {
-          // noop
-        }
-      });
-    };
-
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'visible') invalidate();
-    };
-
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) invalidate();
-    };
-
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    window.addEventListener('pageshow', onPageShow);
-
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      window.removeEventListener('pageshow', onPageShow);
-    };
-  }, []);
-
   // Safe center calculation with strict validation
-  const safeCenter = useMemo<[number, number]>(() => {
-    // Default coordinates (Minsk)
-    const DEFAULT_LAT = 53.8828449;
-    const DEFAULT_LNG = 27.7273595;
+  const safeCenter = useMemo<[number, number]>(() => getSafeCenter(coordinates), [coordinates]);
 
-    if (!coordinates) {
-      return [DEFAULT_LAT, DEFAULT_LNG];
-    }
-
-    const lat = coordinates.latitude;
-    const lng = coordinates.longitude;
-
-    // Strict validation - Number.isFinite returns false for NaN, Infinity, and non-numbers
-    if (
-      !Number.isFinite(lat) ||
-      !Number.isFinite(lng) ||
-      lat < -90 || lat > 90 ||
-      lng < -180 || lng > 180
-    ) {
-      return [DEFAULT_LAT, DEFAULT_LNG];
-    }
-
-    return [lat, lng];
-  }, [coordinates]);
-
-  const circleCenter = useMemo<[number, number] | null>(() => {
-    // Prefer actual current location (web Leaflet) as circle center in radius mode.
-    if (mode === 'radius' && userLocationLatLng) {
-      const lat = Number(userLocationLatLng.lat);
-      const lng = Number(userLocationLatLng.lng);
-      if (isValidCoordinate(lat, lng)) return [lat, lng];
-    }
-
-    const lat = Number(safeCenter?.[0]);
-    const lng = Number(safeCenter?.[1]);
-    if (!isValidCoordinate(lat, lng)) return null;
-    return [lat, lng];
-  }, [mode, safeCenter, userLocationLatLng]);
+  const circleCenter = useMemo<[number, number] | null>(
+    () => getCircleCenter(mode, userLocationLatLng, safeCenter),
+    [mode, safeCenter, userLocationLatLng]
+  );
 
   const circleCenterLatLng = useMemo(
     () => (circleCenter ? { lat: circleCenter[0], lng: circleCenter[1] } : null),
     [circleCenter]
   );
 
-  const hintCenterLatLng = useMemo(() => {
-    if (mode === 'radius' && circleCenterLatLng) return circleCenterLatLng;
-    return coordinatesLatLng;
-  }, [mode, circleCenterLatLng, coordinatesLatLng]);
+  const hintCenterLatLng = useMemo(
+    () => getHintCenterLatLng(mode, circleCenterLatLng, coordinatesLatLng),
+    [mode, circleCenterLatLng, coordinatesLatLng]
+  );
 
   const normalizeLngLatWithHint = useCallback(
     (tuple: [number, number]): [number, number] => {
-      const a = tuple?.[0];
-      const b = tuple?.[1];
-      if (!Number.isFinite(a) || !Number.isFinite(b)) return tuple;
-
-      const option1 = { lng: a, lat: b };
-      const option2 = { lng: b, lat: a };
-      const option1Valid = isValidCoordinate(option1.lat, option1.lng);
-      const option2Valid = isValidCoordinate(option2.lat, option2.lng);
-
-      if (option1Valid && !option2Valid) return [option1.lng, option1.lat];
-      if (!option1Valid && option2Valid) return [option2.lng, option2.lat];
-
-      // Ambiguous: both values fall within latitude range (-90..90) so both orders look "valid".
-      // Choose the interpretation closer to current hint center (user location / current map center).
-      if (
-        option1Valid &&
-        option2Valid &&
-        hintCenterLatLng &&
-        isValidCoordinate(hintCenterLatLng.lat, hintCenterLatLng.lng)
-      ) {
-        try {
-          const d1 = CoordinateConverter.distance(hintCenterLatLng, option1 as any);
-          const d2 = CoordinateConverter.distance(hintCenterLatLng, option2 as any);
-          return d2 < d1 ? [option2.lng, option2.lat] : [option1.lng, option1.lat];
-        } catch {
-          // noop
-        }
-      }
-
-      // Default: assume incoming tuple is already [lng, lat] (legacy Metravel format).
-      return tuple;
+      return normalizeLngLatWithHintHelper(tuple, hintCenterLatLng);
     },
     [hintCenterLatLng]
   );
@@ -905,164 +445,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return createMapPopupComponent({ useMap: rl.useMap, userLocation: userLocationLatLng });
   }, [rl, userLocationLatLng]);
 
-  const handlePopupOpen = useCallback((e: any) => {
-    const popup = e?.popup;
-    const popupEl: HTMLElement | null = popup?.getElement ? popup.getElement() : null;
-    const map = mapRef.current;
-    const mapEl: HTMLElement | null = map?.getContainer ? map.getContainer() : null;
-    if (!popupEl || !mapEl || typeof window === 'undefined') return;
-
-    const run = () => {
-      try {
-        const mapRect = mapEl.getBoundingClientRect();
-        const popupRectAbs = popupEl.getBoundingClientRect();
-        const popupRect = {
-          left: popupRectAbs.left - mapRect.left,
-          top: popupRectAbs.top - mapRect.top,
-          right: popupRectAbs.right - mapRect.left,
-          bottom: popupRectAbs.bottom - mapRect.top,
-          width: popupRectAbs.width,
-          height: popupRectAbs.height,
-        };
-
-        const isNarrowMap = mapRect.width <= 640;
-        const horizontalPadding = mapRect.width <= 420 ? 12 : isNarrowMap ? 16 : 24;
-        const verticalPadding = isNarrowMap ? 18 : 24;
-        const bottomSafePadding = isNarrowMap
-          ? Math.min(
-              Math.max(verticalPadding, popupBottomOffset + 20),
-              Math.max(verticalPadding, Math.round(mapRect.height * 0.4))
-            )
-          : verticalPadding;
-        let dx = 0;
-        let dy = 0;
-
-        const popupCenterX = popupRect.left + popupRect.width / 2;
-        const popupCenterY = popupRect.top + popupRect.height / 2;
-        const safeLeft = horizontalPadding;
-        const safeRight = mapRect.width - horizontalPadding;
-        const safeTop = verticalPadding;
-        const safeBottom = mapRect.height - bottomSafePadding;
-        const safeCenterX = (safeLeft + safeRight) / 2;
-        const safeCenterY = (safeTop + safeBottom) / 2;
-        const overflowLeft = horizontalPadding - popupRect.left;
-        const overflowRight = popupRect.right - (mapRect.width - horizontalPadding);
-        const overflowTop = verticalPadding - popupRect.top;
-        const overflowBottom = popupRect.bottom - safeBottom;
-
-        if (overflowLeft > 0 && overflowRight > 0) {
-          dx = popupCenterX - safeCenterX;
-        } else if (overflowLeft > 0) {
-          dx = -overflowLeft;
-        } else if (overflowRight > 0) {
-          dx = overflowRight;
-        } else if (isNarrowMap) {
-          const centerDeltaX = popupCenterX - safeCenterX;
-          if (Math.abs(centerDeltaX) > 18) {
-            dx = centerDeltaX;
-          }
-        }
-
-        if (overflowTop > 0 && overflowBottom > 0) {
-          dy = popupCenterY - safeCenterY;
-        } else if (overflowTop > 0) {
-          dy = -overflowTop;
-        } else if (overflowBottom > 0) {
-          dy = overflowBottom;
-        } else if (isNarrowMap) {
-          const centerDeltaY = popupCenterY - safeCenterY;
-          if (Math.abs(centerDeltaY) > 24) {
-            dy = centerDeltaY;
-          }
-        }
-
-        if (Math.abs(dx) < 6) dx = 0;
-        if (Math.abs(dy) < 6) dy = 0;
-        if (!dx && !dy) return;
-
-        map?.panBy?.([dx, dy], { animate: true, duration: 0.35 } as any);
-      } catch {
-        // noop
-      }
-    };
-
-    let rafId = 0;
-    const scheduleRun = () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-      }
-      rafId = requestAnimationFrame(() => {
-        rafId = requestAnimationFrame(run);
-      });
-    };
-
-    scheduleRun();
-
-    let resizeObserver: ResizeObserver | null = null;
-    let cleanupTimer: ReturnType<typeof setTimeout> | null = null;
-    const cleanup = () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId);
-        rafId = 0;
-      }
-      resizeObserver?.disconnect();
-      resizeObserver = null;
-      if (cleanupTimer) {
-        clearTimeout(cleanupTimer);
-        cleanupTimer = null;
-      }
-      map?.off?.('popupclose', cleanup);
-    };
-
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        scheduleRun();
-      });
-      resizeObserver.observe(popupEl);
-      const popupContentEl = popupEl.querySelector('.leaflet-popup-content');
-      if (popupContentEl instanceof HTMLElement) {
-        resizeObserver.observe(popupContentEl);
-      }
-    }
-
-    map?.on?.('popupclose', cleanup);
-    cleanupTimer = setTimeout(cleanup, 1000);
-  }, [popupBottomOffset]);
-
-  const popupAutoPanPadding = useMemo(() => {
-    const effectiveWidth = mapPaneWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-    const isNarrowViewport = effectiveWidth <= 768;
-    const isVeryNarrow = effectiveWidth <= 480;
-    const maxWidth = isVeryNarrow
-      ? Math.min(300, Math.max(248, effectiveWidth - 28))
-      : isNarrowViewport
-        ? Math.min(348, Math.max(280, effectiveWidth - 32))
-        : Math.min(436, Math.max(320, effectiveWidth - 40));
-    const minWidth = isVeryNarrow
-      ? 228
-      : isNarrowViewport
-        ? Math.min(280, Math.max(240, maxWidth - 56))
-        : Math.min(336, Math.max(280, maxWidth - 88));
-    const bottomPadding = isNarrowViewport
-      ? Math.min(
-          Math.max(72, popupBottomOffset + 20),
-          Math.max(72, Math.round((typeof window !== 'undefined' ? window.innerHeight : 844) * 0.32))
-        )
-      : 140;
-    return {
-      autoPan: true,
-      keepInView: true,
-      maxWidth,
-      minWidth,
-      className: 'metravel-place-popup',
-      autoPanPaddingTopLeft: isNarrowViewport ? [12, 72] : [24, 140],
-      autoPanPaddingBottomRight: isNarrowViewport ? [12, bottomPadding] : [24, 140],
-      eventHandlers: {
-        popupopen: handlePopupOpen,
-      },
-    };
-  }, [handlePopupOpen, mapPaneWidth, popupBottomOffset]);
-
   const fitBoundsPadding = useMemo(() => {
     // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.
     // Radius mode: the panel is outside the map container, so large right padding over-zooms out.
@@ -1085,13 +467,22 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [mode, routePoints, travelData.length]);
 
   const canRenderMap = leafletReady && !!(L && rl);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!canRenderMap) return;
-    // Once Leaflet modules are ready and MapContainer can render, never keep a blocking loader overlay.
-    setShowInitialLoader(false);
-  }, [canRenderMap]);
+  const { mapPaneWidth } = useMapWebLayoutEffects({
+    wrapperRef,
+    mapRef,
+    mapInstance,
+    setMapInstance,
+    mode,
+    mapContainerId: mapContainerIdRef.current,
+    leafletBaseLayerRef,
+    canRenderMap,
+    setShowInitialLoader,
+  });
+  const { popupAutoPanPadding } = useMapPopupAutoPan({
+    mapRef,
+    mapPaneWidth,
+    popupBottomOffset,
+  });
 
   const shouldShowLoadingOverlay = Platform.OS === 'web'
     ? !!leafletError || !canRenderMap
@@ -1107,21 +498,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
     typeof useMapEvents === 'function'
   );
 
-  const routeLineLatLngObjects = useMemo(() => {
-    if (mode !== 'route') return [] as Array<{ lat: number; lng: number }>;
-
-    const candidate =
-      Array.isArray(fullRouteCoords) && fullRouteCoords.length >= 2
-        ? fullRouteCoords
-        : routePointsForRouting;
-
-    const normalized = (candidate || []).map((p) => normalizeLngLatWithHint(p));
-    const valid = normalized
-      .filter(([lng, lat]) => isValidCoordinate(lat, lng))
-      .map(([lng, lat]) => ({ lat, lng }));
-
-    return valid.length >= 2 ? valid : ([] as Array<{ lat: number; lng: number }>);
-  }, [fullRouteCoords, mode, normalizeLngLatWithHint, routePointsForRouting]);
+  const routeLineLatLngObjects = useMemo(
+    () => buildRouteLineLatLngObjects(mode, fullRouteCoords, routePointsForRouting, hintCenterLatLng),
+    [fullRouteCoords, hintCenterLatLng, mode, routePointsForRouting]
+  );
 
   return (
     <View ref={wrapperRef} style={styles.wrapper} testID="map-leaflet-wrapper">
