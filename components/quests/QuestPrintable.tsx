@@ -465,25 +465,6 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
             linear-gradient(180deg, rgba(7,26,40,0.18) 0%, rgba(7,26,40,0.08) 20%, rgba(7,26,40,0.42) 100%);
         pointer-events: none;
     }
-    .cover-bg-pattern {
-        position: absolute;
-        inset: 0;
-        background-image:
-            radial-gradient(ellipse at 82% 18%, rgba(58,155,191,0.52) 0%, transparent 42%),
-            radial-gradient(ellipse at 14% 88%, rgba(232,160,32,0.18) 0%, transparent 36%),
-            radial-gradient(ellipse at 48% 44%, rgba(15,76,98,0.28) 0%, transparent 70%);
-        pointer-events: none;
-    }
-    .cover-grid {
-        position: absolute;
-        inset: 0;
-        background-image: repeating-linear-gradient(
-            0deg, transparent, transparent 44px, rgba(255,255,255,0.03) 44px, rgba(255,255,255,0.03) 45px
-        ), repeating-linear-gradient(
-            90deg, transparent, transparent 44px, rgba(255,255,255,0.03) 44px, rgba(255,255,255,0.03) 45px
-        );
-        pointer-events: none;
-    }
     .cover-inner {
         position: relative;
         z-index: 2;
@@ -1072,8 +1053,6 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     <!-- ══════════ COVER ══════════ -->
     <div class="cover${coverImageUri ? ' has-cover-image' : ''}">
         ${coverImageUri ? `<div class="cover-image-backdrop" style="background-image:url('${escInline(coverImageUri)}')"></div>` : ''}
-        <div class="cover-bg-pattern"></div>
-        <div class="cover-grid"></div>
         <div class="cover-inner">
             <div class="cover-copy">
                 <div class="cover-copy-panel">

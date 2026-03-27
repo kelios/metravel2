@@ -141,11 +141,9 @@ export function QuestDesktopMapPanel({
 
 export function QuestExcursionsInline({
   styles,
-  compactNav,
   city,
   title,
 }: SharedProps & {
-  compactNav: boolean
   city: CityLike
   title: string
 }) {
@@ -161,10 +159,7 @@ export function QuestExcursionsInline({
           <BelkrajWidgetLazy
             points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
             countryCode={city.countryCode}
-            collapsedHeight={compactNav ? 520 : 760}
-            expandedHeight={compactNav ? 600 : 900}
             className="belkraj-slot"
-            allowScroll
           />
         </Suspense>
       </View>
@@ -190,10 +185,7 @@ export function QuestExcursionsSidebar({
             <BelkrajWidgetLazy
               points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
               countryCode={city.countryCode}
-              collapsedHeight={560}
-              expandedHeight={900}
               className="belkraj-slot"
-              allowScroll
             />
           </Suspense>
         </View>
@@ -220,10 +212,7 @@ export function QuestCompactExcursions({
         <BelkrajWidgetLazy
           points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
           countryCode={city.countryCode}
-          collapsedHeight={380}
-          expandedHeight={760}
           className="belkraj-slot"
-          allowScroll
         />
       </Suspense>
     </View>

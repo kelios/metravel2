@@ -277,7 +277,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                     <QuestExcursionsInline
                         colors={colors}
                         styles={styles}
-                        compactNav={compactNav}
                         city={city}
                         title={title}
                     />
