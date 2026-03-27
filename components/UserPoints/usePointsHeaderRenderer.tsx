@@ -19,6 +19,7 @@ type Params = {
   onToggleFilters: () => void;
   showMapSettings: boolean;
   onToggleMapSettings: () => void;
+  showingRecommendations: boolean;
   onOpenActions: () => void;
   onOpenRecommendations: () => void;
   searchQuery: string;
@@ -47,6 +48,7 @@ export const usePointsHeaderRenderer = ({
   onToggleFilters,
   showMapSettings,
   onToggleMapSettings,
+  showingRecommendations,
   onOpenActions,
   onOpenRecommendations,
   searchQuery,
@@ -77,6 +79,7 @@ export const usePointsHeaderRenderer = ({
         onToggleFilters={onToggleFilters}
         showMapSettings={showMapSettings}
         onToggleMapSettings={onToggleMapSettings}
+        showingRecommendations={showingRecommendations}
         onOpenActions={onOpenActions}
         onOpenRecommendations={onOpenRecommendations}
         searchQuery={searchQuery}
@@ -111,6 +114,7 @@ export const usePointsHeaderRenderer = ({
     onToggleMapSettings,
     searchQuery,
     showFilters,
+    showingRecommendations,
     showMapSettings,
     siteCategoryOptions,
     styles,

@@ -50,6 +50,7 @@ type PointsListHeaderProps = {
 
   showMapSettings: boolean
   onToggleMapSettings: () => void
+  showingRecommendations: boolean
 
   onOpenActions: () => void
   onOpenRecommendations: () => void
@@ -88,6 +89,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   onToggleFilters,
   showMapSettings,
   onToggleMapSettings,
+  showingRecommendations,
   onOpenActions,
   onOpenRecommendations,
   searchQuery,
@@ -102,6 +104,13 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 }) => {
   const themed = useThemedColors();
   const local = React.useMemo(() => createLocalStyles(themed), [themed]);
+  const canRecommend = total >= 3;
+  const recommendationLabel = showingRecommendations ? 'Обновить подборку' : 'Выбрать 3 точки за меня';
+  const recommendationDescription = !canRecommend
+    ? 'Сохраните хотя бы 3 точки, и панель сама предложит готовую мини-подборку.'
+    : showingRecommendations
+      ? 'Сейчас уже показана случайная подборка. Можно обновить её одним нажатием.'
+      : 'Когда не знаете, куда поехать, панель сама выберет 3 случайные точки из ваших сохранений.';
 
   return (
     <View style={styles.header}>
@@ -125,6 +134,32 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
               <Text style={[styles.statPillValue, local.statValue]}>{found || 0}</Text>
             </View>
           </View>
+        </View>
+
+        <View style={local.recommendationCard}>
+          <View style={local.recommendationTextBlock}>
+            <Text style={local.recommendationEyebrow}>Не знаете, куда поехать?</Text>
+            <Text style={local.recommendationTitle}>Доверьте выбор MeTravel</Text>
+            <Text style={local.recommendationDescription}>{recommendationDescription}</Text>
+          </View>
+
+          <Button
+            label={recommendationLabel}
+            onPress={onOpenRecommendations}
+            accessibilityLabel={recommendationLabel}
+            icon={<Feather name="compass" size={16} color={colors.textOnPrimary} />}
+            size="sm"
+            fullWidth
+            disabled={!canRecommend}
+            style={[
+              local.recommendationButton,
+              showingRecommendations && local.recommendationButtonActive,
+            ]}
+          />
+
+          {canRecommend ? (
+            <Text style={local.recommendationHint}>Подборка откроется в списке справа с готовыми маршрутами.</Text>
+          ) : null}
         </View>
 
         <View style={local.actionsGrid}>
@@ -153,14 +188,6 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             label={showMapSettings ? 'Скрыть настройки карты' : 'Показать настройки карты'}
             onPress={onToggleMapSettings}
             active={showMapSettings}
-            size="sm"
-            showLabel={!isMobile}
-            style={local.actionButton}
-          />
-          <IconButton
-            icon={<Feather name="compass" size={18} color={colors.text} />}
-            label="3 случайные точки"
-            onPress={onOpenRecommendations}
             size="sm"
             showLabel={!isMobile}
             style={local.actionButton}
@@ -289,11 +316,59 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     flexWrap: 'wrap',
     gap: DESIGN_TOKENS.spacing.sm,
   },
+  recommendationCard: {
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryAlpha30,
+    gap: DESIGN_TOKENS.spacing.sm,
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+        } as any)
+      : null),
+  },
+  recommendationTextBlock: {
+    gap: 6,
+  },
+  recommendationEyebrow: {
+    fontSize: 12,
+    fontWeight: '700' as any,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.primaryDark,
+  },
+  recommendationTitle: {
+    fontSize: 18,
+    fontWeight: '800' as any,
+    color: colors.text,
+  },
+  recommendationDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textMuted,
+  },
+  recommendationButton: {
+    marginTop: 2,
+  },
+  recommendationButtonActive: {
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 10px 28px rgba(0,0,0,0.12)',
+        } as any)
+      : null),
+  },
+  recommendationHint: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textMuted,
+  },
   actionButton: {
     marginHorizontal: 0,
     ...(Platform.OS === 'web'
       ? ({
-          width: 'calc(50% - 6px)',
+          width: '100%',
           justifyContent: 'flex-start',
         } as any)
       : null),

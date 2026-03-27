@@ -283,6 +283,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     onToggleFilters: () => setShowFilters((prev) => !prev),
     showMapSettings,
     onToggleMapSettings: () => setShowMapSettings((v) => !v),
+    showingRecommendations,
     onOpenActions: () => {
       blurActiveElementForModal();
       setShowActions(true);

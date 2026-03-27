@@ -7,11 +7,15 @@ import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { ExportConfig } from '@/types/pdf-export';
 import { usePdfExport } from '@/hooks/usePdfExport';
 import { useThemedColors } from '@/hooks/useTheme';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { ExportBar } from './ExportBar';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
 import { createStyles } from './listTravelStyles';
 
 type ExportBarStyles = ReturnType<typeof createStyles>;
+const SELECTED_ORDER_MEDIA_WIDTH = 88;
+const SELECTED_ORDER_MEDIA_HEIGHT = 68;
+const SELECTED_ORDER_MEDIA_RADIUS = 12;
 
 type Props = {
   isMobile: boolean;
@@ -81,6 +85,29 @@ function ListTravelExportControls({
   );
 
   const userName = useMemo(() => String(ownerName || ''), [ownerName]);
+  const selectedOrderListStyle = useMemo(
+    () => [
+      (styles as ExportBarStyles).selectedOrderList,
+      !isMobile ? (styles as ExportBarStyles).selectedOrderListDesktop : null,
+    ],
+    [isMobile, styles]
+  );
+
+  const resolveTravelCover = useCallback((travel: Travel) => {
+    const galleryFirst =
+      Array.isArray(travel.gallery) && travel.gallery.length > 0
+        ? typeof travel.gallery[0] === 'string'
+          ? travel.gallery[0]
+          : travel.gallery[0]?.url
+        : null;
+
+    return (
+      travel.travel_image_thumb_url ||
+      (travel as any).travel_image_thumb_small_url ||
+      galleryFirst ||
+      null
+    );
+  }, []);
 
   return (
     <>
@@ -118,18 +145,47 @@ function ListTravelExportControls({
               Меняйте местами выбранные путешествия. Этот порядок используется в режиме "Как расположено в списке выбора".
             </Text>
           </View>
-          <View style={(styles as ExportBarStyles).selectedOrderList}>
+          <View style={selectedOrderListStyle}>
             {selected.map((travel, index) => (
               <View
                 key={String(travel.id ?? travel.slug ?? `${travel.name}-${index}`)}
-                style={(styles as ExportBarStyles).selectedOrderItem}
+                style={[
+                  (styles as ExportBarStyles).selectedOrderItem,
+                  !isMobile ? (styles as ExportBarStyles).selectedOrderItemDesktop : null,
+                ]}
               >
                 <View style={(styles as ExportBarStyles).selectedOrderItemInfo}>
-                  <Text style={(styles as ExportBarStyles).selectedOrderIndex}>{index + 1}</Text>
+                  <View style={(styles as ExportBarStyles).selectedOrderMediaWrap}>
+                    {resolveTravelCover(travel) ? (
+                      <ImageCardMedia
+                        src={resolveTravelCover(travel) || undefined}
+                        alt={travel.name || 'Путешествие'}
+                        width={SELECTED_ORDER_MEDIA_WIDTH}
+                        height={SELECTED_ORDER_MEDIA_HEIGHT}
+                        borderRadius={SELECTED_ORDER_MEDIA_RADIUS}
+                        fit="cover"
+                        blurBackground
+                        allowCriticalWebBlur
+                        priority="low"
+                        loading="lazy"
+                        style={(styles as ExportBarStyles).selectedOrderMedia}
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          (styles as ExportBarStyles).selectedOrderMedia,
+                          (styles as ExportBarStyles).selectedOrderMediaPlaceholder,
+                        ]}
+                      />
+                    )}
+                    <View style={(styles as ExportBarStyles).selectedOrderIndexBadge}>
+                      <Text style={(styles as ExportBarStyles).selectedOrderIndex}>{index + 1}</Text>
+                    </View>
+                  </View>
                   <View style={(styles as ExportBarStyles).selectedOrderTextBlock}>
                     <Text
                       style={(styles as ExportBarStyles).selectedOrderItemTitle}
-                      numberOfLines={1}
+                      numberOfLines={2}
                     >
                       {travel.name || 'Без названия'}
                     </Text>
