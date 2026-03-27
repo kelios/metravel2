@@ -1,13 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import * as Location from 'expo-location';
 
-import RoutingMachine from './RoutingMachine';
-import MapRoute from './Map/MapRoute';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
@@ -21,12 +18,8 @@ import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup';
 import { useLeafletIcons } from './Map/useLeafletIcons';
 import { useMapInstance } from './Map/useMapInstance';
 import { useMapApi } from './Map/useMapApi';
-import { MapLogicComponent } from './Map/MapLogicComponent';
-import MapMarkers from './Map/MapMarkers';
-import ClusterLayer from './Map/ClusterLayer';
 import MapControls from './Map/MapControls';
-import { MapLayers } from './Map/MapLayers';
-import { RouteMarkersLayer } from './Map/RouteMarkersLayer';
+import { MapLoadingOverlay, MapWebBackground, MapWebLeafletCanvas, NoPointsMessage } from './Map/MapWebCanvas';
 
 // New optimized hooks
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
@@ -43,24 +36,6 @@ const isTestEnv =
 const ORS_API_KEY = resolveRoutingApiKey();
 
 type Props = MapProps;
-
-const MapRouteViaUseMap: React.FC<{
-  useMapHook: () => any;
-  leaflet: any;
-  routeCoordinates: Array<{ lat: number; lng: number }>;
-}> = ({ useMapHook, leaflet, routeCoordinates }) => {
-  const map = useMapHook?.();
-  if (!map || !leaflet) return null;
-  return (
-    <MapRoute
-      map={map}
-      leaflet={leaflet}
-      routeCoordinates={routeCoordinates as any}
-      isOptimal={true}
-      disableFitBounds
-    />
-  );
-};
 
 /** Wrapper that subscribes to bottom sheet store so controls reposition reactively. */
 const MapControlsReactive: React.FC<Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>> = (props) => {
@@ -817,52 +792,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, []);
 
-  const renderLoader = useCallback(
-    (_message: string) => (
-      <View style={[styles.loader, { position: 'relative', overflow: 'hidden' }] as any}>
-        {Platform.OS === 'web' && (
-          <img
-            alt=""
-            aria-hidden="true"
-            width={1200}
-            height={900}
-            loading="eager"
-            decoding="async"
-            src={
-              'data:image/svg+xml;utf8,' +
-              encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">' +
-                  '<defs>' +
-                    '<linearGradient id="g" x1="0" y1="0" x2="1" y2="0">' +
-                      '<stop offset="0" stop-color="rgba(0,0,0,0.12)" />' +
-                      '<stop offset="0.5" stop-color="rgba(0,0,0,0.18)" />' +
-                      '<stop offset="1" stop-color="rgba(0,0,0,0.12)" />' +
-                    '</linearGradient>' +
-                  '</defs>' +
-                  '<rect width="1200" height="900" rx="24" fill="url(%23g)" />' +
-                '</svg>'
-              )
-            }
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: 1,
-              pointerEvents: 'none',
-              zIndex: 0,
-            }}
-          />
-        )}
-        <View style={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Загрузка карты" />
-        </View>
-      </View>
-    ),
-    [colors.primary, styles.loader]
-  );
-
   // Safe center calculation with strict validation
   const safeCenter = useMemo<[number, number]>(() => {
     // Default coordinates (Minsk)
@@ -1168,14 +1097,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     ? !!leafletError || !canRenderMap
     : showInitialLoader || leafletLoading || !!leafletError || !canRenderMap;
 
-  const loaderMessage = leafletError
-    ? 'Не удалось загрузить модули карты'
-    : 'Загрузка карты...';
-
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
-  const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rlSafe;
-  const Polyline = (rlSafe as any)?.Polyline as any;
-  const Pane = (rlSafe as any)?.Pane as any;
+  const { useMap, useMapEvents } = rlSafe;
 
   const hasValidReactLeafletHooks = !!(
     useMap && 
@@ -1202,271 +1125,68 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   return (
     <View ref={wrapperRef} style={styles.wrapper} testID="map-leaflet-wrapper">
-      {Platform.OS === 'web' && (
-        <img
-          alt=""
-          aria-hidden="true"
-          width={1200}
-          height={900}
-          loading="eager"
-          decoding="async"
-          src={
-            'data:image/svg+xml;utf8,' +
-            encodeURIComponent(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">' +
-                '<defs>' +
-                  '<linearGradient id="g" x1="0" y1="0" x2="1" y2="0">' +
-                    '<stop offset="0" stop-color="rgba(0,0,0,0.12)" />' +
-                    '<stop offset="0.5" stop-color="rgba(0,0,0,0.18)" />' +
-                    '<stop offset="1" stop-color="rgba(0,0,0,0.12)" />' +
-                  '</linearGradient>' +
-                '</defs>' +
-                '<rect width="1200" height="900" rx="24" fill="url(%23g)" />' +
-              '</svg>'
-            )
-          }
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: 0.18,
-            pointerEvents: 'none',
-            zIndex: 0,
-          }}
-        />
-      )}
+      <MapWebBackground opacity={0.18} />
 
-      {shouldShowLoadingOverlay && (
-        <View
-          testID="map-loading-overlay"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 10,
-            ...(Platform.OS === 'web' ? ({ pointerEvents: 'none' } as any) : null),
-          } as any}
-        >
-          {renderLoader(loaderMessage)}
-        </View>
-      )}
-      {noPointsAlongRoute && (
-        <View
-          testID="no-points-message"
-          style={{ width: 0, height: 0, overflow: 'hidden' }}
-          accessible
-          accessibilityRole="text"
-        >
-          <Text>Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.</Text>
-        </View>
-      )}
+      {shouldShowLoadingOverlay ? <MapLoadingOverlay colors={colors} styles={styles} /> : null}
+      {noPointsAlongRoute ? <NoPointsMessage /> : null}
 
-      {canRenderMap && hasValidReactLeafletHooks && (
-        <MapContainer
-          style={mapContainerStyle}
-          data-testid="map-leaflet-container"
-          id={mapContainerIdRef.current}
-          center={safeCenter}
-          zoom={Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : 11}
-          key={mapInstanceKeyRef.current}
-          zoomControl={false}
-          preferCanvas={false}
-          tap={true}
-          tapTolerance={30}
-        >
-          {/* Ensure custom pane exists before any route Polyline tries to target it */}
-          {typeof Pane === 'function' ? (
-            <Pane name="metravelRoutePane" style={{ zIndex: 590, pointerEvents: 'none' } as any} />
-          ) : null}
-
-          {/* Map layers (tiles, circle, user location) */}
-          <MapLayers
-            TileLayer={TileLayer}
-            Circle={Circle}
-            Marker={Marker}
-            Popup={Popup}
-            mode={mode}
-            circleCenter={circleCenterLatLng}
-            radiusInMeters={radiusInMeters}
-            userLocation={userLocationLatLng}
-            userLocationIcon={customIcons?.userLocation}
-            mapInstance={mapInstance}
-          />
-
-          <MapLogicComponent
-            mapClickHandler={handleMapClick}
-            mode={mode}
-            coordinates={coordinatesLatLng}
-            userLocation={userLocationLatLng}
-            disableFitBounds={disableFitBounds}
-            L={L}
-            travelData={filteredTravelData}
-            circleCenter={circleCenterLatLng}
-            radiusInMeters={radiusInMeters}
-            fitBoundsPadding={fitBoundsPadding}
-            setMapZoom={setMapZoom}
-            mapRef={mapRef}
-            onMapReady={setMapInstance}
-            savedMapViewRef={savedMapViewRef}
-            hasInitializedRef={hasInitializedRef}
-            lastModeRef={lastModeRef}
-            lastAutoFitKeyRef={lastAutoFitKeyRef}
-            leafletBaseLayerRef={leafletBaseLayerRef}
-            leafletOverlayLayersRef={leafletOverlayLayersRef}
-            leafletControlRef={leafletControlRef}
-            useMap={useMap}
-            useMapEvents={useMapEvents}
-            hintCenter={hintCenterLatLng}
-          />
-
-	          {/* Route line renderer */}
-	          {mode === 'route' &&
-	            Array.isArray(routeLineLatLngObjects) &&
-	            routeLineLatLngObjects.length >= 2 && (
-	              // Use Leaflet map instance directly via useMap hook to avoid relying on external state.
-	              typeof useMap === 'function' && L ? (
-	                <MapRouteViaUseMap
-	                  useMapHook={useMap as any}
-	                  leaflet={L}
-	                  routeCoordinates={routeLineLatLngObjects}
-	                />
-	              ) : typeof Polyline === 'function' ? (
-	                <Polyline
-	                  positions={routeLineLatLngObjects as any}
-	                  pane="metravelRoutePane"
-	                  pathOptions={{
-	                    color: (colors as any).primary || DESIGN_TOKENS.colors.primary,
-	                    weight: 6,
-	                    opacity: 1,
-	                    lineJoin: 'round',
-	                    lineCap: 'round',
-	                    interactive: false,
-	                    className: 'metravel-route-line',
-	                  }}
-	                />
-	              ) : null
-	            )}
-
-          {/* Route markers */}
-          <RouteMarkersLayer
-            Marker={Marker}
-            Popup={Popup}
-            Tooltip={Tooltip}
-            routePoints={routePoints}
-            icons={{
-              start: customIcons?.start,
-              end: customIcons?.end,
-            }}
-          />
-
-
-          {/* Routing */}
-          {(() => {
-            const shouldRenderRouting = mode === 'route' &&
-              routePointsForRouting.length >= 2 &&
-              routePointsForRouting.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0]));
-            
-            if (!shouldRenderRouting) return null;
-            
-            return (
-              <RoutingMachine
-                routePoints={routePointsForRouting}
-                transportMode={transportMode}
-                setRoutingLoading={(loading) => {
-                  try {
-                    setRoutingLoading?.(loading);
-                  } catch {
-                    // noop
-                  }
-                }}
-                setErrors={(next) => {
-                  try {
-                    setErrors(next);
-                  } catch {
-                    // noop
-                  }
-                  const routingMsg = (next as any)?.routing;
-                  if (typeof routingMsg === 'string' && routingMsg.trim()) {
-                    try {
-                      setRoutingError?.(routingMsg);
-                    } catch {
-                      // noop
-                    }
-                  } else {
-                    try {
-                      setRoutingError?.(null);
-                    } catch {
-                      // noop
-                    }
-                  }
-                }}
-                setRouteDistance={setRouteDistance}
-                setRouteDuration={setRouteDuration}
-                setFullRouteCoords={setFullRouteCoords}
-                setRouteElevationStats={setRouteElevationStats}
-                ORS_API_KEY={ORS_API_KEY}
-              />
-            );
-          })()}
-
-          {/* Travel markers (not clustered) */}
-          {canRenderTravelPoints &&
-           customIcons?.meTravel &&
-           markers.length > 0 &&
-           !shouldRenderClusters &&
-           PopupComponent && (
-            <MapMarkers
-              points={markers}
-              icon={customIcons.meTravel}
-              Marker={Marker}
-              Popup={Popup}
-              Tooltip={Tooltip}
-              PopupContent={PopupComponent}
-              popupProps={popupAutoPanPadding}
-              onMarkerClick={handleMarkerZoom}
-              hintCenter={hintCenterLatLng}
-              onMarkerInstance={(coord, marker) => {
-                markerByCoordRef.current.set(coord, marker);
-              }}
-            />
-          )}
-
-          {/* Travel markers (clustered) */}
-          {canRenderTravelPoints &&
-           customIcons?.meTravel &&
-           markers.length > 0 &&
-           shouldRenderClusters &&
-           PopupComponent && (
-            <ClusterLayer
-              L={L}
-              clusters={clusters as any}
-              Marker={Marker}
-              Popup={Popup}
-              Tooltip={Tooltip}
-              PopupContent={PopupComponent}
-              popupProps={popupAutoPanPadding}
-              markerIcon={customIcons.meTravel}
-              markerOpacity={travelMarkerOpacity}
-              expandedClusterKey={expandedCluster?.key}
-              expandedClusterItems={expandedCluster?.items}
-              hintCenter={hintCenterLatLng}
-              onClusterZoom={({ center: _center, bounds, key, items }) => {
-                setExpandedCluster({ key, items });
-                try {
-                  mapRef.current?.fitBounds?.(bounds as any, { animate: true, padding: [30, 30] } as any);
-                } catch {
-                  // noop
-                }
-              }}
-              onMarkerClick={handleMarkerZoom}
-              onMarkerInstance={(coord, marker) => {
-                markerByCoordRef.current.set(coord, marker);
-              }}
-            />
-          )}
-        </MapContainer>
-      )}
+      <MapWebLeafletCanvas
+        rl={rlSafe}
+        L={L}
+        colors={colors}
+        mode={mode}
+        canRenderMap={canRenderMap}
+        hasValidReactLeafletHooks={hasValidReactLeafletHooks}
+        mapContainerStyle={mapContainerStyle}
+        mapContainerId={mapContainerIdRef.current}
+        safeCenter={safeCenter}
+        safeZoom={Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : 11}
+        mapInstanceKey={mapInstanceKeyRef.current}
+        circleCenterLatLng={circleCenterLatLng}
+        radiusInMeters={radiusInMeters}
+        userLocationLatLng={userLocationLatLng}
+        customIcons={customIcons}
+        mapInstance={mapInstance}
+        handleMapClick={handleMapClick}
+        coordinatesLatLng={coordinatesLatLng}
+        disableFitBounds={disableFitBounds}
+        travelData={filteredTravelData}
+        fitBoundsPadding={fitBoundsPadding}
+        setMapZoom={setMapZoom}
+        mapRef={mapRef}
+        setMapInstance={setMapInstance}
+        savedMapViewRef={savedMapViewRef}
+        hasInitializedRef={hasInitializedRef}
+        lastModeRef={lastModeRef}
+        lastAutoFitKeyRef={lastAutoFitKeyRef}
+        leafletBaseLayerRef={leafletBaseLayerRef}
+        leafletOverlayLayersRef={leafletOverlayLayersRef}
+        leafletControlRef={leafletControlRef}
+        hintCenterLatLng={hintCenterLatLng}
+        routeLineLatLngObjects={routeLineLatLngObjects}
+        routePoints={routePoints}
+        routePointsForRouting={routePointsForRouting}
+        transportMode={transportMode}
+        setRoutingLoading={setRoutingLoading}
+        setErrors={setErrors}
+        setRoutingError={setRoutingError}
+        setRouteDistance={setRouteDistance}
+        setRouteDuration={setRouteDuration}
+        setFullRouteCoords={setFullRouteCoords}
+        setRouteElevationStats={setRouteElevationStats}
+        orsApiKey={ORS_API_KEY}
+        canRenderTravelPoints={canRenderTravelPoints}
+        markers={markers}
+        shouldRenderClusters={shouldRenderClusters}
+        PopupComponent={PopupComponent}
+        popupAutoPanPadding={popupAutoPanPadding}
+        handleMarkerZoom={handleMarkerZoom}
+        markerByCoordRef={markerByCoordRef}
+        clusters={clusters}
+        expandedCluster={expandedCluster}
+        setExpandedCluster={setExpandedCluster}
+        travelMarkerOpacity={travelMarkerOpacity}
+      />
 
       {/* Map controls */}
       <MapControlsReactive
