@@ -23,6 +23,19 @@ const isPrivateOrLocalHost = (host: string): boolean => {
   return false;
 };
 
+const getSameOriginWebCrossOrigin = (uri: string): 'anonymous' | undefined => {
+  if (Platform.OS !== 'web') return undefined;
+  if (!/^https?:\/\//i.test(uri)) return undefined;
+  if (typeof window === 'undefined' || !window.location?.origin) return undefined;
+
+  try {
+    const parsed = new URL(uri);
+    return parsed.origin === window.location.origin ? 'anonymous' : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const normalizeRemoteImageUri = (uri: string): string => {
   const raw = String(uri || '').trim();
   if (!raw) return raw;
@@ -239,7 +252,7 @@ function OptimizedImage({
     if (typeof activeSource === 'number') return undefined;
     if (webBlobOrDataUri) return undefined;
     const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
-    return /^https?:\/\//i.test(uri) ? 'anonymous' : undefined;
+    return getSameOriginWebCrossOrigin(uri);
   }, [activeSource, validSource, webBlobOrDataUri]);
 
   const shouldRenderBlurBackground =
@@ -481,8 +494,9 @@ export async function prefetchImage(uri: string): Promise<void> {
       };
 
       img.decoding = 'async';
-      if (/^https?:\/\//i.test(uri)) {
-        img.crossOrigin = 'anonymous';
+      const crossOrigin = getSameOriginWebCrossOrigin(uri);
+      if (crossOrigin) {
+        img.crossOrigin = crossOrigin;
       }
 
       img.onload = () => {

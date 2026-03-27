@@ -7,6 +7,7 @@ const {
 
 const parseArgs = (argv) => {
   const args = {
+    appFile: 'test-results/selective/app/app-selective-decision.json',
     schemaFile: 'test-results/selective/schema/schema-selective-decision.json',
     validatorFile: 'test-results/selective/validator/validator-selective-decision.json',
     outputFile: 'test-results/selective-decisions.json',
@@ -14,6 +15,11 @@ const parseArgs = (argv) => {
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i]
+    if (token === '--app-file' && argv[i + 1]) {
+      args.appFile = String(argv[i + 1]).trim()
+      i += 1
+      continue
+    }
     if (token === '--schema-file' && argv[i + 1]) {
       args.schemaFile = String(argv[i + 1]).trim()
       i += 1
@@ -44,10 +50,11 @@ const readJsonIfExists = (filePath) => {
   }
 }
 
-const collectSelectiveDecisions = ({ schemaFile, validatorFile }) => {
+const collectSelectiveDecisions = ({ appFile, schemaFile, validatorFile }) => {
   const decisions = []
   const warnings = []
   const sources = [
+    { label: 'app-targeted-tests', filePath: appFile },
     { label: 'schema-contract-checks', filePath: schemaFile },
     { label: 'validator-contract-checks', filePath: validatorFile },
   ]
@@ -81,6 +88,7 @@ const collectSelectiveDecisions = ({ schemaFile, validatorFile }) => {
 const main = () => {
   const args = parseArgs(process.argv.slice(2))
   const aggregate = collectSelectiveDecisions({
+    appFile: args.appFile,
     schemaFile: args.schemaFile,
     validatorFile: args.validatorFile,
   })

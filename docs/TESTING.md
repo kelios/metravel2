@@ -21,6 +21,9 @@ Use the same changed-file selective rules locally before a full run:
 - `npm run check:fast:json`
 - `npm run check:preflight`
 - `npm run check:preflight:dry`
+- `npm run check:e2e:changed`
+- `npm run check:e2e:changed:dry`
+- `npm run check:e2e:changed:json`
 - `npm run check:changed`
 - `npm run check:changed:dry`
 - `npm run check:changed:json`
@@ -30,7 +33,10 @@ Behavior:
 
 - `typecheck` is currently an explicit full-project audit command; use it before wider refactors and debt-reduction work;
 - `check:fast` is the default lightweight workflow for a finished logical block: it runs selective checks, `guard:external-links`, and ESLint only for changed lintable files;
-- `check:preflight` extends `check:fast` with changed-file complexity validation, so oversized touched feature files are caught before a PR grows further;
+- the `check:fast` ESLint step uses a local cache and `--max-warnings=0`, so repeat runs stay fast while new warnings in touched files still fail the block;
+- local selective checks now include targeted app Jest suites for travel/map/account/messages changes in addition to schema/validator selective runners;
+- `check:e2e:changed` selects a stable subset of Playwright smoke specs by changed area (travel/search/map/account/messages) and is intended for pre-push / preflight validation;
+- `check:preflight` extends `check:fast` with changed-file complexity validation and selective Playwright smoke coverage, so larger local changes hit both code-level and browser-level gates before push;
 - without args, the command scans staged, unstaged, and untracked files from the current git working tree;
 - `--base-ref <ref>` compares `HEAD` against `git merge-base HEAD <ref>`;
 - `--changed-files-file <path>` reuses an explicit newline-separated file list;

@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+echo "githook(pre-commit): npm run check:fast"
+npm run check:fast

@@ -27,9 +27,6 @@ import {
 } from './bookData';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
 
-import { V1FinalRenderer } from '../../v1/V1FinalRenderer';
-import { V1GalleryRenderer } from '../../v1/V1GalleryRenderer';
-import { V1MapRenderer } from '../../v1/V1MapRenderer';
 import { assembleBookPages } from './pdfPageAssembly';
 import { renderChecklistPageSection, renderTocPageSection } from './pdfSectionRenderers';
 import {
@@ -39,6 +36,11 @@ import {
   getImageFilterStyle,
   renderPdfIcon as sharedRenderPdfIcon,
 } from './pdfVisualHelpers';
+import { renderTravelPhotoPageMarkup } from './travelPhotoPage';
+import { renderTravelContentPageMarkup } from './travelContentPage';
+import { RuntimeFinalRenderer } from './renderers/FinalPageRenderer';
+import { RuntimeGalleryRenderer } from './renderers/GalleryPageRenderer';
+import { RuntimeMapRenderer } from './renderers/MapPageRenderer';
 
 /**
  * Базовый runtime для полной генерации PDF-книги.
@@ -51,9 +53,9 @@ export class EnhancedPdfGeneratorBase {
   private themeName: string;
   private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
   private currentSettings?: BookSettings;
-  private finalRenderer!: V1FinalRenderer;
-  private galleryRenderer!: V1GalleryRenderer;
-  private mapRenderer!: V1MapRenderer;
+  private finalRenderer!: RuntimeFinalRenderer;
+  private galleryRenderer!: RuntimeGalleryRenderer;
+  private mapRenderer!: RuntimeMapRenderer;
 
   private getGalleryOptions(): {
     layout: GalleryLayout;
@@ -118,9 +120,9 @@ export class EnhancedPdfGeneratorBase {
 
   private initRenderers(): void {
     const ctx = { theme: this.theme, settings: this.currentSettings };
-    this.finalRenderer = new V1FinalRenderer(ctx);
-    this.galleryRenderer = new V1GalleryRenderer(ctx);
-    this.mapRenderer = new V1MapRenderer(ctx);
+    this.finalRenderer = new RuntimeFinalRenderer(ctx);
+    this.galleryRenderer = new RuntimeGalleryRenderer(ctx);
+    this.mapRenderer = new RuntimeMapRenderer(ctx);
   }
 
   /**
@@ -369,239 +371,17 @@ export class EnhancedPdfGeneratorBase {
    * Рендерит страницу с фото путешествия (поддерживает 3 layout'а)
    */
   private renderTravelPhotoPage(travel: TravelForBook, pageNumber: number): string {
-    const layout = this.currentSettings?.photoPageLayout || 'full-bleed';
-    const { colors, typography, spacing } = this.theme;
-    const coverImage = this.buildSafeImageUrl(
-      travel.travel_image_url || travel.travel_image_thumb_url
-    );
-    
-    const metaPieces = [
-      travel.countryName ? this.escapeHtml(travel.countryName) : null,
-      travel.year ? this.escapeHtml(String(travel.year)) : null,
-      this.formatDays(travel.number_days),
-    ].filter(Boolean);
-
-    const metaHtml = metaPieces.length ? this.escapeHtml(metaPieces.join(' \u2022 ')) : '';
-
-    // Fallback без фото — одинаковый для всех layout'ов
-    const noImageFallback = `
-      <div style="
-        border-radius: ${this.theme.blocks.borderRadius};
-        background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
-        height: 235mm;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: ${colors.accentStrong};
-        box-shadow: ${this.theme.blocks.shadow};
-      ">
-        <h1 style="
-          font-size: ${typography.h1.size};
-          font-weight: ${typography.h1.weight};
-          text-align: center;
-          padding: 20mm;
-          font-family: ${typography.headingFont};
-        ">${this.escapeHtml(travel.name)}</h1>
-      </div>
-    `;
-
-    let content: string;
-
-    if (!coverImage) {
-      content = noImageFallback;
-    } else if (layout === 'framed') {
-      // Framed: фото в рамке с подписью снизу (книжный стиль)
-      content = `
-        <div style="
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          min-height: 240mm;
-        ">
-          <div style="
-            flex: 1;
-            border-radius: ${this.theme.blocks.borderRadius};
-            overflow: hidden;
-            box-shadow: ${this.theme.blocks.shadow};
-            border: 6px solid ${colors.surface};
-            outline: 1px solid ${colors.border};
-            background: ${colors.surfaceAlt};
-            position: relative;
-          ">
-            ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
-          </div>
-          <div style="
-            text-align: center;
-            padding: 8mm 10mm 0 10mm;
-          ">
-            <h1 style="
-              font-size: ${typography.h1.size};
-              font-weight: ${typography.h1.weight};
-              line-height: ${typography.h1.lineHeight};
-              color: ${colors.text};
-              margin: 0 0 3mm 0;
-              font-family: ${typography.headingFont};
-              overflow-wrap: anywhere;
-              word-break: break-word;
-            ">${this.escapeHtml(travel.name)}</h1>
-            ${metaHtml ? `
-              <div style="
-                color: ${colors.textMuted};
-                font-size: 11pt;
-                font-weight: 500;
-                font-family: ${typography.bodyFont};
-              ">${metaHtml}</div>
-            ` : ''}
-          </div>
-        </div>
-      `;
-    } else if (layout === 'split') {
-      // Split: 70% фото слева + 30% цветной блок с названием справа
-      content = `
-        <div style="
-          display: flex;
-          height: 100%;
-          min-height: 240mm;
-          gap: 0;
-          border-radius: ${this.theme.blocks.borderRadius};
-          overflow: hidden;
-          box-shadow: ${this.theme.blocks.shadow};
-        ">
-          <div style="
-            width: 70%;
-            position: relative;
-            overflow: hidden;
-            background: ${colors.surfaceAlt};
-          ">
-            ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
-          </div>
-          <div style="
-            width: 30%;
-            background: linear-gradient(180deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 12mm;
-            color: ${colors.cover.text};
-          ">
-            <h1 style="
-              font-size: ${typography.h2.size};
-              font-weight: ${typography.h1.weight};
-              line-height: ${typography.h1.lineHeight};
-              margin: 0 0 6mm 0;
-              font-family: ${typography.headingFont};
-              overflow-wrap: anywhere;
-              word-break: break-word;
-              hyphens: auto;
-            ">${this.escapeHtml(travel.name)}</h1>
-            ${metaHtml ? `
-              <div style="
-                font-size: 10pt;
-                font-weight: 500;
-                opacity: 0.85;
-                font-family: ${typography.bodyFont};
-                line-height: 1.5;
-              ">${metaHtml}</div>
-            ` : ''}
-          </div>
-        </div>
-      `;
-    } else {
-      // Full-bleed (default): фото с честным cover-crop без blur-placeholder
-      content = `
-        <div style="
-          border-radius: ${this.theme.blocks.borderRadius};
-          overflow: hidden;
-          position: relative;
-          box-shadow: ${this.theme.blocks.shadow};
-          height: 100%;
-          min-height: 235mm;
-        ">
-          <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
-            style="
-              width: 100%;
-              height: 100%;
-              min-height: 235mm;
-              display: block;
-              object-fit: cover;
-              object-position: center;
-              ${this.getImageFilterStyle()}
-            "
-            crossorigin="anonymous"
-            onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(180deg, ${colors.accentLight} 0%, ${colors.accentSoft} 100%)';" />
-          <div style="
-            position: absolute;
-            inset: 0;
-            background:
-              linear-gradient(180deg, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.18) 100%),
-              linear-gradient(180deg, rgba(255,255,255,0.0) 48%, rgba(15,23,42,0.22) 100%);
-          "></div>
-          <div style="
-            position: absolute;
-            left: 14mm;
-            right: auto;
-            bottom: 14mm;
-            max-width: 116mm;
-            padding: 11mm 12mm 10mm 12mm;
-            border-radius: 20px;
-            background: rgba(255,255,255,0.92);
-            border: 1px solid rgba(255,255,255,0.72);
-            box-shadow: 0 18px 42px rgba(15,23,42,0.16);
-          ">
-            ${metaPieces.length ? `
-              <div style="
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-                margin-bottom: 5mm;
-              ">
-                ${metaPieces.map((part) => `
-                  <span style="
-                    display: inline-flex;
-                    align-items: center;
-                    padding: 4px 9px;
-                    border-radius: 999px;
-                    background: ${colors.accentLight};
-                    border: 1px solid ${colors.border};
-                    color: ${colors.textSecondary};
-                    font-size: ${typography.caption.size};
-                    line-height: 1.2;
-                    font-weight: 600;
-                    font-family: ${typography.bodyFont};
-                  ">${this.escapeHtml(part)}</span>
-                `).join('')}
-              </div>
-            ` : ''}
-            <h1 style="
-              color: ${colors.text};
-              font-size: ${typography.h1.size};
-              margin: 0;
-              font-weight: ${typography.h1.weight};
-              line-height: 1.12;
-              font-family: ${typography.headingFont};
-              overflow-wrap: anywhere;
-              word-break: break-word;
-              hyphens: auto;
-            ">${this.escapeHtml(travel.name)}</h1>
-          </div>
-        </div>
-      `;
-    }
-
-    return `
-      <section class="pdf-page travel-photo-page" style="padding: ${spacing.pagePadding};">
-        ${content}
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-weight: 500;
-          font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>
-      </section>
-    `;
+    return renderTravelPhotoPageMarkup({
+      travel,
+      pageNumber,
+      theme: this.theme,
+      layout: this.currentSettings?.photoPageLayout || 'full-bleed',
+      buildSafeImageUrl: (url) => this.buildSafeImageUrl(url),
+      escapeHtml: (value) => this.escapeHtml(value),
+      formatDays: (days) => this.formatDays(days),
+      buildContainImage: (src, alt, height, opts) => this.buildContainImage(src, alt, height, opts),
+      getImageFilterStyle: () => this.getImageFilterStyle(),
+    });
   }
 
   /**
@@ -625,317 +405,33 @@ export class EnhancedPdfGeneratorBase {
     const plusBlocks = travel.plus ? parser.parse(travel.plus) : [];
     const minusBlocks = travel.minus ? parser.parse(travel.minus) : [];
 
-    const url = travel.slug
-      ? `https://metravel.by/travels/${travel.slug}`
-      : travel.url;
-
     // Не показываем inline-галерею если есть отдельная страница галереи (избегаем дублирования фото)
     const hasGalleryPage = this.currentSettings?.includeGallery !== false &&
       (travel.gallery || []).some((item) => {
-        const url = typeof item === 'string' ? item : item?.url;
-        return !!this.buildSafeImageUrl(url);
+        return !!this.buildSafeImageUrl(typeof item === 'string' ? item : item?.url);
       });
-    const inlineGallery = hasGalleryPage
-      ? ''
-      : this.buildInlineGallerySection(travel, colors, typography, spacing);
+    const inlineGallery = this.buildInlineGallerySection(travel, colors, typography, spacing);
 
-    return `
-      <section class="pdf-page travel-content-page" style="padding: ${spacing.pagePadding};">
-        <style>
-          .travel-content-page p {
-            margin-bottom: ${typography.body.marginBottom};
-            line-height: ${typography.body.lineHeight};
-            text-align: justify;
-            orphans: 2;
-            widows: 2;
-          }
-          .travel-content-page h1,
-          .travel-content-page h2,
-          .travel-content-page h3 {
-            page-break-after: avoid;
-            orphans: 3;
-            widows: 3;
-          }
-        </style>
-
-        ${this.buildRunningHeader(travel.name, pageNumber)}
-
-        ${this.buildStatsMiniCard(travel, colors, typography, spacing)}
-
-        ${descriptionHtml ? `
-          <div style="margin-bottom: ${spacing.sectionSpacing};">
-            <div style="
-              display: flex;
-              align-items: center;
-              gap: 10px;
-              margin-bottom: ${spacing.elementSpacing};
-              padding-bottom: 8px;
-              border-bottom: 2px solid ${colors.accentSoft};
-            ">
-              <span style="
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 28px;
-                height: 28px;
-                border-radius: 8px;
-                background: ${colors.accentSoft};
-                flex-shrink: 0;
-              ">${this.renderPdfIcon('pen', colors.accent, 15)}</span>
-              <h2 style="
-                font-size: ${typography.h2.size};
-                font-weight: ${typography.h2.weight};
-                color: ${colors.text};
-                margin: 0;
-                font-family: ${typography.headingFont};
-              ">Описание</h2>
-            </div>
-            <div class="description-block" style="
-              font-size: ${typography.body.size};
-              line-height: ${typography.body.lineHeight};
-              color: ${colors.text};
-              font-family: ${typography.bodyFont};
-            ">${descriptionHtml}</div>
-          </div>
-        ` : ''}
-
-        ${inlineGallery}
-
-        ${recommendationBlocks.length > 0 ? `
-          <div style="margin-bottom: ${spacing.sectionSpacing};">
-            <div style="
-              display: flex;
-              align-items: center;
-              gap: 10px;
-              margin-bottom: ${spacing.elementSpacing};
-              padding-bottom: 8px;
-              border-bottom: 2px solid ${colors.accentSoft};
-            ">
-              <span style="
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 28px;
-                height: 28px;
-                border-radius: 8px;
-                background: ${colors.infoBlock.background};
-                flex-shrink: 0;
-              ">${this.renderPdfIcon('bulb', colors.infoBlock.icon, 15)}</span>
-              <h2 style="
-                font-size: ${typography.h2.size};
-                font-weight: ${typography.h2.weight};
-                color: ${colors.text};
-                margin: 0;
-                font-family: ${typography.headingFont};
-              ">Рекомендации</h2>
-            </div>
-            <div style="
-              font-size: ${typography.body.size};
-              line-height: ${typography.body.lineHeight};
-              color: ${colors.text};
-              font-family: ${typography.bodyFont};
-            ">${this.renderBlocks(recommendationBlocks)}</div>
-          </div>
-        ` : ''}
-
-        ${plusBlocks.length > 0 || minusBlocks.length > 0 ? `
-          <div style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: ${spacing.elementSpacing};
-            margin-top: ${spacing.blockSpacing};
-            break-inside: avoid;
-            page-break-inside: avoid;
-          ">
-            ${plusBlocks.length > 0 ? `
-              <div style="
-                background: ${colors.tipBlock.background};
-                border-radius: ${this.theme.blocks.borderRadius};
-                padding: ${spacing.elementSpacing} ${spacing.blockSpacing};
-                border: ${this.theme.blocks.borderWidth} solid ${colors.tipBlock.border};
-                border-left: 3px solid ${colors.tipBlock.icon};
-                box-shadow: ${this.theme.blocks.shadow};
-                break-inside: avoid;
-                page-break-inside: avoid;
-              ">
-                <div style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  margin-bottom: ${spacing.elementSpacing};
-                ">
-                  <span style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 6px;
-                    background: ${colors.tipBlock.border};
-                    flex-shrink: 0;
-                  ">${this.renderPdfIcon('sparkle', colors.tipBlock.text, 13)}</span>
-                  <h3 style="
-                    margin: 0;
-                    color: ${colors.tipBlock.text};
-                    font-size: ${typography.h4.size};
-                    font-weight: ${typography.h4.weight};
-                    font-family: ${typography.headingFont};
-                  ">Плюсы</h3>
-                </div>
-                <div style="
-                  font-size: ${typography.small.size};
-                  line-height: ${typography.small.lineHeight};
-                  color: ${colors.tipBlock.text};
-                  font-family: ${typography.bodyFont};
-                ">${this.renderBlocks(plusBlocks)}</div>
-              </div>
-            ` : ''}
-            ${minusBlocks.length > 0 ? `
-              <div style="
-                background: ${colors.dangerBlock.background};
-                border-radius: ${this.theme.blocks.borderRadius};
-                padding: ${spacing.elementSpacing} ${spacing.blockSpacing};
-                border: ${this.theme.blocks.borderWidth} solid ${colors.dangerBlock.border};
-                border-left: 3px solid ${colors.dangerBlock.icon};
-                box-shadow: ${this.theme.blocks.shadow};
-                break-inside: avoid;
-                page-break-inside: avoid;
-              ">
-                <div style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  margin-bottom: ${spacing.elementSpacing};
-                ">
-                  <span style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 6px;
-                    background: ${colors.dangerBlock.border};
-                    flex-shrink: 0;
-                  ">${this.renderPdfIcon('warning', colors.dangerBlock.text, 13)}</span>
-                  <h3 style="
-                    margin: 0;
-                    color: ${colors.dangerBlock.text};
-                    font-size: ${typography.h4.size};
-                    font-weight: ${typography.h4.weight};
-                    font-family: ${typography.headingFont};
-                  ">Минусы</h3>
-                </div>
-                <div style="
-                  font-size: ${typography.small.size};
-                  line-height: ${typography.small.lineHeight};
-                  color: ${colors.dangerBlock.text};
-                  font-family: ${typography.bodyFont};
-                ">${this.renderBlocks(minusBlocks)}</div>
-              </div>
-            ` : ''}
-          </div>
-        ` : ''}
-
-        ${url ? `
-          <div class="travel-online-card" style="
-            display: flex;
-            gap: ${spacing.blockSpacing};
-            align-items: center;
-            margin-top: ${spacing.sectionSpacing};
-            padding: 16px 18px;
-            border-radius: 22px;
-            background: linear-gradient(135deg, ${colors.accentLight} 0%, ${colors.surface} 72%);
-            border: 1px solid ${colors.border};
-            border-top: 3px solid ${colors.accent};
-            box-shadow: 0 8px 24px rgba(15,23,42,0.08);
-            break-inside: avoid;
-            page-break-inside: avoid;
-          ">
-            ${qrCode ? `
-              <div style="
-                width: 34mm;
-                height: 34mm;
-                padding: 3mm;
-                border-radius: 16px;
-                background: white;
-                border: 1px solid ${colors.border};
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-              ">
-                <img src="${this.escapeHtml(qrCode)}" alt="QR" style="
-                  width: 100%;
-                  height: 100%;
-                  display: block;
-                " />
-              </div>
-            ` : ''}
-            <div style="
-              font-size: ${typography.small.size};
-              color: ${colors.textMuted};
-              flex: 1;
-              font-family: ${typography.bodyFont};
-              min-width: 0;
-            ">
-              <div style="
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                font-weight: 700;
-                margin-bottom: 6px;
-                color: ${colors.accent};
-                font-size: ${typography.caption.size};
-                font-family: ${typography.headingFont};
-              ">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${colors.accent}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                Онлайн-версия
-              </div>
-              <div style="
-                font-size: ${typography.h3.size};
-                line-height: 1.2;
-                color: ${colors.text};
-                font-weight: ${typography.h4.weight};
-                margin-bottom: 4px;
-                font-family: ${typography.headingFont};
-              ">Маршрут онлайн</div>
-              <div style="
-                line-height: 1.5;
-                color: ${colors.textSecondary};
-                margin-bottom: 8px;
-              ">Сканируйте QR, чтобы сразу открыть маршрут.</div>
-              <div style="
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 5px 12px;
-                border-radius: 999px;
-                background: ${colors.surface};
-                border: 1px solid ${colors.border};
-                color: ${colors.text};
-                font-size: ${typography.caption.size};
-                line-height: 1.3;
-                max-width: 100%;
-              ">
-                <span style="
-                  font-weight: 700;
-                  color: ${colors.accentStrong};
-                  white-space: nowrap;
-                ">metravel.by</span>
-                <span style="
-                  overflow-wrap: anywhere;
-                  word-break: break-word;
-                ">${this.escapeHtml(url.replace(/^https?:\/\//i, ''))}</span>
-              </div>
-            </div>
-          </div>
-        ` : ''}
-
-      </section>
-    `;
+    return renderTravelContentPageMarkup({
+      travel,
+      pageNumber,
+      theme: this.theme,
+      qrCode,
+      variant: 'runtime',
+      descriptionHtml,
+      recommendationBlocks,
+      plusBlocks,
+      minusBlocks,
+      renderBlocks: (blocks) => this.renderBlocks(blocks),
+      renderPdfIcon: (name, color, size) => this.renderPdfIcon(name as any, color, size),
+      escapeHtml: (value) => this.escapeHtml(value),
+      headerHtml: this.buildRunningHeader(travel.name, pageNumber),
+      statsHtml: this.buildStatsMiniCard(travel, colors, typography, spacing),
+      inlineGalleryHtml: inlineGallery,
+      showInlineGallery: true,
+      includeGallery: this.currentSettings?.includeGallery,
+      hasGalleryMedia: hasGalleryPage,
+    });
   }
 
   /**

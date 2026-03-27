@@ -94,7 +94,7 @@ it('calls useBeforeUnload with handler when hasUnsavedChanges=true', () => {
 
 ### 4. Создана документация
 - ✅ `docs/UNLOAD_POLICY_FIX.md` - подробное описание проблемы и решения
-- ✅ `examples/beforeunload-usage.tsx` - примеры использования (6 правильных + 2 неправильных)
+- ✅ Примеры использования были вынесены во временный sandbox и больше не хранятся в репозитории как production-adjacent код
 
 ## Проверка безопасности
 
@@ -106,8 +106,6 @@ grep -r "window.addEventListener.*beforeunload" --include="*.ts" --include="*.ts
 
 **Результаты:**
 1. ✅ `utils/beforeunloadGuard.ts:50` - внутренняя реализация (необходимо)
-2. ✅ `examples/beforeunload-usage.tsx:173` - пример "❌ неправильно" (намеренно)
-3. ✅ `examples/beforeunload-usage.tsx:211` - комментарий в документации
 
 **Вывод:** Нет опасных прямых вызовов в production коде ✅
 

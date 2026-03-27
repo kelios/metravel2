@@ -117,15 +117,7 @@ transition={isFirstSlide ? 0 : 200}
 **Выгода:** -60% рендеринга при первой загрузке (для галереи из 10+ фото)
 
 ### 2. Progressive Image Loading (LQIP)
-Использовать созданный ранее `useProgressiveImage` hook:
-
-```typescript
-const { currentSrc, isLoaded } = useProgressiveImage({
-  placeholderSrc: getThumbnail(resolvedUri), // 50x50 blur
-  src: resolvedUri,
-  loadDelay: isFirstSlide ? 0 : 100,
-});
-```
+Если вернёмся к LQIP-подходу, внедрять его нужно через актуальный shared media pipeline, а не через отдельный экспериментальный hook.
 
 **Выгода:** Instant первый кадр (tiny blur), затем full resolution
 
@@ -185,7 +177,6 @@ const optimizedUri = `${resolvedUri}?w=${containerW}&q=${isFirstSlide ? 90 : 80}
 
 ## Связанные документы
 
-- `TRAVEL_PAGE_REFACTORING.md` - основной план рефакторинга
 - `GALLERY_IMPROVEMENTS.md` - улучшения галереи
 - `UNLOAD_POLICY_FIX.md` - исправление beforeunload
 

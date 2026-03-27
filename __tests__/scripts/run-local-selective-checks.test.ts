@@ -71,12 +71,15 @@ describe('run-local-selective-checks', () => {
     expect(payload.changedFiles).toEqual(['README.md', 'scripts/validator-output.js'])
     expect(payload.checks).toHaveLength(CHECKS.length)
     expect(payload.checks.map((item) => item.check)).toEqual([
+      'app-targeted-tests',
       'schema-contract-checks',
       'validator-contract-checks',
     ])
 
+    const appTargeted = payload.checks.find((item) => item.check === 'app-targeted-tests')
     const schema = payload.checks.find((item) => item.check === 'schema-contract-checks')
     const validator = payload.checks.find((item) => item.check === 'validator-contract-checks')
+    expect(appTargeted.decision).toBe('skip')
     expect(schema.decision).toBe('skip')
     expect(validator.decision).toBe('run')
 

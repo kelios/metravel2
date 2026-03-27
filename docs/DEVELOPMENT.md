@@ -42,11 +42,14 @@ npm run android
 
 - `npm run lint` — ESLint.
 - `npm run typecheck` — полный TypeScript audit (`tsc --noEmit`). Сейчас это отдельная проверка долга, а не cheap-check после каждого логического блока.
-- `npm run check:fast` — быстрый локальный прогон для законченного логического блока: selective checks + `guard:external-links` + ESLint только по изменённым js/ts файлам.
+- `npm run check:fast` — быстрый локальный прогон для законченного логического блока: selective checks + `guard:external-links` + ESLint только по изменённым js/ts файлам. ESLint запускается с локальным cache и `--max-warnings=0`, чтобы повторные прогоны были быстрее, а новые warning'и в touched-files не проходили незамеченными.
 - `npm run check:fast:dry` — показывает, что именно проверит быстрый scope-прогон, без запуска команд.
 - `npm run check:preflight` — расширенный локальный прогон перед PR/крупным завершённым куском: `check:fast` + changed-file complexity guard.
+- `npm run check:e2e:changed` — selective Playwright smoke-прогон по changed files для travel/search/map/account/messages.
+- `npm run check:e2e:changed:dry` — показывает, какие e2e spec'и будут запущены.
 - `npm run check:changed` — локально прогоняет selective schema/validator checks по текущим изменённым файлам в git working tree.
 - `npm run check:changed:dry` — показывает, какие selective checks сработают, без запуска самих тестов.
+- `npm run hooks:install` — включает репозиторные git hooks (`pre-commit` -> `check:fast`, `pre-push` -> `check:preflight`) через `core.hooksPath=githooks`.
 - `npm run governance:verify` — runs external-link guards and governance test suite.
 - `npm run guard:external-links` — runs both external-link guards.
 - Canonical governance command reference: `docs/TESTING.md#governance-commands`.
@@ -74,6 +77,8 @@ Recommended cadence:
 - во время мелких правок в рамках одного незавершённого куска логики ничего не гонять после каждого сохранения;
 - после завершённого логического блока запускать `npm run check:fast`;
 - перед PR или после заметного рефакторинга запускать `npm run check:preflight`;
+- если нужен только быстрый просмотр e2e scope без запуска браузера, использовать `npm run check:e2e:changed:dry`;
+- один раз на машине после `install` запускать `npm run hooks:install`, чтобы fast/preflight проверки срабатывали автоматически на commit/push;
 - перед завершением задачи запускать проверки по scope изменений, как требует `docs/RULES.md`.
 
 ## Route point from photo

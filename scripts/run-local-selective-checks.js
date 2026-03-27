@@ -138,6 +138,10 @@ const runSelectiveScript = ({ scriptPath, changedFiles, dryRun, output }) => {
 
 const CHECKS = [
   {
+    name: 'app-targeted-tests',
+    scriptPath: 'scripts/run-app-contract-tests-if-needed.js',
+  },
+  {
     name: 'schema-contract-checks',
     scriptPath: 'scripts/run-schema-contract-tests-if-needed.js',
   },

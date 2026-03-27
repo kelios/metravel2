@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+echo "githook(pre-push): npm run check:preflight"
+npm run check:preflight

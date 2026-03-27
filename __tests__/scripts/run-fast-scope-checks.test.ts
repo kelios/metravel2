@@ -4,6 +4,8 @@ const { runNodeCli, makeTempDir, writeTextFile } = require('./cli-test-utils')
 const {
   parseArgs,
   getLintTargets,
+  buildEslintArgs,
+  ESLINT_CACHE_LOCATION,
   runFastScopeChecks,
 } = require('@/scripts/run-fast-scope-checks')
 
@@ -37,6 +39,29 @@ describe('run-fast-scope-checks', () => {
       'package.json',
     ])).toEqual([
       'scripts/run-fast-scope-checks.js',
+    ])
+  })
+
+  it('skips deleted or missing changed source files from lint scope', () => {
+    expect(getLintTargets([
+      '__tests__/services/blockRenderer.test.ts',
+      'scripts/run-fast-scope-checks.js',
+    ])).toEqual([
+      'scripts/run-fast-scope-checks.js',
+    ])
+  })
+
+  it('builds cached eslint invocation with zero warning budget', () => {
+    expect(buildEslintArgs([
+      'scripts/run-fast-scope-checks.js',
+      'components/Button.tsx',
+    ])).toEqual([
+      'eslint',
+      '--cache',
+      '--cache-location',
+      ESLINT_CACHE_LOCATION,
+      '--max-warnings=0',
+      'scripts/run-fast-scope-checks.js',
       'components/Button.tsx',
     ])
   })
@@ -49,7 +74,7 @@ describe('run-fast-scope-checks', () => {
     })
 
     expect(result.lintTargets).toEqual(['scripts/validator-output.js'])
-    expect(result.selectiveChecks).toHaveLength(2)
+    expect(result.selectiveChecks).toHaveLength(3)
   })
 
   it('emits combined dry-run json payload', () => {
@@ -73,6 +98,7 @@ describe('run-fast-scope-checks', () => {
     expect(payload.changedFiles).toEqual(['docs/TESTING.md', 'scripts/validator-output.js'])
     expect(payload.lintTargets).toEqual(['scripts/validator-output.js'])
     expect(payload.checks.map((item) => item.check)).toEqual([
+      'app-targeted-tests',
       'schema-contract-checks',
       'validator-contract-checks',
     ])

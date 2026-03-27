@@ -7,6 +7,51 @@ on:
       - main
 
 jobs:
+  app-targeted-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Collect changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/collect-changed-files.js --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --output-file changed_files.txt
+
+      - name: Run selective app targeted tests
+        run: node scripts/run-app-contract-tests-if-needed.js --changed-files-file changed_files.txt
+
+      - name: Capture app selective decision snapshot
+        if: always()
+        run: |
+          mkdir -p test-results
+          node scripts/run-app-contract-tests-if-needed.js --changed-files-file changed_files.txt --dry-run --json > test-results/app-selective-decision.json
+
+      - name: Validate app selective decision snapshot
+        if: always()
+        run: node scripts/validate-selective-decision.js --file test-results/app-selective-decision.json
+
+      - name: Upload app selective decision snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-selective-decision
+          path: test-results/app-selective-decision.json
+          if-no-files-found: ignore
+
   schema-contract-checks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -206,17 +251,76 @@ jobs:
           path: test-results/jest-smoke-results.json
           if-no-files-found: ignore
 
+  e2e-selective:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Collect changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/collect-changed-files.js --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --output-file changed_files.txt
+
+      - name: Capture selective e2e decision snapshot
+        id: e2e_decision
+        run: |
+          mkdir -p test-results
+          node scripts/run-e2e-changed.js --changed-files-file changed_files.txt --dry-run --json > test-results/e2e-changed-decision.json
+          node scripts/validate-e2e-changed-decision.js --file test-results/e2e-changed-decision.json
+          SHOULD_RUN="$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('test-results/e2e-changed-decision.json','utf8'));process.stdout.write(j.shouldRun ? 'true' : 'false')")"
+          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
+
+      - name: Install Playwright browsers
+        if: steps.e2e_decision.outputs.should_run == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run selective e2e smoke
+        if: steps.e2e_decision.outputs.should_run == 'true'
+        run: node scripts/run-e2e-changed.js --changed-files-file changed_files.txt
+
+      - name: Upload selective e2e decision snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-changed-decision
+          path: test-results/e2e-changed-decision.json
+          if-no-files-found: ignore
+
+      - name: Upload selective e2e report
+        if: always() && steps.e2e_decision.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: e2e-results.json
+          if-no-files-found: ignore
+
   quality-summary:
     # Non-gating aggregation job: provides one combined quality snapshot.
     # Runs even when upstream jobs fail and fails fast if expected artifacts are missing.
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - app-targeted-tests
       - schema-contract-checks
       - validator-contract-checks
       - runtime-config-diagnostics
       - lint
       - smoke-critical
+      - e2e-selective
 
     steps:
       - name: Checkout
@@ -296,6 +400,14 @@ jobs:
           name: schema-selective-decision
           path: test-results/selective/schema
 
+      - name: Download app selective decision
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: app-selective-decision
+          path: test-results/selective/app
+
       - name: Download validator selective decision
         if: github.event_name == 'pull_request'
         continue-on-error: true
@@ -307,6 +419,11 @@ jobs:
       - name: Validate downloaded selective decisions (PR)
         if: github.event_name == 'pull_request'
         run: |
+          if [ -f test-results/selective/app/app-selective-decision.json ]; then
+            node scripts/validate-selective-decision.js --file test-results/selective/app/app-selective-decision.json
+          else
+            echo "app selective decision artifact is missing; summary will include warning"
+          fi
           if [ -f test-results/selective/schema/schema-selective-decision.json ]; then
             node scripts/validate-selective-decision.js --file test-results/selective/schema/schema-selective-decision.json
           else
@@ -320,7 +437,7 @@ jobs:
 
       - name: Collect selective decisions aggregate (PR)
         if: github.event_name == 'pull_request'
-        run: node scripts/collect-selective-decisions.js --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json
+        run: node scripts/collect-selective-decisions.js --app-file test-results/selective/app/app-selective-decision.json --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json
 
       - name: Validate selective decisions aggregate (PR)
         if: github.event_name == 'pull_request'

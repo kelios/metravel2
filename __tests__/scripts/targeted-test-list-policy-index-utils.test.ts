@@ -19,19 +19,21 @@ describe('targeted-test-list-policy-index-utils', () => {
   })
 
   it('keeps naming contract constants stable', () => {
-    expect(String(SELECTIVE_RUNNER_TEST_PATTERN)).toBe('/^run-.*-contract-tests-if-needed\\.test\\.ts$/')
+    expect(String(SELECTIVE_RUNNER_TEST_PATTERN)).toBe('/^run-(?:.*-contract-tests-if-needed|e2e-changed)\\.test\\.ts$/')
     expect(String(TARGETED_POLICY_SUITE_PATTERN)).toBe('/^targeted-test-list-policy.*\\.test\\.ts$/')
     expect(CONTRACT_UTILS_SUITE_FILE).toBe('targeted-test-list-contract-utils.test.ts')
   })
 
   it('selects selective runner suites from file list', () => {
     const files = [
+      'run-e2e-changed.test.ts',
       'run-schema-contract-tests-if-needed.test.ts',
       'run-validator-contract-tests-if-needed.test.ts',
       'targeted-test-list-policy.test.ts',
       'README.md',
     ]
     expect(getSelectiveRunnerTestFilesFromList(files)).toEqual([
+      'run-e2e-changed.test.ts',
       'run-schema-contract-tests-if-needed.test.ts',
       'run-validator-contract-tests-if-needed.test.ts',
     ])
@@ -39,6 +41,7 @@ describe('targeted-test-list-policy-index-utils', () => {
 
   it('selects allowed helper consumer suites from file list', () => {
     const files = [
+      'run-e2e-changed.test.ts',
       'run-schema-contract-tests-if-needed.test.ts',
       'run-validator-contract-tests-if-needed.test.ts',
       'targeted-test-list-policy.test.ts',
@@ -47,6 +50,7 @@ describe('targeted-test-list-policy-index-utils', () => {
       'unrelated.test.ts',
     ]
     expect(getAllowedHelperConsumerFilesFromList(files)).toEqual([
+      'run-e2e-changed.test.ts',
       'run-schema-contract-tests-if-needed.test.ts',
       'run-validator-contract-tests-if-needed.test.ts',
       'targeted-test-list-policy.test.ts',

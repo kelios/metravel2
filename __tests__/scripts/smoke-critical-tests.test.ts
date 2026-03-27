@@ -3,7 +3,7 @@ const { SMOKE_CRITICAL_TESTS } = require('@/scripts/smoke-critical-tests')
 describe('smoke-critical-tests', () => {
   it('keeps critical smoke test list stable and non-empty', () => {
     expect(Array.isArray(SMOKE_CRITICAL_TESTS)).toBe(true)
-    expect(SMOKE_CRITICAL_TESTS.length).toBe(70)
+    expect(SMOKE_CRITICAL_TESTS.length).toBe(74)
   })
 
   it('contains key contract and docs coverage tests', () => {
@@ -12,6 +12,10 @@ describe('smoke-critical-tests', () => {
     expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/incident-doc-commands-contract.test.ts')
     expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/baseline-doc-commands-contract.test.ts')
     expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/doc-command-contract-utils.test.ts')
+    expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/install-git-hooks.test.ts')
+    expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/run-e2e-changed.test.ts')
+    expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/validate-e2e-changed-decision.test.ts')
+    expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/run-app-contract-tests-if-needed.test.ts')
     expect(SMOKE_CRITICAL_TESTS).toContain('__tests__/scripts/run-smoke-critical.test.ts')
   })
 

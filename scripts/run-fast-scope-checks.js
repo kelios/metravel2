@@ -1,3 +1,5 @@
+const fs = require('fs')
+const path = require('path')
 const { spawnSync } = require('child_process')
 const { resolveChangedFilesInput, runSelectiveChecks } = require('./run-local-selective-checks')
 
@@ -34,9 +36,27 @@ const parseArgs = (argv) => {
 }
 
 const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|mjs|cjs)$/
+const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 
 const getLintTargets = (changedFiles) => {
-  return (changedFiles || []).filter((filePath) => LINTABLE_FILE_PATTERN.test(filePath))
+  return (changedFiles || []).filter((filePath) => {
+    if (!LINTABLE_FILE_PATTERN.test(filePath)) {
+      return false
+    }
+
+    return fs.existsSync(path.resolve(process.cwd(), filePath))
+  })
+}
+
+const buildEslintArgs = (lintTargets) => {
+  return [
+    'eslint',
+    '--cache',
+    '--cache-location',
+    ESLINT_CACHE_LOCATION,
+    '--max-warnings=0',
+    ...(lintTargets || []),
+  ]
 }
 
 const runCommand = (command, args) => {
@@ -127,7 +147,7 @@ const main = () => {
       return
     }
 
-    const eslintStatus = runCommand('npx', ['eslint', ...result.lintTargets])
+    const eslintStatus = runCommand('npx', buildEslintArgs(result.lintTargets))
     if (eslintStatus !== 0) {
       process.exit(eslintStatus)
     }
@@ -145,5 +165,7 @@ module.exports = {
   LINTABLE_FILE_PATTERN,
   parseArgs,
   getLintTargets,
+  buildEslintArgs,
+  ESLINT_CACHE_LOCATION,
   runFastScopeChecks,
 }

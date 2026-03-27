@@ -1,6 +1,22 @@
 const { runNodeCli } = require('./cli-test-utils')
 
 describe('selective runner json contract', () => {
+  it('emits run decision for app selective runner with matched files', () => {
+    const result = runNodeCli(
+      ['scripts/run-app-contract-tests-if-needed.js', '--dry-run', '--json'],
+      { CHANGED_FILES: 'components/travel/UpsertTravel.tsx\nREADME.md\n' },
+    )
+
+    expect(result.status).toBe(0)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.contractVersion).toBe(1)
+    expect(payload.check).toBe('app-targeted-tests')
+    expect(payload.decision).toBe('run')
+    expect(payload.reason).toBe('match')
+    expect(payload.shouldRun).toBe(true)
+    expect(payload.relevantMatches).toBeGreaterThan(0)
+  })
+
   it('emits run decision for validator selective runner with matched files', () => {
     const result = runNodeCli(
       ['scripts/run-validator-contract-tests-if-needed.js', '--dry-run', '--json'],
