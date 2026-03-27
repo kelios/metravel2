@@ -947,6 +947,7 @@ function ListTravelBase({
       toggleSelect,
       toggleSelectAll,
       clearSelection,
+      moveSelected,
       isSelected,
       hasSelection,
       selectionCount,
@@ -1238,6 +1239,7 @@ function ListTravelBase({
                 ownerName={userId}
                 toggleSelectAll={toggleSelectAll}
                 clearSelection={clearSelection}
+                moveSelected={moveSelected}
                 hasSelection={hasSelection}
                 selectionCount={selectionCount}
                 baseSettings={baseSettings}

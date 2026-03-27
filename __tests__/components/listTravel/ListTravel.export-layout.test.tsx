@@ -95,21 +95,19 @@ jest.mock('@/components/listTravel/hooks/useListTravelData', () => ({
 
 jest.mock('@/components/listTravel/hooks/useListTravelExport', () => ({
   useListTravelExport: () => ({
+    selected: [],
     selectionCount: 0,
     hasSelection: false,
     toggleSelectAll: jest.fn(),
     clearSelection: jest.fn(),
-    pdfExport: {
-      isGenerating: false,
-      progress: 0,
-    },
+    moveSelected: jest.fn(),
+    isSelected: jest.fn(() => false),
     settingsSummary: null,
-    handleOpenSettings: jest.fn(),
-    handleCloseSettings: jest.fn(),
+    setLastSettings: jest.fn(),
     handleSaveWithSettings: jest.fn(),
     handlePreviewWithSettings: jest.fn(),
     lastSettings: null,
-    baseSettings: null,
+    baseSettings: { sortOrder: 'manual', template: 'minimal' },
   }),
 }));
 

@@ -30,7 +30,7 @@ export interface BookSettings {
   coverType: 'auto' | 'first-photo' | 'gradient' | 'custom';
   coverImage?: string;
   template: PdfThemeName;
-  sortOrder: 'date-desc' | 'date-asc' | 'country' | 'alphabetical';
+  sortOrder: 'manual' | 'date-desc' | 'date-asc' | 'country' | 'alphabetical';
   includeToc: boolean;
   includeGallery: boolean;
   includeMap: boolean;
@@ -82,7 +82,7 @@ const defaultBookSettings: BookSettings = {
   subtitle: '',
   coverType: 'auto',
   template: 'minimal',
-  sortOrder: 'date-desc',
+  sortOrder: 'manual',
   includeToc: true,
   includeGallery: true,
   includeMap: true,
@@ -531,6 +531,47 @@ export default function BookSettingsModal({
                   : `Будет создана книга с ${travelCount} путешествиями`}
               </div>
             </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: MODAL_COLORS.text, fontSize: '14px' }}>
+              Порядок путешествий в книге
+            </label>
+            <select
+              value={settings.sortOrder}
+              onChange={(e) => handleSettingsChange({ sortOrder: e.target.value as BookSettings['sortOrder'] })}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                border: `1.5px solid ${MODAL_COLORS.border}`,
+                borderRadius: '12px',
+                fontSize: '15px',
+                minHeight: '44px',
+                backgroundColor: MODAL_COLORS.surface,
+                color: MODAL_COLORS.text,
+                outlineWidth: 0,
+                outlineStyle: 'none',
+                outlineColor: 'transparent',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                cursor: 'pointer',
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = MODAL_COLORS.primary;
+                e.target.style.boxShadow = `0 0 0 3px ${MODAL_COLORS.focus}`;
+                e.target.style.backgroundColor = MODAL_COLORS.surface;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = MODAL_COLORS.border;
+                e.target.style.boxShadow = 'none';
+              }}
+            >
+              <option value="manual">Как расположено в списке выбора</option>
+              <option value="date-desc">Сначала новые по году</option>
+              <option value="date-asc">Сначала старые по году</option>
+              <option value="country">По стране</option>
+              <option value="alphabetical">По названию</option>
+            </select>
           </div>
 
           <div

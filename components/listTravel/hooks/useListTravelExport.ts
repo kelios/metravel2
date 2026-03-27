@@ -14,6 +14,7 @@ export interface UseListTravelExportReturn {
   toggleSelect: (travel: Travel) => void;
   toggleSelectAll: () => void;
   clearSelection: () => void;
+  moveSelected: (id: number | string, direction: 'up' | 'down') => void;
   isSelected: (id: number | string) => boolean;
   hasSelection: boolean;
   selectionCount: number;
@@ -34,8 +35,18 @@ export function useListTravelExport(
   useEffect(() => {
     setSelected((prev) => {
       if (!prev.length) return prev;
-      const next = prev.filter((travel) => travels.some((item) => item.id === travel.id));
-      return next.length === prev.length ? prev : next;
+      let changed = false;
+      const next = prev.map((travel) => {
+        const updated = travels.find((item) => item.id === travel.id);
+        if (!updated) return travel;
+        if (updated === travel) return travel;
+        changed = true;
+        return {
+          ...travel,
+          ...updated,
+        };
+      });
+      return changed ? next : prev;
     });
   }, [travels]);
 
@@ -47,10 +58,45 @@ export function useListTravelExport(
 
   const toggleSelectAll = useCallback(() => {
     if (!travels.length) return;
-    setSelected((prev) => (prev.length === travels.length ? [] : travels));
+    setSelected((prev) => {
+      const visibleIds = new Set(travels.map((travel) => String(travel.id ?? travel.slug)));
+      const allVisibleSelected = travels.every((travel) =>
+        prev.some((item) => String(item.id ?? item.slug) === String(travel.id ?? travel.slug))
+      );
+
+      if (allVisibleSelected) {
+        return prev.filter((item) => !visibleIds.has(String(item.id ?? item.slug)));
+      }
+
+      const next = [...prev];
+      travels.forEach((travel) => {
+        const alreadySelected = next.some(
+          (item) => String(item.id ?? item.slug) === String(travel.id ?? travel.slug)
+        );
+        if (!alreadySelected) {
+          next.push(travel);
+        }
+      });
+      return next;
+    });
   }, [travels]);
 
   const clearSelection = useCallback(() => setSelected([]), []);
+
+  const moveSelected = useCallback((id: number | string, direction: 'up' | 'down') => {
+    setSelected((prev) => {
+      const index = prev.findIndex((item) => String(item.id ?? item.slug) === String(id));
+      if (index < 0) return prev;
+
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(targetIndex, 0, item);
+      return next;
+    });
+  }, []);
 
   const selectedIds = useMemo(() => new Set((selected || []).map((item) => String(item.id ?? item.slug))), [selected]);
 
@@ -69,7 +115,7 @@ export function useListTravelExport(
       subtitle: '',
       coverType: 'auto',
       template: 'minimal',
-      sortOrder: 'date-desc',
+      sortOrder: 'manual',
       includeToc: true,
       includeGallery: true,
       includeMap: true,
@@ -111,6 +157,7 @@ export function useListTravelExport(
     toggleSelect,
     toggleSelectAll,
     clearSelection,
+    moveSelected,
     isSelected,
     hasSelection: selectionCount > 0,
     selectionCount,

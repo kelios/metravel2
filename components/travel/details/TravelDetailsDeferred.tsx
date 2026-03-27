@@ -43,6 +43,7 @@ export const TravelDeferredSections: React.FC<{
     setRatingRef,
     setSidebarRef,
     shouldLoadAuthorSection,
+    shouldLoadComments,
     shouldLoadRating,
   } = useTravelDeferredSectionsModel({
     travelId: travel?.id,
@@ -50,6 +51,7 @@ export const TravelDeferredSections: React.FC<{
 
   const shouldLoadAuthor = shouldLoadAuthorSection
   const shouldLoadRatingSection = shouldLoadRating
+  const shouldAutoloadComments = shouldLoadComments || forceOpenKey === 'comments'
   return (
     <>
       <TravelDetailsContentSection
@@ -129,7 +131,7 @@ export const TravelDeferredSections: React.FC<{
           <CommentsSection
             travelId={travel.id}
             lazyLoad
-            autoload={forceOpenKey === 'comments'}
+            autoload={shouldAutoloadComments}
             canLoadComments
           />
         )}

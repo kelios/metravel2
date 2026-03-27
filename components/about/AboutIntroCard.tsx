@@ -26,7 +26,6 @@ export const AboutIntroCard: React.FC<Props> = ({
   onOpenPrivacy,
   onOpenCookies,
   socialLinks,
-  versionInfo,
 }) => {
   const styles = useAboutStyles();
   const colors = useThemedColors();
@@ -62,12 +61,6 @@ export const AboutIntroCard: React.FC<Props> = ({
       <Text style={styles.footerText}>
         Проект запущен в июне 2020. Использование материалов — только с разрешения автора.
       </Text>
-      {!!versionInfo?.appVersion && (
-        <Text style={styles.footerText}>Версия приложения: {versionInfo.appVersion}</Text>
-      )}
-      {!!versionInfo?.webBuildVersion && (
-        <Text style={styles.footerText}>Версия web-сборки: {versionInfo.webBuildVersion}</Text>
-      )}
       <Text style={styles.contactLabel}>Идеи, отзывы и предложения:</Text>
       <Pressable
         onPress={onSendMail}

@@ -303,13 +303,15 @@ describe('ListTravel Integration Tests', () => {
     });
 
     mockUseListTravelExport.mockReturnValue({
+      selected: [],
       toggleSelect: jest.fn(),
       toggleSelectAll: jest.fn(),
       clearSelection: jest.fn(),
+      moveSelected: jest.fn(),
       isSelected: jest.fn(() => false),
       hasSelection: false,
       selectionCount: 0,
-      pdfExport: null,
+      baseSettings: { sortOrder: 'manual', template: 'minimal' },
       lastSettings: null,
       handleSaveWithSettings: jest.fn(),
       handlePreviewWithSettings: jest.fn(),
@@ -352,13 +354,15 @@ describe('ListTravel Integration Tests', () => {
     const isSelected = jest.fn(() => false);
 
     mockUseListTravelExport.mockReturnValue({
+      selected: [],
       toggleSelect,
       toggleSelectAll: jest.fn(),
       clearSelection: jest.fn(),
+      moveSelected: jest.fn(),
       isSelected,
       hasSelection: false,
       selectionCount: 0,
-      pdfExport: { openPrintBook: jest.fn() },
+      baseSettings: { sortOrder: 'manual', template: 'minimal' },
       lastSettings: { template: 'minimal', colorTheme: 'blue' },
       handleSaveWithSettings: jest.fn(),
       handlePreviewWithSettings: jest.fn(),

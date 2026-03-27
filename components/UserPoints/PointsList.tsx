@@ -589,6 +589,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   actionsTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     gap: DESIGN_TOKENS.spacing.sm,
     flexShrink: 0,
   },

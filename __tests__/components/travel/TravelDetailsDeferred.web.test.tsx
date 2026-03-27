@@ -417,6 +417,7 @@ describe('TravelDeferredSections (web author defer)', () => {
       expect.arrayContaining([
         [
           expect.objectContaining({
+            autoload: true,
             canLoadComments: true,
             lazyLoad: true,
           }),

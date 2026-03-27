@@ -11,6 +11,8 @@ export function sortTravels(
 ): TravelForBook[] {
   const sorted = [...travels];
   switch (sortOrder) {
+    case 'manual':
+      return sorted;
     case 'date-desc':
       return sorted.sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
     case 'date-asc':
