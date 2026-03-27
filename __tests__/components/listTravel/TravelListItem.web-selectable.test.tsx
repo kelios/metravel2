@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 import TravelListItem from '@/components/listTravel/TravelListItem';
@@ -47,9 +47,9 @@ describe('TravelListItem selectable (web)', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
   });
 
-  it('renders a non-interactive selection badge to avoid nested buttons', () => {
+  it('renders a dedicated web checkbox control for selection', () => {
     const queryClient = createTestQueryClient();
-    const { getByTestId } = render(
+    const { getByLabelText } = render(
       <QueryClientProvider client={queryClient}>
         <TravelListItem
           travel={baseTravel}
@@ -62,10 +62,90 @@ describe('TravelListItem selectable (web)', () => {
       </QueryClientProvider>
     );
 
-    const checkbox = getByTestId('selection-checkbox');
+    const checkbox = getByLabelText('Выбрать');
     expect(checkbox.type).toBe('View');
-    expect(checkbox.props.onPress).toBeUndefined();
-    expect(checkbox.props.onClick).toBeUndefined();
-    expect(checkbox.props.role).toBeUndefined();
+    expect(checkbox.props.role).toBe('checkbox');
+    expect(checkbox.props.onClick).toEqual(expect.any(Function));
+    expect(checkbox.props.onTouchEnd).toEqual(expect.any(Function));
+  });
+
+  it('toggles selection from the checkbox itself on web', () => {
+    const queryClient = createTestQueryClient();
+    const onToggle = jest.fn();
+    const { getByTestId } = render(
+      <QueryClientProvider client={queryClient}>
+        <TravelListItem
+          travel={baseTravel}
+          currentUserId={null}
+          isSuperuser={false}
+          isMetravel={false}
+          selectable={true}
+          isSelected={false}
+          onToggle={onToggle}
+        />
+      </QueryClientProvider>
+    );
+
+    fireEvent(getByTestId('selection-checkbox'), 'click', {
+      stopPropagation: jest.fn(),
+      preventDefault: jest.fn(),
+    });
+
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles touch selection on web without relying only on click', () => {
+    const queryClient = createTestQueryClient();
+    const onToggle = jest.fn();
+    const { getByTestId } = render(
+      <QueryClientProvider client={queryClient}>
+        <TravelListItem
+          travel={baseTravel}
+          currentUserId={null}
+          isSuperuser={false}
+          isMetravel={false}
+          selectable={true}
+          isSelected={false}
+          onToggle={onToggle}
+        />
+      </QueryClientProvider>
+    );
+
+    const card = getByTestId('travel-card-selectable-test-travel');
+
+    expect(card.props.onTouchEnd).toEqual(expect.any(Function));
+
+    fireEvent(card, 'touchEnd', {
+      stopPropagation: jest.fn(),
+      preventDefault: jest.fn(),
+    });
+
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('still toggles selection when the travel has no navigation url', () => {
+    const queryClient = createTestQueryClient();
+    const onToggle = jest.fn();
+    const { getByTestId } = render(
+      <QueryClientProvider client={queryClient}>
+        <TravelListItem
+          travel={{
+            ...baseTravel,
+            slug: '',
+            url: '',
+          } as any}
+          currentUserId={null}
+          isSuperuser={false}
+          isMetravel={false}
+          selectable={true}
+          isSelected={false}
+          onToggle={onToggle}
+        />
+      </QueryClientProvider>
+    );
+
+    fireEvent.press(getByTestId('travel-card-selectable-1'));
+
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });

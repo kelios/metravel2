@@ -296,6 +296,7 @@ function TravelListItem({
     const queryClient = useQueryClient();
     const anchorRef = useRef<any>(null);
     const hasPrefetchedRef = useRef(false);
+    const lastSelectableTouchAtRef = useRef(0);
     /** P5.1: Guard для hover-prefetch — чтобы не повторять при повторных наведениях */
     const hasHoverPrefetchedRef = useRef(false);
 
@@ -407,9 +408,13 @@ function TravelListItem({
     }, [prefetchTravelDetails]);
 
     const handlePress = useCallback(() => {
-        if (!navigationUrl) return;
         if (selectable) {
             onToggle?.();
+            return;
+        }
+
+        if (!navigationUrl) {
+            return;
         } else {
             const travelId = (typeof slug === 'string' && slug.trim()) ? slug.trim() : id;
             const isId = !isNaN(Number(travelId));
@@ -438,6 +443,24 @@ function TravelListItem({
         }
     }, [selectable, onToggle, slug, id, queryClient, navigationUrl]);
 
+    const handleSelectableWebActivate = useCallback(
+        (event?: any, source: 'click' | 'touch' | 'key' = 'click') => {
+            if (source === 'click' && Date.now() - lastSelectableTouchAtRef.current < 500) {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                return;
+            }
+
+            if (source === 'touch') {
+                lastSelectableTouchAtRef.current = Date.now();
+            }
+
+            event?.stopPropagation?.();
+            event?.preventDefault?.();
+            handlePress();
+        },
+        [handlePress]
+    );
     const handleEdit = useCallback((e?: any) => {
         // Предотвращаем всплытие и стандартное поведение на веб-платформе
         if (e) {
@@ -474,14 +497,17 @@ function TravelListItem({
               role: 'checkbox',
               tabIndex: 0 as const,
               onClick: (e: any) => {
-                e.stopPropagation();
-                e.preventDefault();
-                handlePress();
+                handleSelectableWebActivate(e, 'click');
+              },
+              onTouchStart: (e: any) => {
+                e.stopPropagation?.();
+              },
+              onTouchEnd: (e: any) => {
+                handleSelectableWebActivate(e, 'touch');
               },
               onKeyDown: (e: any) => {
                 if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handlePress();
+                  handleSelectableWebActivate(e, 'key');
                 }
               },
               onMouseDown: (e: any) => e.stopPropagation?.(),
@@ -499,14 +525,33 @@ function TravelListItem({
           };
 
 const selectableOverlay = selectable ? (
-  <View style={[styles.checkWrap, { pointerEvents: isWeb ? 'none' : 'auto' }] as any}>
+  <View style={[styles.checkWrap, { pointerEvents: 'auto' }] as any}>
     {isWeb ? (
       <View
         accessibilityLabel={isSelected ? 'Убрать из выбранного' : 'Выбрать'}
+        role="checkbox"
+        aria-checked={isSelected}
+        tabIndex={0}
         testID="selection-checkbox"
-        style={[styles.checkbox, isSelected && styles.checkboxChecked]}
+        onClick={(e: any) => {
+          handleSelectableWebActivate(e, 'click');
+        }}
+        onTouchStart={(e: any) => {
+          e.stopPropagation?.();
+        }}
+        onTouchEnd={(e: any) => {
+          handleSelectableWebActivate(e, 'touch');
+        }}
+        onKeyDown={(e: any) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          handleSelectableWebActivate(e, 'key');
+        }}
+        onMouseDown={(e: any) => e.stopPropagation?.()}
+        style={{ cursor: 'pointer' } as any}
       >
-        {isSelected && <Feather name="check" size={14} color={colors.textOnPrimary} />}
+        <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+          {isSelected && <Feather name="check" size={14} color={colors.textOnPrimary} />}
+        </View>
       </View>
     ) : (
       <InlineWebButton
@@ -743,6 +788,7 @@ const unifiedCard = (
           : {}
         : undefined
     }
+    webTouchAction={selectable ? 'manipulation' : undefined}
     mediaProps={{
       placeholderBlurhash: PLACEHOLDER_BLURHASH,
       blurBackground: true,

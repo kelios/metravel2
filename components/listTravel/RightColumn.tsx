@@ -86,6 +86,7 @@ interface RightColumnProps {
   cardSpacing?: number
   testID?: string
   listRef?: React.RefObject<any>
+  isExport?: boolean
 }
 
 const RightColumn: React.FC<RightColumnProps> = memo(
@@ -121,6 +122,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      cardSpacing = 16,
      testID,
      listRef: externalListRef,
+     isExport = false,
    }) => {
     const colors = useThemedColors()
     const localListRef = useRef<any>(null)
@@ -558,7 +560,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                   flex: 1,
                   minHeight: 0,
                   WebkitOverflowScrolling: 'touch',
-                  touchAction: 'pan-y',
+                  touchAction: isExport ? 'auto' : 'pan-y',
                   overscrollBehaviorY: 'contain',
                 } as any}
                 contentContainerStyle={webContentContainerStyle}
@@ -618,6 +620,8 @@ export default memo(RightColumn, (prev, next) => {
     prev.search === next.search &&
     prev.total === next.total &&
     prev.travels.length === next.travels.length &&
+    prev.topContent === next.topContent &&
+    prev.renderItem === next.renderItem &&
     prev.gridColumns === next.gridColumns &&
     prev.isMobile === next.isMobile &&
     prev.showInitialLoading === next.showInitialLoading &&

@@ -1275,6 +1275,7 @@ function ListTravelBase({
         footerLoaderStyle={styles.footerLoader}
         renderItem={renderTravelListItem}
         listRef={flatListRef as any}
+        isExport={isExport}
         testID="travels-list"
       />
     </View>

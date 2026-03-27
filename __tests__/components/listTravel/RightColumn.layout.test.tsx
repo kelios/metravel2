@@ -227,4 +227,75 @@ describe('RightColumn layout invariants', () => {
       });
     });
   });
+
+  it('rerenders when renderItem changes while travels length stays the same', () => {
+    const { rerender } = renderWithProviders(
+      <RightColumn
+        search=""
+        setSearch={jest.fn()}
+        isRecommendationsVisible={false}
+        handleRecommendationsVisibilityChange={jest.fn()}
+        activeFiltersCount={0}
+        total={travels.length}
+        contentPadding={16}
+        showInitialLoading={false}
+        isError={false}
+        showEmptyState={false}
+        getEmptyStateMessage={null}
+        travels={travels as any}
+        gridColumns={2}
+        isMobile={false}
+        showNextPageLoading={false}
+        refetch={jest.fn()}
+        renderItem={(t: any) => {
+          const React = require('react');
+          const { Text } = require('react-native');
+          return React.createElement(Text, { testID: `travel-card-${String(t.id)}` }, `off-${t.id}`);
+        }}
+      />
+    );
+
+    expect(screen.getByText('off-1')).toBeTruthy();
+
+    rerender(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: {
+              queries: { retry: false },
+              mutations: { retry: false },
+            },
+          })
+        }
+      >
+        <ThemeProvider>
+          <RightColumn
+            search=""
+            setSearch={jest.fn()}
+            isRecommendationsVisible={false}
+            handleRecommendationsVisibilityChange={jest.fn()}
+            activeFiltersCount={0}
+            total={travels.length}
+            contentPadding={16}
+            showInitialLoading={false}
+            isError={false}
+            showEmptyState={false}
+            getEmptyStateMessage={null}
+            travels={travels as any}
+            gridColumns={2}
+            isMobile={false}
+            showNextPageLoading={false}
+            refetch={jest.fn()}
+            renderItem={(t: any) => {
+              const React = require('react');
+              const { Text } = require('react-native');
+              return React.createElement(Text, { testID: `travel-card-${String(t.id)}` }, `on-${t.id}`);
+            }}
+          />
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByText('on-1')).toBeTruthy();
+  });
 });
