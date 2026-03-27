@@ -1,8 +1,9 @@
 // src/services/pdf-export/generators/pages/GalleryPageGenerator.ts
-// Генератор страниц с фотогалереями
+// Legacy compatibility adapter for the old pages/* API.
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
 import { escapeHtml } from '../../utils/htmlUtils';
+import { buildContainImageMarkup } from '../v2/runtime/pdfVisualHelpers';
 
 export type GalleryLayout = 'grid' | 'mosaic' | 'collage' | 'polaroid' | 'dynamic';
 
@@ -15,9 +16,6 @@ export interface GalleryPhoto {
 export class GalleryPageGenerator {
   constructor(private theme: PdfThemeConfig) {}
 
-  /**
-   * Генерирует страницу с галереей
-   */
   generate(
     travelName: string,
     photos: GalleryPhoto[],
@@ -25,341 +23,92 @@ export class GalleryPageGenerator {
     pageNumber: number
   ): string {
     const { colors, spacing } = this.theme;
-
     return `
       <section class="pdf-page gallery-page" style="
         padding: ${spacing.pagePadding};
         background: ${colors.background};
         position: relative;
       ">
-        ${this.renderGallery(photos, layout)}
-        ${this.renderPageNumber(pageNumber)}
+        ${this.renderGallery(travelName, photos, layout)}
+        <div style="
+          position: absolute;
+          bottom: 15mm;
+          right: 25mm;
+          font-size: 12pt;
+          color: ${colors.textMuted};
+          font-weight: 500;
+        ">${pageNumber}</div>
       </section>
     `;
   }
 
-  private renderHeader(travelName: string): string {
-    const { colors, typography } = this.theme;
+  private renderGallery(travelName: string, photos: GalleryPhoto[], layout: GalleryLayout): string {
+    const visiblePhotos = photos.slice(0, 9);
+    const gridStyle =
+      layout === 'mosaic'
+        ? 'display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm;'
+        : layout === 'collage'
+          ? 'position: relative; height: 220mm;'
+          : layout === 'dynamic'
+            ? 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm;'
+            : 'display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm;';
 
     return `
       <div style="margin-bottom: 15mm; text-align: center;">
-        <h2 style="
-          font-size: ${typography.h2.size};
-          font-weight: ${typography.h2.weight};
-          margin: 0;
-          color: ${colors.text};
-          font-family: ${typography.headingFont};
-        ">Фотогалерея</h2>
-        <div style="
-          font-size: 12pt;
-          color: ${colors.textSecondary};
-          margin-top: 4mm;
-          font-family: ${typography.bodyFont};
-        ">${this.escapeHtml(travelName)}</div>
+        <h2 style="margin: 0;">Фотогалерея</h2>
+        <div style="margin-top: 4mm;">${escapeHtml(travelName)}</div>
+      </div>
+      <div style="${gridStyle}">
+        ${visiblePhotos.map((photo, index) => this.renderPhoto(photo, index, layout)).join('')}
       </div>
     `;
   }
 
-  private renderGallery(photos: GalleryPhoto[], layout: GalleryLayout): string {
-    switch (layout) {
-      case 'dynamic':
-        return this.renderDynamicLayout(photos);
-      case 'grid':
-        return this.renderGridLayout(photos);
-      case 'mosaic':
-        return this.renderMosaicLayout(photos);
-      case 'collage':
-        return this.renderCollageLayout(photos);
-      case 'polaroid':
-        return this.renderPolaroidLayout(photos);
-      default:
-        return this.renderGridLayout(photos);
-    }
-  }
-
-  /**
-   * Динамическая сетка с акцентом на главное фото (2x2)
-   */
-  private renderDynamicLayout(photos: GalleryPhoto[]): string {
-    const { colors, typography } = this.theme;
-
-    if (photos.length === 0) return '';
-
-    return `
-      <div style="
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        grid-template-rows: repeat(4, 1fr);
-        gap: 4mm;
-        height: 220mm;
-        margin-bottom: 15mm;
-      ">
-        ${photos[0] ? `
-          <!-- Главное фото (2x2) -->
-          <div style="
-            grid-column: 1 / 3;
-            grid-row: 1 / 3;
-            border-radius: 12px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-          ">
-            ${this.buildContainImage(photos[0].url, photos[0].caption || 'Main photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
-            ${photos[0].caption ? `
-              <div style="
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                padding: 8mm;
-                background: linear-gradient(transparent, rgba(0,0,0,0.7));
-                color: white;
-              ">
-                <div style="
-                  font-size: 13pt;
-                  font-weight: 600;
-                  font-family: ${typography.headingFont};
-                ">
-                  ${this.escapeHtml(photos[0].caption)}
-                </div>
-              </div>
-            ` : ''}
-          </div>
-        ` : ''}
-        
-        ${photos.slice(1, 9).map((photo, index) => {
-          // Позиции для остальных фото (1x1)
-          const positions = [
-            { col: '3 / 4', row: '1 / 2' },
-            { col: '4 / 5', row: '1 / 2' },
-            { col: '5 / 7', row: '1 / 2' },
-            { col: '3 / 4', row: '2 / 3' },
-            { col: '4 / 5', row: '2 / 3' },
-            { col: '5 / 7', row: '2 / 3' },
-            { col: '1 / 3', row: '3 / 5' },
-            { col: '3 / 7', row: '3 / 5' },
-          ];
-          
-          const pos = positions[index];
-          if (!pos) return '';
-          
-          return `
-            <div style="
-              grid-column: ${pos.col};
-              grid-row: ${pos.row};
-              border-radius: 8px;
-              overflow: hidden;
-              position: relative;
-              background: ${colors.surfaceAlt};
-            ">
-              ${this.buildContainImage(photo.url, photo.caption || 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  /**
-   * Сетка 3x3 - классическая раскладка
-   */
-  private renderGridLayout(photos: GalleryPhoto[]): string {
+  private renderPhoto(photo: GalleryPhoto, index: number, layout: GalleryLayout): string {
     const { colors } = this.theme;
+    const rotate = layout === 'polaroid' ? `transform: rotate(${index % 2 === 0 ? '-1.4deg' : '1.3deg'});` : '';
+    const collageStyle = layout === 'collage'
+      ? `position: absolute; top: ${(index % 3) * 40}mm; left: ${(index % 3) * 28}mm; width: 58mm; height: 58mm;`
+      : '';
+    const mosaicStyle = layout === 'mosaic'
+      ? `grid-column: ${index === 0 ? 'span 2' : 'span 1'}; grid-row: ${index === 0 ? 'span 2' : 'span 1'};`
+      : '';
+    const dynamicStyle = layout === 'dynamic' && index === 0
+      ? 'grid-column: span 2; grid-row: span 2;'
+      : '';
+    const label = photo.caption || (layout === 'polaroid' ? `Фото ${index + 1}` : '');
 
     return `
       <div style="
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6mm;
-        margin-bottom: 15mm;
-      ">
-        ${photos.slice(0, 9).map(photo => `
-          <div style="
-            aspect-ratio: 1;
-            overflow: hidden;
-            border-radius: 8px;
-            position: relative;
-            background: ${colors.surfaceAlt};
-          ">
-            ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
-
-  /**
-   * Мозаика - Pinterest-style с разными размерами
-   */
-  private renderMosaicLayout(photos: GalleryPhoto[]): string {
-    const { colors } = this.theme;
-    
-    // Паттерн размеров: большой, маленький, маленький, маленький, большой...
-    const pattern = ['large', 'small', 'small', 'small', 'large', 'small', 'small', 'small'];
-
-    return `
-      <div style="
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 5mm;
-        margin-bottom: 15mm;
-      ">
-        ${photos.slice(0, 8).map((photo, index) => {
-          const size = pattern[index % pattern.length];
-          const isLarge = size === 'large';
-          
-          return `
-            <div style="
-              grid-column: ${isLarge ? 'span 2' : 'span 1'};
-              grid-row: ${isLarge ? 'span 2' : 'span 1'};
-              overflow: hidden;
-              border-radius: 12px;
-              position: relative;
-              background: ${colors.surfaceAlt};
-              box-shadow: ${this.theme.blocks.shadow};
-            ">
-              ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  /**
-   * Коллаж - художественная раскладка с наложением
-   */
-  private renderCollageLayout(photos: GalleryPhoto[]): string {
-    const { colors } = this.theme;
-
-    return `
-      <div style="
+        ${collageStyle}
+        ${mosaicStyle}
+        ${dynamicStyle}
+        ${rotate}
+        ${layout === 'polaroid' ? 'padding: 4mm 4mm 8mm 4mm; background: #fff;' : ''}
+        aspect-ratio: 1;
+        overflow: hidden;
+        border-radius: 8px;
         position: relative;
-        height: 200mm;
-        margin-bottom: 15mm;
+        background: ${colors.surfaceAlt};
+        box-shadow: ${this.theme.blocks.shadow};
       ">
-        ${photos.slice(0, 6).map((photo, index) => {
-          const positions = [
-            { top: '0', left: '0', width: '45%', height: '55%', zIndex: 1 },
-            { top: '0', right: '0', width: '50%', height: '45%', zIndex: 2 },
-            { top: '40%', left: '5%', width: '40%', height: '35%', zIndex: 3 },
-            { bottom: '0', left: '0', width: '35%', height: '40%', zIndex: 2 },
-            { bottom: '5%', right: '5%', width: '45%', height: '50%', zIndex: 1 },
-            { top: '50%', left: '40%', width: '25%', height: '30%', zIndex: 4 },
-          ];
-          
-          const pos = positions[index];
-          
-          return `
-            <div style="
-              position: absolute;
-              ${pos.top ? `top: ${pos.top};` : ''}
-              ${pos.bottom ? `bottom: ${pos.bottom};` : ''}
-              ${pos.left ? `left: ${pos.left};` : ''}
-              ${pos.right ? `right: ${pos.right};` : ''}
-              width: ${pos.width};
-              height: ${pos.height};
-              overflow: hidden;
-              border-radius: 12px;
-              background: ${colors.surfaceAlt};
-              box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-              border: 3px solid #ffffff;
-              z-index: ${pos.zIndex};
-            ">
-              ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  /**
-   * Полароид - ретро стиль с рамками и подписями
-   */
-  private renderPolaroidLayout(photos: GalleryPhoto[]): string {
-    const { colors } = this.theme;
-
-    return `
-      <div style="
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10mm;
-        margin-bottom: 15mm;
-      ">
-        ${photos.slice(0, 6).map((photo, index) => `
+        ${buildContainImageMarkup({
+          src: photo.url,
+          alt: photo.caption || `Gallery photo ${index + 1}`,
+          height: '100%',
+          background: colors.surfaceAlt,
+          filterStyle: this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '',
+          backdropMode: 'blur',
+        })}
+        ${label ? `
           <div style="
-            background: #ffffff;
-            padding: 8mm 8mm 12mm 8mm;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border-radius: 4px;
-            transform: rotate(${this.getRandomRotation()}deg);
-          ">
-            <div style="
-              aspect-ratio: 1;
-              overflow: hidden;
-              position: relative;
-              background: ${colors.surfaceAlt};
-              margin-bottom: 6mm;
-            ">
-              ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
-            </div>
-            ${photo.caption ? `
-              <div style="
-                text-align: center;
-                font-size: 9pt;
-                color: #4a4a4a;
-                font-family: 'Courier New', monospace;
-                line-height: 1.4;
-              ">${this.escapeHtml(photo.caption)}</div>
-            ` : `
-              <div style="
-                text-align: center;
-                font-size: 9pt;
-                color: #9b9b9b;
-                font-family: 'Courier New', monospace;
-              ">Фото ${index + 1}</div>
-            `}
-          </div>
-        `).join('')}
+            padding: 3mm 2mm 0 2mm;
+            font-size: 10pt;
+            text-align: center;
+            color: ${colors.text};
+          ">${escapeHtml(label)}</div>
+        ` : ''}
       </div>
-    `;
-  }
-
-  private renderPageNumber(pageNumber: number): string {
-    const { colors } = this.theme;
-
-    return `
-      <div style="
-        position: absolute;
-        bottom: 15mm;
-        right: 25mm;
-        font-size: 12pt;
-        color: ${colors.textMuted};
-        font-weight: 500;
-      ">${pageNumber}</div>
-    `;
-  }
-
-  private getRandomRotation(): number {
-    // Небольшой случайный наклон для эффекта полароида
-    const rotations = [-2, -1, 0, 1, 2];
-    return rotations[Math.floor(Math.random() * rotations.length)];
-  }
-
-  private escapeHtml(text: string): string {
-    return escapeHtml(text);
-  }
-
-  private buildContainImage(src: string, alt: string, filterStyle: string): string {
-    return `
-      <img src="${this.escapeHtml(src)}" alt="" aria-hidden="true"
-        style="position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
-        crossorigin="anonymous" />
-      <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
-        style="position:relative;width:100%;height:100%;object-fit:contain;display:block;${filterStyle}"
-        crossorigin="anonymous"
-        onerror="this.style.display='none';this.previousElementSibling.style.display='none';" />
     `;
   }
 }

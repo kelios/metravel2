@@ -9,7 +9,7 @@ import type { ContentParser, ParsedContentBlock } from '../../../parsers/Content
 import type { BlockRenderer } from '../../../renderers/BlockRenderer';
 import type { TravelQuote } from '../../../quotes/travelQuotes';
 import { pickRandomQuote } from '../../../quotes/travelQuotes';
-import { CoverPageGenerator } from '../../pages/CoverPageGenerator';
+import { CoverPageGenerator } from '../pages/CoverPageGenerator';
 import { buildSafeImageUrl, escapeHtml as sharedEscapeHtml } from '../../../utils/htmlUtils';
 import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../../../utils/pluralize';
 import {
@@ -138,10 +138,6 @@ export class EnhancedPdfGeneratorBase {
     this.initRenderers(); // reinit with updated settings
 
     const sortedTravels = this.sortTravels(travels, settings.sortOrder);
-    const coverImage = this.resolveCoverImage(sortedTravels, settings);
-    const yearRange = this.getYearRange(sortedTravels);
-    const userName = sortedTravels[0]?.userName || 'Аноним';
-
     if (!this.selectedQuotes) {
       const coverQuote = pickRandomQuote();
       const finalQuote = pickRandomQuote(coverQuote);
@@ -155,18 +151,13 @@ export class EnhancedPdfGeneratorBase {
     const meta = this.buildTravelMeta(sortedTravels, settings);
     
     // Обложка с улучшенным дизайном
-    const coverGenerator = new CoverPageGenerator(this.theme);
     const coverQuote = this.selectedQuotes?.cover;
+    const coverGenerator = new CoverPageGenerator(undefined, coverQuote);
     const coverPage = await coverGenerator.generate({
-      title: settings.title,
-      subtitle: settings.subtitle,
-      userName,
-      travelCount: sortedTravels.length,
-      yearRange,
-      coverImage,
-      quote: coverQuote && coverQuote.author ? { text: coverQuote.text, author: coverQuote.author } : undefined,
-      textPosition: 'auto',
-      showDecorations: true,
+      travels: sortedTravels,
+      settings,
+      theme: this.theme,
+      pageNumber: 1,
     });
     const pages = await assembleBookPages({
       coverPage,

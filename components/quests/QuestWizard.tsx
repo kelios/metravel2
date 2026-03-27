@@ -10,28 +10,40 @@ import React, {
 } from 'react';
 import {
     View, Text, StyleSheet, TextInput, Pressable,
-    ScrollView, Platform, Linking,
+    ScrollView, Platform,
     Animated, KeyboardAvoidingView, SafeAreaView, Vibration,
-    Modal, Image, Keyboard
+    Modal, Keyboard
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
 import { generatePrintableQuest } from './QuestPrintable';
 import {
+    QuestFinaleDot,
+    QuestFinalePill,
+    QuestStepDot,
+    QuestStepPill,
+} from './questWizardNavigation';
+import { useQuestWizardProgress } from './useQuestWizardProgress';
+import {
     BelkrajWidgetLazy,
-    getQuestClipboard,
     NativeQuestVideoLazy,
     QuestFullMapLazy,
     QuestWebVideo,
 } from './questWizardMedia';
+import {
+    confirmQuestAsync,
+    copyQuestCoords,
+    detectQuestMapApps,
+    notifyQuest,
+    openQuestMap,
+    resolveQuestUri,
+} from './questWizardHelpers';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS as _DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { openExternalUrl } from '@/utils/externalLinks';
 import { safeGetYoutubeId } from '@/utils/travelDetailsSecure';
 
 // ===================== ТИПЫ =====================
@@ -86,24 +98,6 @@ const useQuestWizardTheme = () => {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     return { colors, styles };
-};
-
-// ======== helpers ========
-const notify = (msg: string) => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') window.alert(msg);
-    else console.info('[INFO]', msg);
-};
-const confirmAsync = async (title: string, message: string): Promise<boolean> => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') return Promise.resolve(window.confirm(`${title}\n\n${message}`));
-    console.info('[CONFIRM]', title, message);
-    return Promise.resolve(true);
-};
-const resolveUri = (src: any | undefined): string | undefined => {
-    if (!src) return undefined;
-    if (typeof src === 'string') return src;
-    // @ts-ignore -- Image.resolveAssetSource is a RN internal API not in public type declarations
-    const u = Image.resolveAssetSource?.(src)?.uri;
-    return u;
 };
 // ===================== ЗУМ КАРТИНОК =====================
 const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: boolean; onClose: () => void; }) => {
@@ -160,43 +154,16 @@ const StepCard = memo((props: StepCardProps) => {
     useEffect(() => { setValue(''); setError(''); }, [step.id]);
 
     useEffect(() => { (async () => {
-        try { const om = await Linking.canOpenURL('om://map'); const om2 = await Linking.canOpenURL('organicmaps://'); setHasOrganic(Boolean(om || om2)); } catch { /* ignore missing map handlers */ }
-        try { const mm = await Linking.canOpenURL('mapsme://map'); setHasMapsme(Boolean(mm)); } catch { /* ignore missing mapsme */ }
+        const detected = await detectQuestMapApps();
+        setHasOrganic(detected.hasOrganic);
+        setHasMapsme(detected.hasMapsme);
     })(); }, [step.id]);
 
-    const openCandidates = async (cands: Array<string | undefined>) => {
-        for (const url of cands) {
-            if (!url) continue;
-            try {
-                const opened = await openExternalUrl(url, {
-                    allowedProtocols: ['http:', 'https:', 'geo:', 'om:', 'organicmaps:', 'mapsme:'],
-                });
-                if (opened) return;
-            } catch {
-                /* ignore failed link open */
-            }
-        }
-        notify('Не удалось открыть карты. Проверьте, что установлено нужное приложение.');
-    };
-
     const openInMap = async (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => {
-        const { lat, lng } = step; const name = encodeURIComponent(step.title || 'Point');
-        const urls = {
-            google: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-            apple: `http://maps.apple.com/?ll=${lat},${lng}`,
-            yandex: `https://yandex.ru/maps/?pt=${lng},${lat}&z=15`,
-            organic_1: `om://map?ll=${lat},${lng}&z=17`,
-            organic_2: `organicmaps://map?ll=${lat},${lng}&z=17`,
-            organic_web: `https://omaps.app/?lat=${lat}&lon=${lng}&zoom=17`,
-            mapsme: `mapsme://map?ll=${lat},${lng}&zoom=17&n=${name}`,
-            geo: Platform.OS === 'android' ? `geo:${lat},${lng}?q=${lat},${lng}(${name})` : undefined,
-        } as const;
-        if (app === 'organic') return openCandidates([urls.organic_1, urls.organic_2, urls.organic_web, urls.geo, urls.google]);
-        if (app === 'mapsme')  return openCandidates([urls.mapsme, urls.geo, urls.google]);
-        return openCandidates([urls[app]]);
+        return openQuestMap(step, app);
     };
 
-    const copyCoords = async () => { const Clipboard = await getQuestClipboard(); await Clipboard.setStringAsync(`${step.lat.toFixed(6)}, ${step.lng.toFixed(6)}`); notify('Координаты скопированы'); };
+    const copyCoords = async () => copyQuestCoords(step);
 
     const shake = () => {
         shakeAnim.setValue(0);
@@ -421,105 +388,40 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
     const { width: screenW, height: screenH, isMobile } = useResponsive();
 
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [unlockedIndex, setUnlockedIndex] = useState(0);
-    const [answers, setAnswers] = useState<Record<string, string>>({});
-    const [attempts, setAttempts] = useState<Record<string, number>>({});
-    const [hints, setHints] = useState<Record<string, boolean>>({});
-    const [showMap, setShowMap] = useState(true);
+    const {
+        currentIndex,
+        setCurrentIndex,
+        unlockedIndex,
+        setUnlockedIndex,
+        answers,
+        setAnswers,
+        attempts,
+        setAttempts,
+        hints,
+        setHints,
+        showMap,
+        setShowMap,
+        progress,
+        allCompleted,
+        resetProgress,
+    } = useQuestWizardProgress({
+        allSteps,
+        steps,
+        storageKey,
+        initialProgress,
+        onProgressChange,
+        onProgressReset,
+    });
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
     const [desktopHasOrganic, setDesktopHasOrganic] = useState(false);
     const [desktopHasMapsme, setDesktopHasMapsme] = useState(false);
-    const suppressSave = useRef(false);
 
     const compactNav = screenW < 600;
     const wideDesktop = screenW >= 1100;
     const compactDesktopLayout = Platform.OS === 'web' && screenW >= 1200;
     const useWideInlineLayout = wideDesktop;
     const useWideExcursionsSidebar = wideDesktop && !compactDesktopLayout;
-
-    // Загрузка прогресса: приоритет — initialProgress (бэкенд), fallback — AsyncStorage
-    useEffect(() => {
-        const loadProgress = async () => {
-            try {
-                suppressSave.current = true;
-                if (initialProgress) {
-                    setCurrentIndex(initialProgress.currentIndex ?? 0);
-                    setUnlockedIndex(initialProgress.unlockedIndex ?? 0);
-                    setAnswers(initialProgress.answers ?? {});
-                    setAttempts(initialProgress.attempts ?? {});
-                    setHints(initialProgress.hints ?? {});
-                    setShowMap(initialProgress.showMap !== undefined ? initialProgress.showMap : true);
-                    // Синхронизируем бэкенд-прогресс в AsyncStorage для офлайн-доступа
-                    await AsyncStorage.setItem(storageKey, JSON.stringify({
-                        index: initialProgress.currentIndex ?? 0,
-                        unlocked: initialProgress.unlockedIndex ?? 0,
-                        answers: initialProgress.answers ?? {},
-                        attempts: initialProgress.attempts ?? {},
-                        hints: initialProgress.hints ?? {},
-                        showMap: initialProgress.showMap !== undefined ? initialProgress.showMap : true,
-                    })).catch(() => {});
-                } else {
-                    const saved = await AsyncStorage.getItem(storageKey);
-                    if (saved) {
-                        // ✅ FIX-010: Используем безопасный парсинг JSON
-                        const { safeJsonParseString } = require('@/utils/safeJsonParse');
-                        const data = safeJsonParseString(saved, { index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true });
-                        setCurrentIndex(data.index ?? 0);
-                        setUnlockedIndex(data.unlocked ?? 0);
-                        setAnswers(data.answers ?? {});
-                        setAttempts(data.attempts ?? {});
-                        setHints(data.hints ?? {});
-                        setShowMap(data.showMap !== undefined ? data.showMap : true);
-                    } else {
-                        setCurrentIndex(0); setUnlockedIndex(0); setAnswers({}); setAttempts({}); setHints({}); setShowMap(true);
-                    }
-                }
-            } catch (e) {
-                // ✅ FIX-007: Используем централизованный logger
-                const { devError } = require('@/utils/logger');
-                devError('Error loading quest progress:', e);
-            } finally {
-                setTimeout(() => { suppressSave.current = false; }, 0);
-            }
-        };
-        loadProgress();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [storageKey]);
-
-    // Сохранение прогресса (локально + бэкенд)
-    useEffect(() => {
-        if (suppressSave.current) return;
-        AsyncStorage.setItem(storageKey, JSON.stringify({
-            index: currentIndex, unlocked: unlockedIndex, answers, attempts, hints, showMap
-        })).catch(e => console.error('Error saving progress:', e));
-        // Синхронизация с бэкендом
-        const completed = steps.length > 0 && steps.every(s => !!answers[s.id]);
-        onProgressChange?.({
-            currentIndex, unlockedIndex: unlockedIndex, answers, attempts, hints, showMap, completed,
-        });
-    }, [currentIndex, unlockedIndex, answers, attempts, hints, showMap, storageKey, onProgressChange, steps]);
-
-    const completedSteps = steps.filter(s => answers[s.id]);
-    const progress = steps.length > 0 ? completedSteps.length / steps.length : 0;
-    const allCompleted = completedSteps.length === steps.length;
-
-    // индекс последнего пройденного шага (по answers), игнорируя intro
-    const maxAnsweredIndex = useMemo(() => {
-        let maxIdx = 0;
-        for (let i = 0; i < allSteps.length; i++) {
-            const s = allSteps[i];
-            if (s.id !== 'intro' && answers[s.id]) maxIdx = Math.max(maxIdx, i);
-        }
-        return maxIdx;
-    }, [allSteps, answers]);
-
-    // держим unlockedIndex не меньше, чем (последний пройденный + 1)
-    useEffect(() => {
-        const nextReachable = Math.min(maxAnsweredIndex + 1, allSteps.length - 1);
-        setUnlockedIndex(prev => Math.max(prev, nextReachable));
-    }, [maxAnsweredIndex, allSteps.length]);
 
     const currentStep = allSteps[currentIndex];
 
@@ -535,18 +437,10 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         }
         let cancelled = false;
         (async () => {
-            try {
-                const om = await Linking.canOpenURL('om://map');
-                const om2 = await Linking.canOpenURL('organicmaps://');
-                if (!cancelled) setDesktopHasOrganic(Boolean(om || om2));
-            } catch {
-                if (!cancelled) setDesktopHasOrganic(false);
-            }
-            try {
-                const mm = await Linking.canOpenURL('mapsme://map');
-                if (!cancelled) setDesktopHasMapsme(Boolean(mm));
-            } catch {
-                if (!cancelled) setDesktopHasMapsme(false);
+            const detected = await detectQuestMapApps();
+            if (!cancelled) {
+                setDesktopHasOrganic(detected.hasOrganic);
+                setDesktopHasMapsme(detected.hasMapsme);
             }
         })();
         return () => {
@@ -554,45 +448,14 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         };
     }, [currentStep, useWideInlineLayout]);
 
-    const openDesktopMapCandidates = useCallback(async (cands: Array<string | undefined>) => {
-        for (const url of cands) {
-            if (!url) continue;
-            try {
-                const opened = await openExternalUrl(url, {
-                    allowedProtocols: ['http:', 'https:', 'geo:', 'om:', 'organicmaps:', 'mapsme:'],
-                });
-                if (opened) return;
-            } catch {
-                /* ignore failed link open */
-            }
-        }
-        notify('Не удалось открыть карты. Проверьте, что установлено нужное приложение.');
-    }, []);
-
     const openCurrentStepInMap = useCallback(async (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => {
         if (!currentStep) return;
-        const { lat, lng } = currentStep;
-        const name = encodeURIComponent(currentStep.title || 'Point');
-        const urls = {
-            google: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-            apple: `http://maps.apple.com/?ll=${lat},${lng}`,
-            yandex: `https://yandex.ru/maps/?pt=${lng},${lat}&z=15`,
-            organic_1: `om://map?ll=${lat},${lng}&z=17`,
-            organic_2: `organicmaps://map?ll=${lat},${lng}&z=17`,
-            organic_web: `https://omaps.app/?lat=${lat}&lon=${lng}&zoom=17`,
-            mapsme: `mapsme://map?ll=${lat},${lng}&zoom=17&n=${name}`,
-            geo: Platform.OS === 'android' ? `geo:${lat},${lng}?q=${lat},${lng}(${name})` : undefined,
-        } as const;
-        if (app === 'organic') return openDesktopMapCandidates([urls.organic_1, urls.organic_2, urls.organic_web, urls.geo, urls.google]);
-        if (app === 'mapsme') return openDesktopMapCandidates([urls.mapsme, urls.geo, urls.google]);
-        return openDesktopMapCandidates([urls[app]]);
-    }, [currentStep, openDesktopMapCandidates]);
+        return openQuestMap(currentStep, app);
+    }, [currentStep]);
 
     const copyCurrentStepCoords = useCallback(async () => {
         if (!currentStep) return;
-        const Clipboard = await getQuestClipboard();
-        await Clipboard.setStringAsync(`${currentStep.lat.toFixed(6)}, ${currentStep.lng.toFixed(6)}`);
-        notify('Координаты скопированы');
+        await copyQuestCoords(currentStep);
     }, [currentStep]);
 
     // === уведомление + переход
@@ -612,41 +475,21 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const goToStep = (index: number) => { const s = allSteps[index]; const isAnswered = !!(s && answers[s.id]); if (index <= unlockedIndex || isAnswered || allCompleted) { setShowFinaleOnly(false); setCurrentIndex(index); } };
 
     const resetQuest = async () => {
-        const ok = await confirmAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.');
+        const ok = await confirmQuestAsync('Сбросить прогресс?', 'Все ваши ответы будут удалены.');
         if (!ok) return;
         try {
-            suppressSave.current = true;
-            await AsyncStorage.removeItem(storageKey);
-            setCurrentIndex(0); setUnlockedIndex(0); setAnswers({}); setAttempts({}); setHints({}); setShowMap(true); setShowFinaleOnly(false);
-            await AsyncStorage.setItem(storageKey, JSON.stringify({ index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true }));
-            onProgressReset?.();
-            notify('Прогресс очищен');
+            await resetProgress();
+            setShowFinaleOnly(false);
+            notifyQuest('Прогресс очищен');
         } catch (e) {
             console.error('Error resetting progress:', e);
-        } finally {
-            setTimeout(() => { suppressSave.current = false; }, 0);
         }
     };
 
     // Когда всё пройдено
     useEffect(() => {
         if (allCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
-    }, [allCompleted, allSteps.length]);
-
-    // ====== Навигация: «Финал» ======
-    const FinalePill = ({ active }: { active: boolean }) => (
-        <Pressable onPress={() => setShowFinaleOnly(true)}
-                   style={[styles.stepPill, active ? styles.stepPillActive : styles.stepPillUnlocked]} hitSlop={6}>
-            <Text style={[styles.stepPillIndex, active && { color: colors.textOnPrimary }]}></Text>
-            <Text style={[styles.stepPillTitle, active && { color: colors.textOnPrimary }]} numberOfLines={1}>Финал</Text>
-        </Pressable>
-    );
-    const FinaleDot = ({ active }: { active: boolean }) => (
-        <Pressable onPress={() => setShowFinaleOnly(true)}
-                   style={[styles.stepDotMini, active ? styles.stepDotMiniActive : styles.stepDotMiniUnlocked]} hitSlop={6}>
-            <Text style={[styles.stepDotMiniText, active && { color: colors.textOnPrimary }]}>Ф</Text>
-        </Pressable>
-    );
+    }, [allCompleted, allSteps.length, setUnlockedIndex]);
 
     // ====== размеры видео-рамки (адаптив 16:9 + ограничение по высоте)
     const videoMaxWidth = 960;
@@ -661,15 +504,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     // ====== видео веб/нэйтив
     const [videoOk, setVideoOk] = useState(true);
     const videoUri = useMemo(() => {
-        const uri = resolveUri(finale.video);
+        const uri = resolveQuestUri(finale.video);
         if (finale.video) {
             console.info('[QuestWizard] Video source:', finale.video);
             console.info('[QuestWizard] Resolved video URI:', uri);
         }
         return uri;
     }, [finale.video]);
-    const posterUri = useMemo(() => resolveUri(finale.poster), [finale.poster]);
-    const coverUri = useMemo(() => resolveUri(coverUrl), [coverUrl]);
+    const posterUri = useMemo(() => resolveQuestUri(finale.poster), [finale.poster]);
+    const coverUri = useMemo(() => resolveQuestUri(coverUrl), [coverUrl]);
     const youtubeEmbedUri = useMemo(() => {
         if (!videoUri) {
             console.info('[QuestWizard] No video URI for YouTube check');
@@ -965,49 +808,30 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         const isDone = !!answers[s.id] && s.id !== 'intro';
                                         const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
                                         return (
-                                            <Pressable
+                                            <QuestStepPill
                                                 key={s.id}
+                                                colors={colors}
+                                                styles={styles}
+                                                compact
+                                                active={isActive}
+                                                done={isDone}
+                                                unlocked={isUnlocked}
                                                 onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                style={[
-                                                    styles.stepPill,
-                                                    styles.compactStepPill,
-                                                    styles.stepPillUnlocked,
-                                                    isActive && styles.stepPillActive,
-                                                    isDone && styles.stepPillDone,
-                                                    !isUnlocked && styles.stepPillLocked,
-                                                ]}
-                                                hitSlop={6}
-                                            >
-                                                {s.id === 'intro' ? (
-                                                    <Feather
-                                                        name="play"
-                                                        size={12}
-                                                        color={(isActive || isDone) ? colors.textOnPrimary : colors.primaryText}
-                                                        style={{ marginRight: 8 }}
-                                                    />
-                                                ) : (
-                                                    <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{i}</Text>
-                                                )}
-                                                <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={2}>
-                                                    {s.id === 'intro' ? 'Старт' : s.title}
-                                                </Text>
-                                            </Pressable>
+                                                indexLabel={String(i)}
+                                                isIntro={s.id === 'intro'}
+                                                label={s.id === 'intro' ? 'Старт' : s.title}
+                                                numberOfLines={2}
+                                            />
                                         );
                                     })}
 
-                                    <Pressable
+                                    <QuestFinalePill
+                                        colors={colors}
+                                        styles={styles}
+                                        compact
+                                        active={showFinaleOnly}
                                         onPress={() => setShowFinaleOnly(true)}
-                                        style={[
-                                            styles.stepPill,
-                                            styles.compactStepPill,
-                                            styles.stepPillUnlocked,
-                                            showFinaleOnly && styles.stepPillActive,
-                                        ]}
-                                        hitSlop={6}
-                                    >
-                                        <Text style={[styles.stepPillIndex, showFinaleOnly && { color: colors.textOnPrimary }]}>Ф</Text>
-                                        <Text style={[styles.stepPillTitle, showFinaleOnly && { color: colors.textOnPrimary }]}>Финал</Text>
-                                    </Pressable>
+                                    />
 
                                     {city && Platform.OS === 'web' && (
                                         <View style={styles.compactExcursionsSection}>
@@ -1085,17 +909,26 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                             const isDone = !!answers[s.id] && s.id !== 'intro';
                                             const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
                                             return (
-                                                <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                           style={[styles.stepPill, styles.stepPillUnlocked, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
-                                                           hitSlop={6}>
-                                                    <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
-                                                    <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
-                                                        {s.id === 'intro' ? 'Старт' : s.title}
-                                                    </Text>
-                                                </Pressable>
+                                                <QuestStepPill
+                                                    key={s.id}
+                                                    colors={colors}
+                                                    styles={styles}
+                                                    active={isActive}
+                                                    done={isDone}
+                                                    unlocked={isUnlocked}
+                                                    onPress={() => { if (isUnlocked) goToStep(i); }}
+                                                    indexLabel={s.id === 'intro' ? '' : String(i)}
+                                                    isIntro={s.id === 'intro'}
+                                                    label={s.id === 'intro' ? 'Старт' : s.title}
+                                                />
                                             );
                                         })}
-                                        <FinalePill active={showFinaleOnly} />
+                                        <QuestFinalePill
+                                            colors={colors}
+                                            styles={styles}
+                                            active={showFinaleOnly}
+                                            onPress={() => setShowFinaleOnly(true)}
+                                        />
                                     </View>
                                 ) : (
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stepsNavigation} contentContainerStyle={{ paddingRight: 8, paddingLeft: 2 }}>
@@ -1106,34 +939,51 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
                                             if (screenW < 600) {
                                                 return (
-                                                    <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                               style={[styles.stepDotMini, isUnlocked && styles.stepDotMiniUnlocked, isActive && styles.stepDotMiniActive, isDone && styles.stepDotMiniDone, !isUnlocked && styles.stepDotMiniLocked]}
-                                                               hitSlop={6}>
-                                                        {s.id === 'intro' ? (
-                                                            <Feather
-                                                                name="play"
-                                                                size={12}
-                                                                color={(isActive || isDone) ? colors.textOnPrimary : colors.primaryText}
-                                                            />
-                                                        ) : (
-                                                            <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{i}</Text>
-                                                        )}
-                                                    </Pressable>
+                                                    <QuestStepDot
+                                                        key={s.id}
+                                                        colors={colors}
+                                                        styles={styles}
+                                                        active={isActive}
+                                                        done={isDone}
+                                                        unlocked={isUnlocked}
+                                                        onPress={() => { if (isUnlocked) goToStep(i); }}
+                                                        label={String(i)}
+                                                        isIntro={s.id === 'intro'}
+                                                    />
                                                 );
                                             }
 
                                             return (
-                                                <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                           style={[styles.stepPill, styles.stepPillUnlocked, styles.stepPillNarrow, isActive && styles.stepPillActive, isDone && styles.stepPillDone, !isUnlocked && styles.stepPillLocked]}
-                                                           hitSlop={6}>
-                                                    <Text style={[styles.stepPillIndex, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '' : i}</Text>
-                                                    <Text style={[styles.stepPillTitle, (isActive || isDone) && { color: colors.textOnPrimary }]} numberOfLines={1}>
-                                                        {s.id === 'intro' ? 'Старт' : s.title}
-                                                    </Text>
-                                                </Pressable>
+                                                <QuestStepPill
+                                                    key={s.id}
+                                                    colors={colors}
+                                                    styles={styles}
+                                                    narrow
+                                                    active={isActive}
+                                                    done={isDone}
+                                                    unlocked={isUnlocked}
+                                                    onPress={() => { if (isUnlocked) goToStep(i); }}
+                                                    indexLabel={s.id === 'intro' ? '' : String(i)}
+                                                    isIntro={s.id === 'intro'}
+                                                    label={s.id === 'intro' ? 'Старт' : s.title}
+                                                />
                                             );
                                         })}
-                                        {compactNav ? <FinaleDot active={showFinaleOnly} /> : <FinalePill active={showFinaleOnly} />}
+                                        {compactNav ? (
+                                            <QuestFinaleDot
+                                                colors={colors}
+                                                styles={styles}
+                                                active={showFinaleOnly}
+                                                onPress={() => setShowFinaleOnly(true)}
+                                            />
+                                        ) : (
+                                            <QuestFinalePill
+                                                colors={colors}
+                                                styles={styles}
+                                                active={showFinaleOnly}
+                                                onPress={() => setShowFinaleOnly(true)}
+                                            />
+                                        )}
                                     </ScrollView>
                                 )}
                                 {compactNav ? (

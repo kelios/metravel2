@@ -1,0 +1,407 @@
+import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig';
+import { escapeHtml } from '../../../utils/htmlUtils';
+import { getTravelLabel } from '../../../utils/pluralize';
+import {
+  analyzeImageBrightness,
+  analyzeImageComposition,
+  getOptimalOverlayColor,
+  getOptimalOverlayOpacity,
+  getOptimalTextColor,
+  getOptimalTextPosition,
+} from '@/utils/imageAnalysis';
+
+export interface SharedCoverPageData {
+  title: string;
+  subtitle?: string;
+  userName: string;
+  travelCount: number;
+  yearRange?: string;
+  coverImage?: string;
+  quote?: {
+    text: string;
+    author: string;
+  };
+  textPosition?: 'top' | 'center' | 'bottom' | 'auto';
+  overlayOpacity?: number;
+  showDecorations?: boolean;
+}
+
+export async function generateSharedCoverPageMarkup(
+  theme: PdfThemeConfig,
+  data: SharedCoverPageData
+): Promise<string> {
+  const { colors } = theme;
+  const travelLabel = getTravelLabel(data.travelCount);
+  const safeCoverImage = data.coverImage || undefined;
+  const formattedYearRange = String(data.yearRange || '').replace(/\s+-\s+/g, '–');
+
+  let brightness = 128;
+  let composition = { topBusy: 0.5, centerBusy: 0.5, bottomBusy: 0.5 };
+  let textPosition: 'top' | 'center' | 'bottom' = 'center';
+  let overlayOpacity = 0.6;
+  let overlayColor = 'rgba(0,0,0,';
+  let textColor = colors.cover.text;
+
+  if (safeCoverImage) {
+    try {
+      brightness = await analyzeImageBrightness(safeCoverImage);
+      composition = await analyzeImageComposition(safeCoverImage);
+      textPosition =
+        data.textPosition === 'auto' || !data.textPosition
+          ? getOptimalTextPosition(composition)
+          : data.textPosition;
+      overlayOpacity = data.overlayOpacity ?? getOptimalOverlayOpacity(brightness);
+      overlayColor = getOptimalOverlayColor(brightness);
+      textColor = getOptimalTextColor(brightness);
+    } catch (error) {
+      console.warn('Image analysis failed, using defaults:', error);
+    }
+  }
+
+  const background = safeCoverImage
+    ? `url('${escapeHtml(safeCoverImage)}')`
+    : `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
+
+  return `
+    <section class="pdf-page cover-page" style="
+      padding: 0;
+      height: 285mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: ${colors.cover.text};
+      background: ${background};
+      background-size: cover;
+      background-position: center;
+      position: relative;
+      overflow: hidden;
+    ">
+      ${safeCoverImage ? renderSmartOverlay(overlayColor, overlayOpacity, textPosition) : ''}
+      ${data.showDecorations !== false ? renderDecorativeElements() : ''}
+      ${renderContent(theme, data, textPosition, textColor, Boolean(safeCoverImage))}
+      ${renderFooterRail(
+        theme,
+        `${escapeHtml(String(data.travelCount))} ${travelLabel}${formattedYearRange ? ` • ${escapeHtml(formattedYearRange)}` : ''}`
+      )}
+    </section>
+  `;
+}
+
+function renderSmartOverlay(
+  overlayColor: string,
+  opacity: number,
+  textPosition: 'top' | 'center' | 'bottom'
+): string {
+  const gradient =
+    textPosition === 'top'
+      ? `linear-gradient(180deg, ${overlayColor}${opacity}) 0%, ${overlayColor}0.1) 50%, ${overlayColor}0.3) 100%)`
+      : textPosition === 'bottom'
+        ? `linear-gradient(180deg, ${overlayColor}0.3) 0%, ${overlayColor}0.1) 50%, ${overlayColor}${opacity}) 100%)`
+        : `linear-gradient(180deg, ${overlayColor}0.4) 0%, ${overlayColor}0.1) 30%, ${overlayColor}0.1) 70%, ${overlayColor}0.4) 100%)`;
+
+  return `
+    <div style="
+      position: absolute;
+      inset: 0;
+      background: ${gradient};
+      z-index: 1;
+    "></div>
+  `;
+}
+
+function renderContent(
+  theme: PdfThemeConfig,
+  data: SharedCoverPageData,
+  textPosition: 'top' | 'center' | 'bottom',
+  textColor: string,
+  hasImage: boolean
+): string {
+  const justifyContent =
+    textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : 'center';
+  const paddingTop = textPosition === 'top' ? '30mm' : '0';
+  const paddingBottom = textPosition === 'bottom' ? '30mm' : '0';
+  const panelBackground =
+    hasImage ? (textColor === '#000000' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.48)') : 'transparent';
+  const panelBorder =
+    textColor === '#000000' ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.22)';
+  const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.24)' : 'none';
+
+  return `
+    <div style="
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: ${justifyContent};
+      padding: ${paddingTop} 24mm ${paddingBottom} 24mm;
+      align-items: ${textPosition === 'center' ? 'center' : 'flex-start'};
+      position: relative;
+      z-index: 2;
+    ">
+      <div class="cover-story-panel" style="
+        width: min(126mm, 100%);
+        padding: ${hasImage ? '11mm 13mm 11mm 13mm' : '0'};
+        border-radius: 18px;
+        background: ${panelBackground};
+        border: ${hasImage ? `1px solid ${panelBorder}` : 'none'};
+        box-shadow: ${panelShadow};
+        backdrop-filter: ${hasImage ? 'blur(8px)' : 'none'};
+        -webkit-backdrop-filter: ${hasImage ? 'blur(8px)' : 'none'};
+        text-align: left;
+      ">
+        ${renderKicker(theme, textColor)}
+        ${renderTitle(theme, data.title, textColor)}
+        ${data.subtitle ? renderSubtitle(theme, data.subtitle, textColor) : ''}
+        ${renderMetaStrip(theme, data, textColor)}
+        ${data.quote ? renderQuote(data.quote, textColor) : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
+  return `
+    <div style="
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5mm;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: ${textColor === '#000000' ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
+      border: 1px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: ${textColor || 'rgba(255,255,255,0.84)'};
+      font-family: ${theme.typography.bodyFont};
+    ">
+      <span>Travel book</span>
+    </div>
+  `;
+}
+
+function renderMetaStrip(theme: PdfThemeConfig, data: SharedCoverPageData, textColor?: string): string {
+  const travelLabel = getTravelLabel(data.travelCount);
+  const items = [
+    data.userName ? escapeHtml(data.userName) : null,
+    Number.isFinite(data.travelCount) ? `${escapeHtml(String(data.travelCount))} ${travelLabel}` : null,
+    data.yearRange ? escapeHtml(data.yearRange) : null,
+  ].filter(Boolean);
+
+  if (!items.length) return '';
+
+  return `
+    <div style="
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 5mm;
+    ">
+      ${items.map((item) => `
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 9px;
+          border-radius: 999px;
+          background: ${textColor === '#000000' ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
+          border: 1px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
+          color: ${textColor || 'rgba(255,255,255,0.9)'};
+          font-size: 9pt;
+          line-height: 1.2;
+          font-weight: 600;
+          font-family: ${theme.typography.bodyFont};
+        ">${item}</span>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderDecorativeElements(): string {
+  return `
+    <div style="
+      position: absolute;
+      inset: 14mm;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      pointer-events: none;
+      z-index: 1;
+    "></div>
+    <div style="
+      position: absolute;
+      inset: 17mm;
+      border: 0.5px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      pointer-events: none;
+      z-index: 1;
+    "></div>
+  `;
+}
+
+function renderSubtitle(theme: PdfThemeConfig, subtitle: string, textColor?: string): string {
+  const opacity = textColor === '#000000' ? '0.7' : '0.88';
+  return `
+    <div style="
+      font-size: 13pt;
+      letter-spacing: 0.02em;
+      color: ${textColor || 'rgba(255,255,255,0.88)'};
+      opacity: ${opacity};
+      margin-top: 4mm;
+      font-family: ${theme.typography.bodyFont};
+      max-width: 104mm;
+      line-height: 1.55;
+    ">${escapeHtml(subtitle)}</div>
+  `;
+}
+
+function getCoverTitleStyle(theme: PdfThemeConfig, title: string): {
+  fontSize: string;
+  lineHeight: number;
+  maxWidth: string;
+  letterSpacing: string;
+} {
+  const normalized = (title || '').trim();
+  const length = normalized.length;
+
+  if (length >= 100) {
+    return { fontSize: '23pt', lineHeight: 1.08, maxWidth: '118mm', letterSpacing: '0' };
+  }
+  if (length >= 75) {
+    return { fontSize: '26pt', lineHeight: 1.08, maxWidth: '114mm', letterSpacing: '0.01em' };
+  }
+  return {
+    fontSize: String(theme.typography.h1.size),
+    lineHeight: 1.08,
+    maxWidth: '102mm',
+    letterSpacing: '0.02em',
+  };
+}
+
+function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): string {
+  const color = textColor || theme.colors.cover.text;
+  const safeTitle = (title || '').trim();
+  if (!safeTitle) return '';
+  const titleStyle = getCoverTitleStyle(theme, safeTitle);
+
+  return `
+    <div style="
+      width: 26mm;
+      height: 2px;
+      background: linear-gradient(90deg, ${theme.colors.accent}, ${theme.colors.accentStrong});
+      border-radius: 999px;
+      margin: 0 0 6mm 0;
+    "></div>
+    <h1 style="
+      color: ${color};
+      font-size: ${titleStyle.fontSize};
+      font-weight: 800;
+      line-height: ${titleStyle.lineHeight};
+      margin: 0;
+      text-shadow: 0 6px 18px rgba(15,23,42,0.2);
+      letter-spacing: ${titleStyle.letterSpacing};
+      font-family: ${theme.typography.headingFont};
+      overflow-wrap: break-word;
+      word-break: normal;
+      hyphens: auto;
+      max-width: ${titleStyle.maxWidth};
+      text-wrap: balance;
+    ">${escapeHtml(safeTitle)}</h1>
+  `;
+}
+
+function renderDate(theme: PdfThemeConfig): string {
+  const dateStr = new Date().toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  return `
+    <span style="
+      font-size: 9pt;
+      opacity: 0.75;
+      font-family: ${theme.typography.bodyFont};
+    ">Создано ${dateStr}</span>
+  `;
+}
+
+function renderQuote(quote: { text: string; author: string }, textColor?: string): string {
+  return `
+    <div style="
+      margin-top: 11mm;
+      max-width: 100%;
+      font-style: italic;
+      opacity: 0.85;
+      color: ${textColor || 'rgba(255,255,255,0.85)'};
+      padding: 8px 12px;
+      background: ${textColor === '#000000' ? 'rgba(15,23,42,0.05)' : 'rgba(255,255,255,0.08)'};
+      border-radius: 14px;
+      border-left: 2px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.18)' : 'rgba(255,255,255,0.24)'};
+    ">
+      <div style="font-size: 11pt; margin-bottom: 4mm; line-height: 1.55;">
+        «${escapeHtml(quote.text)}»
+      </div>
+      <div style="font-size: 9pt; opacity: 0.7; letter-spacing: 0.04em;">
+        — ${escapeHtml(quote.author)}
+      </div>
+    </div>
+  `;
+}
+
+function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
+  return `
+    <div class="cover-footer-rail" style="
+      margin: 0 24mm 16mm 24mm;
+      padding: 8mm 10mm;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 10mm;
+      border-radius: 18px;
+      background: rgba(15,23,42,0.28);
+      border: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    ">
+      <div style="
+        display: flex;
+        flex-direction: column;
+        gap: 2mm;
+        min-width: 0;
+      ">
+        <div style="
+          font-size: 8.5pt;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.62);
+          font-weight: 600;
+        ">Книга путешествий</div>
+        <div style="
+          font-size: 11pt;
+          letter-spacing: 0.02em;
+          color: rgba(255,255,255,0.92);
+          font-weight: 500;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          hyphens: auto;
+        ">${metaLine}</div>
+      </div>
+      <div style="
+        text-align: right;
+        min-width: 30mm;
+      ">
+        <div style="
+          font-size: 10pt;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          color: rgba(255,255,255,0.92);
+          text-transform: uppercase;
+          margin-bottom: 2mm;
+        ">MeTravel</div>
+        ${renderDate(theme)}
+      </div>
+    </div>
+  `;
+}

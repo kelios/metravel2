@@ -1,5 +1,5 @@
 // src/services/pdf-export/generators/pages/TocPageGenerator.ts
-// Генератор оглавления
+// Legacy compatibility adapter for the old pages/* API.
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
 import { escapeHtml } from '../../utils/htmlUtils';
@@ -18,60 +18,51 @@ export interface TocEntry {
 export class TocPageGenerator {
   constructor(private theme: PdfThemeConfig) {}
 
-  /**
-   * Генерирует HTML для оглавления
-   */
   generate(entries: TocEntry[], pageNumber: number): string {
-    const { colors, spacing } = this.theme;
+    const { colors, spacing, typography } = this.theme;
 
     return `
       <section class="pdf-page toc-page" style="
         padding: ${spacing.pagePadding};
         background: ${colors.background};
       ">
-        ${this.renderHeader()}
-        ${this.renderEntries(entries)}
-        ${this.renderPageNumber(pageNumber)}
+        <div style="
+          text-align: center;
+          margin-bottom: 20mm;
+          padding-bottom: 10mm;
+          border-bottom: 3px solid ${colors.accent};
+        ">
+          <h2 style="
+            font-size: ${typography.h2.size};
+            font-weight: ${typography.h2.weight};
+            margin: 0;
+            color: ${colors.text};
+            font-family: ${typography.headingFont};
+          ">Оглавление</h2>
+        </div>
+        <div style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12mm;
+          margin-bottom: 15mm;
+        ">
+          ${entries.map((entry) => this.renderEntry(entry)).join('')}
+        </div>
+        <div style="
+          position: absolute;
+          bottom: 15mm;
+          right: 25mm;
+          font-size: 12pt;
+          color: ${colors.textMuted};
+          font-weight: 500;
+        ">${pageNumber}</div>
       </section>
-    `;
-  }
-
-  private renderHeader(): string {
-    const { colors, typography } = this.theme;
-    return `
-      <div style="
-        text-align: center;
-        margin-bottom: 20mm;
-        padding-bottom: 10mm;
-        border-bottom: 3px solid ${colors.accent};
-      ">
-        <h2 style="
-          font-size: ${typography.h2.size};
-          font-weight: ${typography.h2.weight};
-          margin: 0;
-          color: ${colors.text};
-          font-family: ${typography.headingFont};
-        ">Оглавление</h2>
-      </div>
-    `;
-  }
-
-  private renderEntries(entries: TocEntry[]): string {
-    return `
-      <div style="
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12mm;
-        margin-bottom: 15mm;
-      ">
-        ${entries.map((entry) => this.renderEntry(entry)).join('')}
-      </div>
     `;
   }
 
   private renderEntry(entry: TocEntry): string {
     const { colors, typography } = this.theme;
-    const { travel, pageNumber } = entry;
+    const meta = [entry.travel.countryName, entry.travel.year].filter(Boolean).join(' • ');
 
     return `
       <div style="
@@ -83,9 +74,8 @@ export class TocPageGenerator {
         background: ${colors.surface};
         border-radius: 12px;
         box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        transition: all 0.2s;
       ">
-        ${travel.travel_image_thumb_small_url ? `
+        ${entry.travel.travel_image_thumb_small_url ? `
           <div style="
             width: 35mm;
             height: 35mm;
@@ -93,22 +83,15 @@ export class TocPageGenerator {
             border-radius: 8px;
             overflow: hidden;
             background: ${colors.surfaceAlt};
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           ">
             <img
-              src="${this.escapeHtml(travel.travel_image_thumb_small_url)}"
-              alt="${this.escapeHtml(travel.name)}"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-                ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-              "
+              src="${escapeHtml(entry.travel.travel_image_thumb_small_url)}"
+              alt="${escapeHtml(entry.travel.name)}"
+              style="width: 100%; height: 100%; object-fit: contain;"
               crossorigin="anonymous"
             />
           </div>
         ` : ''}
-
         <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
           <h3 style="
             font-size: 14pt;
@@ -120,17 +103,13 @@ export class TocPageGenerator {
             word-break: break-word;
             hyphens: auto;
             line-height: 1.3;
-          ">${this.escapeHtml(travel.name)}</h3>
-
+          ">${escapeHtml(entry.travel.name)}</h3>
           <div style="
             font-size: 11pt;
             color: ${colors.textMuted};
             margin-bottom: auto;
             font-family: ${typography.bodyFont};
-          ">
-            ${travel.countryName || ''}${travel.countryName && travel.year ? ' • ' : ''}${travel.year || ''}
-          </div>
-
+          ">${escapeHtml(meta)}</div>
           <div style="
             display: inline-flex;
             align-items: center;
@@ -152,28 +131,10 @@ export class TocPageGenerator {
               border-radius: 6px;
               font-weight: 700;
               color: ${colors.accentStrong};
-            ">${pageNumber}</span>
+            ">${entry.pageNumber}</span>
           </div>
         </div>
       </div>
     `;
-  }
-
-  private renderPageNumber(pageNumber: number): string {
-    const { colors } = this.theme;
-    return `
-      <div style="
-        position: absolute;
-        bottom: 15mm;
-        right: 25mm;
-        font-size: 12pt;
-        color: ${colors.textMuted};
-        font-weight: 500;
-      ">${pageNumber}</div>
-    `;
-  }
-
-  private escapeHtml(text: string): string {
-    return escapeHtml(text);
   }
 }
