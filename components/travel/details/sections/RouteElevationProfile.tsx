@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Polyline, Rect, Stop } from 'react-native-svg';
+import { LayoutChangeEvent, Platform, Pressable, Text, View } from 'react-native';
+import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { ParsedRoutePreview } from '@/types/travelRoutes';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { calculateRouteDistanceKm } from '@/utils/routeFileParser';
+import { createRouteElevationProfileStyles } from './RouteElevationProfile.styles';
 
 type Props = {
   title?: string;
@@ -30,6 +30,20 @@ const CHART_PADDING = 8;
 const round = (value: number): number => Math.round(value * 10) / 10;
 const formatKm = (value: number): string => `${round(value)} км`;
 const formatMeters = (value: number): string => `${Math.round(value)} м`;
+const getLocalPointerX = (event: any): number | null => {
+  const locationX = event?.nativeEvent?.locationX;
+  if (typeof locationX === 'number' && Number.isFinite(locationX)) {
+    return locationX;
+  }
+
+  const clientX = event?.clientX;
+  const bounds = event?.currentTarget?.getBoundingClientRect?.();
+  if (typeof clientX === 'number' && bounds) {
+    return clientX - bounds.left;
+  }
+
+  return null;
+};
 
 export default function RouteElevationProfile({
   title = 'Профиль высот',
@@ -43,8 +57,9 @@ export default function RouteElevationProfile({
   keyPointLabels,
 }: Props) {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createRouteElevationProfileStyles(colors), [colors]);
   const chartLineColor = lineColor || colors.primary;
+  const chartAreaColor = colors.primaryAlpha30;
   const [width, setWidth] = useState(0);
   const [activeSampleIndex, setActiveSampleIndex] = useState<number | null>(null);
   const isCompactLayout = width > 0 && width < 520;
@@ -430,12 +445,6 @@ export default function RouteElevationProfile({
             </View>
           ) : null}
           <Svg width={width} height={CHART_HEIGHT}>
-            <Defs>
-              <LinearGradient id="routeElevationFill" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0%" stopColor={chartLineColor} stopOpacity="0.22" />
-                <Stop offset="100%" stopColor={chartLineColor} stopOpacity="0.02" />
-              </LinearGradient>
-            </Defs>
             {yAxisGuides.map((guide) => (
               <Line
                 key={guide.key}
@@ -455,7 +464,6 @@ export default function RouteElevationProfile({
               width={width}
               height={CHART_HEIGHT}
               fill="transparent"
-              onPressIn={(event) => updateActivePoint(event.nativeEvent.locationX)}
             />
             {keyPoints?.peak ? (
               <Line
@@ -469,7 +477,7 @@ export default function RouteElevationProfile({
                 opacity={0.7}
               />
             ) : null}
-            {areaPath ? <Path d={areaPath} fill="url(#routeElevationFill)" /> : null}
+            {areaPath ? <Path d={areaPath} fill={chartAreaColor} opacity={0.7} /> : null}
             <Polyline
               points={polylinePoints}
               fill="none"
@@ -534,10 +542,15 @@ export default function RouteElevationProfile({
             onResponderMove={(event) => updateActivePoint(event.nativeEvent.locationX)}
             onResponderRelease={() => setActiveSampleIndex(null)}
             {...(Platform.OS === 'web'
-              ? {
-                  onPointerMove: (event: React.PointerEvent<View>) => updateActivePoint(event.nativeEvent.locationX),
+              ? ({
+                  onPointerMove: (event: any) => {
+                    const nextLocationX = getLocalPointerX(event);
+                    if (typeof nextLocationX === 'number') {
+                      updateActivePoint(nextLocationX);
+                    }
+                  },
                   onPointerLeave: () => setActiveSampleIndex(null),
-                }
+                } as any)
               : null)}
           />
           <View style={styles.axisLabels}>
@@ -579,268 +592,3 @@ export default function RouteElevationProfile({
     </View>
   );
 }
-
-const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
-  StyleSheet.create({
-    container: {
-      marginTop: DESIGN_TOKENS.spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.surface,
-      padding: DESIGN_TOKENS.spacing.md,
-    },
-    title: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    subtitle: {
-      marginTop: 2,
-      fontSize: 12,
-      color: colors.textMuted,
-      fontWeight: '500',
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: DESIGN_TOKENS.spacing.sm,
-      marginBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    headerTextWrap: {
-      flex: 1,
-    },
-    downloadBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surfaceMuted,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    downloadBtnPressed: {
-      opacity: 0.85,
-      backgroundColor: colors.backgroundSecondary,
-    },
-    downloadBtnDisabled: {
-      opacity: 0.45,
-    },
-    summaryGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: DESIGN_TOKENS.spacing.xs,
-      marginBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    summaryCard: {
-      minWidth: 124,
-      flexGrow: 1,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surfaceMuted,
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-    },
-    summaryCardAccent: {
-      backgroundColor: colors.backgroundSecondary,
-      borderColor: colors.border,
-    },
-    summaryIconWrap: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-      marginBottom: 8,
-    },
-    summaryIconWrapAccent: {
-      backgroundColor: colors.primarySoft,
-    },
-    summaryLabel: {
-      fontSize: 11,
-      color: colors.textMuted,
-      marginBottom: 2,
-    },
-    summaryValue: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      color: colors.text,
-      fontWeight: '700',
-    },
-    chartWrap: {
-      position: 'relative',
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
-      overflow: 'hidden',
-    },
-    chartMetaRow: {
-      position: 'absolute',
-      top: DESIGN_TOKENS.spacing.xs,
-      left: DESIGN_TOKENS.spacing.sm,
-      right: DESIGN_TOKENS.spacing.sm,
-      zIndex: 2,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      pointerEvents: 'none',
-    },
-    chartMetaBadge: {
-      borderRadius: 999,
-      backgroundColor: colors.surfaceAlpha40,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: 4,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    chartMetaBadgePeak: {
-      backgroundColor: colors.primaryAlpha30,
-      borderColor: colors.primaryAlpha40,
-    },
-    chartMetaBadgeCompact: {
-      paddingHorizontal: 6,
-      minHeight: 24,
-    },
-    chartMetaLabel: {
-      fontSize: 11,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-    chartMetaValue: {
-      fontSize: 11,
-      color: colors.text,
-      fontWeight: '700',
-    },
-    tooltip: {
-      position: 'absolute',
-      zIndex: 3,
-      width: 104,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceElevated,
-      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: 6,
-    },
-    tooltipTitle: {
-      fontSize: 11,
-      color: colors.text,
-      fontWeight: '700',
-      marginBottom: 2,
-    },
-    tooltipSubtitle: {
-      fontSize: 10,
-      color: colors.textMuted,
-    },
-    chartHitArea: {
-      ...StyleSheet.absoluteFillObject,
-      zIndex: 4,
-    },
-    yAxisLabels: {
-      position: 'absolute',
-      top: 0,
-      left: DESIGN_TOKENS.spacing.sm,
-      width: 56,
-      height: CHART_HEIGHT,
-      zIndex: 1,
-      pointerEvents: 'none',
-    },
-    yAxisText: {
-      position: 'absolute',
-      left: 0,
-      fontSize: 10,
-      color: colors.textSubtle,
-      backgroundColor: colors.surfaceAlpha40,
-      paddingHorizontal: 4,
-      borderRadius: 6,
-      overflow: 'hidden',
-    },
-    yAxisTextCompact: {
-      fontSize: 9,
-      paddingHorizontal: 2,
-    },
-    axisLabels: {
-      marginTop: 2,
-      marginHorizontal: DESIGN_TOKENS.spacing.sm,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    },
-    axisText: {
-      fontSize: 11,
-      color: colors.textMuted,
-    },
-    tagsRow: {
-      marginTop: 4,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
-      marginHorizontal: DESIGN_TOKENS.spacing.sm,
-      gap: DESIGN_TOKENS.spacing.xs,
-    },
-    pointCardsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: DESIGN_TOKENS.spacing.xs,
-    },
-    pointCardsGridCompact: {
-      flexDirection: 'column',
-    },
-    pointCard: {
-      minWidth: 150,
-      flex: 1,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      padding: DESIGN_TOKENS.spacing.sm,
-    },
-    pointCardCompact: {
-      minWidth: 0,
-      flexBasis: '100%',
-      paddingVertical: DESIGN_TOKENS.spacing.xs,
-    },
-    pointCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 6,
-    },
-    pointCardLabel: {
-      fontSize: 12,
-      color: colors.textMuted,
-      fontWeight: '700',
-    },
-    pointCardValue: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      color: colors.text,
-      fontWeight: '700',
-      marginBottom: 4,
-    },
-    pointCardCaption: {
-      fontSize: 12,
-      color: colors.textMuted,
-      lineHeight: 16,
-    },
-    transportWrap: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      alignSelf: 'flex-start',
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surfaceMuted,
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: 6,
-    },
-    tagItem: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
-      color: colors.text,
-      fontWeight: '600',
-    },
-  });

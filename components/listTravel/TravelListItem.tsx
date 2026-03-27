@@ -1,18 +1,14 @@
 // ✅ УЛУЧШЕНИЕ: src/components/listTravel/TravelListItem.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
-import React, { memo, useCallback, useMemo, useRef, useEffect } from "react";
+import React, { memo, useCallback, useMemo, useRef } from "react";
 import { View, Pressable, Text, Platform } from "react-native";
 import Feather from '@expo/vector-icons/Feather';
 import { router } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/types/types";
 import OptimizedFavoriteButton from "@/components/travel/OptimizedFavoriteButton";
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
-import { queryKeys } from '@/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import { isIOSSafariUserAgent } from "@/components/ui/ImageCardMedia";
 import CardActionPressable from "@/components/ui/CardActionPressable";
-import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
@@ -21,51 +17,18 @@ import { formatViewCount } from "@/components/travel/utils/travelHelpers";
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants';
 import TravelListItemCountriesList from './TravelListItemCountriesList';
 import { createTravelListItemStyles } from './travelListItemStyles';
+import TravelListItemSelectableOverlay from './TravelListItemSelectableOverlay';
+import {
+  isLikelyWatermarked,
+  normalizeOwnerIds,
+  resolveTravelAuthorDisplayName,
+  resolveTravelAuthorName,
+} from './travelListItemHelpers';
+import { useTravelListItemNavigation } from './useTravelListItemNavigation';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
-const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
-/** Hover-prefetch отключён: при скролле курсор проходит над карточками и триггерит лишние запросы */
-const ENABLE_HOVER_PREFETCH = false;
 const EMPTY_STYLE = {} as const;
-
-// Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
-const WATERMARK_DOMAINS = [
-  'shutterstock',
-  'istockphoto',
-  'gettyimages',
-  'depositphotos',
-  'dreamstime',
-  'alamy',
-];
-
-const isLikelyWatermarked = (url: string | null | undefined): boolean => {
-  if (!url) return false;
-  const lower = url.toLowerCase();
-  return WATERMARK_DOMAINS.some((domain) => lower.includes(domain));
-};
-
-const normalizeOwnerIds = (raw: unknown): string[] => {
-  if (raw == null) return [];
-
-  if (Array.isArray(raw)) {
-    return raw
-      .map((value) => String(value ?? '').trim())
-      .filter(Boolean);
-  }
-
-  const normalized = String(raw).trim();
-  if (!normalized) return [];
-
-  if (!normalized.includes(',')) {
-    return [normalized];
-  }
-
-  return normalized
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-};
 
 type Props = {
     travel: Travel;
@@ -132,52 +95,9 @@ function TravelListItem({
         return v || 'Без названия';
     }, [name]);
 
-    const authorName = useMemo(() => {
-        // 1. Пробуем user объект (самый надежный источник)
-        const userObj = travel.user;
-        if (userObj) {
-            const firstName = userObj.first_name || userObj.name;
-            const lastName = userObj.last_name;
-            
-            if (firstName && typeof firstName === 'string' && firstName.trim()) {
-                const cleanFirstName = firstName.trim();
-                if (lastName && typeof lastName === 'string' && lastName.trim()) {
-                    return `${cleanFirstName} ${lastName.trim()}`.trim();
-                }
-                return cleanFirstName;
-            }
-        }
-        
-        // 2. Пробуем прямые поля в travel объекте
-        const directName = (travel as any).author_name || (travel as any).authorName || (travel as any).owner_name || (travel as any).ownerName;
-            if (directName && typeof directName === 'string' && directName.trim()) {
-                const clean = directName.trim();
-                // Проверяем на очевидные плейсхолдеры
-                if (!/^[.\s\u00B7\u2022]+$|^Автор|^Пользователь|^User/i.test(clean)) {
-                    return clean;
-                }
-            }
-        
-        // 3. Используем поле userName как основной fallback
-        const base = userName;
-            if (typeof base === 'string' && base.trim()) {
-                const clean = base.trim();
-                // Проверяем на плейсхолдеры, но менее строго
-                if (!/^[.\s\u00B7\u2022]{4,}$|^Автор|^Пользователь|^User|^Anonymous/i.test(clean)) {
-                    return clean;
-                }
-            }
-        
-        // 4. Ничего не найдено
-        return '';
-    }, [userName, travel]);
+    const authorName = useMemo(() => resolveTravelAuthorName(travel, userName), [userName, travel]);
 
-    const authorDisplayName = useMemo(() => {
-        const v = (authorName || '').trim();
-        if (!v) return '';
-        if (/^[.\s\u00B7\u2022_-]+$/.test(v)) return '';
-        return v;
-    }, [authorName]);
+    const authorDisplayName = useMemo(() => resolveTravelAuthorDisplayName(authorName), [authorName]);
 
     const views = Number(countUnicIpView) || 0;
 
@@ -197,21 +117,20 @@ function TravelListItem({
         } as any);
     }, [id, slug, travel]);
 
-    const returnToPath = useMemo(() => {
-        if (_isMetravel) return '/metravel';
-        if (Platform.OS !== 'web' || typeof window === 'undefined') return '';
-
-        const normalizedPathname = window.location.pathname || '';
-        const navItem = HEADER_NAV_ITEMS.find((item) => !item.external && item.path === normalizedPathname);
-        return navItem?.path || '';
-    }, [_isMetravel]);
-
-    const navigationUrl = useMemo(() => {
-        if (!travelUrl) return '';
-        if (!returnToPath) return travelUrl;
-        const separator = travelUrl.includes('?') ? '&' : '?';
-        return `${travelUrl}${separator}returnTo=${encodeURIComponent(returnToPath)}`;
-    }, [returnToPath, travelUrl]);
+    const {
+      anchorRef,
+      navigationUrl,
+      handlePress,
+      handlePointerEnter,
+      isNavigable,
+    } = useTravelListItemNavigation({
+      id,
+      slug: typeof slug === 'string' ? slug : undefined,
+      travelUrl,
+      isMetravel: _isMetravel,
+      selectable,
+      onToggle,
+    });
 
     const cardTestId = useMemo(() => {
         const suffix = travelKey || 'unknown';
@@ -293,12 +212,7 @@ function TravelListItem({
         const normalizedCurrentUserId = String(currentUserId).trim();
         return ownerIds.includes(normalizedCurrentUserId);
     }, [isSuperuser, currentUserId, travel]);
-    const queryClient = useQueryClient();
-    const anchorRef = useRef<any>(null);
-    const hasPrefetchedRef = useRef(false);
     const lastSelectableTouchAtRef = useRef(0);
-    /** P5.1: Guard для hover-prefetch — чтобы не повторять при повторных наведениях */
-    const hasHoverPrefetchedRef = useRef(false);
 
     const authorUserId = useMemo(() => {
         const ownerRaw =
@@ -325,123 +239,6 @@ function TravelListItem({
         },
         [authorUserId]
     );
-
-    const prefetchTravelDetails = useCallback(() => {
-        if (!ENABLE_TRAVEL_DETAILS_PREFETCH) return;
-        const travelId = slug ?? id;
-        const isId = !isNaN(Number(travelId));
-
-        const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
-        if (cachedData) return;
-
-        queryClient.prefetchQuery({
-            queryKey: queryKeys.travel(travelId),
-            queryFn: ({ signal }) =>
-              isId
-                ? fetchTravel(Number(travelId), { signal })
-                : fetchTravelBySlug(travelId as string, { signal }),
-            staleTime: 5 * 60 * 1000,
-        });
-    }, [slug, id, queryClient]);
-
-    /**
-     * P5.1: Hover-prefetch — предзагружаем данные путешествия при наведении мыши.
-     * Менее агрессивный, чем IntersectionObserver: срабатывает только при явном
-     * пользовательском действии (hover), не вызывает лишних запросов при скролле.
-     */
-    const handlePointerEnter = useCallback(() => {
-        if (!ENABLE_HOVER_PREFETCH) return;
-        if (hasHoverPrefetchedRef.current) return;
-
-        const travelId = slug ?? id;
-        if (!travelId) return;
-        const isId = !isNaN(Number(travelId));
-
-        // Не делаем запрос, если данные уже в кеше
-        const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
-        if (cachedData) {
-            hasHoverPrefetchedRef.current = true;
-            return;
-        }
-
-        hasHoverPrefetchedRef.current = true;
-        queryClient.prefetchQuery({
-            queryKey: queryKeys.travel(travelId),
-            queryFn: ({ signal }) =>
-              isId
-                ? fetchTravel(Number(travelId), { signal })
-                : fetchTravelBySlug(travelId as string, { signal }),
-            staleTime: 5 * 60 * 1000,
-        });
-    }, [slug, id, queryClient]);
-
-    useEffect(() => {
-        if (!ENABLE_TRAVEL_DETAILS_PREFETCH) return;
-        if (Platform.OS !== 'web') return;
-        if (hasPrefetchedRef.current) return;
-
-        const el = anchorRef.current;
-        if (!el) return;
-
-        if (typeof window === 'undefined') return;
-        if (typeof (window as any).IntersectionObserver === 'undefined') return;
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                const entry = entries[0];
-                if (!entry?.isIntersecting) return;
-                if (hasPrefetchedRef.current) return;
-                hasPrefetchedRef.current = true;
-                prefetchTravelDetails();
-                observer.disconnect();
-            },
-            {
-                root: null,
-                // Небольшой запас, чтобы прогреть данные до клика
-                rootMargin: '200px',
-                threshold: 0.01,
-            }
-        );
-
-        observer.observe(el);
-        return () => observer.disconnect();
-    }, [prefetchTravelDetails]);
-
-    const handlePress = useCallback(() => {
-        if (selectable) {
-            onToggle?.();
-            return;
-        }
-
-        if (!navigationUrl) {
-            return;
-        } else {
-            const travelId = (typeof slug === 'string' && slug.trim()) ? slug.trim() : id;
-            const isId = !isNaN(Number(travelId));
-            
-            const shouldPrefetchDetails = typeof navigationUrl === 'string' && navigationUrl.startsWith('/travels/');
-            if (shouldPrefetchDetails && ENABLE_TRAVEL_DETAILS_PREFETCH && Platform.OS === 'web') {
-                // Проверяем наличие в кеше перед prefetch
-                const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
-                if (!cachedData) {
-                    // Предзагружаем в фоне с небольшой задержкой
-                    setTimeout(() => {
-                        queryClient.prefetchQuery({
-                            queryKey: queryKeys.travel(travelId),
-                            queryFn: ({ signal }) =>
-                              isId
-                                ? fetchTravel(Number(travelId), { signal })
-                                : fetchTravelBySlug(travelId as string, { signal }),
-                            staleTime: 5 * 60 * 1000, // 5 минут
-                        });
-                    }, 100);
-                }
-            }
-            
-            // На всякий: если слуг нет — откроем по ID
-            router.push(navigationUrl as any);
-        }
-    }, [selectable, onToggle, slug, id, queryClient, navigationUrl]);
 
     const handleSelectableWebActivate = useCallback(
         (event?: any, source: 'click' | 'touch' | 'key' = 'click') => {
@@ -484,8 +281,6 @@ function TravelListItem({
     }, [id, onDeletePress]);
 
     
-    // ✅ FIX: На web всегда используем View, чтобы избежать вложенных button ↔ button
-    const InlineWebButton = isWeb ? View : Pressable;
     // ✅ B5.1: Улучшенные accessibility атрибуты
     const a11yLabelBase = `Путешествие: ${title}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}`;
     const a11yLabelWithViews = views > 0 ? `${a11yLabelBase}. Просмотров: ${viewsFormatted}` : a11yLabelBase;
@@ -525,47 +320,14 @@ function TravelListItem({
           };
 
 const selectableOverlay = selectable ? (
-  <View style={[styles.checkWrap, { pointerEvents: 'auto' }] as any}>
-    {isWeb ? (
-      <View
-        accessibilityLabel={isSelected ? 'Убрать из выбранного' : 'Выбрать'}
-        role="checkbox"
-        aria-checked={isSelected}
-        tabIndex={0}
-        testID="selection-checkbox"
-        onClick={(e: any) => {
-          handleSelectableWebActivate(e, 'click');
-        }}
-        onTouchStart={(e: any) => {
-          e.stopPropagation?.();
-        }}
-        onTouchEnd={(e: any) => {
-          handleSelectableWebActivate(e, 'touch');
-        }}
-        onKeyDown={(e: any) => {
-          if (e.key !== 'Enter' && e.key !== ' ') return;
-          handleSelectableWebActivate(e, 'key');
-        }}
-        onMouseDown={(e: any) => e.stopPropagation?.()}
-        style={{ cursor: 'pointer' } as any}
-      >
-        <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-          {isSelected && <Feather name="check" size={14} color={colors.textOnPrimary} />}
-        </View>
-      </View>
-    ) : (
-      <InlineWebButton
-        accessibilityRole={isWeb ? undefined : 'button'}
-        accessibilityLabel={isSelected ? 'Убрать из выбранного' : 'Выбрать'}
-        testID="selection-checkbox"
-        {...({ onPress: handlePress } as any)}
-      >
-        <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
-          {isSelected && <Feather name="check" size={14} color={colors.textOnPrimary} />}
-        </View>
-      </InlineWebButton>
-    )}
-  </View>
+  <TravelListItemSelectableOverlay
+    isWeb={isWeb}
+    isSelected={isSelected}
+    handlePress={handlePress}
+    handleSelectableWebActivate={handleSelectableWebActivate}
+    styles={styles}
+    colors={{ textOnPrimary: colors.textOnPrimary }}
+  />
 ) : null;
 
 const rightTopSlot = (
@@ -803,7 +565,6 @@ const unifiedCard = (
 );
 
 const card = unifiedCard;
-const isNavigable = Boolean(navigationUrl);
 
 return (
   <View

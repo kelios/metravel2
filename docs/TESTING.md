@@ -15,9 +15,12 @@ Run canonical governance checks from repo root:
 
 Use the same changed-file selective rules locally before a full run:
 
+- `npm run typecheck`
 - `npm run check:fast`
 - `npm run check:fast:dry`
 - `npm run check:fast:json`
+- `npm run check:preflight`
+- `npm run check:preflight:dry`
 - `npm run check:changed`
 - `npm run check:changed:dry`
 - `npm run check:changed:json`
@@ -25,7 +28,9 @@ Use the same changed-file selective rules locally before a full run:
 
 Behavior:
 
+- `typecheck` is currently an explicit full-project audit command; use it before wider refactors and debt-reduction work;
 - `check:fast` is the default lightweight workflow for a finished logical block: it runs selective checks, `guard:external-links`, and ESLint only for changed lintable files;
+- `check:preflight` extends `check:fast` with changed-file complexity validation, so oversized touched feature files are caught before a PR grows further;
 - without args, the command scans staged, unstaged, and untracked files from the current git working tree;
 - `--base-ref <ref>` compares `HEAD` against `git merge-base HEAD <ref>`;
 - `--changed-files-file <path>` reuses an explicit newline-separated file list;

@@ -37,12 +37,6 @@ type ScrollViewRefLike = RecordUnknown & {
   _domNode?: unknown;
 };
 
-type NativeMeasureLayoutTarget =
-  | number
-  | React.Component<unknown, unknown>
-  | React.ComponentClass<unknown>
-  | null;
-
 type DocumentLike = Document & {
   body?: HTMLElement | null;
   documentElement?: HTMLElement | null;
@@ -325,7 +319,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
       const anchor = anchors[key];
       const scrollTarget = scrollRef.current;
-      let scrollHandle: NativeMeasureLayoutTarget = null;
+      let scrollHandle: unknown = null;
       if (scrollTarget) {
         try {
           scrollHandle = findNodeHandle(scrollTarget);
@@ -335,7 +329,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       }
       if (anchor?.current && scrollHandle != null) {
         anchor.current.measureLayout(
-          scrollHandle,
+          scrollHandle as never,
           (_x, y) => {
             scrollRef.current?.scrollTo({ y, animated: true });
           },

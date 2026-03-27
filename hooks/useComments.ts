@@ -71,12 +71,17 @@ export function useComments(threadId: number) {
   });
 }
 
-export function useTravelComments(travelId: number, threadId?: number | null) {
+export function useTravelComments(
+  travelId: number,
+  threadId?: number | null,
+  options?: { enabled?: boolean }
+) {
   const queryClient = useQueryClient();
+  const isEnabled = options?.enabled ?? true;
   return useQuery({
     queryKey: commentKeys.travelComments(travelId, threadId),
     queryFn: () => commentsApi.getTravelComments({ travelId, threadId }),
-    enabled: !!travelId && travelId > 0,
+    enabled: isEnabled && !!travelId && travelId > 0,
     select: (data) => {
       const prevById = buildPrevById(
         queryClient.getQueryData<TravelComment[]>(

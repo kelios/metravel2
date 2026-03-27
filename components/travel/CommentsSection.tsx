@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -12,11 +12,36 @@ import type { TravelComment } from '@/types/comments';
 
 interface CommentsSectionProps {
   travelId: number;
+  autoload?: boolean;
+  lazyLoad?: boolean;
+  canLoadComments?: boolean;
 }
 
-export function CommentsSection({ travelId }: CommentsSectionProps) {
+export function CommentsSection({
+  travelId,
+  autoload = false,
+  lazyLoad = false,
+  canLoadComments = true,
+}: CommentsSectionProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [isEnabled, setIsEnabled] = useState(lazyLoad ? autoload : true);
+
+  useEffect(() => {
+    if (!lazyLoad) {
+      setIsEnabled(true);
+      return;
+    }
+    if (!autoload) return;
+    setIsEnabled(true);
+  }, [autoload, lazyLoad]);
+
+  useEffect(() => {
+    if (!lazyLoad) return;
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (window.location.hash !== '#comments') return;
+    setIsEnabled(true);
+  }, [lazyLoad]);
 
   const {
     isAuthenticated, comments, topLevel, replies, getParentChain, expandedThreads,
@@ -25,7 +50,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     handleRefresh, handleSubmitComment, handleReply, handleEdit,
     handleCancelReply, handleCancelEdit,
     toggleThread, expandAllThreads, collapseAllThreads, handleLoginPress,
-  } = useCommentsData(travelId);
+  } = useCommentsData(travelId, { enabled: isEnabled });
 
   const renderCommentWithParents = useCallback((comment: TravelComment) => {
     const parentChain = getParentChain(comment.id);
@@ -60,105 +85,131 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
         <Text style={styles.title}>Комментарии {comments.length > 0 && `(${comments.length})`}</Text>
       </View>
 
-      {hasError && (
-        <View style={styles.errorBanner} accessibilityRole="alert">
-          <Feather name="alert-triangle" size={16} color={colors.warning} />
-          <Text style={styles.errorBannerText}>Не удалось загрузить комментарии. Проверьте соединение и попробуйте ещё раз.</Text>
-          <Pressable onPress={handleRefresh} style={styles.errorBannerButton} accessibilityRole="button" accessibilityLabel="Повторить загрузку комментариев">
-            <Text style={styles.errorBannerButtonText}>Повторить</Text>
-          </Pressable>
+      {!isEnabled && (
+        <View style={styles.loadPrompt}>
+          <Text style={styles.loadPromptText}>
+            {canLoadComments
+              ? 'Комментарии загружаются по запросу, чтобы не тянуть лишние сетевые вызовы на странице маршрута.'
+              : 'Комментарии сейчас недоступны для этого маршрута.'}
+          </Text>
+          {canLoadComments ? (
+            <Pressable
+              onPress={() => setIsEnabled(true)}
+              style={styles.loadPromptButton}
+              accessibilityRole="button"
+              accessibilityLabel="Загрузить комментарии"
+            >
+              <Feather name="message-circle" size={16} color={colors.primaryText} />
+              <Text style={styles.loadPromptButtonText}>Загрузить комментарии</Text>
+            </Pressable>
+          ) : null}
         </View>
       )}
 
-      {Object.keys(replies).length > 0 && (
-        <View style={styles.threadControls}>
-          <Pressable onPress={expandAllThreads} style={styles.threadControlButton} accessibilityLabel="Развернуть все треды">
-            <Feather name="maximize-2" size={16} color={colors.primary} />
-            <Text style={styles.threadControlText}>Развернуть все</Text>
-          </Pressable>
-          <Pressable onPress={collapseAllThreads} style={styles.threadControlButton} accessibilityLabel="Свернуть все треды">
-            <Feather name="minimize-2" size={16} color={colors.primary} />
-            <Text style={styles.threadControlText}>Свернуть все</Text>
-          </Pressable>
-        </View>
-      )}
+      {!isEnabled ? null : (
+        <>
 
-      {isAuthenticated && (
-        <CommentForm
-          onSubmit={handleSubmitComment} isSubmitting={isSubmitting}
-          replyTo={replyTo} onCancelReply={handleCancelReply}
-          editComment={editComment} onCancelEdit={handleCancelEdit}
-          autoFocus={!!replyTo || !!editComment}
-        />
-      )}
+          {hasError && (
+            <View style={styles.errorBanner} accessibilityRole="alert">
+              <Feather name="alert-triangle" size={16} color={colors.warning} />
+              <Text style={styles.errorBannerText}>Не удалось загрузить комментарии. Проверьте соединение и попробуйте ещё раз.</Text>
+              <Pressable onPress={handleRefresh} style={styles.errorBannerButton} accessibilityRole="button" accessibilityLabel="Повторить загрузку комментариев">
+                <Text style={styles.errorBannerButtonText}>Повторить</Text>
+              </Pressable>
+            </View>
+          )}
 
-      {!isAuthenticated && (
-        <Pressable onPress={handleLoginPress} style={styles.loginPrompt} accessibilityRole="button" accessibilityLabel="Войти, чтобы оставить комментарий">
-          <View style={styles.loginPromptRow}>
-            <Feather name="log-in" size={18} color={colors.primary} />
-            <Text style={styles.loginText}>Войдите, чтобы оставить комментарий</Text>
-          </View>
-        </Pressable>
-      )}
+          {Object.keys(replies).length > 0 && (
+            <View style={styles.threadControls}>
+              <Pressable onPress={expandAllThreads} style={styles.threadControlButton} accessibilityLabel="Развернуть все треды">
+                <Feather name="maximize-2" size={16} color={colors.primary} />
+                <Text style={styles.threadControlText}>Развернуть все</Text>
+              </Pressable>
+              <Pressable onPress={collapseAllThreads} style={styles.threadControlButton} accessibilityLabel="Свернуть все треды">
+                <Feather name="minimize-2" size={16} color={colors.primary} />
+                <Text style={styles.threadControlText}>Свернуть все</Text>
+              </Pressable>
+            </View>
+          )}
 
-      <View style={styles.commentsList}>
-        {hasError && topLevel.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Feather name="message-circle" size={48} color={colors.disabled} />
-            <Text style={styles.emptyText}>Комментарии недоступны</Text>
-            <Text style={styles.emptySubtext}>Попробуйте обновить страницу или повторить позже</Text>
-          </View>
-        ) : topLevel.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Feather name="message-circle" size={48} color={colors.disabled} />
-            <Text style={styles.emptyText}>Пока нет комментариев</Text>
-            <Text style={styles.emptySubtext}>Будьте первым, кто оставит комментарий!</Text>
-          </View>
-        ) : (
-          topLevel.map((comment) => {
-            const hasReplies = replies[comment.id]?.length > 0;
-            const isExpanded = expandedThreads.has(comment.id);
-            return (
-              <View key={comment.id} style={styles.commentThread}>
-                <CommentItem comment={comment} onReply={handleReply} onEdit={handleEdit} level={0} />
-                {hasReplies && (
-                  <>
-                    <Pressable onPress={() => toggleThread(comment.id)} style={styles.toggleThreadButton}
-                      accessibilityLabel={isExpanded ? 'Свернуть ответы' : 'Показать ответы'}>
-                      <View style={styles.threadLine} />
-                      <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
-                      <Text style={styles.toggleThreadText}>
-                        {isExpanded ? `Свернуть ответы (${replies[comment.id].length})` : `Показать ответы (${replies[comment.id].length})`}
-                      </Text>
-                    </Pressable>
-                    {isExpanded && (
-                      <View style={styles.repliesContainer}>
-                        {replies[comment.id].map((reply) => {
-                          const parentChain = getParentChain(reply.id);
-                          const hasParentChain = parentChain.length > 1;
-                          return (
-                            <View key={reply.id}>
-                              {hasParentChain && renderCommentWithParents(reply)}
-                              <CommentItem comment={reply} onReply={handleReply} onEdit={handleEdit} level={hasParentChain ? parentChain.length : 1} />
-                              {replies[reply.id]?.length > 0 && (
-                                <View style={styles.nestedRepliesContainer}>
-                                  {replies[reply.id].map((nestedReply) => (
-                                    <CommentItem key={nestedReply.id} comment={nestedReply} onReply={handleReply} onEdit={handleEdit} level={2} />
-                                  ))}
-                                </View>
-                              )}
-                            </View>
-                          );
-                        })}
-                      </View>
-                    )}
-                  </>
-                )}
+          {isAuthenticated && (
+            <CommentForm
+              onSubmit={handleSubmitComment} isSubmitting={isSubmitting}
+              replyTo={replyTo} onCancelReply={handleCancelReply}
+              editComment={editComment} onCancelEdit={handleCancelEdit}
+              autoFocus={!!replyTo || !!editComment}
+            />
+          )}
+
+          {!isAuthenticated && (
+            <Pressable onPress={handleLoginPress} style={styles.loginPrompt} accessibilityRole="button" accessibilityLabel="Войти, чтобы оставить комментарий">
+              <View style={styles.loginPromptRow}>
+                <Feather name="log-in" size={18} color={colors.primary} />
+                <Text style={styles.loginText}>Войдите, чтобы оставить комментарий</Text>
               </View>
-            );
-          })
-        )}
-      </View>
+            </Pressable>
+          )}
+
+          <View style={styles.commentsList}>
+            {hasError && topLevel.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Feather name="message-circle" size={48} color={colors.disabled} />
+                <Text style={styles.emptyText}>Комментарии недоступны</Text>
+                <Text style={styles.emptySubtext}>Попробуйте обновить страницу или повторить позже</Text>
+              </View>
+            ) : topLevel.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Feather name="message-circle" size={48} color={colors.disabled} />
+                <Text style={styles.emptyText}>Пока нет комментариев</Text>
+                <Text style={styles.emptySubtext}>Будьте первым, кто оставит комментарий!</Text>
+              </View>
+            ) : (
+              topLevel.map((comment) => {
+                const hasReplies = replies[comment.id]?.length > 0;
+                const isExpanded = expandedThreads.has(comment.id);
+                return (
+                  <View key={comment.id} style={styles.commentThread}>
+                    <CommentItem comment={comment} onReply={handleReply} onEdit={handleEdit} level={0} />
+                    {hasReplies && (
+                      <>
+                        <Pressable onPress={() => toggleThread(comment.id)} style={styles.toggleThreadButton}
+                          accessibilityLabel={isExpanded ? 'Свернуть ответы' : 'Показать ответы'}>
+                          <View style={styles.threadLine} />
+                          <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
+                          <Text style={styles.toggleThreadText}>
+                            {isExpanded ? `Свернуть ответы (${replies[comment.id].length})` : `Показать ответы (${replies[comment.id].length})`}
+                          </Text>
+                        </Pressable>
+                        {isExpanded && (
+                          <View style={styles.repliesContainer}>
+                            {replies[comment.id].map((reply) => {
+                              const parentChain = getParentChain(reply.id);
+                              const hasParentChain = parentChain.length > 1;
+                              return (
+                                <View key={reply.id}>
+                                  {hasParentChain && renderCommentWithParents(reply)}
+                                  <CommentItem comment={reply} onReply={handleReply} onEdit={handleEdit} level={hasParentChain ? parentChain.length : 1} />
+                                  {replies[reply.id]?.length > 0 && (
+                                    <View style={styles.nestedRepliesContainer}>
+                                      {replies[reply.id].map((nestedReply) => (
+                                        <CommentItem key={nestedReply.id} comment={nestedReply} onReply={handleReply} onEdit={handleEdit} level={2} />
+                                      ))}
+                                    </View>
+                                  )}
+                                </View>
+                              );
+                            })}
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -187,6 +238,38 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   loginPromptRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
   loginText: { fontSize: DESIGN_TOKENS.typography.sizes.md - 1, color: colors.primaryText, fontWeight: DESIGN_TOKENS.typography.weights.medium },
+  loadPrompt: {
+    gap: DESIGN_TOKENS.spacing.sm,
+    padding: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  loadPromptText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  loadPromptButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryAlpha30,
+    ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } as any }),
+  },
+  loadPromptButtonText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.primaryText,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+  },
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs,
     paddingVertical: DESIGN_TOKENS.spacing.sm, paddingHorizontal: DESIGN_TOKENS.spacing.md,

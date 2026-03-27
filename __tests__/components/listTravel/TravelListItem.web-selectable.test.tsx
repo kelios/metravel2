@@ -63,7 +63,7 @@ describe('TravelListItem selectable (web)', () => {
     );
 
     const checkbox = getByLabelText('Выбрать');
-    expect(checkbox.type).toBe('View');
+    expect(checkbox.type).toBe('div');
     expect(checkbox.props.role).toBe('checkbox');
     expect(checkbox.props.onClick).toEqual(expect.any(Function));
     expect(checkbox.props.onTouchEnd).toEqual(expect.any(Function));

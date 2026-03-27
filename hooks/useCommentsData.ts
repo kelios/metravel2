@@ -14,10 +14,11 @@ import { useAuth } from '@/context/AuthContext';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import type { TravelComment } from '@/types/comments';
 
-export function useCommentsData(travelId: number) {
+export function useCommentsData(travelId: number, options?: { enabled?: boolean }) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const isEnabled = options?.enabled ?? true;
 
   const [replyTo, setReplyTo] = useState<TravelComment | null>(null);
   const [editComment, setEditComment] = useState<TravelComment | null>(null);
@@ -30,14 +31,14 @@ export function useCommentsData(travelId: number) {
     isLoading: isLoadingThread,
     error: threadError,
     refetch: refetchThread,
-  } = useMainThread(travelId, { enabled: true });
+  } = useMainThread(travelId, { enabled: isEnabled });
 
   const {
     data: comments = [],
     isLoading: isLoadingComments,
     error: commentsError,
     refetch: refetchComments,
-  } = useTravelComments(travelId, mainThread?.id);
+  } = useTravelComments(travelId, mainThread?.id, { enabled: isEnabled });
 
   const createComment = useCreateComment();
   const updateComment = useUpdateComment();

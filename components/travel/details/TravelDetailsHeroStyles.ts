@@ -131,7 +131,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     },
     heroTitleWrap: {
       alignSelf: 'flex-start',
-      maxWidth: Platform.select({ default: '100%', web: 760 }) as any,
+      maxWidth: Platform.OS === 'web' ? 760 : '100%',
     },
     heroTitle: {
       fontSize: Platform.select({ default: 26, web: 32 }),
@@ -148,7 +148,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 6,
           }),
-      maxWidth: Platform.select({ default: '100%', web: 720 }) as any,
+      maxWidth: Platform.OS === 'web' ? 720 : '100%',
     },
     heroFavoriteBtn: {
       position: 'absolute' as any,

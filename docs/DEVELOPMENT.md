@@ -41,8 +41,10 @@ npm run android
 ## Useful scripts
 
 - `npm run lint` — ESLint.
+- `npm run typecheck` — полный TypeScript audit (`tsc --noEmit`). Сейчас это отдельная проверка долга, а не cheap-check после каждого логического блока.
 - `npm run check:fast` — быстрый локальный прогон для законченного логического блока: selective checks + `guard:external-links` + ESLint только по изменённым js/ts файлам.
 - `npm run check:fast:dry` — показывает, что именно проверит быстрый scope-прогон, без запуска команд.
+- `npm run check:preflight` — расширенный локальный прогон перед PR/крупным завершённым куском: `check:fast` + changed-file complexity guard.
 - `npm run check:changed` — локально прогоняет selective schema/validator checks по текущим изменённым файлам в git working tree.
 - `npm run check:changed:dry` — показывает, какие selective checks сработают, без запуска самих тестов.
 - `npm run governance:verify` — runs external-link guards and governance test suite.
@@ -61,6 +63,7 @@ Local selective workflow:
 ```bash
 npm run check:fast
 npm run check:fast:dry
+npm run check:preflight
 npm run check:changed
 npm run check:changed:dry
 node scripts/run-local-selective-checks.js --base-ref origin/main --dry-run --json
@@ -70,6 +73,7 @@ Recommended cadence:
 
 - во время мелких правок в рамках одного незавершённого куска логики ничего не гонять после каждого сохранения;
 - после завершённого логического блока запускать `npm run check:fast`;
+- перед PR или после заметного рефакторинга запускать `npm run check:preflight`;
 - перед завершением задачи запускать проверки по scope изменений, как требует `docs/RULES.md`.
 
 ## Route point from photo

@@ -90,6 +90,6 @@ describe('useCommentsData', () => {
     renderHook(() => useCommentsData(123), { wrapper });
 
     expect(mockUseMainThread).toHaveBeenCalledWith(123, { enabled: true });
-    expect(mockUseTravelComments).toHaveBeenCalledWith(123, 9);
+    expect(mockUseTravelComments).toHaveBeenCalledWith(123, 9, { enabled: true });
   });
 });

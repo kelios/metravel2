@@ -49,22 +49,22 @@ function WebTextButton({
     );
   }
 
-  return (
-    <View
-      ref={ref}
-      role="button"
-      tabIndex={0}
-      aria-label={accessibilityLabel ?? label}
-      onKeyDown={(e: any) => {
+  return React.createElement(
+    'div',
+    {
+      ref,
+      role: 'button',
+      tabIndex: 0,
+      'aria-label': accessibilityLabel ?? label,
+      onKeyDown: (e: KeyboardEvent) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault();
         e.stopPropagation();
         onPress();
-      }}
-      style={{ cursor: 'pointer' } as any}
-    >
-      <Text style={style}>{label}</Text>
-    </View>
+      },
+      style: { cursor: 'pointer' },
+    },
+    <Text style={style}>{label}</Text>,
   );
 }
 
