@@ -601,7 +601,11 @@ export async function generateLeafletRouteSnapshot(
       if (allBoundsLatLngs.length > 0) {
         const bounds = L.latLngBounds(allBoundsLatLngs);
         if (bounds.isValid()) {
-          map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 15 });
+          const paddedBounds =
+            typeof (bounds as { pad?: (padding: number) => unknown }).pad === 'function'
+              ? bounds.pad(0.15)
+              : bounds;
+          map.fitBounds(paddedBounds, { animate: false, maxZoom: 15 });
         }
       }
 
