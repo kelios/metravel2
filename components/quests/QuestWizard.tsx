@@ -108,6 +108,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         setHints,
         showMap,
         setShowMap,
+        completedSteps,
         progress,
         allCompleted,
         resetProgress,

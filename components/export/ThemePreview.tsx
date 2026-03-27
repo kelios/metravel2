@@ -44,8 +44,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(102, 102, 102)',
-      accent: 'rgb(37, 99, 235)',
-      background: 'rgb(255, 255, 255)',
+      accent: 'rgb(199, 134, 106)',
+      background: 'rgb(245, 245, 247)',
     },
     preview: {
       headerFont: 'Inter',
@@ -60,8 +60,8 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(30, 41, 59)',
       secondary: 'rgb(100, 116, 139)',
-      accent: 'rgb(59, 130, 246)',
-      background: 'rgb(248, 250, 252)',
+      accent: 'rgb(126, 166, 199)',
+      background: 'rgb(249, 251, 252)',
     },
     preview: {
       headerFont: 'Inter',
@@ -76,7 +76,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(241, 245, 249)',
       secondary: 'rgb(203, 213, 225)',
-      accent: 'rgb(245, 158, 11)',
+      accent: 'rgb(210, 180, 140)',
       background: 'rgb(15, 23, 42)',
     },
     preview: {
@@ -92,7 +92,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(74, 74, 74)',
-      accent: 'rgb(234, 88, 12)',
+      accent: 'rgb(201, 141, 114)',
       background: 'rgb(255, 255, 255)',
     },
     preview: {
@@ -124,7 +124,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(24, 24, 27)',
       secondary: 'rgb(82, 82, 91)',
-      accent: 'rgb(139, 92, 246)',
+      accent: 'rgb(157, 143, 189)',
       background: 'rgb(255, 255, 255)',
     },
     preview: {
@@ -140,7 +140,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(74, 25, 66)',
       secondary: 'rgb(139, 90, 131)',
-      accent: 'rgb(233, 30, 99)',
+      accent: 'rgb(201, 149, 169)',
       background: 'rgb(253, 242, 248)',
     },
     preview: {
@@ -156,7 +156,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(74, 74, 74)',
-      accent: 'rgb(255, 107, 53)',
+      accent: 'rgb(200, 143, 116)',
       background: 'rgb(255, 255, 255)',
     },
     preview: {
@@ -204,7 +204,7 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     colors: {
       primary: 'rgb(26, 26, 26)',
       secondary: 'rgb(74, 74, 74)',
-      accent: 'rgb(211, 47, 47)',
+      accent: 'rgb(185, 122, 122)',
       background: 'rgb(250, 250, 247)',
     },
     preview: {

@@ -38,11 +38,15 @@ export class RuntimeGalleryRenderer {
     return chunks.map((pagePhotos, pageIndex) => {
       const defaultColumns = calculateOptimalColumns(pagePhotos.length, layout)
       const isTwoPerPage = photosPerPage === 2 && pagePhotos.length === 2
-      const columns = pagePhotos.length === 1
-        ? 1
-        : isTwoPerPage && twoPerPageLayout === 'vertical'
+      const columns = layout === 'collage'
+        ? pagePhotos.length <= 1
           ? 1
-          : Math.max(1, Math.min(4, configuredColumns ?? defaultColumns))
+          : 3
+        : pagePhotos.length === 1
+          ? 1
+          : isTwoPerPage && twoPerPageLayout === 'vertical'
+            ? 1
+            : Math.max(1, Math.min(4, configuredColumns ?? defaultColumns))
       const estimatedRows = Math.max(1, Math.ceil(pagePhotos.length / Math.max(columns, 1)))
       const maxCardHeightMm = Math.max(
         72,
@@ -51,6 +55,12 @@ export class RuntimeGalleryRenderer {
       const targetCardHeightMm =
         layout === 'slideshow'
           ? 200
+          : layout === 'collage'
+            ? pagePhotos.length <= 3
+              ? 125
+              : pagePhotos.length <= 5
+                ? 110
+                : 95
           : pagePhotos.length === 1
             ? 210
             : pagePhotos.length === 2
@@ -131,7 +141,14 @@ export class RuntimeGalleryRenderer {
 
               const collageHero = layout === 'collage' && index === 0
               const collageSpan = collageHero ? 'grid-column: span 2; grid-row: span 2;' : ''
-              const resolvedHeight = collageHero ? '160mm' : imageHeight
+              const resolvedHeight =
+                collageHero
+                  ? pagePhotos.length <= 3
+                    ? '190mm'
+                    : pagePhotos.length <= 5
+                      ? '180mm'
+                      : '168mm'
+                  : imageHeight
               const isSingle = pagePhotos.length === 1
               const forceCover = pagePhotos.length <= 2
               const imgHeightStyle =

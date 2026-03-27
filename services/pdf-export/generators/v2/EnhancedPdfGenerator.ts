@@ -3,7 +3,6 @@
 
 import type { PdfThemeName } from '../../themes/PdfThemeConfig';
 import { ImageProcessor } from './processors/ImageProcessor';
-import { PageGeneratorFactory } from './factories/PageGeneratorFactory';
 import { defaultConfig } from './config/defaults';
 import { EnhancedPdfGeneratorBase } from './runtime/EnhancedPdfGeneratorBase';
 
@@ -16,12 +15,10 @@ import { EnhancedPdfGeneratorBase } from './runtime/EnhancedPdfGeneratorBase';
  */
 export class EnhancedPdfGenerator extends EnhancedPdfGeneratorBase {
   private imageProcessor: ImageProcessor;
-  private factory: PageGeneratorFactory;
 
   constructor(themeName: PdfThemeName | string) {
     super(themeName);
     this.imageProcessor = new ImageProcessor(defaultConfig.imageProcessor);
-    this.factory = new PageGeneratorFactory(this.imageProcessor);
   }
 
   /**
@@ -29,13 +26,6 @@ export class EnhancedPdfGenerator extends EnhancedPdfGeneratorBase {
    */
   clearCache(): void {
     this.imageProcessor.clearCache();
-  }
-
-  /**
-   * Получает фабрику генераторов (для тестирования)
-   */
-  getFactory(): PageGeneratorFactory {
-    return this.factory;
   }
 
   /**

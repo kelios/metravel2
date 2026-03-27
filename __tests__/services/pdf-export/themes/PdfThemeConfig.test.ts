@@ -79,9 +79,9 @@ describe('PdfThemeConfig - Новые темы', () => {
       expect(newspaperTheme.description).toContain('газет');
     });
 
-    it('должна использовать яркий красный акцент', () => {
-      expect(newspaperTheme.colors.accent).toBe('#c8102e');
-      expect(newspaperTheme.colors.accentStrong).toBe('#a00d26');
+    it('должна использовать приглушенный газетный акцент', () => {
+      expect(newspaperTheme.colors.accent).toBe('#b97a7a');
+      expect(newspaperTheme.colors.accentStrong).toBe('#945f5f');
     });
 
     it('должна иметь минимальные закругления для газетного стиля', () => {
@@ -249,4 +249,3 @@ describe('PdfThemeConfig - Новые темы', () => {
     });
   });
 });
-

@@ -117,6 +117,33 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(mapPage).toContain('alt="QR точки 1"')
   })
 
+  it('renders collage galleries larger for print readability', () => {
+    generator.currentSettings = {
+      ...baseSettings,
+      galleryLayout: 'collage',
+    }
+    generator.initRenderers()
+
+    const galleryHtml = generator.renderGalleryPage(
+      {
+        ...travelA,
+        gallery: [
+          { url: 'http://example.com/photo1.jpg' },
+          { url: 'http://example.com/photo2.jpg' },
+          { url: 'http://example.com/photo3.jpg' },
+          { url: 'http://example.com/photo4.jpg' },
+          { url: 'http://example.com/photo5.jpg' },
+        ],
+      },
+      3
+    )
+
+    expect(galleryHtml).toContain('grid-template-columns: repeat(3, 1fr)')
+    expect(galleryHtml).toContain('grid-column: span 2; grid-row: span 2;')
+    expect(galleryHtml).toContain('height: 180mm;')
+    expect(galleryHtml).toContain('max-height: 110mm;')
+  })
+
   it('builds inline gallery and safe URLs', () => {
     const html = generator.buildInlineGallerySection(travelA, generator.theme.colors, generator.theme.typography, generator.theme.spacing)
     expect(html).toContain('grid-template-columns')

@@ -62,6 +62,33 @@ describe('useQuestWizardProgress', () => {
     expect(onProgressChange).not.toHaveBeenCalled()
   })
 
+  it('exposes completedSteps and derived progress for answered quest steps', async () => {
+    const initialProgress = {
+      currentIndex: 1,
+      unlockedIndex: 1,
+      answers: { 'step-1': 'dragon' },
+      attempts: {},
+      hints: {},
+      showMap: true,
+    }
+
+    const { result } = renderHook(() =>
+      useQuestWizardProgress({
+        allSteps,
+        steps: questSteps,
+        storageKey: 'quest_progress_completed_steps',
+        initialProgress,
+      })
+    )
+
+    await waitFor(() => {
+      expect(result.current.completedSteps).toEqual([{ id: 'step-1' }])
+    })
+
+    expect(result.current.progress).toBe(0.5)
+    expect(result.current.allCompleted).toBe(false)
+  })
+
   it('resets persisted progress and state', async () => {
     await AsyncStorage.setItem('quest_progress_reset', JSON.stringify({
       index: 2,

@@ -138,10 +138,10 @@ export const minimalTheme: PdfThemeConfig = {
     surfaceAlt: '#f3f4f6',
     
     // Спокойный терракотовый акцент
-    accent: '#d97355',
-    accentStrong: '#c25b3d',
-    accentSoft: '#fde6dd',
-    accentLight: '#fff3ec',
+    accent: '#c7866a',
+    accentStrong: '#ab6e57',
+    accentSoft: '#f3dfd6',
+    accentLight: '#fbf1eb',
     
     border: '#e5e7eb',
     borderLight: '#f3f4f6',
@@ -173,7 +173,7 @@ export const minimalTheme: PdfThemeConfig = {
     
     cover: {
       background: '#f3f4f6',
-      backgroundGradient: ['#0f172a', '#334155'],
+      backgroundGradient: ['#8b6b5d', '#5c4f4d'],
       text: '#f9fafb',
       textSecondary: '#e5e7eb',
     },
@@ -226,10 +226,10 @@ export const lightTheme: PdfThemeConfig = {
     surface: '#f9fafb',
     surfaceAlt: '#f3f4f6',
     
-    accent: '#3b82f6',
-    accentStrong: '#2563eb',
-    accentSoft: '#dbeafe',
-    accentLight: '#eff6ff',
+    accent: '#7ea6c7',
+    accentStrong: '#5f86a6',
+    accentSoft: '#dde9f1',
+    accentLight: '#f2f7fb',
     
     border: '#e5e7eb',
     borderLight: '#f3f4f6',
@@ -261,7 +261,7 @@ export const lightTheme: PdfThemeConfig = {
     
     cover: {
       background: '#f9fafb',
-      backgroundGradient: ['#3b82f6', '#1d4ed8'],
+      backgroundGradient: ['#8baec7', '#6889a3'],
       text: '#ffffff',
       textSecondary: '#e0e7ff',
     },
@@ -314,10 +314,10 @@ export const darkTheme: PdfThemeConfig = {
     surface: '#1f2937',
     surfaceAlt: '#374151',
     
-    accent: '#f59e0b',
-    accentStrong: '#d97706',
-    accentSoft: '#451a03',
-    accentLight: '#292524',
+    accent: '#d2b48c',
+    accentStrong: '#b08f67',
+    accentSoft: '#3f372f',
+    accentLight: '#2b2622',
     
     border: '#374151',
     borderLight: '#4b5563',
@@ -349,7 +349,7 @@ export const darkTheme: PdfThemeConfig = {
     
     cover: {
       background: '#111827',
-      backgroundGradient: ['#0f172a', '#1e293b'],
+      backgroundGradient: ['#2d3748', '#4a5568'],
       text: '#f9fafb',
       textSecondary: '#d1d5db',
     },
@@ -402,10 +402,10 @@ export const travelMagazineTheme: PdfThemeConfig = {
     surface: '#ffffff',
     surfaceAlt: '#f5f5f4',
     
-    accent: '#ea580c',
-    accentStrong: '#c2410c',
-    accentSoft: '#fed7aa',
-    accentLight: '#ffedd5',
+    accent: '#c98d72',
+    accentStrong: '#a96f59',
+    accentSoft: '#f2ded3',
+    accentLight: '#faf1eb',
     
     border: '#e7e5e4',
     borderLight: '#f5f5f4',
@@ -437,7 +437,7 @@ export const travelMagazineTheme: PdfThemeConfig = {
     
     cover: {
       background: '#fafaf9',
-      backgroundGradient: ['#ea580c', '#c2410c'],
+      backgroundGradient: ['#cf9b86', '#9b786f'],
       text: '#ffffff',
       textSecondary: '#fed7aa',
     },
@@ -578,10 +578,10 @@ export const modernTheme: PdfThemeConfig = {
     surface: '#ffffff',
     surfaceAlt: '#f1f5f9',
     
-    accent: '#8b5cf6',
-    accentStrong: '#7c3aed',
-    accentSoft: '#ddd6fe',
-    accentLight: '#f5f3ff',
+    accent: '#9d8fbd',
+    accentStrong: '#7f729f',
+    accentSoft: '#e6e0f0',
+    accentLight: '#f6f3fa',
     
     border: '#e2e8f0',
     borderLight: '#f1f5f9',
@@ -613,7 +613,7 @@ export const modernTheme: PdfThemeConfig = {
     
     cover: {
       background: '#f8fafc',
-      backgroundGradient: ['#8b5cf6', '#ec4899'],
+      backgroundGradient: ['#a79abf', '#c8a8b8'],
       text: '#ffffff',
       textSecondary: '#ddd6fe',
     },
@@ -666,10 +666,10 @@ export const romanticTheme: PdfThemeConfig = {
     surface: '#ffffff',
     surfaceAlt: '#fdf5ed',
     
-    accent: '#e91e63',
-    accentStrong: '#c2185b',
-    accentSoft: '#f8bbd0',
-    accentLight: '#fce4ec',
+    accent: '#c995a9',
+    accentStrong: '#a97288',
+    accentSoft: '#f2dbe3',
+    accentLight: '#fbf0f4',
     
     border: '#f3e5d8',
     borderLight: '#f9f0e7',
@@ -701,7 +701,7 @@ export const romanticTheme: PdfThemeConfig = {
     
     cover: {
       background: '#fef9f3',
-      backgroundGradient: ['#f48fb1', '#f06292'],
+      backgroundGradient: ['#d7b0be', '#b98da0'],
       text: '#ffffff',
       textSecondary: '#fce4ec',
     },
@@ -754,10 +754,10 @@ export const adventureTheme: PdfThemeConfig = {
     surface: '#ffffff',
     surfaceAlt: '#f5f5f3',
     
-    accent: '#ff6b35',
-    accentStrong: '#e85d2a',
-    accentSoft: '#ffb399',
-    accentLight: '#ffe6dc',
+    accent: '#c88f74',
+    accentStrong: '#a86f57',
+    accentSoft: '#f2ddd2',
+    accentLight: '#faf1eb',
     
     border: '#d9d9d7',
     borderLight: '#e8e8e6',
@@ -789,7 +789,7 @@ export const adventureTheme: PdfThemeConfig = {
     
     cover: {
       background: '#fafaf8',
-      backgroundGradient: ['#ff6b35', '#004e89'],
+      backgroundGradient: ['#c69b84', '#70879c'],
       text: '#ffffff',
       textSecondary: '#ffb399',
     },
@@ -1126,10 +1126,10 @@ export const newspaperTheme: PdfThemeConfig = {
     surfaceAlt: '#f5f5f2',
 
     // Яркий красный акцент как в современных газетах
-    accent: '#c8102e',
-    accentStrong: '#a00d26',
-    accentSoft: '#ef5350',
-    accentLight: '#ffcdd2',
+    accent: '#b97a7a',
+    accentStrong: '#945f5f',
+    accentSoft: '#edd9d9',
+    accentLight: '#f8efef',
 
     border: '#bdbdbd',
     borderLight: '#e0e0e0',
@@ -1161,7 +1161,7 @@ export const newspaperTheme: PdfThemeConfig = {
 
     cover: {
       background: '#fafaf7',
-      backgroundGradient: ['#d32f2f', '#b71c1c'],
+      backgroundGradient: ['#b98c8c', '#8d6f6f'],
       text: '#ffffff',
       textSecondary: '#ffcdd2',
     },
