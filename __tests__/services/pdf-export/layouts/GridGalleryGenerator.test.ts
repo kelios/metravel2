@@ -1,7 +1,7 @@
 // __tests__/services/pdf-export/layouts/GridGalleryGenerator.test.ts
 // Тесты для генератора сеточной галереи
 
-import { GridGalleryGenerator } from '@/services/pdf-export/generators/layouts/GridGalleryGenerator';
+import { GridGalleryGenerator } from '@/services/pdf-export/generators/v2/runtime/legacyGalleryLayouts';
 import type { GalleryPhoto, GallerySettings } from '@/types/pdf-gallery';
 
 describe('GridGalleryGenerator', () => {

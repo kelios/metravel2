@@ -1,50 +1,39 @@
 // components/quests/QuestWizard.tsx
 import React, {
-    memo,
     useCallback,
     useEffect,
     useMemo,
-    useRef,
     useState,
-    Suspense,
 } from 'react';
 import {
-    View, Text, StyleSheet, TextInput, Pressable,
+    View, StyleSheet,
     ScrollView, Platform,
-    Animated, KeyboardAvoidingView, SafeAreaView, Vibration,
-    Modal, Keyboard
+    KeyboardAvoidingView, SafeAreaView, Keyboard
 } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { generatePrintableQuest } from './QuestPrintable';
+import { useQuestFinaleMedia } from './useQuestFinaleMedia';
+import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
 import {
-    QuestFinaleDot,
-    QuestFinalePill,
-    QuestStepDot,
-    QuestStepPill,
-} from './questWizardNavigation';
+    QuestDesktopMapPanel,
+    QuestExcursionsInline,
+    QuestExcursionsSidebar,
+    QuestFinalePanel,
+} from './questWizardSections';
+import { QuestStepCard } from './questWizardStepCard';
 import { useQuestWizardProgress } from './useQuestWizardProgress';
-import {
-    BelkrajWidgetLazy,
-    NativeQuestVideoLazy,
-    QuestFullMapLazy,
-    QuestWebVideo,
-} from './questWizardMedia';
 import {
     confirmQuestAsync,
     copyQuestCoords,
     detectQuestMapApps,
     notifyQuest,
     openQuestMap,
-    resolveQuestUri,
 } from './questWizardHelpers';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS as _DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { safeGetYoutubeId } from '@/utils/travelDetailsSecure';
 
 // ===================== ТИПЫ =====================
 export type QuestStep = {
@@ -99,288 +88,6 @@ const useQuestWizardTheme = () => {
     const styles = useMemo(() => createStyles(colors), [colors]);
     return { colors, styles };
 };
-// ===================== ЗУМ КАРТИНОК =====================
-const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: boolean; onClose: () => void; }) => {
-    const { styles } = useQuestWizardTheme();
-    const scale = useRef(new Animated.Value(1)).current;
-    const shouldUseNativeDriver = false;
-    // @ts-ignore -- Animated.event nativeEvent type narrowing requires explicit cast for pinch gesture
-    const onPinchEvent = Animated.event([{ nativeEvent: { scale } }], { useNativeDriver: shouldUseNativeDriver });
-    const onPinchStateChange = (e: any) => {
-        if (e.nativeEvent.oldState === State.ACTIVE) Animated.spring(scale, { toValue: 1, useNativeDriver: shouldUseNativeDriver }).start();
-    };
-    if (!visible) return null;
-    return (
-        <Modal visible={visible} transparent animationType="fade">
-            <View style={styles.modalOverlay}>
-                <GestureHandlerRootView style={styles.gestureContainer}>
-                    <PinchGestureHandler onGestureEvent={onPinchEvent} onHandlerStateChange={onPinchStateChange}>
-                        <Animated.View style={styles.animatedContainer}>
-                            <Animated.Image source={image} style={[styles.zoomedImage, { transform: [{ scale }] }]} resizeMode="contain" />
-                        </Animated.View>
-                    </PinchGestureHandler>
-                </GestureHandlerRootView>
-                <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Закрыть просмотр фото"><Text style={styles.closeButtonText}>✕</Text></Pressable>
-                <View style={styles.zoomHintContainer}><Text style={styles.zoomHint}>Используйте два пальца, чтобы увеличить фото</Text></View>
-            </View>
-        </Modal>
-    );
-};
-
-// ===================== КАРТОЧКА ШАГА =====================
-type StepCardProps = {
-    step: QuestStep; index: number; attempts: number; hintVisible: boolean; savedAnswer?: string;
-    onSubmit: (v: string) => void; onWrongAttempt: () => void; onToggleHint: () => void; onSkip: () => void;
-    showMap: boolean; onToggleMap: () => void;
-    showLocationControls?: boolean;
-};
-
-const StepCard = memo((props: StepCardProps) => {
-    const { step, index, attempts, hintVisible, savedAnswer, onSubmit, onWrongAttempt, onToggleHint, onSkip, showMap, onToggleMap, showLocationControls = true } = props;
-    const { colors, styles } = useQuestWizardTheme();
-
-    const [value, setValue] = useState(''); const [error, setError] = useState('');
-    const [imageModalVisible, setImageModalVisible] = useState(false);
-    const [hasOrganic, setHasOrganic] = useState(false); const [hasMapsme, setHasMapsme] = useState(false);
-    const [navExpanded, setNavExpanded] = useState(false);
-    const shakeAnim = useRef(new Animated.Value(0)).current;
-    const shouldUseNativeDriver = false;
-
-    // flip animation
-    const flip = useRef(new Animated.Value(0)).current;
-    const triggerFlip = () => { flip.setValue(0); Animated.timing(flip, { toValue: 1, duration: 600, useNativeDriver: shouldUseNativeDriver }).start(() => flip.setValue(0)); };
-    const rot = flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '180deg', '360deg'] });
-
-    useEffect(() => { setValue(''); setError(''); }, [step.id]);
-
-    useEffect(() => { (async () => {
-        const detected = await detectQuestMapApps();
-        setHasOrganic(detected.hasOrganic);
-        setHasMapsme(detected.hasMapsme);
-    })(); }, [step.id]);
-
-    const openInMap = async (app: 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme') => {
-        return openQuestMap(step, app);
-    };
-
-    const copyCoords = async () => copyQuestCoords(step);
-
-    const shake = () => {
-        shakeAnim.setValue(0);
-        Animated.sequence([
-            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: shouldUseNativeDriver }),
-            Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: shouldUseNativeDriver }),
-            Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: shouldUseNativeDriver }),
-        ]).start();
-    };
-
-    const handleCheck = () => {
-        const trimmed = value.trim();
-        if (step.id === 'intro') { onSubmit('start'); return; }
-        if (!trimmed) { setError('Введите ответ'); shake(); Vibration.vibrate(50); return; }
-        const normalized = step.inputType === 'number' ? trimmed.replace(',', '.').trim() : trimmed.toLowerCase().replace(/\s+/g, ' ').trim();
-        const ok = step.answer(normalized);
-        if (ok) { setError(''); Vibration.vibrate(60); triggerFlip(); setTimeout(() => { onSubmit(trimmed); Keyboard.dismiss(); }, 520); }
-        else { setError('Неверный ответ'); onWrongAttempt(); shake(); Vibration.vibrate(200); }
-    };
-
-    const isPassed = !!savedAnswer && step.id !== 'intro';
-    const showHintAfter = 2;
-    const hasMapPaneContent = showLocationControls || (showMap && !!step.image);
-    const hasLocationContent = isPassed || hasMapPaneContent;
-
-    return (
-        <Animated.View style={[styles.card, { transform: [{ perspective: 800 }, { rotateY: rot }] }]}>
-            {/* Заголовок */}
-            <View style={styles.cardHeader}>
-                {step.id !== 'intro' && (
-                    <View style={[styles.stepNumber, isPassed && styles.stepNumberCompleted]}>
-                        <Text style={styles.stepNumberText}>{index}</Text>
-                    </View>
-                )}
-                <View style={styles.headerContent}>
-                    <Text style={styles.stepTitle}>{step.title}</Text>
-                    <Pressable onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} accessibilityRole="button" accessibilityLabel={`Открыть в картах: ${step.location}`}>
-                        <Text style={styles.location}>{step.location}</Text>
-                    </Pressable>
-                </View>
-                {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
-            </View>
-
-            {/* Легенда */}
-            <View style={styles.section}><Text style={styles.storyText}>{step.story}</Text></View>
-
-            {/* Задание */}
-            <View style={styles.section}>
-                <Text style={styles.taskText}>{step.task}</Text>
-
-                {step.id !== 'intro' && !isPassed && (
-                    ((step.answer as any)._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()))
-                        ? (
-                            <Pressable style={styles.primaryButton} onPress={() => onSubmit('ok')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Далее">
-                                <Text style={styles.buttonText}>Далее</Text>
-                            </Pressable>
-                        ) : (
-                            <>
-                                <View style={styles.inputRow}>
-                                    <Animated.View style={[{ flex: 1 }, { transform: [{ translateX: shakeAnim }] }]}>
-                                        <TextInput
-                                            style={[
-                                                styles.input, 
-                                                error ? styles.inputError : null,
-                                                globalFocusStyles.focusable,
-                                            ]}
-                                            placeholder="Ваш ответ..."
-                                            placeholderTextColor={colors.textMuted}
-                                            value={value}
-                                            onChangeText={setValue}
-                                            onSubmitEditing={handleCheck}
-                                            returnKeyType="done"
-                                            keyboardType={step.inputType === 'number' ? (Platform.OS === 'ios' ? 'number-pad' : 'numeric') : 'default'}
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                        />
-                                    </Animated.View>
-                                    <Pressable 
-                                        style={styles.checkButton} 
-                                        onPress={handleCheck} 
-                                        hitSlop={6}
-                                        accessibilityRole="button"
-                                        accessibilityLabel="Проверить ответ"
-                                    >
-                                        <Text style={styles.checkButtonText}>→</Text>
-                                    </Pressable>
-                                </View>
-                                {!!error && (
-                                    <View style={styles.errorContainer}>
-                                        <Text style={styles.errorText}>{error}</Text>
-                                    </View>
-                                )}
-                                <View style={styles.inlineActions}>
-                                    {step.hint && (
-                                        <Pressable 
-                                            onPress={onToggleHint} 
-                                            hitSlop={8}
-                                            accessibilityRole="button"
-                                            accessibilityLabel={hintVisible ? 'Скрыть подсказку' : 'Показать подсказку'}
-                                        >
-                                            <Text style={styles.linkText}>{hintVisible ? 'Скрыть подсказку' : 'Подсказка'}</Text>
-                                        </Pressable>
-                                    )}
-                                    {step.hint && (<Text style={styles.linkSeparator}>·</Text>)}
-                                    <Pressable 
-                                        onPress={onSkip} 
-                                        hitSlop={8}
-                                        accessibilityRole="button"
-                                        accessibilityLabel="Пропустить шаг"
-                                    >
-                                        <Text style={styles.linkText}>Пропустить</Text>
-                                    </Pressable>
-                                </View>
-                                {step.hint && attempts < showHintAfter && !hintVisible && (
-                                    <Text style={styles.hintPrompt}>Подсказка доступна после {showHintAfter - attempts} попыток</Text>
-                                )}
-                            </>
-                        )
-                )}
-
-                {step.hint && (
-                    <View style={[styles.hintContainer, !hintVisible && Platform.select({ web: { visibility: 'hidden' } as any, default: { display: 'none' } })]}>
-                        <Text style={styles.hintText}>Подсказка: {step.hint}</Text>
-                    </View>
-                )}
-            </View>
-
-            {/* Локация */}
-            {step.id !== 'intro' && hasLocationContent && (
-                <View style={styles.section}>
-                    <View style={[styles.answerMapSplit, isPassed && hasMapPaneContent && styles.answerMapSplitWithAnswer]}>
-                        {isPassed && (
-                            <View style={[styles.answerMapPane, styles.answerPane]}>
-                                <View style={styles.answerContainer}>
-                                    <Text style={styles.answerLabel}>Ваш ответ:</Text>
-                                    <Text style={styles.answerValue}>{savedAnswer}</Text>
-                                </View>
-                            </View>
-                        )}
-
-                        {hasMapPaneContent && (
-                            <View style={[styles.answerMapPane, styles.mapPane]}>
-                                {showLocationControls && (
-                                    <>
-                                        <View style={styles.navRow}>
-                                            <Pressable style={styles.navButton} onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
-                                                <Text style={styles.navButtonText}>Навигация</Text>
-                                            </Pressable>
-                                            <Pressable style={styles.navToggle} onPress={() => setNavExpanded(v => !v)} hitSlop={6} accessibilityRole="button" accessibilityLabel={navExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
-                                                <Text style={styles.navToggleText}>{navExpanded ? '▲' : '▼'}</Text>
-                                            </Pressable>
-                                            <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}`}>
-                                                <Text style={styles.coordsButtonText}>{step.lat.toFixed(4)}, {step.lng.toFixed(4)}</Text>
-                                            </Pressable>
-                                            {step.image && (
-                                                <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}>
-                                                    <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
-                                                </Pressable>
-                                            )}
-                                        </View>
-                                        {navExpanded && (
-                                            <View style={styles.navDropdown}>
-                                                <Pressable style={styles.navOption} onPress={() => { openInMap('google'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
-                                                {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openInMap('apple'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-                                                <Pressable style={styles.navOption} onPress={() => { openInMap('yandex'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
-                                                {hasOrganic && (<Pressable style={styles.navOption} onPress={() => { openInMap('organic'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
-                                                {hasMapsme && (<Pressable style={styles.navOption} onPress={() => { openInMap('mapsme'); setNavExpanded(false); }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
-                                            </View>
-                                        )}
-                                    </>
-                                )}
-
-                                {showMap && step.image && (
-                                    <>
-                                        <Text style={styles.photoHint}>Это статичное фото-подсказка, не интерактивная карта.</Text>
-                                        <Pressable style={styles.imagePreview} onPress={() => setImageModalVisible(true)}>
-                                            <ImageCardMedia
-                                                source={typeof step.image === 'string' ? { uri: step.image } : step.image}
-                                                fit="contain"
-                                                blurBackground
-                                                allowCriticalWebBlur
-                                                blurRadius={16}
-                                                alt={step.title ? `Фото-подсказка для шага ${step.title}` : 'Фото-подсказка'}
-                                                style={styles.previewImage}
-                                            />
-                                            <View style={styles.imageOverlay}><Text style={styles.overlayText}>Нажмите для увеличения</Text></View>
-                                        </Pressable>
-                                    </>
-                                )}
-                            </View>
-                        )}
-                    </View>
-
-                    <ImageZoomModal image={typeof step.image === 'string' ? { uri: step.image } : step.image} visible={imageModalVisible} onClose={() => setImageModalVisible(false)} />
-                </View>
-            )}
-
-            {step.id === 'intro' && (<Pressable style={styles.startButton} onPress={handleCheck} hitSlop={6}><Text style={styles.startButtonText}>Начать квест</Text></Pressable>)}
-
-            {/* Оверлей сообщения на пике flip */}
-            <Animated.View
-                style={[
-                    StyleSheet.absoluteFill,
-                    {
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: flip.interpolate({ inputRange: [0.35, 0.5, 0.65], outputRange: [0, 1, 0] }),
-                    },
-                    { pointerEvents: 'none' } as any,
-                ]}
-            >
-                <View style={styles.flipBadge}><Text style={styles.flipText}>✓ Правильно!</Text></View>
-            </Animated.View>
-        </Animated.View>
-    );
-});
-
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
 export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry }: QuestWizardProps) {
     const { colors, styles } = useQuestWizardTheme();
@@ -491,53 +198,24 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         if (allCompleted) { setShowFinaleOnly(true); setUnlockedIndex(allSteps.length - 1); }
     }, [allCompleted, allSteps.length, setUnlockedIndex]);
 
-    // ====== размеры видео-рамки (адаптив 16:9 + ограничение по высоте)
-    const videoMaxWidth = 960;
-    const horizontalPadding = SPACING.md * 2;
-    const footerReserve = 88;
-    const headerReserve = 220;
-    const maxFrameHeight = Math.max(180, screenH - headerReserve - footerReserve);
-    let frameW = Math.min(Math.max(screenW - horizontalPadding, 240), videoMaxWidth);
-    let frameH = (frameW * 9) / 16;
-    if (frameH > maxFrameHeight) { frameH = maxFrameHeight; frameW = (frameH * 16) / 9; }
-
-    // ====== видео веб/нэйтив
-    const [videoOk, setVideoOk] = useState(true);
-    const videoUri = useMemo(() => {
-        const uri = resolveQuestUri(finale.video);
-        if (finale.video) {
-            console.info('[QuestWizard] Video source:', finale.video);
-            console.info('[QuestWizard] Resolved video URI:', uri);
-        }
-        return uri;
-    }, [finale.video]);
-    const posterUri = useMemo(() => resolveQuestUri(finale.poster), [finale.poster]);
-    const coverUri = useMemo(() => resolveQuestUri(coverUrl), [coverUrl]);
-    const youtubeEmbedUri = useMemo(() => {
-        if (!videoUri) {
-            console.info('[QuestWizard] No video URI for YouTube check');
-            return undefined;
-        }
-        const youtubeId = safeGetYoutubeId(videoUri);
-        if (youtubeId) {
-            console.info('[QuestWizard] YouTube ID detected:', youtubeId);
-        } else {
-            console.info('[QuestWizard] Not a YouTube URL:', videoUri);
-        }
-        if (!youtubeId) return undefined;
-        return `https://www.youtube.com/embed/${youtubeId}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
-    }, [videoUri]);
-    const handleVideoError = useMemo(() => () => {
-        console.error('[QuestWizard] Video playback error');
-        setVideoOk(false);
-    }, []);
-    const handleVideoRetry = useCallback(() => {
-        console.info('[QuestWizard] Retrying video playback');
-        if (Platform.OS === 'web') {
-            onFinaleVideoRetry?.();
-        }
-        setVideoOk(true);
-    }, [onFinaleVideoRetry]);
+    const {
+        frameW,
+        videoOk,
+        setVideoOk,
+        videoUri,
+        posterUri,
+        coverUri,
+        youtubeEmbedUri,
+        handleVideoError,
+        handleVideoRetry,
+    } = useQuestFinaleMedia({
+        finaleVideo: finale.video,
+        finalePoster: finale.poster,
+        coverUrl,
+        screenW,
+        screenH,
+        onFinaleVideoRetry,
+    });
 
     const handlePrintDownload = useCallback(() => {
         const questUrl = typeof window !== 'undefined'
@@ -545,11 +223,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             : undefined;
         void generatePrintableQuest({ title, steps, intro, coverUrl, questUrl });
     }, [coverUrl, intro, steps, title]);
-
-    useEffect(() => { 
-        console.info('[QuestWizard] Video changed, resetting videoOk state');
-        setVideoOk(true); 
-    }, [finale.video]);
 
     const mainContent = (
         <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
@@ -559,7 +232,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 {(!showFinaleOnly) && currentStep && (
                     <View style={useWideInlineLayout ? styles.desktopRow : undefined}>
                         <View style={useWideInlineLayout ? styles.desktopMain : undefined}>
-                            <StepCard
+                            <QuestStepCard
+                                colors={colors}
+                                styles={styles}
                                 step={currentStep}
                                 index={currentIndex}
                                 attempts={attempts[currentStep.id] || 0}
@@ -576,179 +251,66 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         </View>
 
                         {!!steps.length && (
-                            <View
-                                style={[
-                                    styles.fullMapSection,
-                                    useWideInlineLayout && (compactDesktopLayout ? styles.compactDesktopSide : styles.desktopSide),
-                                ]}
-                            >
-                                {useWideInlineLayout && currentStep.id !== 'intro' && (
-                                    <View style={styles.mapTopControls}>
-                                        <View style={styles.navRow}>
-                                            <Pressable style={styles.navButton} onPress={() => openCurrentStepInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6} accessibilityRole="button" accessibilityLabel="Открыть навигацию">
-                                                <Text style={styles.navButtonText}>Навигация</Text>
-                                            </Pressable>
-                                            <Pressable style={styles.navToggle} onPress={() => setDesktopNavExpanded(v => !v)} hitSlop={6} accessibilityRole="button" accessibilityLabel={desktopNavExpanded ? 'Скрыть варианты навигации' : 'Показать варианты навигации'}>
-                                                <Text style={styles.navToggleText}>{desktopNavExpanded ? '▲' : '▼'}</Text>
-                                            </Pressable>
-                                            <Pressable style={styles.coordsButton} onPress={copyCurrentStepCoords} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Копировать координаты ${currentStep.lat.toFixed(4)}, ${currentStep.lng.toFixed(4)}`}>
-                                                <Text style={styles.coordsButtonText}>{currentStep.lat.toFixed(4)}, {currentStep.lng.toFixed(4)}</Text>
-                                            </Pressable>
-                                            {currentStep.image && (
-                                                <Pressable style={styles.photoToggle} onPress={toggleMap} hitSlop={8} accessibilityRole="button" accessibilityLabel={showMap ? 'Скрыть фото' : 'Показать фото'}>
-                                                    <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
-                                                </Pressable>
-                                            )}
-                                        </View>
-                                        {desktopNavExpanded && (
-                                            <View style={styles.navDropdown}>
-                                                <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('google'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
-                                                {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('apple'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
-                                                <Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('yandex'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
-                                                {desktopHasOrganic && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('organic'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
-                                                {desktopHasMapsme && (<Pressable style={styles.navOption} onPress={() => { openCurrentStepInMap('mapsme'); setDesktopNavExpanded(false); }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
-                                            </View>
-                                        )}
-                                    </View>
-                                )}
-
-                                <Suspense fallback={<QuestMapSkeleton />}>
-                                    <QuestFullMapLazy
-                                        steps={steps}
-                                        height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
-                                        title="Карта квеста"
-                                    />
-                                </Suspense>
-                            </View>
+                            <QuestDesktopMapPanel
+                                colors={colors}
+                                styles={styles}
+                                currentStep={currentStep}
+                                steps={steps}
+                                compactDesktopLayout={compactDesktopLayout}
+                                useWideInlineLayout={useWideInlineLayout}
+                                desktopNavExpanded={desktopNavExpanded}
+                                setDesktopNavExpanded={setDesktopNavExpanded}
+                                desktopHasOrganic={desktopHasOrganic}
+                                desktopHasMapsme={desktopHasMapsme}
+                                showMap={showMap}
+                                toggleMap={toggleMap}
+                                openCurrentStepInMap={openCurrentStepInMap as any}
+                                copyCurrentStepCoords={copyCurrentStepCoords}
+                            />
                         )}
                     </View>
                 )}
 
                 {/* Экскурсии рядом — на узких экранах под контентом */}
                 {!useWideExcursionsSidebar && !compactDesktopLayout && (!showFinaleOnly) && currentStep && city && Platform.OS === 'web' && (
-                    <View style={styles.excursionsSection}>
-                        <View style={styles.excursionsDivider} />
-                        <View style={styles.excursionsCard}>
-                            <View style={styles.excursionsHeader}>
-                                <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-                                <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
-                            </View>
-                            <Suspense fallback={null}>
-                                <BelkrajWidgetLazy
-                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                    countryCode={city.countryCode}
-                                    collapsedHeight={compactNav ? 520 : 760}
-                                    expandedHeight={compactNav ? 600 : 900}
-                                    className="belkraj-slot"
-                                    allowScroll
-                                />
-                            </Suspense>
-                        </View>
-                    </View>
+                    <QuestExcursionsInline
+                        colors={colors}
+                        styles={styles}
+                        compactNav={compactNav}
+                        city={city}
+                        title={title}
+                    />
                 )}
 
                 {/* Финал — доступен всегда; видео — когда всё пройдено */}
                 {showFinaleOnly && (
-                    <View style={styles.completionScreen}>
-                        {allCompleted ? (
-                            <>
-                                <Text style={styles.completionTitle}>Квест завершен!</Text>
-
-                                {/* Видео: web = DOM <video>, native = expo-av */}
-                                {finale.video && (
-                                    <View
-                                        style={[
-                                            styles.videoFrame,
-                                            {
-                                                width: '100%',
-                                                maxWidth: frameW,
-                                                aspectRatio: 16 / 9,
-                                            },
-                                        ]}
-                                    >
-                                        {Platform.OS === 'web' ? (
-                                            youtubeEmbedUri ? (
-                                                <iframe
-                                                    src={youtubeEmbedUri}
-                                                    width="100%"
-                                                    height="100%"
-                                                    style={{ border: 'none', display: 'block' }}
-                                                    loading="lazy"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                                    allowFullScreen
-                                                    title="Видео квеста"
-                                                />
-                                            ) : videoOk ? (
-                                                <QuestWebVideo src={videoUri} poster={posterUri} onError={handleVideoError} />
-                                            ) : (
-                                                <>
-                                                    {posterUri ? (
-                                                        <ImageCardMedia
-                                                            src={posterUri}
-                                                            fit="contain"
-                                                            blurBackground
-                                                            allowCriticalWebBlur
-                                                            blurRadius={18}
-                                                            style={StyleSheet.absoluteFillObject as any}
-                                                            alt="Постер видео квеста"
-                                                        />
-                                                    ) : null}
-                                                    <View style={styles.videoFallbackOverlay}>
-                                                        <Text style={styles.videoFallbackText}>Не удалось воспроизвести видео. Попробуйте ещё раз.</Text>
-                                                        <Pressable onPress={handleVideoRetry} style={styles.videoRetryBtn} hitSlop={8}>
-                                                            <Text style={styles.videoRetryText}>Повторить</Text>
-                                                        </Pressable>
-                                                    </View>
-                                                </>
-                                            )
-                                        ) : (
-                                            <Suspense fallback={null}>
-                                                <NativeQuestVideoLazy
-                                                    source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
-                                                    posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
-                                                    usePoster={!!finale.poster}
-                                                    style={StyleSheet.absoluteFill}
-                                                    useNativeControls
-                                                    shouldPlay={false}
-                                                    isLooping={false}
-                                                    onError={() => setVideoOk(false)}
-                                                />
-                                            </Suspense>
-                                        )}
-                                    </View>
-                                )}
-
-                                <Text style={styles.completionText}>{finale.text}</Text>
-                            </>
-                        ) : (
-                            <Text style={[styles.completionText, { opacity: 0.8 }]}> 
-                                Чтобы открыть приз/видео — завершите все шаги ({completedSteps.length} из {steps.length}).
-                            </Text>
-                        )}
-                    </View>
+                    <QuestFinalePanel
+                        colors={colors}
+                        styles={styles}
+                        finale={finale}
+                        allCompleted={allCompleted}
+                        completedCount={completedSteps.length}
+                        stepsCount={steps.length}
+                        frameW={frameW}
+                        youtubeEmbedUri={youtubeEmbedUri}
+                        videoOk={videoOk}
+                        videoUri={videoUri}
+                        posterUri={posterUri}
+                        handleVideoError={handleVideoError}
+                        handleVideoRetry={handleVideoRetry}
+                        setVideoOk={setVideoOk}
+                    />
                 )}
             </View>
 
             {/* Правая колонка: блок экскурсий — постоянно видим на desktop */}
             {useWideExcursionsSidebar && city && Platform.OS === 'web' && (
-                <View style={styles.excursionsSidebar}>
-                    <View style={styles.excursionsSidebarInner}>
-                        <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-                        <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
-                        <View style={styles.excursionsSidebarWidget}>
-                            <Suspense fallback={null}>
-                                <BelkrajWidgetLazy
-                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                    countryCode={city.countryCode}
-                                    collapsedHeight={560}
-                                    expandedHeight={900}
-                                    className="belkraj-slot"
-                                    allowScroll
-                                />
-                            </Suspense>
-                        </View>
-                    </View>
-                </View>
+                <QuestExcursionsSidebar
+                    colors={colors}
+                    styles={styles}
+                    city={city}
+                    title={title}
+                />
             )}
         </View>
     );
@@ -759,100 +321,26 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                     {compactDesktopLayout ? (
                         <View style={styles.compactShell}>
-                            <View style={styles.compactSidebar}>
-                                <View style={styles.compactSidebarHeader}>
-                                    <View style={styles.compactSidebarIdentity}>
-                                        {coverUri ? (
-                                            <View style={styles.compactSidebarCover}>
-                                                <ImageCardMedia
-                                                    src={coverUri}
-                                                    alt={`Обложка квеста ${title}`}
-                                                    height={88}
-                                                    width={88}
-                                                    fit="contain"
-                                                    blurBackground
-                                                    allowCriticalWebBlur
-                                                    borderRadius={18}
-                                                    style={styles.compactSidebarCover}
-                                                    priority="high"
-                                                    loading="eager"
-                                                />
-                                            </View>
-                                        ) : null}
-                                        <Text style={styles.compactSidebarTitle}>{title}</Text>
-                                    </View>
-                                    <View style={styles.compactSidebarActions}>
-                                        <Pressable
-                                            onPress={handlePrintDownload}
-                                            style={styles.compactIconButton}
-                                            hitSlop={6}
-                                            accessibilityRole="button"
-                                            accessibilityLabel="Скачать печатную версию квеста"
-                                        >
-                                            <Feather name="download" size={16} color={colors.textMuted} />
-                                        </Pressable>
-                                        <Pressable onPress={resetQuest} style={styles.resetButton} hitSlop={6}>
-                                            <Text style={styles.resetText}>Сбросить</Text>
-                                        </Pressable>
-                                    </View>
-                                </View>
-
-                                <View style={styles.progressContainer}>
-                                    <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
-                                    <Text style={styles.progressText}>{completedSteps.length} / {steps.length} завершено</Text>
-                                </View>
-
-                                <ScrollView style={styles.compactStepsList} showsVerticalScrollIndicator={false} contentContainerStyle={styles.compactStepsListContent}>
-                                    {allSteps.map((s, i) => {
-                                        const isActive = i === currentIndex && !showFinaleOnly;
-                                        const isDone = !!answers[s.id] && s.id !== 'intro';
-                                        const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
-                                        return (
-                                            <QuestStepPill
-                                                key={s.id}
-                                                colors={colors}
-                                                styles={styles}
-                                                compact
-                                                active={isActive}
-                                                done={isDone}
-                                                unlocked={isUnlocked}
-                                                onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                indexLabel={String(i)}
-                                                isIntro={s.id === 'intro'}
-                                                label={s.id === 'intro' ? 'Старт' : s.title}
-                                                numberOfLines={2}
-                                            />
-                                        );
-                                    })}
-
-                                    <QuestFinalePill
-                                        colors={colors}
-                                        styles={styles}
-                                        compact
-                                        active={showFinaleOnly}
-                                        onPress={() => setShowFinaleOnly(true)}
-                                    />
-
-                                    {city && Platform.OS === 'web' && (
-                                        <View style={styles.compactExcursionsSection}>
-                                            <View style={styles.compactExcursionsHeader}>
-                                                <Text style={styles.excursionsTitle}>Экскурсии рядом</Text>
-                                                <Text style={styles.excursionsSubtitle}>Откройте больше с местными гидами</Text>
-                                            </View>
-                                            <Suspense fallback={null}>
-                                                <BelkrajWidgetLazy
-                                                    points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                                    countryCode={city.countryCode}
-                                                    collapsedHeight={380}
-                                                    expandedHeight={760}
-                                                    className="belkraj-slot"
-                                                    allowScroll
-                                                />
-                                            </Suspense>
-                                        </View>
-                                    )}
-                                </ScrollView>
-                            </View>
+                            <QuestCompactSidebar
+                                colors={colors}
+                                styles={styles}
+                                title={title}
+                                coverUri={coverUri}
+                                progress={progress}
+                                completedCount={completedSteps.length}
+                                stepsCount={steps.length}
+                                allSteps={allSteps}
+                                answers={answers}
+                                currentIndex={currentIndex}
+                                unlockedIndex={unlockedIndex}
+                                allCompleted={allCompleted}
+                                showFinaleOnly={showFinaleOnly}
+                                goToStep={goToStep}
+                                onShowFinale={() => setShowFinaleOnly(true)}
+                                city={city}
+                                onReset={resetQuest}
+                                onPrintDownload={handlePrintDownload}
+                            />
 
                             <ScrollView
                                 style={[styles.content, styles.compactMainContent]}
@@ -867,151 +355,28 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         </View>
                     ) : (
                         <>
-                            {/* Шапка */}
-                            <View style={styles.header}>
-                                <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
-                                    <View style={styles.headerIdentity}>
-                                        {coverUri ? (
-                                            <View style={[styles.headerCover, isMobile && styles.headerCoverMobile]}>
-                                                <ImageCardMedia
-                                                    src={coverUri}
-                                                    alt={`Обложка квеста ${title}`}
-                                                    height={isMobile ? 72 : 88}
-                                                    width={isMobile ? 72 : 128}
-                                                    fit="contain"
-                                                    blurBackground
-                                                    allowCriticalWebBlur
-                                                    borderRadius={18}
-                                                    style={[styles.headerCover, isMobile && styles.headerCoverMobile]}
-                                                    priority="high"
-                                                    loading="eager"
-                                                />
-                                            </View>
-                                        ) : null}
-                                        <Text style={[styles.title, isMobile && styles.titleMobile]}>{title}</Text>
-                                    </View>
-                                    <Pressable onPress={resetQuest} style={styles.resetButton} hitSlop={6}>
-                                        <Text style={styles.resetText}>Сбросить</Text>
-                                    </Pressable>
-                                </View>
-
-                                {/* Прогресс */}
-                                <View style={styles.progressContainer}>
-                                    <View style={styles.progressBar}><View style={[styles.progressFill, { width: `${progress * 100}%` }]} /></View>
-                                    <Text style={styles.progressText}>{completedSteps.length} / {steps.length} завершено</Text>
-                                </View>
-
-                                {/* Навигация по шагам + Финал */}
-                                {wideDesktop ? (
-                                    <View style={styles.stepsGrid}>
-                                        {allSteps.map((s, i) => {
-                                            const isActive = i === currentIndex && !showFinaleOnly;
-                                            const isDone = !!answers[s.id] && s.id !== 'intro';
-                                            const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
-                                            return (
-                                                <QuestStepPill
-                                                    key={s.id}
-                                                    colors={colors}
-                                                    styles={styles}
-                                                    active={isActive}
-                                                    done={isDone}
-                                                    unlocked={isUnlocked}
-                                                    onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                    indexLabel={s.id === 'intro' ? '' : String(i)}
-                                                    isIntro={s.id === 'intro'}
-                                                    label={s.id === 'intro' ? 'Старт' : s.title}
-                                                />
-                                            );
-                                        })}
-                                        <QuestFinalePill
-                                            colors={colors}
-                                            styles={styles}
-                                            active={showFinaleOnly}
-                                            onPress={() => setShowFinaleOnly(true)}
-                                        />
-                                    </View>
-                                ) : (
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stepsNavigation} contentContainerStyle={{ paddingRight: 8, paddingLeft: 2 }}>
-                                        {allSteps.map((s, i) => {
-                                            const isActive = i === currentIndex && !showFinaleOnly;
-                                            const isUnlocked = (i <= unlockedIndex) || !!answers[s.id] || allCompleted;
-                                            const isDone = !!answers[s.id] && s.id !== 'intro';
-
-                                            if (screenW < 600) {
-                                                return (
-                                                    <QuestStepDot
-                                                        key={s.id}
-                                                        colors={colors}
-                                                        styles={styles}
-                                                        active={isActive}
-                                                        done={isDone}
-                                                        unlocked={isUnlocked}
-                                                        onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                        label={String(i)}
-                                                        isIntro={s.id === 'intro'}
-                                                    />
-                                                );
-                                            }
-
-                                            return (
-                                                <QuestStepPill
-                                                    key={s.id}
-                                                    colors={colors}
-                                                    styles={styles}
-                                                    narrow
-                                                    active={isActive}
-                                                    done={isDone}
-                                                    unlocked={isUnlocked}
-                                                    onPress={() => { if (isUnlocked) goToStep(i); }}
-                                                    indexLabel={s.id === 'intro' ? '' : String(i)}
-                                                    isIntro={s.id === 'intro'}
-                                                    label={s.id === 'intro' ? 'Старт' : s.title}
-                                                />
-                                            );
-                                        })}
-                                        {compactNav ? (
-                                            <QuestFinaleDot
-                                                colors={colors}
-                                                styles={styles}
-                                                active={showFinaleOnly}
-                                                onPress={() => setShowFinaleOnly(true)}
-                                            />
-                                        ) : (
-                                            <QuestFinalePill
-                                                colors={colors}
-                                                styles={styles}
-                                                active={showFinaleOnly}
-                                                onPress={() => setShowFinaleOnly(true)}
-                                            />
-                                        )}
-                                    </ScrollView>
-                                )}
-                                {compactNav ? (
-                                    <Text style={styles.navActiveTitle} numberOfLines={1}>
-                                        {showFinaleOnly ? 'Финал' : (currentIndex === 0 ? 'Старт' : allSteps[currentIndex]?.title)}
-                                    </Text>
-                                ) : (
-                                    <Text style={styles.navHint}>Нажмите на шаг (или «Финал»), чтобы перейти</Text>
-                                )}
-
-                                {Platform.OS === 'web' && (
-                                    <View style={styles.printSection}>
-                                        <Text style={styles.printHint}>
-                                            Печатная версия квеста: маршрут, задания и место для ответов.
-                                        </Text>
-                                        <Pressable
-                                            style={styles.printButton}
-                                            onPress={handlePrintDownload}
-                                            hitSlop={6}
-                                            accessibilityRole="button"
-                                            accessibilityLabel="Скачать печатную версию квеста"
-                                        >
-                                            <Feather name="download" size={16} color={colors.textOnPrimary} />
-                                            <Text style={styles.printButtonText}>Скачать печатную версию</Text>
-                                        </Pressable>
-                                    </View>
-                                )}
-                            </View>
+                            <QuestHeaderPanel
+                                colors={colors}
+                                styles={styles}
+                                title={title}
+                                coverUri={coverUri}
+                                progress={progress}
+                                completedCount={completedSteps.length}
+                                stepsCount={steps.length}
+                                allSteps={allSteps}
+                                answers={answers}
+                                currentIndex={currentIndex}
+                                unlockedIndex={unlockedIndex}
+                                allCompleted={allCompleted}
+                                showFinaleOnly={showFinaleOnly}
+                                goToStep={goToStep}
+                                onShowFinale={() => setShowFinaleOnly(true)}
+                                isMobile={isMobile}
+                                screenW={screenW}
+                                compactNav={compactNav}
+                                onReset={resetQuest}
+                                onPrintDownload={handlePrintDownload}
+                            />
 
                             {/* Контент */}
                             <ScrollView
@@ -1937,14 +1302,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         letterSpacing: -0.3,
     },
 });
-
-const QuestMapSkeleton = () => {
-    const colors = useThemedColors();
-    return (
-        <View style={{ height: 300, borderRadius: 16, backgroundColor: colors.backgroundSecondary, overflow: 'hidden' }}>
-            <View style={{ flex: 1, opacity: 0.6, backgroundColor: colors.borderLight }} />
-        </View>
-    );
-};
 
 export default QuestWizard;
