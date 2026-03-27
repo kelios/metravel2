@@ -66,19 +66,18 @@ const CardActionPressable = ({
     const ariaPressed = !canUseAriaSelected && accessibilityRole === 'button' && ariaSelected !== undefined ? ariaSelected : undefined;
     return (
       <View
+        testID={testID}
         style={[
           resolvedStyle as any,
           { cursor: disabled ? 'not-allowed' : 'pointer' } as any,
         ]}
-        accessibilityRole={accessibilityRole}
-        {...(accessibilityLabel ? { accessibilityLabel } : {})}
-        accessibilityHint={accessibilityHint}
-        accessibilityState={resolvedState}
         {...({
           role: accessibilityRole,
           tabIndex: disabled ? -1 : 0,
           title: title ?? accessibilityLabel,
           'data-testid': testID,
+          'aria-label': accessibilityLabel,
+          'aria-description': accessibilityHint,
           'aria-disabled': disabled || undefined,
           'aria-checked': ariaChecked !== undefined ? ariaChecked : undefined,
           'aria-selected': canUseAriaSelected && ariaSelected !== undefined ? ariaSelected : undefined,
@@ -94,7 +93,6 @@ const CardActionPressable = ({
         }}
         onMouseEnter={() => onHoverIn?.()}
         onMouseLeave={() => onHoverOut?.()}
-        testID={testID}
       >
         {safeChildren}
       </View>

@@ -5,11 +5,12 @@ import { Platform, Alert } from 'react-native';
 import { usePdfExport } from '@/hooks/usePdfExport';
 import { ExportStage } from '@/types/pdf-export';
 import type { ChecklistSection } from '@/components/export/BookSettingsModal';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
 
-jest.mock('@/api/travelsApi', () => ({
+jest.mock('@/api/travelDetailsQueries', () => ({
   fetchTravel: jest.fn(async () => ({
     id: 99,
     name: 'Detailed Travel',
@@ -75,6 +76,8 @@ global.document = mockDocument as unknown as Document;
 
 const originalPlatformOS = Platform.OS;
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+const mockFetchTravel = fetchTravel as jest.MockedFunction<typeof fetchTravel>;
+const mockFetchTravelBySlug = fetchTravelBySlug as jest.MockedFunction<typeof fetchTravelBySlug>;
 
 beforeAll(() => {
   Object.defineProperty(Platform, 'OS', {
@@ -132,6 +135,56 @@ describe('usePdfExport', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchTravel.mockResolvedValue({
+      id: 99,
+      slug: 'detailed-travel',
+      name: 'Detailed Travel',
+      url: '/travels/detailed-travel',
+      youtube_link: '',
+      userName: 'user',
+      description: 'Full description',
+      recommendation: 'Some tips',
+      plus: 'Pros',
+      minus: 'Cons',
+      cityName: 'City',
+      countryName: 'Country',
+      countUnicIpView: '',
+      gallery: [],
+      travelAddress: [],
+      userIds: '',
+      year: '2024',
+      monthName: 'January',
+      number_days: 5,
+      companions: [],
+      countryCode: '',
+      travel_image_thumb_url: '',
+      travel_image_thumb_small_url: '',
+    } as any);
+    mockFetchTravelBySlug.mockResolvedValue({
+      id: 100,
+      slug: 'slug-travel',
+      name: 'Slug Travel',
+      url: '/travels/slug-travel',
+      youtube_link: '',
+      userName: 'user',
+      description: 'Full description',
+      recommendation: 'Some tips',
+      plus: 'Pros',
+      minus: 'Cons',
+      cityName: 'City',
+      countryName: 'Country',
+      countUnicIpView: '',
+      gallery: [],
+      travelAddress: [],
+      userIds: '',
+      year: '2024',
+      monthName: 'January',
+      number_days: 5,
+      companions: [],
+      countryCode: '',
+      travel_image_thumb_url: '',
+      travel_image_thumb_small_url: '',
+    } as any);
   });
 
   describe('Инициализация', () => {
@@ -257,6 +310,39 @@ describe('usePdfExport', () => {
         expect(result.current.isGenerating).toBe(false);
         expect(result.current.error).toBeNull();
       });
+    });
+
+    it('дозагружает детали для пустой галереи перед экспортом книги', async () => {
+      mockFetchTravel.mockResolvedValueOnce({
+        ...mockTravels[0],
+        id: 1,
+        gallery: [{ id: 501, url: 'https://metravel.by/gallery/501/photo.jpg' }],
+        travelAddress: [{ id: 1, name: 'Point', coords: '53.9,27.56' }],
+      } as any);
+
+      const partialTravel = {
+        ...mockTravels[0],
+        gallery: [],
+        travelAddress: [],
+      };
+
+      const { result } = renderHook(() => usePdfExport([partialTravel]));
+
+      await act(async () => { await Promise.resolve(); });
+
+      await act(async () => {
+        await result.current.openPrintBook(mockSettings);
+      });
+
+      expect(mockFetchTravel).toHaveBeenCalledWith(1);
+      expect(mockGenerateTravelsHtml).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            gallery: [{ id: 501, url: 'https://metravel.by/gallery/501/photo.jpg' }],
+          }),
+        ],
+        expect.any(Object),
+      );
     });
 
     it('должен обрабатывать ошибки генерации HTML и устанавливать статус ошибки', async () => {

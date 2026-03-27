@@ -1,21 +1,17 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { Platform, ScrollView, View } from 'react-native';
 
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { ExportConfig } from '@/types/pdf-export';
 import { usePdfExport } from '@/hooks/usePdfExport';
-import { useThemedColors } from '@/hooks/useTheme';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { Caption, Heading } from '@/components/ui/Typography';
 import { ExportBar } from './ExportBar';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
+import SelectedTravelOrderCard from './SelectedTravelOrderCard';
 import { createStyles } from './listTravelStyles';
 
 type ExportBarStyles = ReturnType<typeof createStyles>;
-const SELECTED_ORDER_MEDIA_WIDTH = 88;
-const SELECTED_ORDER_MEDIA_HEIGHT = 68;
-const SELECTED_ORDER_MEDIA_RADIUS = 12;
 
 type Props = {
   isMobile: boolean;
@@ -26,6 +22,7 @@ type Props = {
   toggleSelectAll: () => void;
   clearSelection: () => void;
   moveSelected: (id: number | string, direction: 'up' | 'down') => void;
+  moveSelectedTo: (id: number | string, targetId: number | string) => void;
   hasSelection: boolean;
   selectionCount: number;
   baseSettings: BookSettings;
@@ -44,6 +41,7 @@ function ListTravelExportControls({
   toggleSelectAll,
   clearSelection,
   moveSelected,
+  moveSelectedTo,
   hasSelection,
   selectionCount,
   baseSettings,
@@ -52,9 +50,10 @@ function ListTravelExportControls({
   setLastSettings,
   styles,
 }: Props) {
-  const colors = useThemedColors();
   const pdfExport = usePdfExport(selected, pdfConfig);
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   const handleCloseSettings = useCallback(() => {
     setIsBookSettingsOpen(false);
@@ -88,26 +87,9 @@ function ListTravelExportControls({
   const selectedOrderListStyle = useMemo(
     () => [
       (styles as ExportBarStyles).selectedOrderList,
-      !isMobile ? (styles as ExportBarStyles).selectedOrderListDesktop : null,
     ],
-    [isMobile, styles]
+    [styles]
   );
-
-  const resolveTravelCover = useCallback((travel: Travel) => {
-    const galleryFirst =
-      Array.isArray(travel.gallery) && travel.gallery.length > 0
-        ? typeof travel.gallery[0] === 'string'
-          ? travel.gallery[0]
-          : travel.gallery[0]?.url
-        : null;
-
-    return (
-      travel.travel_image_thumb_url ||
-      (travel as any).travel_image_thumb_small_url ||
-      galleryFirst ||
-      null
-    );
-  }, []);
 
   return (
     <>
@@ -139,103 +121,65 @@ function ListTravelExportControls({
 
       {hasSelection ? (
         <View style={(styles as ExportBarStyles).selectedOrderPanel}>
-          <View style={(styles as ExportBarStyles).selectedOrderHeader}>
-            <Text style={(styles as ExportBarStyles).selectedOrderTitle}>Порядок в книге</Text>
-            <Text style={(styles as ExportBarStyles).selectedOrderSubtitle}>
-              Меняйте местами выбранные путешествия. Этот порядок используется в режиме "Как расположено в списке выбора".
-            </Text>
+          <View style={(styles as ExportBarStyles).selectedOrderHeaderRow}>
+            <View style={(styles as ExportBarStyles).selectedOrderHeader}>
+              <Heading level={3} style={(styles as ExportBarStyles).selectedOrderTitle}>
+                Порядок в книге
+              </Heading>
+              <Caption style={(styles as ExportBarStyles).selectedOrderSubtitle}>
+                Перетаскивайте карточки мышью или используйте стрелки для точной перестановки.
+              </Caption>
+            </View>
           </View>
-          <View style={selectedOrderListStyle}>
-            {selected.map((travel, index) => (
-              <View
-                key={String(travel.id ?? travel.slug ?? `${travel.name}-${index}`)}
-                style={[
-                  (styles as ExportBarStyles).selectedOrderItem,
-                  !isMobile ? (styles as ExportBarStyles).selectedOrderItemDesktop : null,
-                ]}
-              >
-                <View style={(styles as ExportBarStyles).selectedOrderItemInfo}>
-                  <View style={(styles as ExportBarStyles).selectedOrderMediaWrap}>
-                    {resolveTravelCover(travel) ? (
-                      <ImageCardMedia
-                        src={resolveTravelCover(travel) || undefined}
-                        alt={travel.name || 'Путешествие'}
-                        width={SELECTED_ORDER_MEDIA_WIDTH}
-                        height={SELECTED_ORDER_MEDIA_HEIGHT}
-                        borderRadius={SELECTED_ORDER_MEDIA_RADIUS}
-                        fit="cover"
-                        blurBackground
-                        allowCriticalWebBlur
-                        priority="low"
-                        loading="lazy"
-                        style={(styles as ExportBarStyles).selectedOrderMedia}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          (styles as ExportBarStyles).selectedOrderMedia,
-                          (styles as ExportBarStyles).selectedOrderMediaPlaceholder,
-                        ]}
-                      />
-                    )}
-                    <View style={(styles as ExportBarStyles).selectedOrderIndexBadge}>
-                      <Text style={(styles as ExportBarStyles).selectedOrderIndex}>{index + 1}</Text>
-                    </View>
-                  </View>
-                  <View style={(styles as ExportBarStyles).selectedOrderTextBlock}>
-                    <Text
-                      style={(styles as ExportBarStyles).selectedOrderItemTitle}
-                      numberOfLines={2}
-                    >
-                      {travel.name || 'Без названия'}
-                    </Text>
-                    {!!(travel.countryName || travel.year) && (
-                      <Text
-                        style={(styles as ExportBarStyles).selectedOrderItemMeta}
-                        numberOfLines={1}
-                    >
-                        {[travel.countryName, travel.year].filter(Boolean).join(' • ')}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                <View style={(styles as ExportBarStyles).selectedOrderActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Поднять ${travel.name || 'путешествие'} выше`}
-                    disabled={index === 0}
-                    onPress={() => moveSelected(travel.id ?? travel.slug ?? index, 'up')}
-                    style={[
-                      (styles as ExportBarStyles).selectedOrderActionButton,
-                      index === 0 && (styles as ExportBarStyles).selectedOrderActionButtonDisabled,
-                    ]}
-                  >
-                    <Feather
-                      name="chevron-up"
-                      size={16}
-                      color={index === 0 ? colors.textTertiary : colors.text}
-                    />
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`Опустить ${travel.name || 'путешествие'} ниже`}
-                    disabled={index === selected.length - 1}
-                    onPress={() => moveSelected(travel.id ?? travel.slug ?? index, 'down')}
-                    style={[
-                      (styles as ExportBarStyles).selectedOrderActionButton,
-                      index === selected.length - 1 &&
-                        (styles as ExportBarStyles).selectedOrderActionButtonDisabled,
-                    ]}
-                  >
-                    <Feather
-                      name="chevron-down"
-                      size={16}
-                      color={index === selected.length - 1 ? colors.textTertiary : colors.text}
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            ))}
+          <View style={(styles as ExportBarStyles).selectedOrderScroller}>
+            <ScrollView
+              horizontal={isMobile || Platform.OS === 'web'}
+              showsHorizontalScrollIndicator={Platform.OS === 'web'}
+              showsVerticalScrollIndicator={!isMobile && Platform.OS !== 'web'}
+              contentContainerStyle={
+                isMobile || Platform.OS === 'web'
+                  ? selectedOrderListStyle
+                  : (styles as ExportBarStyles).selectedOrderGrid
+              }
+            >
+              {selected.map((travel, index) => (
+                <SelectedTravelOrderCard
+                  key={String(travel.id ?? travel.slug ?? `${travel.name}-${index}`)}
+                  travel={travel}
+                  itemId={String(travel.id ?? travel.slug ?? index)}
+                  index={index}
+                  isMobile={isMobile}
+                  styles={styles as ExportBarStyles}
+                  isDragging={draggedId === String(travel.id ?? travel.slug ?? index)}
+                  isDropTarget={dropTargetId === String(travel.id ?? travel.slug ?? index)}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < selected.length - 1}
+                  onMoveUp={() => moveSelected(travel.id ?? travel.slug ?? index, 'up')}
+                  onMoveDown={() => moveSelected(travel.id ?? travel.slug ?? index, 'down')}
+                  onDragStart={() => setDraggedId(String(travel.id ?? travel.slug ?? index))}
+                  onDragEnter={() => {
+                    if (!draggedId || draggedId === String(travel.id ?? travel.slug ?? index)) return;
+                    setDropTargetId(String(travel.id ?? travel.slug ?? index));
+                  }}
+                  onDrop={(sourceId) => {
+                    const currentId = String(travel.id ?? travel.slug ?? index);
+                    const effectiveDraggedId = String(sourceId || draggedId || '');
+                    if (!effectiveDraggedId || effectiveDraggedId === currentId) {
+                      setDraggedId(null);
+                      setDropTargetId(null);
+                      return;
+                    }
+                    moveSelectedTo(effectiveDraggedId, currentId);
+                    setDraggedId(null);
+                    setDropTargetId(null);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedId(null);
+                    setDropTargetId(null);
+                  }}
+                />
+              ))}
+            </ScrollView>
           </View>
         </View>
       ) : null}

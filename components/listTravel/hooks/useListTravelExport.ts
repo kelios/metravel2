@@ -15,6 +15,7 @@ export interface UseListTravelExportReturn {
   toggleSelectAll: () => void;
   clearSelection: () => void;
   moveSelected: (id: number | string, direction: 'up' | 'down') => void;
+  moveSelectedTo: (id: number | string, targetId: number | string) => void;
   isSelected: (id: number | string) => boolean;
   hasSelection: boolean;
   selectionCount: number;
@@ -98,6 +99,19 @@ export function useListTravelExport(
     });
   }, []);
 
+  const moveSelectedTo = useCallback((id: number | string, targetId: number | string) => {
+    setSelected((prev) => {
+      const sourceIndex = prev.findIndex((item) => String(item.id ?? item.slug) === String(id));
+      const targetIndex = prev.findIndex((item) => String(item.id ?? item.slug) === String(targetId));
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return prev;
+
+      const next = [...prev];
+      const [item] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, item);
+      return next;
+    });
+  }, []);
+
   const selectedIds = useMemo(() => new Set((selected || []).map((item) => String(item.id ?? item.slug))), [selected]);
 
   const isSelected = useCallback(
@@ -158,6 +172,7 @@ export function useListTravelExport(
     toggleSelectAll,
     clearSelection,
     moveSelected,
+    moveSelectedTo,
     isSelected,
     hasSelection: selectionCount > 0,
     selectionCount,

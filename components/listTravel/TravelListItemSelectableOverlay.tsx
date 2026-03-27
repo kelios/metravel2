@@ -21,23 +21,21 @@ export default function TravelListItemSelectableOverlay({
   styles,
   colors,
 }: Props) {
+  const checkboxLabel = isSelected ? 'Убрать из выбранного' : 'Выбрать'
+
   return (
     <View style={[styles.checkWrap, { pointerEvents: 'auto' }] as any}>
       {isWeb ? (
-        React.createElement(
-          'div',
-          {
+        <View
+          {...({
             role: 'checkbox',
             'aria-checked': isSelected,
-            'aria-label': isSelected ? 'Убрать из выбранного' : 'Выбрать',
+            'aria-label': checkboxLabel,
             tabIndex: 0,
             testID: 'selection-checkbox',
             'data-testid': 'selection-checkbox',
             onClick: (e: MouseEvent) => {
               handleSelectableWebActivate(e, 'click')
-            },
-            onTouchStart: (e: TouchEvent) => {
-              e.stopPropagation?.()
             },
             onTouchEnd: (e: TouchEvent) => {
               handleSelectableWebActivate(e, 'touch')
@@ -47,16 +45,17 @@ export default function TravelListItemSelectableOverlay({
               handleSelectableWebActivate(e, 'key')
             },
             onMouseDown: (e: MouseEvent) => e.stopPropagation?.(),
-            style: { cursor: 'pointer' },
-          },
+          } as any)}
+          style={[styles.checkboxHitTarget ?? null, { cursor: 'pointer' } as any]}
+        >
           <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
             {isSelected && <Feather name="check" size={14} color={colors.textOnPrimary} />}
-          </View>,
-        )
+          </View>
+        </View>
       ) : (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isSelected ? 'Убрать из выбранного' : 'Выбрать'}
+          accessibilityLabel={checkboxLabel}
           testID="selection-checkbox"
           {...({ onPress: handlePress } as any)}
         >

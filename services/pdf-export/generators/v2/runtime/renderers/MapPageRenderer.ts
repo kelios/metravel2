@@ -40,7 +40,7 @@ export class RuntimeMapRenderer {
         ${this.renderRouteSummary(data, locationCount)}
         <div style="margin-bottom: 4mm; page-break-inside: avoid; break-inside: avoid;">
           <div style="
-            background: linear-gradient(135deg, ${colors.surfaceAlt} 0%, ${colors.surface} 100%);
+            background: ${colors.surface};
             border-radius: ${this.ctx.theme.blocks.borderRadius};
             padding: 10px;
             border: ${this.ctx.theme.blocks.borderWidth} solid ${colors.border};
@@ -50,10 +50,11 @@ export class RuntimeMapRenderer {
               border-radius: ${this.ctx.theme.blocks.borderRadius};
               overflow: hidden;
               height: ${mapHeightMm}mm;
+              background: ${colors.surfaceAlt};
             ">
               ${data.snapshotDataUrl ? `
                 <img src="${escapeHtml(data.snapshotDataUrl)}" alt="Карта маршрута"
-                  style="width: 100%; height: 100%; display: block; object-fit: cover; ${getImageFilterStyle(this.ctx)}" />
+                  style="width: 100%; height: 100%; display: block; object-fit: contain; object-position: center center; ${getImageFilterStyle(this.ctx)}" />
               ` : `
                 ${data.mapSvg}
               `}
@@ -274,9 +275,9 @@ export class RuntimeMapRenderer {
       if (delta < 0) descent += Math.abs(delta)
     }
 
-    const chartWidth = 180
-    const chartHeight = 40
-    const padding = 2
+    const chartWidth = 220
+    const chartHeight = 96
+    const padding = 10
 
     const polylinePoints = samples
       .map((sample) => {
@@ -286,13 +287,23 @@ export class RuntimeMapRenderer {
       })
       .join(' ')
 
+    const areaPath = samples
+      .map((sample, index) => {
+        const x = padding + (sample.distanceKm / Math.max(0.001, totalDistanceKm)) * (chartWidth - padding * 2)
+        const y = padding + (1 - (sample.elevationM - minElevation) / elevationRange) * (chartHeight - padding * 2)
+        return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
+      })
+      .join(' ')
+
+    const guideValues = [maxElevation, minElevation + elevationRange / 2, minElevation]
     const round = (v: number) => Math.round(v * 10) / 10
+    const gradientId = `elev-fill-${Math.round(minElevation)}-${Math.round(maxElevation)}-${samples.length}`
 
     return `
       <div style="
         margin-bottom: 4mm;
-        padding: 8px 10px;
-        background: ${colors.surfaceAlt};
+        padding: 10px;
+        background: ${colors.surface};
         border-radius: ${this.ctx.theme.blocks.borderRadius};
         border: ${this.ctx.theme.blocks.borderWidth} solid ${colors.border};
         page-break-inside: avoid;
@@ -300,69 +311,134 @@ export class RuntimeMapRenderer {
       ">
         <div style="
           font-size: 9pt;
-          font-weight: 600;
+          font-weight: 700;
           color: ${colors.text};
-          margin-bottom: 6px;
+          margin-bottom: 3px;
           font-family: ${typography.headingFont};
         ">Профиль высот</div>
-        <div style="display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;">
-          <svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width: 100%; max-width: 120mm; height: 30mm; flex-shrink: 0;">
+        <div style="
+          font-size: ${typography.caption.size};
+          line-height: 1.45;
+          color: ${colors.textMuted};
+          margin-bottom: 8px;
+          font-family: ${typography.bodyFont};
+        ">${escapeHtml(`${round(totalDistanceKm)} км • ${Math.round(ascent)} м набора • ${Math.round(descent)} м сброса`)}</div>
+        <div style="
+          position: relative;
+          border-radius: 14px;
+          border: 1px solid ${colors.border};
+          background: ${colors.surfaceAlt};
+          padding: 10px 10px 8px;
+          overflow: hidden;
+          margin-bottom: 8px;
+        ">
+          <div style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+          ">
+            <span style="
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              padding: 4px 8px;
+              border-radius: 999px;
+              background: ${colors.surface};
+              border: 1px solid ${colors.borderLight};
+              color: ${colors.text};
+              font-size: ${typography.caption.size};
+              font-weight: 700;
+              font-family: ${typography.bodyFont};
+            ">Мин. ${round(minElevation)} м</span>
+            <span style="
+              display: inline-flex;
+              align-items: center;
+              gap: 4px;
+              padding: 4px 8px;
+              border-radius: 999px;
+              background: ${colors.accentSoft};
+              border: 1px solid ${colors.accentLight};
+              color: ${colors.text};
+              font-size: ${typography.caption.size};
+              font-weight: 700;
+              font-family: ${typography.bodyFont};
+            ">Макс. ${round(maxElevation)} м</span>
+          </div>
+          <div style="position: relative;">
+            <svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width: 100%; height: 40mm; display: block;">
             <defs>
-              <linearGradient id="elev-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="${colors.accent}" stop-opacity="0.2"/>
-                <stop offset="100%" stop-color="${colors.accent}" stop-opacity="0.02"/>
+              <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="${colors.accent}" stop-opacity="0.26"/>
+                <stop offset="100%" stop-color="${colors.accent}" stop-opacity="0.04"/>
               </linearGradient>
             </defs>
-            <polygon
-              points="${padding},${chartHeight} ${polylinePoints} ${chartWidth - padding},${chartHeight}"
-              fill="url(#elev-fill)"
+            ${guideValues.map((value) => {
+              const progress = elevationRange <= 0 ? 0 : (maxElevation - value) / elevationRange
+              const y = padding + (chartHeight - padding * 2) * progress
+              return `
+                <line
+                  x1="${padding}"
+                  y1="${y.toFixed(1)}"
+                  x2="${chartWidth - padding}"
+                  y2="${y.toFixed(1)}"
+                  stroke="${colors.borderLight}"
+                  stroke-width="1"
+                  stroke-dasharray="3 4"
+                  opacity="0.75"
+                />
+              `
+            }).join('')}
+            <path
+              d="${areaPath} L ${(chartWidth - padding).toFixed(1)} ${(chartHeight - padding).toFixed(1)} L ${padding.toFixed(1)} ${(chartHeight - padding).toFixed(1)} Z"
+              fill="url(#${gradientId})"
             />
             <polyline
               points="${polylinePoints}"
               fill="none"
               stroke="${colors.accent}"
-              stroke-width="1.5"
+              stroke-width="2.6"
               stroke-linejoin="round"
               stroke-linecap="round"
             />
           </svg>
-          <div style="
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 6px;
-            min-width: 42mm;
-            flex: 1;
-          ">
-            ${[
-              { label: 'Мин.', value: `${round(minElevation)} м` },
-              { label: 'Макс.', value: `${round(maxElevation)} м` },
-              { label: 'Набор', value: `${round(ascent)} м` },
-              { label: 'Сброс', value: `${round(descent)} м` },
-            ].map((metric) => `
-              <div style="
-                padding: 6px 8px;
-                border-radius: 10px;
-                background: ${colors.surface};
-                border: 1px solid ${colors.border};
-              ">
-                <div style="
-                  font-size: ${typography.caption.size};
-                  line-height: 1.2;
-                  color: ${colors.textMuted};
-                  text-transform: uppercase;
-                  letter-spacing: 0.04em;
-                  font-family: ${typography.bodyFont};
-                  margin-bottom: 2px;
-                ">${metric.label}</div>
-                <div style="
-                  font-size: 10pt;
-                  font-weight: 700;
-                  color: ${colors.text};
-                  font-family: ${typography.headingFont};
-                ">${metric.value}</div>
-              </div>
-            `).join('')}
           </div>
+        </div>
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 6px;
+        ">
+          ${[
+            { label: 'Мин.', value: `${round(minElevation)} м` },
+            { label: 'Макс.', value: `${round(maxElevation)} м` },
+            { label: 'Набор', value: `${round(ascent)} м` },
+            { label: 'Сброс', value: `${round(descent)} м` },
+          ].map((metric) => `
+            <div style="
+              padding: 8px 10px;
+              border-radius: 10px;
+              background: ${colors.surface};
+              border: 1px solid ${colors.border};
+            ">
+              <div style="
+                font-size: ${typography.caption.size};
+                line-height: 1.2;
+                color: ${colors.textMuted};
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                font-family: ${typography.bodyFont};
+                margin-bottom: 3px;
+              ">${metric.label}</div>
+              <div style="
+                font-size: 10pt;
+                font-weight: 700;
+                color: ${colors.text};
+                font-family: ${typography.headingFont};
+              ">${metric.value}</div>
+            </div>
+          `).join('')}
         </div>
       </div>
     `

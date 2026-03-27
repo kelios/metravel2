@@ -948,6 +948,7 @@ function ListTravelBase({
       toggleSelectAll,
       clearSelection,
       moveSelected,
+      moveSelectedTo,
       isSelected,
       hasSelection,
       selectionCount,
@@ -1240,6 +1241,7 @@ function ListTravelBase({
                 toggleSelectAll={toggleSelectAll}
                 clearSelection={clearSelection}
                 moveSelected={moveSelected}
+                moveSelectedTo={moveSelectedTo}
                 hasSelection={hasSelection}
                 selectionCount={selectionCount}
                 baseSettings={baseSettings}

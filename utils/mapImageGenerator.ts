@@ -431,13 +431,10 @@ export async function generateLeafletRouteSnapshot(
         markerZoomAnimation: false,
       });
 
-      const tileLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        {
-          attribution: ' OpenStreetMap  CartoDB',
-          crossOrigin: true,
-        }
-      ).addTo(map);
+      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        crossOrigin: true,
+      }).addTo(map);
 
       // Маркеры как в веб-карте + аккуратный номер точки поверх пина
       const latLngs = validPoints.map((p) => L.latLng(p.lat, p.lng));
@@ -570,15 +567,23 @@ export async function generateLeafletRouteSnapshot(
         L.marker(latLng, { icon }).addTo(map);
       });
 
-      // Рисуем линию маршрута из GPX/KML файла, если она есть
+      // Рисуем линию маршрута в той же манере, что и на travel page: светлый halo + основная линия.
       if (validRouteLine.length >= 2) {
         const routeLatLngs = validRouteLine.map(([lat, lng]) => L.latLng(lat, lng));
 
         if (routeLatLngs.length >= 2) {
           L.polyline(routeLatLngs, {
+            color: DESIGN_TOKENS.colors.surface,
+            weight: 8,
+            opacity: 0.95,
+            lineCap: 'round',
+            lineJoin: 'round',
+          }).addTo(map);
+
+          L.polyline(routeLatLngs, {
             color: DESIGN_TOKENS.colors.accent,
-            weight: 4,
-            opacity: 0.85,
+            weight: 5,
+            opacity: 1,
             lineCap: 'round',
             lineJoin: 'round',
           }).addTo(map);
@@ -596,7 +601,7 @@ export async function generateLeafletRouteSnapshot(
       if (allBoundsLatLngs.length > 0) {
         const bounds = L.latLngBounds(allBoundsLatLngs);
         if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [28, 28], animate: false });
+          map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 15 });
         }
       }
 

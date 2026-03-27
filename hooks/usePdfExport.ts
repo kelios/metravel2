@@ -81,6 +81,7 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
       await runtime.runPdfExport({
         selected,
         settings,
+        config,
         travelCacheRef,
         isMountedRef,
         setIsGenerating,
@@ -89,7 +90,7 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
         updateProgress,
       });
     },
-    [loadRuntimeModule, selected, updateProgress],
+    [config, loadRuntimeModule, selected, updateProgress],
   );
 
   return useMemo(() => ({

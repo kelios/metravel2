@@ -512,8 +512,8 @@ export class EnhancedPdfGeneratorBase {
             label: location.address,
           })),
           {
-            width: 1400,
-            height: 900,
+            width: 1600,
+            height: 1040,
             routeLine: hasRouteLineForMap ? routeLineCoords : undefined,
           }
         );

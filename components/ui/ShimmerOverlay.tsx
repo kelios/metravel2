@@ -38,8 +38,9 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
   if (Platform.OS === 'web') {
     return (
       <View
-        style={baseStyle}
         testID={testID}
+        style={baseStyle}
+        {...(testID ? ({ 'data-testid': testID } as any) : {})}
       >
         <View style={shimmerStyles.overflow}>
           <View

@@ -4,6 +4,7 @@ import type { MutableRefObject } from 'react';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage } from '@/types/pdf-export';
+import type { ExportConfig } from '@/types/pdf-export';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
 
@@ -18,6 +19,7 @@ type UpdateProgress = (
 type RunPdfExportOptions = {
   selected: Travel[];
   settings: BookSettings;
+  config?: ExportConfig;
   travelCacheRef: MutableRefObject<Record<string | number, Travel>>;
   isMountedRef: MutableRefObject<boolean>;
   setIsGenerating: (value: boolean) => void;
@@ -28,6 +30,8 @@ type RunPdfExportOptions = {
 
 let bookHtmlExportServicePromise: Promise<BookHtmlExportService> | null = null;
 let bookPreviewWindowModulePromise: Promise<typeof import('@/utils/openBookPreviewWindow')> | null = null;
+const DEFAULT_BATCH_SIZE = 3;
+const DEFAULT_MAX_RETRIES = 2;
 
 async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
   if (!bookHtmlExportServicePromise) {
@@ -57,15 +61,22 @@ export async function prewarmPdfExportRuntime(): Promise<void> {
   await getBookHtmlExportService();
 }
 
-function needsDetails(travel: Travel) {
+function isNonEmptyArray(value: unknown): value is unknown[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function needsDetails(travel: Travel, settings: BookSettings) {
   const partial = travel as Partial<Travel>;
+  const galleryIsReady = !settings.includeGallery || isNonEmptyArray(partial.gallery);
+  const mapIsReady = !settings.includeMap || isNonEmptyArray(partial.travelAddress);
+
   return (
     typeof partial.description === 'undefined' ||
     typeof partial.recommendation === 'undefined' ||
     typeof partial.plus === 'undefined' ||
     typeof partial.minus === 'undefined' ||
-    typeof partial.gallery === 'undefined' ||
-    typeof partial.travelAddress === 'undefined' ||
+    !galleryIsReady ||
+    !mapIsReady ||
     typeof (partial as unknown as { travel_image_url?: string }).travel_image_url === 'undefined'
   );
 }
@@ -85,53 +96,79 @@ function mergeTravelData(base: Travel, detailed: Travel): Travel {
 
 async function loadDetailedTravels(
   selected: Travel[],
+  settings: BookSettings,
+  config: ExportConfig | undefined,
   travelCacheRef: MutableRefObject<Record<string | number, Travel>>,
+  updateProgress?: UpdateProgress,
 ): Promise<Travel[]> {
   if (!selected?.length) return [];
 
-  return Promise.all(
-    selected.map(async (travel) => {
-      const cacheKey = travel.id ?? travel.slug ?? travel.url;
+  const batchSize = Math.max(1, config?.batchSize ?? DEFAULT_BATCH_SIZE);
+  const maxRetries = Math.max(0, config?.maxRetries ?? DEFAULT_MAX_RETRIES);
+  const results: Travel[] = [];
 
-      if (cacheKey && travelCacheRef.current[cacheKey]) {
-        return mergeTravelData(travel, travelCacheRef.current[cacheKey]);
+  for (let start = 0; start < selected.length; start += batchSize) {
+    const batch = selected.slice(start, start + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(async (travel) => {
+      const cacheKey = travel.id ?? travel.slug ?? travel.url;
+      const cachedTravel = cacheKey ? travelCacheRef.current[cacheKey] : undefined;
+
+      if (cachedTravel && !needsDetails(cachedTravel, settings)) {
+        return mergeTravelData(travel, cachedTravel);
       }
 
-      if (!needsDetails(travel)) {
+      if (!needsDetails(travel, settings)) {
         if (cacheKey) {
           travelCacheRef.current[cacheKey] = travel;
         }
         return travel;
       }
 
-      try {
-        const numericId = Number(travel.id);
-        let detailed: Travel;
+      for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+        try {
+          const numericId = Number(travel.id);
+          let detailed: Travel;
 
-        if (!Number.isNaN(numericId)) {
-          detailed = await fetchTravel(numericId);
-        } else if (travel.slug) {
-          detailed = await fetchTravelBySlug(travel.slug);
-        } else {
-          detailed = travel;
-        }
+          if (!Number.isNaN(numericId)) {
+            detailed = await fetchTravel(numericId);
+          } else if (travel.slug) {
+            detailed = await fetchTravelBySlug(travel.slug);
+          } else {
+            detailed = travel;
+          }
 
-        const merged = mergeTravelData(travel, detailed);
-        if (cacheKey) {
-          travelCacheRef.current[cacheKey] = merged;
+          const merged = mergeTravelData(travel, detailed);
+          if (cacheKey) {
+            travelCacheRef.current[cacheKey] = merged;
+          }
+          return merged;
+        } catch (error) {
+          if (attempt === maxRetries) {
+            console.warn('[usePdfExport] Не удалось загрузить детали путешествия', travel.id, error);
+            return travel;
+          }
         }
-        return merged;
-      } catch (error) {
-        console.warn('[usePdfExport] Не удалось загрузить детали путешествия', travel.id, error);
-        return travel;
       }
     }),
-  );
+    );
+
+    results.push(...batchResults);
+    updateProgress?.(
+      ExportStage.VALIDATING,
+      Math.min(5, 2 + Math.round((results.length / selected.length) * 3)),
+      'Проверка данных...',
+      [`Путешествия (${results.length}/${selected.length})`],
+    );
+  }
+
+  return results;
 }
 
 export async function runPdfExport({
   selected,
   settings,
+  config,
   travelCacheRef,
   isMountedRef,
   setIsGenerating,
@@ -162,7 +199,7 @@ export async function runPdfExport({
   try {
     updateProgress(ExportStage.VALIDATING, 2, 'Проверка данных...', ['Проверка путешествий']);
 
-    const travelsForExport = await loadDetailedTravels(selected, travelCacheRef);
+    const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);
     if (!travelsForExport.length) {
       Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
       return;

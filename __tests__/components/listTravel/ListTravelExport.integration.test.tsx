@@ -122,6 +122,7 @@ jest.mock('@/components/listTravel/hooks/useListTravelExport', () => ({
     toggleSelectAll: jest.fn(),
     clearSelection: jest.fn(),
     moveSelected: jest.fn(),
+    moveSelectedTo: jest.fn(),
     isSelected: () => true,
     hasSelection: true,
     selectionCount: 1,

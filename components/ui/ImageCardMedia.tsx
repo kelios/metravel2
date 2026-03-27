@@ -735,7 +735,8 @@ function ImageCardMedia({
         },
         style,
       ]}
-      testID={testID}
+      {...(Platform.OS === 'web' && testID ? ({ 'data-testid': testID } as any) : {})}
+      testID={Platform.OS === 'web' ? undefined : testID}
     >
       {resolvedSource && !shouldDisableNetwork ? (
         <>

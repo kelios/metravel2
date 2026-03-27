@@ -87,8 +87,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         ]}
                         {...Platform.select({
                             web: {
-                                // @ts-ignore -- testID is a web-only test attribute not in RN View types
-                                testID: 'confirm-dialog',
+                                'data-testid': 'confirm-dialog',
                                 // @ts-ignore -- role dialog is a web-only ARIA role not in RN View types
                                 role: 'dialog',
                                 // @ts-ignore -- aria-modal is a web-only ARIA attribute not in RN View types
