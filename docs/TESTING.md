@@ -11,6 +11,22 @@ Run canonical governance checks from repo root:
 - `yarn guard:external-links`
 - `npm run guard:external-links`
 
+## Local selective checks
+
+Use the same changed-file selective rules locally before a full run:
+
+- `npm run check:changed`
+- `npm run check:changed:dry`
+- `npm run check:changed:json`
+- `node scripts/run-local-selective-checks.js --base-ref origin/main --dry-run --json`
+
+Behavior:
+
+- without args, the command scans staged, unstaged, and untracked files from the current git working tree;
+- `--base-ref <ref>` compares `HEAD` against `git merge-base HEAD <ref>`;
+- `--changed-files-file <path>` reuses an explicit newline-separated file list;
+- dry-run JSON returns both selective decisions in one payload, which makes CI/local diagnostics easier to compare.
+
 ## Validator Contracts
 
 - Local helper commands:

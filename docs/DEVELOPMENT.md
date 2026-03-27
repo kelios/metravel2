@@ -41,6 +41,8 @@ npm run android
 ## Useful scripts
 
 - `npm run lint` — ESLint.
+- `npm run check:changed` — локально прогоняет selective schema/validator checks по текущим изменённым файлам в git working tree.
+- `npm run check:changed:dry` — показывает, какие selective checks сработают, без запуска самих тестов.
 - `npm run governance:verify` — runs external-link guards and governance test suite.
 - `npm run guard:external-links` — runs both external-link guards.
 - Canonical governance command reference: `docs/TESTING.md#governance-commands`.
@@ -51,6 +53,14 @@ npm run android
 - `npm run check:image-architecture` — enforces image/card architecture rules (also runs in `npm run test:ci`).
 - `./build-dev.sh` — full dev web build + deploy to dev server (`DEPLOY=0` to skip deploy).
 - `./build-prod.sh [dev|preprod|prod]` — production-mode web export into `dist/<env>`, SEO/public-files post-processing, and deploy to prod server by default (`DEPLOY=0` for build-only, `CLEAN=1` to reinstall deps).
+
+Local selective workflow:
+
+```bash
+npm run check:changed
+npm run check:changed:dry
+node scripts/run-local-selective-checks.js --base-ref origin/main --dry-run --json
+```
 
 ## Route point from photo
 
