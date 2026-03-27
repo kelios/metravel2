@@ -35,6 +35,10 @@ export type Travel = {
     rating?: number | null
     rating_count?: number
     user_rating?: number | null
+    comment_count?: number | null
+    comments_count?: number | null
+    thread_id?: number | null
+    comment_thread_id?: number | null
     // ✅ ИСПРАВЛЕНО: Поддержка обоих форматов для обратной совместимости
     gallery: GalleryItem[]
     travelAddress: TravelAddressItem[]

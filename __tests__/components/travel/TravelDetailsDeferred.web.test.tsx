@@ -359,4 +359,70 @@ describe('TravelDeferredSections (web author defer)', () => {
 
     expect(mockCommentsSectionSpy).toHaveBeenCalled()
   })
+
+  it('passes comment availability flag based on travel metadata', async () => {
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
+
+    const travel: any = {
+      id: 5,
+      name: 'Deferred comments metadata travel',
+      description: '<p>Test description</p>',
+      gallery: [],
+      youtube_link: null,
+      recommendation: '',
+      plus: '',
+      minus: '',
+      rating: 0,
+      rating_count: 0,
+      user_rating: null,
+      comments_count: null,
+      comment_count: null,
+      thread_id: null,
+      comment_thread_id: null,
+    }
+
+    const anchors: any = {
+      description: { current: null },
+      video: { current: null },
+      comments: { current: null },
+      map: { current: null },
+      gallery: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    await act(async () => {
+      renderer.create(
+        <Suspense fallback={null}>
+          <TravelDeferredSections
+            travel={travel}
+            isMobile={false}
+            forceOpenKey={null}
+            anchors={anchors}
+            scrollY={new Animated.Value(0)}
+            viewportHeight={900}
+            scrollToMapSection={() => {}}
+          />
+        </Suspense>,
+      )
+      await Promise.resolve()
+    })
+
+    expect(mockCommentsSectionSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        [
+          expect.objectContaining({
+            canLoadComments: false,
+            lazyLoad: true,
+          }),
+          undefined,
+        ],
+      ]),
+    )
+  })
 })

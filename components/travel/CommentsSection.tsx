@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
+import { Platform, View, Text, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -9,6 +9,7 @@ import { CommentItem } from './CommentItem';
 import { CommentForm } from './CommentForm';
 import { useCommentsData } from '@/hooks/useCommentsData';
 import type { TravelComment } from '@/types/comments';
+import { createCommentsSectionStyles } from './CommentsSection.styles';
 
 interface CommentsSectionProps {
   travelId: number;
@@ -24,7 +25,7 @@ export function CommentsSection({
   canLoadComments = true,
 }: CommentsSectionProps) {
   const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createCommentsSectionStyles(colors), [colors]);
   const [isEnabled, setIsEnabled] = useState(lazyLoad ? autoload : true);
 
   useEffect(() => {
@@ -213,110 +214,3 @@ export function CommentsSection({
     </View>
   );
 }
-
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
-  container: {
-    flex: 1, backgroundColor: colors.surface,
-    padding: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: DESIGN_TOKENS.spacing.lg }),
-    borderRadius: DESIGN_TOKENS.radii.md, borderWidth: 1, borderColor: colors.borderLight,
-  },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xl },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm,
-    marginBottom: DESIGN_TOKENS.spacing.lg, paddingBottom: DESIGN_TOKENS.spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.borderLight,
-  },
-  title: {
-    fontSize: Platform.select({ default: 20, web: 22 }),
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold, color: colors.text, letterSpacing: -0.3,
-  },
-  loginPrompt: {
-    backgroundColor: colors.primarySoft, borderRadius: DESIGN_TOKENS.radii.md,
-    padding: DESIGN_TOKENS.spacing.md, marginBottom: DESIGN_TOKENS.spacing.md,
-    alignItems: 'center', borderWidth: 1, borderColor: colors.primaryAlpha30,
-    ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.2s ease' } as any }),
-  },
-  loginPromptRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.sm },
-  loginText: { fontSize: DESIGN_TOKENS.typography.sizes.md - 1, color: colors.primaryText, fontWeight: DESIGN_TOKENS.typography.weights.medium },
-  loadPrompt: {
-    gap: DESIGN_TOKENS.spacing.sm,
-    padding: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  loadPromptText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-    lineHeight: 20,
-  },
-  loadPromptButton: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
-    ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } as any }),
-  },
-  loadPromptButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.primaryText,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
-  },
-  errorBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs,
-    paddingVertical: DESIGN_TOKENS.spacing.sm, paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.md, borderRadius: DESIGN_TOKENS.radii.sm,
-    backgroundColor: colors.warningSoft, borderWidth: 1, borderColor: colors.warningAlpha40,
-  },
-  errorBannerText: { flex: 1, fontSize: DESIGN_TOKENS.typography.sizes.sm, color: colors.warning, fontWeight: DESIGN_TOKENS.typography.weights.medium },
-  errorBannerButton: {
-    paddingVertical: DESIGN_TOKENS.spacing.xxs, paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    borderRadius: DESIGN_TOKENS.radii.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.warningAlpha40,
-  },
-  errorBannerButtonText: { fontSize: DESIGN_TOKENS.typography.sizes.sm - 1, color: colors.warning, fontWeight: DESIGN_TOKENS.typography.weights.semibold },
-  commentsList: { flex: 1 },
-  emptyState: { alignItems: 'center', paddingVertical: DESIGN_TOKENS.spacing.xxl, paddingHorizontal: DESIGN_TOKENS.spacing.lg },
-  emptyText: {
-    fontSize: Platform.select({ default: 17, web: 18 }), fontWeight: DESIGN_TOKENS.typography.weights.semibold,
-    color: colors.textMuted, marginTop: DESIGN_TOKENS.spacing.md, letterSpacing: -0.2,
-  },
-  emptySubtext: { fontSize: DESIGN_TOKENS.typography.sizes.sm, color: colors.textTertiary, marginTop: DESIGN_TOKENS.spacing.xs, textAlign: 'center', lineHeight: 20 },
-  threadControls: { flexDirection: 'row', gap: DESIGN_TOKENS.spacing.sm, marginBottom: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.xs },
-  threadControlButton: {
-    flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs,
-    paddingVertical: 6, paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: colors.backgroundSecondary, borderRadius: DESIGN_TOKENS.radii.pill,
-    borderWidth: 1, borderColor: colors.borderLight,
-    ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } as any }),
-  },
-  threadControlText: { fontSize: DESIGN_TOKENS.typography.sizes.sm, color: colors.primaryText, fontWeight: DESIGN_TOKENS.typography.weights.medium },
-  commentThread: { marginBottom: DESIGN_TOKENS.spacing.md },
-  toggleThreadButton: {
-    flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs,
-    paddingVertical: DESIGN_TOKENS.spacing.sm, paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    marginLeft: DESIGN_TOKENS.spacing.xl, marginTop: DESIGN_TOKENS.spacing.xs, marginBottom: DESIGN_TOKENS.spacing.xs,
-  },
-  threadLine: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 2, backgroundColor: colors.primaryAlpha30 },
-  toggleThreadText: { fontSize: DESIGN_TOKENS.typography.sizes.sm, color: colors.primaryText, fontWeight: DESIGN_TOKENS.typography.weights.medium },
-  repliesContainer: { marginLeft: DESIGN_TOKENS.spacing.md, paddingLeft: DESIGN_TOKENS.spacing.md, borderLeftWidth: 2, borderLeftColor: colors.border },
-  nestedRepliesContainer: { marginLeft: DESIGN_TOKENS.spacing.lg, paddingLeft: DESIGN_TOKENS.spacing.md, borderLeftWidth: 2, borderLeftColor: colors.borderLight, marginTop: DESIGN_TOKENS.spacing.xs },
-  parentChainContainer: {
-    backgroundColor: colors.surfaceAlpha40, borderRadius: DESIGN_TOKENS.radii.sm,
-    padding: DESIGN_TOKENS.spacing.sm, marginBottom: DESIGN_TOKENS.spacing.sm,
-    borderLeftWidth: 3, borderLeftColor: colors.primaryAlpha50,
-  },
-  parentChainHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.xs, paddingBottom: DESIGN_TOKENS.spacing.xs,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  parentChainLabel: { fontSize: DESIGN_TOKENS.typography.sizes.sm, color: colors.textMuted, fontStyle: 'italic' },
-});

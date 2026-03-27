@@ -372,6 +372,54 @@ describe('CommentsSection', () => {
     });
   });
 
+  describe('Lazy loading guard', () => {
+    beforeEach(() => {
+      mockUseAuth.mockReturnValue({
+        isAuthenticated: false,
+        userId: null,
+        username: '',
+        isSuperuser: false,
+        userAvatar: null,
+        authReady: true,
+        profileRefreshToken: 0,
+        setIsAuthenticated: jest.fn(),
+        setUsername: jest.fn(),
+        setIsSuperuser: jest.fn(),
+        setUserId: jest.fn(),
+        setUserAvatar: jest.fn(),
+        triggerProfileRefresh: jest.fn(),
+        logout: jest.fn(),
+        login: jest.fn(),
+        sendPassword: jest.fn(),
+        setNewPassword: jest.fn(),
+      });
+
+      mockUseMainThread.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      } as any);
+
+      mockUseTravelComments.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      } as any);
+    });
+
+    it('shows unavailable state instead of load button when comments cannot be loaded', () => {
+      render(
+        <CommentsSection travelId={123} lazyLoad canLoadComments={false} />,
+        { wrapper }
+      );
+
+      expect(screen.getByText('Комментарии сейчас недоступны для этого маршрута.')).toBeTruthy();
+      expect(screen.queryByText('Загрузить комментарии')).toBeNull();
+    });
+  });
+
   describe('Comment organization', () => {
     beforeEach(() => {
       mockUseAuth.mockReturnValue({

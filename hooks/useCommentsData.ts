@@ -13,6 +13,11 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import type { TravelComment } from '@/types/comments';
+import {
+  buildCommentThreadModel,
+  findTopLevelAncestor as findCommentTopLevelAncestor,
+  getCommentParentChain,
+} from './comments/commentThreadModel';
 
 export function useCommentsData(travelId: number, options?: { enabled?: boolean }) {
   const { isAuthenticated } = useAuth();
@@ -46,68 +51,20 @@ export function useCommentsData(travelId: number, options?: { enabled?: boolean 
 
   // Thread structure
   const { topLevel, replies, allComments, subThreadToParent } = useMemo(() => {
-    const _topLevel: TravelComment[] = [];
-    const _replies: Record<number, TravelComment[]> = {};
-    const _allComments: Record<number, TravelComment> = {};
-
-    comments.forEach((c) => { _allComments[c.id] = c; });
-
-    const _subThreadToParent: Record<number, number> = {};
-    comments.forEach((c) => {
-      const st = typeof c.sub_thread === 'string' ? Number(c.sub_thread) : c.sub_thread;
-      if (typeof st === 'number' && !Number.isNaN(st) && st > 0) {
-        _subThreadToParent[st] = c.id;
-      }
-    });
-
-    comments.forEach((c) => {
-      const parentId = _subThreadToParent[c.thread];
-      if (typeof parentId === 'number' && parentId !== c.id && !!_allComments[parentId]) {
-        (_replies[parentId] ??= []).push(c);
-        return;
-      }
-      _topLevel.push(c);
-    });
-
-    if (_topLevel.length === 0 && comments.length > 0) {
-      if (!didWarnAllSubThread.current) {
-        console.warn('BUG: All comments ended up as replies! Showing them anyway.');
-        didWarnAllSubThread.current = true;
-      }
-      return { topLevel: comments, replies: {} as Record<number, TravelComment[]>, allComments: _allComments, subThreadToParent: _subThreadToParent };
+    const model = buildCommentThreadModel(comments, didWarnAllSubThread.current)
+    if (model.warnedAllSubThread && !didWarnAllSubThread.current && comments.length > 0) {
+      console.warn('BUG: All comments ended up as replies! Showing them anyway.')
+      didWarnAllSubThread.current = true
     }
-
-    return { topLevel: _topLevel, replies: _replies, allComments: _allComments, subThreadToParent: _subThreadToParent };
+    return model
   }, [comments]);
 
   const findTopLevelAncestor = useCallback((commentId: number): number | null => {
-    const visited = new Set<number>();
-    let current = allComments[commentId];
-    if (!current) return commentId;
-    while (current) {
-      if (visited.has(current.id)) break;
-      visited.add(current.id);
-      const parentId = subThreadToParent[current.thread];
-      if (typeof parentId !== 'number' || parentId === current.id || !allComments[parentId]) return current.id;
-      current = allComments[parentId];
-    }
-    return commentId;
+    return findCommentTopLevelAncestor(commentId, allComments, subThreadToParent)
   }, [allComments, subThreadToParent]);
 
   const getParentChain = useCallback((commentId: number): TravelComment[] => {
-    const chain: TravelComment[] = [];
-    const visited = new Set<number>();
-    let currentComment = allComments[commentId];
-    while (currentComment) {
-      if (visited.has(currentComment.id)) break;
-      visited.add(currentComment.id);
-      const parentId = subThreadToParent[currentComment.thread];
-      if (typeof parentId !== 'number' || parentId === currentComment.id) break;
-      const parentComment = allComments[parentId];
-      if (parentComment) { chain.unshift(parentComment); currentComment = parentComment; }
-      else break;
-    }
-    return chain;
+    return getCommentParentChain(commentId, allComments, subThreadToParent)
   }, [allComments, subThreadToParent]);
 
   // Handlers

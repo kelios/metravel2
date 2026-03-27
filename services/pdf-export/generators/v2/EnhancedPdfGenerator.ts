@@ -10,49 +10,31 @@ import { StyleGenerator } from './builders/StyleGenerator';
 import { PageGeneratorFactory } from './factories/PageGeneratorFactory';
 import { pickRandomQuote } from '../../quotes/travelQuotes';
 import { defaultConfig } from './config/defaults';
-
-// Импортируем старый генератор для делегирования
-import { EnhancedPdfGenerator as V1Generator } from '../EnhancedPdfGenerator';
+import { EnhancedPdfGenerator as LegacyEnhancedPdfGenerator } from '../v1/LegacyEnhancedPdfGenerator';
 
 /**
  * Улучшенный генератор PDF v2
  * Использует модульную архитектуру с отдельными генераторами страниц
  *
  * ФАЗА 4: Полная интеграция с фабрикой генераторов
+ *
+ * Пока основная логика generation наследуется из legacy-реализации,
+ * но ownership публичного entrypoint уже закреплен за v2.
  */
-export class EnhancedPdfGenerator {
-  private theme: ReturnType<typeof getThemeConfig>;
+export class EnhancedPdfGenerator extends LegacyEnhancedPdfGenerator {
+  private v2Theme: ReturnType<typeof getThemeConfig>;
   private imageProcessor: ImageProcessor;
   private htmlBuilder: HtmlBuilder;
   private styleGenerator: StyleGenerator;
   private factory: PageGeneratorFactory;
-  private v1Generator: V1Generator;
 
   constructor(themeName: PdfThemeName | string) {
-    this.theme = getThemeConfig(themeName);
+    super(themeName);
+    this.v2Theme = getThemeConfig(themeName);
     this.imageProcessor = new ImageProcessor(defaultConfig.imageProcessor);
     this.htmlBuilder = new HtmlBuilder();
-    this.styleGenerator = new StyleGenerator(this.theme);
+    this.styleGenerator = new StyleGenerator(this.v2Theme);
     this.factory = new PageGeneratorFactory(this.imageProcessor);
-
-    // v1 используется как fallback для совместимости
-    this.v1Generator = new V1Generator(themeName);
-  }
-
-  /**
-   * Генерирует HTML для PDF книги
-   *
-   * СТРАТЕГИЯ: Пока делегируем к v1, но компоненты v2 готовы к использованию
-   * В будущих фазах постепенно перенесем всю логику сюда
-   */
-  async generate(
-    travels: TravelForBook[],
-    settings: BookSettings
-  ): Promise<string> {
-    // ✅ ФАЗА 4 (В ПРОЦЕССЕ): Используем v1 для полной генерации
-    // Все компоненты v2 протестированы и готовы к использованию
-    // Следующий шаг: постепенно заменять части v1 на v2
-    return this.v1Generator.generate(travels, settings);
   }
 
   /**
