@@ -35,6 +35,25 @@ type TravelPreloadWindow = Window & typeof globalThis & {
   __metravelTravelPreloadPromise?: Promise<unknown>;
 };
 
+function hasLikelyStrippedEmbeddedMedia(description: string): boolean {
+  const raw = String(description || '');
+  if (!raw) return false;
+
+  const hasEmbedMarkup =
+    /<iframe\b/i.test(raw) ||
+    /<blockquote\b[^>]*\binstagram-media\b/i.test(raw) ||
+    /<a\b[^>]*href="https?:\/\/(?:www\.)?instagram\.com\/(?:(?:p|reel|tv)\/)[^"]+"/i.test(raw) ||
+    /<a\b[^>]*href="https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtube\.com\/shorts\/|youtu\.be\/)[^"]+"/i.test(raw);
+
+  if (hasEmbedMarkup) return false;
+
+  const hasMediaLinks =
+    /https?:\/\/(?:www\.)?instagram\.com\//i.test(raw) ||
+    /https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\//i.test(raw);
+
+  return hasMediaLinks;
+}
+
 function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is Travel {
   if (!travel) return false;
 
@@ -54,6 +73,8 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
     Array.isArray(travel.coordsMeTravel);
   const hasMeaningfulDescription =
     typeof travel.description === 'string' && travel.description.replace(/<[^>]*>/g, ' ').trim().length > 0;
+  const hasCorruptedEmbeddedMediaDescription =
+    typeof travel.description === 'string' && hasLikelyStrippedEmbeddedMedia(travel.description);
   const gallery = Array.isArray(travel.gallery) ? travel.gallery : [];
   const travelAddress = Array.isArray(travel.travelAddress) ? travel.travelAddress : [];
   const coordsMeTravel = Array.isArray(travel.coordsMeTravel) ? travel.coordsMeTravel : [];
@@ -66,7 +87,8 @@ function hasSufficientPreloadedTravelData(travel: Travel | undefined): travel is
     hasName &&
     hasAnyDetailField &&
     hasStableDetailContract &&
-    hasMeaningfulDetailSignal
+    hasMeaningfulDetailSignal &&
+    !hasCorruptedEmbeddedMediaDescription
   );
 }
 

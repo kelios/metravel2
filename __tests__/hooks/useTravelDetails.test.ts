@@ -370,6 +370,57 @@ describe('useTravelDetails', () => {
     expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
+  it('falls back to fetchTravelBySlug when preload keeps media links but loses embed markup', async () => {
+    (Platform.OS as any) = 'web';
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: {
+          id: 439,
+          slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+          name: 'Аккаунты в instagram о путешествиях по Беларуси',
+          description:
+            '<p><a href="https://www.instagram.com/udivitelnaya_belarus/">https://www.instagram.com/udivitelnaya_belarus</a></p>',
+          gallery: [],
+          travelAddress: [{ id: 1, name: 'Point' }],
+          coordsMeTravel: [{ id: 1, lat: 53.9, lng: 27.56 }],
+        },
+        slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+        isId: false,
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi' });
+    (fetchTravelBySlug as jest.Mock).mockResolvedValue({
+      id: 439,
+      slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+      name: 'Аккаунты в instagram о путешествиях по Беларуси',
+      description:
+        '<p><a href="https://www.instagram.com/udivitelnaya_belarus/">https://www.instagram.com/udivitelnaya_belarus</a></p><iframe src="https://www.instagram.com/p/CRTm_GpnjVR/embed/captioned/"></iframe>',
+      gallery: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
+      coordsMeTravel: [{ id: 1, lat: 53.9, lng: 27.56 }],
+    });
+
+    renderHook(() => useTravelDetails());
+
+    const data = await capturedQueryFn!();
+    expect(fetchTravelBySlug).toHaveBeenCalledWith(
+      'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+      { signal: undefined }
+    );
+    expect(data).toEqual({
+      id: 439,
+      slug: 'akkaunty-v-instagram-o-puteshestviyah-po-belarusi',
+      name: 'Аккаунты в instagram о путешествиях по Беларуси',
+      description:
+        '<p><a href="https://www.instagram.com/udivitelnaya_belarus/">https://www.instagram.com/udivitelnaya_belarus</a></p><iframe src="https://www.instagram.com/p/CRTm_GpnjVR/embed/captioned/"></iframe>',
+      gallery: [],
+      travelAddress: [{ id: 1, name: 'Point' }],
+      coordsMeTravel: [{ id: 1, lat: 53.9, lng: 27.56 }],
+    });
+    expect((global as any).window.__metravelTravelPreload).toBeUndefined();
+  });
+
   it('exposes refetch function from react-query result', () => {
     const mockRefetch = jest.fn();
     useLocalSearchParams.mockReturnValue({ param: '456' });
