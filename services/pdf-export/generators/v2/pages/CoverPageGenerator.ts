@@ -6,6 +6,10 @@ import type { PageContext } from '../types';
 import { ImageProcessor } from '../processors/ImageProcessor';
 import type { TravelQuote } from '../../../quotes/travelQuotes';
 import { getTravelLabel } from '../../../utils/pluralize';
+import {
+  getYearRange as getBookYearRange,
+  resolveCoverImage as resolveBookCoverImage,
+} from '../runtime/bookData';
 
 /**
  * Генератор обложки книги
@@ -25,10 +29,10 @@ export class CoverPageGenerator extends BasePageGenerator {
     const travelCount = travels.length;
     const userName = travels[0]?.userName || 'Аноним';
     const travelLabel = getTravelLabel(travelCount);
-    const yearRange = this.getYearRange(travels);
+    const yearRange = getBookYearRange(travels)?.replace(' - ', '–');
 
     // Обрабатываем изображение обложки
-    const coverImage = await this.resolveCoverImage(travels, settings);
+    const coverImage = resolveBookCoverImage(travels, settings);
     const safeCoverImage = coverImage ? await this.imageProcessor.processUrl(coverImage) : '';
 
     const background = `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
@@ -215,52 +219,4 @@ export class CoverPageGenerator extends BasePageGenerator {
       </section>
     `;
   }
-
-  /**
-   * Получает диапазон лет из путешествий
-   */
-  private getYearRange(travels: any[]): string | undefined {
-    if (!travels.length) return undefined;
-
-    const years = travels
-      .map(t => t.year)
-      .filter((y): y is number => typeof y === 'number')
-      .sort((a, b) => a - b);
-
-    if (!years.length) return undefined;
-    if (years.length === 1) return String(years[0]);
-
-    const min = years[0];
-    const max = years[years.length - 1];
-    return min === max ? String(min) : `${min}–${max}`;
-  }
-
-  /**
-   * Определяет изображение для обложки
-   */
-  private async resolveCoverImage(
-    travels: any[],
-    settings: any
-  ): Promise<string> {
-    // Используем изображение из настроек, если есть
-    if (settings.coverImage) {
-      return settings.coverImage;
-    }
-
-    // Иначе берем первое фото из первого путешествия
-    const firstTravel = travels[0];
-    if (!firstTravel) return '';
-
-    const coverUrl = firstTravel.cover_image_url || firstTravel.coverImageUrl;
-    if (coverUrl) return coverUrl;
-
-    const gallery = firstTravel.gallery || [];
-    if (gallery.length > 0) {
-      const firstPhoto = gallery[0];
-      return typeof firstPhoto === 'string' ? firstPhoto : firstPhoto?.url || '';
-    }
-
-    return '';
-  }
 }
-

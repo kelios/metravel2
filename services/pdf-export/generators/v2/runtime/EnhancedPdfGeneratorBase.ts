@@ -1,42 +1,50 @@
-// src/services/pdf-export/generators/v1/LegacyEnhancedPdfGenerator.ts
-// ✅ LEGACY: Прежняя оркестрация PDF-генерации, сохраненная для поэтапной миграции в v2
+// src/services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts
+// ✅ RUNTIME: Общая orchestration/runtime-логика для канонического EnhancedPdfGenerator v2
 
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { TravelForBook } from '@/types/pdf-export';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
-import { getThemeConfig, type PdfThemeName } from '../../themes/PdfThemeConfig';
-import type { ContentParser, ParsedContentBlock } from '../../parsers/ContentParser';
-import type { BlockRenderer } from '../../renderers/BlockRenderer';
-import type { TravelQuote } from '../../quotes/travelQuotes';
-import { pickRandomQuote } from '../../quotes/travelQuotes';
-import { CoverPageGenerator } from '../pages/CoverPageGenerator';
-import { escapeHtml as sharedEscapeHtml } from '../../utils/htmlUtils';
-import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../../utils/pluralize';
+import { getThemeConfig, type PdfThemeName } from '../../../themes/PdfThemeConfig';
+import type { ContentParser, ParsedContentBlock } from '../../../parsers/ContentParser';
+import type { BlockRenderer } from '../../../renderers/BlockRenderer';
+import type { TravelQuote } from '../../../quotes/travelQuotes';
+import { pickRandomQuote } from '../../../quotes/travelQuotes';
+import { CoverPageGenerator } from '../../pages/CoverPageGenerator';
+import { buildSafeImageUrl, escapeHtml as sharedEscapeHtml } from '../../../utils/htmlUtils';
+import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../../../utils/pluralize';
+import {
+  buildGoogleMapsUrl as sharedBuildGoogleMapsUrl,
+  buildMapPlaceholder as sharedBuildMapPlaceholder,
+  buildRouteSvg as sharedBuildRouteSvg,
+  buildTravelMeta as sharedBuildTravelMeta,
+  calculateRouteDistanceFromPreview as sharedCalculateRouteDistanceFromPreview,
+  getBestCoverImage as sharedGetBestCoverImage,
+  getYearRange as sharedGetYearRange,
+  normalizeLocations as sharedNormalizeLocations,
+  parseCoordinates as sharedParseCoordinates,
+  resolveCoverImage as sharedResolveCoverImage,
+  sortTravels as sharedSortTravels,
+} from './bookData';
+import type { NormalizedLocation, TravelSectionMeta } from './types';
 
-import { V1FinalRenderer } from './V1FinalRenderer';
-import { V1GalleryRenderer } from './V1GalleryRenderer';
-import { V1MapRenderer } from './V1MapRenderer';
-
-const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
-  clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
-  food: ['Перекусы', 'Термос', 'Походная посуда', 'Мультитул/нож', 'Фильтр или запас воды'],
-  electronics: ['Повербанк', 'Камера/GoPro', 'Переходники', 'Налобный фонарь', 'Запасные карты памяти'],
-  documents: ['Паспорт', 'Билеты/бронирования', 'Страховка', 'Водительские права', 'Список контактов'],
-  medicine: ['Индивидуальные лекарства', 'Пластыри и бинт', 'Средство от насекомых', 'Солнцезащита', 'Антисептик'],
-};
-
-const CHECKLIST_LABELS: Record<BookSettings['checklistSections'][number], string> = {
-  clothing: 'Одежда',
-  food: 'Еда',
-  electronics: 'Электроника',
-  documents: 'Документы',
-  medicine: 'Аптечка',
-};
+import { V1FinalRenderer } from '../../v1/V1FinalRenderer';
+import { V1GalleryRenderer } from '../../v1/V1GalleryRenderer';
+import { V1MapRenderer } from '../../v1/V1MapRenderer';
+import { assembleBookPages } from './pdfPageAssembly';
+import { renderChecklistPageSection, renderTocPageSection } from './pdfSectionRenderers';
+import {
+  buildContainImageMarkup,
+  buildGalleryCaption as sharedBuildGalleryCaption,
+  getGalleryGapMm as sharedGetGalleryGapMm,
+  getImageFilterStyle,
+  renderPdfIcon as sharedRenderPdfIcon,
+} from './pdfVisualHelpers';
 
 /**
- * Генератор улучшенного PDF
+ * Базовый runtime для полной генерации PDF-книги.
+ * Канонический public entrypoint живет в ../EnhancedPdfGenerator.ts.
  */
-export class EnhancedPdfGenerator {
+export class EnhancedPdfGeneratorBase {
   private parser: ContentParser | null = null;
   private blockRenderer: BlockRenderer | null = null;
   private theme: ReturnType<typeof getThemeConfig>;
@@ -86,15 +94,7 @@ export class EnhancedPdfGenerator {
   }
 
   private getGalleryGapMm(spacing: NonNullable<BookSettings['gallerySpacing']>): number {
-    switch (spacing) {
-      case 'compact':
-        return 3;
-      case 'spacious':
-        return 8;
-      case 'normal':
-      default:
-        return 6;
-    }
+    return sharedGetGalleryGapMm(spacing);
   }
 
   private buildGalleryCaption(
@@ -102,47 +102,12 @@ export class EnhancedPdfGenerator {
     position: CaptionPosition,
     typography: ReturnType<typeof getThemeConfig>['typography']
   ): { wrapperStart: string; wrapperEnd: string } {
-    if (position === 'none') {
-      return { wrapperStart: '', wrapperEnd: '' };
-    }
-
-    const text = `Фото ${index + 1}`;
-
-    if (position === 'overlay') {
-      return {
-        wrapperStart: `
-          <div style="
-            position: absolute;
-            left: 8px;
-            bottom: 8px;
-            right: 8px;
-            padding: 6px 10px;
-            background: rgba(0,0,0,0.65);
-            color: #fff;
-            border-radius: 10px;
-            font-size: ${typography.caption.size};
-            line-height: 1.25;
-            font-weight: 600;
-            z-index: 2;
-          ">${this.escapeHtml(text)}`, 
-        wrapperEnd: `</div>`,
-      };
-    }
-
-    const top = position === 'top';
-    return {
-      wrapperStart: `
-        <div style="
-          padding: 8px 10px;
-          color: ${this.theme.colors.textMuted};
-          font-size: ${typography.caption.size};
-          font-weight: 600;
-          font-family: ${typography.bodyFont};
-          ${top ? 'border-bottom' : 'border-top'}: 1px solid ${this.theme.colors.border};
-          background: ${this.theme.colors.surface};
-        ">${this.escapeHtml(text)}`, 
-      wrapperEnd: `</div>`,
-    };
+    return sharedBuildGalleryCaption({
+      index,
+      position,
+      typography,
+      colors: this.theme.colors,
+    });
   }
 
   constructor(themeName: PdfThemeName | string) {
@@ -187,10 +152,6 @@ export class EnhancedPdfGenerator {
     // Собираем метаданные для оглавления
     const meta = this.buildTravelMeta(sortedTravels, settings);
     
-    // Генерируем страницы
-    const pages: string[] = [];
-    let currentPage = settings.includeToc ? 3 : 2;
-
     // Обложка с улучшенным дизайном
     const coverGenerator = new CoverPageGenerator(this.theme);
     const coverQuote = this.selectedQuotes?.cover;
@@ -205,60 +166,24 @@ export class EnhancedPdfGenerator {
       textPosition: 'auto',
       showDecorations: true,
     });
-    pages.push(coverPage);
-
-    // Оглавление
-    if (settings.includeToc) {
-      pages.push(this.renderTocPage(meta, 2));
-      currentPage = 3;
-    } else {
-      currentPage = 2;
-    }
-
-    // Страницы путешествий
-    const useSeparators = meta.length >= 3;
-    for (let index = 0; index < meta.length; index++) {
-      const item = meta[index];
-      const travel = item.travel;
-
-      // Разделительная страница между путешествиями (при 3+ путешествиях)
-      if (useSeparators && index > 0) {
-        pages.push(this.renderSeparatorPage(travel, index + 1, meta.length));
-      }
-
-      // Страница с большим обложечным фото
-      pages.push(this.renderTravelPhotoPage(travel, currentPage));
-      currentPage++;
-
-      // Страница с текстом и inline-галереями (фото «внутри» статьи)
-      pages.push(this.renderTravelContentPage(travel, qrCodes[index], currentPage));
-      currentPage++;
-
-      // Отдельная страница галереи (все фото), если включено в настройках
-      if (item.hasGallery) {
-        const galleryPages = this.renderGalleryPages(travel, currentPage);
-        pages.push(...galleryPages);
-        currentPage += galleryPages.length;
-      }
-
-      // Карта (DOM-скриншот Leaflet, только в браузере)
-      if (item.hasMap) {
-        const mapPage = await this.renderMapPage(travel, item.locations, currentPage);
-        pages.push(mapPage);
-        currentPage++;
-      }
-    }
-
-    if (settings.includeChecklists) {
-      const checklistPage = this.renderChecklistPage(settings, currentPage);
-      if (checklistPage) {
-        pages.push(checklistPage);
-        currentPage++;
-      }
-    }
-
-    // Финальная страница
-    pages.push(this.renderFinalPage(currentPage, sortedTravels));
+    const pages = await assembleBookPages({
+      coverPage,
+      meta,
+      qrCodes,
+      settings,
+      sortedTravels,
+      renderTocPage: (tocMeta, pageNumber) => this.renderTocPage(tocMeta, pageNumber),
+      renderSeparatorPage: (travel, travelIndex, totalTravels) =>
+        this.renderSeparatorPage(travel, travelIndex, totalTravels),
+      renderTravelPhotoPage: (travel, pageNumber) => this.renderTravelPhotoPage(travel, pageNumber),
+      renderTravelContentPage: (travel, qrCodeDataUrl, pageNumber) =>
+        this.renderTravelContentPage(travel, qrCodeDataUrl, pageNumber),
+      renderGalleryPages: (travel, startPageNumber) => this.renderGalleryPages(travel, startPageNumber),
+      renderMapPage: (travel, locations, pageNumber) => this.renderMapPage(travel, locations, pageNumber),
+      renderChecklistPage: (currentSettings, pageNumber) =>
+        this.renderChecklistPage(currentSettings, pageNumber),
+      renderFinalPage: (pageNumber, finalTravels) => this.renderFinalPage(pageNumber, finalTravels),
+    });
 
     // Собираем HTML
     return this.buildHtmlDocument(pages, settings);
@@ -418,187 +343,26 @@ export class EnhancedPdfGenerator {
    * Рендерит оглавление
    */
   private renderTocPage(meta: TravelSectionMeta[], pageNumber: number): string {
-    const { colors, typography, spacing } = this.theme;
-    const isCompactToc = meta.length <= 2;
-    const tocItems = meta
-      .map((item, index) => {
-        const travel = item.travel;
-
-        const country = travel.countryName ? this.escapeHtml(travel.countryName) : '';
-        const year = travel.year ? this.escapeHtml(String(travel.year)) : '';
-        const days = this.formatDays(travel.number_days);
-        const metaLineParts = [country, year, days].filter(Boolean);
-        const metaLine = metaLineParts.join(' \u2022 ');
-        const thumbUrl = this.buildSafeImageUrl(
-          travel.travel_image_thumb_url || travel.travel_image_url
-        );
-        const previewSize = isCompactToc ? 56 : 40;
-        const cardPadding = isCompactToc ? '16px 18px' : '12px 16px';
-        const titleFontSize = isCompactToc ? '14pt' : '13pt';
-        const metaFontSize = isCompactToc ? '10pt' : '9.5pt';
-        const badgeSize = isCompactToc ? 36 : 32;
-
-        return `
-          <div style="
-            display: flex;
-            align-items: stretch;
-            background: ${colors.surface};
-            border-radius: ${this.theme.blocks.borderRadius};
-            border: ${this.theme.blocks.borderWidth} solid ${colors.border};
-            box-shadow: ${this.theme.blocks.shadow};
-            overflow: hidden;
-          ">
-            ${thumbUrl ? `
-              <div style="
-                width: ${previewSize}px;
-                min-height: ${previewSize}px;
-                flex-shrink: 0;
-                position: relative;
-                overflow: hidden;
-                background: ${colors.surfaceAlt};
-              ">
-                <img src="${this.escapeHtml(thumbUrl)}" alt=""
-                  style="width: 100%; height: 100%; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
-                  crossorigin="anonymous"
-                  onerror="this.style.display='none';this.parentElement.style.background='${colors.accentSoft}';" />
-              </div>
-            ` : `
-              <div style="
-                width: ${previewSize}px;
-                min-height: ${previewSize}px;
-                flex-shrink: 0;
-                background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-              ">
-                <span style="
-                  font-size: 18pt;
-                  font-weight: 800;
-                  color: ${colors.accent};
-                  font-family: ${typography.headingFont};
-                  opacity: 0.7;
-                ">${index + 1}</span>
-              </div>
-            `}
-            <div style="
-              flex: 1;
-              min-width: 0;
-              padding: ${cardPadding};
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              gap: 12px;
-            ">
-              <div style="flex: 1; min-width: 0;">
-                <div style="
-                  font-weight: 600;
-                  font-size: ${titleFontSize};
-                  margin-bottom: 3px;
-                  color: ${colors.text};
-                  line-height: 1.3;
-                  font-family: ${typography.headingFont};
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                ">${this.escapeHtml(travel.name)}</div>
-                ${metaLine ? `
-                  <div style="
-                    font-size: ${metaFontSize};
-                    color: ${colors.textMuted};
-                    font-family: ${typography.bodyFont};
-                    line-height: 1.4;
-                  ">${metaLine}</div>
-                ` : ''}
-              </div>
-              <div style="
-                width: ${badgeSize}px;
-                height: ${badgeSize}px;
-                border-radius: 999px;
-                background: ${colors.accentSoft};
-                color: ${colors.accent};
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: 700;
-                font-size: 12pt;
-                flex-shrink: 0;
-                font-family: ${typography.headingFont};
-              ">${item.startPage}</div>
-            </div>
-          </div>
-        `;
-      })
-      .join('');
-
-    return `
-      <section class="pdf-page toc-page" style="
-        padding: ${spacing.pagePadding};
-        background: ${colors.background};
-        display: flex;
-        flex-direction: column;
-      ">
-        <div style="
-          text-align: center;
-          margin-top: ${isCompactToc ? '10mm' : '14mm'};
-          margin-bottom: ${isCompactToc ? '8mm' : '10mm'};
-        ">
-          <div style="
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            background: ${colors.accentSoft};
-            margin-bottom: 10px;
-          ">
-            ${this.renderPdfIcon('map-pin', colors.accent, 22)}
-          </div>
-          <h2 style="
-            font-size: ${typography.h1.size};
-            margin-bottom: 6px;
-            font-weight: ${typography.h1.weight};
-            color: ${colors.text};
-            letter-spacing: -0.02em;
-            font-family: ${typography.headingFont};
-          ">Содержание</h2>
-          <p style="
-            color: ${colors.textMuted};
-            font-size: ${typography.body.size};
-            font-family: ${typography.bodyFont};
-            margin: 0 0 6px 0;
-          ">${meta.length} ${this.getTravelLabel(meta.length)}</p>
-          <div style="
-            width: 40mm;
-            height: 3px;
-            margin: 0 auto;
-            background: linear-gradient(90deg, transparent, ${colors.accent}, transparent);
-            border-radius: 999px;
-          "></div>
-        </div>
-        <div style="
-          display: flex;
-          flex-direction: column;
-          gap: ${isCompactToc ? '12px' : '8px'};
-          justify-content: ${isCompactToc ? 'center' : 'flex-start'};
-          flex: 1;
-          max-width: ${isCompactToc ? '156mm' : '100%'};
-          width: 100%;
-          margin: 0 auto;
-        ">
-          ${tocItems}
-        </div>
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>
-      </section>
-    `;
+    return renderTocPageSection({
+      meta,
+      pageNumber,
+      theme: this.theme,
+      escapeHtml: (value) => this.escapeHtml(value),
+      buildSafeImageUrl: (raw) => this.buildSafeImageUrl(raw),
+      formatDays: (days) => {
+        if (typeof days === 'number') {
+          return this.formatDays(days);
+        }
+        if (typeof days === 'string') {
+          const parsed = Number(days);
+          return this.formatDays(Number.isFinite(parsed) ? parsed : undefined);
+        }
+        return this.formatDays(days);
+      },
+      getTravelLabel: (count) => this.getTravelLabel(count),
+      renderPdfIcon: (name, color, size) => this.renderPdfIcon(name, color, size),
+      getImageFilterStyle: () => this.getImageFilterStyle(),
+    });
   }
 
   /**
@@ -1287,160 +1051,20 @@ export class EnhancedPdfGenerator {
   }
 
   private calculateRouteDistanceFromPreview(preview: import('@/types/travelRoutes').ParsedRoutePreview): number {
-    const linePoints = Array.isArray(preview?.linePoints) ? preview.linePoints : [];
-    if (linePoints.length < 2) return 0;
-
-    const toRad = (v: number) => (v * Math.PI) / 180;
-    const R = 6371;
-
-    let totalKm = 0;
-    let prevCoord: { lat: number; lng: number } | null = null;
-
-    for (const point of linePoints) {
-      const [latStr, lngStr] = String(point.coord ?? '').replace(/;/g, ',').split(',');
-      const lat = Number(latStr);
-      const lng = Number(lngStr);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-      if (prevCoord) {
-        const dLat = toRad(lat - prevCoord.lat);
-        const dLng = toRad(lng - prevCoord.lng);
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(toRad(prevCoord.lat)) * Math.cos(toRad(lat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        totalKm += R * c;
-      }
-      prevCoord = { lat, lng };
-    }
-
-    return totalKm;
+    return sharedCalculateRouteDistanceFromPreview(preview);
   }
 
   /**
    * Рендерит страницу чек-листов
    */
   private renderChecklistPage(settings: BookSettings, pageNumber: number): string | null {
-    if (!settings.checklistSections || !settings.checklistSections.length) {
-      return null;
-    }
-
-    const { colors, typography, spacing } = this.theme;
-    const sections = settings.checklistSections
-      .map((section) => ({
-        key: section,
-        label: CHECKLIST_LABELS[section] || 'Секция',
-        items: CHECKLIST_LIBRARY[section] || [],
-      }))
-      .filter((section) => section.items.length > 0);
-
-    if (!sections.length) return null;
-
-    const cards = sections
-      .map(
-        (section) => `
-        <div style="
-          border: ${this.theme.blocks.borderWidth} solid ${colors.border};
-          border-radius: ${this.theme.blocks.borderRadius};
-          padding: ${spacing.blockSpacing};
-          background: ${colors.surface};
-          box-shadow: ${this.theme.blocks.shadow};
-          break-inside: avoid;
-          page-break-inside: avoid;
-        ">
-          <div style="
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 4px;
-            margin-bottom: ${spacing.elementSpacing};
-          ">
-            <h3 style="
-              margin: 0;
-              font-size: ${typography.h4.size};
-              font-weight: ${typography.h4.weight};
-              color: ${colors.text};
-              font-family: ${typography.headingFont};
-              max-width: 100%;
-              word-break: break-word;
-              line-height: 1.2;
-            ">${section.label}</h3>
-            <span style="
-              font-size: ${typography.caption.size};
-              color: ${colors.textMuted};
-              font-weight: 600;
-              font-family: ${typography.bodyFont};
-              line-height: 1.2;
-            ">${section.items.length} пунктов</span>
-          </div>
-          <div style="
-            margin: 0;
-            color: ${colors.textMuted};
-            font-size: ${typography.body.size};
-            line-height: ${typography.body.lineHeight};
-            font-family: ${typography.bodyFont};
-            word-break: break-word;
-          ">
-            ${section.items.map((item) => `
-              <div style="display: flex; align-items: flex-start; gap: 6px; margin-bottom: 4px;">
-                <span style="
-                  display: inline-block;
-                  width: 12px;
-                  height: 12px;
-                  min-width: 12px;
-                  border: 1.5px solid ${colors.border};
-                  border-radius: 2px;
-                  margin-top: 3px;
-                  flex-shrink: 0;
-                "></span>
-                <span>${this.escapeHtml(item)}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `
-      )
-      .join('');
-
-    return `
-      <section class="pdf-page checklist-page" style="padding: ${spacing.pagePadding};">
-        ${this.buildRunningHeader('Чек-листы', pageNumber)}
-        <div style="text-align: center; margin-bottom: ${spacing.sectionSpacing};">
-          <div style="
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: ${colors.accentSoft};
-            margin-bottom: 8px;
-          ">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${colors.accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          </div>
-          <h2 style="
-            font-size: ${typography.h2.size};
-            font-weight: ${typography.h2.weight};
-            margin-bottom: ${spacing.elementSpacing};
-            letter-spacing: -0.01em;
-            color: ${colors.text};
-            font-family: ${typography.headingFont};
-          ">Чек-листы путешествия</h2>
-          <p style="
-            color: ${colors.textMuted};
-            font-size: ${typography.body.size};
-            font-family: ${typography.bodyFont};
-          ">Подходит для печати и отметок</p>
-        </div>
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(${sections.length >= 4 ? 2 : 3}, minmax(0, 1fr));
-          gap: ${spacing.elementSpacing};
-        ">
-          ${cards}
-        </div>
-      </section>
-    `;
+    return renderChecklistPageSection({
+      settings,
+      pageNumber,
+      theme: this.theme,
+      escapeHtml: (value) => this.escapeHtml(value),
+      buildRunningHeader: (title, currentPage) => this.buildRunningHeader(title, currentPage),
+    });
   }
 
   /**
@@ -1926,57 +1550,22 @@ export class EnhancedPdfGenerator {
     travels: TravelForBook[],
     sortOrder: BookSettings['sortOrder']
   ): TravelForBook[] {
-    const sorted = [...travels];
-    switch (sortOrder) {
-      case 'date-desc':
-        return sorted.sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
-      case 'date-asc':
-        return sorted.sort((a, b) => (Number(a.year) || 0) - (Number(b.year) || 0));
-      case 'country':
-        return sorted.sort((a, b) =>
-          (a.countryName || '').localeCompare(b.countryName || '', 'ru')
-        );
-      case 'alphabetical':
-        return sorted.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-      default:
-        return sorted;
-    }
+    return sharedSortTravels(travels, sortOrder);
   }
 
   private getYearRange(travels: TravelForBook[]): string | undefined {
-    const years = travels
-      .map((t) => Number(t.year))
-      .filter((year) => !Number.isNaN(year) && year > 0);
-    if (!years.length) return undefined;
-    const min = Math.min(...years);
-    const max = Math.max(...years);
-    return min === max ? String(min) : `${min} - ${max}`;
+    return sharedGetYearRange(travels);
   }
 
   private resolveCoverImage(
     travels: TravelForBook[],
     settings: BookSettings
   ): string | undefined {
-    if (settings.coverType === 'gradient') return undefined;
-    if (settings.coverType === 'first-photo') {
-      const first = travels[0];
-      return first?.travel_image_url || first?.travel_image_thumb_url;
-    }
-    if (settings.coverType === 'custom') {
-      return settings.coverImage;
-    }
-    if (settings.coverType === 'auto') {
-      return settings.coverImage || this.getBestCoverImage(travels);
-    }
-    return settings.coverImage || this.getBestCoverImage(travels);
+    return sharedResolveCoverImage(travels, settings);
   }
 
   private getBestCoverImage(travels: TravelForBook[]): string | undefined {
-    for (const travel of travels) {
-      const photo = travel.travel_image_url || travel.travel_image_thumb_url;
-      if (photo) return photo;
-    }
-    return undefined;
+    return sharedGetBestCoverImage(travels);
   }
 
   private async generateQRCodes(travels: TravelForBook[]): Promise<string[]> {
@@ -2000,179 +1589,34 @@ export class EnhancedPdfGenerator {
     travels: TravelForBook[],
     settings: BookSettings
   ): TravelSectionMeta[] {
-    const meta: TravelSectionMeta[] = [];
-    let currentPage = settings.includeToc ? 3 : 2;
-
-    travels.forEach((travel) => {
-      const locations = this.normalizeLocations(travel);
-      const galleryPhotos = (travel.gallery || [])
-        .map((item) => {
-          const raw = typeof item === 'string' ? item : item?.url;
-          return this.buildSafeImageUrl(raw);
-        })
-        .filter((url): url is string => !!url && url.trim().length > 0);
-      const hasGallery = Boolean(settings.includeGallery && galleryPhotos.length);
-      const galleryPageCount = hasGallery
-        ? Math.max(1, Math.ceil(galleryPhotos.length / this.getGalleryPhotosPerPage(
-          (settings.galleryLayout || 'grid') as GalleryLayout,
-          galleryPhotos.length,
-          settings
-        )))
-        : 0;
-      const hasMap = Boolean(settings.includeMap && locations.length);
-
-      meta.push({
-        travel,
-        hasGallery,
-        hasMap,
-        locations,
-        startPage: currentPage,
-      });
-
-      currentPage += 2; // photo + text
-      if (hasGallery) currentPage += galleryPageCount;
-      if (hasMap) currentPage += 1;
+    return sharedBuildTravelMeta({
+      travels,
+      settings,
+      getGalleryPhotosPerPage: (layout, totalPhotos, currentSettings) =>
+        this.getGalleryPhotosPerPage(layout, totalPhotos, currentSettings),
     });
-
-    return meta;
   }
 
   private normalizeLocations(travel: TravelForBook): NormalizedLocation[] {
-    if (!Array.isArray(travel.travelAddress)) return [];
-    return travel.travelAddress
-      .filter(Boolean)
-      .map((point, index) => {
-        const coords = this.parseCoordinates(point.coord);
-        return {
-          id: String(point.id ?? index),
-          address: point.address || `Точка ${index + 1}`,
-          categoryName: point.categoryName,
-          coord: point.coord,
-          thumbnailUrl: point.travelImageThumbUrl,
-          lat: coords?.lat,
-          lng: coords?.lng,
-        };
-      })
-      .filter((location) => location.address.trim().length > 0);
+    return sharedNormalizeLocations(travel);
   }
 
   private parseCoordinates(
     coord?: string | null
   ): { lat: number; lng: number } | null {
-    if (!coord) return null;
-    const [latStr, lngStr] = coord.split(',').map((value) => Number(value.trim()));
-    if (Number.isNaN(latStr) || Number.isNaN(lngStr)) return null;
-    return { lat: latStr, lng: lngStr };
+    return sharedParseCoordinates(coord);
   }
 
   private buildRouteSvg(locations: NormalizedLocation[]): string {
-    const points = locations
-      .map((location) => {
-        if (typeof location.lat !== 'number' || typeof location.lng !== 'number')
-          return null;
-        return { lat: location.lat, lng: location.lng };
-      })
-      .filter(Boolean) as Array<{ lat: number; lng: number }>;
-
-    if (!points.length) {
-      return this.buildMapPlaceholder();
-    }
-
-    const lats = points.map((point) => point.lat);
-    const lngs = points.map((point) => point.lng);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-    const latRange = Math.max(0.0001, maxLat - minLat);
-    const lngRange = Math.max(0.0001, maxLng - minLng);
-
-    const paddingX = 6;
-    const paddingY = 8;
-    const width = 100 - paddingX * 2;
-    const height = 60 - paddingY * 2;
-
-    const normalized = points.map((point, index) => {
-      const x = paddingX + ((point.lng - minLng) / lngRange) * width;
-      const y = paddingY + ((maxLat - point.lat) / latRange) * height;
-      return { x, y, index };
-    });
-
-    // Маршрутная линия (polyline) соединяющая точки
-    const routeLine = normalized.length >= 2
-      ? `<polyline
-          points="${normalized.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ')}"
-          fill="none"
-          stroke="${this.theme.colors.accentStrong}"
-          stroke-width="1.2"
-          stroke-dasharray="4,3"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          opacity="0.6"
-        />`
-      : '';
-
-    const circles = normalized
-      .map(
-        (point) => `
-      <g>
-        <circle
-          cx="${point.x.toFixed(2)}"
-          cy="${point.y.toFixed(2)}"
-          r="2.6"
-          fill="${this.theme.colors.surface}"
-          stroke="${this.theme.colors.accentStrong}"
-          stroke-width="0.7"
-        />
-        <text
-          x="${point.x.toFixed(2)}"
-          y="${(point.y + 0.55).toFixed(2)}"
-          font-size="3.4"
-          text-anchor="middle"
-          fill="${this.theme.colors.text}"
-          font-weight="700"
-        >
-          ${point.index + 1}
-        </text>
-      </g>
-    `
-      )
-      .join('');
-
-    return `
-    <svg viewBox="0 0 100 60" preserveAspectRatio="none" role="img" aria-label="Маршрут путешествия">
-      <defs>
-        <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${this.theme.colors.surfaceAlt}" />
-          <stop offset="100%" stop-color="${this.theme.colors.accentLight}" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="100" height="60" rx="5" fill="url(#mapGradient)" />
-      ${routeLine}
-      ${circles}
-    </svg>
-  `;
+    return sharedBuildRouteSvg(locations, this.theme);
   }
 
   private buildMapPlaceholder(): string {
-    return `
-    <svg viewBox="0 0 100 60" role="img" aria-label="Маршрут" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="mapPlaceholderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="${this.theme.colors.surfaceAlt}" />
-          <stop offset="100%" stop-color="${this.theme.colors.accentLight}" />
-        </linearGradient>
-      </defs>
-      <rect x="0" y="0" width="100" height="60" rx="4" fill="url(#mapPlaceholderGradient)" />
-      <text x="50" y="32" text-anchor="middle" fill="${this.theme.colors.textMuted}" font-size="8">Недостаточно данных</text>
-    </svg>
-  `;
+    return sharedBuildMapPlaceholder(this.theme);
   }
 
   private buildGoogleMapsUrl(location: NormalizedLocation): string {
-    if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return '';
-    const query = `${location.lat},${location.lng}`;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    return sharedBuildGoogleMapsUrl(location);
   }
 
   private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
@@ -2345,91 +1789,11 @@ export class EnhancedPdfGenerator {
     color: string,
     sizePt: number
   ): string {
-    const size = `${sizePt}pt`;
-    const wrapperStyle = `
-      width: ${size};
-      height: ${size};
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      vertical-align: middle;
-      line-height: 1;
-    `;
-
-    const svgStart = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${sizePt}" height="${sizePt}" fill="none" stroke="${this.escapeHtml(color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;">`;
-    const svgEnd = `</svg>`;
-
-    const paths: Record<typeof name, string> = {
-      camera: `<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>`,
-      pen: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`,
-      bulb: `<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12c.7.6 1 1.3 1 2v1h6v-1c0-.7.3-1.4 1-2a7 7 0 0 0-4-12z"/>`,
-      warning: `<path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
-      sparkle: `<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8z"/>`,
-      globe: `<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>`,
-      calendar: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`,
-      clock: `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
-      'map-pin': `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`,
-    };
-
-    return `
-      <span style="${wrapperStyle}">${svgStart}${paths[name]}${svgEnd}</span>
-    `;
+    return sharedRenderPdfIcon(name, color, sizePt);
   }
 
   private buildSafeImageUrl(url?: string | null): string | undefined {
-    if (!url) return undefined;
-    const trimmed = String(url).trim();
-    if (!trimmed) return undefined;
-    if (trimmed.startsWith('data:')) return trimmed;
-    if (this.isLocalResource(trimmed)) return trimmed;
-    if (/^https?:\/\/images\.weserv\.nl\//i.test(trimmed)) return trimmed;
-    if (trimmed.startsWith('//')) return this.buildSafeImageUrl(`https:${trimmed}`);
-    // Разрешаем относительные пути: дополняем текущим origin
-    if (trimmed.startsWith('/')) {
-      if (typeof window !== 'undefined' && (window as any).location?.origin) {
-        return `${(window as any).location.origin}${trimmed}`;
-      }
-      return `https://metravel.by${trimmed}`;
-    }
-
-    if (!/^https?:\/\//i.test(trimmed) && !trimmed.includes('://')) {
-      return this.buildSafeImageUrl(`https://metravel.by/${trimmed.replace(/^\/+/, '')}`);
-    }
-
-    try {
-      const parsed = new URL(trimmed);
-      const host = parsed.hostname.toLowerCase();
-      const isLocalhost = host === 'localhost' || host === '127.0.0.1';
-      const isPrivateV4 =
-        /^192\.168\./.test(host) ||
-        /^10\./.test(host) ||
-        /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
-
-      if (isLocalhost || isPrivateV4) {
-        parsed.protocol = 'https:';
-        parsed.host = 'metravel.by';
-        return this.buildSafeImageUrl(parsed.toString());
-      }
-    } catch {
-      // ignore URL parse errors
-    }
-
-    try {
-      const normalized = trimmed.replace(/^https?:\/\//i, '');
-      const delimiter = encodeURIComponent(normalized);
-      // Увеличено разрешение до 2400px для высокого качества печати (300 DPI)
-      // Добавлены параметры: q=90 (качество JPEG), il (прогрессивная загрузка)
-      return `https://images.weserv.nl/?url=${delimiter}&w=2400&q=90&il&fit=inside`;
-    } catch {
-      return trimmed;
-    }
-  }
-
-  private isLocalResource(url: string): boolean {
-    const lower = url.toLowerCase();
-    // Считаем по-настоящему "локальными" только blob:-URL, которые нельзя надёжно проксировать
-    return lower.startsWith('blob:');
+    return buildSafeImageUrl(url);
   }
 
   private escapeHtml(value: string | null | undefined): string {
@@ -2440,7 +1804,7 @@ export class EnhancedPdfGenerator {
    * Получает CSS-фильтр для изображений в зависимости от темы
    */
   private getImageFilterStyle(): string {
-    return this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '';
+    return getImageFilterStyle(this.theme.imageFilter);
   }
 
   /**
@@ -2453,18 +1817,15 @@ export class EnhancedPdfGenerator {
     height: string,
     opts?: { onerrorBg?: string; extraStyle?: string }
   ): string {
-    const bg = opts?.onerrorBg || this.theme.colors.surfaceAlt;
-    const filterStyle = this.getImageFilterStyle();
-    const extra = opts?.extraStyle || '';
-    return `
-      <div aria-hidden="true"
-        style="position:absolute;inset:0;background:${bg};">
-      </div>
-      <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
-        style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}${extra}"
-        crossorigin="anonymous"
-        onerror="this.style.display='none';this.parentElement.style.background='${bg}';" />
-    `;
+    return buildContainImageMarkup({
+      src,
+      alt,
+      height,
+      background: opts?.onerrorBg || this.theme.colors.surfaceAlt,
+      filterStyle: this.getImageFilterStyle(),
+      extraStyle: opts?.extraStyle || '',
+      backdropMode: 'solid',
+    });
   }
 
   /**
@@ -2511,7 +1872,7 @@ export class EnhancedPdfGenerator {
 
   private async ensureParser(): Promise<ContentParser> {
     if (this.parser) return this.parser;
-    const mod = await import('../../parsers/ContentParser');
+    const mod = await import('../../../parsers/ContentParser');
     this.parser = new mod.ContentParser();
     return this.parser;
   }
@@ -2519,7 +1880,7 @@ export class EnhancedPdfGenerator {
   private async ensureBlockRenderer(): Promise<BlockRenderer | null> {
     if (typeof document === 'undefined') return null;
     if (this.blockRenderer) return this.blockRenderer;
-    const mod = await import('../../renderers/BlockRenderer');
+    const mod = await import('../../../renderers/BlockRenderer');
     this.blockRenderer = new mod.BlockRenderer(this.theme);
     return this.blockRenderer;
   }
@@ -2534,22 +1895,4 @@ export class EnhancedPdfGenerator {
     const mod = await import('@/utils/mapImageGenerator');
     return mod.generateLeafletRouteSnapshot;
   }
-}
-
-interface TravelSectionMeta {
-  travel: TravelForBook;
-  hasGallery: boolean;
-  hasMap: boolean;
-  locations: NormalizedLocation[];
-  startPage: number;
-}
-
-interface NormalizedLocation {
-  id: string;
-  address: string;
-  categoryName?: string;
-  coord?: string;
-  thumbnailUrl?: string;
-  lat?: number;
-  lng?: number;
 }

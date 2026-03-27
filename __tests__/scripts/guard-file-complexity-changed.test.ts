@@ -79,15 +79,16 @@ describe('guard-file-complexity-changed', () => {
   })
 
   it('treats already oversized tracked files as non-blocking legacy touches', () => {
-    const baselineLoc = getGitTrackedFileLoc('components/listTravel/TravelListItem.tsx')
+    const legacyOversizedFile = 'components/travel/StableContent.tsx'
+    const baselineLoc = getGitTrackedFileLoc(legacyOversizedFile)
     expect(typeof baselineLoc).toBe('number')
     expect(Number(baselineLoc)).toBeGreaterThan(MAX_LOC)
 
-    const report = scanChangedFiles(['components/listTravel/TravelListItem.tsx'])
+    const report = scanChangedFiles([legacyOversizedFile])
     expect(report.violations).toEqual([])
     expect(report.legacyOversizedTouched).toEqual([
       expect.objectContaining({
-        file: 'components/listTravel/TravelListItem.tsx',
+        file: legacyOversizedFile,
         baselineLoc,
       }),
     ])

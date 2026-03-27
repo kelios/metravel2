@@ -5,6 +5,8 @@ import { BasePageGenerator } from './PageGenerator';
 import type { PageContext } from '../types';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
 import { calculateOptimalColumns } from '@/types/pdf-gallery';
+import { buildSafeImageUrl } from '../../../utils/htmlUtils';
+import { buildGalleryCaption, getGalleryGapMm } from '../runtime/pdfVisualHelpers';
 
 /**
  * Генератор страницы галереи фотографий
@@ -26,7 +28,7 @@ export class GalleryPageGenerator extends BasePageGenerator {
     const photos = (travel.gallery || [])
       .map((item) => {
         const raw = typeof item === 'string' ? item : item?.url;
-        return this.buildSafeImageUrl(raw);
+        return buildSafeImageUrl(raw);
       })
       .filter((url): url is string => !!url && url.trim().length > 0);
 
@@ -36,7 +38,7 @@ export class GalleryPageGenerator extends BasePageGenerator {
     const galleryOptions = this.getGalleryOptions(settings);
     const { layout, columns: configuredColumns, showCaptions, captionPosition, spacing: gallerySpacing } = galleryOptions;
 
-    const gapMm = this.getGalleryGapMm(gallerySpacing);
+    const gapMm = getGalleryGapMm(gallerySpacing);
 
     const defaultColumns = calculateOptimalColumns(photos.length, layout);
     const columns = Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
@@ -60,7 +62,9 @@ export class GalleryPageGenerator extends BasePageGenerator {
         <div style="${gridContainerStyle}">
           ${photos
             .map((photo, index) => {
-              const caption = showCaptions ? this.buildGalleryCaption(index, captionPosition, typography, colors) : null;
+              const caption = showCaptions
+                ? buildGalleryCaption({ index, position: captionPosition, typography, colors })
+                : null;
 
               const wrapperStyle =
                 layout === 'masonry'
@@ -134,96 +138,4 @@ export class GalleryPageGenerator extends BasePageGenerator {
     };
   }
 
-  /**
-   * Получает размер отступа в мм
-   */
-  private getGalleryGapMm(spacing: string): number {
-    switch (spacing) {
-      case 'compact':
-        return 3;
-      case 'spacious':
-        return 8;
-      case 'normal':
-      default:
-        return 6;
-    }
-  }
-
-  /**
-   * Создает подпись для фотографии
-   */
-  private buildGalleryCaption(
-    index: number,
-    position: CaptionPosition,
-    typography: any,
-    colors: any
-  ): { wrapperStart: string; wrapperEnd: string } {
-    if (position === 'none') {
-      return { wrapperStart: '', wrapperEnd: '' };
-    }
-
-    const text = `Фото ${index + 1}`;
-
-    if (position === 'overlay') {
-      return {
-        wrapperStart: `
-          <div style="
-            position: absolute;
-            left: 8px;
-            bottom: 8px;
-            right: 8px;
-            padding: 6px 10px;
-            background: rgba(0,0,0,0.65);
-            color: #fff;
-            border-radius: 10px;
-            font-size: ${typography.caption.size};
-            line-height: 1.25;
-            font-weight: 600;
-            z-index: 2;
-          ">${this.escapeHtml(text)}`,
-        wrapperEnd: `</div>`,
-      };
-    }
-
-    const top = position === 'top';
-    return {
-      wrapperStart: `
-        <div style="
-          padding: 8px 10px;
-          color: ${colors.textMuted};
-          font-size: ${typography.caption.size};
-          font-weight: 600;
-          font-family: ${typography.bodyFont};
-          ${top ? 'border-bottom' : 'border-top'}: 1px solid ${colors.border};
-          background: ${colors.surface};
-        ">${this.escapeHtml(text)}`,
-      wrapperEnd: `</div>`,
-    };
-  }
-
-  /**
-   * Получает правильную форму слова "фото"
-   */
-  private getPhotoLabel(count: number): string {
-    if (count === 1) return 'фото';
-    if (count >= 2 && count <= 4) return 'фото';
-    return 'фото';
-  }
-
-  /**
-   * Создает безопасный URL изображения
-   */
-  private buildSafeImageUrl(url: string | null | undefined): string {
-    if (!url) return '';
-    const trimmed = url.trim();
-    if (!trimmed) return '';
-
-    // Используем прокси для внешних изображений
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}&w=1600&q=85`;
-    }
-
-    return trimmed;
-  }
 }
-

@@ -2,6 +2,8 @@
 // ✅ INTERFACE: Базовый интерфейс для генераторов страниц
 
 import type { PageContext } from '../types';
+import { escapeHtml as sharedEscapeHtml } from '../../../utils/htmlUtils';
+import { buildContainImageMarkup } from '../runtime/pdfVisualHelpers';
 
 /**
  * Базовый интерфейс для всех генераторов страниц
@@ -31,15 +33,8 @@ export abstract class BasePageGenerator implements PageGenerator {
   /**
    * Экранирование HTML
    */
-  protected escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+  protected escapeHtml(text: string | null | undefined): string {
+    return sharedEscapeHtml(text);
   }
 
   /**
@@ -51,17 +46,13 @@ export abstract class BasePageGenerator implements PageGenerator {
     height: string,
     opts?: { onerrorBg?: string; filterStyle?: string }
   ): string {
-    const bg = opts?.onerrorBg || '#f3f4f6';
-    const filterStyle = opts?.filterStyle || '';
-    return `
-      <img src="${this.escapeHtml(src)}" alt="" aria-hidden="true"
-        style="position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
-        crossorigin="anonymous" />
-      <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
-        style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}"
-        crossorigin="anonymous"
-        onerror="this.style.display='none';this.previousElementSibling.style.display='none';this.parentElement.style.background='${bg}';" />
-    `;
+    return buildContainImageMarkup({
+      src,
+      alt,
+      height,
+      background: opts?.onerrorBg || '#f3f4f6',
+      filterStyle: opts?.filterStyle || '',
+      backdropMode: 'blur',
+    });
   }
 }
-

@@ -1,14 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CommentsSkeleton } from '@/components/travel/TravelDetailSkeletons';
 import { devWarn } from '@/utils/logger';
-import { CommentItem } from './CommentItem';
 import { CommentForm } from './CommentForm';
+import { CommentThread } from './CommentThread';
 import { useCommentsData } from '@/hooks/useCommentsData';
-import type { TravelComment } from '@/types/comments';
 import { createCommentsSectionStyles } from './CommentsSection.styles';
 
 interface CommentsSectionProps {
@@ -52,24 +50,6 @@ export function CommentsSection({
     handleCancelReply, handleCancelEdit,
     toggleThread, expandAllThreads, collapseAllThreads, handleLoginPress,
   } = useCommentsData(travelId, { enabled: isEnabled });
-
-  const renderCommentWithParents = useCallback((comment: TravelComment) => {
-    const parentChain = getParentChain(comment.id);
-    if (parentChain.length === 0) return null;
-    return (
-      <View style={styles.parentChainContainer}>
-        <View style={styles.parentChainHeader}>
-          <Feather name="corner-down-right" size={16} color={DESIGN_TOKENS.colors.textMuted} />
-          <Text style={styles.parentChainLabel}>
-            Ответ в треде (показаны {parentChain.length + 1} из {parentChain.length + 1 + (replies[comment.id]?.length || 0)} сообщений)
-          </Text>
-        </View>
-        {parentChain.map((parentComment, index) => (
-          <CommentItem key={parentComment.id} comment={parentComment} onReply={handleReply} onEdit={handleEdit} level={index} />
-        ))}
-      </View>
-    );
-  }, [getParentChain, replies, handleReply, handleEdit, styles]);
 
   if (isLoading && !isRefreshing) {
     return <View style={styles.centerContainer} testID="comments-skeleton"><CommentsSkeleton /></View>;
@@ -166,46 +146,20 @@ export function CommentsSection({
               </View>
             ) : (
               topLevel.map((comment) => {
-                const hasReplies = replies[comment.id]?.length > 0;
-                const isExpanded = expandedThreads.has(comment.id);
                 return (
-                  <View key={comment.id} style={styles.commentThread}>
-                    <CommentItem comment={comment} onReply={handleReply} onEdit={handleEdit} level={0} />
-                    {hasReplies && (
-                      <>
-                        <Pressable onPress={() => toggleThread(comment.id)} style={styles.toggleThreadButton}
-                          accessibilityLabel={isExpanded ? 'Свернуть ответы' : 'Показать ответы'}>
-                          <View style={styles.threadLine} />
-                          <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
-                          <Text style={styles.toggleThreadText}>
-                            {isExpanded ? `Свернуть ответы (${replies[comment.id].length})` : `Показать ответы (${replies[comment.id].length})`}
-                          </Text>
-                        </Pressable>
-                        {isExpanded && (
-                          <View style={styles.repliesContainer}>
-                            {replies[comment.id].map((reply) => {
-                              const parentChain = getParentChain(reply.id);
-                              const hasParentChain = parentChain.length > 1;
-                              return (
-                                <View key={reply.id}>
-                                  {hasParentChain && renderCommentWithParents(reply)}
-                                  <CommentItem comment={reply} onReply={handleReply} onEdit={handleEdit} level={hasParentChain ? parentChain.length : 1} />
-                                  {replies[reply.id]?.length > 0 && (
-                                    <View style={styles.nestedRepliesContainer}>
-                                      {replies[reply.id].map((nestedReply) => (
-                                        <CommentItem key={nestedReply.id} comment={nestedReply} onReply={handleReply} onEdit={handleEdit} level={2} />
-                                      ))}
-                                    </View>
-                                  )}
-                                </View>
-                              );
-                            })}
-                          </View>
-                        )}
-                      </>
-                    )}
-                  </View>
-                );
+                  <CommentThread
+                    key={comment.id}
+                    comment={comment}
+                    replies={replies}
+                    expandedThreads={expandedThreads}
+                    getParentChain={getParentChain}
+                    onReply={handleReply}
+                    onEdit={handleEdit}
+                    onToggleThread={toggleThread}
+                    colors={colors}
+                    styles={styles}
+                  />
+                )
               })
             )}
           </View>

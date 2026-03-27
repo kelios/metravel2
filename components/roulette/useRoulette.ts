@@ -130,7 +130,8 @@ export function useRoulette() {
 
   const { data: facetsData } = useQuery({
     queryKey: ['roulette-travel-facets', rouletteQueryParams],
-    queryFn: ({ signal } = {} as any) => fetchTravelFacets('', rouletteQueryParams, { signal }),
+    queryFn: ({ signal } = {} as any) =>
+      fetchTravelFacets('', rouletteQueryParams, { signal, suppressErrors: true }),
     enabled: Boolean(options),
     staleTime: 30 * 1000,
   });

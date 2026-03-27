@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, Platform, StyleSheet, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
@@ -22,8 +22,27 @@ const SIZES = {
 function UserAvatar({ uri, size = 'md', onError }: UserAvatarProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors, SIZES[size]), [colors, size]);
+  const webAvatarStyle = useMemo(
+    () => createWebAvatarStyle(colors, SIZES[size]),
+    [colors, size],
+  );
 
   if (uri) {
+    if (Platform.OS === 'web') {
+      return (
+        <View style={styles.container}>
+          <img
+            src={uri}
+            alt=""
+            aria-hidden="true"
+            referrerPolicy="no-referrer"
+            style={webAvatarStyle}
+            onError={onError}
+          />
+        </View>
+      );
+    }
+
     return (
       <View style={styles.container}>
         <Image source={{ uri }} style={styles.avatar} onError={onError} />
@@ -55,5 +74,15 @@ const createStyles = (colors: ThemedColors, size: number) =>
       borderColor: colors.borderLight,
     },
   });
+
+const createWebAvatarStyle = (colors: ThemedColors, size: number): React.CSSProperties => ({
+  width: size,
+  height: size,
+  display: 'block',
+  borderRadius: size / 2,
+  border: `1px solid ${colors.borderLight}`,
+  objectFit: 'cover',
+  backgroundColor: colors.surfaceMuted,
+});
 
 export default React.memo(UserAvatar);

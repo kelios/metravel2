@@ -294,7 +294,7 @@ describe('AccountMenu', () => {
     expect(getLastImageSourceUri()).toBe(signed);
   });
 
-  it('appends cache-buster param to non-signed avatar url', () => {
+  it('does not append cache-buster param to third-party avatar url', () => {
     const plain = 'https://example.com/avatar.webp';
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
@@ -316,7 +316,7 @@ describe('AccountMenu', () => {
     } as any);
 
     renderWithClient(<RenderRightMenu />);
-    expect(getLastImageSourceUri()).toBe(`${plain}?v=7`);
+    expect(getLastImageSourceUri()).toBe(plain);
   });
 
   it('calls logout and navigates when logout is pressed', async () => {

@@ -557,6 +557,17 @@ describe('src/api/travelsApi.ts', () => {
       expect(devError).toHaveBeenCalledWith('Error fetching travel facets: HTTP', 500, 'Server Error');
     });
 
+    it('подавляет devError при suppressErrors=true', async () => {
+      const { fetchTravelFacets } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 502, statusText: 'Bad Gateway' } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'bad gateway' } as any);
+
+      const result = await fetchTravelFacets('', {}, { suppressErrors: true } as any);
+
+      expect(result).toEqual({ total: 0, facets: {} });
+      expect(devError).not.toHaveBeenCalled();
+    });
+
     it('пробрасывает AbortError без логирования', async () => {
       const { fetchTravelFacets } = loadTravelsApi();
       const abortError: any = new Error('aborted');

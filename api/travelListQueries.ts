@@ -45,7 +45,7 @@ const createTravelQueryError = (message: string, status?: number) => {
 export const fetchTravelFacets = async (
     search: string,
     urlParams: Record<string, unknown>,
-    options?: { signal?: AbortSignal }
+    options?: { signal?: AbortSignal; suppressErrors?: boolean }
 ): Promise<TravelFacetsResponse> => {
     try {
         const whereObject: Record<string, unknown> = {};
@@ -107,7 +107,9 @@ export const fetchTravelFacets = async (
 
         const payload = await safeJsonParse<Record<string, unknown>>(res, {});
         if (!res.ok) {
-            devError('Error fetching travel facets: HTTP', res.status, res.statusText);
+            if (!options?.suppressErrors) {
+                devError('Error fetching travel facets: HTTP', res.status, res.statusText);
+            }
             return { total: 0, facets: {} };
         }
 
@@ -138,7 +140,9 @@ export const fetchTravelFacets = async (
         return { total, facets };
     } catch (e) {
         if (isAbortError(e)) throw e;
-        devError('Error fetching travel facets:', e);
+        if (!options?.suppressErrors) {
+            devError('Error fetching travel facets:', e);
+        }
         return { total: 0, facets: {} };
     }
 };

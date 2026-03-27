@@ -75,6 +75,7 @@ export class CoverPageGenerator {
     const { colors } = this.theme;
     const travelLabel = this.getTravelLabel(data.travelCount);
     const safeCoverImage = this.buildSafeImageUrl(data.coverImage);
+    const formattedYearRange = String(data.yearRange || '').replace(/\s+-\s+/g, '–');
 
     // Анализируем изображение для умного затемнения
     let brightness = 128;
@@ -125,7 +126,7 @@ export class CoverPageGenerator {
 
         ${this.renderContent(data, textPosition, textColor, Boolean(safeCoverImage))}
         ${this.renderFooterRail(
-          `${this.escapeHtml(String(data.travelCount))} ${travelLabel}${data.yearRange ? ` • ${this.escapeHtml(data.yearRange)}` : ''}`
+          `${this.escapeHtml(String(data.travelCount))} ${travelLabel}${formattedYearRange ? ` • ${this.escapeHtml(formattedYearRange)}` : ''}`
         )}
       </section>
     `;

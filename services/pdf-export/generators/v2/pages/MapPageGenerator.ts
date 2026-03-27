@@ -4,20 +4,20 @@
 import { BasePageGenerator } from './PageGenerator';
 import type { PageContext } from '../types';
 import { generateLeafletRouteSnapshot } from '@/utils/mapImageGenerator';
-
-/**
- * Локация с координатами
- */
-interface NormalizedLocation {
-  name: string;
-  lat?: number;
-  lng?: number;
-}
+import {
+  buildGoogleMapsUrl as buildBookGoogleMapsUrl,
+  buildRouteSvg as buildBookRouteSvg,
+} from '../runtime/bookData';
+import type { NormalizedLocation } from '../runtime/types';
 
 /**
  * Генератор страницы карты маршрута
  */
 export class MapPageGenerator extends BasePageGenerator {
+  private getLocationLabel(location: NormalizedLocation): string {
+    return location.address || location.name || '';
+  }
+
   /**
    * Генерирует страницу карты
    */
@@ -33,7 +33,7 @@ export class MapPageGenerator extends BasePageGenerator {
 
     if (!locations.length) return '';
 
-    const mapSvg = this.buildRouteSvg(locations, colors);
+    const mapSvg = buildBookRouteSvg(locations, theme);
     const pointsWithCoords = locations.filter(
       (location) => typeof location.lat === 'number' && typeof location.lng === 'number'
     );
@@ -45,7 +45,7 @@ export class MapPageGenerator extends BasePageGenerator {
           pointsWithCoords.map((location) => ({
             lat: location.lat as number,
             lng: location.lng as number,
-            label: location.name,
+            label: this.getLocationLabel(location),
           })),
           { width: 1400, height: 900 }
         );
@@ -106,18 +106,11 @@ export class MapPageGenerator extends BasePageGenerator {
     `;
   }
 
-  private buildGoogleMapsUrl(location: NormalizedLocation): string {
-    if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return '';
-    // Using lat/lng keeps the URL stable across locales.
-    const query = `${location.lat},${location.lng}`;
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-  }
-
   private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
     const QRCode = await this.getQRCode();
     return Promise.all(
       locations.map(async (loc) => {
-        const url = this.buildGoogleMapsUrl(loc);
+        const url = buildBookGoogleMapsUrl(loc);
         if (!url) return '';
         try {
           return await QRCode.toDataURL(url, {
@@ -149,98 +142,6 @@ export class MapPageGenerator extends BasePageGenerator {
     const locations = (metadata?.locations || []) as NormalizedLocation[];
     return locations.length > 0 ? 1 : 0;
   }
-
-  /**
-   * Создает SVG карту маршрута (fallback)
-   */
-  private buildRouteSvg(locations: NormalizedLocation[], colors: any): string {
-    const width = 700;
-    const height = 500;
-    const padding = 40;
-
-    const validLocations = locations.filter(
-      (loc) => typeof loc.lat === 'number' && typeof loc.lng === 'number'
-    );
-
-    if (!validLocations.length) {
-      return `
-        <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-          <rect width="100%" height="100%" fill="${colors.surfaceAlt}"/>
-          <text x="50%" y="50%" text-anchor="middle" fill="${colors.textMuted}" font-size="16">
-            Карта недоступна
-          </text>
-        </svg>
-      `;
-    }
-
-    // Находим границы
-    const lats = validLocations.map((loc) => loc.lat as number);
-    const lngs = validLocations.map((loc) => loc.lng as number);
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-
-    const latRange = maxLat - minLat || 1;
-    const lngRange = maxLng - minLng || 1;
-
-    // Функция для преобразования координат в пиксели
-    const toX = (lng: number) =>
-      padding + ((lng - minLng) / lngRange) * (width - 2 * padding);
-    const toY = (lat: number) =>
-      height - padding - ((lat - minLat) / latRange) * (height - 2 * padding);
-
-    // Создаем линию маршрута
-    const pathPoints = validLocations.map((loc) => {
-      const x = toX(loc.lng as number);
-      const y = toY(loc.lat as number);
-      return `${x},${y}`;
-    }).join(' ');
-
-    return `
-      <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="${colors.surface}"/>
-        
-        <!-- Маршрут -->
-        <polyline
-          points="${pathPoints}"
-          fill="none"
-          stroke="${colors.accent}"
-          stroke-width="3"
-          stroke-dasharray="5,5"
-          opacity="0.7"
-        />
-        
-        <!-- Точки маршрута -->
-        ${validLocations.map((loc, index) => {
-          const x = toX(loc.lng as number);
-          const y = toY(loc.lat as number);
-          const isFirst = index === 0;
-          const isLast = index === validLocations.length - 1;
-          
-          return `
-            <circle
-              cx="${x}"
-              cy="${y}"
-              r="${isFirst || isLast ? 8 : 6}"
-              fill="${isFirst ? '#22c55e' : isLast ? '#ef4444' : colors.accent}"
-              stroke="white"
-              stroke-width="2"
-            />
-            <text
-              x="${x}"
-              y="${y - 15}"
-              text-anchor="middle"
-              fill="${colors.text}"
-              font-size="12"
-              font-weight="600"
-            >${this.escapeHtml(loc.name)}</text>
-          `;
-        }).join('')}
-      </svg>
-    `;
-  }
-
   /**
    * Создает список локаций
    */
@@ -289,9 +190,9 @@ export class MapPageGenerator extends BasePageGenerator {
                 font-size: 11px;
                 font-weight: 700;
               ">${index + 1}</span>
-              <span style="max-width: 240px; word-break: break-word;">${this.escapeHtml(loc.name)}</span>
+              <span style="max-width: 240px; word-break: break-word;">${this.escapeHtml(this.getLocationLabel(loc))}</span>
               ${qr ? `
-                <a href="${this.escapeHtml(this.buildGoogleMapsUrl(loc))}" style="display: inline-flex; margin-left: 4px;" target="_blank" rel="noreferrer">
+                <a href="${this.escapeHtml(buildBookGoogleMapsUrl(loc))}" style="display: inline-flex; margin-left: 4px;" target="_blank" rel="noreferrer">
                   <img src="${this.escapeHtml(qr)}" alt="QR" style="width: 14mm; height: 14mm; border-radius: 4px; border: 1px solid ${colors.border}; background: #fff;" />
                 </a>
               ` : ''}
@@ -314,4 +215,3 @@ export class MapPageGenerator extends BasePageGenerator {
     `;
   }
 }
-

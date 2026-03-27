@@ -88,6 +88,9 @@ function SearchScreen() {
         contentLayer: {
           flex: 1,
         },
+        contentLayerHidden: {
+          display: 'none' as const,
+        },
       }),
     [colors],
   )
@@ -132,7 +135,7 @@ function SearchScreen() {
             )}
 
             {/* Content layer - renders behind skeleton, fades in when ready */}
-            <View style={styles.contentLayer}>
+            <View style={[styles.contentLayer, !contentReady && styles.contentLayerHidden]}>
               <Suspense fallback={<SearchPageSkeleton showSidebarNavigation={false} />}>
                 <ListTravelWithReadyCallback onReady={() => setContentReady(true)} />
               </Suspense>

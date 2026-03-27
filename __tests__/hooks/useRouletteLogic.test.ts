@@ -109,6 +109,11 @@ describe('useRouletteLogic', () => {
 
     await waitFor(() => expect(result.current.filtersSummary).toBe('Беларусь и ещё 1'));
 
+    expect(fetchTravelFacets).toHaveBeenCalledWith(
+      '',
+      expect.any(Object),
+      expect.objectContaining({ suppressErrors: true })
+    );
     expect(result.current.filterGroups.length).toBeGreaterThan(0);
     expect(result.current.activeFiltersCount).toBeGreaterThan(0);
     expect(result.current.filterGroups[0]?.options[0]).toMatchObject({
