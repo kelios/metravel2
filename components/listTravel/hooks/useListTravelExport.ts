@@ -149,6 +149,19 @@ export function useListTravelExport(
     setLastSettings(baseSettings);
   }, [baseSettings]);
 
+  useEffect(() => {
+    setLastSettings((prev) => {
+      if (prev.sortOrder === 'manual') {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        sortOrder: 'manual',
+      };
+    });
+  }, [selected]);
+
   const settingsSummary = useMemo(() => {
     const template = lastSettings.template || 'minimal';
     return `${template}`;

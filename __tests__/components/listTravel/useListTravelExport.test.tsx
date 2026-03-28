@@ -93,4 +93,23 @@ describe('useListTravelExport', () => {
 
     expect(result.current.selected.map((item) => item.id)).toEqual([3, 1, 2]);
   });
+
+  it('resets remembered export sort to manual when selection changes', () => {
+    const { result } = renderHook(() => useListTravelExport([travelA, travelB, travelC]));
+
+    act(() => {
+      result.current.setLastSettings((prev) => ({
+        ...prev,
+        sortOrder: 'date-desc',
+      }));
+    });
+
+    expect(result.current.lastSettings.sortOrder).toBe('date-desc');
+
+    act(() => {
+      result.current.toggleSelect(travelA);
+    });
+
+    expect(result.current.lastSettings.sortOrder).toBe('manual');
+  });
 });
