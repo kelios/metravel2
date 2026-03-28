@@ -6,18 +6,24 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-n
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 
-export type PdfThemeName = 
-  | 'minimal' 
-  | 'light' 
-  | 'dark' 
-  | 'travel-magazine' 
-  | 'classic' 
-  | 'modern' 
-  | 'romantic' 
+export type PdfThemeName =
+  | 'minimal'
+  | 'light'
+  | 'dark'
+  | 'travel-magazine'
+  | 'classic'
+  | 'modern'
+  | 'romantic'
   | 'adventure'
   | 'black-white'
   | 'sepia'
-  | 'newspaper';
+  | 'newspaper'
+  | 'ocean'
+  | 'forest'
+  | 'sunset'
+  | 'nordic'
+  | 'retro'
+  | 'tropical';
 
 interface ThemeInfo {
   id: PdfThemeName;
@@ -211,6 +217,102 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
       headerFont: 'Libre Franklin',
       bodyFont: 'PT Serif',
       style: 'modern',
+    },
+  },
+  ocean: {
+    id: 'ocean',
+    name: 'Океан',
+    description: 'Глубокий синий с бирюзой',
+    colors: {
+      primary: 'rgb(12, 27, 42)',
+      secondary: 'rgb(91, 122, 149)',
+      accent: 'rgb(46, 139, 158)',
+      background: 'rgb(240, 247, 250)',
+    },
+    preview: {
+      headerFont: 'DM Sans',
+      bodyFont: 'Source Sans 3',
+      style: 'modern',
+    },
+  },
+  forest: {
+    id: 'forest',
+    name: 'Лес',
+    description: 'Насыщенные зелёные и земляные тона',
+    colors: {
+      primary: 'rgb(26, 46, 26)',
+      secondary: 'rgb(90, 122, 90)',
+      accent: 'rgb(74, 140, 92)',
+      background: 'rgb(244, 248, 242)',
+    },
+    preview: {
+      headerFont: 'Merriweather',
+      bodyFont: 'Source Serif 4',
+      style: 'classic',
+    },
+  },
+  sunset: {
+    id: 'sunset',
+    name: 'Закат',
+    description: 'Тёплый коралл и золото',
+    colors: {
+      primary: 'rgb(45, 27, 20)',
+      secondary: 'rgb(140, 107, 94)',
+      accent: 'rgb(224, 120, 64)',
+      background: 'rgb(254, 247, 240)',
+    },
+    preview: {
+      headerFont: 'Outfit',
+      bodyFont: 'Nunito',
+      style: 'playful',
+    },
+  },
+  nordic: {
+    id: 'nordic',
+    name: 'Скандинавия',
+    description: 'Холодный минимализм',
+    colors: {
+      primary: 'rgb(28, 37, 51)',
+      secondary: 'rgb(122, 138, 158)',
+      accent: 'rgb(107, 138, 173)',
+      background: 'rgb(245, 247, 250)',
+    },
+    preview: {
+      headerFont: 'Inter',
+      bodyFont: 'Inter',
+      style: 'modern',
+    },
+  },
+  retro: {
+    id: 'retro',
+    name: 'Ретро',
+    description: 'Стиль 70-х: горчица и бургунди',
+    colors: {
+      primary: 'rgb(42, 31, 20)',
+      secondary: 'rgb(138, 114, 96)',
+      accent: 'rgb(196, 132, 60)',
+      background: 'rgb(248, 243, 236)',
+    },
+    preview: {
+      headerFont: 'Playfair Display',
+      bodyFont: 'Libre Baskerville',
+      style: 'elegant',
+    },
+  },
+  tropical: {
+    id: 'tropical',
+    name: 'Тропики',
+    description: 'Изумруд, бирюза и фуксия',
+    colors: {
+      primary: 'rgb(26, 42, 36)',
+      secondary: 'rgb(90, 122, 110)',
+      accent: 'rgb(232, 87, 122)',
+      background: 'rgb(242, 250, 246)',
+    },
+    preview: {
+      headerFont: 'Poppins',
+      bodyFont: 'Nunito',
+      style: 'playful',
     },
   },
 };

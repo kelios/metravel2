@@ -4,7 +4,7 @@
 /**
  * Тип темы оформления
  */
-export type PdfThemeName = 
+export type PdfThemeName =
   | 'minimal'
   | 'light'
   | 'dark'
@@ -16,7 +16,13 @@ export type PdfThemeName =
   | 'illustrated'
   | 'black-white'
   | 'sepia'
-  | 'newspaper';
+  | 'newspaper'
+  | 'ocean'
+  | 'forest'
+  | 'sunset'
+  | 'nordic'
+  | 'retro'
+  | 'tropical';
 
 /**
  * Конфигурация темы оформления PDF
@@ -1202,6 +1208,534 @@ export const newspaperTheme: PdfThemeConfig = {
 };
 
 /**
+ * Ocean — глубокий синий с бирюзовыми акцентами, свежий прибрежный стиль
+ */
+export const oceanTheme: PdfThemeConfig = {
+  name: 'ocean',
+  displayName: 'Океан',
+  description: 'Глубокий синий с бирюзовыми акцентами',
+
+  colors: {
+    text: '#0c1b2a',
+    textSecondary: '#1e3a5f',
+    textMuted: '#5b7a95',
+    background: '#f0f7fa',
+    surface: '#ffffff',
+    surfaceAlt: '#e8f4f8',
+
+    accent: '#2e8b9e',
+    accentStrong: '#1a6b7d',
+    accentSoft: '#c5e8ef',
+    accentLight: '#e8f6f9',
+
+    border: '#c1d9e3',
+    borderLight: '#dfeef3',
+
+    infoBlock: {
+      background: '#e0f2fe',
+      border: '#7dd3fc',
+      text: '#075985',
+      icon: '#0ea5e9',
+    },
+    warningBlock: {
+      background: '#fef9c3',
+      border: '#fde047',
+      text: '#854d0e',
+      icon: '#eab308',
+    },
+    tipBlock: {
+      background: '#ccfbf1',
+      border: '#5eead4',
+      text: '#115e59',
+      icon: '#14b8a6',
+    },
+    dangerBlock: {
+      background: '#fee2e2',
+      border: '#fca5a5',
+      text: '#991b1b',
+      icon: '#ef4444',
+    },
+
+    cover: {
+      background: '#f0f7fa',
+      backgroundGradient: ['#1a6b7d', '#0c3547'],
+      text: '#f0f9ff',
+      textSecondary: '#a5d8e8',
+    },
+  },
+
+  typography: {
+    headingFont: "'DM Sans', system-ui, -apple-system, sans-serif",
+    bodyFont: "'Source Sans 3', system-ui, -apple-system, sans-serif",
+    monoFont: "'JetBrains Mono', monospace",
+
+    h1: { size: '34pt', weight: 700, lineHeight: 1.15, marginBottom: '16pt' },
+    h2: { size: '26pt', weight: 600, lineHeight: 1.25, marginBottom: '14pt' },
+    h3: { size: '20pt', weight: 600, lineHeight: 1.35, marginBottom: '12pt' },
+    h4: { size: '16pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
+
+    body: { size: '12pt', lineHeight: 1.85, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
+  },
+
+  spacing: {
+    pagePadding: '24mm',
+    sectionSpacing: '24pt',
+    blockSpacing: '16pt',
+    elementSpacing: '12pt',
+    contentMaxWidth: '100%',
+    columnGap: '16pt',
+  },
+
+  blocks: {
+    borderRadius: '14px',
+    shadow: '0 4px 16px rgba(14,107,125,0.1)',
+    borderWidth: '1px',
+  },
+};
+
+/**
+ * Forest — насыщенные зелёные тона, лесная атмосфера
+ */
+export const forestTheme: PdfThemeConfig = {
+  name: 'forest',
+  displayName: 'Лес',
+  description: 'Насыщенные зелёные тона и земляная палитра',
+
+  colors: {
+    text: '#1a2e1a',
+    textSecondary: '#2d4a2d',
+    textMuted: '#5a7a5a',
+    background: '#f4f8f2',
+    surface: '#ffffff',
+    surfaceAlt: '#ecf3e8',
+
+    accent: '#4a8c5c',
+    accentStrong: '#2d6b3e',
+    accentSoft: '#c8e0ce',
+    accentLight: '#e8f3eb',
+
+    border: '#c5d5c0',
+    borderLight: '#dde8d9',
+
+    infoBlock: {
+      background: '#e8f5e9',
+      border: '#a5d6a7',
+      text: '#1b5e20',
+      icon: '#43a047',
+    },
+    warningBlock: {
+      background: '#fff8e1',
+      border: '#ffcc80',
+      text: '#e65100',
+      icon: '#ff9800',
+    },
+    tipBlock: {
+      background: '#e0f2f1',
+      border: '#80cbc4',
+      text: '#004d40',
+      icon: '#009688',
+    },
+    dangerBlock: {
+      background: '#fbe9e7',
+      border: '#ef9a9a',
+      text: '#bf360c',
+      icon: '#e53935',
+    },
+
+    cover: {
+      background: '#f4f8f2',
+      backgroundGradient: ['#2d6b3e', '#1a3a22'],
+      text: '#f0f8f0',
+      textSecondary: '#a8d5b0',
+    },
+  },
+
+  typography: {
+    headingFont: "'Merriweather', Georgia, serif",
+    bodyFont: "'Source Serif 4', Georgia, serif",
+    monoFont: "'Courier New', monospace",
+
+    h1: { size: '34pt', weight: 700, lineHeight: 1.25, marginBottom: '16pt' },
+    h2: { size: '26pt', weight: 600, lineHeight: 1.35, marginBottom: '14pt' },
+    h3: { size: '20pt', weight: 600, lineHeight: 1.4, marginBottom: '12pt' },
+    h4: { size: '16pt', weight: 600, lineHeight: 1.45, marginBottom: '10pt' },
+
+    body: { size: '12pt', lineHeight: 1.9, marginBottom: '14pt' },
+    small: { size: '11pt', lineHeight: 1.8 },
+    caption: { size: '10pt', lineHeight: 1.7 },
+  },
+
+  spacing: {
+    pagePadding: '26mm',
+    sectionSpacing: '26pt',
+    blockSpacing: '18pt',
+    elementSpacing: '14pt',
+    contentMaxWidth: '100%',
+    columnGap: '18pt',
+  },
+
+  blocks: {
+    borderRadius: '10px',
+    shadow: '0 3px 12px rgba(45,107,62,0.1)',
+    borderWidth: '1px',
+  },
+};
+
+/**
+ * Sunset — тёплые закатные тона: коралл, золото, мягкий персик
+ */
+export const sunsetTheme: PdfThemeConfig = {
+  name: 'sunset',
+  displayName: 'Закат',
+  description: 'Тёплые закатные тона — коралл, золото, персик',
+
+  colors: {
+    text: '#2d1b14',
+    textSecondary: '#5c3a2e',
+    textMuted: '#8c6b5e',
+    background: '#fef7f0',
+    surface: '#ffffff',
+    surfaceAlt: '#fdf0e6',
+
+    accent: '#e07840',
+    accentStrong: '#c45e2a',
+    accentSoft: '#fad5bf',
+    accentLight: '#fef0e6',
+
+    border: '#edcdb8',
+    borderLight: '#f5e3d4',
+
+    infoBlock: {
+      background: '#fff4e6',
+      border: '#ffc078',
+      text: '#854d0e',
+      icon: '#f59e0b',
+    },
+    warningBlock: {
+      background: '#fef3c7',
+      border: '#fde68a',
+      text: '#92400e',
+      icon: '#d97706',
+    },
+    tipBlock: {
+      background: '#ecfdf5',
+      border: '#a7f3d0',
+      text: '#065f46',
+      icon: '#10b981',
+    },
+    dangerBlock: {
+      background: '#fef2f2',
+      border: '#fecaca',
+      text: '#991b1b',
+      icon: '#ef4444',
+    },
+
+    cover: {
+      background: '#fef7f0',
+      backgroundGradient: ['#e07840', '#c94a6e'],
+      text: '#ffffff',
+      textSecondary: '#ffd4b8',
+    },
+  },
+
+  typography: {
+    headingFont: "'Outfit', system-ui, -apple-system, sans-serif",
+    bodyFont: "'Nunito', system-ui, -apple-system, sans-serif",
+    monoFont: "'JetBrains Mono', monospace",
+
+    h1: { size: '36pt', weight: 800, lineHeight: 1.1, marginBottom: '16pt' },
+    h2: { size: '26pt', weight: 700, lineHeight: 1.2, marginBottom: '14pt' },
+    h3: { size: '20pt', weight: 600, lineHeight: 1.3, marginBottom: '12pt' },
+    h4: { size: '16pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
+
+    body: { size: '12pt', lineHeight: 1.85, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
+  },
+
+  spacing: {
+    pagePadding: '24mm',
+    sectionSpacing: '24pt',
+    blockSpacing: '16pt',
+    elementSpacing: '12pt',
+    contentMaxWidth: '100%',
+    columnGap: '16pt',
+  },
+
+  blocks: {
+    borderRadius: '16px',
+    shadow: '0 6px 20px rgba(224,120,64,0.12)',
+    borderWidth: '1px',
+  },
+};
+
+/**
+ * Nordic — холодный скандинавский минимализм, приглушённые голубые и серые
+ */
+export const nordicTheme: PdfThemeConfig = {
+  name: 'nordic',
+  displayName: 'Скандинавия',
+  description: 'Холодный минимализм, приглушённые серо-голубые тона',
+
+  colors: {
+    text: '#1c2533',
+    textSecondary: '#3b4a5c',
+    textMuted: '#7a8a9e',
+    background: '#f5f7fa',
+    surface: '#ffffff',
+    surfaceAlt: '#edf0f5',
+
+    accent: '#6b8aad',
+    accentStrong: '#4a6d8c',
+    accentSoft: '#d0dde8',
+    accentLight: '#eaf0f5',
+
+    border: '#d5dce5',
+    borderLight: '#e8ecf1',
+
+    infoBlock: {
+      background: '#e8f0fe',
+      border: '#a8c6e8',
+      text: '#1a4b7a',
+      icon: '#4a8ac7',
+    },
+    warningBlock: {
+      background: '#fef6e7',
+      border: '#f0d78c',
+      text: '#7a5c12',
+      icon: '#c7a232',
+    },
+    tipBlock: {
+      background: '#e5f5ec',
+      border: '#8ec9a5',
+      text: '#1a5a35',
+      icon: '#3ea86e',
+    },
+    dangerBlock: {
+      background: '#fce8e8',
+      border: '#e5a0a0',
+      text: '#7a1a1a',
+      icon: '#c74a4a',
+    },
+
+    cover: {
+      background: '#f5f7fa',
+      backgroundGradient: ['#4a6d8c', '#2c3e50'],
+      text: '#f5f7fa',
+      textSecondary: '#b0c4d8',
+    },
+  },
+
+  typography: {
+    headingFont: "'Inter', system-ui, -apple-system, sans-serif",
+    bodyFont: "'Inter', system-ui, -apple-system, sans-serif",
+    monoFont: "'JetBrains Mono', monospace",
+
+    h1: { size: '32pt', weight: 600, lineHeight: 1.2, marginBottom: '16pt' },
+    h2: { size: '24pt', weight: 600, lineHeight: 1.3, marginBottom: '12pt' },
+    h3: { size: '18pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
+    h4: { size: '14pt', weight: 600, lineHeight: 1.4, marginBottom: '8pt' },
+
+    body: { size: '12pt', lineHeight: 1.8, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
+  },
+
+  spacing: {
+    pagePadding: '28mm',
+    sectionSpacing: '26pt',
+    blockSpacing: '18pt',
+    elementSpacing: '14pt',
+    contentMaxWidth: '100%',
+    columnGap: '18pt',
+  },
+
+  blocks: {
+    borderRadius: '8px',
+    shadow: '0 2px 8px rgba(28,37,51,0.06)',
+    borderWidth: '1px',
+  },
+};
+
+/**
+ * Retro — ретро-стиль 70-х: горчичный, бургунди, тёплый беж
+ */
+export const retroTheme: PdfThemeConfig = {
+  name: 'retro',
+  displayName: 'Ретро',
+  description: 'Стиль 70-х — горчичный, бургунди, тёплый беж',
+
+  colors: {
+    text: '#2a1f14',
+    textSecondary: '#5c4330',
+    textMuted: '#8a7260',
+    background: '#f8f3ec',
+    surface: '#fffdf8',
+    surfaceAlt: '#f0e8db',
+
+    accent: '#c4843c',
+    accentStrong: '#9e5b2a',
+    accentSoft: '#edd5b8',
+    accentLight: '#faf1e4',
+
+    border: '#d9c7ae',
+    borderLight: '#ebe0d0',
+
+    infoBlock: {
+      background: '#e8ebe0',
+      border: '#a8b090',
+      text: '#3a4028',
+      icon: '#6b7a4a',
+    },
+    warningBlock: {
+      background: '#fdf2d0',
+      border: '#e0c060',
+      text: '#7a5a0a',
+      icon: '#c4963c',
+    },
+    tipBlock: {
+      background: '#e0ede0',
+      border: '#90b890',
+      text: '#2a4a2a',
+      icon: '#5a8a5a',
+    },
+    dangerBlock: {
+      background: '#f5e0d8',
+      border: '#c8887a',
+      text: '#7a2a1a',
+      icon: '#a04a3a',
+    },
+
+    cover: {
+      background: '#f8f3ec',
+      backgroundGradient: ['#8a3a3a', '#5c2828'],
+      text: '#faf0e0',
+      textSecondary: '#e0c0a0',
+    },
+  },
+
+  typography: {
+    headingFont: "'Playfair Display', Georgia, serif",
+    bodyFont: "'Libre Baskerville', Georgia, serif",
+    monoFont: "'Courier New', monospace",
+
+    h1: { size: '36pt', weight: 800, lineHeight: 1.15, marginBottom: '18pt' },
+    h2: { size: '28pt', weight: 700, lineHeight: 1.25, marginBottom: '14pt' },
+    h3: { size: '22pt', weight: 600, lineHeight: 1.35, marginBottom: '12pt' },
+    h4: { size: '17pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
+
+    body: { size: '12pt', lineHeight: 1.9, marginBottom: '14pt' },
+    small: { size: '11pt', lineHeight: 1.8 },
+    caption: { size: '10pt', lineHeight: 1.7 },
+  },
+
+  spacing: {
+    pagePadding: '26mm',
+    sectionSpacing: '26pt',
+    blockSpacing: '18pt',
+    elementSpacing: '14pt',
+    contentMaxWidth: '100%',
+    columnGap: '18pt',
+  },
+
+  blocks: {
+    borderRadius: '6px',
+    shadow: '0 4px 14px rgba(158,91,42,0.12)',
+    borderWidth: '2px',
+  },
+};
+
+/**
+ * Tropical — яркие тропические цвета: изумруд, горячий розовый, бирюза
+ */
+export const tropicalTheme: PdfThemeConfig = {
+  name: 'tropical',
+  displayName: 'Тропики',
+  description: 'Яркие тропические цвета — изумруд, бирюза, фуксия',
+
+  colors: {
+    text: '#1a2a24',
+    textSecondary: '#2d4a3e',
+    textMuted: '#5a7a6e',
+    background: '#f2faf6',
+    surface: '#ffffff',
+    surfaceAlt: '#e6f5ee',
+
+    accent: '#e8577a',
+    accentStrong: '#c93d60',
+    accentSoft: '#fad0dc',
+    accentLight: '#fef0f4',
+
+    border: '#c0ddd0',
+    borderLight: '#daeee4',
+
+    infoBlock: {
+      background: '#e0f7fa',
+      border: '#80deea',
+      text: '#006064',
+      icon: '#00bcd4',
+    },
+    warningBlock: {
+      background: '#fff9c4',
+      border: '#fff176',
+      text: '#f57f17',
+      icon: '#ffeb3b',
+    },
+    tipBlock: {
+      background: '#e8f5e9',
+      border: '#81c784',
+      text: '#1b5e20',
+      icon: '#4caf50',
+    },
+    dangerBlock: {
+      background: '#fce4ec',
+      border: '#f48fb1',
+      text: '#880e4f',
+      icon: '#e91e63',
+    },
+
+    cover: {
+      background: '#f2faf6',
+      backgroundGradient: ['#00897b', '#e8577a'],
+      text: '#ffffff',
+      textSecondary: '#b2dfdb',
+    },
+  },
+
+  typography: {
+    headingFont: "'Poppins', system-ui, -apple-system, sans-serif",
+    bodyFont: "'Nunito', system-ui, -apple-system, sans-serif",
+    monoFont: "'JetBrains Mono', monospace",
+
+    h1: { size: '36pt', weight: 800, lineHeight: 1.1, marginBottom: '16pt' },
+    h2: { size: '26pt', weight: 700, lineHeight: 1.2, marginBottom: '14pt' },
+    h3: { size: '20pt', weight: 600, lineHeight: 1.3, marginBottom: '12pt' },
+    h4: { size: '16pt', weight: 600, lineHeight: 1.4, marginBottom: '10pt' },
+
+    body: { size: '12pt', lineHeight: 1.85, marginBottom: '12pt' },
+    small: { size: '11pt', lineHeight: 1.7 },
+    caption: { size: '10pt', lineHeight: 1.6 },
+  },
+
+  spacing: {
+    pagePadding: '24mm',
+    sectionSpacing: '24pt',
+    blockSpacing: '16pt',
+    elementSpacing: '12pt',
+    contentMaxWidth: '100%',
+    columnGap: '16pt',
+  },
+
+  blocks: {
+    borderRadius: '18px',
+    shadow: '0 6px 22px rgba(0,137,123,0.12)',
+    borderWidth: '1px',
+  },
+};
+
+/**
  * Реестр тем
  */
 export const PDF_THEMES: Record<PdfThemeName, PdfThemeConfig> = {
@@ -1217,6 +1751,12 @@ export const PDF_THEMES: Record<PdfThemeName, PdfThemeConfig> = {
   'black-white': blackWhiteTheme,
   sepia: sepiaTheme,
   newspaper: newspaperTheme,
+  ocean: oceanTheme,
+  forest: forestTheme,
+  sunset: sunsetTheme,
+  nordic: nordicTheme,
+  retro: retroTheme,
+  tropical: tropicalTheme,
 };
 
 /**
