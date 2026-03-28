@@ -64,10 +64,27 @@ describe('RuntimeMapRenderer', () => {
       } as any,
     })
 
+    // Header
     expect(html).toContain('Профиль высот')
-    expect(html).toContain('Мин. 3 м')
-    expect(html).toContain('Макс. 280 м')
-    expect(html).toContain('grid-template-columns: repeat(2, minmax(0, 1fr));')
-    expect(html.indexOf('<svg viewBox="0 0 220 96"')).toBeLessThan(html.indexOf('>Мин.<'))
+    // 6 summary cards
+    expect(html).toContain('Дистанция')
+    expect(html).toContain('Набор')
+    expect(html).toContain('Сброс')
+    expect(html).toContain('Перепад')
+    // Min/max badges
+    expect(html).toContain('Мин 3 м')
+    expect(html).toContain('Пик 280 м')
+    // Chart SVG with new dimensions
+    expect(html).toContain('<svg viewBox="0 0 500 120"')
+    // Peak vertical line (info color dashed)
+    expect(html).toContain('stroke-dasharray="4 3"')
+    // Key point circles
+    expect(html).toContain('Старт')
+    expect(html).toContain('Высшая точка')
+    expect(html).toContain('Финиш')
+    // X-axis labels
+    expect(html).toContain('0 км')
+    // SVG chart is present
+    expect(html.indexOf('<svg viewBox="0 0 500 120"')).toBeGreaterThan(-1)
   })
 })

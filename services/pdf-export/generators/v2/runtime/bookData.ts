@@ -213,19 +213,19 @@ export function buildRouteSvg(
           points="${normalizedRouteLine.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')}"
           fill="none"
           stroke="${theme.colors.surface}"
-          stroke-width="2.8"
+          stroke-width="4.5"
           stroke-linecap="round"
           stroke-linejoin="round"
-          opacity="0.95"
+          opacity="0.9"
         />
         <polyline
           points="${normalizedRouteLine.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')}"
           fill="none"
-          stroke="${theme.colors.accentStrong}"
-          stroke-width="1.8"
+          stroke="${theme.colors.accent}"
+          stroke-width="2.8"
           stroke-linecap="round"
           stroke-linejoin="round"
-          opacity="0.95"
+          opacity="1"
         />`
       : '';
 

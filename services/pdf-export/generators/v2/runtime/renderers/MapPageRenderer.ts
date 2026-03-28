@@ -273,29 +273,67 @@ export class RuntimeMapRenderer {
       if (delta < 0) descent += Math.abs(delta)
     }
 
-    const chartWidth = 220
-    const chartHeight = 96
-    const padding = 10
-
-    const polylinePoints = samples
-      .map((sample) => {
-        const x = padding + (sample.distanceKm / Math.max(0.001, totalDistanceKm)) * (chartWidth - padding * 2)
-        const y = padding + (1 - (sample.elevationM - minElevation) / elevationRange) * (chartHeight - padding * 2)
-        return `${x.toFixed(1)},${y.toFixed(1)}`
-      })
-      .join(' ')
-
-    const areaPath = samples
-      .map((sample, index) => {
-        const x = padding + (sample.distanceKm / Math.max(0.001, totalDistanceKm)) * (chartWidth - padding * 2)
-        const y = padding + (1 - (sample.elevationM - minElevation) / elevationRange) * (chartHeight - padding * 2)
-        return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`
-      })
-      .join(' ')
-
-    const guideValues = [maxElevation, minElevation + elevationRange / 2, minElevation]
     const round = (v: number) => Math.round(v * 10) / 10
-    const gradientId = `elev-fill-${Math.round(minElevation)}-${Math.round(maxElevation)}-${samples.length}`
+    const fmt = (v: number) => `${Math.round(v)} м`
+
+    // Key samples
+    const startSample = samples[0]
+    const finishSample = samples[samples.length - 1]
+    const peakSample = samples.reduce((best, s) => s.elevationM > best.elevationM ? s : best, samples[0])
+
+    // SVG chart geometry
+    const CW = 500        // viewBox width
+    const CH = 120        // viewBox height
+    const PL = 44         // left padding (y-axis labels)
+    const PR = 10         // right padding
+    const PT = 10         // top padding
+    const PB = 18         // bottom padding (x-axis labels)
+    const plotW = CW - PL - PR
+    const plotH = CH - PT - PB
+    const baseY = PT + plotH
+
+    const toX = (d: number) => PL + (d / Math.max(0.001, totalDistanceKm)) * plotW
+    const toY = (e: number) => PT + (1 - (e - minElevation) / elevationRange) * plotH
+
+    const polylinePoints = samples.map((s) => `${toX(s.distanceKm).toFixed(1)},${toY(s.elevationM).toFixed(1)}`).join(' ')
+
+    const areaPath = `M ${toX(samples[0].distanceKm).toFixed(1)} ${baseY} `
+      + samples.map((s) => `L ${toX(s.distanceKm).toFixed(1)} ${toY(s.elevationM).toFixed(1)}`).join(' ')
+      + ` L ${toX(samples[samples.length - 1].distanceKm).toFixed(1)} ${baseY} Z`
+
+    // 3 y-axis guides
+    const guideValues = [maxElevation, minElevation + elevationRange / 2, minElevation]
+
+    // Peak key point
+    const peakX = toX(peakSample.distanceKm)
+    const peakY = toY(peakSample.elevationM)
+    const startX = toX(startSample.distanceKm)
+    const startY = toY(startSample.elevationM)
+    const finishX = toX(finishSample.distanceKm)
+    const finishY = toY(finishSample.elevationM)
+
+    const gradientId = `elev-${Math.round(minElevation)}-${Math.round(maxElevation)}-${samples.length}`
+
+    // Colors matching the travel page
+    const accentColor = colors.accent
+    const infoColor = colors.info ?? '#3b82f6'
+
+    // 6 summary cards (matches summaryCards in RouteElevationProfile.tsx)
+    const summaryCards = [
+      { label: 'Дистанция', value: `${round(totalDistanceKm)} км`, accent: true },
+      { label: 'Набор', value: `+${fmt(ascent)}`, accent: true },
+      { label: 'Сброс', value: `-${fmt(descent)}`, accent: false },
+      { label: 'Мин высота', value: fmt(minElevation), accent: false },
+      { label: 'Макс высота', value: fmt(maxElevation), accent: false },
+      { label: 'Перепад', value: fmt(elevationRange), accent: false },
+    ]
+
+    // 3 point cards (matches pointCards in RouteElevationProfile.tsx)
+    const pointCards = [
+      { label: 'Старт', value: fmt(startSample.elevationM), color: accentColor },
+      { label: 'Высшая точка', value: fmt(peakSample.elevationM), color: infoColor },
+      { label: 'Финиш', value: fmt(finishSample.elevationM), color: colors.accentStrong ?? accentColor },
+    ]
 
     return `
       <div style="
@@ -306,135 +344,123 @@ export class RuntimeMapRenderer {
         border: ${this.ctx.theme.blocks.borderWidth} solid ${colors.border};
         page-break-inside: avoid;
         break-inside: avoid;
+        font-family: ${typography.bodyFont};
       ">
-        <div style="
-          font-size: 9pt;
-          font-weight: 700;
-          color: ${colors.text};
-          margin-bottom: 3px;
-          font-family: ${typography.headingFont};
-        ">Профиль высот</div>
-        <div style="
-          font-size: ${typography.caption.size};
-          line-height: 1.45;
-          color: ${colors.textMuted};
-          margin-bottom: 8px;
-          font-family: ${typography.bodyFont};
-        ">${escapeHtml(`${round(totalDistanceKm)} км • ${Math.round(ascent)} м набора • ${Math.round(descent)} м сброса`)}</div>
+        <!-- Header -->
+        <div style="margin-bottom: 8px;">
+          <div style="font-size: 9pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">Профиль высот</div>
+          <div style="font-size: ${typography.caption.size}; color: ${colors.textMuted}; margin-top: 2px;">
+            ${escapeHtml(`${round(totalDistanceKm)} км • +${Math.round(ascent)} м набора • пик ${fmt(maxElevation)}`)}</div>
+        </div>
+
+        <!-- 6 summary cards -->
+        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px;">
+          ${summaryCards.map((c) => `
+            <div style="
+              flex: 1 1 80px;
+              padding: 7px 8px;
+              border-radius: 10px;
+              border: 1px solid ${c.accent ? colors.border : colors.borderLight};
+              background: ${c.accent ? colors.backgroundSecondary ?? colors.surfaceAlt : colors.surfaceAlt};
+            ">
+              <div style="font-size: 9pt; color: ${colors.textMuted}; margin-bottom: 2px;">${escapeHtml(c.label)}</div>
+              <div style="font-size: 9pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">${escapeHtml(c.value)}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Chart -->
         <div style="
           position: relative;
-          border-radius: 14px;
-          border: 1px solid ${colors.border};
-          background: ${colors.surfaceAlt};
-          padding: 10px 10px 8px;
+          border-radius: 10px;
+          border: 1px solid ${colors.borderLight};
+          background: ${colors.backgroundSecondary ?? colors.surfaceAlt};
           overflow: hidden;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         ">
+          <!-- Min / Пик badges -->
           <div style="
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 6px;
+            position: absolute; top: 6px; left: 8px; right: 8px;
+            display: flex; justify-content: space-between; z-index: 2; pointer-events: none;
           ">
             <span style="
-              display: inline-flex;
-              align-items: center;
-              gap: 4px;
-              padding: 4px 8px;
-              border-radius: 999px;
-              background: ${colors.surface};
-              border: 1px solid ${colors.borderLight};
-              color: ${colors.text};
-              font-size: ${typography.caption.size};
-              font-weight: 700;
-              font-family: ${typography.bodyFont};
-            ">Мин. ${round(minElevation)} м</span>
+              padding: 3px 8px; border-radius: 999px; font-size: ${typography.caption.size}; font-weight: 700;
+              background: rgba(255,255,255,0.72); border: 1px solid ${colors.borderLight}; color: ${colors.text};
+            ">Мин ${fmt(minElevation)}</span>
             <span style="
-              display: inline-flex;
-              align-items: center;
-              gap: 4px;
-              padding: 4px 8px;
-              border-radius: 999px;
-              background: ${colors.accentSoft};
-              border: 1px solid ${colors.accentLight};
-              color: ${colors.text};
-              font-size: ${typography.caption.size};
-              font-weight: 700;
-              font-family: ${typography.bodyFont};
-            ">Макс. ${round(maxElevation)} м</span>
+              padding: 3px 8px; border-radius: 999px; font-size: ${typography.caption.size}; font-weight: 700;
+              background: ${colors.accentSoft}; border: 1px solid ${colors.accentLight ?? colors.border}; color: ${colors.text};
+            ">Пик ${fmt(maxElevation)}</span>
           </div>
-          <div style="position: relative;">
-            <svg viewBox="0 0 ${chartWidth} ${chartHeight}" style="width: 100%; height: 40mm; display: block;">
+
+          <svg viewBox="0 0 ${CW} ${CH}" style="width: 100%; height: 48mm; display: block;" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="${colors.accent}" stop-opacity="0.26"/>
-                <stop offset="100%" stop-color="${colors.accent}" stop-opacity="0.04"/>
+                <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.30"/>
+                <stop offset="100%" stop-color="${accentColor}" stop-opacity="0.03"/>
               </linearGradient>
             </defs>
-            ${guideValues.map((value) => {
-              const progress = elevationRange <= 0 ? 0 : (maxElevation - value) / elevationRange
-              const y = padding + (chartHeight - padding * 2) * progress
+
+            <!-- Y-axis guide lines + labels -->
+            ${guideValues.map((val, _i) => {
+              const gy = toY(val)
               return `
-                <line
-                  x1="${padding}"
-                  y1="${y.toFixed(1)}"
-                  x2="${chartWidth - padding}"
-                  y2="${y.toFixed(1)}"
-                  stroke="${colors.borderLight}"
-                  stroke-width="1"
-                  stroke-dasharray="3 4"
-                  opacity="0.75"
-                />
+                <line x1="${PL}" y1="${gy.toFixed(1)}" x2="${CW - PR}" y2="${gy.toFixed(1)}"
+                  stroke="${colors.borderLight}" stroke-width="1" stroke-dasharray="3 4" opacity="0.8"/>
+                <text x="${(PL - 3).toFixed(1)}" y="${(gy + 3.5).toFixed(1)}"
+                  font-size="9" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
+                >${Math.round(val)} м</text>
               `
             }).join('')}
-            <path
-              d="${areaPath} L ${(chartWidth - padding).toFixed(1)} ${(chartHeight - padding).toFixed(1)} L ${padding.toFixed(1)} ${(chartHeight - padding).toFixed(1)} Z"
-              fill="url(#${gradientId})"
-            />
-            <polyline
-              points="${polylinePoints}"
-              fill="none"
-              stroke="${colors.accent}"
-              stroke-width="2.6"
-              stroke-linejoin="round"
-              stroke-linecap="round"
-            />
+
+            <!-- Peak vertical line -->
+            <line x1="${peakX.toFixed(1)}" y1="${PT}" x2="${peakX.toFixed(1)}" y2="${(PT + plotH).toFixed(1)}"
+              stroke="${infoColor}" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.65"/>
+
+            <!-- Area fill -->
+            <path d="${areaPath}" fill="url(#${gradientId})"/>
+
+            <!-- Profile line -->
+            <polyline points="${polylinePoints}" fill="none"
+              stroke="${accentColor}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+
+            <!-- Key point circles: start, peak, finish -->
+            <circle cx="${startX.toFixed(1)}" cy="${startY.toFixed(1)}" r="4" fill="${accentColor}"/>
+            <circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="5" fill="${infoColor}"/>
+            <circle cx="${finishX.toFixed(1)}" cy="${finishY.toFixed(1)}" r="4" fill="${colors.accentStrong ?? accentColor}"/>
+
+            <!-- X-axis labels -->
+            <text x="${PL}" y="${(CH - 3).toFixed(1)}"
+              font-size="9" fill="${colors.textMuted}" font-family="${typography.bodyFont}">0 км</text>
+            <text x="${(CW - PR).toFixed(1)}" y="${(CH - 3).toFixed(1)}"
+              font-size="9" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
+            >${escapeHtml(`${round(totalDistanceKm)} км`)}</text>
           </svg>
-          </div>
         </div>
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 6px;
-        ">
-          ${[
-            { label: 'Мин.', value: `${round(minElevation)} м` },
-            { label: 'Макс.', value: `${round(maxElevation)} м` },
-            { label: 'Набор', value: `${round(ascent)} м` },
-            { label: 'Сброс', value: `${round(descent)} м` },
-          ].map((metric) => `
+
+        <!-- 3 point cards: Старт / Высшая точка / Финиш -->
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px;">
+          ${pointCards.map((c) => `
             <div style="
               padding: 8px 10px;
               border-radius: 10px;
               background: ${colors.surface};
-              border: 1px solid ${colors.border};
+              border: 1px solid ${colors.borderLight};
             ">
               <div style="
-                font-size: ${typography.caption.size};
-                line-height: 1.2;
-                color: ${colors.textMuted};
-                text-transform: uppercase;
-                letter-spacing: 0.04em;
-                font-family: ${typography.bodyFont};
-                margin-bottom: 3px;
-              ">${metric.label}</div>
-              <div style="
-                font-size: 10pt;
-                font-weight: 700;
-                color: ${colors.text};
-                font-family: ${typography.headingFont};
-              ">${metric.value}</div>
+                display: flex; align-items: center; gap: 5px; margin-bottom: 5px;
+              ">
+                <span style="
+                  width: 8px; height: 8px; border-radius: 50%;
+                  background: ${c.color}; display: inline-block; flex-shrink: 0;
+                "></span>
+                <span style="font-size: ${typography.caption.size}; color: ${colors.textMuted}; font-weight: 700;">
+                  ${escapeHtml(c.label)}
+                </span>
+              </div>
+              <div style="font-size: 10pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">
+                ${escapeHtml(c.value)}
+              </div>
             </div>
           `).join('')}
         </div>
