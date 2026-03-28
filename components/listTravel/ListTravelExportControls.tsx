@@ -1,15 +1,18 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { ExportConfig } from '@/types/pdf-export';
 import { usePdfExport } from '@/hooks/usePdfExport';
-import { Caption, Heading } from '@/components/ui/Typography';
-import { ExportBar } from './ExportBar';
+import { Caption } from '@/components/ui/Typography';
+import UIButton from '@/components/ui/Button';
+import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import BookSettingsModal from '@/components/export/BookSettingsModal';
 import SelectedTravelOrderCard from './SelectedTravelOrderCard';
 import { createStyles } from './listTravelStyles';
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
 type ExportBarStyles = ReturnType<typeof createStyles>;
 
@@ -32,6 +35,49 @@ type Props = {
   styles: Record<string, unknown>;
 };
 
+function CompactActionLink({
+  label,
+  onPress,
+  icon,
+  style,
+}: {
+  label: string;
+  onPress: () => void;
+  icon?: string;
+  style?: any;
+}) {
+  if (Platform.OS !== 'web') {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+      >
+        {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
+        <Text style={style}>{label}</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPress(); }}
+      onKeyDown={(e: any) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault(); e.stopPropagation(); onPress();
+      }}
+      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+    >
+      {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
+      <Text style={style}>{label}</Text>
+    </div>
+  );
+}
+
 function ListTravelExportControls({
   isMobile,
   travels,
@@ -46,7 +92,7 @@ function ListTravelExportControls({
   selectionCount,
   baseSettings,
   lastSettings,
-  settingsSummary,
+  settingsSummary: _settingsSummary,
   setLastSettings,
   styles,
 }: Props) {
@@ -54,6 +100,7 @@ function ListTravelExportControls({
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const s = styles as ExportBarStyles;
 
   const handleCloseSettings = useCallback(() => {
     setIsBookSettingsOpen(false);
@@ -85,12 +132,95 @@ function ListTravelExportControls({
 
   const userName = useMemo(() => String(ownerName || ''), [ownerName]);
   const isWeb = Platform.OS === 'web';
+
+  const selectionText = selectionCount
+    ? `Выбрано ${selectionCount} ${getTravelLabel(selectionCount)}`
+    : 'Выберите путешествия для экспорта';
+
   const selectedOrderListStyle = useMemo(
-    () => [
-      (styles as ExportBarStyles).selectedOrderList,
-    ],
-    [styles]
+    () => [s.selectedOrderList],
+    [s.selectedOrderList]
   );
+
+  const renderOrderCards = () => {
+    const cards = selected.map((travel, index) => {
+      const itemId = String(travel.id ?? travel.slug ?? index);
+      return (
+        <SelectedTravelOrderCard
+          key={String(travel.id ?? travel.slug ?? `${travel.name}-${index}`)}
+          travel={travel}
+          itemId={itemId}
+          index={index}
+          isMobile={isMobile}
+          styles={s}
+          isDragging={draggedId === itemId}
+          isDropTarget={dropTargetId === itemId}
+          canMoveUp={index > 0}
+          canMoveDown={index < selected.length - 1}
+          onMoveUp={() => moveSelected(travel.id ?? travel.slug ?? index, 'up')}
+          onMoveDown={() => moveSelected(travel.id ?? travel.slug ?? index, 'down')}
+          onDragStart={() => setDraggedId(itemId)}
+          onDragEnter={() => {
+            if (!draggedId || draggedId === itemId) return;
+            setDropTargetId(itemId);
+          }}
+          onDrop={(sourceId) => {
+            const effectiveDraggedId = String(sourceId || draggedId || '');
+            if (!effectiveDraggedId || effectiveDraggedId === itemId) {
+              setDraggedId(null);
+              setDropTargetId(null);
+              return;
+            }
+            moveSelectedTo(effectiveDraggedId, itemId);
+            setDraggedId(null);
+            setDropTargetId(null);
+          }}
+          onDragEnd={() => {
+            setDraggedId(null);
+            setDropTargetId(null);
+          }}
+        />
+      );
+    });
+
+    if (isWeb) {
+      return (
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '100%',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            paddingBottom: 4,
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              minWidth: 'max-content',
+              columnGap: 10,
+            }}
+          >
+            {cards}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <ScrollView
+        horizontal={isMobile}
+        showsHorizontalScrollIndicator={false}
+        showsVerticalScrollIndicator={!isMobile}
+        contentContainerStyle={
+          isMobile ? selectedOrderListStyle : s.selectedOrderGrid
+        }
+      >
+        {cards}
+      </ScrollView>
+    );
+  };
 
   return (
     <>
@@ -105,158 +235,102 @@ function ListTravelExportControls({
         mode="save"
       />
 
-      <View
-        style={[
-          (styles as ExportBarStyles).exportWorkspace,
-          isMobile && (styles as ExportBarStyles).exportWorkspaceMobile,
-        ]}
-      >
-        <ExportBar
-          isMobile={isMobile}
-          selectedCount={selectionCount}
-          allCount={travels.length}
-          onToggleSelectAll={toggleSelectAll}
-          onClearSelection={clearSelection}
-          onSave={handleImmediateSave}
-          onSettings={handleOpenSettings}
-          isGenerating={pdfExport.isGenerating}
-          progress={pdfExport.progress}
-          settingsSummary={settingsSummary}
-          hasSelection={hasSelection}
-          styles={styles as ExportBarStyles}
-        />
-
-        {hasSelection ? (
-          <>
-            <View
-              style={[
-                (styles as ExportBarStyles).exportWorkspaceDivider,
-                isMobile && (styles as ExportBarStyles).exportWorkspaceDividerMobile,
-              ]}
-            />
-            <View style={(styles as ExportBarStyles).selectedOrderPanel}>
-              <View style={(styles as ExportBarStyles).selectedOrderHeaderRow}>
-                <View style={(styles as ExportBarStyles).selectedOrderHeader}>
-                  <Heading level={3} style={(styles as ExportBarStyles).selectedOrderTitle}>
-                    Порядок в книге
-                  </Heading>
-                  <Caption style={(styles as ExportBarStyles).selectedOrderSubtitle}>
-                    Перетаскивайте карточки мышью или используйте стрелки для точной перестановки.
-                  </Caption>
+      <View style={[s.exportWorkspace, isMobile && s.exportWorkspaceMobile]}>
+        {/* Header row: selection info + actions + PDF button */}
+        <View style={[s.exportBar, isMobile && s.exportBarMobile]}>
+          <View style={s.exportBarInfo}>
+            <View style={s.exportBarHeaderRow}>
+              <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
+              {hasSelection && (
+                <View style={s.exportBarCountBadge}>
+                  <Caption style={s.exportBarCountBadgeText}>{selectionCount}</Caption>
                 </View>
-              </View>
-              <View style={(styles as ExportBarStyles).selectedOrderScroller}>
-                {isWeb ? (
-                  <div
-                    style={{
-                      width: '100%',
-                      maxWidth: '100%',
-                      overflowX: 'auto',
-                      overflowY: 'hidden',
-                      paddingBottom: 6,
-                      WebkitOverflowScrolling: 'touch',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        minWidth: 'max-content',
-                        columnGap: 12,
-                      }}
-                    >
-                      {selected.map((travel, index) => (
-                        <SelectedTravelOrderCard
-                          key={String(travel.id ?? travel.slug ?? `${travel.name}-${index}`)}
-                          travel={travel}
-                          itemId={String(travel.id ?? travel.slug ?? index)}
-                          index={index}
-                          isMobile={isMobile}
-                          styles={styles as ExportBarStyles}
-                          isDragging={draggedId === String(travel.id ?? travel.slug ?? index)}
-                          isDropTarget={dropTargetId === String(travel.id ?? travel.slug ?? index)}
-                          canMoveUp={index > 0}
-                          canMoveDown={index < selected.length - 1}
-                          onMoveUp={() => moveSelected(travel.id ?? travel.slug ?? index, 'up')}
-                          onMoveDown={() => moveSelected(travel.id ?? travel.slug ?? index, 'down')}
-                          onDragStart={() => setDraggedId(String(travel.id ?? travel.slug ?? index))}
-                          onDragEnter={() => {
-                            if (!draggedId || draggedId === String(travel.id ?? travel.slug ?? index)) return;
-                            setDropTargetId(String(travel.id ?? travel.slug ?? index));
-                          }}
-                          onDrop={(sourceId) => {
-                            const currentId = String(travel.id ?? travel.slug ?? index);
-                            const effectiveDraggedId = String(sourceId || draggedId || '');
-                            if (!effectiveDraggedId || effectiveDraggedId === currentId) {
-                              setDraggedId(null);
-                              setDropTargetId(null);
-                              return;
-                            }
-                            moveSelectedTo(effectiveDraggedId, currentId);
-                            setDraggedId(null);
-                            setDropTargetId(null);
-                          }}
-                          onDragEnd={() => {
-                            setDraggedId(null);
-                            setDropTargetId(null);
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <ScrollView
-                    horizontal={isMobile}
-                    showsHorizontalScrollIndicator={false}
-                    showsVerticalScrollIndicator={!isMobile}
-                    contentContainerStyle={
-                      isMobile
-                        ? selectedOrderListStyle
-                        : (styles as ExportBarStyles).selectedOrderGrid
-                    }
-                  >
-                    {selected.map((travel, index) => (
-                      <SelectedTravelOrderCard
-                        key={String(travel.id ?? travel.slug ?? `${travel.name}-${index}`)}
-                        travel={travel}
-                        itemId={String(travel.id ?? travel.slug ?? index)}
-                        index={index}
-                        isMobile={isMobile}
-                        styles={styles as ExportBarStyles}
-                        isDragging={draggedId === String(travel.id ?? travel.slug ?? index)}
-                        isDropTarget={dropTargetId === String(travel.id ?? travel.slug ?? index)}
-                        canMoveUp={index > 0}
-                        canMoveDown={index < selected.length - 1}
-                        onMoveUp={() => moveSelected(travel.id ?? travel.slug ?? index, 'up')}
-                        onMoveDown={() => moveSelected(travel.id ?? travel.slug ?? index, 'down')}
-                        onDragStart={() => setDraggedId(String(travel.id ?? travel.slug ?? index))}
-                        onDragEnter={() => {
-                          if (!draggedId || draggedId === String(travel.id ?? travel.slug ?? index)) return;
-                          setDropTargetId(String(travel.id ?? travel.slug ?? index));
-                        }}
-                        onDrop={(sourceId) => {
-                          const currentId = String(travel.id ?? travel.slug ?? index);
-                          const effectiveDraggedId = String(sourceId || draggedId || '');
-                          if (!effectiveDraggedId || effectiveDraggedId === currentId) {
-                            setDraggedId(null);
-                            setDropTargetId(null);
-                            return;
-                          }
-                          moveSelectedTo(effectiveDraggedId, currentId);
-                          setDraggedId(null);
-                          setDropTargetId(null);
-                        }}
-                        onDragEnd={() => {
-                          setDraggedId(null);
-                          setDropTargetId(null);
-                        }}
-                      />
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
+              )}
             </View>
-          </>
-        ) : null}
+            {!hasSelection && (
+              <Caption style={s.exportBarHint}>
+                Отметьте путешествия ниже, чтобы собрать PDF-книгу
+              </Caption>
+            )}
+          </View>
+
+          <View style={s.exportBarActions}>
+            <CompactActionLink
+              label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
+              onPress={toggleSelectAll}
+              style={s.linkButton as any}
+            />
+            {hasSelection && (
+              <CompactActionLink
+                label="Очистить"
+                onPress={clearSelection}
+                style={s.linkButton as any}
+              />
+            )}
+            {hasSelection && (
+              <CompactActionLink
+                label="Настройки"
+                onPress={handleOpenSettings}
+                icon="settings"
+                style={s.linkButton as any}
+              />
+            )}
+          </View>
+
+          <View style={[s.exportBarButtons, isMobile && s.exportBarButtonsMobile]}>
+            <UIButton
+              label={pdfExport.isGenerating ? `Генерация... ${pdfExport.progress || 0}%` : 'Сохранить PDF'}
+              onPress={handleImmediateSave}
+              disabled={!hasSelection || pdfExport.isGenerating}
+              size="sm"
+            />
+          </View>
+        </View>
+
+        {/* Progress bar */}
+        {pdfExport.isGenerating && isWeb && (
+          <View style={s.progressWrapper}>
+            <ProgressIndicator
+              progress={pdfExport.progress ?? 0}
+              stage={
+                (pdfExport.progress ?? 0) < 30
+                  ? 'Подготовка данных...'
+                  : (pdfExport.progress ?? 0) < 60
+                    ? 'Генерация содержимого...'
+                    : (pdfExport.progress ?? 0) < 90
+                      ? 'Обработка изображений...'
+                      : 'Создание PDF...'
+              }
+              message={
+                (pdfExport.progress ?? 0) < 30
+                  ? 'Проверка выбранных путешествий'
+                  : (pdfExport.progress ?? 0) < 60
+                    ? 'Формирование макета'
+                    : (pdfExport.progress ?? 0) < 90
+                      ? 'Оптимизация изображений'
+                      : 'Финальная обработка'
+              }
+              showPercentage
+            />
+          </View>
+        )}
+
+        {/* Compact order strip */}
+        {hasSelection && (
+          <View style={s.selectedOrderStrip}>
+            <View style={s.selectedOrderStripHeader}>
+              <Caption style={s.selectedOrderStripLabel}>
+                Порядок в книге
+              </Caption>
+              <Caption style={s.selectedOrderStripHint}>
+                Перетаскивайте для перестановки
+              </Caption>
+            </View>
+            <View style={s.selectedOrderScroller}>
+              {renderOrderCards()}
+            </View>
+          </View>
+        )}
       </View>
     </>
   );

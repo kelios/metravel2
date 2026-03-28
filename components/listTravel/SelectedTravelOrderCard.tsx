@@ -116,7 +116,7 @@ export default function SelectedTravelOrderCard({
       right: '8px',
       top: '50%',
       transform: 'translateY(-50%)',
-      zIndex: 3,
+      zIndex: 4,
       display: 'flex',
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -141,7 +141,7 @@ export default function SelectedTravelOrderCard({
       left: '8px',
       right: '8px',
       bottom: '8px',
-      zIndex: 3,
+      zIndex: 2,
       padding: '8px 12px',
       borderRadius: '12px',
       backgroundColor: 'rgba(17, 24, 39, 0.64)',
@@ -150,9 +150,16 @@ export default function SelectedTravelOrderCard({
       fontSize: '14px',
       fontWeight: 600,
       lineHeight: '1.2',
-      whiteSpace: 'normal',
       overflow: 'hidden',
       pointerEvents: 'none',
+    };
+    const titleTextStyle: React.CSSProperties = {
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'normal',
     };
 
     return (
@@ -250,7 +257,7 @@ export default function SelectedTravelOrderCard({
           </div>
 
           <div style={titleOverlayStyle}>
-            <span>
+            <span style={titleTextStyle}>
               {travel.name || 'Без названия'}
             </span>
           </div>
@@ -326,7 +333,8 @@ export default function SelectedTravelOrderCard({
           <Caption
             muted={false}
             style={styles.selectedOrderOverlayTitle}
-            numberOfLines={1}
+            numberOfLines={2}
+            ellipsizeMode="tail"
           >
             {travel.name || 'Без названия'}
           </Caption>

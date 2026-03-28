@@ -111,32 +111,34 @@ export const ExportBar = memo(function ExportBar({
     >
       <View style={resolvedStyles.exportBarInfo}>
         <Text style={resolvedStyles.exportBarInfoTitle as any}>{selectionText}</Text>
-        <Text style={resolvedStyles.exportBarInfoSubtitle as any}>
-          {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
-        </Text>
-        <View style={resolvedStyles.exportBarInfoActions}>
-          <WebTextButton
-            label={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
-            onPress={onToggleSelectAll}
-            accessibilityLabel={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
-            style={resolvedStyles.linkButton as any}
-          />
-          {hasSelection && (
+        <View style={resolvedStyles.exportBarMetaRow}>
+          <Text style={resolvedStyles.exportBarInfoSubtitle as any}>
+            {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
+          </Text>
+          <View style={resolvedStyles.exportBarInfoActions}>
             <WebTextButton
-              label="Очистить выбор"
-              onPress={onClearSelection}
-              accessibilityLabel="Очистить выбор"
+              label={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
+              onPress={onToggleSelectAll}
+              accessibilityLabel={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
               style={resolvedStyles.linkButton as any}
             />
-          )}
-          {hasSelection && (
-            <WebTextButton
-              label="Настройки"
-              onPress={onSettings}
-              accessibilityLabel="Настройки экспорта"
-              style={resolvedStyles.linkButton as any}
-            />
-          )}
+            {hasSelection && (
+              <WebTextButton
+                label="Очистить выбор"
+                onPress={onClearSelection}
+                accessibilityLabel="Очистить выбор"
+                style={resolvedStyles.linkButton as any}
+              />
+            )}
+            {hasSelection && (
+              <WebTextButton
+                label="Настройки"
+                onPress={onSettings}
+                accessibilityLabel="Настройки экспорта"
+                style={resolvedStyles.linkButton as any}
+              />
+            )}
+          </View>
         </View>
       </View>
 
