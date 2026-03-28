@@ -332,6 +332,8 @@ function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): 
   const safeTitle = (title || '').trim()
   if (!safeTitle) return ''
   const titleStyle = getCoverTitleStyle(theme, safeTitle)
+  const usesDarkText = isDarkTextColor(textColor)
+  const textShadow = usesDarkText ? 'none' : '0 6px 18px rgba(15,23,42,0.2)'
 
   return `
     <div style="
@@ -347,7 +349,7 @@ function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): 
       font-weight: 800;
       line-height: ${titleStyle.lineHeight};
       margin: 0;
-      text-shadow: 0 6px 18px rgba(15,23,42,0.2);
+      text-shadow: ${textShadow};
       letter-spacing: ${titleStyle.letterSpacing};
       font-family: ${theme.typography.headingFont};
       overflow-wrap: break-word;
