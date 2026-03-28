@@ -47,6 +47,7 @@ export class RuntimeMapRenderer {
             box-shadow: ${this.ctx.theme.blocks.shadow};
           ">
             <div style="
+              position: relative;
               border-radius: ${this.ctx.theme.blocks.borderRadius};
               overflow: hidden;
               height: ${mapHeightMm}mm;
@@ -56,13 +57,34 @@ export class RuntimeMapRenderer {
                 ? `<img src="${data.snapshotDataUrl}" alt="Карта маршрута" style="width: 100%; height: 100%; object-fit: cover; display: block;" />`
                 : data.mapSvg
               }
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 24px;
+                height: 24px;
+                opacity: 0.6;
+                z-index: 2;
+              ">
+                <circle cx="50" cy="50" r="48" fill="rgba(255,255,255,0.85)" stroke="${colors.textMuted}" stroke-width="2"/>
+                <line x1="50" y1="8" x2="50" y2="92" stroke="${colors.textMuted}" stroke-width="1.5"/>
+                <line x1="8" y1="50" x2="92" y2="50" stroke="${colors.textMuted}" stroke-width="1.5"/>
+                <polygon points="50,4 44,20 56,20" fill="${colors.text}"/>
+                <polygon points="50,96 44,80 56,80" fill="${colors.textMuted}"/>
+                <polygon points="4,50 20,44 20,56" fill="${colors.textMuted}"/>
+                <polygon points="96,50 80,44 80,56" fill="${colors.textMuted}"/>
+                <text x="50" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="${colors.text}" font-family="sans-serif">N</text>
+                <text x="50" y="95" text-anchor="middle" font-size="11" fill="${colors.textMuted}" font-family="sans-serif">S</text>
+                <text x="7" y="54" text-anchor="middle" font-size="11" fill="${colors.textMuted}" font-family="sans-serif">W</text>
+                <text x="93" y="54" text-anchor="middle" font-size="11" fill="${colors.textMuted}" font-family="sans-serif">E</text>
+              </svg>
             </div>
           </div>
         </div>
         ${elevationProfileHtml}
         <div>
           ${routeHeaderHtml}
-          <div style="column-count: 1;">${firstPageCards.join('')}</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">${firstPageCards.join('')}</div>
         </div>
       </section>
     `
@@ -84,7 +106,7 @@ export class RuntimeMapRenderer {
               font-weight: 400;
               color: ${colors.textMuted};
             ">(продолжение)</span></h2>
-            <div style="column-count: 1;">${chunk.join('')}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">${chunk.join('')}</div>
           </div>
         </section>
       `
@@ -110,32 +132,21 @@ export class RuntimeMapRenderer {
       ">
         <div style="
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
           gap: 10px;
           margin-bottom: 8px;
         ">
-          <div>
-            <div style="
-              display: inline-flex;
-              align-items: center;
-              gap: 6px;
-              margin-bottom: 4px;
-              font-size: ${typography.caption.size};
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              font-weight: 700;
-              color: ${colors.accent};
-              font-family: ${typography.bodyFont};
-            ">Маршрут</div>
-            <h2 style="
-              margin: 0;
-              font-size: ${typography.h2.size};
-              line-height: 1.15;
-              color: ${colors.text};
-              font-family: ${typography.headingFont};
-            ">Карта и ключевые точки</h2>
-          </div>
+          <h2 style="
+            margin: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: ${typography.h2.size};
+            line-height: 1.15;
+            color: ${colors.text};
+            font-family: ${typography.headingFont};
+          ">Маршрут</h2>
           <span style="
             display: inline-flex;
             align-items: center;
@@ -356,7 +367,7 @@ export class RuntimeMapRenderer {
             ">Пик ${fmt(maxElevation)}</span>
           </div>
 
-          <svg viewBox="0 0 ${CW} ${CH}" style="width: 100%; height: 48mm; display: block;" xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 0 ${CW} ${CH}" style="width: 100%; height: 56mm; display: block;" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.30"/>
@@ -465,7 +476,7 @@ export class RuntimeMapRenderer {
   }
 
   private getMapHeightMm(locationCount: number): number {
-    if (locationCount <= 6) return 132
-    return 128
+    if (locationCount <= 6) return 140
+    return 136
   }
 }
