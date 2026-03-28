@@ -5,6 +5,8 @@ import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig';
 import { buildSafeImageUrl } from '../../../utils/htmlUtils';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
 
+export const TOC_ITEMS_PER_PAGE = 5;
+
 export function sortTravels(
   travels: TravelForBook[],
   sortOrder: BookSettings['sortOrder']
@@ -75,7 +77,7 @@ export function buildTravelMeta(params: {
 }): TravelSectionMeta[] {
   const { travels, settings, getGalleryPhotosPerPage } = params;
   const meta: TravelSectionMeta[] = [];
-  let currentPage = settings.includeToc ? 3 : 2;
+  let currentPage = settings.includeToc ? 2 + getTocPageCount(travels.length) : 2;
 
   travels.forEach((travel) => {
     const locations = normalizeLocations(travel);
@@ -115,6 +117,11 @@ export function buildTravelMeta(params: {
   });
 
   return meta;
+}
+
+export function getTocPageCount(travelCount: number): number {
+  if (travelCount <= 0) return 0;
+  return Math.max(1, Math.ceil(travelCount / TOC_ITEMS_PER_PAGE));
 }
 
 export function normalizeLocations(travel: TravelForBook): NormalizedLocation[] {

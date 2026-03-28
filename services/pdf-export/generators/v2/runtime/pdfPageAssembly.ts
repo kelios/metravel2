@@ -1,6 +1,7 @@
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import type { TravelForBook } from '@/types/pdf-export'
 
+import { getTocPageCount, TOC_ITEMS_PER_PAGE } from './bookData'
 import type { NormalizedLocation, TravelSectionMeta } from './types'
 
 type AssembleBookPagesArgs = {
@@ -9,7 +10,7 @@ type AssembleBookPagesArgs = {
   qrCodes: string[]
   settings: BookSettings
   sortedTravels: TravelForBook[]
-  renderTocPage: (meta: TravelSectionMeta[], pageNumber: number) => string
+  renderTocPage: (meta: TravelSectionMeta[], pageNumber: number, totalCount: number) => string
   renderSeparatorPage: (
     travel: TravelForBook,
     travelIndex: number,
@@ -47,10 +48,16 @@ export async function assembleBookPages({
   renderFinalPage,
 }: AssembleBookPagesArgs): Promise<string[]> {
   const pages: string[] = [coverPage]
-  let currentPage = settings.includeToc ? 3 : 2
+  let currentPage = settings.includeToc ? 2 + getTocPageCount(meta.length) : 2
 
   if (settings.includeToc) {
-    pages.push(renderTocPage(meta, 2))
+    const totalCount = meta.length
+    const tocPageCount = getTocPageCount(totalCount)
+    for (let pageIndex = 0; pageIndex < tocPageCount; pageIndex += 1) {
+      const start = pageIndex * TOC_ITEMS_PER_PAGE
+      const end = start + TOC_ITEMS_PER_PAGE
+      pages.push(renderTocPage(meta.slice(start, end), 2 + pageIndex, totalCount))
+    }
   }
 
   const useSeparators = meta.length >= 3

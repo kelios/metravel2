@@ -165,7 +165,7 @@ export class EnhancedPdfGeneratorBase {
       qrCodes,
       settings,
       sortedTravels,
-      renderTocPage: (tocMeta, pageNumber) => this.renderTocPage(tocMeta, pageNumber),
+      renderTocPage: (tocMeta, pageNumber, totalCount) => this.renderTocPage(tocMeta, pageNumber, totalCount),
       renderSeparatorPage: (travel, travelIndex, totalTravels) =>
         this.renderSeparatorPage(travel, travelIndex, totalTravels),
       renderTravelPhotoPage: (travel, pageNumber) => this.renderTravelPhotoPage(travel, pageNumber),
@@ -335,10 +335,11 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Рендерит оглавление
    */
-  private renderTocPage(meta: TravelSectionMeta[], pageNumber: number): string {
+  private renderTocPage(meta: TravelSectionMeta[], pageNumber: number, totalCount: number): string {
     return renderTocPageSection({
       meta,
       pageNumber,
+      totalCount,
       theme: this.theme,
       escapeHtml: (value) => this.escapeHtml(value),
       buildSafeImageUrl: (raw) => this.buildSafeImageUrl(raw),
@@ -518,6 +519,25 @@ export class EnhancedPdfGeneratorBase {
             routeLine: hasRouteLineForMap ? routeLineCoords : undefined,
           }
         );
+      } catch {
+        snapshotDataUrl = null;
+      }
+    }
+
+    if (!snapshotDataUrl && pointsWithCoords.length) {
+      try {
+        const { generateStaticMapUrl } = await import('@/utils/mapImageGenerator');
+        snapshotDataUrl = generateStaticMapUrl(
+          pointsWithCoords.map((location) => ({
+            name: location.address,
+            lat: location.lat as number,
+            lng: location.lng as number,
+          })),
+          {
+            width: 1600,
+            height: 1040,
+          }
+        ) || null;
       } catch {
         snapshotDataUrl = null;
       }
@@ -877,6 +897,11 @@ export class EnhancedPdfGeneratorBase {
     const year = travel.year ? String(travel.year) : '';
     const days = this.formatDays(travel.number_days);
     const metaParts = [country, year, days].filter(Boolean);
+    const titleLength = travel.name.trim().length;
+    const separatorTitleFontSize =
+      titleLength > 140 ? '24pt' : titleLength > 100 ? '28pt' : typography.h1.size;
+    const separatorTitleLineHeight =
+      titleLength > 140 ? '1.08' : titleLength > 100 ? '1.12' : typography.h1.lineHeight;
     const thumbUrl = this.buildSafeImageUrl(
       travel.travel_image_thumb_url || travel.travel_image_url
     );
@@ -947,15 +972,17 @@ export class EnhancedPdfGeneratorBase {
         "></div>
 
         <h2 style="
-          font-size: ${typography.h1.size};
+          font-size: ${separatorTitleFontSize};
           font-weight: ${typography.h1.weight};
           color: ${colors.text};
           margin-bottom: 5mm;
-          max-width: 150mm;
+          max-width: 176mm;
           font-family: ${typography.headingFont};
-          line-height: ${typography.h1.lineHeight};
-          overflow-wrap: anywhere;
-          word-break: break-word;
+          line-height: ${separatorTitleLineHeight};
+          overflow-wrap: break-word;
+          word-break: normal;
+          hyphens: auto;
+          text-wrap: balance;
         ">${this.escapeHtml(travel.name)}</h2>
 
         ${metaParts.length ? `

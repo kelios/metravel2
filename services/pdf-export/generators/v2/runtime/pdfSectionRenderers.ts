@@ -40,6 +40,7 @@ type PdfTheme = ReturnType<typeof getThemeConfig>
 export function renderTocPageSection(args: {
   meta: TravelSectionMeta[]
   pageNumber: number
+  totalCount: number
   theme: PdfTheme
   escapeHtml: (value: string) => string
   buildSafeImageUrl: (raw?: string | null) => string | undefined
@@ -50,6 +51,7 @@ export function renderTocPageSection(args: {
   const {
     meta,
     pageNumber,
+    totalCount,
     theme,
     escapeHtml,
     buildSafeImageUrl,
@@ -59,25 +61,13 @@ export function renderTocPageSection(args: {
   } = args
   const { colors, typography, spacing } = theme
 
-  const use2Col = meta.length >= 6
-  const thumbW = use2Col ? 80 : 96
-  const thumbH = use2Col ? 56 : 66
+  const thumbW = 96
+  const thumbH = 66
 
   const tocItems = meta
     .map((item, index) => {
-      return buildTocRow(item, index, meta.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, use2Col, thumbW, thumbH)
+      return buildTocRow(item, index, meta.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, false, thumbW, thumbH)
     })
-    .join('')
-
-  const splitIndex = Math.ceil(meta.length / 2)
-  const col1Items = meta.slice(0, splitIndex)
-  const col2Items = meta.slice(splitIndex)
-
-  const col1Html = col1Items
-    .map((item, index) => buildTocRow(item, index, col1Items.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, use2Col, thumbW, thumbH))
-    .join('')
-  const col2Html = col2Items
-    .map((item, index) => buildTocRow(item, index + splitIndex, col2Items.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, use2Col, thumbW, thumbH))
     .join('')
 
   return `
@@ -131,36 +121,23 @@ export function renderTocPageSection(args: {
               font-size: 18pt;
               font-weight: 800;
               color: ${colors.accent};
-              font-family: ${typography.headingFont};
-              letter-spacing: -0.04em;
-              line-height: 1;
-            ">${meta.length}</div>
+            font-family: ${typography.headingFont};
+            letter-spacing: -0.04em;
+            line-height: 1;
+            ">${totalCount}</div>
             <div style="
               font-size: 8pt;
               color: ${colors.textMuted};
               font-family: ${typography.bodyFont};
               margin-top: 2px;
-            ">${getTravelLabel(meta.length)}</div>
+            ">${getTravelLabel(totalCount)}</div>
           </div>
         </div>
       </div>
 
-      ${use2Col ? `
-        <div style="
-          display: grid;
-          grid-template-columns: 1fr 1px 1fr;
-          gap: 0 6mm;
-          flex: 1;
-        ">
-          <div>${col1Html}</div>
-          <div style="background: ${colors.border}; width: 1px;"></div>
-          <div>${col2Html}</div>
-        </div>
-      ` : `
-        <div style="flex: 1;">
-          ${tocItems}
-        </div>
-      `}
+      <div style="flex: 1;">
+        ${tocItems}
+      </div>
 
       <div style="
         margin-top: auto;

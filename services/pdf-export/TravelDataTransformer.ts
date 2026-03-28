@@ -393,6 +393,7 @@ export class TravelDataTransformer {
     try {
       const parsed = new URL(trimmed);
       const host = parsed.hostname.toLowerCase();
+      const hostWithPort = parsed.host.toLowerCase();
       const isLocalhost = host === 'localhost' || host === '127.0.0.1';
       const isPrivateV4 =
         /^192\.168\./.test(host) ||
@@ -404,6 +405,11 @@ export class TravelDataTransformer {
         rewritten.protocol = 'https:';
         rewritten.host = 'metravel.by';
         return this.buildSafeImageUrl(rewritten.toString());
+      }
+
+      if (this.isFirstPartyMetravelHost(host, hostWithPort)) {
+        parsed.protocol = 'https:';
+        return parsed.toString();
       }
     } catch {
       // ignore URL parse errors
@@ -425,6 +431,19 @@ export class TravelDataTransformer {
     const lower = url.toLowerCase();
     // Оставляем только blob:-URL как локальные (их нельзя безопасно проксировать)
     return lower.startsWith('blob:');
+  }
+
+  private isFirstPartyMetravelHost(host: string, hostWithPort: string): boolean {
+    if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
+      return true;
+    }
+
+    try {
+      const configured = typeof window !== 'undefined' ? window.location?.host?.toLowerCase() : '';
+      return Boolean(configured) && hostWithPort === configured;
+    } catch {
+      return false;
+    }
   }
 
   private sanitizeInlineStyles(html: string): string {

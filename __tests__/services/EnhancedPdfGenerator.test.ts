@@ -1,6 +1,7 @@
 import { EnhancedPdfGenerator } from '@/services/pdf-export/generators/EnhancedPdfGenerator'
 import type { TravelForBook } from '@/types/pdf-export'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
+import { generateLeafletRouteSnapshot } from '@/utils/mapImageGenerator'
 
 jest.mock('qrcode', () => ({
   toDataURL: jest.fn(() => Promise.resolve('qr-data')),
@@ -8,6 +9,7 @@ jest.mock('qrcode', () => ({
 
 jest.mock('@/utils/mapImageGenerator', () => ({
   generateLeafletRouteSnapshot: jest.fn(() => Promise.resolve('leaflet-snapshot')),
+  generateStaticMapUrl: jest.fn(() => 'https://staticmap.openstreetmap.fr/staticmap.php?mock=1'),
 }))
 
 jest.mock('@/services/pdf-export/parsers/ContentParser', () => ({
@@ -116,6 +118,32 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(mapPage).toContain('alt="QR точки 1"')
   })
 
+  it('falls back to static map image when leaflet snapshot is unavailable', async () => {
+    ;(generateLeafletRouteSnapshot as jest.Mock).mockResolvedValueOnce(null)
+
+    const locations = generator.normalizeLocations(travelA)
+    const mapPage = await generator.renderMapPage(travelA, locations, 4)
+
+    expect(mapPage).toContain('staticmap.openstreetmap.fr')
+    expect(mapPage).not.toContain('Недостаточно данных')
+  })
+
+  it('renders long separator titles without aggressive word breaking', () => {
+    const separatorHtml = generator.renderSeparatorPage(
+      {
+        ...travelA,
+        name: 'Усадебно-парковый комплекс Ельских - Прилукский дворцово-парковый комплекс Чапских - Церковь св. Петра и Павла - Парк-музей интерактивной истории',
+      },
+      6,
+      10
+    )
+
+    expect(separatorHtml).toContain('word-break: normal')
+    expect(separatorHtml).toContain('hyphens: auto')
+    expect(separatorHtml).toContain('font-size: 24pt')
+    expect(separatorHtml).toContain('max-width: 176mm')
+  })
+
   it('renders collage galleries larger for print readability', () => {
     generator.currentSettings = {
       ...baseSettings,
@@ -149,6 +177,7 @@ describe('EnhancedPdfGenerator helpers', () => {
 
     const safe = generator.buildSafeImageUrl('http://cdn.test/image.jpg')
     expect(safe).toContain('images.weserv.nl')
+    expect(generator.buildSafeImageUrl('https://metravel.by/gallery/42/photo.jpg')).toBe('https://metravel.by/gallery/42/photo.jpg')
     expect(generator.buildSafeImageUrl('data:image/png;base64,abc')).toContain('data:image/png')
     expect(generator.buildSafeImageUrl('blob:local-image')).toBe('blob:local-image')
 
@@ -214,6 +243,29 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(html).toContain('hyphens: auto')
     expect(html).toContain('word-break: break-word')
     expect(html).toContain('overflow-wrap: anywhere')
+  })
+
+  it('splits toc across multiple pages and keeps travel page numbers aligned', async () => {
+    ;(generator as any).selectedQuotes = undefined
+    const travels = Array.from({ length: 10 }, (_, index) => ({
+      ...travelA,
+      id: index + 1,
+      slug: `travel-${index + 1}`,
+      name: `Travel ${index + 1}`,
+    }))
+
+    const html = await generator.generate(travels, {
+      ...baseSettings,
+      includeGallery: false,
+      includeMap: false,
+      includeChecklists: false,
+      includeToc: true,
+    })
+
+    const tocMatches = html.match(/class="pdf-page toc-page"/g) || []
+    expect(tocMatches).toHaveLength(2)
+    expect(html).toContain('>10<')
+    expect(html).toContain('>04<')
   })
 
   it('falls back to MeTravel title and hides cover <h1> when settings.title is empty', async () => {

@@ -559,8 +559,7 @@ describe('TravelDataTransformer', () => {
       const result = transformer.transform(travels);
       const thumb = result[0].travelAddress?.[0]?.travelImageThumbUrl;
       expect(thumb).toBeTruthy();
-      expect(String(thumb)).toContain('https://images.weserv.nl/?url=');
-      expect(String(thumb)).toContain(encodeURIComponent('metravel.by/gallery/5076/conversions/a-thumb.jpg'));
+      expect(String(thumb)).toBe('https://metravel.by/gallery/5076/conversions/a-thumb.jpg');
       expect(String(thumb)).not.toContain('192.168.50.36');
     });
 

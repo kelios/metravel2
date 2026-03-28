@@ -41,6 +41,7 @@ export function buildSafeImageUrl(url?: string | null): string | undefined {
   try {
     const parsed = new URL(trimmed);
     const host = parsed.hostname.toLowerCase();
+    const hostWithPort = parsed.host.toLowerCase();
     const isLocalhost = host === 'localhost' || host === '127.0.0.1';
     const isPrivateV4 =
       /^192\.168\./.test(host) ||
@@ -51,6 +52,11 @@ export function buildSafeImageUrl(url?: string | null): string | undefined {
       parsed.protocol = 'https:';
       parsed.host = 'metravel.by';
       return buildSafeImageUrl(parsed.toString());
+    }
+
+    if (isFirstPartyMetravelHost(host, hostWithPort)) {
+      parsed.protocol = 'https:';
+      return parsed.toString();
     }
   } catch {
     // ignore URL parse errors
@@ -68,4 +74,17 @@ export function buildSafeImageUrl(url?: string | null): string | undefined {
 
 function isLocalResource(url: string): boolean {
   return url.toLowerCase().startsWith('blob:');
+}
+
+function isFirstPartyMetravelHost(host: string, hostWithPort: string): boolean {
+  if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
+    return true;
+  }
+
+  try {
+    const configured = typeof window !== 'undefined' ? window.location?.host?.toLowerCase() : '';
+    return Boolean(configured) && hostWithPort === configured;
+  } catch {
+    return false;
+  }
 }
