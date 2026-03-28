@@ -35,6 +35,8 @@ export class RuntimeGalleryRenderer {
       chunks.push(photos.slice(start, start + photosPerPage))
     }
 
+    const totalPhotos = photos.length
+
     return chunks.map((pagePhotos, pageIndex) => {
       const defaultColumns = calculateOptimalColumns(pagePhotos.length, layout)
       const isTwoPerPage = photosPerPage === 2 && pagePhotos.length === 2
@@ -82,12 +84,17 @@ export class RuntimeGalleryRenderer {
 
       const pageNumber = startPageNumber + pageIndex
       const isFirstGalleryPage = pageIndex === 0
+
+      const globalStartIndex = pageIndex * photosPerPage
+      const rangeStart = globalStartIndex + 1
+      const rangeEnd = Math.min(globalStartIndex + pagePhotos.length, totalPhotos)
+
       const galleryHeaderHtml = isFirstGalleryPage ? `
         <div style="
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 4mm;
+          margin-bottom: 2mm;
         ">
           <span style="
             display: inline-flex;
@@ -95,7 +102,7 @@ export class RuntimeGalleryRenderer {
             justify-content: center;
             width: 28px;
             height: 28px;
-            border-radius: 8px;
+            border-radius: 10px;
             background: ${colors.accentSoft};
             flex-shrink: 0;
           ">
@@ -108,6 +115,8 @@ export class RuntimeGalleryRenderer {
             font-weight: 700;
             color: ${colors.text};
             font-family: ${this.ctx.theme.typography.headingFont};
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
           ">Фотогалерея</span>
           <span style="
             display: inline-flex;
@@ -119,24 +128,54 @@ export class RuntimeGalleryRenderer {
             font-size: 8pt;
             font-weight: 700;
             font-family: ${this.ctx.theme.typography.bodyFont};
-          ">${photos.length} фото</span>
+          ">${totalPhotos} фото</span>
+        </div>
+        <div style="
+          height: 3px;
+          background: linear-gradient(to right, ${colors.accent}, transparent);
+          margin-bottom: 4mm;
+          border-radius: 2px;
+        "></div>
+      ` : ''
+
+      const continuationHeaderHtml = !isFirstGalleryPage ? `
+        <div style="
+          display: flex;
+          justify-content: flex-end;
+          margin-bottom: 3mm;
+        ">
+          <span style="
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 999px;
+            background: ${colors.accentSoft};
+            color: ${colors.accentStrong};
+            font-size: 8pt;
+            font-weight: 700;
+            font-family: ${this.ctx.theme.typography.bodyFont};
+          ">Фото ${rangeStart}–${rangeEnd} из ${totalPhotos}</span>
         </div>
       ` : ''
+
       return `
       <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; height: 285mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
         ${buildRunningHeader(this.ctx, travel.name, pageNumber)}
         ${galleryHeaderHtml}
+        ${continuationHeaderHtml}
         <div style="${gridContainerStyle}">
           ${pagePhotos
             .map((photo, index) => {
+              const globalIndex = globalStartIndex + index
               const wrapperStyle =
                 layout === 'masonry'
                   ? `break-inside: avoid; margin-bottom: ${gapMm}mm;`
                   : ''
 
+              const polaroidRotation = index % 2 === 0 ? '-2.5deg' : '2.4deg'
               const polaroidStyle =
                 layout === 'polaroid'
-                  ? `padding: 1.5mm; background: #fff; transform: rotate(${index % 2 === 0 ? '-1.4deg' : '1.3deg'});`
+                  ? `padding: 1.5mm; padding-bottom: 0; background: #fff; transform: rotate(${polaroidRotation});`
                   : ''
 
               const collageHero = layout === 'collage' && index === 0
@@ -160,11 +199,41 @@ export class RuntimeGalleryRenderer {
                   ? (isSingle ? `min-height: ${singleImageHeight};` : '')
                   : `min-height: ${isSingle ? singleImageHeight : resolvedHeight};`
 
+              const borderRadiusValue = this.increaseBorderRadius(this.ctx.theme.blocks.borderRadius, 2)
+
+              const numberBadge = `
+                <span style="
+                  position: absolute;
+                  bottom: 6px;
+                  right: 6px;
+                  background: rgba(0,0,0,0.5);
+                  color: white;
+                  font-size: 7pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  font-weight: 600;
+                  z-index: 1;
+                ">${globalIndex + 1}</span>
+              `
+
+              const polaroidCaption = layout === 'polaroid' ? `
+                <div style="
+                  height: 8mm;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 8pt;
+                  color: ${colors.textSecondary || '#666'};
+                  font-family: ${this.ctx.theme.typography.bodyFont};
+                  font-weight: 500;
+                ">Фото ${globalIndex + 1}</div>
+              ` : ''
+
               return `
             <div class="gallery-photo-frame" style="
               ${wrapperStyle}
               ${collageSpan}
-              border-radius: ${this.ctx.theme.blocks.borderRadius};
+              border-radius: ${borderRadiusValue};
               overflow: hidden;
               position: relative;
               box-shadow: ${this.ctx.theme.blocks.shadow};
@@ -172,22 +241,27 @@ export class RuntimeGalleryRenderer {
               ${polaroidStyle}
               ${wrapperMinHeight}
               display: flex;
+              ${layout === 'polaroid' ? 'flex-direction: column;' : ''}
               align-items: center;
               justify-content: center;
               ${layout === 'polaroid' ? '' : 'padding: 0;'}
             ">
-              <img src="${escapeHtml(photo)}" alt="Фото ${index + 1}"
-                style="
-                  width: 100%;
-                  ${imgHeightStyle}
-                  object-fit: ${forceCover ? 'cover' : 'contain'};
-                  display: block;
-                  position: relative;
-                  border-radius: ${this.ctx.theme.blocks.borderRadius};
-                  ${getImageFilterStyle(this.ctx)}
-                "
-                crossorigin="anonymous"
-                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+              <div style="position: relative; width: 100%; ${layout === 'polaroid' ? 'flex: 1; display: flex; align-items: center; justify-content: center;' : ''}">
+                <img src="${escapeHtml(photo)}" alt="Фото ${globalIndex + 1}"
+                  style="
+                    width: 100%;
+                    ${imgHeightStyle}
+                    object-fit: ${forceCover ? 'cover' : 'contain'};
+                    display: block;
+                    position: relative;
+                    border-radius: ${borderRadiusValue};
+                    ${getImageFilterStyle(this.ctx)}
+                  "
+                  crossorigin="anonymous"
+                  onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+                ${numberBadge}
+              </div>
+              ${polaroidCaption}
             </div>
           `
             })
@@ -240,5 +314,12 @@ export class RuntimeGalleryRenderer {
     if (!match) return fallback
     const parsed = Number(match[1])
     return Number.isFinite(parsed) ? parsed : fallback
+  }
+
+  private increaseBorderRadius(value: string, addPx: number): string {
+    const match = value.trim().match(/^(\d+(?:\.\d+)?)(px|mm|rem|em|%)$/)
+    if (!match) return value
+    const num = parseFloat(match[1]) + addPx
+    return `${num}${match[2]}`
   }
 }

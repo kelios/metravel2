@@ -285,11 +285,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     selectedOrderScroller: {
       minHeight: 0,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: colors.backgroundSecondary,
-      padding: DESIGN_TOKENS.spacing.xs,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({

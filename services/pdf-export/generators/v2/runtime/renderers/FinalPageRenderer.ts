@@ -46,14 +46,14 @@ export class RuntimeFinalRenderer {
         ${stats.map((s) => `
           <div class="final-summary-tile" style="
             text-align: center;
-            padding: 10px 16px;
-            min-width: 50px;
+            padding: 14px 20px;
+            min-width: 60px;
             border-radius: 18px;
             background: rgba(255,255,255,0.07);
             border: 1px solid rgba(255,255,255,0.12);
           ">
             <div style="
-              font-size: 22pt;
+              font-size: 30pt;
               font-weight: 800;
               color: ${colors.cover.text};
               font-family: ${typography.headingFont};
@@ -90,7 +90,7 @@ export class RuntimeFinalRenderer {
         <div style="
           position: absolute;
           inset: 12mm;
-          border: 1.5px solid rgba(255,255,255,0.12);
+          border: 1.5px solid rgba(255,255,255,0.2);
           border-radius: 14px;
           pointer-events: none;
         "></div>
@@ -110,11 +110,13 @@ export class RuntimeFinalRenderer {
           transform: translateX(-50%);
           width: 132mm;
           height: auto;
-          opacity: 0.2;
+          opacity: 0.35;
         ">
           <path d="M18 90 C60 30, 98 102, 136 58 S214 18, 252 56 S292 108, 306 34" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
           <circle cx="18" cy="90" r="4" fill="rgba(255,255,255,0.85)"/>
+          <circle cx="77" cy="60" r="3.5" fill="rgba(255,255,255,0.5)"/>
           <circle cx="136" cy="58" r="4" fill="rgba(255,255,255,0.55)"/>
+          <circle cx="194" cy="36" r="3.5" fill="rgba(255,255,255,0.5)"/>
           <circle cx="306" cy="34" r="4" fill="rgba(255,255,255,0.85)"/>
         </svg>
 
@@ -124,13 +126,14 @@ export class RuntimeFinalRenderer {
           width: 148mm;
           padding: 26mm 18mm 18mm;
           border-radius: 26px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.2);
           box-shadow: 0 18px 42px rgba(0,0,0,0.2);
         ">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto 6mm auto; display: block; opacity: 0.7;">
             <circle cx="12" cy="12" r="10"/>
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
           </svg>
 
           <div style="
@@ -183,10 +186,10 @@ export class RuntimeFinalRenderer {
                 position: absolute;
                 top: -4mm;
                 left: -3mm;
-              ">“</div>
+              ">"</div>
               <p style="
                 margin: 0 0 4mm 0;
-                font-size: 10.5pt;
+                font-size: 12pt;
                 line-height: 1.65;
                 opacity: 0.88;
                 font-style: italic;
@@ -223,13 +226,19 @@ export class RuntimeFinalRenderer {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            margin-bottom: 2mm;
+            margin-bottom: 1mm;
             font-size: ${typography.caption.size};
           ">
-            <span style="font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">
+            <span style="font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;">
               MeTravel.by
             </span>
           </div>
+          <div style="
+            font-size: 7pt;
+            opacity: 0.6;
+            letter-spacing: 0.05em;
+            margin-bottom: 2mm;
+          ">metravel.by</div>
           <div>© ${new Date().getFullYear()}</div>
         </div>
         <div style="

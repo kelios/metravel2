@@ -6,6 +6,46 @@ import type { PdfIconName } from './pdfVisualHelpers'
 
 type TravelContentVariant = 'runtime' | 'standalone'
 
+function buildSectionDivider(colors: PdfThemeConfig['colors']): string {
+  return `
+    <div style="
+      text-align: center;
+      margin: 6mm 0;
+      color: ${colors.textMuted};
+      font-size: 12pt;
+      letter-spacing: 0.5em;
+      opacity: 0.35;
+      user-select: none;
+    ">· · ·</div>
+  `
+}
+
+function buildDropCapHtml(html: string, colors: PdfThemeConfig['colors'], typography: PdfThemeConfig['typography']): string {
+  const stripped = html.replace(/^[\s]*/, '')
+  const pMatch = stripped.match(/^<p[^>]*>([\s\S]*?)<\/p>/i)
+  if (!pMatch) return html
+
+  const innerHtml = pMatch[1].replace(/^[\s]*/, '')
+  const firstChar = innerHtml.match(/^(&[^;]+;|[^\s<])/)?.[0]
+  if (!firstChar || firstChar.length === 0) return html
+
+  const rest = innerHtml.slice(firstChar.length)
+  const dropCapParagraph = `<p style="margin-bottom: ${typography.body.marginBottom}; line-height: ${typography.body.lineHeight}; text-align: justify;">
+    <span style="
+      float: left;
+      font-size: 42pt;
+      line-height: 0.82;
+      font-weight: 800;
+      color: ${colors.accent};
+      font-family: ${typography.headingFont};
+      margin-right: 3px;
+      margin-top: 4px;
+      padding-bottom: 2px;
+    ">${firstChar}</span>${rest}</p>`
+
+  return stripped.replace(pMatch[0], dropCapParagraph)
+}
+
 export function renderTravelContentPageMarkup(args: {
   travel: TravelForBook
   pageNumber: number
@@ -53,9 +93,55 @@ export function renderTravelContentPageMarkup(args: {
     showInlineGallery &&
     !(includeGallery !== false && hasGalleryMedia)
 
-  const descriptionSection = descriptionHtml
+  const processedDescriptionHtml = variant === 'runtime' && descriptionHtml
+    ? buildDropCapHtml(descriptionHtml, colors, typography)
+    : descriptionHtml
+
+  const buildSectionHeader = (iconName: PdfIconName, iconColor: string, iconBg: string, title: string) => `
+    <div style="
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: ${spacing.elementSpacing};
+      padding-bottom: 8px;
+      position: relative;
+    ">
+      <span style="
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: ${iconBg};
+        flex-shrink: 0;
+      ">${renderPdfIcon(iconName, iconColor, 15)}</span>
+      <h2 style="
+        font-size: ${typography.h2.size};
+        font-weight: ${typography.h2.weight};
+        color: ${colors.text};
+        margin: 0;
+        font-family: ${typography.headingFont};
+      ">${title}</h2>
+      <div style="
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, ${colors.accent}, ${colors.accentSoft} 50%, transparent);
+        border-radius: 999px;
+      "></div>
+    </div>
+  `
+
+  const descriptionSection = processedDescriptionHtml
     ? `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
+            ${
+              variant === 'runtime'
+                ? buildSectionHeader('pen', colors.accent, colors.accentSoft, 'Описание')
+                : `
             <div style="
               display: flex;
               align-items: center;
@@ -64,35 +150,22 @@ export function renderTravelContentPageMarkup(args: {
               padding-bottom: 8px;
               border-bottom: 2px solid ${colors.accentSoft};
             ">
-              ${
-                variant === 'runtime'
-                  ? `
-              <span style="
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 28px;
-                height: 28px;
-                border-radius: 8px;
-                background: ${colors.accentSoft};
-                flex-shrink: 0;
-              ">${renderPdfIcon('pen', colors.accent, 15)}</span>`
-                  : renderPdfIcon('pen', colors.text, 20)
-              }
+              ${renderPdfIcon('pen', colors.text, 20)}
               <h2 style="
                 font-size: ${typography.h2.size};
                 font-weight: ${typography.h2.weight};
-                color: ${variant === 'runtime' ? colors.text : colors.accent};
+                color: ${colors.accent};
                 margin: 0;
                 font-family: ${typography.headingFont};
               ">Описание</h2>
-            </div>
+            </div>`
+            }
             <div${variant === 'runtime' ? ' class="description-block"' : ''} style="
               font-size: ${typography.body.size};
-              line-height: ${typography.body.lineHeight};
+              line-height: 1.75;
               color: ${colors.text};
               font-family: ${typography.bodyFont};
-            ">${descriptionHtml}</div>
+            ">${processedDescriptionHtml}</div>
           </div>
         `
     : variant === 'standalone'
@@ -125,10 +198,18 @@ export function renderTravelContentPageMarkup(args: {
         `
       : ''
 
+  const hasDividerBetweenSections = variant === 'runtime'
+  const divider = hasDividerBetweenSections ? buildSectionDivider(colors) : ''
+
   const recommendationSection =
     recommendationBlocks.length > 0
       ? `
+          ${divider}
           <div style="margin-bottom: ${spacing.sectionSpacing};">
+            ${
+              variant === 'runtime'
+                ? buildSectionHeader('bulb', colors.infoBlock.icon, colors.infoBlock.background, 'Рекомендации')
+                : `
             <div style="
               display: flex;
               align-items: center;
@@ -137,29 +218,16 @@ export function renderTravelContentPageMarkup(args: {
               padding-bottom: 8px;
               border-bottom: 2px solid ${colors.accentSoft};
             ">
-              ${
-                variant === 'runtime'
-                  ? `
-              <span style="
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 28px;
-                height: 28px;
-                border-radius: 8px;
-                background: ${colors.infoBlock.background};
-                flex-shrink: 0;
-              ">${renderPdfIcon('bulb', colors.infoBlock.icon, 15)}</span>`
-                  : renderPdfIcon('bulb', colors.text, 20)
-              }
+              ${renderPdfIcon('bulb', colors.text, 20)}
               <h2 style="
                 font-size: ${typography.h2.size};
                 font-weight: ${typography.h2.weight};
-                color: ${variant === 'runtime' ? colors.text : colors.accent};
+                color: ${colors.accent};
                 margin: 0;
                 font-family: ${typography.headingFont};
               ">Рекомендации</h2>
-            </div>
+            </div>`
+            }
             <div style="
               font-size: ${typography.body.size};
               line-height: ${typography.body.lineHeight};
@@ -174,6 +242,7 @@ export function renderTravelContentPageMarkup(args: {
     plusBlocks.length > 0 || minusBlocks.length > 0
       ? variant === 'runtime'
         ? `
+          ${divider}
           <div style="
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -188,7 +257,7 @@ export function renderTravelContentPageMarkup(args: {
                 border-radius: ${theme.blocks.borderRadius};
                 padding: ${spacing.elementSpacing} ${spacing.blockSpacing};
                 border: ${theme.blocks.borderWidth} solid ${colors.tipBlock.border};
-                border-left: 3px solid ${colors.tipBlock.icon};
+                border-left: 4px solid ${colors.tipBlock.icon};
                 box-shadow: ${theme.blocks.shadow};
                 break-inside: avoid;
                 page-break-inside: avoid;
@@ -231,7 +300,7 @@ export function renderTravelContentPageMarkup(args: {
                 border-radius: ${theme.blocks.borderRadius};
                 padding: ${spacing.elementSpacing} ${spacing.blockSpacing};
                 border: ${theme.blocks.borderWidth} solid ${colors.dangerBlock.border};
-                border-left: 3px solid ${colors.dangerBlock.icon};
+                border-left: 4px solid ${colors.dangerBlock.icon};
                 box-shadow: ${theme.blocks.shadow};
                 break-inside: avoid;
                 page-break-inside: avoid;
@@ -335,33 +404,32 @@ export function renderTravelContentPageMarkup(args: {
     url
       ? variant === 'runtime'
         ? `
+          ${divider}
           <div class="travel-online-card" style="
             display: flex;
-            gap: ${spacing.blockSpacing};
+            gap: 14px;
             align-items: center;
             margin-top: ${spacing.sectionSpacing};
-            padding: 16px 18px;
-            border-radius: 22px;
-            background: linear-gradient(135deg, ${colors.accentLight} 0%, ${colors.surface} 72%);
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: ${colors.surfaceAlt};
             border: 1px solid ${colors.border};
-            border-top: 3px solid ${colors.accent};
-            box-shadow: 0 8px 24px rgba(15,23,42,0.08);
+            border-left: 4px solid ${colors.accent};
             break-inside: avoid;
             page-break-inside: avoid;
           ">
             ${qrCode ? `
               <div style="
-                width: 34mm;
-                height: 34mm;
-                padding: 3mm;
-                border-radius: 16px;
+                width: 28mm;
+                height: 28mm;
+                padding: 2mm;
+                border-radius: 12px;
                 background: white;
                 border: 1px solid ${colors.border};
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 flex-shrink: 0;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
               ">
                 <img src="${escapeHtml(qrCode)}" alt="QR" style="
                   width: 100%;
@@ -384,7 +452,7 @@ export function renderTravelContentPageMarkup(args: {
                 text-transform: uppercase;
                 letter-spacing: 0.1em;
                 font-weight: 700;
-                margin-bottom: 6px;
+                margin-bottom: 4px;
                 color: ${colors.accent};
                 font-size: ${typography.caption.size};
                 font-family: ${typography.headingFont};
@@ -393,23 +461,15 @@ export function renderTravelContentPageMarkup(args: {
                 Онлайн-версия
               </div>
               <div style="
-                font-size: ${typography.h3.size};
-                line-height: 1.2;
-                color: ${colors.text};
-                font-weight: ${typography.h4.weight};
-                margin-bottom: 4px;
-                font-family: ${typography.headingFont};
-              ">Маршрут онлайн</div>
-              <div style="
-                line-height: 1.5;
+                line-height: 1.4;
                 color: ${colors.textSecondary};
-                margin-bottom: 8px;
-              ">Сканируйте QR, чтобы сразу открыть маршрут.</div>
+                margin-bottom: 6px;
+              ">Сканируйте QR-код для просмотра маршрута</div>
               <div style="
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                padding: 5px 12px;
+                padding: 4px 10px;
                 border-radius: 999px;
                 background: ${colors.surface};
                 border: 1px solid ${colors.border};
@@ -468,7 +528,7 @@ export function renderTravelContentPageMarkup(args: {
         <style>
           .travel-content-page p {
             margin-bottom: ${typography.body.marginBottom};
-            line-height: ${typography.body.lineHeight};
+            line-height: 1.75;
             text-align: justify;
             orphans: 2;
             widows: 2;

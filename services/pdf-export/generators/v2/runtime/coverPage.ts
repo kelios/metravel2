@@ -1,6 +1,6 @@
-import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig';
-import { escapeHtml } from '../../../utils/htmlUtils';
-import { getTravelLabel } from '../../../utils/pluralize';
+import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig'
+import { escapeHtml } from '../../../utils/htmlUtils'
+import { getTravelLabel } from '../../../utils/pluralize'
 import {
   analyzeImageBrightness,
   analyzeImageComposition,
@@ -8,59 +8,59 @@ import {
   getOptimalOverlayOpacity,
   getOptimalTextColor,
   getOptimalTextPosition,
-} from '@/utils/imageAnalysis';
+} from '@/utils/imageAnalysis'
 
 export interface SharedCoverPageData {
-  title: string;
-  subtitle?: string;
-  userName: string;
-  travelCount: number;
-  yearRange?: string;
-  coverImage?: string;
+  title: string
+  subtitle?: string
+  userName: string
+  travelCount: number
+  yearRange?: string
+  coverImage?: string
   quote?: {
-    text: string;
-    author: string;
-  };
-  textPosition?: 'top' | 'center' | 'bottom' | 'auto';
-  overlayOpacity?: number;
-  showDecorations?: boolean;
+    text: string
+    author: string
+  }
+  textPosition?: 'top' | 'center' | 'bottom' | 'auto'
+  overlayOpacity?: number
+  showDecorations?: boolean
 }
 
 export async function generateSharedCoverPageMarkup(
   theme: PdfThemeConfig,
   data: SharedCoverPageData
 ): Promise<string> {
-  const { colors } = theme;
-  const travelLabel = getTravelLabel(data.travelCount);
-  const safeCoverImage = data.coverImage || undefined;
-  const formattedYearRange = String(data.yearRange || '').replace(/\s+-\s+/g, '–');
+  const { colors } = theme
+  const travelLabel = getTravelLabel(data.travelCount)
+  const safeCoverImage = data.coverImage || undefined
+  const formattedYearRange = String(data.yearRange || '').replace(/\s+-\s+/g, '–')
 
-  let brightness = 128;
-  let composition = { topBusy: 0.5, centerBusy: 0.5, bottomBusy: 0.5 };
-  let textPosition: 'top' | 'center' | 'bottom' = 'center';
-  let overlayOpacity = 0.6;
-  let overlayColor = 'rgba(0,0,0,';
-  let textColor = colors.cover.text;
+  let brightness = 128
+  let composition = { topBusy: 0.5, centerBusy: 0.5, bottomBusy: 0.5 }
+  let textPosition: 'top' | 'center' | 'bottom' = 'center'
+  let overlayOpacity = 0.6
+  let overlayColor = 'rgba(0,0,0,'
+  let textColor = colors.cover.text
 
   if (safeCoverImage) {
     try {
-      brightness = await analyzeImageBrightness(safeCoverImage);
-      composition = await analyzeImageComposition(safeCoverImage);
+      brightness = await analyzeImageBrightness(safeCoverImage)
+      composition = await analyzeImageComposition(safeCoverImage)
       textPosition =
         data.textPosition === 'auto' || !data.textPosition
           ? getOptimalTextPosition(composition)
-          : data.textPosition;
-      overlayOpacity = data.overlayOpacity ?? getOptimalOverlayOpacity(brightness);
-      overlayColor = getOptimalOverlayColor(brightness);
-      textColor = getOptimalTextColor(brightness);
+          : data.textPosition
+      overlayOpacity = data.overlayOpacity ?? getOptimalOverlayOpacity(brightness)
+      overlayColor = getOptimalOverlayColor(brightness)
+      textColor = getOptimalTextColor(brightness)
     } catch (error) {
-      console.warn('Image analysis failed, using defaults:', error);
+      console.warn('Image analysis failed, using defaults:', error)
     }
   }
 
   const background = safeCoverImage
     ? `url('${escapeHtml(safeCoverImage)}')`
-    : `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
+    : `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`
 
   return `
     <section class="pdf-page cover-page" style="
@@ -84,7 +84,7 @@ export async function generateSharedCoverPageMarkup(
         `${escapeHtml(String(data.travelCount))} ${travelLabel}${formattedYearRange ? ` • ${escapeHtml(formattedYearRange)}` : ''}`
       )}
     </section>
-  `;
+  `
 }
 
 function renderSmartOverlay(
@@ -97,7 +97,7 @@ function renderSmartOverlay(
       ? `linear-gradient(180deg, ${overlayColor}${opacity}) 0%, ${overlayColor}0.1) 50%, ${overlayColor}0.3) 100%)`
       : textPosition === 'bottom'
         ? `linear-gradient(180deg, ${overlayColor}0.3) 0%, ${overlayColor}0.1) 50%, ${overlayColor}${opacity}) 100%)`
-        : `linear-gradient(180deg, ${overlayColor}0.4) 0%, ${overlayColor}0.1) 30%, ${overlayColor}0.1) 70%, ${overlayColor}0.4) 100%)`;
+        : `linear-gradient(180deg, ${overlayColor}0.4) 0%, ${overlayColor}0.1) 30%, ${overlayColor}0.1) 70%, ${overlayColor}0.4) 100%)`
 
   return `
     <div style="
@@ -106,7 +106,7 @@ function renderSmartOverlay(
       background: ${gradient};
       z-index: 1;
     "></div>
-  `;
+  `
 }
 
 function renderContent(
@@ -117,14 +117,14 @@ function renderContent(
   hasImage: boolean
 ): string {
   const justifyContent =
-    textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : 'center';
-  const paddingTop = textPosition === 'top' ? '30mm' : '0';
-  const paddingBottom = textPosition === 'bottom' ? '30mm' : '0';
+    textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : 'center'
+  const paddingTop = textPosition === 'top' ? '30mm' : '0'
+  const paddingBottom = textPosition === 'bottom' ? '30mm' : '0'
   const panelBackground =
-    hasImage ? (textColor === '#000000' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.48)') : 'transparent';
+    hasImage ? (textColor === '#000000' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.48)') : 'transparent'
   const panelBorder =
-    textColor === '#000000' ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.22)';
-  const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.24)' : 'none';
+    textColor === '#000000' ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.22)'
+  const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.24)' : 'none'
 
   return `
     <div style="
@@ -155,7 +155,7 @@ function renderContent(
         ${data.quote ? renderQuote(data.quote, textColor) : ''}
       </div>
     </div>
-  `;
+  `
 }
 
 function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
@@ -163,9 +163,9 @@ function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
     <div style="
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 7px;
       margin-bottom: 5mm;
-      padding: 5px 10px;
+      padding: 5px 12px 5px 10px;
       border-radius: 999px;
       background: ${textColor === '#000000' ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
       border: 1px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
@@ -176,20 +176,21 @@ function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
       color: ${textColor || 'rgba(255,255,255,0.84)'};
       font-family: ${theme.typography.bodyFont};
     ">
-      <span>Travel book</span>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${textColor || 'rgba(255,255,255,0.84)'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span>Книга путешествий</span>
     </div>
-  `;
+  `
 }
 
 function renderMetaStrip(theme: PdfThemeConfig, data: SharedCoverPageData, textColor?: string): string {
-  const travelLabel = getTravelLabel(data.travelCount);
+  const travelLabel = getTravelLabel(data.travelCount)
   const items = [
     data.userName ? escapeHtml(data.userName) : null,
     Number.isFinite(data.travelCount) ? `${escapeHtml(String(data.travelCount))} ${travelLabel}` : null,
     data.yearRange ? escapeHtml(data.yearRange) : null,
-  ].filter(Boolean);
+  ].filter(Boolean)
 
-  if (!items.length) return '';
+  if (!items.length) return ''
 
   return `
     <div style="
@@ -214,7 +215,26 @@ function renderMetaStrip(theme: PdfThemeConfig, data: SharedCoverPageData, textC
         ">${item}</span>
       `).join('')}
     </div>
-  `;
+  `
+}
+
+function renderCornerMark(position: string, rotate: string): string {
+  return `
+    <div style="
+      position: absolute;
+      ${position}
+      width: 18mm;
+      height: 18mm;
+      pointer-events: none;
+      z-index: 1;
+      transform: ${rotate};
+    ">
+      <svg viewBox="0 0 60 60" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 28 L4 4 L28 4" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="4" cy="4" r="2" fill="rgba(255,255,255,0.25)"/>
+      </svg>
+    </div>
+  `
 }
 
 function renderDecorativeElements(): string {
@@ -222,7 +242,7 @@ function renderDecorativeElements(): string {
     <div style="
       position: absolute;
       inset: 14mm;
-      border: 1.5px solid rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.25);
       border-radius: 14px;
       pointer-events: none;
       z-index: 1;
@@ -230,16 +250,20 @@ function renderDecorativeElements(): string {
     <div style="
       position: absolute;
       inset: 17mm;
-      border: 0.5px solid rgba(255,255,255,0.08);
+      border: 0.5px solid rgba(255,255,255,0.12);
       border-radius: 10px;
       pointer-events: none;
       z-index: 1;
     "></div>
-  `;
+    ${renderCornerMark('top: 10mm; left: 10mm;', 'rotate(0deg)')}
+    ${renderCornerMark('top: 10mm; right: 10mm;', 'rotate(90deg)')}
+    ${renderCornerMark('bottom: 10mm; right: 10mm;', 'rotate(180deg)')}
+    ${renderCornerMark('bottom: 10mm; left: 10mm;', 'rotate(270deg)')}
+  `
 }
 
 function renderSubtitle(theme: PdfThemeConfig, subtitle: string, textColor?: string): string {
-  const opacity = textColor === '#000000' ? '0.7' : '0.88';
+  const opacity = textColor === '#000000' ? '0.7' : '0.88'
   return `
     <div style="
       font-size: 13pt;
@@ -251,42 +275,42 @@ function renderSubtitle(theme: PdfThemeConfig, subtitle: string, textColor?: str
       max-width: 104mm;
       line-height: 1.55;
     ">${escapeHtml(subtitle)}</div>
-  `;
+  `
 }
 
 function getCoverTitleStyle(theme: PdfThemeConfig, title: string): {
-  fontSize: string;
-  lineHeight: number;
-  maxWidth: string;
-  letterSpacing: string;
+  fontSize: string
+  lineHeight: number
+  maxWidth: string
+  letterSpacing: string
 } {
-  const normalized = (title || '').trim();
-  const length = normalized.length;
+  const normalized = (title || '').trim()
+  const length = normalized.length
 
   if (length >= 100) {
-    return { fontSize: '23pt', lineHeight: 1.08, maxWidth: '118mm', letterSpacing: '0' };
+    return { fontSize: '23pt', lineHeight: 1.08, maxWidth: '118mm', letterSpacing: '0' }
   }
   if (length >= 75) {
-    return { fontSize: '26pt', lineHeight: 1.08, maxWidth: '114mm', letterSpacing: '0.01em' };
+    return { fontSize: '26pt', lineHeight: 1.08, maxWidth: '114mm', letterSpacing: '0.01em' }
   }
   return {
     fontSize: String(theme.typography.h1.size),
     lineHeight: 1.08,
     maxWidth: '102mm',
     letterSpacing: '0.02em',
-  };
+  }
 }
 
 function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): string {
-  const color = textColor || theme.colors.cover.text;
-  const safeTitle = (title || '').trim();
-  if (!safeTitle) return '';
-  const titleStyle = getCoverTitleStyle(theme, safeTitle);
+  const color = textColor || theme.colors.cover.text
+  const safeTitle = (title || '').trim()
+  if (!safeTitle) return ''
+  const titleStyle = getCoverTitleStyle(theme, safeTitle)
 
   return `
     <div style="
-      width: 26mm;
-      height: 2px;
+      width: 32mm;
+      height: 3px;
       background: linear-gradient(90deg, ${theme.colors.accent}, ${theme.colors.accentStrong});
       border-radius: 999px;
       margin: 0 0 6mm 0;
@@ -306,7 +330,7 @@ function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): 
       max-width: ${titleStyle.maxWidth};
       text-wrap: balance;
     ">${escapeHtml(safeTitle)}</h1>
-  `;
+  `
 }
 
 function renderDate(theme: PdfThemeConfig): string {
@@ -314,7 +338,7 @@ function renderDate(theme: PdfThemeConfig): string {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  });
+  })
 
   return `
     <span style="
@@ -322,7 +346,7 @@ function renderDate(theme: PdfThemeConfig): string {
       opacity: 0.75;
       font-family: ${theme.typography.bodyFont};
     ">Создано ${dateStr}</span>
-  `;
+  `
 }
 
 function renderQuote(quote: { text: string; author: string }, textColor?: string): string {
@@ -331,24 +355,38 @@ function renderQuote(quote: { text: string; author: string }, textColor?: string
       margin-top: 11mm;
       max-width: 100%;
       font-style: italic;
-      opacity: 0.85;
       color: ${textColor || 'rgba(255,255,255,0.85)'};
-      padding: 8px 12px;
+      padding: 10px 14px 10px 16px;
       background: ${textColor === '#000000' ? 'rgba(15,23,42,0.05)' : 'rgba(255,255,255,0.08)'};
       border-radius: 14px;
-      border-left: 2px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.18)' : 'rgba(255,255,255,0.24)'};
+      border-left: 3px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.22)' : 'rgba(255,255,255,0.3)'};
+      position: relative;
     ">
-      <div style="font-size: 11pt; margin-bottom: 4mm; line-height: 1.55;">
-        «${escapeHtml(quote.text)}»
+      <span style="
+        position: absolute;
+        top: -2mm;
+        left: 8px;
+        font-size: 36pt;
+        line-height: 1;
+        font-family: Georgia, 'Times New Roman', serif;
+        opacity: 0.25;
+        font-style: normal;
+        color: ${textColor || 'rgba(255,255,255,0.85)'};
+      ">«</span>
+      <div style="font-size: 11pt; margin-bottom: 4mm; line-height: 1.55; padding-top: 4mm;">
+        ${escapeHtml(quote.text)}
       </div>
-      <div style="font-size: 9pt; opacity: 0.7; letter-spacing: 0.04em;">
+      <div style="font-size: 9pt; opacity: 0.7; letter-spacing: 0.04em; font-style: normal;">
         — ${escapeHtml(quote.author)}
       </div>
     </div>
-  `;
+  `
 }
 
 function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
+  const { colors } = theme
+  const g0 = colors.cover.backgroundGradient[0]
+  const g1 = colors.cover.backgroundGradient[1]
   return `
     <div class="cover-footer-rail" style="
       margin: 0 24mm 16mm 24mm;
@@ -360,10 +398,11 @@ function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
       justify-content: space-between;
       gap: 10mm;
       border-radius: 18px;
-      background: rgba(15,23,42,0.28);
-      border: 1px solid rgba(255,255,255,0.12);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: linear-gradient(135deg, ${g0}cc, ${g1}bb);
+      border: 1px solid rgba(255,255,255,0.18);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
     ">
       <div style="
         display: flex;
@@ -403,5 +442,5 @@ function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
         ${renderDate(theme)}
       </div>
     </div>
-  `;
+  `
 }

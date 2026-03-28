@@ -41,6 +41,8 @@ export function renderTravelPhotoPageMarkup(args: {
   ].filter(Boolean)
   const metaHtml = metaPieces.length ? escapeHtml(metaPieces.join(' \u2022 ')) : ''
 
+  const travelIndex = travel.index != null ? travel.index : pageNumber
+
   const noImageFallback = `
       <div style="
         border-radius: ${theme.blocks.borderRadius};
@@ -78,8 +80,8 @@ export function renderTravelPhotoPageMarkup(args: {
             flex: 1;
             border-radius: ${theme.blocks.borderRadius};
             overflow: hidden;
-            box-shadow: ${theme.blocks.shadow};
-            border: 6px solid ${colors.surface};
+            box-shadow: 0 20px 50px rgba(15,23,42,0.18), 0 8px 20px rgba(15,23,42,0.10);
+            border: 14px solid ${colors.surface};
             outline: 1px solid ${colors.border};
             background: ${colors.surfaceAlt};
             position: relative;
@@ -123,7 +125,7 @@ export function renderTravelPhotoPageMarkup(args: {
           box-shadow: ${theme.blocks.shadow};
         ">
           <div style="
-            width: 70%;
+            width: 64%;
             position: relative;
             overflow: hidden;
             background: ${colors.surfaceAlt};
@@ -131,7 +133,12 @@ export function renderTravelPhotoPageMarkup(args: {
             ${buildContainImage(coverImage, escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
           </div>
           <div style="
-            width: 30%;
+            width: 0;
+            border-left: 2px solid ${colors.accentStrong};
+            flex-shrink: 0;
+          "></div>
+          <div style="
+            width: 36%;
             background: linear-gradient(180deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%);
             display: flex;
             flex-direction: column;
@@ -192,6 +199,17 @@ export function renderTravelPhotoPageMarkup(args: {
           "></div>
           <div style="
             position: absolute;
+            top: 10mm;
+            right: 10mm;
+            font-size: 48pt;
+            font-weight: 800;
+            font-family: ${typography.headingFont};
+            color: rgba(255,255,255,0.18);
+            line-height: 1;
+            pointer-events: none;
+          ">${travelIndex}</div>
+          <div style="
+            position: absolute;
             left: 14mm;
             right: auto;
             bottom: 14mm;
@@ -207,7 +225,7 @@ export function renderTravelPhotoPageMarkup(args: {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 6px;
-                margin-bottom: 5mm;
+                margin-bottom: 3mm;
               ">
                 ${metaPieces.map((part) => `
                   <span style="
@@ -225,6 +243,13 @@ export function renderTravelPhotoPageMarkup(args: {
                   ">${escapeHtml(part)}</span>
                 `).join('')}
               </div>
+              <div style="
+                width: 40mm;
+                height: 3px;
+                border-radius: 2px;
+                background: linear-gradient(90deg, ${colors.accentStrong}, ${colors.accentLight});
+                margin-bottom: 5mm;
+              "></div>
             ` : ''}
             <h1 style="
               color: ${colors.text};
@@ -249,10 +274,17 @@ export function renderTravelPhotoPageMarkup(args: {
           position: absolute;
           bottom: 15mm;
           right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-weight: 500;
-          font-family: ${typography.bodyFont};
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
+          background: ${colors.accentSoft};
+          color: ${colors.accentStrong};
+          font-size: 8pt;
+          font-weight: 700;
+          font-family: ${typography.headingFont};
         ">${pageNumber}</div>
       </section>
     `
