@@ -194,11 +194,16 @@ export function buildRouteSvg(
     return { x, y };
   };
 
-  const normalized = points.map((point, index) => ({
-    ...projectPoint(point),
-    index,
-    label: point.label,
-  }));
+  const normalized = points.map((point, index) => {
+    const rawLabel = point.label ?? '';
+    const firstSegment = rawLabel.split(' · ')[0].trim();
+    const shortLabel = firstSegment.length > 15 ? firstSegment.slice(0, 14) + '…' : firstSegment;
+    return {
+      ...projectPoint(point),
+      index,
+      label: shortLabel,
+    };
+  });
 
   const normalizedRouteLine = routeLine.map(projectPoint);
 
@@ -283,7 +288,7 @@ export function buildRouteSvg(
     .join('');
 
   return `
-    <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Маршрут путешествия">
+    <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" overflow="hidden" role="img" aria-label="Маршрут путешествия">
       <defs>
         <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="${theme.colors.surfaceAlt}" />

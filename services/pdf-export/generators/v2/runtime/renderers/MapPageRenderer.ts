@@ -52,7 +52,10 @@ export class RuntimeMapRenderer {
               height: ${mapHeightMm}mm;
               background: ${colors.surfaceAlt};
             ">
-              ${data.mapSvg}
+              ${data.snapshotDataUrl
+                ? `<img src="${data.snapshotDataUrl}" alt="Карта маршрута" style="width: 100%; height: 100%; object-fit: cover; display: block;" />`
+                : data.mapSvg
+              }
             </div>
           </div>
         </div>

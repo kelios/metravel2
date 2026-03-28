@@ -2,7 +2,7 @@ import { RuntimeMapRenderer } from '@/services/pdf-export/generators/v2/runtime/
 import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig'
 
 describe('RuntimeMapRenderer', () => {
-  it('renders the deterministic svg map block instead of relying on a bitmap snapshot', () => {
+  it('renders the snapshot image when snapshotDataUrl is available', () => {
     const renderer = new RuntimeMapRenderer({ theme: getThemeConfig('minimal') })
 
     const html = renderer.render({
@@ -16,8 +16,26 @@ describe('RuntimeMapRenderer', () => {
       routePreview: null,
     })
 
+    expect(html).toContain('<img src="data:image/png;base64,test"')
+    expect(html).not.toContain('<svg viewBox="0 0 100 60"')
+  })
+
+  it('falls back to the deterministic svg map block when snapshotDataUrl is null', () => {
+    const renderer = new RuntimeMapRenderer({ theme: getThemeConfig('minimal') })
+
+    const html = renderer.render({
+      travelName: 'Test route',
+      snapshotDataUrl: null,
+      mapSvg: '<svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>',
+      locationCards: [],
+      locationCount: 3,
+      pageNumber: 5,
+      routeInfo: 'Track',
+      routePreview: null,
+    })
+
     expect(html).toContain('<svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>')
-    expect(html).not.toContain('<img src="data:image/png;base64,test"')
+    expect(html).not.toContain('<img src="data:image/png;base64,')
   })
 
   it('renders the elevation profile in the same chart-first order as the travel page block', () => {

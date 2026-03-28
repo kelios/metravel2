@@ -443,7 +443,7 @@ export async function generateLeafletRouteSnapshot(
         const number = index + 1;
 
         const labelRaw = validPoints[index]?.label;
-        const label =
+        const labelFull =
           typeof labelRaw === 'string'
             ? labelRaw
                 .replace(/\s+/g, ' ')
@@ -452,6 +452,9 @@ export async function generateLeafletRouteSnapshot(
                 .replace(/[,\s]+$/g, '')
                 .trim()
             : '';
+        // Use only the first segment (before " · ") and cap length to keep labels compact on the map
+        const firstSegment = labelFull.split(' · ')[0].trim();
+        const label = firstSegment.length > 35 ? firstSegment.slice(0, 33) + '…' : firstSegment;
 
         const isStart = index === 0;
         const isEnd = index === latLngs.length - 1;
@@ -509,47 +512,47 @@ export async function generateLeafletRouteSnapshot(
           ${label ? `
             <div style="
               position: absolute;
-              top: -8px;
+              top: -4px;
               left: 34px;
-              max-width: 320px;
-              padding: 10px 12px;
-              border-radius: 14px;
+              max-width: 150px;
+              padding: 5px 8px;
+              border-radius: 10px;
               background: ${labelBg};
               border: 1px solid ${labelBorder};
               color: ${labelText};
               font-family: ${fontFamily};
-              font-size: 14px;
-              line-height: 1.25;
+              font-size: 11px;
+              line-height: 1.3;
               font-weight: 700;
               white-space: normal;
               overflow: hidden;
               text-overflow: ellipsis;
               display: -webkit-box;
-              -webkit-line-clamp: 3;
+              -webkit-line-clamp: 2;
               -webkit-box-orient: vertical;
-              box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+              box-shadow: 0 2px 8px rgba(0,0,0,0.14);
               text-rendering: geometricPrecision;
               -webkit-font-smoothing: antialiased;
             ">
               <div style="
                 position: absolute;
-                left: -9px;
-                top: 16px;
+                left: -7px;
+                top: 10px;
                 width: 0;
                 height: 0;
-                border-top: 9px solid transparent;
-                border-bottom: 9px solid transparent;
-                border-right: 9px solid ${labelBorder};
+                border-top: 7px solid transparent;
+                border-bottom: 7px solid transparent;
+                border-right: 7px solid ${labelBorder};
               "></div>
               <div style="
                 position: absolute;
-                left: -8px;
-                top: 16px;
+                left: -6px;
+                top: 10px;
                 width: 0;
                 height: 0;
-                border-top: 9px solid transparent;
-                border-bottom: 9px solid transparent;
-                border-right: 9px solid ${labelBg};
+                border-top: 7px solid transparent;
+                border-bottom: 7px solid transparent;
+                border-right: 7px solid ${labelBg};
               "></div>
               ${escapeHtml(label)}
             </div>
