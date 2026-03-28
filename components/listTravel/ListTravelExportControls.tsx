@@ -274,24 +274,26 @@ function ListTravelExportControls({
                 </View>
               )}
               <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
+              <View style={s.exportBarActions}>
+                <CompactActionLink
+                  label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
+                  onPress={toggleSelectAll}
+                  icon={selectionCount === travels.length && travels.length > 0 ? 'minus-circle' : 'check-circle'}
+                  style={s.linkButton as any}
+                />
+                {hasSelection && (
+                  <CompactActionLink
+                    label="Очистить"
+                    onPress={clearSelection}
+                    icon="x"
+                    style={s.linkButtonDanger as any}
+                  />
+                )}
+              </View>
             </View>
           </View>
 
-          <View style={s.exportBarActions}>
-            <CompactActionLink
-              label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
-              onPress={toggleSelectAll}
-              icon={selectionCount === travels.length && travels.length > 0 ? 'minus-circle' : 'check-circle'}
-              style={s.linkButton as any}
-            />
-            {hasSelection && (
-              <CompactActionLink
-                label="Очистить"
-                onPress={clearSelection}
-                icon="x"
-                style={s.linkButtonDanger as any}
-              />
-            )}
+          <View style={[s.exportBarButtons, isMobile && s.exportBarButtonsMobile]}>
             {hasSelection && (
               <CompactActionLink
                 label="Настройки"
@@ -300,9 +302,6 @@ function ListTravelExportControls({
                 style={s.linkButton as any}
               />
             )}
-          </View>
-
-          <View style={[s.exportBarButtons, isMobile && s.exportBarButtonsMobile]}>
             <UIButton
               label={pdfExport.isGenerating ? `Генерация... ${pdfExport.progress || 0}%` : 'Сохранить PDF'}
               onPress={handleImmediateSave}
