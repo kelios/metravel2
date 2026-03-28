@@ -144,10 +144,10 @@ function renderContent(
   const paddingTop = textPosition === 'top' ? '30mm' : '0'
   const paddingBottom = textPosition === 'bottom' ? '30mm' : '0'
   const panelBackground =
-    hasImage ? (usesDarkText ? 'rgba(255,255,255,0.92)' : 'rgba(15,23,42,0.65)') : 'transparent'
+    hasImage ? (usesDarkText ? 'rgba(255,255,255,0.95)' : 'rgba(15,23,42,0.75)') : 'transparent'
   const panelBorder =
-    usesDarkText ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.22)'
-  const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.24)' : 'none'
+    usesDarkText ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.25)'
+  const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.32)' : 'none'
 
   return `
     <div class="cover-content-layer" style="
@@ -411,13 +411,23 @@ function renderQuote(quote: { text: string; author: string }, textColor?: string
 
 function isDarkTextColor(textColor?: string): boolean {
   const normalized = String(textColor || '').trim().toLowerCase()
-  return (
+  if (
     normalized === '#000' ||
     normalized === '#000000' ||
     normalized === 'black' ||
     normalized === 'rgb(0, 0, 0)' ||
     normalized === 'rgb(0,0,0)'
-  )
+  ) return true
+
+  // Проверяем hex-цвета на тёмность (luminance < 50%)
+  const hexMatch = normalized.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/)
+  if (hexMatch) {
+    const r = parseInt(hexMatch[1], 16)
+    const g = parseInt(hexMatch[2], 16)
+    const b = parseInt(hexMatch[3], 16)
+    return (r * 299 + g * 587 + b * 114) / 1000 < 128
+  }
+  return false
 }
 
 function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {

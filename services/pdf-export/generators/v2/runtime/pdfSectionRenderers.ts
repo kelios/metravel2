@@ -63,8 +63,8 @@ export function renderTocPageSection(args: {
   } = args
   const { colors, typography, spacing } = theme
 
-  const thumbW = 96
-  const thumbH = 66
+  const thumbW = 110
+  const thumbH = 76
 
   const tocItems = meta
     .map((item, index) => {
@@ -208,8 +208,8 @@ function buildTocRow(
     <div style="
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: ${use2Col ? '10px 0' : '12px 0'};
+      gap: 14px;
+      padding: ${use2Col ? '10px 0' : '14px 0'};
       ${!isLast ? `border-bottom: 1px solid ${colors.borderLight || colors.border};` : ''}
     ">
       <span style="
@@ -259,10 +259,10 @@ function buildTocRow(
           color: ${colors.text};
           line-height: 1.25;
           font-family: ${typography.headingFont};
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
           margin-bottom: 2px;
+          overflow-wrap: break-word;
+          word-break: normal;
+          hyphens: auto;
         ">${escapeHtml(travel.name)}</div>
         ${metaLine ? `
           <div style="

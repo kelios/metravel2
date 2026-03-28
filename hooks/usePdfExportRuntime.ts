@@ -53,12 +53,22 @@ async function getBookPreviewModule() {
 
 /**
  * Открывает окно предпросмотра синхронно (до async-работы), чтобы не попасть
- * под блокировку всплывающих окон. Возвращает Window или null.
+ * под блокировку всплывающих окон. Показывает loading-экран. Возвращает Window или null.
  */
 function openPendingPreviewWindow(): Window | null {
   if (typeof window === 'undefined') return null;
   try {
-    return openWebWindow('about:blank');
+    const win = openWebWindow('about:blank');
+    if (win) {
+      try {
+        win.document.open();
+        win.document.write('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>Готовим книгу…</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8f9fa;color:#1a1a1a}.card{border:1px solid #e5e7eb;border-radius:14px;padding:24px 32px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.08);text-align:center}.spinner{width:28px;height:28px;border:3px solid #e5e7eb;border-top-color:#e07840;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px}@keyframes spin{to{transform:rotate(360deg)}}.title{font-size:16px;font-weight:600;margin-bottom:4px}.sub{font-size:13px;color:#6b7280}</style></head><body><div class="card"><div class="spinner"></div><div class="title">Готовим печатную версию</div><div class="sub">Загрузка данных и изображений…</div></div></body></html>');
+        win.document.close();
+      } catch {
+        // ignore write error — window is still usable
+      }
+    }
+    return win;
   } catch {
     return null;
   }

@@ -235,21 +235,33 @@ export class RuntimeGalleryRenderer {
               box-shadow: ${this.ctx.theme.blocks.shadow};
               background: ${layout === 'polaroid' ? '#fff' : colors.surfaceAlt};
               ${polaroidStyle}
-              display: flex;
-              ${layout === 'polaroid' ? 'flex-direction: column;' : ''}
-              align-items: center;
-              justify-content: center;
+              ${layout === 'polaroid' ? 'display: flex; flex-direction: column;' : ''}
               ${layout === 'polaroid' ? '' : 'padding: 0;'}
             ">
-              <div style="position: relative; width: 100%; ${layout === 'polaroid' ? 'flex: 1; display: flex; align-items: center; justify-content: center;' : ''}">
-                <img src="${escapeHtml(photo)}" alt="Фото ${globalIndex + 1}"
+              <div style="position: relative; width: 100%; ${imgHeightStyle} overflow: hidden; ${layout === 'polaroid' ? 'flex: 1;' : ''}">
+                <img src="${escapeHtml(photo)}" alt=""
+                  loading="eager" decoding="sync" aria-hidden="true"
                   style="
+                    position: absolute;
+                    top: 0; left: 0;
                     width: 100%;
-                    ${imgHeightStyle}
+                    height: 100%;
+                    object-fit: cover;
+                    display: block;
+                    filter: blur(20px) brightness(0.85);
+                    transform: scale(1.15);
+                    ${getImageFilterStyle(this.ctx)}
+                  "
+                  onerror="this.style.display='none';" />
+                <img src="${escapeHtml(photo)}" alt="Фото ${globalIndex + 1}"
+                  loading="eager" decoding="sync"
+                  style="
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
                     object-fit: contain;
                     display: block;
-                    position: relative;
-                    border-radius: ${borderRadiusValue};
+                    z-index: 1;
                     ${getImageFilterStyle(this.ctx)}
                   "
                   onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />

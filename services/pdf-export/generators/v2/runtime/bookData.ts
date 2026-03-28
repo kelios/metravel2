@@ -5,7 +5,7 @@ import type { PdfThemeConfig } from '../../../themes/PdfThemeConfig';
 import { buildSafeImageUrl } from '../../../utils/htmlUtils';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
 
-export const TOC_ITEMS_PER_PAGE = 5;
+export const TOC_ITEMS_PER_PAGE = 7;
 
 export function sortTravels(
   travels: TravelForBook[],

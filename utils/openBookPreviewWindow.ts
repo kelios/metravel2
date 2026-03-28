@@ -65,22 +65,33 @@ export function openPendingBookPreviewWindow(): Window | null {
 export function openBookPreviewWindow(html: string, targetWindow?: Window | null): void {
   if (typeof window === 'undefined') return;
 
+  // Если есть предоткрытое окно — перенаправляем его на Blob URL
   if (targetWindow && !targetWindow.closed) {
-    const written = writeHtmlToWindow(targetWindow, html);
-    if (written) return;
+    try {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      targetWindow.location.href = url;
+
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 300_000);
+      return;
+    } catch {
+      // Fallback: document.write в предоткрытое окно
+      const written = writeHtmlToWindow(targetWindow, html);
+      if (written) return;
+    }
   }
 
-  // Используем Blob URL вместо document.write(), чтобы изолировать PDF-превью
-  // от service worker и manifest родительского окна (предотвращает ошибки icon.svg)
+  // Нет предоткрытого окна — открываем новое через Blob URL
   try {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const win = tryFinalizeWindow(openWebWindow(url));
 
-    // Освобождаем Blob URL после открытия (с задержкой, чтобы браузер успел загрузить)
     setTimeout(() => {
       URL.revokeObjectURL(url);
-    }, 60_000);
+    }, 300_000);
 
     if (!win) return;
   } catch {
