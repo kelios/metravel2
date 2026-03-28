@@ -1209,8 +1209,8 @@ export class EnhancedPdfGeneratorBase {
         ">
           ${location.thumbnailUrl ? `
             <div style="
-              width: 92px;
-              height: 62px;
+              width: 118px;
+              height: 82px;
               border-radius: 10px;
               overflow: hidden;
               flex-shrink: 0;

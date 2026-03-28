@@ -117,6 +117,8 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(mapPage).toContain('height: 140mm')
     expect(mapPage).not.toContain('height: 125mm')
     expect(mapPage).toContain('alt="QR точки 1"')
+    expect(mapPage).toContain('width: 118px;')
+    expect(mapPage).toContain('height: 82px;')
   })
 
   it('falls back to static map image when leaflet snapshot is unavailable', async () => {
