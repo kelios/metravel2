@@ -367,14 +367,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               ]}
             >
               {/* Group Header */}
-              <Pressable
-                onPress={() => toggleGroup(group.key)}
-                style={styles.groupHeader}
-                accessibilityRole="button"
-                accessibilityLabel={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${group.title}`}
-                accessibilityState={{ expanded: isExpanded }}
-              >
-                <View style={styles.groupHeaderLeft}>
+              <View style={styles.groupHeader}>
+                <Pressable
+                  onPress={() => toggleGroup(group.key)}
+                  style={[styles.groupHeaderLeft, { paddingVertical: 4 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${group.title}`}
+                  accessibilityState={{ expanded: isExpanded }}
+                >
                   {group.icon && (
                     <View style={styles.iconSlot16}>
                       <Feather
@@ -390,7 +390,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                       <Text style={styles.selectedBadgeText}>{selectedCount}</Text>
                     </View>
                   )}
-                </View>
+                  <View style={styles.iconSlot18}>
+                    <Feather
+                      name={isExpanded ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={colors.textMuted}
+                    />
+                  </View>
+                </Pressable>
                 <View style={styles.groupHeaderRight}>
                   {selectedCount > 0 && (
                     <GroupClearButton
@@ -401,15 +408,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                       colors={colors}
                     />
                   )}
-                  <View style={styles.iconSlot18}>
-                    <Feather
-                      name={isExpanded ? "chevron-up" : "chevron-down"}
-                      size={18}
-                      color={colors.textMuted}
-                    />
-                  </View>
                 </View>
-              </Pressable>
+              </View>
 
               {/* Group Options */}
               {isExpanded && (

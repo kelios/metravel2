@@ -10,6 +10,9 @@ export async function analyzeImageBrightness(imageUrl: string): Promise<number> 
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return 128; // Дефолтное значение для SSR
   }
+  if (!shouldAnalyzeImagePixels(imageUrl)) {
+    return 128;
+  }
 
   return new Promise((resolve) => {
     const img = new Image();
@@ -76,6 +79,9 @@ export async function analyzeImageComposition(imageUrl: string): Promise<{
   bottomBusy: number;
 }> {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return { topBusy: 0.5, centerBusy: 0.5, bottomBusy: 0.5 };
+  }
+  if (!shouldAnalyzeImagePixels(imageUrl)) {
     return { topBusy: 0.5, centerBusy: 0.5, bottomBusy: 0.5 };
   }
 
@@ -203,4 +209,22 @@ export function getOptimalOverlayColor(brightness: number): string {
  */
 export function getOptimalTextColor(brightness: number): string {
   return brightness > 128 ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)';
+}
+
+function shouldAnalyzeImagePixels(imageUrl: string): boolean {
+  const trimmed = String(imageUrl || '').trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return true;
+
+  try {
+    const resolved = new URL(trimmed, window.location.origin);
+    if (resolved.origin === window.location.origin) {
+      return true;
+    }
+
+    const host = resolved.hostname.toLowerCase();
+    return host === 'images.weserv.nl';
+  } catch {
+    return false;
+  }
 }
