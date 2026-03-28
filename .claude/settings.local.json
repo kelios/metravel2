@@ -8,7 +8,8 @@
       "Bash(find /Users/juliasavran/Sites/metravel2/metravel2 -path */node_modules -prune -o -type f -path */pdf-export/* -print)",
       "Bash(find /Users/juliasavran/Sites/metravel2/metravel2 -path */node_modules -prune -o -type f -path *export* -name *.tsx -print)",
       "Bash(find /Users/juliasavran/Sites/metravel2/metravel2/services/pdf-export -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
-      "Bash(npx jest:*)"
+      "Bash(npx jest:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

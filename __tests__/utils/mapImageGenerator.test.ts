@@ -53,20 +53,16 @@ describe('generateStaticMapUrl', () => {
     expect(generateStaticMapUrl([], {})).toBe('')
   })
 
-  it('generates OSM URL with correct parameters', () => {
+  it('returns empty string without API key (dead OSM fallback removed)', () => {
     const url = generateStaticMapUrl(points, { width: 400, height: 300, zoom: 10 })
-    expect(url).toContain('staticmap.openstreetmap.fr')
-    expect(url).toContain('55.75')
-    expect(url).toContain('400x300')
+    expect(url).toBe('')
   })
 
-  it('generates OSM URL without apiKey (always free)', () => {
-    const url = generateStaticMapUrl(points, { zoom: 8 })
-    expect(url).toContain('staticmap.openstreetmap.fr')
-    expect(url).toContain('center=')
-    expect(url).toContain('zoom=8')
-    // OSM не использует Google API ключи
-    expect(url).not.toContain('maps.googleapis.com')
+  it('generates Google Maps URL when apiKey is provided', () => {
+    const url = generateStaticMapUrl(points, { zoom: 8, apiKey: 'test-key' })
+    expect(url).toContain('maps.googleapis.com')
+    expect(url).toContain('test-key')
+    expect(url).toContain('55.75')
   })
 })
 
@@ -137,7 +133,7 @@ describe('generateLeafletRouteSnapshot', () => {
       { width: 320, height: 180, zoom: 9 }
     )
 
-    jest.runAllTimers()
+    await jest.advanceTimersByTimeAsync(7000)
     const result = await promise
 
     expect(result).toBe('data:image/png;base64,leaflet')
@@ -157,7 +153,7 @@ describe('generateLeafletRouteSnapshot', () => {
       { width: 321, height: 181, zoom: 9 }
     )
 
-    jest.runAllTimers()
+    await jest.advanceTimersByTimeAsync(7000)
     const result = await promise
 
     expect(result).toBe('data:image/png;base64,local-html2canvas')
@@ -178,7 +174,7 @@ describe('generateLeafletRouteSnapshot', () => {
       ],
     })
 
-    jest.runAllTimers()
+    await jest.advanceTimersByTimeAsync(7000)
     const result = await promise
 
     expect(result).toBe('data:image/png;base64,local-html2canvas')
@@ -211,7 +207,7 @@ describe('generateLeafletRouteSnapshot', () => {
         [11, 22],
       ],
     })
-    jest.runAllTimers()
+    await jest.advanceTimersByTimeAsync(7000)
     const first = await firstPromise
 
     const secondPromise = generateLeafletRouteSnapshot(points, {
@@ -223,7 +219,7 @@ describe('generateLeafletRouteSnapshot', () => {
         [12, 23],
       ],
     })
-    jest.runAllTimers()
+    await jest.advanceTimersByTimeAsync(7000)
     const second = await secondPromise
 
     expect(first).toBe('data:image/png;base64,leaflet-1')

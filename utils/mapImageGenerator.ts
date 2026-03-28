@@ -129,37 +129,14 @@ export function generateStaticMapUrl(
 }
 
 /**
- * Генерирует URL для статичной карты через OpenStreetMap
- * Использует публичный бесплатный сервис staticmap.openstreetmap.fr (без API-ключа)
+ * Ранее использовала staticmap.openstreetmap.fr — сервис недоступен.
+ * Возвращает пустую строку; основной путь — generateCanvasMapSnapshot.
  */
 function generateOSMStaticMapUrl(
-  points: MapPoint[],
-  options: { width: number; height: number; zoom: number }
+  _points: MapPoint[],
+  _options: { width: number; height: number; zoom: number }
 ): string {
-  const { width, height, zoom } = options;
-
-  // Вычисляем центр
-  const centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
-  const centerLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
-
-  // Формируем маркеры (упрощённо: одинаковый стиль для всех точек)
-  const markers = points
-    .map((point) => `${point.lat},${point.lng},lightblue1`)
-    .join('|');
-
-  // Стандартный статичный OSM без ключа
-  // Используем французский зеркальный сервер staticmap.openstreetmap.fr
-  const size = `${Math.round(width)}x${Math.round(height)}`;
-
-  const url =
-    `https://staticmap.openstreetmap.fr/staticmap.php?` +
-    `center=${centerLat},${centerLng}` +
-    `&zoom=${zoom}` +
-    `&size=${size}` +
-    `&markers=${markers}` +
-    `&maptype=mapnik&format=png`;
-
-  return url;
+  return '';
 }
 
 /**
@@ -277,8 +254,339 @@ export async function generateMapImageFromDOM(
 }
 
 /**
+ * Проверяет, является ли data URL изображение почти полностью одноцветным (пустая карта).
+ * Проверяет выборку пикселей — если >95% одного цвета, считает изображение пустым.
+ */
+async function isImageMostlyBlank(dataUrl: string, _origWidth: number, _origHeight: number): Promise<boolean> {
+  if (typeof document === 'undefined') return false;
+  if (isTestEnvironment()) return false;
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject();
+      img.src = dataUrl;
+    });
+
+    const sampleSize = 100;
+    const canvas = document.createElement('canvas');
+    canvas.width = sampleSize;
+    canvas.height = sampleSize;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return false;
+
+    ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+    const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
+    const data = imageData.data;
+
+    // Считаем количество «фоновых» пикселей (близких к первому пикселю)
+    const r0 = data[0], g0 = data[1], b0 = data[2];
+    let sameCount = 0;
+    const totalPixels = sampleSize * sampleSize;
+    const threshold = 30; // допуск на различие цвета
+
+    for (let i = 0; i < data.length; i += 4) {
+      if (
+        Math.abs(data[i] - r0) < threshold &&
+        Math.abs(data[i + 1] - g0) < threshold &&
+        Math.abs(data[i + 2] - b0) < threshold
+      ) {
+        sameCount++;
+      }
+    }
+
+    return sameCount / totalPixels > 0.92;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Загружает изображение по URL и конвертирует в data URI.
+ * Используется для конвертации static map URLs в inline-формат для PDF.
+ */
+export async function fetchImageAsDataUri(
+  url: string,
+  timeoutMs: number = 10000
+): Promise<string | null> {
+  if (typeof document === 'undefined') return null;
+  if (!url || url.startsWith('data:')) return url || null;
+
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(() => reject(new Error('timeout')), timeoutMs);
+      img.onload = () => { window.clearTimeout(timer); resolve(); };
+      img.onerror = () => { window.clearTimeout(timer); reject(new Error('load failed')); };
+      img.src = url;
+    });
+
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || 800;
+    canvas.height = img.naturalHeight || 600;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return null;
+  }
+}
+
+// ────────────────────────────────────────────────────
+// Canvas-based map renderer (без html2canvas, надёжный для PDF)
+// ────────────────────────────────────────────────────
+
+function lngToTileX(lng: number, zoom: number): number {
+  return ((lng + 180) / 360) * Math.pow(2, zoom)
+}
+function latToTileY(lat: number, zoom: number): number {
+  const r = (lat * Math.PI) / 180
+  return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * Math.pow(2, zoom)
+}
+
+function calculateFitZoom(
+  minLat: number, maxLat: number, minLng: number, maxLng: number,
+  width: number, height: number
+): number {
+  for (let z = 16; z >= 2; z--) {
+    const x1 = lngToTileX(minLng, z) * 256
+    const x2 = lngToTileX(maxLng, z) * 256
+    const y1 = latToTileY(maxLat, z) * 256
+    const y2 = latToTileY(minLat, z) * 256
+    // Добавляем 15% padding
+    if ((x2 - x1) * 1.3 <= width && (y2 - y1) * 1.3 <= height) return z
+  }
+  return 2
+}
+
+function loadCrossOriginImage(url: string, timeoutMs: number = 8000): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    const timer = window.setTimeout(() => { reject(new Error('timeout')) }, timeoutMs)
+    img.onload = () => { window.clearTimeout(timer); resolve(img) }
+    img.onerror = () => { window.clearTimeout(timer); reject(new Error('load error')) }
+    img.src = url
+  })
+}
+
+function drawRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number
+): void {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
+}
+
+/**
+ * Генерирует карту маршрута напрямую на Canvas.
+ * Загружает тайлы, рисует маршрут и маркеры — без html2canvas.
+ * Самый надёжный метод для PDF-экспорта.
+ */
+export async function generateCanvasMapSnapshot(
+  points: { lat: number; lng: number; label?: string }[],
+  options: { width?: number; height?: number; routeLine?: Array<[number, number]> } = {}
+): Promise<string | null> {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return null
+
+  const width = options.width ?? 800
+  const height = options.height ?? 480
+  const routeLine = (options.routeLine ?? []).filter(
+    ([lat, lng]) => Number.isFinite(lat) && Number.isFinite(lng) &&
+      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+  )
+  const validPoints = points.filter(
+    (p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) &&
+      p.lat >= -90 && p.lat <= 90 && p.lng >= -180 && p.lng <= 180
+  )
+
+  const allCoords = [
+    ...validPoints.map((p) => [p.lat, p.lng] as [number, number]),
+    ...routeLine,
+  ]
+  if (!allCoords.length) return null
+
+  const lats = allCoords.map((c) => c[0])
+  const lngs = allCoords.map((c) => c[1])
+  const minLat = Math.min(...lats)
+  const maxLat = Math.max(...lats)
+  const minLng = Math.min(...lngs)
+  const maxLng = Math.max(...lngs)
+
+  const zoom = Math.min(15, calculateFitZoom(minLat, maxLat, minLng, maxLng, width, height))
+  const centerLat = (minLat + maxLat) / 2
+  const centerLng = (minLng + maxLng) / 2
+
+  // Pixel coordinates центра
+  const cxPx = lngToTileX(centerLng, zoom) * 256
+  const cyPx = latToTileY(centerLat, zoom) * 256
+
+  // Диапазон тайлов
+  const tileSize = 256
+  const maxTile = Math.pow(2, zoom) - 1
+  const startTX = Math.max(0, Math.floor((cxPx - width / 2) / tileSize))
+  const endTX = Math.min(maxTile, Math.floor((cxPx + width / 2) / tileSize))
+  const startTY = Math.max(0, Math.floor((cyPx - height / 2) / tileSize))
+  const endTY = Math.min(maxTile, Math.floor((cyPx + height / 2) / tileSize))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+
+  // Фон
+  ctx.fillStyle = '#e8e4df'
+  ctx.fillRect(0, 0, width, height)
+
+  // Загружаем и рисуем тайлы
+  const subdomains = 'abcd'
+  const tilePromises: Promise<void>[] = []
+
+  for (let tx = startTX; tx <= endTX; tx++) {
+    for (let ty = startTY; ty <= endTY; ty++) {
+      const s = subdomains[Math.abs(tx + ty) % subdomains.length]
+      const url = `https://${s}.basemaps.cartocdn.com/light_all/${zoom}/${tx}/${ty}@2x.png`
+      const drawX = tx * tileSize - (cxPx - width / 2)
+      const drawY = ty * tileSize - (cyPx - height / 2)
+
+      tilePromises.push(
+        loadCrossOriginImage(url).then((img) => {
+          ctx.drawImage(img, drawX, drawY, tileSize, tileSize)
+        }).catch(() => { /* skip failed tiles */ })
+      )
+    }
+  }
+
+  await Promise.all(tilePromises)
+
+  // Проекция lat/lng → canvas px
+  const toCanvasX = (lng: number) => lngToTileX(lng, zoom) * 256 - (cxPx - width / 2)
+  const toCanvasY = (lat: number) => latToTileY(lat, zoom) * 256 - (cyPx - height / 2)
+
+  // Линия маршрута
+  if (routeLine.length >= 2) {
+    // Белый ореол
+    ctx.strokeStyle = 'rgba(255,255,255,0.92)'
+    ctx.lineWidth = 7
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    routeLine.forEach(([lat, lng], i) => {
+      const px = toCanvasX(lng), py = toCanvasY(lat)
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
+    })
+    ctx.stroke()
+
+    // Основная линия
+    ctx.strokeStyle = DESIGN_TOKENS.colors.accent
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    routeLine.forEach(([lat, lng], i) => {
+      const px = toCanvasX(lng), py = toCanvasY(lat)
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py)
+    })
+    ctx.stroke()
+  }
+
+  // Маркеры
+  validPoints.forEach((point, index) => {
+    const px = toCanvasX(point.lng)
+    const py = toCanvasY(point.lat)
+    const isStart = index === 0
+    const isEnd = index === validPoints.length - 1
+    const pinColor = isStart
+      ? DESIGN_TOKENS.colors.success
+      : isEnd
+        ? DESIGN_TOKENS.colors.danger
+        : DESIGN_TOKENS.colors.accent
+
+    // Тень пина
+    ctx.beginPath()
+    ctx.ellipse(px, py + 3, 7, 4, 0, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'
+    ctx.fill()
+
+    // Хвост пина (треугольник)
+    ctx.beginPath()
+    ctx.moveTo(px - 7, py - 8)
+    ctx.lineTo(px, py + 4)
+    ctx.lineTo(px + 7, py - 8)
+    ctx.fillStyle = pinColor
+    ctx.fill()
+
+    // Круг пина
+    ctx.beginPath()
+    ctx.arc(px, py - 12, 11, 0, Math.PI * 2)
+    ctx.fillStyle = pinColor
+    ctx.fill()
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2.5
+    ctx.stroke()
+
+    // Номер
+    ctx.fillStyle = '#fff'
+    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(String(index + 1), px, py - 12)
+
+    // Подпись
+    const rawLabel = typeof point.label === 'string' ? point.label : ''
+    const firstSegment = rawLabel.split(' · ')[0].trim()
+    const label = firstSegment.length > 30 ? firstSegment.slice(0, 28) + '…' : firstSegment
+    if (label) {
+      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif'
+      const labelW = ctx.measureText(label).width + 14
+      const lx = px + 16
+      const ly = py - 18
+
+      drawRoundRect(ctx, lx, ly, labelW, 22, 6)
+      ctx.fillStyle = '#fff'
+      ctx.fill()
+      ctx.strokeStyle = DESIGN_TOKENS.colors.border
+      ctx.lineWidth = 1
+      ctx.stroke()
+
+      // Треугольник-указатель
+      ctx.beginPath()
+      ctx.moveTo(lx, ly + 7)
+      ctx.lineTo(lx - 6, ly + 11)
+      ctx.lineTo(lx, ly + 15)
+      ctx.fillStyle = '#fff'
+      ctx.fill()
+
+      ctx.fillStyle = DESIGN_TOKENS.colors.text
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(label, lx + 7, ly + 11)
+    }
+  })
+
+  // Attribution (мелким шрифтом)
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'
+  ctx.font = '9px sans-serif'
+  ctx.textAlign = 'right'
+  ctx.textBaseline = 'bottom'
+  ctx.fillText('© OpenStreetMap © CARTO', width - 6, height - 4)
+
+  return canvas.toDataURL('image/png')
+}
+
+/**
  * Генерирует снимок маршрута с помощью Leaflet + html2canvas
- * Использует скрытый off-screen контейнер, поэтому не влияет на основную верстку
+ * Используется скрытый off-screen контейнер, поэтому не влияет на основную верстку
  *
  * @param points - массив точек маршрута с координатами и опциональными метками
  * @param options.routeLine - опциональная линия маршрута из GPX/KML файла [[lat, lng], ...]
@@ -454,9 +762,11 @@ export async function generateLeafletRouteSnapshot(
         markerZoomAnimation: false,
       });
 
-      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        crossOrigin: true,
+      // CARTO light_all — стабильные CORS-заголовки, светлый стиль идеален для печати
+      const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        crossOrigin: 'anonymous',
+        subdomains: 'abcd',
       }).addTo(map);
 
       // Маркеры как в веб-карте + аккуратный номер точки поверх пина
@@ -643,19 +953,48 @@ export async function generateLeafletRouteSnapshot(
             resolved = true;
             resolve();
           }
-        }, 5000);
+        }, 6000);
 
         tileLayer.on('load', () => {
           if (!resolved) {
             resolved = true;
             window.clearTimeout(timeout);
-            resolve();
+            // Даём 300ms на финальный рендер после load-события
+            window.setTimeout(resolve, 300);
           }
         });
       });
 
+      // Проверяем, загрузились ли тайлы
+      const tileImages = container.querySelectorAll('.leaflet-tile-pane img, .leaflet-tile');
+      let loadedTiles = 0;
+      tileImages.forEach((img) => {
+        if (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0) {
+          loadedTiles++;
+        }
+      });
+
+      if (loadedTiles === 0 && tileImages.length > 0) {
+        if (typeof console !== 'undefined') {
+          console.warn('[MAP_SNAPSHOT] No tiles loaded, skipping html2canvas capture');
+        }
+        return null;
+      }
+
       // Скриншот контейнера
       const dataUrl = await generateMapImageFromDOM(container, width, height);
+
+      // Валидация: проверяем что изображение не пустое (все пиксели одного цвета)
+      if (dataUrl && !dataUrl.startsWith('data:image/svg')) {
+        const isBlank = await isImageMostlyBlank(dataUrl, width, height);
+        if (isBlank) {
+          if (typeof console !== 'undefined') {
+            console.warn('[MAP_SNAPSHOT] Captured image is mostly blank, discarding');
+          }
+          return null;
+        }
+      }
+
       return dataUrl;
     } catch (error) {
       // В случае ошибки вернем null, чтобы генератор PDF мог использовать SVG как fallback

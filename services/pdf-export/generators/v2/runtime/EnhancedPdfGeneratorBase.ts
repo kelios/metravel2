@@ -511,40 +511,36 @@ export class EnhancedPdfGeneratorBase {
     let snapshotDataUrl: string | null = null;
     const hasRouteLineForMap = routeLineCoords.length >= 2;
 
-    if (pointsWithCoords.length || hasRouteLineForMap) {
+    const mapPoints = pointsWithCoords.map((location) => ({
+      lat: location.lat as number,
+      lng: location.lng as number,
+      label: location.address,
+    }));
+    const mapRouteOpts = hasRouteLineForMap ? routeLineCoords : undefined;
+
+    // 1) Canvas-based renderer — самый надёжный метод (без html2canvas / внешних сервисов)
+    if (mapPoints.length || hasRouteLineForMap) {
       try {
-        const generateLeafletRouteSnapshot = await this.getLeafletRouteSnapshot();
-        snapshotDataUrl = await generateLeafletRouteSnapshot(
-          pointsWithCoords.map((location) => ({
-            lat: location.lat as number,
-            lng: location.lng as number,
-            label: location.address,
-          })),
-          {
-            width: 1600,
-            height: 1040,
-            routeLine: hasRouteLineForMap ? routeLineCoords : undefined,
-          }
-        );
+        const { generateCanvasMapSnapshot } = await import('@/utils/mapImageGenerator');
+        snapshotDataUrl = await generateCanvasMapSnapshot(mapPoints, {
+          width: 1600,
+          height: 1040,
+          routeLine: mapRouteOpts,
+        });
       } catch {
         snapshotDataUrl = null;
       }
     }
 
-    if (!snapshotDataUrl && pointsWithCoords.length) {
+    // 2) Leaflet + html2canvas fallback
+    if (!snapshotDataUrl && (mapPoints.length || hasRouteLineForMap)) {
       try {
-        const { generateStaticMapUrl } = await import('@/utils/mapImageGenerator');
-        snapshotDataUrl = generateStaticMapUrl(
-          pointsWithCoords.map((location) => ({
-            name: location.address,
-            lat: location.lat as number,
-            lng: location.lng as number,
-          })),
-          {
-            width: 1600,
-            height: 1040,
-          }
-        ) || null;
+        const generateLeafletRouteSnapshot = await this.getLeafletRouteSnapshot();
+        snapshotDataUrl = await generateLeafletRouteSnapshot(mapPoints, {
+          width: 1600,
+          height: 1040,
+          routeLine: mapRouteOpts,
+        });
       } catch {
         snapshotDataUrl = null;
       }

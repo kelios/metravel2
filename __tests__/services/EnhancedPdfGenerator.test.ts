@@ -1,15 +1,17 @@
 import { EnhancedPdfGenerator } from '@/services/pdf-export/generators/EnhancedPdfGenerator'
 import type { TravelForBook } from '@/types/pdf-export'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
-import { generateLeafletRouteSnapshot } from '@/utils/mapImageGenerator'
+import { generateCanvasMapSnapshot } from '@/utils/mapImageGenerator'
 
 jest.mock('qrcode', () => ({
   toDataURL: jest.fn(() => Promise.resolve('qr-data')),
 }))
 
 jest.mock('@/utils/mapImageGenerator', () => ({
+  generateCanvasMapSnapshot: jest.fn(() => Promise.resolve('canvas-snapshot')),
   generateLeafletRouteSnapshot: jest.fn(() => Promise.resolve('leaflet-snapshot')),
-  generateStaticMapUrl: jest.fn(() => 'https://staticmap.openstreetmap.fr/staticmap.php?mock=1'),
+  generateStaticMapUrl: jest.fn(() => 'https://staticmap.example.com/mock'),
+  fetchImageAsDataUri: jest.fn(() => Promise.resolve(null)),
 }))
 
 jest.mock('@/services/pdf-export/parsers/ContentParser', () => ({
@@ -121,13 +123,13 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(mapPage).toContain('height: 82px;')
   })
 
-  it('falls back to static map image when leaflet snapshot is unavailable', async () => {
-    ;(generateLeafletRouteSnapshot as jest.Mock).mockResolvedValueOnce(null)
+  it('falls back to leaflet when canvas snapshot is unavailable', async () => {
+    ;(generateCanvasMapSnapshot as jest.Mock).mockResolvedValueOnce(null)
 
     const locations = generator.normalizeLocations(travelA)
     const mapPage = await generator.renderMapPage(travelA, locations, 4)
 
-    expect(mapPage).toContain('staticmap.openstreetmap.fr')
+    expect(mapPage).toContain('leaflet-snapshot')
     expect(mapPage).not.toContain('Недостаточно данных')
   })
 
@@ -171,7 +173,7 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(galleryHtml).toContain('grid-template-columns: repeat(3, 1fr)')
     expect(galleryHtml).toContain('grid-column: span 2; grid-row: span 2;')
     expect(galleryHtml).toContain('height: 180mm;')
-    expect(galleryHtml).toContain('max-height: 110mm;')
+    expect(galleryHtml).toContain('height: 110mm;')
   })
 
   it('builds inline gallery and safe URLs', () => {

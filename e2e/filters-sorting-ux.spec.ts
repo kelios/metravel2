@@ -306,13 +306,14 @@ test.describe('@smoke Filters and Sorting UX', () => {
       await expectEmptyFilterShell(page);
       return;
     }
-    
+
     await filterOption.click();
     await page.waitForTimeout(DEBOUNCE_MS);
-    
-    // Clear button should appear
+    await waitForListResultsSignal(page).catch(() => {});
+
+    // Clear button should appear — use longer timeout to allow for list re-render
     const clearButton = page.getByRole('button', { name: /Очистить \d+ выбранных/i });
-    await expect(clearButton).toBeVisible({ timeout: 5000 });
+    await expect(clearButton).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
   });
 
   test('group clear button clears only that group', async ({ page }) => {

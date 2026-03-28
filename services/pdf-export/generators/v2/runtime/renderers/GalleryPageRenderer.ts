@@ -189,15 +189,9 @@ export class RuntimeGalleryRenderer {
                       : '168mm'
                   : imageHeight
               const isSingle = pagePhotos.length === 1
-              const forceCover = pagePhotos.length <= 2
-              const imgHeightStyle =
-                layout === 'polaroid'
-                  ? (forceCover ? `height: ${isSingle ? singleImageHeight : resolvedHeight};` : `height: auto; max-height: ${isSingle ? singleImageHeight : resolvedHeight};`)
-                  : (forceCover ? `height: ${isSingle ? singleImageHeight : resolvedHeight};` : `height: auto; max-height: ${resolvedHeight};`)
-              const wrapperMinHeight =
-                layout === 'polaroid'
-                  ? (isSingle ? `min-height: ${singleImageHeight};` : '')
-                  : `min-height: ${isSingle ? singleImageHeight : resolvedHeight};`
+              // Всегда cover для печатной галереи — заполняет ячейку без пустого пространства
+              const imgHeightStyle = `height: ${isSingle ? singleImageHeight : resolvedHeight};`
+              const wrapperMinHeight = ''
 
               const borderRadiusValue = this.increaseBorderRadius(this.ctx.theme.blocks.borderRadius, 2)
 
@@ -251,7 +245,7 @@ export class RuntimeGalleryRenderer {
                   style="
                     width: 100%;
                     ${imgHeightStyle}
-                    object-fit: ${forceCover ? 'cover' : 'contain'};
+                    object-fit: cover;
                     display: block;
                     position: relative;
                     border-radius: ${borderRadiusValue};
