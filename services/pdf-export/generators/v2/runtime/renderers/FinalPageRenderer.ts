@@ -66,7 +66,7 @@ export class RuntimeFinalRenderer {
               letter-spacing: 0.1em;
               color: ${colors.cover.textSecondary};
               font-family: ${typography.bodyFont};
-              opacity: 0.75;
+              opacity: 0.85;
             ">${escapeHtml(s.label)}</div>
           </div>
         `).join('')}
@@ -110,7 +110,7 @@ export class RuntimeFinalRenderer {
           transform: translateX(-50%);
           width: 132mm;
           height: auto;
-          opacity: 0.35;
+          opacity: 0.45;
         ">
           <path d="M18 90 C60 30, 98 102, 136 58 S214 18, 252 56 S292 108, 306 34" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round"/>
           <circle cx="18" cy="90" r="4" fill="rgba(255,255,255,0.85)"/>
@@ -181,7 +181,7 @@ export class RuntimeFinalRenderer {
               <div style="
                 font-size: 32pt;
                 line-height: 1;
-                opacity: 0.2;
+                opacity: 0.35;
                 font-family: Georgia, serif;
                 position: absolute;
                 top: -4mm;
@@ -200,9 +200,9 @@ export class RuntimeFinalRenderer {
               </p>
               <p style="
                 margin: 0;
-                font-size: 8.5pt;
+                font-size: 9pt;
                 line-height: 1.4;
-                opacity: 0.55;
+                opacity: 0.7;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
                 font-family: ${typography.bodyFont};

@@ -89,7 +89,7 @@ export function renderTocPageSection(args: {
       ">
         <div>
           <div style="
-            font-size: 7.5pt;
+            font-size: 8pt;
             font-weight: 700;
             letter-spacing: 0.14em;
             text-transform: uppercase;
@@ -159,7 +159,7 @@ export function renderTocPageSection(args: {
           border-radius: 999px;
         "></div>
         <span style="
-          font-size: 7.5pt;
+          font-size: 8pt;
           color: ${colors.textMuted};
           font-family: ${typography.bodyFont};
           letter-spacing: 0.06em;
@@ -266,7 +266,7 @@ function buildTocRow(
         ">${escapeHtml(travel.name)}</div>
         ${metaLine ? `
           <div style="
-            font-size: ${use2Col ? '7.5pt' : '8.5pt'};
+            font-size: ${use2Col ? '8pt' : '9pt'};
             color: ${colors.textMuted};
             font-family: ${typography.bodyFont};
             line-height: 1.3;

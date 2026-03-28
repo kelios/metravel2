@@ -84,7 +84,7 @@ export class RuntimeMapRenderer {
         ${elevationProfileHtml}
         <div>
           ${routeHeaderHtml}
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">${firstPageCards.join('')}</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3mm;">${firstPageCards.join('')}</div>
         </div>
       </section>
     `
@@ -106,7 +106,7 @@ export class RuntimeMapRenderer {
               font-weight: 400;
               color: ${colors.textMuted};
             ">(продолжение)</span></h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">${chunk.join('')}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3mm;">${chunk.join('')}</div>
           </div>
         </section>
       `
@@ -337,8 +337,8 @@ export class RuntimeMapRenderer {
               border: 1px solid ${c.accent ? colors.border : colors.borderLight};
               background: ${c.accent ? colors.backgroundSecondary ?? colors.surfaceAlt : colors.surfaceAlt};
             ">
-              <div style="font-size: 9pt; color: ${colors.textMuted}; margin-bottom: 2px;">${escapeHtml(c.label)}</div>
-              <div style="font-size: 9pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">${escapeHtml(c.value)}</div>
+              <div style="font-size: 8pt; color: ${colors.textMuted}; margin-bottom: 2px;">${escapeHtml(c.label)}</div>
+              <div style="font-size: 10pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">${escapeHtml(c.value)}</div>
             </div>
           `).join('')}
         </div>
@@ -382,7 +382,7 @@ export class RuntimeMapRenderer {
                 <line x1="${PL}" y1="${gy.toFixed(1)}" x2="${CW - PR}" y2="${gy.toFixed(1)}"
                   stroke="${colors.borderLight}" stroke-width="1" stroke-dasharray="3 4" opacity="0.8"/>
                 <text x="${(PL - 3).toFixed(1)}" y="${(gy + 3.5).toFixed(1)}"
-                  font-size="9" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
+                  font-size="10" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
                 >${Math.round(val)} м</text>
               `
             }).join('')}
@@ -405,7 +405,7 @@ export class RuntimeMapRenderer {
 
             <!-- X-axis labels -->
             <text x="${PL}" y="${(CH - 3).toFixed(1)}"
-              font-size="9" fill="${colors.textMuted}" font-family="${typography.bodyFont}">0 км</text>
+              font-size="10" fill="${colors.textMuted}" font-family="${typography.bodyFont}">0 км</text>
             <text x="${(CW - PR).toFixed(1)}" y="${(CH - 3).toFixed(1)}"
               font-size="9" text-anchor="end" fill="${colors.textMuted}" font-family="${typography.bodyFont}"
             >${escapeHtml(`${round(totalDistanceKm)} км`)}</text>

@@ -66,10 +66,10 @@ export function buildRunningHeader(
         gap: 8px;
       ">
         <span style="
-          font-size: 7pt;
+          font-size: 8pt;
           text-transform: uppercase;
           letter-spacing: 0.1em;
-          opacity: 0.5;
+          opacity: 0.65;
           font-weight: 600;
         ">MeTravel</span>
         <span style="
