@@ -145,21 +145,37 @@ export function parseCoordinates(coord?: string | null): { lat: number; lng: num
 
 export function buildRouteSvg(
   locations: NormalizedLocation[],
-  theme: Pick<PdfThemeConfig, 'colors'>
+  theme: Pick<PdfThemeConfig, 'colors'>,
+  options: { routeLineCoords?: Array<[number, number]> } = {}
 ): string {
   const points = locations
     .map((location) => {
       if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return null;
-      return { lat: location.lat, lng: location.lng };
+      return { lat: location.lat, lng: location.lng, label: location.address };
     })
-    .filter(Boolean) as Array<{ lat: number; lng: number }>;
+    .filter(Boolean) as Array<{ lat: number; lng: number; label?: string }>;
 
-  if (!points.length) {
+  const routeLine = (Array.isArray(options.routeLineCoords) ? options.routeLineCoords : [])
+    .filter(
+      (point): point is [number, number] =>
+        Array.isArray(point) &&
+        Number.isFinite(point[0]) &&
+        Number.isFinite(point[1]) &&
+        point[0] >= -90 &&
+        point[0] <= 90 &&
+        point[1] >= -180 &&
+        point[1] <= 180
+    )
+    .map(([lat, lng]) => ({ lat, lng }));
+
+  const layoutPoints = routeLine.length >= 2 ? [...routeLine, ...points] : points;
+
+  if (!layoutPoints.length) {
     return buildMapPlaceholder(theme);
   }
 
-  const lats = points.map((point) => point.lat);
-  const lngs = points.map((point) => point.lng);
+  const lats = layoutPoints.map((point) => point.lat);
+  const lngs = layoutPoints.map((point) => point.lng);
   const minLat = Math.min(...lats);
   const maxLat = Math.max(...lats);
   const minLng = Math.min(...lngs);
@@ -167,60 +183,107 @@ export function buildRouteSvg(
   const latRange = Math.max(0.0001, maxLat - minLat);
   const lngRange = Math.max(0.0001, maxLng - minLng);
 
-  const paddingX = 6;
+  const paddingX = 8;
   const paddingY = 8;
   const width = 100 - paddingX * 2;
   const height = 60 - paddingY * 2;
 
-  const normalized = points.map((point, index) => {
+  const projectPoint = (point: { lat: number; lng: number }) => {
     const x = paddingX + ((point.lng - minLng) / lngRange) * width;
     const y = paddingY + ((maxLat - point.lat) / latRange) * height;
-    return { x, y, index };
-  });
+    return { x, y };
+  };
 
-  const routeLine =
-    normalized.length >= 2
+  const normalized = points.map((point, index) => ({
+    ...projectPoint(point),
+    index,
+    label: point.label,
+  }));
+
+  const normalizedRouteLine = routeLine.map(projectPoint);
+
+  const routeLineMarkup =
+    normalizedRouteLine.length >= 2
       ? `<polyline
-          points="${normalized.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')}"
+          points="${normalizedRouteLine.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')}"
           fill="none"
-          stroke="${theme.colors.accentStrong}"
-          stroke-width="1.2"
-          stroke-dasharray="4,3"
+          stroke="${theme.colors.surface}"
+          stroke-width="2.8"
           stroke-linecap="round"
           stroke-linejoin="round"
-          opacity="0.6"
+          opacity="0.95"
+        />
+        <polyline
+          points="${normalizedRouteLine.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ')}"
+          fill="none"
+          stroke="${theme.colors.accentStrong}"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          opacity="0.95"
         />`
       : '';
 
-  const circles = normalized
+  const markers = normalized
     .map(
       (point) => `
       <g>
+        <path
+          d="M ${point.x.toFixed(2)} ${(point.y - 0.6).toFixed(2)} c -1.9 0 -3.4 1.5 -3.4 3.4 c 0 2.7 3.4 6.4 3.4 6.4 s 3.4 -3.7 3.4 -6.4 c 0 -1.9 -1.5 -3.4 -3.4 -3.4 z"
+          fill="${point.index === 0 ? theme.colors.accentStrong : theme.colors.accent}"
+          stroke="${theme.colors.surface}"
+          stroke-width="0.55"
+        />
         <circle
           cx="${point.x.toFixed(2)}"
-          cy="${point.y.toFixed(2)}"
-          r="2.6"
+          cy="${(point.y + 2.2).toFixed(2)}"
+          r="2.2"
           fill="${theme.colors.surface}"
           stroke="${theme.colors.accentStrong}"
           stroke-width="0.7"
         />
         <text
           x="${point.x.toFixed(2)}"
-          y="${(point.y + 0.55).toFixed(2)}"
-          font-size="3.4"
+          y="${(point.y + 2.75).toFixed(2)}"
+          font-size="3"
           text-anchor="middle"
           fill="${theme.colors.text}"
           font-weight="700"
         >
           ${point.index + 1}
         </text>
+        ${
+          point.label
+            ? `
+        <g transform="translate(${Math.min(77, point.x + 3.4).toFixed(2)} ${Math.max(4.8, point.y - 2.2).toFixed(2)})">
+          <rect
+            x="0"
+            y="0"
+            rx="2"
+            width="${Math.min(22, Math.max(9, point.label.length * 0.95)).toFixed(2)}"
+            height="6.4"
+            fill="${theme.colors.surface}"
+            stroke="${theme.colors.border}"
+            stroke-width="0.45"
+          />
+          <text
+            x="1.8"
+            y="4.15"
+            font-size="2.1"
+            fill="${theme.colors.text}"
+            font-weight="600"
+          >${escapeXml(point.label)}</text>
+        </g>
+        `
+            : ''
+        }
       </g>
     `
     )
     .join('');
 
   return `
-    <svg viewBox="0 0 100 60" preserveAspectRatio="none" role="img" aria-label="Маршрут путешествия">
+    <svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Маршрут путешествия">
       <defs>
         <linearGradient id="mapGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="${theme.colors.surfaceAlt}" />
@@ -228,10 +291,23 @@ export function buildRouteSvg(
         </linearGradient>
       </defs>
       <rect x="0" y="0" width="100" height="60" rx="5" fill="url(#mapGradient)" />
-      ${routeLine}
-      ${circles}
+      <path d="M 0 48 C 16 42, 24 52, 39 46 S 66 39, 82 44 S 95 50, 100 46 L 100 60 L 0 60 Z" fill="${theme.colors.surface}" opacity="0.55" />
+      <path d="M 0 16 C 15 10, 28 22, 41 17 S 66 9, 82 16 S 95 22, 100 17" fill="none" stroke="${theme.colors.borderLight}" stroke-width="0.8" opacity="0.75" />
+      <path d="M 0 26 C 18 20, 28 31, 43 25 S 68 18, 84 24 S 95 30, 100 25" fill="none" stroke="${theme.colors.borderLight}" stroke-width="0.8" opacity="0.75" />
+      <path d="M 0 37 C 16 31, 29 42, 44 36 S 69 28, 85 35 S 95 41, 100 36" fill="none" stroke="${theme.colors.borderLight}" stroke-width="0.8" opacity="0.75" />
+      ${routeLineMarkup}
+      ${markers}
     </svg>
   `;
+}
+
+function escapeXml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export function buildMapPlaceholder(theme: Pick<PdfThemeConfig, 'colors'>): string {

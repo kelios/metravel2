@@ -446,7 +446,6 @@ export class EnhancedPdfGeneratorBase {
   ): Promise<string> {
     if (!locations.length) return '';
 
-    const mapSvg = this.buildRouteSvg(locations);
     const pointsWithCoords = locations.filter(
       (location) => typeof location.lat === 'number' && typeof location.lng === 'number'
     );
@@ -498,6 +497,8 @@ export class EnhancedPdfGeneratorBase {
     } catch {
       // Игнорируем ошибки загрузки route files
     }
+
+    const mapSvg = this.buildRouteSvg(locations, { routeLineCoords });
 
     let snapshotDataUrl: string | null = null;
     const hasRouteLineForMap = routeLineCoords.length >= 2;
@@ -1094,8 +1095,11 @@ export class EnhancedPdfGeneratorBase {
     return sharedParseCoordinates(coord);
   }
 
-  private buildRouteSvg(locations: NormalizedLocation[]): string {
-    return sharedBuildRouteSvg(locations, this.theme);
+  private buildRouteSvg(
+    locations: NormalizedLocation[],
+    options?: { routeLineCoords?: Array<[number, number]> }
+  ): string {
+    return sharedBuildRouteSvg(locations, this.theme, options);
   }
 
   private buildMapPlaceholder(): string {

@@ -2,13 +2,13 @@ import { RuntimeMapRenderer } from '@/services/pdf-export/generators/v2/runtime/
 import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig'
 
 describe('RuntimeMapRenderer', () => {
-  it('keeps the generated map snapshot uncropped in PDF output', () => {
+  it('renders the deterministic svg map block instead of relying on a bitmap snapshot', () => {
     const renderer = new RuntimeMapRenderer({ theme: getThemeConfig('minimal') })
 
     const html = renderer.render({
       travelName: 'Test route',
       snapshotDataUrl: 'data:image/png;base64,test',
-      mapSvg: '<svg></svg>',
+      mapSvg: '<svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>',
       locationCards: [],
       locationCount: 3,
       pageNumber: 5,
@@ -16,8 +16,8 @@ describe('RuntimeMapRenderer', () => {
       routePreview: null,
     })
 
-    expect(html).toContain('object-fit: contain')
-    expect(html).not.toContain('object-fit: cover')
+    expect(html).toContain('<svg viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>')
+    expect(html).not.toContain('<img src="data:image/png;base64,test"')
   })
 
   it('renders the elevation profile in the same chart-first order as the travel page block', () => {

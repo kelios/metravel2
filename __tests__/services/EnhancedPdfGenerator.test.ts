@@ -108,7 +108,6 @@ describe('EnhancedPdfGenerator helpers', () => {
 
     const locations = generator.normalizeLocations(travelA)
     const mapPage = await generator.renderMapPage(travelA, locations, 4)
-    expect(mapPage).toContain('leaflet-snapshot')
     expect(mapPage).toContain('Маршрут')
     expect(mapPage).toContain('Карта и ключевые точки')
     expect(mapPage).toContain('map-location-card')

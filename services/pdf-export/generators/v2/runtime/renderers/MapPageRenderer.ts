@@ -1,6 +1,6 @@
 import type { ParsedRoutePreview } from '@/types/travelRoutes'
 import { escapeHtml } from '../../../../utils/htmlUtils'
-import { buildRunningHeader, getImageFilterStyle, type RuntimeRenderContext } from './renderHelpers'
+import { buildRunningHeader, type RuntimeRenderContext } from './renderHelpers'
 
 export interface RuntimeMapPageData {
   travelName: string
@@ -52,12 +52,7 @@ export class RuntimeMapRenderer {
               height: ${mapHeightMm}mm;
               background: ${colors.surfaceAlt};
             ">
-              ${data.snapshotDataUrl ? `
-                <img src="${escapeHtml(data.snapshotDataUrl)}" alt="Карта маршрута"
-                  style="width: 100%; height: 100%; display: block; object-fit: contain; object-position: center center; ${getImageFilterStyle(this.ctx)}" />
-              ` : `
-                ${data.mapSvg}
-              `}
+              ${data.mapSvg}
             </div>
           </div>
         </div>

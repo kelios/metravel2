@@ -67,20 +67,9 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      padding: DESIGN_TOKENS.spacing.md,
-      marginBottom: DESIGN_TOKENS.spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-        } as any,
-        ios: DESIGN_TOKENS.shadowsNative.medium,
-        android: { elevation: 4 },
-        default: DESIGN_TOKENS.shadowsNative.medium,
-      }),
+      padding: 0,
+      marginBottom: 0,
+      backgroundColor: 'transparent',
     },
     exportBarMobile: {
       flexDirection: 'column',
@@ -95,21 +84,23 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     exportBarInfo: {
       flex: 1,
       marginRight: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.xs,
     },
     exportBarInfoTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
+      fontSize: DESIGN_TOKENS.typography.sizes.xl,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
+      lineHeight: 42,
     },
     exportBarInfoSubtitle: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textMuted,
-      marginBottom: DESIGN_TOKENS.spacing.sm,
+      marginBottom: DESIGN_TOKENS.spacing.md,
     },
     exportBarInfoActions: {
       flexDirection: 'row',
       gap: DESIGN_TOKENS.spacing.sm,
+      flexWrap: 'wrap',
     },
     linkButton: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -119,6 +110,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     exportBarButtons: {
       flexDirection: 'row',
       gap: DESIGN_TOKENS.spacing.sm,
+      alignItems: 'flex-start',
     },
     exportBarButtonsMobile: {
       flexDirection: 'column',
@@ -128,19 +120,42 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     progressWrapper: {
       marginTop: DESIGN_TOKENS.spacing.sm,
     },
-    selectedOrderPanel: {
+    exportWorkspace: {
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.border,
       marginBottom: DESIGN_TOKENS.spacing.md,
-      padding: DESIGN_TOKENS.spacing.md,
-      gap: DESIGN_TOKENS.spacing.md,
+      padding: DESIGN_TOKENS.spacing.lg,
+      gap: DESIGN_TOKENS.spacing.lg,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
+          boxShadow: DESIGN_TOKENS.shadows.medium,
         } as any,
+        ios: DESIGN_TOKENS.shadowsNative.medium,
+        android: { elevation: 4 },
+        default: DESIGN_TOKENS.shadowsNative.medium,
       }),
+    },
+    exportWorkspaceMobile: {
+      padding: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    exportWorkspaceDivider: {
+      height: 1,
+      backgroundColor: colors.borderLight,
+      marginHorizontal: -DESIGN_TOKENS.spacing.lg,
+    },
+    exportWorkspaceDividerMobile: {
+      marginHorizontal: -DESIGN_TOKENS.spacing.md,
+    },
+    selectedOrderPanel: {
+      backgroundColor: 'transparent',
+      borderRadius: 0,
+      borderWidth: 0,
+      marginBottom: 0,
+      padding: 0,
+      gap: DESIGN_TOKENS.spacing.md,
     },
     selectedOrderHeaderRow: {
       flexDirection: 'row',
@@ -190,14 +205,14 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     selectedOrderScroller: {
       minHeight: 184,
       borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.background,
+      backgroundColor: colors.backgroundSecondary,
       padding: DESIGN_TOKENS.spacing.sm,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      overflow: Platform.OS === 'web' ? 'auto' : 'hidden',
+      overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
-            overflowX: 'auto',
+            overflowX: 'hidden',
             overflowY: 'hidden',
           } as any)
         : null),
