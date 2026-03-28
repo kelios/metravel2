@@ -96,11 +96,6 @@ export class RuntimeMapRenderer {
 
   private renderRouteSummary(data: RuntimeMapPageData, locationCount: number): string {
     const { colors, typography } = this.ctx.theme
-    const metrics = [
-      { value: locationCount, label: locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек' },
-      { value: data.routePreview ? `${Math.round(this.calculateRouteDistanceKm(data.routePreview.linePoints) * 10) / 10} км` : 'Карта', label: 'маршрут' },
-      { value: data.routePreview?.elevationProfile?.length ? 'Профиль' : 'GPS', label: 'данные' },
-    ]
 
     return `
       <div style="
@@ -153,38 +148,6 @@ export class RuntimeMapRenderer {
             font-family: ${typography.bodyFont};
             white-space: nowrap;
           ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
-        </div>
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 8px;
-          margin-bottom: 6px;
-        ">
-          ${metrics.map((metric) => `
-            <div style="
-              padding: 8px 10px;
-              border-radius: 14px;
-              background: ${colors.surfaceAlt};
-              border: 1px solid ${colors.border};
-            ">
-              <div style="
-                font-size: 12pt;
-                font-weight: 700;
-                color: ${colors.text};
-                font-family: ${typography.headingFont};
-                line-height: 1.15;
-                margin-bottom: 2px;
-              ">${escapeHtml(String(metric.value))}</div>
-              <div style="
-                font-size: ${typography.caption.size};
-                line-height: 1.35;
-                color: ${colors.textMuted};
-                text-transform: uppercase;
-                letter-spacing: 0.06em;
-                font-family: ${typography.bodyFont};
-              ">${escapeHtml(metric.label)}</div>
-            </div>
-          `).join('')}
         </div>
         <p style="
           margin: 0;
