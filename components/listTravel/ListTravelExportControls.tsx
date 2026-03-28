@@ -266,31 +266,27 @@ function ListTravelExportControls({
       <View style={[s.exportWorkspace, isMobile && s.exportWorkspaceMobile]}>
         {/* Header row: selection info + actions + PDF button */}
         <View style={[s.exportBar, isMobile && s.exportBarMobile]}>
-          <View style={s.exportBarInfo}>
-            <View style={s.exportBarTitleRow}>
-              {hasSelection && (
-                <View style={s.exportBarCountBadge}>
-                  <Text style={s.exportBarCountBadgeText as any}>{selectionCount}</Text>
-                </View>
-              )}
-              <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
-              <View style={s.exportBarActions}>
-                <CompactActionLink
-                  label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
-                  onPress={toggleSelectAll}
-                  icon={selectionCount === travels.length && travels.length > 0 ? 'minus-circle' : 'check-circle'}
-                  style={s.linkButton as any}
-                />
-                {hasSelection && (
-                  <CompactActionLink
-                    label="Очистить"
-                    onPress={clearSelection}
-                    icon="x"
-                    style={s.linkButtonDanger as any}
-                  />
-                )}
+          <View style={s.exportBarTitleRow}>
+            {hasSelection && (
+              <View style={s.exportBarCountBadge}>
+                <Text style={s.exportBarCountBadgeText as any}>{selectionCount}</Text>
               </View>
-            </View>
+            )}
+            <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
+            <CompactActionLink
+              label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
+              onPress={toggleSelectAll}
+              icon={selectionCount === travels.length && travels.length > 0 ? 'minus-circle' : 'check-circle'}
+              style={s.linkButton as any}
+            />
+            {hasSelection && (
+              <CompactActionLink
+                label="Очистить"
+                onPress={clearSelection}
+                icon="x"
+                style={s.linkButtonDanger as any}
+              />
+            )}
           </View>
 
           <View style={[s.exportBarButtons, isMobile && s.exportBarButtonsMobile]}>

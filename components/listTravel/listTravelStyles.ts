@@ -97,6 +97,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
+      flexWrap: 'wrap',
     },
     exportBarInfoTitle: {
       fontSize: 16,
