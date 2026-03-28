@@ -5,13 +5,15 @@
       "name": "Expo Web",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["web"],
-      "port": 8081
+      "port": 8081,
+      "autoPort": false
     },
     {
       "name": "Expo Start (All Platforms)",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["start"],
-      "port": 8081
+      "port": 8081,
+      "autoPort": false
     },
     {
       "name": "E2E Web Server",
