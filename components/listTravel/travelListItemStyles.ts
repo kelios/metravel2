@@ -69,7 +69,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       ...Platform.select({
         web: {
           boxShadow: `0 0 0 3px ${colors.primary}`,
-          outline: 'none',
+          outlineStyle: 'none',
         } as any,
         default: {
           borderColor: colors.primary,
