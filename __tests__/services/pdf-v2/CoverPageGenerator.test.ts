@@ -35,7 +35,7 @@ describe('CoverPageGenerator', () => {
           userName: 'Иван Иванов',
           year: 2024,
           countryName: 'Беларусь',
-          coverImageUrl: 'https://example.com/cover.jpg',
+          travel_image_url: 'https://example.com/cover.jpg',
           gallery: [],
         },
       ],
@@ -64,6 +64,8 @@ describe('CoverPageGenerator', () => {
 
     expect(html).toContain('pdf-page');
     expect(html).toContain('cover-page');
+    expect(html).toContain('cover-image-layer');
+    expect(html).toContain('<img');
     expect(html).toContain('Моя книга путешествий');
     expect(html).toContain('Приключения 2024');
     expect(html).toContain('Иван Иванов');
@@ -78,11 +80,11 @@ describe('CoverPageGenerator', () => {
 
   it('генерирует обложку без изображения', async () => {
     mockContext.travels = [
-      {
-        ...mockContext.travels![0],
-        coverImageUrl: undefined,
-        gallery: [],
-      },
+        {
+          ...mockContext.travels![0],
+          travel_image_url: undefined,
+          gallery: [],
+        },
     ];
 
     const html = await generator.generate(mockContext);
@@ -159,4 +161,3 @@ describe('CoverPageGenerator', () => {
     expect(count).toBe(1);
   });
 });
-

@@ -267,11 +267,6 @@ function ListTravelExportControls({
         {/* Header row: selection info + actions + PDF button */}
         <View style={[s.exportBar, isMobile && s.exportBarMobile]}>
           <View style={s.exportBarTitleRow}>
-            {hasSelection && (
-              <View style={s.exportBarCountBadge}>
-                <Text style={s.exportBarCountBadgeText as any}>{selectionCount}</Text>
-              </View>
-            )}
             <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
             <CompactActionLink
               label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}

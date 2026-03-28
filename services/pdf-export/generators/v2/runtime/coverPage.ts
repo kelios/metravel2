@@ -58,9 +58,7 @@ export async function generateSharedCoverPageMarkup(
     }
   }
 
-  const background = safeCoverImage
-    ? `url('${escapeHtml(safeCoverImage)}')`
-    : `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`
+  const background = `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`
 
   return `
     <section class="pdf-page cover-page" style="
@@ -71,11 +69,10 @@ export async function generateSharedCoverPageMarkup(
       justify-content: space-between;
       color: ${colors.cover.text};
       background: ${background};
-      background-size: cover;
-      background-position: center;
       position: relative;
       overflow: hidden;
     ">
+      ${safeCoverImage ? renderCoverImageLayer(safeCoverImage) : ''}
       ${safeCoverImage ? renderSmartOverlay(overlayColor, overlayOpacity, textPosition) : ''}
       ${data.showDecorations !== false ? renderDecorativeElements() : ''}
       ${renderContent(theme, data, textPosition, textColor, Boolean(safeCoverImage))}
@@ -84,6 +81,30 @@ export async function generateSharedCoverPageMarkup(
         `${escapeHtml(String(data.travelCount))} ${travelLabel}${formattedYearRange ? ` • ${escapeHtml(formattedYearRange)}` : ''}`
       )}
     </section>
+  `
+}
+
+function renderCoverImageLayer(coverImage: string): string {
+  return `
+    <div class="cover-image-layer" style="
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      z-index: 0;
+      overflow: hidden;
+    ">
+      <img
+        src="${escapeHtml(coverImage)}"
+        alt=""
+        crossorigin="anonymous"
+        style="
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          display: block;
+        "
+        onerror="this.style.display='none';"
+      />
+    </div>
   `
 }
 

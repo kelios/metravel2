@@ -233,12 +233,6 @@ export class RuntimeFinalRenderer {
               MeTravel.by
             </span>
           </div>
-          <div style="
-            font-size: 7pt;
-            opacity: 0.6;
-            letter-spacing: 0.05em;
-            margin-bottom: 2mm;
-          ">metravel.by</div>
           <div>© ${new Date().getFullYear()}</div>
         </div>
         <div style="
