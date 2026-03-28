@@ -73,6 +73,7 @@ export async function assembleBookPages({
 
     if (useSeparators && index > 0) {
       pages.push(renderSeparatorPage(travel, index + 1, meta.length))
+      currentPage++
     }
 
     pages.push(renderTravelPhotoPage(travel, currentPage))
@@ -90,7 +91,9 @@ export async function assembleBookPages({
     if (item.hasMap) {
       const mapPage = await renderMapPage(travel, item.locations, currentPage)
       pages.push(mapPage)
-      currentPage++
+      // MapPageRenderer может вернуть несколько страниц (основная + продолжения при >6 локациях)
+      const mapPageCount = (mapPage.match(/<section\s[^>]*class="[^"]*pdf-page/g) || []).length
+      currentPage += Math.max(1, mapPageCount)
     }
   }
 

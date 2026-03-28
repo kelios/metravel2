@@ -78,8 +78,9 @@ export function buildTravelMeta(params: {
   const { travels, settings, getGalleryPhotosPerPage } = params;
   const meta: TravelSectionMeta[] = [];
   let currentPage = settings.includeToc ? 2 + getTocPageCount(travels.length) : 2;
+  const useSeparators = travels.length >= 3;
 
-  travels.forEach((travel) => {
+  travels.forEach((travel, index) => {
     const locations = normalizeLocations(travel);
     const galleryPhotos = (travel.gallery || [])
       .map((item) => {
@@ -103,6 +104,11 @@ export function buildTravelMeta(params: {
       : 0;
     const hasMap = Boolean(settings.includeMap && locations.length);
 
+    // Separator page для 2+ путешествия при 3+ путешествиях в книге
+    if (useSeparators && index > 0) {
+      currentPage += 1;
+    }
+
     meta.push({
       travel,
       hasGallery,
@@ -111,12 +117,21 @@ export function buildTravelMeta(params: {
       startPage: currentPage,
     });
 
-    currentPage += 2;
+    currentPage += 2; // photo page + content page
     if (hasGallery) currentPage += galleryPageCount;
-    if (hasMap) currentPage += 1;
+    if (hasMap) currentPage += getMapPageCount(locations.length);
   });
 
   return meta;
+}
+
+const MAP_FIRST_PAGE_MAX_CARDS = 6;
+const MAP_CONTINUATION_PAGE_MAX_CARDS = 10;
+
+export function getMapPageCount(locationCount: number): number {
+  if (locationCount <= 0) return 0;
+  const remaining = Math.max(0, locationCount - MAP_FIRST_PAGE_MAX_CARDS);
+  return 1 + Math.ceil(remaining / MAP_CONTINUATION_PAGE_MAX_CARDS);
 }
 
 export function getTocPageCount(travelCount: number): number {
@@ -145,9 +160,10 @@ export function normalizeLocations(travel: TravelForBook): NormalizedLocation[] 
 
 export function parseCoordinates(coord?: string | null): { lat: number; lng: number } | null {
   if (!coord) return null;
-  const [latStr, lngStr] = coord.split(',').map((value) => Number(value.trim()));
-  if (Number.isNaN(latStr) || Number.isNaN(lngStr)) return null;
-  return { lat: latStr, lng: lngStr };
+  // Поддерживаем разделители: запятая и точка с запятой
+  const [latNum, lngNum] = coord.replace(/;/g, ',').split(',').map((value) => Number(value.trim()));
+  if (Number.isNaN(latNum) || Number.isNaN(lngNum)) return null;
+  return { lat: latNum, lng: lngNum };
 }
 
 export function buildRouteSvg(

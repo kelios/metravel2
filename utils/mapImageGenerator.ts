@@ -643,7 +643,7 @@ export async function generateLeafletRouteSnapshot(
             resolved = true;
             resolve();
           }
-        }, 1500);
+        }, 5000);
 
         tileLayer.on('load', () => {
           if (!resolved) {

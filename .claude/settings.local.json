@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find /Users/juliasavran/Sites/metravel2/metravel2 -type f -name *pdf* -o -name *PDF* -o -name *export* -o -name *Export*)",
+      "Bash(grep -r \"mapImageGenerator\\\\|openBookPreviewWindow\" /Users/juliasavran/Sites/metravel2/metravel2/utils --include=*.ts --include=*.tsx -l)",
+      "Bash(find /Users/juliasavran/Sites/metravel2/metravel2 -path */node_modules -prune -o -type f -path */pdf-export/* -print)",
+      "Bash(find /Users/juliasavran/Sites/metravel2/metravel2 -path */node_modules -prune -o -type f -path *export* -name *.tsx -print)",
+      "Bash(find /Users/juliasavran/Sites/metravel2/metravel2/services/pdf-export -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(npx jest:*)"
     ]
   }
 }

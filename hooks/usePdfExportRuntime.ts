@@ -6,6 +6,7 @@ import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage } from '@/types/pdf-export';
 import type { ExportConfig } from '@/types/pdf-export';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
+import { openWebWindow } from '@/utils/externalLinks';
 import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
 
 type UpdateProgress = (
@@ -43,13 +44,29 @@ async function getBookHtmlExportService(): Promise<BookHtmlExportService> {
   return bookHtmlExportServicePromise;
 }
 
-async function openBookPreview(html: string): Promise<void> {
+async function getBookPreviewModule() {
   if (!bookPreviewWindowModulePromise) {
     bookPreviewWindowModulePromise = import('@/utils/openBookPreviewWindow');
   }
+  return bookPreviewWindowModulePromise;
+}
 
-  const mod = await bookPreviewWindowModulePromise;
-  mod.openBookPreviewWindow(html);
+/**
+ * Открывает окно предпросмотра синхронно (до async-работы), чтобы не попасть
+ * под блокировку всплывающих окон. Возвращает Window или null.
+ */
+function openPendingPreviewWindow(): Window | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return openWebWindow('about:blank');
+  } catch {
+    return null;
+  }
+}
+
+async function openBookPreview(html: string, targetWindow?: Window | null): Promise<void> {
+  const mod = await getBookPreviewModule();
+  mod.openBookPreviewWindow(html, targetWindow ?? undefined);
 }
 
 export async function prewarmPdfExportRuntime(): Promise<void> {
@@ -184,9 +201,14 @@ export async function runPdfExport({
     return;
   }
 
+  // Открываем окно СИНХРОННО (в контексте user-click), чтобы браузер не заблокировал popup.
+  // Если не открылось — продолжаем, openBookPreview откроет через Blob URL.
+  const pendingWindow = openPendingPreviewWindow();
+
   const htmlService = await getBookHtmlExportService();
 
   if (!isMountedRef.current) {
+    if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
     Alert.alert('Ошибка', 'Предпросмотр книги недоступен');
     return;
   }
@@ -201,6 +223,7 @@ export async function runPdfExport({
 
     const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);
     if (!travelsForExport.length) {
+      if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
       Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
       return;
     }
@@ -230,7 +253,7 @@ export async function runPdfExport({
       'Финализация документа',
     ]);
 
-    await openBookPreview(html);
+    await openBookPreview(html, pendingWindow);
 
     const elapsedTime = Math.round((Date.now() - startTime) / 1000);
 
@@ -238,6 +261,7 @@ export async function runPdfExport({
       updateProgress(ExportStage.COMPLETE, 100, `Готово! (${elapsedTime} сек)`, ['Документ создан ✓']);
     }
   } catch (err) {
+    if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
     const error = err instanceof Error ? err : new Error(String(err));
     if (isMountedRef.current) {
       setError(error);
