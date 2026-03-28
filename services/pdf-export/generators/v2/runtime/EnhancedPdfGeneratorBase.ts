@@ -748,6 +748,27 @@ export class EnhancedPdfGeneratorBase {
           image-rendering: -webkit-optimize-contrast;
           image-rendering: crisp-edges;
         }
+        .cover-page {
+          isolation: isolate;
+        }
+        .cover-page .cover-image-layer {
+          z-index: 0 !important;
+        }
+        .cover-page .cover-smart-overlay {
+          z-index: 1 !important;
+        }
+        .cover-page .cover-content-layer,
+        .cover-page .cover-footer-rail {
+          position: relative !important;
+          z-index: 2 !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+        .cover-page .cover-story-panel,
+        .cover-page .cover-footer-rail {
+          -webkit-backdrop-filter: none !important;
+          backdrop-filter: none !important;
+        }
       }
     `;
 

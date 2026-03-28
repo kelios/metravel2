@@ -70,6 +70,7 @@ export async function generateSharedCoverPageMarkup(
       color: ${colors.cover.text};
       background: ${background};
       position: relative;
+      isolation: isolate;
       overflow: hidden;
     ">
       ${safeCoverImage ? renderCoverImageLayer(safeCoverImage) : ''}
@@ -93,6 +94,7 @@ function renderCoverImageLayer(coverImage: string): string {
       overflow: hidden;
     ">
       <img
+        class="cover-image"
         src="${escapeHtml(coverImage)}"
         alt=""
         crossorigin="anonymous"
@@ -121,7 +123,7 @@ function renderSmartOverlay(
         : `linear-gradient(180deg, ${overlayColor}0.4) 0%, ${overlayColor}0.1) 30%, ${overlayColor}0.1) 70%, ${overlayColor}0.4) 100%)`
 
   return `
-    <div style="
+    <div class="cover-smart-overlay" style="
       position: absolute;
       top: 0; right: 0; bottom: 0; left: 0;
       background: ${gradient};
@@ -137,18 +139,19 @@ function renderContent(
   textColor: string,
   hasImage: boolean
 ): string {
+  const usesDarkText = isDarkTextColor(textColor)
   const justifyContent =
     textPosition === 'top' ? 'flex-start' : textPosition === 'bottom' ? 'flex-end' : 'center'
   const paddingTop = textPosition === 'top' ? '30mm' : '0'
   const paddingBottom = textPosition === 'bottom' ? '30mm' : '0'
   const panelBackground =
-    hasImage ? (textColor === '#000000' ? 'rgba(255,255,255,0.92)' : 'rgba(15,23,42,0.65)') : 'transparent'
+    hasImage ? (usesDarkText ? 'rgba(255,255,255,0.92)' : 'rgba(15,23,42,0.65)') : 'transparent'
   const panelBorder =
-    textColor === '#000000' ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.22)'
+    usesDarkText ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.22)'
   const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.24)' : 'none'
 
   return `
-    <div style="
+    <div class="cover-content-layer" style="
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -181,6 +184,7 @@ function renderContent(
 }
 
 function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
+  const usesDarkText = isDarkTextColor(textColor)
   return `
     <div style="
       display: inline-flex;
@@ -189,8 +193,8 @@ function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
       margin-bottom: 5mm;
       padding: 5px 12px 5px 10px;
       border-radius: 999px;
-      background: ${textColor === '#000000' ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
-      border: 1px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
+      background: ${usesDarkText ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
+      border: 1px solid ${usesDarkText ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
       font-size: 9pt;
       font-weight: 700;
       text-transform: uppercase;
@@ -205,6 +209,7 @@ function renderKicker(theme: PdfThemeConfig, textColor?: string): string {
 }
 
 function renderMetaStrip(theme: PdfThemeConfig, data: SharedCoverPageData, textColor?: string): string {
+  const usesDarkText = isDarkTextColor(textColor)
   const travelLabel = getTravelLabel(data.travelCount)
   const items = [
     data.userName ? escapeHtml(data.userName) : null,
@@ -227,8 +232,8 @@ function renderMetaStrip(theme: PdfThemeConfig, data: SharedCoverPageData, textC
           align-items: center;
           padding: 4px 9px;
           border-radius: 999px;
-          background: ${textColor === '#000000' ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
-          border: 1px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
+          background: ${usesDarkText ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.12)'};
+          border: 1px solid ${usesDarkText ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.16)'};
           color: ${textColor || 'rgba(255,255,255,0.9)'};
           font-size: 9pt;
           line-height: 1.2;
@@ -285,7 +290,7 @@ function renderDecorativeElements(): string {
 }
 
 function renderSubtitle(theme: PdfThemeConfig, subtitle: string, textColor?: string): string {
-  const opacity = textColor === '#000000' ? '0.7' : '0.88'
+  const opacity = isDarkTextColor(textColor) ? '0.7' : '0.88'
   return `
     <div style="
       font-size: 13pt;
@@ -371,6 +376,7 @@ function renderDate(theme: PdfThemeConfig): string {
 }
 
 function renderQuote(quote: { text: string; author: string }, textColor?: string): string {
+  const usesDarkText = isDarkTextColor(textColor)
   return `
     <div style="
       margin-top: 11mm;
@@ -378,9 +384,9 @@ function renderQuote(quote: { text: string; author: string }, textColor?: string
       font-style: italic;
       color: ${textColor || 'rgba(255,255,255,0.85)'};
       padding: 10px 14px 10px 16px;
-      background: ${textColor === '#000000' ? 'rgba(15,23,42,0.05)' : 'rgba(255,255,255,0.08)'};
+      background: ${usesDarkText ? 'rgba(15,23,42,0.05)' : 'rgba(255,255,255,0.08)'};
       border-radius: 14px;
-      border-left: 3px solid ${textColor === '#000000' ? 'rgba(15,23,42,0.22)' : 'rgba(255,255,255,0.3)'};
+      border-left: 3px solid ${usesDarkText ? 'rgba(15,23,42,0.22)' : 'rgba(255,255,255,0.3)'};
       position: relative;
     ">
       <span style="
@@ -402,6 +408,17 @@ function renderQuote(quote: { text: string; author: string }, textColor?: string
       </div>
     </div>
   `
+}
+
+function isDarkTextColor(textColor?: string): boolean {
+  const normalized = String(textColor || '').trim().toLowerCase()
+  return (
+    normalized === '#000' ||
+    normalized === '#000000' ||
+    normalized === 'black' ||
+    normalized === 'rgb(0, 0, 0)' ||
+    normalized === 'rgb(0,0,0)'
+  )
 }
 
 function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
@@ -459,7 +476,7 @@ function renderFooterRail(theme: PdfThemeConfig, metaLine: string): string {
           color: rgba(255,255,255,0.92);
           text-transform: uppercase;
           margin-bottom: 2mm;
-        ">MeTravel</div>
+        ">MeTravel.by</div>
         ${renderDate(theme)}
       </div>
     </div>

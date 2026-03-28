@@ -32,6 +32,10 @@ export function useListTravelExport(
   { ownerName }: UseListTravelExportOptions = {}
 ): UseListTravelExportReturn {
   const [selected, setSelected] = useState<Travel[]>([]);
+  const normalizedOwnerName = useMemo(() => {
+    const value = String(ownerName || '').trim();
+    return value && !/^\d+$/.test(value) ? value : '';
+  }, [ownerName]);
 
   useEffect(() => {
     setSelected((prev) => {
@@ -125,7 +129,7 @@ export function useListTravelExport(
 
   const baseSettings = useMemo<BookSettings>(
     () => ({
-      title: ownerName ? `Путешествия ${ownerName}` : 'Мои путешествия',
+      title: normalizedOwnerName ? `Путешествия ${normalizedOwnerName}` : 'Мои путешествия',
       subtitle: '',
       coverType: 'auto',
       template: 'minimal',
@@ -136,7 +140,7 @@ export function useListTravelExport(
       includeChecklists: false,
       checklistSections: ['clothing', 'food', 'electronics'],
     }),
-    [ownerName]
+    [normalizedOwnerName]
   );
 
   const [lastSettings, setLastSettings] = useState<BookSettings>(baseSettings);
