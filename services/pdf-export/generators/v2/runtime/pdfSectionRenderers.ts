@@ -29,11 +29,6 @@ export function renderTocPageSection(args: {
   buildSafeImageUrl: (raw?: string | null) => string | undefined
   formatDays: (days?: number | string | null) => string
   getTravelLabel: (count: number) => string
-  renderPdfIcon: (
-    name: 'camera' | 'pen' | 'bulb' | 'warning' | 'sparkle' | 'globe' | 'calendar' | 'clock' | 'map-pin',
-    color: string,
-    size: number,
-  ) => string
   getImageFilterStyle: () => string
 }): string {
   const {
@@ -44,11 +39,14 @@ export function renderTocPageSection(args: {
     buildSafeImageUrl,
     formatDays,
     getTravelLabel,
-    renderPdfIcon,
     getImageFilterStyle,
   } = args
   const { colors, typography, spacing } = theme
-  const isCompactToc = meta.length <= 2
+
+  const use2Col = meta.length >= 6
+  const thumbW = use2Col ? 62 : 72
+  const thumbH = use2Col ? 46 : 52
+
   const tocItems = meta
     .map((item, index) => {
       const travel = item.travel
@@ -57,103 +55,102 @@ export function renderTocPageSection(args: {
       const days = formatDays(travel.number_days)
       const metaLine = [country, year, days].filter(Boolean).join(' \u2022 ')
       const thumbUrl = buildSafeImageUrl(travel.travel_image_thumb_url || travel.travel_image_url)
-      const previewSize = isCompactToc ? 56 : 40
-      const cardPadding = isCompactToc ? '16px 18px' : '12px 16px'
-      const titleFontSize = isCompactToc ? '14pt' : '13pt'
-      const metaFontSize = isCompactToc ? '10pt' : '9.5pt'
-      const badgeSize = isCompactToc ? 36 : 32
+      const isLast = index === meta.length - 1
 
       return `
         <div style="
           display: flex;
-          align-items: stretch;
-          background: ${colors.surface};
-          border-radius: ${theme.blocks.borderRadius};
-          border: ${theme.blocks.borderWidth} solid ${colors.border};
-          box-shadow: ${theme.blocks.shadow};
-          overflow: hidden;
+          align-items: center;
+          gap: 10px;
+          padding: ${use2Col ? '7px 0' : '9px 0'};
+          ${!isLast ? `border-bottom: 1px solid ${colors.borderLight || colors.border};` : ''}
         ">
-          ${thumbUrl ? `
-            <div style="
-              width: ${previewSize}px;
-              min-height: ${previewSize}px;
-              flex-shrink: 0;
-              position: relative;
-              overflow: hidden;
-              background: ${colors.surfaceAlt};
-            ">
+          <span style="
+            width: 18px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            color: ${colors.textMuted};
+            font-family: ${typography.bodyFont};
+            text-align: right;
+            flex-shrink: 0;
+            opacity: 0.55;
+            letter-spacing: 0.02em;
+          ">${String(index + 1).padStart(2, '0')}</span>
+
+          <div style="
+            width: ${thumbW}px;
+            height: ${thumbH}px;
+            flex-shrink: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: ${colors.surfaceAlt};
+          ">
+            ${thumbUrl ? `
               <img src="${escapeHtml(thumbUrl)}" alt=""
                 style="width: 100%; height: 100%; object-fit: cover; display: block; ${getImageFilterStyle()}"
                 crossorigin="anonymous"
-                onerror="this.style.display='none';this.parentElement.style.background='${colors.accentSoft}';" />
-            </div>
-          ` : `
-            <div style="
-              width: ${previewSize}px;
-              min-height: ${previewSize}px;
-              flex-shrink: 0;
-              background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              <span style="
-                font-size: 18pt;
-                font-weight: 800;
-                color: ${colors.accent};
-                font-family: ${typography.headingFont};
-                opacity: 0.7;
-              ">${index + 1}</span>
-            </div>
-          `}
-          <div style="
-            flex: 1;
-            min-width: 0;
-            padding: ${cardPadding};
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-          ">
-            <div style="flex: 1; min-width: 0;">
+                onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,${colors.accentSoft},${colors.accentLight})';" />
+            ` : `
               <div style="
-                font-weight: 600;
-                font-size: ${titleFontSize};
-                margin-bottom: 3px;
-                color: ${colors.text};
-                line-height: 1.3;
-                font-family: ${typography.headingFont};
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              ">${escapeHtml(travel.name)}</div>
-              ${metaLine ? `
-                <div style="
-                  font-size: ${metaFontSize};
-                  color: ${colors.textMuted};
-                  font-family: ${typography.bodyFont};
-                  line-height: 1.4;
-                ">${metaLine}</div>
-              ` : ''}
-            </div>
-            <div style="
-              width: ${badgeSize}px;
-              height: ${badgeSize}px;
-              border-radius: 999px;
-              background: ${colors.accentSoft};
-              color: ${colors.accent};
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 700;
-              font-size: 12pt;
-              flex-shrink: 0;
-              font-family: ${typography.headingFont};
-            ">${item.startPage}</div>
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">
+                <span style="font-size: 14pt; font-weight: 800; color: ${colors.accent}; font-family: ${typography.headingFont}; opacity: 0.5;">${index + 1}</span>
+              </div>
+            `}
           </div>
+
+          <div style="flex: 1; min-width: 0;">
+            <div style="
+              font-weight: 600;
+              font-size: ${use2Col ? '9.5pt' : '11pt'};
+              color: ${colors.text};
+              line-height: 1.25;
+              font-family: ${typography.headingFont};
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              margin-bottom: 2px;
+            ">${escapeHtml(travel.name)}</div>
+            ${metaLine ? `
+              <div style="
+                font-size: ${use2Col ? '7.5pt' : '8.5pt'};
+                color: ${colors.textMuted};
+                font-family: ${typography.bodyFont};
+                line-height: 1.3;
+              ">${metaLine}</div>
+            ` : ''}
+          </div>
+
+          <div style="
+            font-size: ${use2Col ? '14pt' : '16pt'};
+            font-weight: 800;
+            color: ${colors.accent};
+            font-family: ${typography.headingFont};
+            min-width: 22px;
+            text-align: right;
+            flex-shrink: 0;
+            letter-spacing: -0.02em;
+            line-height: 1;
+          ">${item.startPage}</div>
         </div>
       `
     })
+    .join('')
+
+  const splitIndex = Math.ceil(meta.length / 2)
+  const col1Items = meta.slice(0, splitIndex)
+  const col2Items = meta.slice(splitIndex)
+
+  const col1Html = col1Items
+    .map((item, index) => buildTocRow(item, index, col1Items.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, use2Col, thumbW, thumbH))
+    .join('')
+  const col2Html = col2Items
+    .map((item, index) => buildTocRow(item, index + splitIndex, col2Items.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, use2Col, thumbW, thumbH))
     .join('')
 
   return `
@@ -164,65 +161,197 @@ export function renderTocPageSection(args: {
       flex-direction: column;
     ">
       <div style="
-        text-align: center;
-        margin-top: ${isCompactToc ? '10mm' : '14mm'};
-        margin-bottom: ${isCompactToc ? '8mm' : '10mm'};
-      ">
-        <div style="
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 48px;
-          height: 48px;
-          border-radius: 14px;
-          background: ${colors.accentSoft};
-          margin-bottom: 10px;
-        ">
-          ${renderPdfIcon('map-pin', colors.accent, 22)}
-        </div>
-        <h2 style="
-          font-size: ${typography.h1.size};
-          margin-bottom: 6px;
-          font-weight: ${typography.h1.weight};
-          color: ${colors.text};
-          letter-spacing: -0.02em;
-          font-family: ${typography.headingFont};
-        ">Содержание</h2>
-        <p style="
-          color: ${colors.textMuted};
-          font-size: ${typography.body.size};
-          font-family: ${typography.bodyFont};
-          margin: 0 0 6px 0;
-        ">${meta.length} ${getTravelLabel(meta.length)}</p>
-        <div style="
-          width: 40mm;
-          height: 3px;
-          margin: 0 auto;
-          background: linear-gradient(90deg, transparent, ${colors.accent}, transparent);
-          border-radius: 999px;
-        "></div>
-      </div>
-      <div style="
         display: flex;
-        flex-direction: column;
-        gap: ${isCompactToc ? '12px' : '8px'};
-        justify-content: ${isCompactToc ? 'center' : 'flex-start'};
-        flex: 1;
-        max-width: ${isCompactToc ? '156mm' : '100%'};
-        width: 100%;
-        margin: 0 auto;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 7mm;
+        padding-bottom: 5mm;
+        border-bottom: 2px solid ${colors.text};
       ">
-        ${tocItems}
+        <div>
+          <div style="
+            font-size: 7.5pt;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: ${colors.accent};
+            font-family: ${typography.bodyFont};
+            margin-bottom: 2mm;
+          ">MeTravel · Книга путешествий</div>
+          <h2 style="
+            font-size: 28pt;
+            font-weight: 800;
+            color: ${colors.text};
+            letter-spacing: -0.03em;
+            font-family: ${typography.headingFont};
+            line-height: 1;
+            margin: 0;
+          ">Содержание</h2>
+        </div>
+        <div style="
+          text-align: right;
+          padding-bottom: 2px;
+        ">
+          <div style="
+            font-size: 22pt;
+            font-weight: 800;
+            color: ${colors.accent};
+            font-family: ${typography.headingFont};
+            letter-spacing: -0.04em;
+            line-height: 1;
+            opacity: 0.22;
+          ">${meta.length}</div>
+          <div style="
+            font-size: 8pt;
+            color: ${colors.textMuted};
+            font-family: ${typography.bodyFont};
+            margin-top: 1px;
+          ">${getTravelLabel(meta.length)}</div>
+        </div>
       </div>
+
+      ${use2Col ? `
+        <div style="
+          display: grid;
+          grid-template-columns: 1fr 1px 1fr;
+          gap: 0 6mm;
+          flex: 1;
+        ">
+          <div>${col1Html}</div>
+          <div style="background: ${colors.border}; width: 1px;"></div>
+          <div>${col2Html}</div>
+        </div>
+      ` : `
+        <div style="flex: 1;">
+          ${tocItems}
+        </div>
+      `}
+
       <div style="
-        position: absolute;
-        bottom: 15mm;
-        right: 25mm;
-        font-size: ${typography.caption.size};
+        margin-top: auto;
+        padding-top: 5mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid ${colors.borderLight || colors.border};
+      ">
+        <span style="
+          font-size: 7.5pt;
+          color: ${colors.textMuted};
+          font-family: ${typography.bodyFont};
+          opacity: 0.55;
+          letter-spacing: 0.06em;
+        ">METRAVEL.BY</span>
+        <span style="
+          font-size: 8pt;
+          font-weight: 600;
+          color: ${colors.textMuted};
+          font-family: ${typography.bodyFont};
+        ">${pageNumber}</span>
+      </div>
+    </section>
+  `
+}
+
+function buildTocRow(
+  item: TravelSectionMeta,
+  index: number,
+  isLast: boolean,
+  colors: { surface: string; surfaceAlt: string; accentSoft: string; accentLight: string; accent: string; text: string; textMuted: string; border: string; borderLight?: string },
+  typography: { headingFont: string; bodyFont: string },
+  getImageFilterStyle: () => string,
+  buildSafeImageUrl: (url?: string | null) => string | undefined,
+  escapeHtml: (v: string) => string,
+  formatDays: (d?: number | string | null) => string,
+  use2Col: boolean,
+  thumbW: number,
+  thumbH: number,
+): string {
+  const travel = item.travel
+  const country = travel.countryName ? escapeHtml(travel.countryName) : ''
+  const year = travel.year ? escapeHtml(String(travel.year)) : ''
+  const days = formatDays(travel.number_days)
+  const metaLine = [country, year, days].filter(Boolean).join(' \u2022 ')
+  const thumbUrl = buildSafeImageUrl(travel.travel_image_thumb_url || travel.travel_image_url)
+
+  return `
+    <div style="
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: ${use2Col ? '7px 0' : '9px 0'};
+      ${!isLast ? `border-bottom: 1px solid ${colors.borderLight || colors.border};` : ''}
+    ">
+      <span style="
+        width: 18px;
+        font-size: 7.5pt;
+        font-weight: 700;
         color: ${colors.textMuted};
         font-family: ${typography.bodyFont};
-      ">${pageNumber}</div>
-    </section>
+        text-align: right;
+        flex-shrink: 0;
+        opacity: 0.55;
+        letter-spacing: 0.02em;
+      ">${String(index + 1).padStart(2, '0')}</span>
+
+      <div style="
+        width: ${thumbW}px;
+        height: ${thumbH}px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: ${colors.surfaceAlt};
+      ">
+        ${thumbUrl ? `
+          <img src="${escapeHtml(thumbUrl)}" alt=""
+            style="width: 100%; height: 100%; object-fit: cover; display: block; ${getImageFilterStyle()}"
+            crossorigin="anonymous"
+            onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,${colors.accentSoft},${colors.accentLight})';" />
+        ` : `
+          <div style="
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
+            display: flex; align-items: center; justify-content: center;
+          ">
+            <span style="font-size: 13pt; font-weight: 800; color: ${colors.accent}; font-family: ${typography.headingFont}; opacity: 0.5;">${index + 1}</span>
+          </div>
+        `}
+      </div>
+
+      <div style="flex: 1; min-width: 0;">
+        <div style="
+          font-weight: 600;
+          font-size: ${use2Col ? '9.5pt' : '11pt'};
+          color: ${colors.text};
+          line-height: 1.25;
+          font-family: ${typography.headingFont};
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin-bottom: 2px;
+        ">${escapeHtml(travel.name)}</div>
+        ${metaLine ? `
+          <div style="
+            font-size: ${use2Col ? '7.5pt' : '8.5pt'};
+            color: ${colors.textMuted};
+            font-family: ${typography.bodyFont};
+            line-height: 1.3;
+          ">${metaLine}</div>
+        ` : ''}
+      </div>
+
+      <div style="
+        font-size: ${use2Col ? '14pt' : '16pt'};
+        font-weight: 800;
+        color: ${colors.accent};
+        font-family: ${typography.headingFont};
+        min-width: 20px;
+        text-align: right;
+        flex-shrink: 0;
+        letter-spacing: -0.02em;
+        line-height: 1;
+      ">${item.startPage}</div>
+    </div>
   `
 }
 

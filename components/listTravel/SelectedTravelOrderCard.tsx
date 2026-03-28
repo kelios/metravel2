@@ -9,9 +9,9 @@ import { Caption } from '@/components/ui/Typography';
 import { createStyles } from './listTravelStyles';
 
 type ExportBarStyles = ReturnType<typeof createStyles>;
-const MEDIA_WIDTH = 196;
-const MEDIA_HEIGHT = 148;
-const MEDIA_RADIUS = 18;
+const MEDIA_WIDTH = 128;
+const MEDIA_HEIGHT = 96;
+const MEDIA_RADIUS = 10;
 
 type Props = {
   travel: Travel;
@@ -123,9 +123,9 @@ export default function SelectedTravelOrderCard({
       gap: '8px',
     };
     const actionButtonStyle: React.CSSProperties = {
-      width: '44px',
-      height: '44px',
-      borderRadius: '22px',
+      width: '28px',
+      height: '28px',
+      borderRadius: '14px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -233,7 +233,7 @@ export default function SelectedTravelOrderCard({
             >
               <Feather
                 name="chevron-left"
-                size={18}
+                size={14}
                 color={canMoveUp ? colors.text : colors.textTertiary}
               />
             </button>
@@ -250,7 +250,7 @@ export default function SelectedTravelOrderCard({
             >
               <Feather
                 name="chevron-right"
-                size={18}
+                size={14}
                 color={canMoveDown ? colors.text : colors.textTertiary}
               />
             </button>

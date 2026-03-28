@@ -239,17 +239,10 @@ function ListTravelExportControls({
         {/* Header row: selection info + actions + PDF button */}
         <View style={[s.exportBar, isMobile && s.exportBarMobile]}>
           <View style={s.exportBarInfo}>
-            <View style={s.exportBarHeaderRow}>
-              <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
-              {hasSelection && (
-                <View style={s.exportBarCountBadge}>
-                  <Caption style={s.exportBarCountBadgeText}>{selectionCount}</Caption>
-                </View>
-              )}
-            </View>
+            <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
             {!hasSelection && (
               <Caption style={s.exportBarHint}>
-                Отметьте путешествия ниже, чтобы собрать PDF-книгу
+                Отметьте путешествия для PDF-книги
               </Caption>
             )}
           </View>
@@ -320,10 +313,7 @@ function ListTravelExportControls({
           <View style={s.selectedOrderStrip}>
             <View style={s.selectedOrderStripHeader}>
               <Caption style={s.selectedOrderStripLabel}>
-                Порядок в книге
-              </Caption>
-              <Caption style={s.selectedOrderStripHint}>
-                Перетаскивайте для перестановки
+                {`Порядок в книге${Platform.OS === 'web' ? ' · перетащите для сортировки' : ''}`}
               </Caption>
             </View>
             <View style={s.selectedOrderScroller}>

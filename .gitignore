@@ -88,3 +88,45 @@ build/
 /playwright-screenshots/
 nginx/ssl/
 /nginx/ssl/fullchain.pem
+
+# Claude Code AI session artifacts
+.claude/worktrees/
+.claude/sessions/
+.claude/tmp/
+
+# iOS signing & certificates (never commit)
+*.cer
+*.certSigningRequest
+*.p12
+*.p8
+*.mobileprovision
+AuthKey_*.p8
+
+# Additional env files
+.env.local
+.env.production
+.env.*.local
+
+# EAS auto-versioning
+eas-build-auto-version.txt
+eas-update-auto-version.txt
+
+# macOS system files
+.AppleDouble
+.LSOverride
+Icon$
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# Editor swap/backup files
+*.swp
+*.swo
+*~
+.#*
+
+# Sentry (if used)
+sentry.properties
+.sentryclirc

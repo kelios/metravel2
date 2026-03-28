@@ -93,10 +93,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: DESIGN_TOKENS.spacing.xs,
     },
     exportBarInfoTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
-      lineHeight: 28,
+      lineHeight: 20,
     },
     exportBarCountBadge: {
       minWidth: 22,
@@ -168,9 +168,9 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderWidth: 1,
       borderColor: colors.border,
       marginBottom: DESIGN_TOKENS.spacing.sm,
-      padding: DESIGN_TOKENS.spacing.sm,
+      padding: DESIGN_TOKENS.spacing.xxs,
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      gap: DESIGN_TOKENS.spacing.sm,
+      gap: DESIGN_TOKENS.spacing.xs,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
@@ -282,7 +282,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     selectedOrderGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(184px, 1fr))',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(128px, 1fr))',
       gap: DESIGN_TOKENS.spacing.sm,
       alignItems: 'start',
       width: '100%',
@@ -292,7 +292,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       paddingRight: 4,
     },
     selectedOrderItem: {
-      width: 184,
+      width: 128,
       flexShrink: 0,
       display: 'flex',
       flexDirection: 'column',
@@ -327,12 +327,12 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     selectedOrderMediaWrap: {
       position: 'relative',
-      width: 184,
-      height: 138,
+      width: 128,
+      height: 96,
       flexShrink: 0,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.surface,
       overflow: 'hidden',
       ...Platform.select({
@@ -440,9 +440,9 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: DESIGN_TOKENS.spacing.xs,
     },
     selectedOrderActionButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(255,255,255,0.95)',

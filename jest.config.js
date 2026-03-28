@@ -23,6 +23,15 @@ module.exports = {
     '\\.(svg|png|jpe?g|gif|webp)$': '<rootDir>/__mocks__/fileMock.js',
     '\\.(css|less|scss|sass)$': '<rootDir>/__mocks__/styleMock.js',
   },
+  modulePathIgnorePatterns: [
+    '<rootDir>/.claude/',
+  ],
+  testPathIgnorePatterns: [
+    '<rootDir>/.claude/',
+  ],
+  watchPathIgnorePatterns: [
+    '<rootDir>/.claude/',
+  ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '<rootDir>/components/Map',
