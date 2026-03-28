@@ -46,16 +46,44 @@ function CompactActionLink({
   icon?: string;
   style?: any;
 }) {
+  const pillStyle: React.CSSProperties = {
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '4px 10px',
+    borderRadius: 999,
+    border: `1px solid ${style?.color ?? 'currentColor'}22`,
+    backgroundColor: `${style?.color ?? 'currentColor'}0d`,
+    fontSize: 13,
+    fontWeight: 500,
+    color: style?.color,
+    lineHeight: '1',
+    transition: 'background 0.15s',
+    textDecoration: 'none',
+    userSelect: 'none',
+  };
+
   if (Platform.OS !== 'web') {
     return (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={label}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: style?.color ? `${style.color}33` : '#ccc',
+          backgroundColor: pressed ? `${style?.color ?? '#000'}22` : `${style?.color ?? '#000'}0d`,
+        })}
       >
         {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
-        <Text style={style}>{label}</Text>
+        <Text style={[style, { textDecorationLine: 'none' }]}>{label}</Text>
       </Pressable>
     );
   }
@@ -70,10 +98,10 @@ function CompactActionLink({
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault(); e.stopPropagation(); onPress();
       }}
-      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+      style={pillStyle}
     >
       {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
-      <Text style={style}>{label}</Text>
+      <Text style={[style, { textDecorationLine: 'none', fontSize: 13 }]}>{label}</Text>
     </div>
   );
 }
@@ -239,32 +267,36 @@ function ListTravelExportControls({
         {/* Header row: selection info + actions + PDF button */}
         <View style={[s.exportBar, isMobile && s.exportBarMobile]}>
           <View style={s.exportBarInfo}>
-            <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
-            {!hasSelection && (
-              <Caption style={s.exportBarHint}>
-                Отметьте путешествия для PDF-книги
-              </Caption>
-            )}
+            <View style={s.exportBarTitleRow}>
+              {hasSelection && (
+                <View style={s.exportBarCountBadge}>
+                  <Text style={s.exportBarCountBadgeText as any}>{selectionCount}</Text>
+                </View>
+              )}
+              <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
+            </View>
           </View>
 
           <View style={s.exportBarActions}>
             <CompactActionLink
               label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
               onPress={toggleSelectAll}
+              icon={selectionCount === travels.length && travels.length > 0 ? 'minus-circle' : 'check-circle'}
               style={s.linkButton as any}
             />
             {hasSelection && (
               <CompactActionLink
                 label="Очистить"
                 onPress={clearSelection}
-                style={s.linkButton as any}
+                icon="x"
+                style={s.linkButtonDanger as any}
               />
             )}
             {hasSelection && (
               <CompactActionLink
                 label="Настройки"
                 onPress={handleOpenSettings}
-                icon="settings"
+                icon="sliders"
                 style={s.linkButton as any}
               />
             )}
@@ -276,6 +308,7 @@ function ListTravelExportControls({
               onPress={handleImmediateSave}
               disabled={!hasSelection || pdfExport.isGenerating}
               size="sm"
+              icon={!pdfExport.isGenerating ? <Feather name="book-open" size={15} color="#fff" /> : undefined}
             />
           </View>
         </View>
@@ -310,16 +343,20 @@ function ListTravelExportControls({
 
         {/* Compact order strip */}
         {hasSelection && (
-          <View style={s.selectedOrderStrip}>
-            <View style={s.selectedOrderStripHeader}>
-              <Caption style={s.selectedOrderStripLabel}>
-                {`Порядок в книге${Platform.OS === 'web' ? ' · перетащите для сортировки' : ''}`}
-              </Caption>
+          <>
+            <View style={[s.exportWorkspaceDivider, isMobile && s.exportWorkspaceDividerMobile]} />
+            <View style={s.selectedOrderStrip}>
+              <View style={s.selectedOrderStripHeader}>
+                <Feather name="layers" size={13} color={undefined} style={s.selectedOrderStripIcon as any} />
+                <Caption style={s.selectedOrderStripLabel}>
+                  {`Порядок в книге${Platform.OS === 'web' ? ' · перетащите для сортировки' : ''}`}
+                </Caption>
+              </View>
+              <View style={s.selectedOrderScroller}>
+                {renderOrderCards()}
+              </View>
             </View>
-            <View style={s.selectedOrderScroller}>
-              {renderOrderCards()}
-            </View>
-          </View>
+          </>
         )}
       </View>
     </>

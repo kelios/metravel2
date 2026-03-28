@@ -23,19 +23,70 @@ export function buildRunningHeader(
       align-items: center;
       padding-bottom: 4mm;
       margin-bottom: 6mm;
-      border-bottom: 0.5pt solid ${colors.border};
+      border-bottom: none;
       font-size: ${typography.caption.size};
       color: ${colors.textMuted};
       font-family: ${typography.bodyFont};
       letter-spacing: 0.02em;
+      position: relative;
     ">
-      <span style="
+      <div style="
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1.5px;
+        background: linear-gradient(90deg, ${colors.accent}, ${colors.accentLight || colors.border} 40%, ${colors.border} 100%);
+        border-radius: 999px;
+      "></div>
+      <div style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
         max-width: 70%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      ">${escapeHtml(travelName)}</span>
-      <span>${pageNumber}</span>
+        min-width: 0;
+      ">
+        <span style="
+          width: 14px;
+          height: 2.5px;
+          background: ${colors.accent};
+          border-radius: 999px;
+          flex-shrink: 0;
+        "></span>
+        <span style="
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-weight: 600;
+        ">${escapeHtml(travelName)}</span>
+      </div>
+      <div style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      ">
+        <span style="
+          font-size: 7pt;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          opacity: 0.5;
+          font-weight: 600;
+        ">MeTravel</span>
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
+          background: ${colors.accentSoft};
+          color: ${colors.accentStrong};
+          font-size: 8pt;
+          font-weight: 700;
+          font-family: ${typography.headingFont};
+          line-height: 1;
+        ">${pageNumber}</span>
+      </div>
     </div>
   `
 }

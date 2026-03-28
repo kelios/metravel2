@@ -72,6 +72,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: 'transparent',
       gap: DESIGN_TOKENS.spacing.sm,
       flexWrap: 'wrap',
+      minHeight: 44,
     },
     exportBarMobile: {
       flexDirection: 'column',
@@ -92,11 +93,16 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.xs,
     },
+    exportBarTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
     exportBarInfoTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
-      lineHeight: 20,
+      lineHeight: 22,
     },
     exportBarCountBadge: {
       minWidth: 22,
@@ -147,7 +153,14 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     linkButton: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.primaryText,
-      textDecorationLine: 'underline',
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+      textDecorationLine: 'none',
+    },
+    linkButtonDanger: {
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      color: colors.danger,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+      textDecorationLine: 'none',
     },
     exportBarButtons: {
       flexDirection: 'row',
@@ -167,8 +180,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.border,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
       marginBottom: DESIGN_TOKENS.spacing.sm,
-      padding: DESIGN_TOKENS.spacing.xxs,
+      paddingVertical: DESIGN_TOKENS.spacing.sm,
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
       gap: DESIGN_TOKENS.spacing.xs,
       ...Platform.select({
@@ -193,17 +208,20 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       marginHorizontal: -DESIGN_TOKENS.spacing.sm,
     },
     selectedOrderStrip: {
-      gap: 4,
+      gap: 6,
     },
     selectedOrderStripHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.sm,
+      gap: DESIGN_TOKENS.spacing.xs,
+    },
+    selectedOrderStripIcon: {
+      color: colors.textMuted,
     },
     selectedOrderStripLabel: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      color: colors.text,
+      color: colors.textMuted,
     },
     selectedOrderStripHint: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
