@@ -89,7 +89,7 @@ export class RuntimeFinalRenderer {
       ">
         <div style="
           position: absolute;
-          inset: 12mm;
+          top: 12mm; right: 12mm; bottom: 12mm; left: 12mm;
           border: 1.5px solid rgba(255,255,255,0.2);
           border-radius: 14px;
           pointer-events: none;
@@ -97,7 +97,7 @@ export class RuntimeFinalRenderer {
 
         <div style="
           position: absolute;
-          inset: 0;
+          top: 0; right: 0; bottom: 0; left: 0;
           background:
             radial-gradient(circle at 50% 25%, rgba(255,255,255,0.08), transparent 36%),
             radial-gradient(circle at 50% 80%, rgba(217,115,85,0.16), transparent 32%);

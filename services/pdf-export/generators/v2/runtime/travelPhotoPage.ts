@@ -192,7 +192,7 @@ export function renderTravelPhotoPageMarkup(args: {
             onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(180deg, ${colors.accentLight} 0%, ${colors.accentSoft} 100%)';" />
           <div style="
             position: absolute;
-            inset: 0;
+            top: 0; right: 0; bottom: 0; left: 0;
             background:
               linear-gradient(180deg, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.18) 100%),
               linear-gradient(180deg, rgba(255,255,255,0.0) 48%, rgba(15,23,42,0.22) 100%);

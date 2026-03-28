@@ -102,7 +102,7 @@ function renderSmartOverlay(
   return `
     <div style="
       position: absolute;
-      inset: 0;
+      top: 0; right: 0; bottom: 0; left: 0;
       background: ${gradient};
       z-index: 1;
     "></div>
@@ -121,7 +121,7 @@ function renderContent(
   const paddingTop = textPosition === 'top' ? '30mm' : '0'
   const paddingBottom = textPosition === 'bottom' ? '30mm' : '0'
   const panelBackground =
-    hasImage ? (textColor === '#000000' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.48)') : 'transparent'
+    hasImage ? (textColor === '#000000' ? 'rgba(255,255,255,0.92)' : 'rgba(15,23,42,0.65)') : 'transparent'
   const panelBorder =
     textColor === '#000000' ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.22)'
   const panelShadow = hasImage ? '0 22px 52px rgba(15,23,42,0.24)' : 'none'
@@ -138,7 +138,8 @@ function renderContent(
       z-index: 2;
     ">
       <div class="cover-story-panel" style="
-        width: min(126mm, 100%);
+        width: 126mm;
+        max-width: 100%;
         padding: ${hasImage ? '11mm 13mm 11mm 13mm' : '0'};
         border-radius: 18px;
         background: ${panelBackground};
@@ -241,7 +242,7 @@ function renderDecorativeElements(): string {
   return `
     <div style="
       position: absolute;
-      inset: 14mm;
+      top: 14mm; right: 14mm; bottom: 14mm; left: 14mm;
       border: 2px solid rgba(255,255,255,0.25);
       border-radius: 14px;
       pointer-events: none;
@@ -249,7 +250,7 @@ function renderDecorativeElements(): string {
     "></div>
     <div style="
       position: absolute;
-      inset: 17mm;
+      top: 17mm; right: 17mm; bottom: 17mm; left: 17mm;
       border: 0.5px solid rgba(255,255,255,0.12);
       border-radius: 10px;
       pointer-events: none;
@@ -328,7 +329,6 @@ function renderTitle(theme: PdfThemeConfig, title: string, textColor?: string): 
       word-break: normal;
       hyphens: auto;
       max-width: ${titleStyle.maxWidth};
-      text-wrap: balance;
     ">${escapeHtml(safeTitle)}</h1>
   `
 }

@@ -111,7 +111,7 @@ export function buildContainImageMarkup(args: {
   if (backdropMode === 'solid') {
     return `
       <div aria-hidden="true"
-        style="position:absolute;inset:0;background:${background};">
+        style="position:absolute;top:0;right:0;bottom:0;left:0;background:${background};">
       </div>
       <img src="${safeSrc}" alt="${safeAlt}"
         style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}${extraStyle}"
@@ -122,7 +122,7 @@ export function buildContainImageMarkup(args: {
 
   return `
       <img src="${safeSrc}" alt="" aria-hidden="true"
-        style="position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
+        style="position:absolute;top:-10px;right:-10px;bottom:-10px;left:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
         crossorigin="anonymous" />
       <img src="${safeSrc}" alt="${safeAlt}"
         style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}"
