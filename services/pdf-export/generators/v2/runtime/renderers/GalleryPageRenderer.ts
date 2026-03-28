@@ -40,15 +40,19 @@ export class RuntimeGalleryRenderer {
     return chunks.map((pagePhotos, pageIndex) => {
       const defaultColumns = calculateOptimalColumns(pagePhotos.length, layout)
       const isTwoPerPage = photosPerPage === 2 && pagePhotos.length === 2
-      const columns = layout === 'collage'
-        ? pagePhotos.length <= 1
-          ? 1
-          : 3
+      // Для печати: максимум 2 колонки по умолчанию, чтобы фото были крупными
+      const printDefaultColumns = layout === 'collage'
+        ? pagePhotos.length <= 1 ? 1 : 3
         : pagePhotos.length === 1
           ? 1
           : isTwoPerPage && twoPerPageLayout === 'vertical'
             ? 1
-            : Math.max(1, Math.min(4, configuredColumns ?? defaultColumns))
+            : pagePhotos.length === 2
+              ? 2
+              : Math.min(2, defaultColumns)
+      const columns = configuredColumns
+        ? Math.max(1, Math.min(4, configuredColumns))
+        : printDefaultColumns
       const estimatedRows = Math.max(1, Math.ceil(pagePhotos.length / Math.max(columns, 1)))
       const maxCardHeightMm = Math.max(
         72,
@@ -70,8 +74,8 @@ export class RuntimeGalleryRenderer {
               : pagePhotos.length <= 4
                 ? 130
                 : pagePhotos.length <= 6
-                  ? 95
-                  : 80
+                  ? 110
+                  : 95
       const cardHeightMm = Math.min(targetCardHeightMm, maxCardHeightMm)
       const singleCardHeightMm = Math.min(210, availableContentHeightMm)
       const imageHeight = `${cardHeightMm}mm`
@@ -189,9 +193,7 @@ export class RuntimeGalleryRenderer {
                       : '168mm'
                   : imageHeight
               const isSingle = pagePhotos.length === 1
-              // Всегда cover для печатной галереи — заполняет ячейку без пустого пространства
               const imgHeightStyle = `height: ${isSingle ? singleImageHeight : resolvedHeight};`
-              const wrapperMinHeight = ''
 
               const borderRadiusValue = this.increaseBorderRadius(this.ctx.theme.blocks.borderRadius, 2)
 
@@ -233,7 +235,6 @@ export class RuntimeGalleryRenderer {
               box-shadow: ${this.ctx.theme.blocks.shadow};
               background: ${layout === 'polaroid' ? '#fff' : colors.surfaceAlt};
               ${polaroidStyle}
-              ${wrapperMinHeight}
               display: flex;
               ${layout === 'polaroid' ? 'flex-direction: column;' : ''}
               align-items: center;
@@ -245,7 +246,7 @@ export class RuntimeGalleryRenderer {
                   style="
                     width: 100%;
                     ${imgHeightStyle}
-                    object-fit: cover;
+                    object-fit: contain;
                     display: block;
                     position: relative;
                     border-radius: ${borderRadiusValue};
@@ -286,7 +287,9 @@ export class RuntimeGalleryRenderer {
     if (typeof configured === 'number' && configured > 0) {
       return Math.min(totalPhotos, Math.max(1, configured))
     }
-    return totalPhotos
+    // Для печати: по умолчанию 6 фото на страницу для читаемости
+    if (layout === 'collage') return Math.min(totalPhotos, 5)
+    return Math.min(totalPhotos, 6)
   }
 
   private getGalleryGapMm(spacing: 'compact' | 'normal' | 'spacious'): number {

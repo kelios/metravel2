@@ -475,10 +475,22 @@ export async function generateCanvasMapSnapshot(
   const toCanvasX = (lng: number) => lngToTileX(lng, zoom) * 256 - (cxPx - width / 2)
   const toCanvasY = (lat: number) => latToTileY(lat, zoom) * 256 - (cyPx - height / 2)
 
+  // Прямые HEX-цвета для canvas (CSS var() не работает в Canvas API)
+  const MAP_COLORS = {
+    route: '#e07840',      // яркий оранжевый для маршрута
+    routeHalo: 'rgba(255,255,255,0.92)',
+    pinStart: '#3a8a5c',   // насыщенный зелёный
+    pinEnd: '#c0504d',     // насыщенный красный
+    pinMid: '#4a7fb5',     // насыщенный синий
+    labelBg: '#fff',
+    labelBorder: '#d0d5dd',
+    labelText: '#1a1a1a',
+  }
+
   // Линия маршрута
   if (routeLine.length >= 2) {
     // Белый ореол
-    ctx.strokeStyle = 'rgba(255,255,255,0.92)'
+    ctx.strokeStyle = MAP_COLORS.routeHalo
     ctx.lineWidth = 7
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -490,7 +502,7 @@ export async function generateCanvasMapSnapshot(
     ctx.stroke()
 
     // Основная линия
-    ctx.strokeStyle = DESIGN_TOKENS.colors.accent
+    ctx.strokeStyle = MAP_COLORS.route
     ctx.lineWidth = 4
     ctx.beginPath()
     routeLine.forEach(([lat, lng], i) => {
@@ -507,70 +519,80 @@ export async function generateCanvasMapSnapshot(
     const isStart = index === 0
     const isEnd = index === validPoints.length - 1
     const pinColor = isStart
-      ? DESIGN_TOKENS.colors.success
+      ? MAP_COLORS.pinStart
       : isEnd
-        ? DESIGN_TOKENS.colors.danger
-        : DESIGN_TOKENS.colors.accent
+        ? MAP_COLORS.pinEnd
+        : MAP_COLORS.pinMid
 
     // Тень пина
     ctx.beginPath()
-    ctx.ellipse(px, py + 3, 7, 4, 0, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(0,0,0,0.18)'
+    ctx.ellipse(px, py + 3, 8, 4, 0, 0, Math.PI * 2)
+    ctx.fillStyle = 'rgba(0,0,0,0.22)'
     ctx.fill()
 
     // Хвост пина (треугольник)
     ctx.beginPath()
-    ctx.moveTo(px - 7, py - 8)
+    ctx.moveTo(px - 8, py - 8)
     ctx.lineTo(px, py + 4)
-    ctx.lineTo(px + 7, py - 8)
+    ctx.lineTo(px + 8, py - 8)
     ctx.fillStyle = pinColor
     ctx.fill()
 
     // Круг пина
     ctx.beginPath()
-    ctx.arc(px, py - 12, 11, 0, Math.PI * 2)
+    ctx.arc(px, py - 13, 13, 0, Math.PI * 2)
     ctx.fillStyle = pinColor
     ctx.fill()
     ctx.strokeStyle = '#fff'
-    ctx.lineWidth = 2.5
+    ctx.lineWidth = 3
     ctx.stroke()
 
     // Номер
     ctx.fillStyle = '#fff'
-    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, sans-serif'
+    ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText(String(index + 1), px, py - 12)
+    ctx.fillText(String(index + 1), px, py - 13)
 
     // Подпись
     const rawLabel = typeof point.label === 'string' ? point.label : ''
     const firstSegment = rawLabel.split(' · ')[0].trim()
     const label = firstSegment.length > 30 ? firstSegment.slice(0, 28) + '…' : firstSegment
     if (label) {
-      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif'
-      const labelW = ctx.measureText(label).width + 14
-      const lx = px + 16
-      const ly = py - 18
+      ctx.font = '600 12px -apple-system, BlinkMacSystemFont, sans-serif'
+      const labelW = ctx.measureText(label).width + 16
+      const lx = px + 18
+      const ly = py - 22
 
-      drawRoundRect(ctx, lx, ly, labelW, 22, 6)
-      ctx.fillStyle = '#fff'
+      // Тень подписи
+      ctx.shadowColor = 'rgba(0,0,0,0.12)'
+      ctx.shadowBlur = 4
+      ctx.shadowOffsetY = 2
+
+      drawRoundRect(ctx, lx, ly, labelW, 24, 6)
+      ctx.fillStyle = MAP_COLORS.labelBg
       ctx.fill()
-      ctx.strokeStyle = DESIGN_TOKENS.colors.border
+      ctx.strokeStyle = MAP_COLORS.labelBorder
       ctx.lineWidth = 1
       ctx.stroke()
 
+      // Сброс тени
+      ctx.shadowColor = 'transparent'
+      ctx.shadowBlur = 0
+      ctx.shadowOffsetY = 0
+
       // Треугольник-указатель
       ctx.beginPath()
-      ctx.moveTo(lx, ly + 7)
-      ctx.lineTo(lx - 6, ly + 11)
-      ctx.lineTo(lx, ly + 15)
-      ctx.fillStyle = '#fff'
+      ctx.moveTo(lx, ly + 8)
+      ctx.lineTo(lx - 7, ly + 12)
+      ctx.lineTo(lx, ly + 16)
+      ctx.fillStyle = MAP_COLORS.labelBg
       ctx.fill()
 
-      ctx.fillStyle = DESIGN_TOKENS.colors.text
+      ctx.fillStyle = MAP_COLORS.labelText
       ctx.textAlign = 'left'
       ctx.textBaseline = 'middle'
-      ctx.fillText(label, lx + 7, ly + 11)
+      ctx.fillText(label, lx + 8, ly + 12)
     }
   })
 
