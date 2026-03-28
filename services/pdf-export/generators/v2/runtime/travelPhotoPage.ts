@@ -188,7 +188,6 @@ export function renderTravelPhotoPageMarkup(args: {
               object-position: center;
               ${getImageFilterStyle()}
             "
-            crossorigin="anonymous"
             onerror="this.style.display='none'; this.parentElement.style.background='linear-gradient(180deg, ${colors.accentLight} 0%, ${colors.accentSoft} 100%)';" />
           <div style="
             position: absolute;

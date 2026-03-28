@@ -165,7 +165,8 @@ export class EnhancedPdfGeneratorBase {
       qrCodes,
       settings,
       sortedTravels,
-      renderTocPage: (tocMeta, pageNumber, totalCount) => this.renderTocPage(tocMeta, pageNumber, totalCount),
+      renderTocPage: (tocMeta, pageNumber, totalCount, startIndex) =>
+        this.renderTocPage(tocMeta, pageNumber, totalCount, startIndex),
       renderSeparatorPage: (travel, travelIndex, totalTravels) =>
         this.renderSeparatorPage(travel, travelIndex, totalTravels),
       renderTravelPhotoPage: (travel, pageNumber) => this.renderTravelPhotoPage(travel, pageNumber),
@@ -335,11 +336,17 @@ export class EnhancedPdfGeneratorBase {
   /**
    * Рендерит оглавление
    */
-  private renderTocPage(meta: TravelSectionMeta[], pageNumber: number, totalCount: number): string {
+  private renderTocPage(
+    meta: TravelSectionMeta[],
+    pageNumber: number,
+    totalCount: number,
+    startIndex: number,
+  ): string {
     return renderTocPageSection({
       meta,
       pageNumber,
       totalCount,
+      startIndex,
       theme: this.theme,
       escapeHtml: (value) => this.escapeHtml(value),
       buildSafeImageUrl: (raw) => this.buildSafeImageUrl(raw),
@@ -942,7 +949,6 @@ export class EnhancedPdfGeneratorBase {
           ">
             <img src="${this.escapeHtml(thumbUrl)}" alt=""
               style="width: 100%; height: 100%; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
-              crossorigin="anonymous"
               onerror="this.style.display='none';this.parentElement.style.background='${colors.accentSoft}';" />
           </div>
         ` : ''}

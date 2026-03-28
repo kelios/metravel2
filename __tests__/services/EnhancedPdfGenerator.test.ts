@@ -264,8 +264,10 @@ describe('EnhancedPdfGenerator helpers', () => {
 
     const tocMatches = html.match(/class="pdf-page toc-page"/g) || []
     expect(tocMatches).toHaveLength(2)
-    expect(html).toContain('>10<')
-    expect(html).toContain('>04<')
+    expect((html.match(/>01</g) || [])).toHaveLength(1)
+    expect((html.match(/>05</g) || [])).toHaveLength(1)
+    expect((html.match(/>06</g) || [])).toHaveLength(1)
+    expect((html.match(/>10</g) || []).length).toBeGreaterThanOrEqual(1)
   })
 
   it('falls back to MeTravel title and hides cover <h1> when settings.title is empty', async () => {

@@ -41,6 +41,7 @@ export function renderTocPageSection(args: {
   meta: TravelSectionMeta[]
   pageNumber: number
   totalCount: number
+  startIndex: number
   theme: PdfTheme
   escapeHtml: (value: string) => string
   buildSafeImageUrl: (raw?: string | null) => string | undefined
@@ -52,6 +53,7 @@ export function renderTocPageSection(args: {
     meta,
     pageNumber,
     totalCount,
+    startIndex,
     theme,
     escapeHtml,
     buildSafeImageUrl,
@@ -66,7 +68,7 @@ export function renderTocPageSection(args: {
 
   const tocItems = meta
     .map((item, index) => {
-      return buildTocRow(item, index, meta.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, false, thumbW, thumbH)
+      return buildTocRow(item, startIndex + index, meta.length - 1 === index, colors, typography, getImageFilterStyle, buildSafeImageUrl, escapeHtml, formatDays, false, thumbW, thumbH)
     })
     .join('')
 
@@ -238,7 +240,6 @@ function buildTocRow(
         ${thumbUrl ? `
           <img src="${escapeHtml(thumbUrl)}" alt=""
             style="width: 100%; height: 100%; object-fit: cover; display: block; ${getImageFilterStyle()}"
-            crossorigin="anonymous"
             onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,${colors.accentSoft},${colors.accentLight})';" />
         ` : `
           <div style="

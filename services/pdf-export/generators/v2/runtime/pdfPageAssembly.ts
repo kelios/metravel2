@@ -10,7 +10,12 @@ type AssembleBookPagesArgs = {
   qrCodes: string[]
   settings: BookSettings
   sortedTravels: TravelForBook[]
-  renderTocPage: (meta: TravelSectionMeta[], pageNumber: number, totalCount: number) => string
+  renderTocPage: (
+    meta: TravelSectionMeta[],
+    pageNumber: number,
+    totalCount: number,
+    startIndex: number,
+  ) => string
   renderSeparatorPage: (
     travel: TravelForBook,
     travelIndex: number,
@@ -56,7 +61,7 @@ export async function assembleBookPages({
     for (let pageIndex = 0; pageIndex < tocPageCount; pageIndex += 1) {
       const start = pageIndex * TOC_ITEMS_PER_PAGE
       const end = start + TOC_ITEMS_PER_PAGE
-      pages.push(renderTocPage(meta.slice(start, end), 2 + pageIndex, totalCount))
+      pages.push(renderTocPage(meta.slice(start, end), 2 + pageIndex, totalCount, start))
     }
   }
 

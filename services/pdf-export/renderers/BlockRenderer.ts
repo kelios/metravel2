@@ -78,7 +78,6 @@ export class BlockRenderer {
             ${this.theme.imageFilter ? `filter: blur(18px) saturate(1.06) ${this.theme.imageFilter};` : ''}
           "
           onerror="this.style.display='none';"
-          crossorigin="anonymous"
         />
         <img
           src="${this.escapeHtml(src)}"
@@ -95,7 +94,6 @@ export class BlockRenderer {
             ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
           "
           onerror="this.style.display='none';"
-          crossorigin="anonymous"
         />
       </div>
     `;

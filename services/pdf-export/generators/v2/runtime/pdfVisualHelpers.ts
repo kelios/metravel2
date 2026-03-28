@@ -115,7 +115,6 @@ export function buildContainImageMarkup(args: {
       </div>
       <img src="${safeSrc}" alt="${safeAlt}"
         style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}${extraStyle}"
-        crossorigin="anonymous"
         onerror="this.style.display='none';this.parentElement.style.background='${background}';" />
     `
   }
@@ -123,10 +122,9 @@ export function buildContainImageMarkup(args: {
   return `
       <img src="${safeSrc}" alt="" aria-hidden="true"
         style="position:absolute;top:-10px;right:-10px;bottom:-10px;left:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
-        crossorigin="anonymous" />
+         />
       <img src="${safeSrc}" alt="${safeAlt}"
         style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}"
-        crossorigin="anonymous"
         onerror="this.style.display='none';this.previousElementSibling.style.display='none';this.parentElement.style.background='${background}';" />
     `
 }

@@ -97,7 +97,6 @@ function renderCoverImageLayer(coverImage: string): string {
         class="cover-image"
         src="${escapeHtml(coverImage)}"
         alt=""
-        crossorigin="anonymous"
         style="
           width: 100%;
           height: 100%;
