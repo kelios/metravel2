@@ -68,17 +68,26 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
     selected: {
       ...Platform.select({
         web: {
-          boxShadow: colors.boxShadows.hover,
-          borderColor: colors.primary,
+          boxShadow: `0 0 0 3px ${colors.primary}`,
+          outline: 'none',
         } as any,
         default: {
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
-          elevation: 4,
+          borderColor: colors.primary,
+          borderWidth: 2.5,
         },
       }),
+    },
+
+    selectedOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(77, 124, 112, 0.22)',
+      zIndex: 2,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      pointerEvents: 'none',
     },
 
     single: {
@@ -339,24 +348,31 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       lineHeight: Platform.OS === 'web' ? 18 : 16,
     },
 
-    // Упрощенные чекбоксы
+    // Чекбоксы выбора
     checkWrap: {
       position: 'absolute',
-      top: DESIGN_TOKENS.spacing.sm,
-      right: DESIGN_TOKENS.spacing.sm,
+      top: 8,
+      right: 8,
       zIndex: 20,
+      padding: 4,
+    },
+
+    checkboxHitTarget: {
+      padding: 4,
     },
 
     checkbox: {
-      width: 24,
-      height: 24,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       borderWidth: 2,
-      borderColor: colors.borderStrong,
-      backgroundColor: colors.surface,
+      borderColor: 'rgba(255,255,255,0.85)',
+      backgroundColor: 'rgba(0,0,0,0.28)',
       justifyContent: 'center',
       alignItems: 'center',
-      cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+      ...(Platform.OS === 'web'
+        ? { cursor: 'pointer', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }
+        : {}),
     },
 
     checkboxChecked: {
