@@ -100,6 +100,7 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(galleryHtml).toContain('gallery-page')
     expect(galleryHtml).toContain('gallery-photo-frame')
     expect(galleryHtml).toContain('images.weserv.nl')
+    expect(galleryHtml).not.toContain('crossorigin="anonymous"')
     expect(galleryHtml).toContain('height: 285mm')
     expect(galleryHtml).not.toContain('flex: 1; min-height: 170mm')
     expect(galleryHtml).not.toContain('filter: blur(14px)')

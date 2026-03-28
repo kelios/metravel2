@@ -257,7 +257,6 @@ export class RuntimeGalleryRenderer {
                     border-radius: ${borderRadiusValue};
                     ${getImageFilterStyle(this.ctx)}
                   "
-                  crossorigin="anonymous"
                   onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
                 ${numberBadge}
               </div>

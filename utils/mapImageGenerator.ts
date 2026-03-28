@@ -165,13 +165,19 @@ function generateOSMStaticMapUrl(
 /**
  * Генерирует статичную карту через html2canvas (клиентский рендеринг)
  * Используется как fallback, если нет доступа к API карт
+ *
+ * @param returnNullOnError — если true, возвращает null при ошибке html2canvas
+ *   вместо серой заглушки. Используется при попытке захватить DOM-карту,
+ *   чтобы при провале перейти к off-screen подходу.
  */
 export async function generateMapImageFromDOM(
   container: HTMLElement,
   width: number = 800,
-  height: number = 600
-): Promise<string> {
+  height: number = 600,
+  returnNullOnError: boolean = false
+): Promise<string | null> {
   if (typeof document === 'undefined' || typeof window === 'undefined') {
+    if (returnNullOnError) return null;
     throw new Error('generateMapImageFromDOM can only be used in a browser environment');
   }
 
@@ -247,6 +253,8 @@ export async function generateMapImageFromDOM(
       console.error('[MAP_SNAPSHOT_DOM] generateMapImageFromDOM error', error);
     }
 
+    if (returnNullOnError) return null;
+
     // Fallback: если карта не может быть экспортирована (CORS/DOM-ошибка),
     // возвращаем простую заглушку, чтобы PDF всё равно содержал валидное изображение
     const fallbackCanvas = document.createElement('canvas');
@@ -286,6 +294,21 @@ export async function generateLeafletRouteSnapshot(
   const height = options.height ?? 480;
   const zoom = options.zoom ?? 10;
   const routeLine = options.routeLine ?? [];
+
+  // Первым делом пробуем захватить уже отрендеренную карту со страницы путешествия.
+  // Это даёт точно такой же вид, как на странице (тайлы + маркеры с номерами + линия).
+  // Флаг [data-map-for-pdf="1"] выставляется на секции TravelRouteMapBlock.
+  const mapSection = document.querySelector('[data-map-for-pdf="1"]') as HTMLElement | null;
+  const existingLeafletEl = mapSection?.querySelector('.leaflet-container') as HTMLElement | null;
+  if (existingLeafletEl && existingLeafletEl.clientWidth > 0 && existingLeafletEl.clientHeight > 0) {
+    const domCapture = await generateMapImageFromDOM(
+      existingLeafletEl,
+      existingLeafletEl.clientWidth,
+      existingLeafletEl.clientHeight,
+      true // returnNullOnError — при провале переходим к off-screen подходу
+    );
+    if (domCapture) return domCapture;
+  }
 
   const cacheKey = buildLeafletRouteSnapshotCacheKey(points, routeLine, { width, height, zoom });
   const cached = leafletRouteSnapshotCache.get(cacheKey);

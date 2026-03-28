@@ -922,10 +922,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           setMapReady(true);
         }}
       >
-        {/* Base tile layer */}
+        {/* Base tile layer — crossOrigin нужен для захвата карты через html2canvas при экспорте в PDF */}
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"
+          crossOrigin="anonymous"
         />
 
         {/* Route line connecting travel points - using custom layer for proper z-index */}
