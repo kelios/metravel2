@@ -93,10 +93,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       gap: DESIGN_TOKENS.spacing.xs,
     },
     exportBarInfoTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
       color: colors.text,
-      lineHeight: 28,
+      lineHeight: 22,
     },
     exportBarCountBadge: {
       minWidth: 22,
@@ -121,7 +121,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     exportBarActions: {
       flexDirection: 'row',
-      gap: DESIGN_TOKENS.spacing.sm,
+      gap: DESIGN_TOKENS.spacing.xs,
       flexWrap: 'wrap',
       alignItems: 'center',
       flexShrink: 0,
@@ -149,10 +149,32 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.primaryText,
       textDecorationLine: 'underline',
     },
+    actionChip: {
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    actionChipText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textSecondary,
+      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+    },
+    exportBarDivider: {
+      width: 1,
+      height: 20,
+      backgroundColor: colors.borderLight,
+      marginHorizontal: 2,
+      alignSelf: 'center',
+    },
     exportBarButtons: {
-      flexDirection: 'row',
-      gap: DESIGN_TOKENS.spacing.sm,
-      alignItems: 'flex-start',
+      flexDirection: 'column',
+      gap: 2,
+      alignItems: 'flex-end',
+    },
+    exportBarSaveHint: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textTertiary,
+      textAlign: 'right' as any,
     },
     exportBarButtonsMobile: {
       flexDirection: 'column',
@@ -168,15 +190,18 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderWidth: 1,
       borderColor: colors.border,
       marginBottom: DESIGN_TOKENS.spacing.sm,
-      padding: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      gap: DESIGN_TOKENS.spacing.sm,
+      padding: DESIGN_TOKENS.spacing.xs,
+      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+      gap: DESIGN_TOKENS.spacing.xs,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          boxShadow: DESIGN_TOKENS.shadows.medium ?? DESIGN_TOKENS.shadows.light,
         } as any,
         ios: DESIGN_TOKENS.shadowsNative.light,
-        android: { elevation: 2 },
+        android: { elevation: 4 },
         default: DESIGN_TOKENS.shadowsNative.light,
       }),
     },
@@ -206,6 +231,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.text,
     },
     selectedOrderStripHint: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      color: colors.textTertiary,
+    },
+    selectedOrderStripMeta: {
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textTertiary,
     },

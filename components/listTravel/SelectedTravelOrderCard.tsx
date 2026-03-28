@@ -9,9 +9,9 @@ import { Caption } from '@/components/ui/Typography';
 import { createStyles } from './listTravelStyles';
 
 type ExportBarStyles = ReturnType<typeof createStyles>;
-const MEDIA_WIDTH = 196;
-const MEDIA_HEIGHT = 148;
-const MEDIA_RADIUS = 18;
+const MEDIA_WIDTH = 160;
+const MEDIA_HEIGHT = 120;
+const MEDIA_RADIUS = 12;
 
 type Props = {
   travel: Travel;
@@ -123,9 +123,9 @@ export default function SelectedTravelOrderCard({
       gap: '8px',
     };
     const actionButtonStyle: React.CSSProperties = {
-      width: '44px',
-      height: '44px',
-      borderRadius: '22px',
+      width: '32px',
+      height: '32px',
+      borderRadius: '16px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -138,16 +138,16 @@ export default function SelectedTravelOrderCard({
     };
     const titleOverlayStyle: React.CSSProperties = {
       position: 'absolute',
-      left: '8px',
-      right: '8px',
-      bottom: '8px',
+      left: '6px',
+      right: '6px',
+      bottom: '6px',
       zIndex: 2,
-      padding: '8px 12px',
-      borderRadius: '12px',
+      padding: '5px 8px',
+      borderRadius: '8px',
       backgroundColor: 'rgba(17, 24, 39, 0.64)',
       backdropFilter: 'blur(10px)',
       color: colors.textOnDark,
-      fontSize: '14px',
+      fontSize: '12px',
       fontWeight: 600,
       lineHeight: '1.2',
       overflow: 'hidden',
@@ -219,6 +219,21 @@ export default function SelectedTravelOrderCard({
             <span>{index + 1}</span>
           </div>
 
+          {/* Drag handle */}
+          <div style={{
+            position: 'absolute',
+            top: '5px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}>
+            <Feather name="more-horizontal" size={14} color="rgba(255,255,255,0.65)" />
+          </div>
+
           <div style={controlsStyle}>
             <button
               type="button"
@@ -233,7 +248,7 @@ export default function SelectedTravelOrderCard({
             >
               <Feather
                 name="chevron-left"
-                size={18}
+                size={14}
                 color={canMoveUp ? colors.text : colors.textTertiary}
               />
             </button>
@@ -250,7 +265,7 @@ export default function SelectedTravelOrderCard({
             >
               <Feather
                 name="chevron-right"
-                size={18}
+                size={14}
                 color={canMoveDown ? colors.text : colors.textTertiary}
               />
             </button>

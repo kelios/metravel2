@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { Travel } from '@/types/types';
@@ -35,45 +35,105 @@ type Props = {
   styles: Record<string, unknown>;
 };
 
-function CompactActionLink({
+function IconActionButton({
   label,
   onPress,
   icon,
-  style,
+  iconColor,
+  danger,
 }: {
   label: string;
   onPress: () => void;
-  icon?: string;
-  style?: any;
+  icon: string;
+  iconColor?: string;
+  danger?: boolean;
 }) {
+  const [hovered, setHovered] = useState(false);
+
   if (Platform.OS !== 'web') {
     return (
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={label}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
-        {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
-        <Text style={style}>{label}</Text>
+        <Feather name={icon as any} size={15} color={iconColor} />
       </Pressable>
     );
   }
 
+  const resolvedIconColor = hovered
+    ? danger ? '#e53935' : '#111827'
+    : iconColor ?? '#6b7280';
+
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={label}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPress(); }}
-      onKeyDown={(e: any) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault(); e.stopPropagation(); onPress();
-      }}
-      style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+      style={{ position: 'relative', display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
-      <Text style={style}>{label}</Text>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={label}
+        title={label}
+        onClick={(e: any) => { e.preventDefault(); e.stopPropagation(); onPress(); }}
+        onKeyDown={(e: any) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault(); e.stopPropagation(); onPress();
+        }}
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          backgroundColor: hovered
+            ? danger ? 'rgba(229,57,53,0.08)' : 'rgba(0,0,0,0.06)'
+            : 'transparent',
+          border: '1px solid',
+          borderColor: hovered
+            ? danger ? 'rgba(229,57,53,0.2)' : 'rgba(0,0,0,0.1)'
+            : 'transparent',
+          transition: 'background-color 0.12s ease, border-color 0.12s ease',
+          outline: 'none',
+        }}
+      >
+        <Feather name={icon as any} size={15} color={resolvedIconColor} />
+      </div>
+
+      {hovered && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 6px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(17,24,39,0.9)',
+            color: '#fff',
+            fontSize: 11,
+            fontWeight: 500,
+            lineHeight: '1',
+            padding: '5px 8px',
+            borderRadius: 6,
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 999,
+            letterSpacing: '0.01em',
+          }}
+        >
+          {label}
+        </div>
+      )}
     </div>
   );
 }
@@ -255,35 +315,40 @@ function ListTravelExportControls({
           </View>
 
           <View style={s.exportBarActions}>
-            <CompactActionLink
+            <IconActionButton
               label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
               onPress={toggleSelectAll}
-              style={s.linkButton as any}
+              icon={selectionCount === travels.length && travels.length > 0 ? 'minus-square' : 'check-square'}
             />
             {hasSelection && (
-              <CompactActionLink
-                label="Очистить"
+              <IconActionButton
+                label="Очистить выбор"
                 onPress={clearSelection}
-                style={s.linkButton as any}
+                icon="x"
+                danger
               />
             )}
             {hasSelection && (
-              <CompactActionLink
-                label="Настройки"
+              <IconActionButton
+                label="Настройки экспорта"
                 onPress={handleOpenSettings}
-                icon="settings"
-                style={s.linkButton as any}
+                icon="sliders"
               />
             )}
+            {isWeb && <View style={s.exportBarDivider} />}
           </View>
 
           <View style={[s.exportBarButtons, isMobile && s.exportBarButtonsMobile]}>
             <UIButton
-              label={pdfExport.isGenerating ? `Генерация... ${pdfExport.progress || 0}%` : 'Сохранить PDF'}
+              label={pdfExport.isGenerating ? `${pdfExport.progress || 0}%` : 'Сохранить PDF'}
               onPress={handleImmediateSave}
               disabled={!hasSelection || pdfExport.isGenerating}
               size="sm"
+              icon={<Feather name={pdfExport.isGenerating ? 'loader' : 'download'} size={14} color="#fff" />}
             />
+            {!hasSelection && !isMobile && (
+              <Caption style={s.exportBarSaveHint}>Выберите путешествия</Caption>
+            )}
           </View>
         </View>
 
@@ -318,14 +383,9 @@ function ListTravelExportControls({
         {/* Compact order strip */}
         {hasSelection && (
           <View style={s.selectedOrderStrip}>
-            <View style={s.selectedOrderStripHeader}>
-              <Caption style={s.selectedOrderStripLabel}>
-                Порядок в книге
-              </Caption>
-              <Caption style={s.selectedOrderStripHint}>
-                Перетаскивайте для перестановки
-              </Caption>
-            </View>
+            <Caption style={s.selectedOrderStripMeta}>
+              Порядок в книге · перетащите для сортировки
+            </Caption>
             <View style={s.selectedOrderScroller}>
               {renderOrderCards()}
             </View>
