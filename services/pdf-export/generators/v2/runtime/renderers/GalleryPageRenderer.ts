@@ -248,8 +248,8 @@ export class RuntimeGalleryRenderer {
                     height: 100%;
                     object-fit: cover;
                     display: block;
-                    filter: blur(20px) brightness(0.85);
-                    transform: scale(1.15);
+                    filter: blur(28px) brightness(0.55) saturate(0.4);
+                    transform: scale(1.2);
                     ${getImageFilterStyle(this.ctx)}
                   "
                   onerror="this.style.display='none';" />

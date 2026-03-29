@@ -542,14 +542,22 @@ export function renderTravelContentPageMarkup(args: {
             orphans: 3;
             widows: 3;
           }
+          .travel-content-page .description-block ol li,
+          .travel-content-page .description-block ul li {
+            margin-bottom: 2pt !important;
+          }
+          .travel-content-page .description-block ol,
+          .travel-content-page .description-block ul {
+            margin-bottom: 8pt !important;
+          }
           .content-layout { width: 100%; border-collapse: collapse; }
           .content-layout td { padding: 0; vertical-align: top; border: none; }
           .content-layout thead { display: table-header-group; }
-          .content-layout thead td { height: 14mm; border-bottom: 1.5px solid ${colors.border}; }
+          .content-layout thead td { height: 32mm; }
         </style>
         <table class="content-layout">
           <thead><tr><td aria-hidden="true"></td></tr></thead>
-          <tbody><tr><td style="padding: ${spacing.pagePadding} 0;">
+          <tbody><tr><td style="padding: 4mm 0 ${spacing.pagePadding} 0;">
             ${headerHtml}
             ${statsHtml}
             ${descriptionSection}

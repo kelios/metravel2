@@ -17,6 +17,7 @@ export class RuntimeMapRenderer {
   constructor(private ctx: RuntimeRenderContext) {}
 
   private static readonly FIRST_PAGE_MAX_CARDS = 6
+  private static readonly FIRST_PAGE_MAX_CARDS_WITH_ELEVATION = 0
   private static readonly CONTINUATION_PAGE_MAX_CARDS = 10
 
   render(data: RuntimeMapPageData): string {
@@ -29,11 +30,15 @@ export class RuntimeMapRenderer {
       ? this.renderElevationProfile(data.routePreview)
       : ''
 
+    const firstPageMaxCards = hasElevation
+      ? RuntimeMapRenderer.FIRST_PAGE_MAX_CARDS_WITH_ELEVATION
+      : RuntimeMapRenderer.FIRST_PAGE_MAX_CARDS
     const allCards = data.locationCards
-    const firstPageCards = allCards.slice(0, RuntimeMapRenderer.FIRST_PAGE_MAX_CARDS)
-    const remainingCards = allCards.slice(RuntimeMapRenderer.FIRST_PAGE_MAX_CARDS)
+    const firstPageCards = allCards.slice(0, firstPageMaxCards)
+    const remainingCards = allCards.slice(firstPageMaxCards)
 
     const routeHeaderHtml = this.renderRouteHeader(data, locationCount)
+    const routeHeaderHtmlNoSubtitle = this.renderRouteHeader(data, locationCount, { showSubtitle: false })
 
     let pages = `
       <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
@@ -83,21 +88,22 @@ export class RuntimeMapRenderer {
           </div>
         </div>
         ${elevationProfileHtml}
+        ${firstPageCards.length > 0 ? `
         <div>
           ${routeHeaderHtml}
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3mm;">${firstPageCards.join('')}</div>
         </div>
+        ` : ''}
       </section>
     `
 
     let continuationPageNum = data.pageNumber + 1
+    let isFirstContinuation = firstPageCards.length === 0
     for (let i = 0; i < remainingCards.length; i += RuntimeMapRenderer.CONTINUATION_PAGE_MAX_CARDS) {
       const chunk = remainingCards.slice(i, i + RuntimeMapRenderer.CONTINUATION_PAGE_MAX_CARDS)
-      pages += `
-        <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
-          ${buildRunningHeader(this.ctx, data.travelName, continuationPageNum)}
-          <div>
-            <h2 style="
+      const headerHtml = isFirstContinuation
+        ? routeHeaderHtmlNoSubtitle
+        : `<h2 style="
               font-size: ${typography.h2.size};
               margin: 0 0 4mm 0;
               font-family: ${typography.headingFont};
@@ -106,12 +112,18 @@ export class RuntimeMapRenderer {
               font-size: ${typography.small.size};
               font-weight: 400;
               color: ${colors.textMuted};
-            ">(продолжение)</span></h2>
+            ">(продолжение)</span></h2>`
+      pages += `
+        <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
+          ${buildRunningHeader(this.ctx, data.travelName, continuationPageNum)}
+          <div>
+            ${headerHtml}
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3mm;">${chunk.join('')}</div>
           </div>
         </section>
       `
       continuationPageNum += 1
+      isFirstContinuation = false
     }
 
     return pages
@@ -172,15 +184,16 @@ export class RuntimeMapRenderer {
     `
   }
 
-  private renderRouteHeader(data: RuntimeMapPageData, locationCount: number): string {
+  private renderRouteHeader(data: RuntimeMapPageData, locationCount: number, options?: { showSubtitle?: boolean }): string {
     const { colors, typography } = this.ctx.theme
+    const showSubtitle = options?.showSubtitle ?? true
     return `
       <div style="
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 6px 10px;
-        margin-bottom: 4mm;
+        margin-bottom: ${showSubtitle ? '4mm' : '4mm'};
       ">
         <span style="
           display: inline-flex;
@@ -214,13 +227,13 @@ export class RuntimeMapRenderer {
           font-family: ${typography.bodyFont};
         ">${locationCount} ${locationCount === 1 ? 'точка' : locationCount >= 2 && locationCount <= 4 ? 'точки' : 'точек'}</span>
       </div>
-      <p style="
+      ${showSubtitle ? `<p style="
         color: ${colors.textMuted};
         margin-bottom: 4mm;
         font-size: 9pt;
         font-family: ${typography.bodyFont};
         line-height: 1.45;
-      ">${escapeHtml(data.routeInfo || data.travelName)}</p>
+      ">${escapeHtml(data.routeInfo || data.travelName)}</p>` : ''}
     `
   }
 

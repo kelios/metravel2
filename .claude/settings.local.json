@@ -10,7 +10,9 @@
       "Bash(find /Users/juliasavran/Sites/metravel2/metravel2/services/pdf-export -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
       "Bash(npx jest:*)",
       "Bash(npx eslint:*)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(brew install:*)",
+      "Bash(pdftoppm -v)"
     ]
   }
 }

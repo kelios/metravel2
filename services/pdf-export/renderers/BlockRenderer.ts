@@ -182,13 +182,21 @@ export class BlockRenderer {
   /**
    * Рендерит сырой rich-text HTML: применяет умную раскладку изображений,
    * парсит в блоки и рендерит. Централизует паттерн applySmartImageLayout → parse → render.
+   * Заголовки понижаются на 1 уровень (h2→h3, h3→h4), чтобы отличаться от секционных заголовков.
    */
   renderRichText(rawHtml: string): string {
     if (!rawHtml) return '';
     const formatted = applySmartImageLayout(rawHtml);
     const parser = new ContentParser();
     const blocks = parser.parse(formatted);
-    return this.renderBlocks(blocks);
+    const demoted = blocks.map((block) => {
+      if (block.type === 'heading') {
+        const newLevel = Math.max(block.level + 2, 4);
+        return { ...block, level: Math.min(newLevel, 4) as 1 | 2 | 3 | 4 };
+      }
+      return block;
+    });
+    return this.renderBlocks(demoted);
   }
 
   /**

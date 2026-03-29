@@ -949,13 +949,33 @@ export class EnhancedPdfGeneratorBase {
       var padTop = parseFloat(secCS.paddingTop) || 0;
       var padRight = parseFloat(secCS.paddingRight) || 0;
 
+      // Clone the running header from the first page to use on continuation pages
+      var origHeader = sections[i].querySelector('[data-page-num]');
+      var headerContainer = origHeader ? origHeader.closest('div[style]') : null;
+      // Walk up to the outermost running-header wrapper (the one with position:relative)
+      while (headerContainer && headerContainer.parentElement &&
+             headerContainer.parentElement !== sections[i].querySelector('td') &&
+             headerContainer.parentElement.tagName !== 'TD') {
+        headerContainer = headerContainer.parentElement;
+      }
+
       for (var p = 1; p < nPages; p++) {
         var yTop = p * PAGE_H;
-        // Small page-number badge in top-right corner (doesn't cover content)
         var marker = document.createElement('div');
         marker.className = 'cpn-marker';
-        marker.style.cssText = 'position:absolute;top:' + Math.round(yTop + padTop * 0.3) + 'px;right:' + padRight + 'px;z-index:10;';
-        marker.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:' + badgeBg + ';color:' + badgeColor + ';font-size:8pt;font-weight:700;font-family:' + badgeFont + ';line-height:1;">' + (realPage[i] + p) + '</span>';
+
+        if (headerContainer) {
+          // Full running header clone with updated page number
+          marker.style.cssText = 'position:absolute;top:' + Math.round(yTop) + 'px;left:' + padRight + 'px;right:' + padRight + 'px;z-index:10;padding-top:' + Math.round(padTop * 0.5) + 'px;';
+          var cloned = headerContainer.cloneNode(true);
+          var badge = cloned.querySelector('[data-page-num]');
+          if (badge) badge.textContent = String(realPage[i] + p);
+          marker.appendChild(cloned);
+        } else {
+          // Fallback: simple badge
+          marker.style.cssText = 'position:absolute;top:' + Math.round(yTop + padTop * 0.3) + 'px;right:' + padRight + 'px;z-index:10;';
+          marker.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:' + badgeBg + ';color:' + badgeColor + ';font-size:8pt;font-weight:700;font-family:' + badgeFont + ';line-height:1;">' + (realPage[i] + p) + '</span>';
+        }
         sections[i].appendChild(marker);
       }
     }
@@ -1205,35 +1225,70 @@ export class EnhancedPdfGeneratorBase {
         align-items: center;
         padding-bottom: 4mm;
         margin-bottom: 6mm;
-        border-bottom: 1px solid ${colors.border};
+        border-bottom: none;
         font-size: ${typography.caption.size};
         color: ${colors.textMuted};
         font-family: ${typography.bodyFont};
         letter-spacing: 0.02em;
+        position: relative;
       ">
-        <span style="
-          display: inline-flex;
+        <div style="
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 1.5px;
+          background: linear-gradient(90deg, ${colors.accent}, ${(colors as any).accentLight || colors.border} 40%, ${colors.border} 100%);
+          border-radius: 999px;
+        "></div>
+        <div style="
+          display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           max-width: 70%;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          min-width: 0;
         ">
           <span style="
-            width: 5px;
-            height: 5px;
-            border-radius: 999px;
+            width: 14px;
+            height: 2.5px;
             background: ${colors.accent};
+            border-radius: 999px;
             flex-shrink: 0;
-            opacity: 0.7;
           "></span>
-          ${this.escapeHtml(travelName)}
-        </span>
-        <span style="
-          font-weight: 600;
-          color: ${colors.textSecondary};
-        " data-page-num>${pageNumber}</span>
+          <span style="
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 600;
+          ">${this.escapeHtml(travelName)}</span>
+        </div>
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          <span style="
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.65;
+            font-weight: 600;
+          ">MeTravel</span>
+          <span style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: ${colors.accentSoft};
+            color: ${colors.accentStrong};
+            font-size: 8pt;
+            font-weight: 700;
+            font-family: ${typography.headingFont};
+            line-height: 1;
+          " data-page-num>${pageNumber}</span>
+        </div>
       </div>
     `;
   }
