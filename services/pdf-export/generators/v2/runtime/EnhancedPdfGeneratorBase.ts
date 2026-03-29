@@ -748,6 +748,9 @@ export class EnhancedPdfGeneratorBase {
         object-fit: contain;
         border-radius: 6pt;
       }
+      .cpn-marker-badge {
+        display: none !important;
+      }
       @media print {
         html, body {
           background: ${colors.background};
@@ -828,6 +831,7 @@ export class EnhancedPdfGeneratorBase {
         .content-layout thead { display: table-header-group; }
         .content-layout td { border: none; }
         .cpn-marker-badge {
+          display: inline-flex !important;
           position: absolute;
           pointer-events: none;
           z-index: 20;
@@ -936,39 +940,62 @@ export class EnhancedPdfGeneratorBase {
       tocNums[t].textContent = String(photoSections[t]);
     }
 
-      // 4. Paint dedicated page number badges for content pages.
-      // Chromium repeats thead visually, but those repeated instances are not directly
-      // mutable after pagination, so we hide the source badge and place per-page badges
-      // in a stable right-side zone instead of mutating the repeated header copy.
-      for (var i = 0; i < sections.length; i++) {
-        var cls2 = sections[i].className || '';
-        if (cls2.indexOf('travel-content-page') === -1) continue;
+    // 4. Update print status
+    try {
+      var el = document.getElementById('print-status');
+      if (el) el.textContent = (el.textContent || '') + ' \u2022 \u0441\u0442\u0440: ' + (cur - 1);
+    } catch(e) {}
+  };
 
-      var oldMarkers = sections[i].querySelectorAll('.cpn-marker-badge');
+  window.__syncContentPageBadges = function(forPrint) {
+    var PAGE_H = 297 * (96 / 25.4);
+    var getContentSectionMetrics = function(section) {
+      var table = section.querySelector('.content-layout');
+      var thead = table ? table.querySelector('thead') : null;
+      var repeatHeaderH = thead ? (thead.getBoundingClientRect().height || thead.offsetHeight || 0) : 0;
+      var rawHeight = section.scrollHeight || section.offsetHeight || PAGE_H;
+      var continuationBodyH = Math.max(1, PAGE_H - repeatHeaderH);
+      var extraHeight = Math.max(0, rawHeight - PAGE_H);
+      var continuationPages = extraHeight > 0 ? Math.ceil((extraHeight - 2) / continuationBodyH) : 0;
+
+      return {
+        continuationBodyH: continuationBodyH,
+        nPages: 1 + continuationPages,
+      };
+    };
+    var sections = document.querySelectorAll('.pdf-page.travel-content-page');
+    if (!sections.length) return;
+
+    for (var i = 0; i < sections.length; i++) {
+      var section = sections[i];
+      var oldMarkers = section.querySelectorAll('.cpn-marker-badge');
       for (var om = oldMarkers.length - 1; om >= 0; om--) {
         oldMarkers[om].parentNode.removeChild(oldMarkers[om]);
       }
 
-        var existingBadge = sections[i].querySelector('[data-page-num]');
-        if (!existingBadge) continue;
-        existingBadge.style.visibility = 'hidden';
+      var existingBadge = section.querySelector('[data-page-num]');
+      if (!existingBadge) continue;
+      existingBadge.style.visibility = forPrint ? 'hidden' : '';
+      if (!forPrint) continue;
 
-        var metrics = getContentSectionMetrics(sections[i]);
-        var badgeRect = existingBadge.getBoundingClientRect();
-        var sectionRect = sections[i].getBoundingClientRect();
-        var badgeTop = badgeRect.top - sectionRect.top;
+      var sectionPage = Number(existingBadge.textContent || 0) || 0;
+      var metrics = getContentSectionMetrics(section);
+      var badgeRect = existingBadge.getBoundingClientRect();
+      var sectionRect = section.getBoundingClientRect();
+      var badgeTopInSection = badgeRect.top - sectionRect.top;
       var badgeLeft = badgeRect.left - sectionRect.left;
       var badgeWidth = badgeRect.width || existingBadge.offsetWidth || 22;
       var badgeHeight = badgeRect.height || existingBadge.offsetHeight || 22;
       var badgeStyles = window.getComputedStyle(existingBadge);
 
-        for (var p = 0; p < metrics.nPages; p++) {
-          var marker = document.createElement('div');
-          marker.className = 'cpn-marker-badge';
-          marker.style.top = Math.round((p + 1) * metrics.continuationBodyH - badgeHeight - 12) + 'px';
-          marker.style.left = Math.round(badgeLeft) + 'px';
-          marker.style.width = Math.round(badgeWidth) + 'px';
-          marker.style.height = Math.round(badgeHeight) + 'px';
+      for (var p = 0; p < metrics.nPages; p++) {
+        var marker = document.createElement('div');
+        marker.className = 'cpn-marker-badge';
+        // Position badge at the same relative spot within each printed page's repeated thead
+        marker.style.top = Math.round(p * PAGE_H + badgeTopInSection) + 'px';
+        marker.style.left = Math.round(badgeLeft) + 'px';
+        marker.style.width = Math.round(badgeWidth) + 'px';
+        marker.style.height = Math.round(badgeHeight) + 'px';
         marker.style.display = 'inline-flex';
         marker.style.alignItems = 'center';
         marker.style.justifyContent = 'center';
@@ -979,21 +1006,25 @@ export class EnhancedPdfGeneratorBase {
         marker.style.fontWeight = badgeStyles.fontWeight || '700';
         marker.style.fontFamily = badgeStyles.fontFamily || 'sans-serif';
         marker.style.lineHeight = '1';
-        marker.textContent = String(realPage[i] + p);
-        sections[i].appendChild(marker);
+        marker.textContent = String(sectionPage + p);
+        section.appendChild(marker);
       }
     }
-
-    // 5. Update print status
-    try {
-      var el = document.getElementById('print-status');
-      if (el) el.textContent = (el.textContent || '') + ' \u2022 \u0441\u0442\u0440: ' + (cur - 1);
-    } catch(e) {}
   };
 
   // Auto-run after all resources load (images determine section heights)
   window.addEventListener('load', function() {
-    setTimeout(function() { window.__recalcPageNumbers(); }, 300);
+    setTimeout(function() {
+      window.__recalcPageNumbers();
+      window.__syncContentPageBadges(false);
+    }, 300);
+  });
+  window.addEventListener('beforeprint', function() {
+    window.__recalcPageNumbers();
+    window.__syncContentPageBadges(true);
+  });
+  window.addEventListener('afterprint', function() {
+    window.__syncContentPageBadges(false);
   });
   </script>
 </body>
@@ -1040,18 +1071,24 @@ export class EnhancedPdfGeneratorBase {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
+        width: 100%;
+        max-width: 100%;
         margin-bottom: ${spacing.sectionSpacing};
         align-items: center;
         padding: 10px 14px;
         background: ${colors.surfaceAlt};
         border-radius: ${this.theme.blocks.borderRadius};
         border-left: 3px solid ${colors.accent};
+        box-sizing: border-box;
+        overflow: hidden;
       ">
         ${items.map((item) => `
           <span style="
             display: inline-flex;
             align-items: center;
             gap: 5px;
+            max-width: 100%;
+            min-width: 0;
             white-space: nowrap;
             padding: 5px 10px;
             background: ${colors.surface};
@@ -1270,6 +1307,7 @@ export class EnhancedPdfGeneratorBase {
           display: flex;
           align-items: center;
           gap: 8px;
+          flex-shrink: 0;
         ">
           <span style="
             font-size: 8pt;

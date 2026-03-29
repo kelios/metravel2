@@ -550,12 +550,42 @@ export function renderTravelContentPageMarkup(args: {
           .travel-content-page .description-block ul {
             margin-bottom: 8pt !important;
           }
-          .content-layout { width: 100%; border-collapse: collapse; }
-          .content-layout td { padding: 0; vertical-align: top; border: none; }
+          .content-layout {
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+          .content-layout thead,
+          .content-layout tbody,
+          .content-layout tr,
+          .content-layout td {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+          }
+          .content-layout td {
+            width: 100%;
+            padding: 0;
+            vertical-align: top;
+            border: none;
+            box-sizing: border-box;
+          }
           .content-layout thead { display: table-header-group; }
           .content-layout thead td {
+            height: 32mm;
             padding: 4mm 0 0 0;
             vertical-align: top;
+          }
+          .travel-content-page .travel-online-card {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+          }
+          .travel-content-page .travel-online-card > div {
+            min-width: 0;
+            max-width: 100%;
           }
         </style>
         <table class="content-layout">

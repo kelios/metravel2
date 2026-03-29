@@ -60,7 +60,7 @@ export class RuntimeMapRenderer {
               background: ${colors.surfaceAlt};
             ">
               ${data.snapshotDataUrl
-                ? `<img src="${data.snapshotDataUrl}" alt="Карта маршрута" style="width: 100%; height: 100%; object-fit: cover; display: block;" />`
+                ? `<img src="${data.snapshotDataUrl}" alt="Карта маршрута" style="width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(1.15) contrast(1.05);" />`
                 : data.mapSvg
               }
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="

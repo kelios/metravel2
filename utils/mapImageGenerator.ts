@@ -457,7 +457,7 @@ export async function generateCanvasMapSnapshot(
   for (let tx = startTX; tx <= endTX; tx++) {
     for (let ty = startTY; ty <= endTY; ty++) {
       const s = subdomains[Math.abs(tx + ty) % subdomains.length]
-      const url = `https://${s}.basemaps.cartocdn.com/light_all/${zoom}/${tx}/${ty}@2x.png`
+      const url = `https://${s}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}@2x.png`
       const drawX = tx * tileSize - (cxPx - width / 2)
       const drawY = ty * tileSize - (cyPx - height / 2)
 
