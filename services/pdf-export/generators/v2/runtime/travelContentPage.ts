@@ -137,7 +137,7 @@ export function renderTravelContentPageMarkup(args: {
 
   const descriptionSection = processedDescriptionHtml
     ? `
-          <div style="margin-bottom: ${spacing.sectionSpacing};">
+          <div style="margin-bottom: ${spacing.sectionSpacing}; break-inside: auto; page-break-inside: auto;">
             ${
               variant === 'runtime'
                 ? buildSectionHeader('pen', colors.accent, colors.accentSoft, 'Описание')
@@ -165,6 +165,8 @@ export function renderTravelContentPageMarkup(args: {
               line-height: 1.75;
               color: ${colors.text};
               font-family: ${typography.bodyFont};
+              break-inside: auto;
+              page-break-inside: auto;
             ">${processedDescriptionHtml}</div>
           </div>
         `
@@ -205,7 +207,7 @@ export function renderTravelContentPageMarkup(args: {
     recommendationBlocks.length > 0
       ? `
           ${divider}
-          <div style="margin-bottom: ${spacing.sectionSpacing};">
+          <div style="margin-bottom: ${spacing.sectionSpacing}; break-inside: avoid; page-break-inside: avoid;">
             ${
               variant === 'runtime'
                 ? buildSectionHeader('bulb', colors.infoBlock.icon, colors.infoBlock.background, 'Рекомендации')
@@ -524,7 +526,7 @@ export function renderTravelContentPageMarkup(args: {
       : ''
 
   return `
-      <section class="pdf-page travel-content-page" style="padding: ${spacing.pagePadding};">
+      <section class="pdf-page travel-content-page" style="padding: 0 ${spacing.pagePadding}; position: relative;">
         <style>
           .travel-content-page p {
             margin-bottom: ${typography.body.marginBottom};
@@ -540,14 +542,23 @@ export function renderTravelContentPageMarkup(args: {
             orphans: 3;
             widows: 3;
           }
+          .content-layout { width: 100%; border-collapse: collapse; }
+          .content-layout td { padding: 0; vertical-align: top; border: none; }
+          .content-layout thead { display: table-header-group; }
+          .content-layout thead td { height: 14mm; border-bottom: 1.5px solid ${colors.border}; }
         </style>
-        ${headerHtml}
-        ${statsHtml}
-        ${descriptionSection}
-        ${shouldShowInlineGallery ? inlineGalleryHtml : ''}
-        ${recommendationSection}
-        ${prosConsSection}
-        ${onlineSection}
+        <table class="content-layout">
+          <thead><tr><td aria-hidden="true"></td></tr></thead>
+          <tbody><tr><td style="padding: ${spacing.pagePadding} 0;">
+            ${headerHtml}
+            ${statsHtml}
+            ${descriptionSection}
+            ${shouldShowInlineGallery ? inlineGalleryHtml : ''}
+            ${recommendationSection}
+            ${prosConsSection}
+            ${onlineSection}
+          </td></tr></tbody>
+        </table>
         ${
           variant === 'standalone'
             ? `
@@ -559,7 +570,7 @@ export function renderTravelContentPageMarkup(args: {
           color: ${colors.textMuted};
           font-weight: 500;
           font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>`
+        " data-page-num>${pageNumber}</div>`
             : ''
         }
       </section>

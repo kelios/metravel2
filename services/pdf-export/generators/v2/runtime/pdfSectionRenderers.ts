@@ -177,7 +177,7 @@ export function renderTocPageSection(args: {
           font-size: 8pt;
           font-weight: 700;
           font-family: ${typography.headingFont};
-        ">${pageNumber}</span>
+        " data-page-num>${pageNumber}</span>
       </div>
     </section>
   `
@@ -293,7 +293,7 @@ function buildTocRow(
         flex-shrink: 0;
         letter-spacing: -0.02em;
         line-height: 1;
-      ">${item.startPage}</div>
+      " data-toc-page>${item.startPage}</div>
     </div>
   `
 }

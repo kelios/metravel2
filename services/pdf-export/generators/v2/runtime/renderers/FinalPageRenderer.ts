@@ -242,7 +242,7 @@ export class RuntimeFinalRenderer {
           font-size: ${typography.caption.size};
           opacity: 0.6;
           font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>
+        " data-page-num>${pageNumber}</div>
       </section>
     `
   }

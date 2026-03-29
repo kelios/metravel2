@@ -627,10 +627,10 @@ export class EnhancedPdfGeneratorBase {
         overflow: hidden;
         border-radius: 2px;
       }
-      @media print {
-        .pdf-page.travel-content-page {
-          min-height: auto;
-        }
+      /* Контентные страницы могут быть длиннее одной A4 */
+      .pdf-page.travel-content-page {
+        overflow: visible;
+        height: auto;
       }
       /* Разрыв страницы ПЕРЕД каждой следующей .pdf-page (кроме первой) */
       .pdf-page + .pdf-page {
@@ -659,15 +659,16 @@ export class EnhancedPdfGeneratorBase {
       p {
         orphans: 2;
         widows: 2;
-        page-break-inside: avoid;
         text-rendering: optimizeLegibility;
       }
       img, figure, blockquote, pre, table {
         page-break-inside: avoid;
+        break-inside: avoid;
         page-break-after: auto;
       }
       .no-break {
         page-break-inside: avoid;
+        break-inside: avoid;
       }
       .break-before {
         page-break-before: always;
@@ -760,12 +761,75 @@ export class EnhancedPdfGeneratorBase {
           text-decoration: none;
         }
         .pdf-page {
-          page-break-after: always;
           box-shadow: none;
           margin: 0;
           width: 210mm;
           min-height: 297mm;
           border-radius: 0;
+          overflow: visible;
+        }
+        /* Фиксированные страницы — ровно 1 печатная страница */
+        .pdf-page.cover-page,
+        .pdf-page.travel-photo-page,
+        .pdf-page.gallery-page,
+        .pdf-page.map-page,
+        .pdf-page.separator-page,
+        .pdf-page.toc-page,
+        .pdf-page.final-page,
+        .pdf-page.checklist-page {
+          height: 297mm;
+          max-height: 297mm;
+          overflow: hidden;
+        }
+        /* Контентные страницы свободно перетекают на следующие страницы */
+        .pdf-page.travel-content-page {
+          height: auto;
+          min-height: auto;
+          overflow: visible;
+        }
+        /* Защита секций контент-страницы от разрыва */
+        .travel-content-page > div {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        /* Описание может быть длинным — разрешаем разрыв внутри, но защищаем дочерние блоки */
+        .travel-content-page .description-block {
+          break-inside: auto;
+          page-break-inside: auto;
+        }
+        .travel-content-page .description-block > * {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        /* Ограничиваем высоту изображений в контент-страницах чтобы они помещались на одну страницу */
+        .travel-content-page img {
+          max-height: 240mm;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .travel-content-page figure,
+        .travel-content-page .img-single-wide,
+        .travel-content-page .img-row-2,
+        .travel-content-page .img-grid,
+        .travel-content-page .img-float-right,
+        .travel-content-page .img-float-left {
+          break-inside: avoid;
+          page-break-inside: avoid;
+          max-height: 260mm;
+          overflow: hidden;
+        }
+        /* QR-код и онлайн-секция не должны разрываться */
+        .travel-content-page .travel-online-card {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        /* Таблица-обёртка контента: thead повторяет отступ на каждой странице */
+        .content-layout { border-collapse: collapse; }
+        .content-layout thead { display: table-header-group; }
+        .content-layout td { border: none; }
+        /* Маркеры нумерации продолжения контент-страниц (вставляются JS) */
+        .cpn-marker {
+          pointer-events: none;
         }
         img {
           image-rendering: -webkit-optimize-contrast;
@@ -816,6 +880,98 @@ export class EnhancedPdfGeneratorBase {
 </head>
 <body>
   ${pages.join('\n')}
+  <script>
+  window.__recalcPageNumbers = function() {
+    var PAGE_H = 297 * (96 / 25.4);
+    var sections = document.querySelectorAll('.pdf-page');
+    if (!sections.length) return;
+
+    // 1. Calculate real printed page number for each section
+    var realPage = [];
+    var cur = 1;
+    for (var i = 0; i < sections.length; i++) {
+      realPage.push(cur);
+      var cls = sections[i].className || '';
+      if (cls.indexOf('travel-content-page') !== -1) {
+        var h = sections[i].scrollHeight || sections[i].offsetHeight || PAGE_H;
+        cur += Math.max(1, Math.ceil((h - 2) / PAGE_H));
+      } else {
+        cur += 1;
+      }
+    }
+
+    // 2. Update all [data-page-num] elements within each section
+    for (var i = 0; i < sections.length; i++) {
+      var nums = sections[i].querySelectorAll('[data-page-num]');
+      for (var j = 0; j < nums.length; j++) {
+        nums[j].textContent = String(realPage[i]);
+      }
+    }
+
+    // 3. Update TOC entries: [data-toc-page] points to the photo-page of each travel
+    var photoSections = [];
+    for (var i = 0; i < sections.length; i++) {
+      if ((sections[i].className || '').indexOf('travel-photo-page') !== -1) {
+        photoSections.push(realPage[i]);
+      }
+    }
+    var tocNums = document.querySelectorAll('[data-toc-page]');
+    for (var t = 0; t < Math.min(tocNums.length, photoSections.length); t++) {
+      tocNums[t].textContent = String(photoSections[t]);
+    }
+
+    // 4. Insert page-number markers on continuation pages of content sections
+    for (var i = 0; i < sections.length; i++) {
+      var cls2 = sections[i].className || '';
+      if (cls2.indexOf('travel-content-page') === -1) continue;
+      // Remove old markers
+      var oldM = sections[i].querySelectorAll('.cpn-marker');
+      for (var om = oldM.length - 1; om >= 0; om--) oldM[om].parentNode.removeChild(oldM[om]);
+
+      var sh = sections[i].scrollHeight || sections[i].offsetHeight || PAGE_H;
+      var nPages = Math.max(1, Math.ceil((sh - 2) / PAGE_H));
+      if (nPages <= 1) continue;
+
+      // Read badge style from the existing running header badge
+      var existingBadge = sections[i].querySelector('[data-page-num]');
+      var badgeBg = '#f0f0f0';
+      var badgeColor = '#333';
+      var badgeFont = 'sans-serif';
+      if (existingBadge) {
+        var cs = window.getComputedStyle(existingBadge);
+        badgeBg = cs.backgroundColor || badgeBg;
+        badgeColor = cs.color || badgeColor;
+        badgeFont = cs.fontFamily || badgeFont;
+      }
+
+      // Get pagePadding from section's computed style
+      var secCS = window.getComputedStyle(sections[i]);
+      var padTop = parseFloat(secCS.paddingTop) || 0;
+      var padRight = parseFloat(secCS.paddingRight) || 0;
+
+      for (var p = 1; p < nPages; p++) {
+        var yTop = p * PAGE_H;
+        // Small page-number badge in top-right corner (doesn't cover content)
+        var marker = document.createElement('div');
+        marker.className = 'cpn-marker';
+        marker.style.cssText = 'position:absolute;top:' + Math.round(yTop + padTop * 0.3) + 'px;right:' + padRight + 'px;z-index:10;';
+        marker.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:' + badgeBg + ';color:' + badgeColor + ';font-size:8pt;font-weight:700;font-family:' + badgeFont + ';line-height:1;">' + (realPage[i] + p) + '</span>';
+        sections[i].appendChild(marker);
+      }
+    }
+
+    // 5. Update print status
+    try {
+      var el = document.getElementById('print-status');
+      if (el) el.textContent = (el.textContent || '') + ' \u2022 \u0441\u0442\u0440: ' + (cur - 1);
+    } catch(e) {}
+  };
+
+  // Auto-run after all resources load (images determine section heights)
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.__recalcPageNumbers(); }, 300);
+  });
+  </script>
 </body>
 </html>
     `;
@@ -1077,7 +1233,7 @@ export class EnhancedPdfGeneratorBase {
         <span style="
           font-weight: 600;
           color: ${colors.textSecondary};
-        ">${pageNumber}</span>
+        " data-page-num>${pageNumber}</span>
       </div>
     `;
   }

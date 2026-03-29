@@ -85,7 +85,7 @@ export function buildRunningHeader(
           font-weight: 700;
           font-family: ${typography.headingFont};
           line-height: 1;
-        ">${pageNumber}</span>
+        " data-page-num>${pageNumber}</span>
       </div>
     </div>
   `

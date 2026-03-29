@@ -284,7 +284,7 @@ export function renderTravelPhotoPageMarkup(args: {
           font-size: 8pt;
           font-weight: 700;
           font-family: ${typography.headingFont};
-        ">${pageNumber}</div>
+        " data-page-num>${pageNumber}</div>
       </section>
     `
 }

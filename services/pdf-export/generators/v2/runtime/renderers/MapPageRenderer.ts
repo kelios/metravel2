@@ -22,7 +22,8 @@ export class RuntimeMapRenderer {
   render(data: RuntimeMapPageData): string {
     const { colors, typography, spacing } = this.ctx.theme
     const locationCount = Number.isFinite(data.locationCount) ? data.locationCount : 0
-    const mapHeightMm = this.getMapHeightMm(locationCount)
+    const hasElevation = !!data.routePreview && Array.isArray(data.routePreview.elevationProfile) && data.routePreview.elevationProfile.length >= 2
+    const mapHeightMm = this.getMapHeightMm(locationCount, hasElevation)
 
     const elevationProfileHtml = data.routePreview
       ? this.renderElevationProfile(data.routePreview)
@@ -367,7 +368,7 @@ export class RuntimeMapRenderer {
             ">Пик ${fmt(maxElevation)}</span>
           </div>
 
-          <svg viewBox="0 0 ${CW} ${CH}" style="width: 100%; height: 56mm; display: block;" xmlns="http://www.w3.org/2000/svg">
+          <svg viewBox="0 0 ${CW} ${CH}" style="width: 100%; height: 38mm; display: block;" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="${accentColor}" stop-opacity="0.30"/>
@@ -475,7 +476,8 @@ export class RuntimeMapRenderer {
     return earthKm * c
   }
 
-  private getMapHeightMm(locationCount: number): number {
+  private getMapHeightMm(locationCount: number, hasElevation = false): number {
+    if (hasElevation) return 95
     if (locationCount <= 6) return 140
     return 136
   }
