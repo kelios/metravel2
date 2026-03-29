@@ -553,12 +553,14 @@ export function renderTravelContentPageMarkup(args: {
           .content-layout { width: 100%; border-collapse: collapse; }
           .content-layout td { padding: 0; vertical-align: top; border: none; }
           .content-layout thead { display: table-header-group; }
-          .content-layout thead td { height: 32mm; }
+          .content-layout thead td {
+            padding: 4mm 0 0 0;
+            vertical-align: top;
+          }
         </style>
         <table class="content-layout">
-          <thead><tr><td aria-hidden="true"></td></tr></thead>
+          <thead><tr><td>${headerHtml}</td></tr></thead>
           <tbody><tr><td style="padding: 4mm 0 ${spacing.pagePadding} 0;">
-            ${headerHtml}
             ${statsHtml}
             ${descriptionSection}
             ${shouldShowInlineGallery ? inlineGalleryHtml : ''}

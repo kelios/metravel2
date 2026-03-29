@@ -243,6 +243,8 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(html).toContain('final-summary-tile')
     expect(html).toContain('final-route-line')
     expect(html).not.toContain('>metravel.by</div>')
+    expect(html).toContain('<thead><tr><td>')
+    expect(html).toContain('cpn-marker-badge')
 
     expect(html).toContain('hyphens: auto')
     expect(html).toContain('word-break: break-word')

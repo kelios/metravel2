@@ -827,9 +827,10 @@ export class EnhancedPdfGeneratorBase {
         .content-layout { border-collapse: collapse; }
         .content-layout thead { display: table-header-group; }
         .content-layout td { border: none; }
-        /* Маркеры нумерации продолжения контент-страниц (вставляются JS) */
-        .cpn-marker {
+        .cpn-marker-badge {
+          position: absolute;
           pointer-events: none;
+          z-index: 20;
         }
         img {
           image-rendering: -webkit-optimize-contrast;
@@ -865,10 +866,10 @@ export class EnhancedPdfGeneratorBase {
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>${this.escapeHtml((settings.title || '').trim() || 'MeTravel')}</title>
+  <title>${this.escapeHtml((settings.title || '').trim() || 'MeTravel.by')}</title>
   
   <!-- Изолированный manifest/favicon для print preview без лишних запросов к родительскому origin -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"MeTravel Print Preview","short_name":"MeTravel","display":"standalone","icons":[]}' />
+  <link rel="manifest" href='data:application/manifest+json,{"name":"MeTravel.by Print Preview","short_name":"MeTravel.by","display":"standalone","icons":[]}' />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
   
   <!-- Google Fonts для улучшенной типографики -->
@@ -883,6 +884,22 @@ export class EnhancedPdfGeneratorBase {
   <script>
   window.__recalcPageNumbers = function() {
     var PAGE_H = 297 * (96 / 25.4);
+    var getContentSectionMetrics = function(section) {
+      var table = section.querySelector('.content-layout');
+      var thead = table ? table.querySelector('thead') : null;
+      var repeatHeaderH = thead ? (thead.getBoundingClientRect().height || thead.offsetHeight || 0) : 0;
+      var rawHeight = section.scrollHeight || section.offsetHeight || PAGE_H;
+      var continuationBodyH = Math.max(1, PAGE_H - repeatHeaderH);
+      var extraHeight = Math.max(0, rawHeight - PAGE_H);
+      var continuationPages = extraHeight > 0 ? Math.ceil((extraHeight - 2) / continuationBodyH) : 0;
+
+      return {
+        rawHeight: rawHeight,
+        repeatHeaderH: repeatHeaderH,
+        continuationBodyH: continuationBodyH,
+        nPages: 1 + continuationPages,
+      };
+    };
     var sections = document.querySelectorAll('.pdf-page');
     if (!sections.length) return;
 
@@ -893,8 +910,7 @@ export class EnhancedPdfGeneratorBase {
       realPage.push(cur);
       var cls = sections[i].className || '';
       if (cls.indexOf('travel-content-page') !== -1) {
-        var h = sections[i].scrollHeight || sections[i].offsetHeight || PAGE_H;
-        cur += Math.max(1, Math.ceil((h - 2) / PAGE_H));
+        cur += getContentSectionMetrics(sections[i]).nPages;
       } else {
         cur += 1;
       }
@@ -920,62 +936,50 @@ export class EnhancedPdfGeneratorBase {
       tocNums[t].textContent = String(photoSections[t]);
     }
 
-    // 4. Insert page-number markers on continuation pages of content sections
-    for (var i = 0; i < sections.length; i++) {
-      var cls2 = sections[i].className || '';
-      if (cls2.indexOf('travel-content-page') === -1) continue;
-      // Remove old markers
-      var oldM = sections[i].querySelectorAll('.cpn-marker');
-      for (var om = oldM.length - 1; om >= 0; om--) oldM[om].parentNode.removeChild(oldM[om]);
+      // 4. Paint dedicated page number badges for content pages.
+      // Chromium repeats thead visually, but those repeated instances are not directly
+      // mutable after pagination, so we hide the source badge and place per-page badges
+      // in a stable right-side zone instead of mutating the repeated header copy.
+      for (var i = 0; i < sections.length; i++) {
+        var cls2 = sections[i].className || '';
+        if (cls2.indexOf('travel-content-page') === -1) continue;
 
-      var sh = sections[i].scrollHeight || sections[i].offsetHeight || PAGE_H;
-      var nPages = Math.max(1, Math.ceil((sh - 2) / PAGE_H));
-      if (nPages <= 1) continue;
-
-      // Read badge style from the existing running header badge
-      var existingBadge = sections[i].querySelector('[data-page-num]');
-      var badgeBg = '#f0f0f0';
-      var badgeColor = '#333';
-      var badgeFont = 'sans-serif';
-      if (existingBadge) {
-        var cs = window.getComputedStyle(existingBadge);
-        badgeBg = cs.backgroundColor || badgeBg;
-        badgeColor = cs.color || badgeColor;
-        badgeFont = cs.fontFamily || badgeFont;
+      var oldMarkers = sections[i].querySelectorAll('.cpn-marker-badge');
+      for (var om = oldMarkers.length - 1; om >= 0; om--) {
+        oldMarkers[om].parentNode.removeChild(oldMarkers[om]);
       }
 
-      // Get pagePadding from section's computed style
-      var secCS = window.getComputedStyle(sections[i]);
-      var padTop = parseFloat(secCS.paddingTop) || 0;
-      var padRight = parseFloat(secCS.paddingRight) || 0;
+        var existingBadge = sections[i].querySelector('[data-page-num]');
+        if (!existingBadge) continue;
+        existingBadge.style.visibility = 'hidden';
 
-      // Clone the running header from the first page to use on continuation pages
-      var origHeader = sections[i].querySelector('[data-page-num]');
-      var headerContainer = origHeader ? origHeader.closest('div[style]') : null;
-      // Walk up to the outermost running-header wrapper (the one with position:relative)
-      while (headerContainer && headerContainer.parentElement &&
-             headerContainer.parentElement !== sections[i].querySelector('td') &&
-             headerContainer.parentElement.tagName !== 'TD') {
-        headerContainer = headerContainer.parentElement;
-      }
+        var metrics = getContentSectionMetrics(sections[i]);
+        var badgeRect = existingBadge.getBoundingClientRect();
+        var sectionRect = sections[i].getBoundingClientRect();
+        var badgeTop = badgeRect.top - sectionRect.top;
+      var badgeLeft = badgeRect.left - sectionRect.left;
+      var badgeWidth = badgeRect.width || existingBadge.offsetWidth || 22;
+      var badgeHeight = badgeRect.height || existingBadge.offsetHeight || 22;
+      var badgeStyles = window.getComputedStyle(existingBadge);
 
-      for (var p = 1; p < nPages; p++) {
-        var yTop = p * PAGE_H;
-        var marker = document.createElement('div');
-        marker.className = 'cpn-marker';
-
-        if (headerContainer) {
-          // Full running header clone with updated page number
-          marker.style.cssText = 'position:absolute;top:' + Math.round(yTop) + 'px;left:' + padRight + 'px;right:' + padRight + 'px;z-index:10;padding-top:' + Math.round(padTop * 0.5) + 'px;';
-          var cloned = headerContainer.cloneNode(true);
-          var badge = cloned.querySelector('[data-page-num]');
-          if (badge) badge.textContent = String(realPage[i] + p);
-          marker.appendChild(cloned);
-        } else {
-          // Fallback: simple badge
-          marker.style.cssText = 'position:absolute;top:' + Math.round(yTop + padTop * 0.3) + 'px;right:' + padRight + 'px;z-index:10;';
-          marker.innerHTML = '<span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:' + badgeBg + ';color:' + badgeColor + ';font-size:8pt;font-weight:700;font-family:' + badgeFont + ';line-height:1;">' + (realPage[i] + p) + '</span>';
-        }
+        for (var p = 0; p < metrics.nPages; p++) {
+          var marker = document.createElement('div');
+          marker.className = 'cpn-marker-badge';
+          marker.style.top = Math.round((p + 1) * metrics.continuationBodyH - badgeHeight - 12) + 'px';
+          marker.style.left = Math.round(badgeLeft) + 'px';
+          marker.style.width = Math.round(badgeWidth) + 'px';
+          marker.style.height = Math.round(badgeHeight) + 'px';
+        marker.style.display = 'inline-flex';
+        marker.style.alignItems = 'center';
+        marker.style.justifyContent = 'center';
+        marker.style.borderRadius = badgeStyles.borderRadius || '6px';
+        marker.style.background = badgeStyles.backgroundColor || '#f0f0f0';
+        marker.style.color = badgeStyles.color || '#333';
+        marker.style.fontSize = badgeStyles.fontSize || '8pt';
+        marker.style.fontWeight = badgeStyles.fontWeight || '700';
+        marker.style.fontFamily = badgeStyles.fontFamily || 'sans-serif';
+        marker.style.lineHeight = '1';
+        marker.textContent = String(realPage[i] + p);
         sections[i].appendChild(marker);
       }
     }
@@ -1273,7 +1277,7 @@ export class EnhancedPdfGeneratorBase {
             letter-spacing: 0.1em;
             opacity: 0.65;
             font-weight: 600;
-          ">MeTravel</span>
+          ">MeTravel.by</span>
           <span style="
             display: inline-flex;
             align-items: center;
