@@ -15,17 +15,11 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelFilters } from '@/hooks/useTravelFilters';
-import { showToast } from '@/utils/toast';
+import { showToastMessage } from '@/utils/toast';
+import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 import TravelRouteFilesPanel from '@/components/travel/TravelRouteFilesPanel';
-
-async function showToastMessage(payload: any) {
-    await showToast(payload);
-}
-
-const hasToastBeenShown = (error: unknown): boolean =>
-    error instanceof Error && (error as Error & { toastShown?: boolean }).toastShown === true;
 
 const WebMapComponent = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/WebMapComponent'))

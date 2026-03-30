@@ -71,7 +71,7 @@ export function buildRunningHeader(
           letter-spacing: 0.1em;
           opacity: 0.65;
           font-weight: 600;
-        ">MeTravel</span>
+        ">MeTravel.by</span>
         <span style="
           display: inline-flex;
           align-items: center;

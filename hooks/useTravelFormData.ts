@@ -3,7 +3,7 @@ import isEqual from 'fast-deep-equal';
 import { useRouter, type Href } from 'expo-router';
 import { QueryClientContext, type QueryClient } from '@tanstack/react-query';
 import { fetchTravel } from '@/api/travelsApi';
-import { saveFormData, uploadImage } from '@/api/misc';
+import { saveFormData } from '@/api/misc';
 import { ApiError } from '@/api/client';
 import { TravelFormData, Travel, MarkerData } from '@/types/types';
 import { useFormState } from '@/hooks/useFormState';
@@ -29,53 +29,21 @@ import {
   sanitizeCoverUrl,
   filterAllowedKeys,
   mergeOverridePreservingUserInput,
-  isLocalPreviewUrl,
 } from '@/utils/travelFormNormalization';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
-import { getPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 import { applySmartImageLayout } from '@/utils/richTextImageLayout';
 
-import { showToast, type ToastPayload } from '@/utils/toast';
-
-async function showToastMessage(payload: ToastPayload) {
-  await showToast(payload);
-}
+import { showToastMessage } from '@/utils/toast';
+import { getErrorMessage, getErrorName } from '@/utils/errorHelpers';
+import { useMarkerImageUpload } from '@/hooks/useMarkerImageUpload';
 
 type ToastAwareError = Error & { toastShown?: boolean };
 const DEFAULT_MARKER_SERIALIZER_FALLBACK_IMAGE = '/og-default.png';
-
-type UploadImageResponse = Record<string, unknown> & {
-  url?: unknown;
-  data?: Record<string, unknown>;
-  path?: unknown;
-  file_url?: unknown;
-};
 
 type MonitoringWindow = Window & {
   Sentry?: {
     captureException: (error: unknown, context?: Record<string, unknown>) => void;
   };
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const getErrorMessage = (error: unknown, fallback = ''): string => {
-  if (error instanceof Error && typeof error.message === 'string') return error.message;
-  if (isRecord(error) && typeof error.message === 'string') return error.message;
-  return fallback;
-};
-
-const getErrorName = (error: unknown): string | null => {
-  if (error instanceof Error && typeof error.name === 'string') return error.name;
-  if (isRecord(error) && typeof error.name === 'string') return error.name;
-  return null;
-};
-
-const extractUploadUrl = (response: UploadImageResponse): string => {
-  const nestedData = isRecord(response.data) ? response.data : null;
-  const uploadedUrlRaw = response.url ?? nestedData?.url ?? response.path ?? response.file_url;
-  return uploadedUrlRaw ? normalizeMediaUrl(String(uploadedUrlRaw)) : '';
 };
 
 interface UseTravelFormDataOptions {
@@ -133,7 +101,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const initialLoadKeyRef = useRef<string | null>(null);
   const pendingBaselineRef = useRef<TravelFormData | null>(null);
   const didInvalidateAfterCreateRef = useRef(false);
-  const markerUploadStateRef = useRef(new Map<string, { inFlight: boolean; attempts: number }>());
 
   const formState = useFormState<TravelFormData>(initialFormData, {
     debounce: 5000,
@@ -160,114 +127,16 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     });
   }, []);
 
-  const applyUploadedMarkerImage = useCallback(
-    (markerId: string, blobUrl: string, uploadedUrl: string) => {
-      const currentMarkers = Array.isArray(formDataRef.current.coordsMeTravel)
-        ? (formDataRef.current.coordsMeTravel as MarkerData[])
-        : [];
-
-      const updatedMarkers = currentMarkers.map((marker) => {
-        if (String(marker?.id ?? '') !== markerId) return marker;
-        if (String(marker?.image ?? '').trim() !== blobUrl) return marker;
-        return {
-          ...marker,
-          image: uploadedUrl,
-        };
-      });
-
-      const nextFormData = {
-        ...(formDataRef.current as TravelFormData),
-        coordsMeTravel: updatedMarkers as unknown as TravelFormData['coordsMeTravel'],
-      };
-
-      formDataRef.current = nextFormData;
+  const { rehydrateMarkerIdsFromServer, uploadPendingMarkerImages } = useMarkerImageUpload({
+    formDataRef,
+    updateFormMarkers: useCallback((updatedMarkers: MarkerData[], _nextFormData: TravelFormData) => {
       setMarkers(updatedMarkers);
       formState.updateField('coordsMeTravel', updatedMarkers);
-      updateBaselineRef.current?.(nextFormData);
-    },
-    [formState]
-  );
-
-  const rehydrateMarkerIdsFromServer = useCallback(
-    async (travelIdValue: string | number | null | undefined, sourceMarkers: MarkerData[]) => {
-      const resolvedTravelId = normalizeTravelId(travelIdValue);
-      if (resolvedTravelId == null) return null;
-      if (!Array.isArray(sourceMarkers) || sourceMarkers.length === 0) return null;
-
-      const needsMarkerIds = sourceMarkers.some((marker) => {
-        const markerId = marker?.id;
-        const imageUrl = typeof marker?.image === 'string' ? marker.image.trim() : '';
-        return isLocalPreviewUrl(imageUrl) && (markerId == null || String(markerId).trim() === '');
-      });
-      if (!needsMarkerIds) return null;
-
-      try {
-        const freshTravel = await fetchTravel(Number(resolvedTravelId));
-        const transformed = normalizeDraftPlaceholders(transformTravelToFormData(freshTravel));
-        const serverMarkers = Array.isArray(transformed.coordsMeTravel)
-          ? (transformed.coordsMeTravel as unknown as MarkerData[])
-          : [];
-        if (serverMarkers.length === 0) return null;
-
-        const mergedMarkers = mergeMarkersPreserveImages(serverMarkers, sourceMarkers) as MarkerData[];
-        const hasResolvedIds = mergedMarkers.some((marker) => {
-          const imageUrl = typeof marker?.image === 'string' ? marker.image.trim() : '';
-          return isLocalPreviewUrl(imageUrl) && marker?.id != null && String(marker.id).trim() !== '';
-        });
-
-        return hasResolvedIds ? mergedMarkers : null;
-      } catch {
-        return null;
-      }
-    },
-    []
-  );
-
-  const uploadPendingMarkerImages = useCallback(
-    async (markersInput: unknown) => {
-      if (!Array.isArray(markersInput) || markersInput.length === 0) return;
-
-      await Promise.all(
-        markersInput.map(async (marker) => {
-          const markerRecord =
-            marker && typeof marker === 'object' ? (marker as Record<string, unknown>) : null;
-          const imageUrl = typeof markerRecord?.image === 'string' ? markerRecord.image.trim() : '';
-          const markerId = markerRecord?.id;
-          if (!imageUrl || !/^(blob:)/i.test(imageUrl)) return;
-          if (markerId == null || String(markerId).trim() === '') return;
-
-          const state = markerUploadStateRef.current.get(imageUrl) ?? { inFlight: false, attempts: 0 };
-          if (state.inFlight || state.attempts >= 3) return;
-
-          const file = getPendingImageFile(imageUrl);
-          if (!file) return;
-
-          markerUploadStateRef.current.set(imageUrl, { inFlight: true, attempts: state.attempts + 1 });
-
-          try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('collection', 'travelImageAddress');
-            formData.append('id', String(markerId));
-
-            const response = (await uploadImage(formData)) as UploadImageResponse;
-            const uploadedUrl = extractUploadUrl(response);
-            if (!uploadedUrl) {
-              throw new Error('Upload did not return URL');
-            }
-
-            removePendingImageFile(imageUrl);
-            applyUploadedMarkerImage(String(markerId), imageUrl, uploadedUrl);
-          } catch {
-            // Keep pending file for the next successful save/retry path.
-          } finally {
-            markerUploadStateRef.current.set(imageUrl, { inFlight: false, attempts: state.attempts + 1 });
-          }
-        })
-      );
-    },
-    [applyUploadedMarkerImage]
-  );
+    }, [formState]),
+    updateBaseline: useCallback((data: TravelFormData) => {
+      updateBaselineRef.current?.(data);
+    }, []),
+  });
 
   const cleanAndSave = useCallback(async (data: TravelFormData, options?: { autosave?: boolean }) => {
     // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition

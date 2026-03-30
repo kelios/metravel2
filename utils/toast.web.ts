@@ -16,3 +16,5 @@ export async function showToast(payload: ToastPayload): Promise<void> {
     // ignore
   }
 }
+
+export const showToastMessage = showToast

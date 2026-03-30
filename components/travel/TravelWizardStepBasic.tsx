@@ -15,14 +15,8 @@ import { useStepTransition } from '@/hooks/useStepTransition';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { showToast } from '@/utils/toast';
-
-async function showToastMessage(payload: any) {
-    await showToast(payload);
-}
-
-const hasToastBeenShown = (error: unknown): boolean =>
-    error instanceof Error && (error as Error & { toastShown?: boolean }).toastShown === true;
+import { showToastMessage } from '@/utils/toast';
+import { hasToastBeenShown } from '@/utils/errorHelpers';
 
 interface TravelWizardStepBasicProps {
     currentStep: number;

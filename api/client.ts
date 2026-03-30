@@ -21,6 +21,8 @@ import {
 } from '@/api/apiConfig';
 import { notifyAuthInvalidation } from '@/api/authInvalidation';
 export { setAuthInvalidationHandler } from '@/api/authInvalidation';
+import { getApiErrorMessage, getErrorTextField } from '@/utils/errorHelpers';
+import { RateLimiter, type RateLimitSlot } from '@/utils/rateLimiter';
 
 /**
  * Класс ошибки API
@@ -40,38 +42,6 @@ type DownloadResponse = {
     blob: Blob;
     filename?: string;
     contentType?: string;
-};
-
-const getErrorTextField = (data: unknown, field: 'message' | 'detail'): string | undefined => {
-    if (!data || typeof data !== 'object') return undefined;
-    const value = (data as Record<string, unknown>)[field];
-    return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
-};
-
-const getFirstValidationErrorMessage = (data: unknown): string | undefined => {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return undefined;
-    const entries = Object.entries(data as Record<string, unknown>);
-    for (const [field, value] of entries) {
-        if (typeof value === 'string' && value.trim().length > 0) {
-            return `${field}: ${value.trim()}`;
-        }
-        if (Array.isArray(value)) {
-            const firstString = value.find(item => typeof item === 'string' && item.trim().length > 0);
-            if (typeof firstString === 'string') {
-                return `${field}: ${firstString.trim()}`;
-            }
-        }
-    }
-    return undefined;
-};
-
-const getApiErrorMessage = (data: unknown, fallbackStatusText: string): string => {
-    return (
-        getErrorTextField(data, 'message') ||
-        getErrorTextField(data, 'detail') ||
-        getFirstValidationErrorMessage(data) ||
-        `Ошибка запроса: ${fallbackStatusText}`
-    );
 };
 
 const hasLoggableRequestError = (error: unknown): boolean => {
@@ -97,22 +67,12 @@ class ApiClient {
     private refreshTokenPromise: Promise<string> | null = null;
     private refreshTokenLock: boolean = false; // ✅ FIX-003: Lock для предотвращения race condition
 
-    // ✅ FIX: Rate limiting для предотвращения спама запросов
-    // Optimized: per-endpoint counters + global counter avoid O(n) scans.
-    private requestTimestamps: Map<string, number[]> = new Map();
-    private globalTimestamps: number[] = [];
-    private readonly rateLimitWindow = 60000; // 1 минута
-    private readonly maxRequestsPerWindow = 100; // Максимум 100 запросов в минуту
-    private readonly maxRequestsPerEndpoint = 20; // Максимум 20 запросов к одному эндпоинту в минуту
-
-    private getEndpointLimit(endpointKey: string): number {
-        // Upsert can burst during autosave/manual-save races and marker edits.
-        // Keep client-side protection but with a less aggressive endpoint limit.
-        if (endpointKey === '/travels/upsert/') {
-            return 120;
-        }
-        return this.maxRequestsPerEndpoint;
-    }
+    private rateLimiter = new RateLimiter({
+        window: 60_000,
+        maxPerWindow: 100,
+        maxPerEndpoint: 20,
+        endpointLimits: { '/travels/upsert/': 120 },
+    });
 
     constructor() {
         this.baseURL = API_BASE_URL;
@@ -121,76 +81,12 @@ class ApiClient {
         };
     }
 
-    /**
-     * ✅ FIX: Проверка rate limit перед отправкой запроса
-     */
-    private checkRateLimit(endpoint: string): { key: string; timestamp: number } | null {
-        const now = Date.now();
-        const cutoff = now - this.rateLimitWindow;
-        const key = endpoint.split('?')[0]; // Игнорируем query параметры
-
-        // Trim global timestamps (oldest first, so trim from head)
-        while (this.globalTimestamps.length > 0 && this.globalTimestamps[0] < cutoff) {
-            this.globalTimestamps.shift();
-        }
-
-        // Проверяем общий лимит
-        if (this.globalTimestamps.length >= this.maxRequestsPerWindow) {
-            console.warn('Global rate limit exceeded');
-            return null;
-        }
-
-        // Trim per-endpoint timestamps
-        const timestamps = this.requestTimestamps.get(key);
-        if (timestamps) {
-            while (timestamps.length > 0 && timestamps[0] < cutoff) {
-                timestamps.shift();
-            }
-            if (timestamps.length === 0) {
-                this.requestTimestamps.delete(key);
-            }
-        }
-
-        // Проверяем лимит для конкретного эндпоинта
-        const current = this.requestTimestamps.get(key);
-        const endpointLimit = this.getEndpointLimit(key);
-        if (current && current.length >= endpointLimit) {
-            console.warn(`Rate limit exceeded for endpoint: ${key}`);
-            return null;
-        }
-
-        // Добавляем текущую метку
-        this.globalTimestamps.push(now);
-        if (current) {
-            current.push(now);
-        } else {
-            this.requestTimestamps.set(key, [now]);
-        }
-
-        return { key, timestamp: now };
+    private checkRateLimit(endpoint: string): RateLimitSlot | null {
+        return this.rateLimiter.acquire(endpoint);
     }
 
-    private releaseRateLimitSlot(slot: { key: string; timestamp: number }): void {
-        const endpointTimestamps = this.requestTimestamps.get(slot.key);
-        if (endpointTimestamps && endpointTimestamps.length > 0) {
-            const index = endpointTimestamps.lastIndexOf(slot.timestamp);
-            if (index >= 0) {
-                endpointTimestamps.splice(index, 1);
-            } else {
-                endpointTimestamps.pop();
-            }
-
-            if (endpointTimestamps.length === 0) {
-                this.requestTimestamps.delete(slot.key);
-            }
-        }
-
-        const globalIndex = this.globalTimestamps.lastIndexOf(slot.timestamp);
-        if (globalIndex >= 0) {
-            this.globalTimestamps.splice(globalIndex, 1);
-        } else if (this.globalTimestamps.length > 0) {
-            this.globalTimestamps.pop();
-        }
+    private releaseRateLimitSlot(slot: RateLimitSlot): void {
+        this.rateLimiter.release(slot);
     }
 
     /**

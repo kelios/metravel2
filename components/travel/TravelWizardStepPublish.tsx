@@ -30,7 +30,8 @@ import { getModerationIssues, type ModerationIssue } from '@/utils/formValidatio
 import { trackWizardEvent } from '@/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { showToast } from '@/utils/toast';
+import { showToastMessage } from '@/utils/toast';
+import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishChecklist';
 import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
 import {
@@ -43,13 +44,6 @@ import {
 } from '@/utils/instagramPublish';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { buildInstagramOAuthUrl, getInstagramOAuthResolution } from '@/utils/instagramOAuth';
-
-async function showToastMessage(payload: any) {
-    await showToast(payload);
-}
-
-const hasToastBeenShown = (error: unknown): boolean =>
-    error instanceof Error && (error as Error & { toastShown?: boolean }).toastShown === true;
 
 interface TravelWizardStepPublishProps {
     currentStep: number;

@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation } from 'expo-router';
 import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
-import { showToast, type ToastPayload } from '@/utils/toast';
+import { showToastMessage } from '@/utils/toast';
+import { getErrorMessage } from '@/utils/errorHelpers';
 import { useBeforeUnload } from '@/utils/beforeunloadGuard';
 
 type WizardSaveResult = {
@@ -18,13 +19,6 @@ type BeforeRemoveEventLike = {
     action: unknown;
   };
 };
-
-const getErrorMessage = (error: unknown, fallback: string): string =>
-  error instanceof Error && typeof error.message === 'string' ? error.message : fallback;
-
-async function showToastMessage(payload: ToastPayload) {
-  await showToast(payload);
-}
 
 export interface StepMeta {
   id: number;

@@ -8,7 +8,7 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
-import { showToast } from '@/utils/toast';
+import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
 import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 
@@ -16,10 +16,6 @@ const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
-
-async function showToastMessage(payload: any) {
-    await showToast(payload);
-}
 
 const reverseGeocode = async (latlng: any) => {
     // Пробуем несколько сервисов для получения наиболее точного адреса.
