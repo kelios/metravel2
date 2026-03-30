@@ -142,23 +142,27 @@ function loadBookPreviewWindowModule(): Promise<BookPreviewWindowModule> {
     return bookPreviewWindowModulePromise;
 }
 
-async function buildPrintableStaticMapUrl(points: PrintableMapPoint[]): Promise<string> {
+async function buildPrintableCanvasMapDataUrl(points: PrintableMapPoint[]): Promise<string> {
     if (!points.length) return '';
 
-    const { generateStaticMapUrl } = await loadMapImageGenerator();
-
-    return generateStaticMapUrl(
-        points.map((point) => ({
-            name: point.location,
-            lat: point.lat,
-            lng: point.lng,
-        })),
-        {
-            width: MAP_IMAGE_WIDTH,
-            height: MAP_IMAGE_HEIGHT,
-            zoom: MAP_IMAGE_ZOOM,
-        },
-    );
+    try {
+        const { generateCanvasMapSnapshot } = await loadMapImageGenerator();
+        const snapshot = await generateCanvasMapSnapshot(
+            points.map((point) => ({
+                lat: point.lat,
+                lng: point.lng,
+                label: `${point.num}. ${point.location}`,
+            })),
+            {
+                width: MAP_IMAGE_WIDTH,
+                height: MAP_IMAGE_HEIGHT,
+                routeLine: points.map((point) => [point.lat, point.lng] as [number, number]),
+            },
+        );
+        return snapshot || '';
+    } catch {
+        return '';
+    }
 }
 
 async function buildPrintableLeafletMapDataUrl(points: PrintableMapPoint[]): Promise<string> {
@@ -267,8 +271,8 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     const siteQr = questUrl ? qrUrl(questUrl, QR_SITE) : '';
     const bookPreviewWindow = await loadBookPreviewWindowModule();
     const previewWindow = bookPreviewWindow.openPendingBookPreviewWindow();
-    const mapLeafletDataUrl = await buildPrintableLeafletMapDataUrl(mapPoints);
-    const mapStaticUrl = mapLeafletDataUrl || await buildPrintableStaticMapUrl(mapPoints);
+    const mapCanvasDataUrl = await buildPrintableCanvasMapDataUrl(mapPoints);
+    const mapStaticUrl = mapCanvasDataUrl || await buildPrintableLeafletMapDataUrl(mapPoints);
     const mapSvg = buildPrintableMapSvg(mapPoints);
 
     const mapHtml = mapStaticUrl ? `
@@ -299,6 +303,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                 <span class="step-eyebrow-divider"></span>
                 <span class="step-location-label">${escHtml(step.location)}</span>
                 ${hasCoords ? `<span class="step-coords-label">${step.lat.toFixed(4)}, ${step.lng.toFixed(4)}</span>` : ''}
+                <span class="step-progress">${i + 1} / ${steps.length}</span>
             </div>
             <div class="step-body${stepImageUri ? '' : ' no-photo'}">
                 ${stepImageUri ? `
@@ -317,7 +322,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                         <p class="task">${escHtml(step.task)}</p>
                         ${step.hint ? `
                         <div class="hint-row">
-                            <span class="hint-icon">💡</span>
+                            <span class="hint-icon">i</span>
                             <p class="hint">${escHtml(step.hint)}</p>
                         </div>` : ''}
                     </div>
@@ -346,6 +351,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                             <span class="answer-label-line"></span>
                         </div>
                         <div class="answer-lines">
+                            <div class="answer-line"></div>
                             <div class="answer-line"></div>
                             <div class="answer-line"></div>
                         </div>
@@ -600,7 +606,10 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         display: block;
         border-bottom: 1px solid rgba(255,255,255,0.25);
         width: 260px;
-        height: 30px;
+        height: 28px;
+    }
+    .cover-for-line + .cover-for-line {
+        margin-top: 2px;
     }
     .cover-stamp {
         align-self: flex-end;
@@ -734,6 +743,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         min-height: 260px;
         object-fit: cover;
         background: ${PRINT_COLORS.mapGridBg};
+        filter: saturate(1.12) contrast(1.04);
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
@@ -785,7 +795,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     /* ─── STEP ───────────────────────────────────────── */
     .step {
         page-break-inside: avoid;
-        margin-bottom: 22px;
+        margin-bottom: 30px;
         border: 1px solid ${PRINT_COLORS.stepBorder};
         border-radius: 18px;
         overflow: hidden;
@@ -834,15 +844,27 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         color: rgba(255,255,255,0.35);
         flex-shrink: 0;
     }
+    .step-progress {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+        font-size: 6.5pt;
+        color: rgba(255,255,255,0.4);
+        font-family: Inter, sans-serif;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        flex-shrink: 0;
+    }
     .step-body {
         display: grid;
-        grid-template-columns: 220px 1fr;
+        grid-template-columns: 200px 1fr;
     }
     .step-body.no-photo {
         grid-template-columns: 1fr;
     }
     .step-photo-wrap {
-        width: 220px;
+        width: 200px;
         overflow: hidden;
         background: ${PRINT_COLORS.stepPhotoBg};
         border-right: 1px solid ${PRINT_COLORS.stepBorder};
@@ -850,15 +872,15 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     }
     .step-photo {
         display: block;
-        width: 220px;
+        width: 200px;
         height: 100%;
-        min-height: 216px;
+        min-height: 200px;
         object-fit: cover;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
     .step-content {
-        padding: 18px 20px 16px;
+        padding: 20px 22px 18px;
         min-width: 0;
     }
     .step-title {
@@ -927,7 +949,21 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         padding-top: 8px;
         border-top: 1px dashed rgba(196,132,26,0.3);
     }
-    .hint-icon { font-size: 9pt; flex-shrink: 0; line-height: 1.5; opacity: 0.7; }
+    .hint-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: ${PRINT_COLORS.hintIcon};
+        color: ${PRINT_COLORS.white};
+        font-size: 8pt;
+        font-weight: 900;
+        font-family: Inter, sans-serif;
+        flex-shrink: 0;
+        font-style: normal;
+    }
     .hint {
         font-size: 8pt;
         color: ${PRINT_COLORS.hint};
@@ -1003,24 +1039,36 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         height: 1px;
         background: ${PRINT_COLORS.answerBorder};
     }
-    .answer-lines { display: flex; flex-direction: column; gap: 8px; }
-    .answer-line { border-bottom: 1px solid ${PRINT_COLORS.answerLine}; height: 24px; }
+    .answer-lines { display: flex; flex-direction: column; gap: 6px; }
+    .answer-line { border-bottom: 1px solid ${PRINT_COLORS.answerLine}; height: 28px; }
 
     /* ─── FOOTER ─────────────────────────────────────── */
     .doc-footer {
         text-align: center;
-        margin-top: 40px;
-        padding: 16px 20px;
-        border-top: 1px solid ${PRINT_COLORS.footerBorder};
+        margin-top: 48px;
+        padding: 20px 24px;
+        border-top: 2px solid ${PRINT_COLORS.sectionDivider};
         font-size: 7.5pt;
         color: ${PRINT_COLORS.footerText};
         font-family: Inter, sans-serif;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 14px;
+        gap: 8px;
         background: ${PRINT_COLORS.soft};
-        border-radius: 12px;
+        border-radius: 14px;
+    }
+    .doc-footer-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .doc-footer-tagline {
+        font-size: 7pt;
+        color: ${PRINT_COLORS.lineMuted};
+        font-style: italic;
+        letter-spacing: 0.3px;
     }
     .doc-footer-dot { width: 3px; height: 3px; border-radius: 50%; background: ${PRINT_COLORS.lineMuted}; display: inline-block; vertical-align: middle; }
     .doc-footer-brand { font-weight: 700; color: ${PRINT_COLORS.brand}; font-size: 8pt; }
@@ -1044,7 +1092,8 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
     <div class="toolbar no-print">
         <span class="toolbar-title">${escHtml(title)}</span>
         <button class="toolbar-btn" onclick="window.print()">
-            &#128438; Сохранить PDF
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Сохранить PDF
         </button>
     </div>
 
@@ -1072,6 +1121,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
                         <div class="cover-for-block">
                             <div class="cover-for-label">Для</div>
                             <span class="cover-for-line"></span>
+                            <span class="cover-for-line"></span>
                         </div>
                     </div>
                 </div>
@@ -1095,7 +1145,7 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
         <div class="intro-content">
             <h2>Как пройти квест</h2>
             <p>${escHtml(intro.story)}</p>
-            <p class="intro-note">✏️ Записывайте ответы от руки. Проверить их можно позднее на сайте, отсканировав QR-код на обложке.</p>
+            <p class="intro-note">Записывайте ответы от руки. Проверить их можно позднее на сайте, отсканировав QR-код на обложке.</p>
         </div>
     </div>
     ` : ''}
@@ -1139,11 +1189,14 @@ export async function generatePrintableQuest({ title, steps, intro, coverUrl, qu
 
     <!-- ══════════ FOOTER ══════════ -->
     <div class="doc-footer">
-        <span class="doc-footer-brand">metravel.by</span>
-        <span class="doc-footer-dot"></span>
-        <span>${escHtml(title)}</span>
-        <span class="doc-footer-dot"></span>
-        <span>${today}</span>
+        <div class="doc-footer-row">
+            <span class="doc-footer-brand">metravel.by</span>
+            <span class="doc-footer-dot"></span>
+            <span>${escHtml(title)}</span>
+            <span class="doc-footer-dot"></span>
+            <span>${today}</span>
+        </div>
+        <span class="doc-footer-tagline">Создавайте свои маршруты и квесты на metravel.by</span>
     </div>
 
     </main>
