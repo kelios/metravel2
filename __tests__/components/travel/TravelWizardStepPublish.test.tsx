@@ -14,9 +14,13 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({}));
-jest.mock('@/utils/toast', () => ({
-  showToast: jest.fn(),
-}));
+jest.mock('@/utils/toast', () => {
+  const showToast = jest.fn();
+  return {
+    showToast,
+    showToastMessage: showToast,
+  };
+});
 jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn().mockResolvedValue(undefined),
 }));

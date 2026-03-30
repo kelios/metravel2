@@ -283,7 +283,7 @@ describe('EnhancedPdfGenerator helpers', () => {
       title: '   ',
     })
 
-    expect(html).toContain('<title>MeTravel</title>')
+    expect(html).toContain('<title>MeTravel.by</title>')
 
     const coverStart = html.indexOf('cover-page')
     const coverEnd = html.indexOf('toc-page')
