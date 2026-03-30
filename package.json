@@ -258,7 +258,8 @@
     "follow-redirects": "^1.15.6",
     "cookie": "^0.6.0",
     "@isaacs/brace-expansion": ">=5.0.1",
-    "flatted": "^3.4.0"
+    "flatted": "^3.4.0",
+    "picomatch": ">=2.3.2"
   },
   "prettier": {
     "jsxBracketSameLine": true,
