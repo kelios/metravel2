@@ -1,6 +1,6 @@
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
 import { safeJsonParse, safeJsonParseString } from '@/utils/safeJsonParse'
-import { openBookPreviewWindow } from '@/utils/openBookPreviewWindow'
+import { openBookPreviewWindow, openPendingBookPreviewWindow } from '@/utils/openBookPreviewWindow'
 
 class FakeResponse {
   status: number
@@ -190,18 +190,18 @@ describe('safeJsonParseString', () => {
 
 describe('openBookPreviewWindow', () => {
   const originalWindow = global.window
-  let mockCreateObjectURL: jest.Mock
-  let mockRevokeObjectURL: jest.Mock
+  const originalCreateObjectURL = global.URL.createObjectURL
+  const originalRevokeObjectURL = global.URL.revokeObjectURL
 
   beforeEach(() => {
-    mockCreateObjectURL = jest.fn(() => 'blob:http://localhost/mock-blob-url')
-    mockRevokeObjectURL = jest.fn()
-    global.URL.createObjectURL = mockCreateObjectURL
-    global.URL.revokeObjectURL = mockRevokeObjectURL
+    global.URL.createObjectURL = jest.fn(() => 'blob:http://localhost/mock-preview')
+    global.URL.revokeObjectURL = jest.fn()
   })
 
   afterEach(() => {
     global.window = originalWindow as any
+    global.URL.createObjectURL = originalCreateObjectURL
+    global.URL.revokeObjectURL = originalRevokeObjectURL
     jest.restoreAllMocks()
   })
 
@@ -214,15 +214,14 @@ describe('openBookPreviewWindow', () => {
 
     openBookPreviewWindow('<html></html>')
 
-    expect(mockCreateObjectURL).toHaveBeenCalled()
     expect(mockWindow.open).toHaveBeenCalledWith(
-      'blob:http://localhost/mock-blob-url',
+      'blob:http://localhost/mock-preview',
       '_blank',
       'noopener'
     )
   })
 
-  it('opens Blob URL in a new window', () => {
+  it('opens preview HTML in a new blob window', () => {
     const winInstance: any = {}
     const open = jest.fn(() => winInstance)
 
@@ -232,21 +231,17 @@ describe('openBookPreviewWindow', () => {
     const html = '<html><body>Test</body></html>'
     openBookPreviewWindow(html)
 
-    expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
     expect(open).toHaveBeenCalledWith(
-      'blob:http://localhost/mock-blob-url',
+      'blob:http://localhost/mock-preview',
       '_blank',
       'noopener'
     )
   })
 
-  it('falls back to document.write when Blob URL fails', () => {
-    mockCreateObjectURL.mockImplementation(() => {
-      throw new Error('Blob not supported')
-    })
-
+  it('writes directly into a pre-opened target window', () => {
     const write = jest.fn()
-    const winInstance: any = {
+    const targetWindow: any = {
+      closed: false,
       document: {
         open: jest.fn(),
         write,
@@ -254,16 +249,66 @@ describe('openBookPreviewWindow', () => {
       },
     }
 
+    const html = '<html><body>Inline target</body></html>'
+    openBookPreviewWindow(html, targetWindow)
+
+    expect(write).toHaveBeenCalledWith(html)
+  })
+
+  it('reuses the remembered pending preview window when targetWindow is omitted', () => {
+    const pendingWrite = jest.fn()
+    const pendingWindow: any = {
+      opener: null,
+      document: {
+        open: jest.fn(),
+        write: pendingWrite,
+        close: jest.fn(),
+      },
+    }
+
+    const open = jest.fn(() => pendingWindow)
+    const mockWindow: any = { ...window, open }
+    global.window = mockWindow as any
+
+    openPendingBookPreviewWindow()
+    pendingWrite.mockClear()
+
+    const html = '<html><body>Reuse pending</body></html>'
+    openBookPreviewWindow(html)
+
+    expect(open).toHaveBeenCalledTimes(1)
+    expect(pendingWrite).toHaveBeenCalledWith(html)
+  })
+
+  it('does not open a second window when the target write fails', () => {
+    jest.useFakeTimers()
+
+    const failingTargetWindow: any = {
+      closed: false,
+      location: {
+        replace: jest.fn(),
+      },
+      document: {
+        open: jest.fn(() => {
+          throw new Error('write failed')
+        }),
+        write: jest.fn(),
+        close: jest.fn(),
+      },
+    }
+
     const mockWindow: any = {
       ...window,
-      open: jest.fn(() => winInstance),
+      open: jest.fn(),
     }
     global.window = mockWindow as any
 
-    const html = '<html><body>Fallback</body></html>'
-    openBookPreviewWindow(html)
+    openBookPreviewWindow('<html><body>Retry</body></html>', failingTargetWindow)
+    jest.runAllTimers()
 
-    expect(mockWindow.open).toHaveBeenCalledWith('about:blank', '_blank', 'noopener')
-    expect(write).toHaveBeenCalledWith(html)
+    expect(mockWindow.open).not.toHaveBeenCalled()
+    expect(failingTargetWindow.location.replace).toHaveBeenCalledWith('about:blank')
+
+    jest.useRealTimers()
   })
 })

@@ -27,6 +27,7 @@ import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { buildTravelRouteDownloadPath } from '@/api/travelRoutes';
+import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles';
 import { useAuthStore } from '@/stores/authStore';
@@ -344,6 +345,17 @@ function CompactSideBarTravel({
       const rawUrl =
         String(supportedRouteFile.download_url ?? '').trim() ||
         buildTravelRouteDownloadPath(travelId, supportedRouteFile.id);
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const started = downloadUrlOnWeb(rawUrl, {
+          allowRelative: true,
+          baseUrl: window.location.origin,
+        });
+        if (!started) {
+          notifyUnavailable('Скачать маршрут');
+        }
+        return;
+      }
 
       await openExternalUrlInNewTab(rawUrl, {
         allowRelative: true,

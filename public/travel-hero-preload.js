@@ -373,17 +373,6 @@
         if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
         if (document.querySelector('link[data-travel-hero-preload="true"][as="image"]')) return;
 
-        // Skip if not visible soon (prevents "preloaded but not used" warning)
-        if (!document.querySelector('.travel-hero, [data-hero-container]')) {
-          // Defer preload until hero container exists
-          setTimeout(function() {
-            if (document.querySelector('.travel-hero, [data-hero-container]')) {
-              createPreloadLink();
-            }
-          }, 100);
-          return;
-        }
-
         function createPreloadLink() {
           var isMobile = (window.innerWidth || 0) < 768;
           var quality = isMobile ? 35 : 45;

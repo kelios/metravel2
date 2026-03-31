@@ -13,6 +13,7 @@ import {
   uploadTravelRouteFile,
 } from '@/api/travelRoutes';
 import type { ParsedRoutePoint, ParsedRoutePreview, TravelRouteFile } from '@/types/travelRoutes';
+import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { parseRouteFilePreview } from '@/utils/routeFileParser';
 
@@ -207,6 +208,18 @@ export default function TravelRouteFilesPanel({
     async (file: TravelRouteFile) => {
       if (!travelId) return;
       const rawUrl = String(file.download_url ?? '').trim() || buildTravelRouteDownloadPath(travelId, file.id);
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const started = downloadUrlOnWeb(rawUrl, {
+          allowRelative: true,
+          baseUrl: window.location.origin,
+        });
+        if (!started) {
+          setError('Не удалось скачать файл маршрута');
+        }
+        return;
+      }
+
       await openExternalUrlInNewTab(rawUrl, {
         allowRelative: true,
         baseUrl:

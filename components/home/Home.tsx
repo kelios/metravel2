@@ -93,7 +93,7 @@ function Home() {
   useEffect(() => {
     if (shouldRenderHeavyContentImmediately) return;
 
-    const timer = setTimeout(() => setShowHeavyContent(true), isMobile ? 200 : 50);
+    const timer = setTimeout(() => setShowHeavyContent(true), isMobile ? 100 : 30);
     return () => clearTimeout(timer);
   }, [shouldRenderHeavyContentImmediately, isMobile]);
 

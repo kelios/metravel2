@@ -253,6 +253,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
+      {/* Home hero image preload — first slide of the book carousel.
+          Only injected for home page; the inline script checks pathname. */}
+      <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/'&&p!=='/index')return;var u='https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp?w=500&q=75&fit=contain';if(document.querySelector('link[rel="preload"][href="'+u+'"]'))return;var l=document.createElement('link');l.rel='preload';l.as='image';l.href=u;try{l.fetchPriority='high'}catch(_){}document.head.appendChild(l)}catch(_){}})();` }} />
+
       {/* Font preloads removed: Roboto is loaded via expo-font on native only.
           On web the app uses system-ui / Inter from CSS; preloading unused .ttf files
           triggers "preloaded but not used" warnings in Chrome. */}
@@ -293,7 +297,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
 	      <script
 	        dangerouslySetInnerHTML={{
-	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;function finish(){if(done)return;done=true;root.classList.add('rnw-styles-ready')}var inlineSheet=document.getElementById('react-native-stylesheet');if(inlineSheet){if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}else{setTimeout(finish,200)}}catch(_){}})();`,
+	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;function finish(){if(done)return;done=true;root.classList.add('rnw-styles-ready')}var inlineSheet=document.getElementById('react-native-stylesheet');if(inlineSheet){if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}else{setTimeout(finish,80)}}catch(_){}})();`,
 	        }}
 	      />
 

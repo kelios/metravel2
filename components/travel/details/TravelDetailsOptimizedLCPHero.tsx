@@ -353,7 +353,7 @@ function OptimizedLCPHeroInner({
               objectPosition: 'center',
             }}
             loading="eager"
-            decoding="sync"
+            decoding="auto"
             fetchPriority="high"
             ref={imgRef as any}
             referrerPolicy="no-referrer-when-downgrade"

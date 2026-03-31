@@ -5,6 +5,7 @@ import { METRICS } from '@/constants/layout'
 import type { TravelRouteFile } from '@/types/travelRoutes'
 import type { Travel } from '@/types/types'
 import { buildTravelRouteDownloadPath } from '@/api/travelRoutes'
+import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { useTravelDetailsMapSectionHintsModel } from './useTravelDetailsMapSectionHintsModel'
 
@@ -72,6 +73,18 @@ export function useTravelDetailsMapSectionModel({
       const rawUrl =
         String(file.download_url ?? '').trim() ||
         buildTravelRouteDownloadPath(travel.id, file.id)
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const started = downloadUrlOnWeb(rawUrl, {
+          allowRelative: true,
+          baseUrl: window.location.origin,
+        })
+        if (!started) {
+          notifyDownloadUnavailable()
+        }
+        return
+      }
+
       await openExternalUrlInNewTab(rawUrl, {
         allowRelative: true,
         baseUrl:

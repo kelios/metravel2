@@ -146,7 +146,7 @@ export const buildHomeHeroSlidePreloadUrl = (
     optimizeImageUrl(remoteUri, {
       width,
       height,
-      quality: 90,
+      quality: 75,
       fit: 'contain',
       format: 'auto',
     }) ?? remoteUri
@@ -790,9 +790,10 @@ const HomeHero = memo(function HomeHero({
                     fit="contain"
                     blurBackground
                     allowCriticalWebBlur
-                    quality={85}
+                    quality={75}
                     alt={BOOK_IMAGES[0].alt}
                     loading="eager"
+                    priority="high"
                     style={styles.tabletFeaturedImage}
                   />
                   <View style={styles.tabletFeaturedOverlay}>
@@ -862,9 +863,10 @@ const HomeHero = memo(function HomeHero({
                               fit="contain"
                               blurBackground={!disableHeroSliderBlur}
                               allowCriticalWebBlur={!disableHeroSliderBlur}
-                              quality={90}
+                              quality={75}
                               alt={slide.alt}
-                              loading={isSlideLoaded ? 'eager' : 'lazy'}
+                              loading={slideIndex === 0 ? 'eager' : (isSlideLoaded ? 'eager' : 'lazy')}
+                              priority={slideIndex === 0 ? 'high' : 'normal'}
                               showImmediately={isSlideLoaded}
                               style={styles.slideImage}
                               onLoad={() => markSlideAsLoaded(slideIndex)}

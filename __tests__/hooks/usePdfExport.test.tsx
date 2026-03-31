@@ -9,6 +9,7 @@ import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
+const mockOpenPendingBookPreviewWindow = jest.fn(() => null);
 
 jest.mock('@/api/travelDetailsQueries', () => ({
   fetchTravel: jest.fn(async () => ({
@@ -40,6 +41,7 @@ jest.mock('@/services/book/BookHtmlExportService', () => ({
 }));
 
 jest.mock('@/utils/openBookPreviewWindow', () => ({
+  openPendingBookPreviewWindow: (...args: any[]) => mockOpenPendingBookPreviewWindow(...args),
   openBookPreviewWindow: (...args: any[]) => mockOpenBookPreviewWindow(...args),
 }));
 
@@ -74,6 +76,7 @@ const mockDocument = {
 
 global.document = mockDocument as unknown as Document;
 
+const originalWindowOpen = typeof window !== 'undefined' ? window.open : undefined;
 const originalPlatformOS = Platform.OS;
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 const mockFetchTravel = fetchTravel as jest.MockedFunction<typeof fetchTravel>;
@@ -135,6 +138,18 @@ describe('usePdfExport', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    if (typeof window !== 'undefined') {
+      (window as any).open = jest.fn(() => ({
+        opener: {},
+        closed: false,
+        close: jest.fn(),
+        document: {
+          open: jest.fn(),
+          write: jest.fn(),
+          close: jest.fn(),
+        },
+      }));
+    }
     mockFetchTravel.mockResolvedValue({
       id: 99,
       slug: 'detailed-travel',
@@ -389,5 +404,8 @@ afterAll(() => {
     configurable: true,
     value: originalPlatformOS,
   });
+  if (typeof window !== 'undefined') {
+    (window as any).open = originalWindowOpen;
+  }
   alertSpy.mockRestore();
 });

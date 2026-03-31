@@ -60,6 +60,8 @@ export function buildCriticalCSS(): string {
     '[data-testid="home-hero"]{contain:layout style}',
     '[data-testid="home-trust-block"]{content-visibility:auto;contain-intrinsic-size:auto 220px}',
     '[data-testid="home-how-it-works"]{content-visibility:auto;contain-intrinsic-size:auto 420px}',
+    '[data-testid="home-faq"]{content-visibility:auto;contain-intrinsic-size:auto 500px}',
+    '[data-testid="home-favorites-history"]{content-visibility:auto;contain-intrinsic-size:auto 320px}',
     '[data-testid="home-hero-stack"]{min-height:400px;contain:layout style paint;display:flex;flex-direction:column !important;width:100%}',
     '@media (min-width:768px){[data-testid="home-hero-stack"]{flex-direction:row !important;align-items:center}}',
     '[data-testid="home-hero-image-slot"]{display:none}',

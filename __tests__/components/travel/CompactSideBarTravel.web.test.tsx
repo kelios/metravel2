@@ -8,6 +8,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
+const mockDownloadUrlOnWeb: jest.Mock = jest.fn(() => true);
 const mockOpenExternalUrlInNewTab: jest.Mock = jest.fn(() => Promise.resolve(true));
 const mockUseTravelRouteFiles: jest.Mock = jest.fn(() => ({
   data: [] as any[],
@@ -49,6 +50,12 @@ jest.mock('@/utils/externalLinks', () => ({
   __esModule: true,
   openExternalUrlInNewTab: (url: unknown, options?: unknown) =>
     mockOpenExternalUrlInNewTab(url, options),
+}));
+
+jest.mock('@/utils/downloadUrlOnWeb', () => ({
+  __esModule: true,
+  downloadUrlOnWeb: (url: unknown, options?: unknown) =>
+    mockDownloadUrlOnWeb(url, options),
 }));
 
 jest.mock('@/components/home/WeatherWidget', () => ({
@@ -143,6 +150,7 @@ describe('CompactSideBarTravel - Web', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockDownloadUrlOnWeb.mockReturnValue(true);
     mockAuthState.isSuperuser = false;
     mockAuthState.userId = null;
     mockUseTravelRouteFiles.mockReturnValue({
@@ -307,13 +315,14 @@ describe('CompactSideBarTravel - Web', () => {
       fireEvent.press(downloadButton);
 
       await waitFor(() => {
-        expect(mockOpenExternalUrlInNewTab).toHaveBeenCalledWith(
+        expect(mockDownloadUrlOnWeb).toHaveBeenCalledWith(
           '/api/travels/test-123/routes/77/download/',
           expect.objectContaining({
             allowRelative: true,
           })
         );
       });
+      expect(mockOpenExternalUrlInNewTab).not.toHaveBeenCalled();
       expect(defaultProps.onNavigate).not.toHaveBeenCalledWith('download-route');
     });
   });

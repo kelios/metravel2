@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
+const { ESLint } = require('eslint')
 const { resolveChangedFilesInput, runSelectiveChecks } = require('./run-local-selective-checks')
 
 const parseArgs = (argv) => {
@@ -38,14 +39,24 @@ const parseArgs = (argv) => {
 const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|mjs|cjs)$/
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
 
-const getLintTargets = (changedFiles) => {
-  return (changedFiles || []).filter((filePath) => {
+const getLintTargets = async (changedFiles) => {
+  const eslint = new ESLint()
+  const lintableFiles = (changedFiles || []).filter((filePath) => {
     if (!LINTABLE_FILE_PATTERN.test(filePath)) {
       return false
     }
 
     return fs.existsSync(path.resolve(process.cwd(), filePath))
   })
+
+  const lintTargets = await Promise.all(
+    lintableFiles.map(async (filePath) => {
+      const isIgnored = await eslint.isPathIgnored(filePath)
+      return isIgnored ? null : filePath
+    }),
+  )
+
+  return lintTargets.filter(Boolean)
 }
 
 const buildEslintArgs = (lintTargets) => {
@@ -67,8 +78,8 @@ const runCommand = (command, args) => {
   return result.status ?? 1
 }
 
-const runFastScopeChecks = ({ changedFiles, dryRun, output }) => {
-  const lintTargets = getLintTargets(changedFiles)
+const runFastScopeChecks = async ({ changedFiles, dryRun, output }) => {
+  const lintTargets = await getLintTargets(changedFiles)
   const selectiveChecks = runSelectiveChecks({ changedFiles, dryRun, output })
 
   return {
@@ -96,7 +107,7 @@ const emitJsonSummary = ({ source, changedFiles, lintTargets, selectiveChecks })
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
 }
 
-const main = () => {
+const main = async () => {
   try {
     const args = parseArgs(process.argv.slice(2))
     if (args.output === 'json' && !args.dryRun) {
@@ -105,7 +116,7 @@ const main = () => {
     }
 
     const input = resolveChangedFilesInput(args)
-    const result = runFastScopeChecks({
+    const result = await runFastScopeChecks({
       changedFiles: input.files,
       dryRun: args.dryRun,
       output: args.output,
@@ -158,7 +169,7 @@ const main = () => {
 }
 
 if (require.main === module) {
-  main()
+  void main()
 }
 
 module.exports = {
