@@ -38,7 +38,13 @@ import {
 } from './pdfVisualHelpers';
 import { renderTravelPhotoPageMarkup } from './travelPhotoPage';
 import { renderTravelContentPageMarkup } from './travelContentPage';
-import { buildPdfHtmlDocument, buildPdfLocationCards } from './pdfRuntimeMarkup';
+import {
+  buildPdfHtmlDocument,
+  buildPdfLocationCards,
+  buildPdfRunningHeader,
+  buildPdfSeparatorPage,
+  buildPdfStatsMiniCard,
+} from './pdfRuntimeMarkup';
 import { RuntimeFinalRenderer } from './renderers/FinalPageRenderer';
 import { RuntimeGalleryRenderer } from './renderers/GalleryPageRenderer';
 import { RuntimeMapRenderer } from './renderers/MapPageRenderer';
@@ -606,298 +612,44 @@ export class EnhancedPdfGeneratorBase {
     typography: ReturnType<typeof getThemeConfig>['typography'],
     spacing: ReturnType<typeof getThemeConfig>['spacing']
   ): string {
-    const items: Array<{ icon: string; value: string }> = [];
-
-    const iconColor = colors.accent;
-    const iconSize = 11;
-
-    if (travel.countryName) {
-      items.push({ icon: this.renderPdfIcon('globe', iconColor, iconSize), value: travel.countryName });
-    }
-    if (travel.year) {
-      items.push({ icon: this.renderPdfIcon('calendar', iconColor, iconSize), value: String(travel.year) });
-    }
-    if (typeof travel.number_days === 'number' && travel.number_days > 0) {
-      items.push({ icon: this.renderPdfIcon('clock', iconColor, iconSize), value: this.formatDays(travel.number_days) });
-    }
-    const photoCount = (travel.gallery || []).length;
-    if (photoCount > 0) {
-      items.push({ icon: this.renderPdfIcon('camera', iconColor, iconSize), value: `${photoCount} фото` });
-    }
-    const locationCount = (travel.travelAddress || []).length;
-    if (locationCount > 0) {
-      items.push({ icon: this.renderPdfIcon('map-pin', iconColor, iconSize), value: `${locationCount} ${locationCount === 1 ? 'место' : locationCount < 5 ? 'места' : 'мест'}` });
-    }
-
-    if (!items.length) return '';
-
-    return `
-      <div style="
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        width: 100%;
-        max-width: 100%;
-        margin-bottom: ${spacing.sectionSpacing};
-        align-items: center;
-        padding: 10px 14px;
-        background: ${colors.surfaceAlt};
-        border-radius: ${this.theme.blocks.borderRadius};
-        border-left: 3px solid ${colors.accent};
-        box-sizing: border-box;
-        overflow: hidden;
-      ">
-        ${items.map((item) => `
-          <span style="
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            max-width: 100%;
-            min-width: 0;
-            white-space: nowrap;
-            padding: 5px 10px;
-            background: ${colors.surface};
-            border: 1px solid ${colors.border};
-            border-radius: 999px;
-            font-size: ${typography.caption.size};
-            line-height: 1.2;
-            color: ${colors.textSecondary};
-            font-family: ${typography.bodyFont};
-            font-weight: 500;
-          ">
-            ${item.icon}
-            <span>${this.escapeHtml(item.value)}</span>
-          </span>
-        `).join('')}
-      </div>
-    `;
+    return buildPdfStatsMiniCard({
+      travel,
+      theme: this.theme,
+      colors,
+      typography,
+      spacing,
+      escapeHtml: (value) => this.escapeHtml(value),
+      formatDays: (days) => this.formatDays(days),
+      renderPdfIcon: (name, color, sizePt) => this.renderPdfIcon(name, color, sizePt),
+    });
   }
 
   /**
    * Разделительная страница между путешествиями (при 3+ путешествиях в книге)
    */
   private renderSeparatorPage(travel: TravelForBook, travelIndex: number, totalTravels: number): string {
-    const { colors, typography } = this.theme;
-    const country = travel.countryName || '';
-    const year = travel.year ? String(travel.year) : '';
-    const days = this.formatDays(travel.number_days);
-    const metaParts = [country, year, days].filter(Boolean);
-    const titleLength = travel.name.trim().length;
-    const separatorTitleFontSize =
-      titleLength > 140 ? '24pt' : titleLength > 100 ? '28pt' : typography.h1.size;
-    const separatorTitleLineHeight =
-      titleLength > 140 ? '1.08' : titleLength > 100 ? '1.12' : typography.h1.lineHeight;
-    const thumbUrl = this.buildSafeImageUrl(
-      travel.travel_image_thumb_url || travel.travel_image_url
-    );
-
-    return `
-      <section class="pdf-page separator-page" style="
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 285mm;
-        text-align: center;
-        background: ${colors.surface};
-        position: relative;
-        overflow: hidden;
-      ">
-        <div style="
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, ${colors.accentSoft}, ${colors.accent}, ${colors.accentSoft});
-        "></div>
-
-        ${thumbUrl ? `
-          <div style="
-            width: 88px;
-            height: 88px;
-            border-radius: 999px;
-            overflow: hidden;
-            margin-bottom: 6mm;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.14);
-            border: 4px solid ${colors.surface};
-            outline: 2px solid ${colors.accentSoft};
-            background: ${colors.surfaceAlt};
-          ">
-            <img src="${this.escapeHtml(thumbUrl)}" alt=""
-              style="width: 100%; height: 100%; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
-              onerror="this.style.display='none';this.parentElement.style.background='${colors.accentSoft}';" />
-          </div>
-        ` : ''}
-
-        <div style="
-          width: 44px;
-          height: 44px;
-          border-radius: 999px;
-          background: ${colors.accentSoft};
-          color: ${colors.accent};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 18pt;
-          font-weight: 800;
-          font-family: ${typography.headingFont};
-          margin-bottom: 4mm;
-        ">${travelIndex}</div>
-
-        <div style="
-          width: 20mm;
-          height: 2px;
-          background: linear-gradient(90deg, transparent, ${colors.accent}, transparent);
-          border-radius: 999px;
-          margin-bottom: 6mm;
-          opacity: 0.4;
-        "></div>
-
-        <h2 style="
-          font-size: ${separatorTitleFontSize};
-          font-weight: ${typography.h1.weight};
-          color: ${colors.text};
-          margin-bottom: 5mm;
-          max-width: 176mm;
-          font-family: ${typography.headingFont};
-          line-height: ${separatorTitleLineHeight};
-          overflow-wrap: break-word;
-          word-break: normal;
-          hyphens: auto;
-          text-wrap: balance;
-        ">${this.escapeHtml(travel.name)}</h2>
-
-        ${metaParts.length ? `
-          <div style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6mm;
-            flex-wrap: wrap;
-          ">
-            ${metaParts.map((part) => `
-              <span style="
-                font-size: 10pt;
-                color: ${colors.textMuted};
-                font-family: ${typography.bodyFont};
-                padding: 3px 10px;
-                background: ${colors.surfaceAlt};
-                border-radius: 999px;
-                border: 1px solid ${colors.border};
-              ">${this.escapeHtml(part)}</span>
-            `).join('')}
-          </div>
-        ` : ''}
-
-        <div style="
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, ${colors.accentSoft}, ${colors.accent}, ${colors.accentSoft});
-        "></div>
-
-        <div style="
-          position: absolute;
-          bottom: 22mm;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-family: ${typography.bodyFont};
-          opacity: 0.6;
-        ">
-          <span style="font-weight: 600;">${travelIndex}</span>
-          <span style="color: ${colors.border};">/</span>
-          <span>${totalTravels}</span>
-        </div>
-      </section>
-    `;
+    return buildPdfSeparatorPage({
+      travel,
+      travelIndex,
+      totalTravels,
+      theme: this.theme,
+      thumbUrl: this.buildSafeImageUrl(travel.travel_image_thumb_url || travel.travel_image_url),
+      formattedDays: this.formatDays(travel.number_days),
+      escapeHtml: (value) => this.escapeHtml(value),
+      getImageFilterStyle: () => this.getImageFilterStyle(),
+    });
   }
 
   /**
    * Running header для контент-страниц (не для обложки, TOC, фото-страницы и финала)
    */
   private buildRunningHeader(travelName: string, pageNumber: number): string {
-    const { colors, typography } = this.theme;
-    return `
-      <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-bottom: 4mm;
-        margin-bottom: 6mm;
-        border-bottom: none;
-        font-size: ${typography.caption.size};
-        color: ${colors.textMuted};
-        font-family: ${typography.bodyFont};
-        letter-spacing: 0.02em;
-        position: relative;
-      ">
-        <div style="
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 1.5px;
-          background: linear-gradient(90deg, ${colors.accent}, ${(colors as any).accentLight || colors.border} 40%, ${colors.border} 100%);
-          border-radius: 999px;
-        "></div>
-        <div style="
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          max-width: 70%;
-          min-width: 0;
-        ">
-          <span style="
-            width: 14px;
-            height: 2.5px;
-            background: ${colors.accent};
-            border-radius: 999px;
-            flex-shrink: 0;
-          "></span>
-          <span style="
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 600;
-          ">${this.escapeHtml(travelName)}</span>
-        </div>
-        <div style="
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-shrink: 0;
-        ">
-          <span style="
-            font-size: 8pt;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            opacity: 0.65;
-            font-weight: 600;
-          ">MeTravel.by</span>
-          <span style="
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 22px;
-            height: 22px;
-            border-radius: 6px;
-            background: ${colors.accentSoft};
-            color: ${colors.accentStrong};
-            font-size: 8pt;
-            font-weight: 700;
-            font-family: ${typography.headingFont};
-            line-height: 1;
-          " data-page-num>${pageNumber}</span>
-        </div>
-      </div>
-    `;
+    return buildPdfRunningHeader({
+      travelName,
+      pageNumber,
+      theme: this.theme,
+      escapeHtml: (value) => this.escapeHtml(value),
+    });
   }
 
   // Вспомогательные методы

@@ -183,8 +183,10 @@ Known cleanup:
 - Reduced `EnhancedPdfGeneratorBase` coupling:
   - moved HTML document shell, print styles, and page-number sync script into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
   - moved map location-card markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
+  - moved separator-page markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
+  - moved stats mini-card and running-header markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
   - kept orchestration, parser/renderer lifecycle, and runtime page assembly in `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts`
-  - reduced `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` from 1719 to 1130 lines without changing PDF runtime behavior
+  - reduced `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` from 1719 to 882 lines without changing PDF runtime behavior
 - Restored green full test suite:
   - removed `ESLint` runtime API usage from `scripts/run-fast-scope-checks.js` to avoid flat-config dynamic-import failures under Jest
   - aligned `__tests__/scripts/run-fast-scope-checks.test.ts` with the script's synchronous contract
@@ -205,6 +207,8 @@ Known cleanup:
 - `npx playwright test e2e/map-page.spec.ts -g "desktop: route polyline is visible after entering start/end coordinates"` ✅
 - targeted ESLint on `EnhancedPdfGeneratorBase` slice ✅
 - `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts` ✅
+- targeted ESLint on the follow-up `EnhancedPdfGeneratorBase` runtime-markup slice ✅
+- `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts` after the follow-up runtime-markup extraction ✅
 - `npm run test:run -- __tests__/scripts/run-fast-scope-checks.test.ts __tests__/components/home/HomeHero.test.tsx` ✅
 - `npm run lint` ✅
 - `npm run test:run` ✅

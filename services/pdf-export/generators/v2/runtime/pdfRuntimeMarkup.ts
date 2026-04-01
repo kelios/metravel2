@@ -1,8 +1,12 @@
 import type { BookSettings } from '@/components/export/BookSettingsModal'
+import type { TravelForBook } from '@/types/pdf-export'
 import type { NormalizedLocation } from './types'
 import { getThemeConfig } from '../../../themes/PdfThemeConfig'
 
 type RuntimeTheme = ReturnType<typeof getThemeConfig>
+type RuntimeColors = RuntimeTheme['colors']
+type RuntimeTypography = RuntimeTheme['typography']
+type RuntimeSpacing = RuntimeTheme['spacing']
 
 type BuildHtmlDocumentParams = {
   pages: string[]
@@ -16,6 +20,46 @@ type BuildLocationCardsParams = {
   qrCodes?: string[]
   theme: RuntimeTheme
   showCoordinates: boolean
+  escapeHtml: (value: string | null | undefined) => string
+  getImageFilterStyle: () => string
+}
+
+type RuntimeIconName =
+  | 'camera'
+  | 'pen'
+  | 'bulb'
+  | 'warning'
+  | 'sparkle'
+  | 'globe'
+  | 'calendar'
+  | 'clock'
+  | 'map-pin'
+
+type BuildStatsMiniCardParams = {
+  travel: TravelForBook
+  theme: RuntimeTheme
+  colors: RuntimeColors
+  typography: RuntimeTypography
+  spacing: RuntimeSpacing
+  escapeHtml: (value: string | null | undefined) => string
+  formatDays: (days?: number | null) => string
+  renderPdfIcon: (name: RuntimeIconName, color: string, sizePt: number) => string
+}
+
+type BuildRunningHeaderParams = {
+  travelName: string
+  pageNumber: number
+  theme: RuntimeTheme
+  escapeHtml: (value: string | null | undefined) => string
+}
+
+type BuildSeparatorPageParams = {
+  travel: TravelForBook
+  travelIndex: number
+  totalTravels: number
+  theme: RuntimeTheme
+  thumbUrl?: string
+  formattedDays: string
   escapeHtml: (value: string | null | undefined) => string
   getImageFilterStyle: () => string
 }
@@ -448,6 +492,320 @@ export function buildPdfHtmlDocument({
 </body>
 </html>
     `
+}
+
+export function buildPdfStatsMiniCard({
+  travel,
+  theme,
+  colors,
+  typography,
+  spacing,
+  escapeHtml,
+  formatDays,
+  renderPdfIcon,
+}: BuildStatsMiniCardParams): string {
+  const items: Array<{ icon: string; value: string }> = []
+
+  const iconColor = colors.accent
+  const iconSize = 11
+
+  if (travel.countryName) {
+    items.push({ icon: renderPdfIcon('globe', iconColor, iconSize), value: travel.countryName })
+  }
+  if (travel.year) {
+    items.push({ icon: renderPdfIcon('calendar', iconColor, iconSize), value: String(travel.year) })
+  }
+  if (typeof travel.number_days === 'number' && travel.number_days > 0) {
+    items.push({ icon: renderPdfIcon('clock', iconColor, iconSize), value: formatDays(travel.number_days) })
+  }
+
+  const photoCount = (travel.gallery || []).length
+  if (photoCount > 0) {
+    items.push({ icon: renderPdfIcon('camera', iconColor, iconSize), value: `${photoCount} фото` })
+  }
+
+  const locationCount = (travel.travelAddress || []).length
+  if (locationCount > 0) {
+    items.push({
+      icon: renderPdfIcon('map-pin', iconColor, iconSize),
+      value: `${locationCount} ${locationCount === 1 ? 'место' : locationCount < 5 ? 'места' : 'мест'}`,
+    })
+  }
+
+  if (!items.length) return ''
+
+  return `
+    <div style="
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+      max-width: 100%;
+      margin-bottom: ${spacing.sectionSpacing};
+      align-items: center;
+      padding: 10px 14px;
+      background: ${colors.surfaceAlt};
+      border-radius: ${theme.blocks.borderRadius};
+      border-left: 3px solid ${colors.accent};
+      box-sizing: border-box;
+      overflow: hidden;
+    ">
+      ${items.map((item) => `
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          max-width: 100%;
+          min-width: 0;
+          white-space: nowrap;
+          padding: 5px 10px;
+          background: ${colors.surface};
+          border: 1px solid ${colors.border};
+          border-radius: 999px;
+          font-size: ${typography.caption.size};
+          line-height: 1.2;
+          color: ${colors.textSecondary};
+          font-family: ${typography.bodyFont};
+          font-weight: 500;
+        ">
+          ${item.icon}
+          <span>${escapeHtml(item.value)}</span>
+        </span>
+      `).join('')}
+    </div>
+  `
+}
+
+export function buildPdfRunningHeader({
+  travelName,
+  pageNumber,
+  theme,
+  escapeHtml,
+}: BuildRunningHeaderParams): string {
+  const { colors, typography } = theme
+
+  return `
+    <div style="
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 4mm;
+      margin-bottom: 6mm;
+      border-bottom: none;
+      font-size: ${typography.caption.size};
+      color: ${colors.textMuted};
+      font-family: ${typography.bodyFont};
+      letter-spacing: 0.02em;
+      position: relative;
+    ">
+      <div style="
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1.5px;
+        background: linear-gradient(90deg, ${colors.accent}, ${colors.accentLight || colors.border} 40%, ${colors.border} 100%);
+        border-radius: 999px;
+      "></div>
+      <div style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 70%;
+        min-width: 0;
+      ">
+        <span style="
+          width: 14px;
+          height: 2.5px;
+          background: ${colors.accent};
+          border-radius: 999px;
+          flex-shrink: 0;
+        "></span>
+        <span style="
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-weight: 600;
+        ">${escapeHtml(travelName)}</span>
+      </div>
+      <div style="
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      ">
+        <span style="
+          font-size: 8pt;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          opacity: 0.65;
+          font-weight: 600;
+        ">MeTravel.by</span>
+        <span style="
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
+          background: ${colors.accentSoft};
+          color: ${colors.accentStrong};
+          font-size: 8pt;
+          font-weight: 700;
+          font-family: ${typography.headingFont};
+          line-height: 1;
+        " data-page-num>${pageNumber}</span>
+      </div>
+    </div>
+  `
+}
+
+export function buildPdfSeparatorPage({
+  travel,
+  travelIndex,
+  totalTravels,
+  theme,
+  thumbUrl,
+  formattedDays,
+  escapeHtml,
+  getImageFilterStyle,
+}: BuildSeparatorPageParams): string {
+  const { colors, typography } = theme
+  const country = travel.countryName || ''
+  const year = travel.year ? String(travel.year) : ''
+  const metaParts = [country, year, formattedDays].filter(Boolean)
+  const titleLength = travel.name.trim().length
+  const separatorTitleFontSize =
+    titleLength > 140 ? '24pt' : titleLength > 100 ? '28pt' : typography.h1.size
+  const separatorTitleLineHeight =
+    titleLength > 140 ? '1.08' : titleLength > 100 ? '1.12' : typography.h1.lineHeight
+
+  return `
+    <section class="pdf-page separator-page" style="
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 285mm;
+      text-align: center;
+      background: ${colors.surface};
+      position: relative;
+      overflow: hidden;
+    ">
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, ${colors.accentSoft}, ${colors.accent}, ${colors.accentSoft});
+      "></div>
+
+      ${thumbUrl ? `
+        <div style="
+          width: 88px;
+          height: 88px;
+          border-radius: 999px;
+          overflow: hidden;
+          margin-bottom: 6mm;
+          box-shadow: 0 6px 24px rgba(0,0,0,0.14);
+          border: 4px solid ${colors.surface};
+          outline: 2px solid ${colors.accentSoft};
+          background: ${colors.surfaceAlt};
+        ">
+          <img src="${escapeHtml(thumbUrl)}" alt=""
+            style="width: 100%; height: 100%; object-fit: cover; display: block; ${getImageFilterStyle()}"
+            onerror="this.style.display='none';this.parentElement.style.background='${colors.accentSoft}';" />
+        </div>
+      ` : ''}
+
+      <div style="
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        background: ${colors.accentSoft};
+        color: ${colors.accent};
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18pt;
+        font-weight: 800;
+        font-family: ${typography.headingFont};
+        margin-bottom: 4mm;
+      ">${travelIndex}</div>
+
+      <div style="
+        width: 20mm;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, ${colors.accent}, transparent);
+        border-radius: 999px;
+        margin-bottom: 6mm;
+        opacity: 0.4;
+      "></div>
+
+      <h2 style="
+        font-size: ${separatorTitleFontSize};
+        font-weight: ${typography.h1.weight};
+        color: ${colors.text};
+        margin-bottom: 5mm;
+        max-width: 176mm;
+        font-family: ${typography.headingFont};
+        line-height: ${separatorTitleLineHeight};
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: auto;
+        text-wrap: balance;
+      ">${escapeHtml(travel.name)}</h2>
+
+      ${metaParts.length ? `
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6mm;
+          flex-wrap: wrap;
+        ">
+          ${metaParts.map((part) => `
+            <span style="
+              font-size: 10pt;
+              color: ${colors.textMuted};
+              font-family: ${typography.bodyFont};
+              padding: 3px 10px;
+              background: ${colors.surfaceAlt};
+              border-radius: 999px;
+              border: 1px solid ${colors.border};
+            ">${escapeHtml(part)}</span>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <div style="
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, ${colors.accentSoft}, ${colors.accent}, ${colors.accentSoft});
+      "></div>
+
+      <div style="
+        position: absolute;
+        bottom: 22mm;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: ${typography.caption.size};
+        color: ${colors.textMuted};
+        font-family: ${typography.bodyFont};
+        opacity: 0.6;
+      ">
+        <span style="font-weight: 600;">${travelIndex}</span>
+        <span style="color: ${colors.border};">/</span>
+        <span>${totalTravels}</span>
+      </div>
+    </section>
+  `
 }
 
 export function buildPdfLocationCards({
