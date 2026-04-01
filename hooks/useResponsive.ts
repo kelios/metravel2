@@ -245,8 +245,19 @@ const getSnapshot = () => (_hydrated ? currentSnapshot : SSR_SNAPSHOT);
  * }
  */
 export function useResponsive(): ResponsiveState {
-  const { width, height } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const isHydrated = Platform.OS !== 'web' || (_hydrated && width > 0 && height > 0);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const webWindowSnapshot = getWebWindowSnapshot();
+  const width =
+    Platform.OS === 'web' && snapshot.width <= 0 && webWindowSnapshot
+      ? webWindowSnapshot.width
+      : snapshot.width;
+  const height =
+    Platform.OS === 'web' && snapshot.height <= 0 && webWindowSnapshot
+      ? webWindowSnapshot.height
+      : snapshot.height;
+  const isHydrated =
+    Platform.OS !== 'web' ||
+    (_hydrated && width > 0 && height > 0);
   const isPortrait = height > width;
   const orientation: Orientation = isPortrait ? 'portrait' : 'landscape';
 
