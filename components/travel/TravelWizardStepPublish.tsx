@@ -3,29 +3,20 @@ import * as Clipboard from 'expo-clipboard';
 import {
     KeyboardAvoidingView,
     Platform,
-    Pressable,
     ScrollView,
     View,
-    Text,
-    TextInput,
     StyleSheet,
     findNodeHandle,
     UIManager,
 } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Icon } from '@/ui/paper';
-import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { sendMessage } from '@/api/messages';
 import { devError } from '@/utils/logger';
 import { hapticNotification } from '@/utils/haptics';
-import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData } from '@/types/types';
-import Button from '@/components/ui/Button';
-import CardActionPressable from '@/components/ui/CardActionPressable';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -34,6 +25,9 @@ import { showToastMessage } from '@/utils/toast';
 import { hasToastBeenShown } from '@/utils/errorHelpers';
 import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishChecklist';
 import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
+import InstagramPublishPanel from '@/components/travel/InstagramPublishPanel';
+import PublishModerationAdminPanel from '@/components/travel/PublishModerationAdminPanel';
+import PublishStatusSummaryPanel from '@/components/travel/PublishStatusSummaryPanel';
 import { useInstagramPublishDraft } from '@/components/travel/useInstagramPublishDraft';
 import {
     INSTAGRAM_CAPTION_MAX_LENGTH,
@@ -566,138 +560,19 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.contentInner}>
-                    <View style={[styles.card, styles.statusChipCard]}>
-                        <Text style={styles.cardTitle}>Текущий статус</Text>
-                        <View style={styles.statusChipRow}>
-                            <View
-                                style={[
-                                    styles.statusChip,
-                                    currentBackendStatus.tone === 'success' && styles.statusChipSuccess,
-                                    currentBackendStatus.tone === 'warning' && styles.statusChipWarning,
-                                    currentBackendStatus.tone === 'muted' && styles.statusChipMuted,
-                                ]}
-                            >
-                                <Text style={styles.statusChipText}>{currentBackendStatus.label}</Text>
-                            </View>
-                            <Text style={styles.statusChipHint}>
-                                {pendingModeration
-                                    ? 'Маршрут отправлен на модерацию, ожидает решения администратора.'
-                                    : 'Это статус, который уже сохранён. Ниже вы можете выбрать новый (черновик или модерация).'}
-                            </Text>
-                        </View>
-                    </View>
-
-                    {!pendingModeration && (
-                        <View style={[styles.card, styles.statusCard]}>
-                            <Text style={styles.cardTitle}>Статус публикации</Text>
-                            <View style={styles.statusOptions}>
-                                <CardActionPressable
-                                    style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
-                                    onPress={() => setStatus('draft')}
-                                    disabled={userPendingModeration}
-                                    accessibilityLabel="Сохранить как черновик"
-                                >
-                                    <View style={styles.radioOuter}>
-                                        {status === 'draft' && <View style={styles.radioInner} />}
-                                    </View>
-                                    <View style={styles.statusTextCol}>
-                                        <Text style={styles.statusLabel}>Сохранить как черновик</Text>
-                                        <Text style={styles.statusHint}>
-                                            Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.
-                                        </Text>
-                                    </View>
-                                </CardActionPressable>
-
-                                <View style={styles.divider} />
-
-                                <CardActionPressable
-                                    style={[styles.statusOption, status === 'moderation' && styles.statusOptionActive]}
-                                    onPress={() => setStatus('moderation')}
-                                    disabled={userPendingModeration}
-                                    accessibilityLabel="Отправить на модерацию"
-                                >
-                                    <View style={styles.radioOuter}>
-                                        {status === 'moderation' && <View style={styles.radioInner} />}
-                                    </View>
-                                    <View style={styles.statusTextCol}>
-                                        <Text style={styles.statusLabel}>Отправить на модерацию</Text>
-                                        <Text style={styles.statusHint}>
-                                            После одобрения маршрут станет публичным и появится в списке путешествий.
-                                        </Text>
-                                    </View>
-                                </CardActionPressable>
-                            </View>
-                        </View>
-                    )}
-
-                    {status === 'moderation' && missingForModeration.length > 0 && (
-                        <View ref={missingBannerAnchorRef} nativeID="travelwizard-publish-missing-banner" />
-                    )}
-
-                    {status === 'moderation' && missingForModeration.length > 0 && (
-                        <View style={[styles.card, styles.bannerError]}>
-                            <Text style={styles.bannerTitle}>Нужно дополнить перед модерацией</Text>
-                            <Text style={styles.bannerDescription}>
-                                Проверьте отмеченные пункты чек-листа. Без них мы не сможем отправить маршрут на модерацию.
-                            </Text>
-                            {missingForModeration.map(issue => {
-                                const isClickable = !!onNavigateToIssue;
-
-                                const rowContent = (
-                                    <>
-                                        <View style={[styles.checkBadge, styles.checkBadgeMissing]}>
-                                            <Icon source="alert" size={14} color={colors.dangerDark} />
-                                        </View>
-                                        <Text
-                                            style={[
-                                                styles.checklistLabel,
-                                                isClickable && styles.checklistLabelClickable,
-                                            ]}
-                                        >
-                                            {issue.label}
-                                        </Text>
-                                    </>
-                                );
-
-                                const rowStyle = [
-                                    styles.checklistRow,
-                                    isClickable && styles.checklistRowClickable,
-                                ];
-
-                                if (isClickable) {
-                                    return (
-                                        <CardActionPressable
-                                            key={issue.key}
-                                            style={rowStyle}
-                                            onPress={() => onNavigateToIssue?.(issue)}
-                                            accessibilityLabel={issue.label}
-                                        >
-                                            {rowContent}
-                                        </CardActionPressable>
-                                    );
-                                }
-
-                                return (
-                                    <View key={issue.key} style={rowStyle}>
-                                        {rowContent}
-                                    </View>
-                                );
-                            })}
-                        </View>
-                    )}
-
-                    <View style={[styles.card, styles.qualityCard]}>
-                        <Text style={styles.cardTitle}>Качество заполнения</Text>
-                        <QualityIndicator level={qualityScore.level} score={qualityScore.score} />
-                        {qualityScore.suggestions.length > 0 && (
-                            <View style={styles.suggestionsContainer}>
-                                <Text style={styles.suggestionsTitle}>Рекомендации для улучшения:</Text>
-                                {qualityScore.suggestions.map((suggestion, idx) => (
-                                    <Text key={idx} style={styles.suggestionItem}>• {suggestion}</Text>
-                                ))}
-                            </View>
-                        )}
-                    </View>
+                    <PublishStatusSummaryPanel
+                        colors={colors}
+                        styles={styles}
+                        currentBackendStatus={currentBackendStatus}
+                        pendingModeration={pendingModeration}
+                        userPendingModeration={userPendingModeration}
+                        status={status}
+                        missingForModeration={missingForModeration}
+                        qualityScore={qualityScore}
+                        onStatusChange={setStatus}
+                        onNavigateToIssue={onNavigateToIssue}
+                        missingBannerAnchor={missingBannerAnchorRef}
+                    />
 
                     <PublishChecklistCard
                         colors={colors}
@@ -710,411 +585,42 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                     />
 
                     {isSuperAdmin && (pendingModeration || formData.moderation || status === 'moderation') && (
-                        <View style={[styles.card, styles.adminCard]}>
-                            <Text style={styles.cardTitle}>Панель модератора</Text>
-                            <Text style={styles.adminHint}>
-                                Маршрут находится на модерации. Вы можете одобрить или отклонить его.
-                            </Text>
-                            <View style={styles.rejectionCommentContainer}>
-                                <Text style={styles.rejectionCommentLabel}>Комментарий при отклонении (будет отправлен автору):</Text>
-                                <TextInput
-                                    style={[
-                                        styles.rejectionCommentInput,
-                                        {
-                                            backgroundColor: colors.backgroundSecondary,
-                                            color: colors.text,
-                                            borderColor: colors.borderLight,
-                                        },
-                                    ]}
-                                    value={rejectionComment}
-                                    onChangeText={setRejectionComment}
-                                    placeholder="Укажите причину отклонения..."
-                                    placeholderTextColor={colors.textMuted}
-                                    multiline
-                                    maxLength={1000}
-                                    accessibilityLabel="Комментарий при отклонении"
-                                />
-                            </View>
-                            <View style={styles.adminButtons}>
-                                <Button
-                                    label="Одобрить модерацию"
-                                    onPress={handleApproveModeration}
-                                    icon={<Feather name="check-circle" size={20} color={colors.textOnPrimary} />}
-                                    variant="primary"
-                                    size="md"
-                                    style={[styles.adminButton, styles.adminButtonApprove]}
-                                    labelStyle={styles.adminButtonText}
-                                    accessibilityLabel="Одобрить модерацию"
-                                />
-                                <Button
-                                    label="Отклонить"
-                                    onPress={handleRejectModeration}
-                                    icon={<Feather name="x-circle" size={20} color={colors.textOnPrimary} />}
-                                    variant="danger"
-                                    size="md"
-                                    style={[styles.adminButton, styles.adminButtonReject]}
-                                    labelStyle={styles.adminButtonText}
-                                    accessibilityLabel="Отклонить модерацию"
-                                />
-                            </View>
-                        </View>
+                        <PublishModerationAdminPanel
+                            colors={colors}
+                            styles={styles}
+                            rejectionComment={rejectionComment}
+                            onRejectionCommentChange={setRejectionComment}
+                            onApprove={() => void handleApproveModeration()}
+                            onReject={() => void handleRejectModeration()}
+                        />
                     )}
 
                     {isSuperAdmin && (
-                        <View style={[styles.card, styles.instagramCard]}>
-                            <Text style={styles.cardTitle}>Instagram публикация</Text>
-                            <Text style={styles.adminHint}>
-                                Берутся только первые 10 фото из галереи. Порядок можно поменять вручную.
-                            </Text>
-                            <View style={styles.instagramControlRow}>
-                                <View style={styles.instagramCounterPill}>
-                                    <Text style={styles.instagramCounterLabel}>Длина caption</Text>
-                                    <Text
-                                        style={[
-                                            styles.instagramCounterValue,
-                                            isInstagramCaptionTooLong && styles.instagramCounterDanger,
-                                        ]}
-                                    >
-                                        {instagramFinalLength}/{INSTAGRAM_CAPTION_MAX_LENGTH}
-                                    </Text>
-                                </View>
-                                <View style={styles.instagramCounterPill}>
-                                    <Text style={styles.instagramCounterLabel}>Хэштеги</Text>
-                                    <Text
-                                        style={[
-                                            styles.instagramCounterValue,
-                                            isInstagramHashtagCountTooHigh && styles.instagramCounterDanger,
-                                        ]}
-                                    >
-                                        {instagramHashtagCount}/{INSTAGRAM_HASHTAG_MAX_COUNT}
-                                    </Text>
-                                </View>
-                            </View>
-                            <View style={styles.instagramEditor}>
-                                <Text style={styles.instagramEditorLabel}>Caption</Text>
-                                <TextInput
-                                    value={editableInstagramCaption}
-                                    onChangeText={handleInstagramCaptionChange}
-                                    style={styles.instagramCaptionInput}
-                                    multiline
-                                    placeholder="Опишите маршрут и добавьте призыв к действию"
-                                    placeholderTextColor={colors.textMuted}
-                                    accessibilityLabel="Instagram caption"
-                                />
-                            </View>
-                            <View style={styles.instagramEditor}>
-                                <Text style={styles.instagramEditorLabel}>Хэштеги</Text>
-                                <TextInput
-                                    value={editableInstagramHashtags}
-                                    onChangeText={handleInstagramHashtagsChange}
-                                    style={styles.instagramCaptionInput}
-                                    multiline
-                                    placeholder="#метки #путешествия"
-                                    placeholderTextColor={colors.textMuted}
-                                    accessibilityLabel="Instagram hashtags"
-                                />
-                            </View>
-                            <Text style={styles.instagramHintText}>
-                                Перетаскивайте карточки мышью или используйте стрелки для точной перестановки.
-                            </Text>
-                            {Platform.OS === 'web' ? (
-                                <div
-                                    style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                                        gap: DESIGN_TOKENS.spacing.md,
-                                        width: '100%',
-                                        marginTop: DESIGN_TOKENS.spacing.md,
-                                    }}
-                                >
-                                    {editableInstagramImages.map((imageUrl, index) => (
-                                        <div
-                                            key={`${imageUrl}-${index}`}
-                                            data-testid="instagram-preview-image"
-                                            style={Object.assign(
-                                                {},
-                                                styles.instagramGalleryCard as any,
-                                                draggedInstagramImageIndex === index
-                                                    ? (styles.instagramGalleryCardDragging as any)
-                                                    : null,
-                                                {
-                                                    display: 'block',
-                                                }
-                                            )}
-                                            {...{
-                                                draggable: true,
-                                                onDragStart: (event: any) => {
-                                                    event?.dataTransfer?.setData?.('text/plain', String(index));
-                                                    event?.dataTransfer && (event.dataTransfer.effectAllowed = 'move');
-                                                    handleInstagramDragStart(index);
-                                                },
-                                                onDragOver: (event: any) => {
-                                                    event?.preventDefault?.();
-                                                    if (event?.dataTransfer) {
-                                                        event.dataTransfer.dropEffect = 'move';
-                                                    }
-                                                },
-                                                onDrop: (event: any) => {
-                                                    event?.preventDefault?.();
-                                                    handleInstagramDrop(index);
-                                                },
-                                                onDragEnd: () => {
-                                                    handleInstagramDragEnd();
-                                                },
-                                            }}
-                                        >
-                                            <ExpoImage
-                                                source={{ uri: imageUrl }}
-                                                style={styles.instagramGalleryImage}
-                                                contentFit="cover"
-                                                transition={150}
-                                            />
-                                            <View style={styles.instagramGalleryDragHandle}>
-                                                <Feather name="move" size={18} color={colors.textSecondary} />
-                                            </View>
-                                            <Pressable
-                                                onPress={() => handleRemoveInstagramImage(index)}
-                                                style={styles.instagramGalleryRemoveButton}
-                                                testID={`instagram-remove-${index}`}
-                                                accessibilityLabel={`Исключить фото ${index + 1} из публикации`}
-                                            >
-                                                <Feather name="x" size={18} color={colors.textInverse} />
-                                            </Pressable>
-                                            <View style={styles.instagramGalleryControls}>
-                                                <Pressable
-                                                    onPress={() => handleMoveInstagramImage(index, -1)}
-                                                    disabled={index === 0}
-                                                    style={[
-                                                        styles.instagramGalleryControlButton,
-                                                        index === 0 && styles.instagramGalleryControlButtonDisabled,
-                                                    ]}
-                                                    testID={`instagram-move-left-${index}`}
-                                                    accessibilityLabel={`Переместить фото ${index + 1} влево`}
-                                                >
-                                                    <Feather name="chevron-left" size={20} color={colors.textSecondary} />
-                                                </Pressable>
-                                                <Pressable
-                                                    onPress={() => handleMoveInstagramImage(index, 1)}
-                                                    disabled={index === editableInstagramImages.length - 1}
-                                                    style={[
-                                                        styles.instagramGalleryControlButton,
-                                                        index === editableInstagramImages.length - 1 && styles.instagramGalleryControlButtonDisabled,
-                                                    ]}
-                                                    testID={`instagram-move-right-${index}`}
-                                                    accessibilityLabel={`Переместить фото ${index + 1} вправо`}
-                                                >
-                                                    <Feather name="chevron-right" size={20} color={colors.textSecondary} />
-                                                </Pressable>
-                                            </View>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    contentContainerStyle={styles.instagramGalleryRow}
-                                >
-                                    {editableInstagramImages.map((imageUrl, index) => (
-                                    <View
-                                        key={`${imageUrl}-${index}`}
-                                        style={[
-                                            styles.instagramGalleryCard,
-                                            draggedInstagramImageIndex === index && styles.instagramGalleryCardDragging,
-                                        ]}
-                                        testID="instagram-preview-image"
-                                        {...(Platform.OS === 'web'
-                                            ? ({
-                                                draggable: true,
-                                                onDragStart: (event: any) => {
-                                                    event?.dataTransfer?.setData?.('text/plain', String(index));
-                                                    event?.dataTransfer && (event.dataTransfer.effectAllowed = 'move');
-                                                    handleInstagramDragStart(index);
-                                                },
-                                                onDragOver: (event: any) => {
-                                                    event?.preventDefault?.();
-                                                    if (event?.dataTransfer) {
-                                                        event.dataTransfer.dropEffect = 'move';
-                                                    }
-                                                },
-                                                onDrop: (event: any) => {
-                                                    event?.preventDefault?.();
-                                                    handleInstagramDrop(index);
-                                                },
-                                                onDragEnd: () => {
-                                                    handleInstagramDragEnd();
-                                                },
-                                            } as any)
-                                            : {})}
-                                    >
-                                        <ExpoImage
-                                            source={{ uri: imageUrl }}
-                                            style={styles.instagramGalleryImage}
-                                            contentFit="cover"
-                                            transition={150}
-                                        />
-                                        <View style={styles.instagramGalleryDragHandle}>
-                                            <Feather name="move" size={16} color={colors.textSecondary} />
-                                        </View>
-                                        <Pressable
-                                            onPress={() => handleRemoveInstagramImage(index)}
-                                            style={styles.instagramGalleryRemoveButton}
-                                            testID={`instagram-remove-${index}`}
-                                            accessibilityLabel={`Исключить фото ${index + 1} из публикации`}
-                                        >
-                                            <Feather name="x" size={16} color={colors.textInverse} />
-                                        </Pressable>
-                                        <View style={styles.instagramGalleryControls}>
-                                            <Pressable
-                                                onPress={() => handleMoveInstagramImage(index, -1)}
-                                                disabled={index === 0}
-                                                style={[
-                                                    styles.instagramGalleryControlButton,
-                                                    index === 0 && styles.instagramGalleryControlButtonDisabled,
-                                                ]}
-                                                testID={`instagram-move-left-${index}`}
-                                                accessibilityLabel={`Переместить фото ${index + 1} влево`}
-                                            >
-                                                <Feather name="chevron-left" size={18} color={colors.textSecondary} />
-                                            </Pressable>
-                                            <Pressable
-                                                onPress={() => handleMoveInstagramImage(index, 1)}
-                                                disabled={index === editableInstagramImages.length - 1}
-                                                style={[
-                                                    styles.instagramGalleryControlButton,
-                                                    index === editableInstagramImages.length - 1 && styles.instagramGalleryControlButtonDisabled,
-                                                ]}
-                                                testID={`instagram-move-right-${index}`}
-                                                accessibilityLabel={`Переместить фото ${index + 1} вправо`}
-                                            >
-                                                <Feather name="chevron-right" size={18} color={colors.textSecondary} />
-                                            </Pressable>
-                                        </View>
-                                    </View>
-                                    ))}
-                                </ScrollView>
-                            )}
-
-                            <View style={styles.instagramPreview}>
-                                <View style={styles.instagramFieldHeader}>
-                                    <Text style={styles.rejectionCommentLabel}>Текст поста</Text>
-                                    <Text
-                                        style={[
-                                            styles.instagramCounter,
-                                            isInstagramCaptionTooLong && styles.instagramCounterDanger,
-                                        ]}
-                                    >
-                                        {instagramFinalLength}/{INSTAGRAM_CAPTION_MAX_LENGTH} символов
-                                    </Text>
-                                </View>
-                                <TextInput
-                                    style={[
-                                        styles.rejectionCommentInput,
-                                        styles.instagramCaptionInput,
-                                        {
-                                            backgroundColor: colors.backgroundSecondary,
-                                            color: colors.text,
-                                            borderColor: colors.borderLight,
-                                        },
-                                    ]}
-                                    value={editableInstagramCaption}
-                                    onChangeText={handleInstagramCaptionChange}
-                                    placeholder="Текст публикации"
-                                    placeholderTextColor={colors.textMuted}
-                                    multiline
-                                    accessibilityLabel="Текст поста для Instagram"
-                                />
-                                <Text
-                                    style={[
-                                        styles.instagramHintText,
-                                        isInstagramCaptionTooLong && styles.instagramHintDanger,
-                                    ]}
-                                >
-                                    Текст: {instagramCaptionLength} символов. Итоговый caption с тегами должен быть не длиннее {INSTAGRAM_CAPTION_MAX_LENGTH} символов.
-                                </Text>
-                            </View>
-
-                            <View style={styles.instagramPreview}>
-                                <View style={styles.instagramFieldHeader}>
-                                    <Text style={styles.rejectionCommentLabel}>Хэштеги</Text>
-                                    <Text
-                                        style={[
-                                            styles.instagramCounter,
-                                            isInstagramHashtagCountTooHigh && styles.instagramCounterDanger,
-                                        ]}
-                                    >
-                                        {instagramHashtagCount}/{INSTAGRAM_HASHTAG_MAX_COUNT} тегов
-                                    </Text>
-                                </View>
-                                <TextInput
-                                    style={[
-                                        styles.rejectionCommentInput,
-                                        {
-                                            backgroundColor: colors.backgroundSecondary,
-                                            color: colors.text,
-                                            borderColor: colors.borderLight,
-                                        },
-                                    ]}
-                                    value={editableInstagramHashtags}
-                                    onChangeText={handleInstagramHashtagsChange}
-                                    placeholder="#metravelby #польша"
-                                    placeholderTextColor={colors.textMuted}
-                                    multiline
-                                    accessibilityLabel="Хэштеги для Instagram"
-                                />
-                                <Text
-                                    style={[
-                                        styles.instagramHintText,
-                                        isInstagramHashtagCountTooHigh && styles.instagramHintDanger,
-                                    ]}
-                                >
-                                    Instagram допускает до {INSTAGRAM_HASHTAG_MAX_COUNT} хэштегов. Сейчас распознано {instagramHashtagCount}.
-                                </Text>
-                            </View>
-
-                            <View style={styles.instagramPreview}>
-                                <View style={styles.instagramFieldHeader}>
-                                    <Text style={styles.rejectionCommentLabel}>Предпросмотр</Text>
-                                    <Text
-                                        style={[
-                                            styles.instagramCounter,
-                                            isInstagramCaptionTooLong && styles.instagramCounterDanger,
-                                        ]}
-                                    >
-                                        {instagramFinalLength}/{INSTAGRAM_CAPTION_MAX_LENGTH}
-                                    </Text>
-                                </View>
-                                <Text style={styles.instagramPreviewText}>
-                                    {finalInstagramText}
-                                </Text>
-                            </View>
-
-                            <View style={styles.adminButtons}>
-                                <Button
-                                    label="Скопировать текст"
-                                    onPress={() => void handleCopyInstagramText()}
-                                    icon={<Feather name="copy" size={18} color={colors.textOnPrimary} />}
-                                    variant="secondary"
-                                    size="md"
-                                    style={styles.adminButton}
-                                    labelStyle={styles.adminButtonText}
-                                    accessibilityLabel="Скопировать текст для Instagram"
-                                />
-                            </View>
-
-                            <View style={styles.adminButtons}>
-                                <Button
-                                    label="Опубликовать в Instagram"
-                                    onPress={() => void handlePublishToInstagram()}
-                                    icon={<Feather name="instagram" size={18} color={colors.textOnPrimary} />}
-                                    variant="primary"
-                                    size="md"
-                                    style={styles.adminButton}
-                                    labelStyle={styles.adminButtonText}
-                                    accessibilityLabel="Опубликовать в Instagram"
-                                />
-                            </View>
-                        </View>
+                        <InstagramPublishPanel
+                            colors={colors}
+                            styles={styles}
+                            editableInstagramCaption={editableInstagramCaption}
+                            editableInstagramHashtags={editableInstagramHashtags}
+                            editableInstagramImages={editableInstagramImages}
+                            draggedInstagramImageIndex={draggedInstagramImageIndex}
+                            instagramCaptionLength={instagramCaptionLength}
+                            instagramHashtagCount={instagramHashtagCount}
+                            instagramFinalLength={instagramFinalLength}
+                            isInstagramCaptionTooLong={isInstagramCaptionTooLong}
+                            isInstagramHashtagCountTooHigh={isInstagramHashtagCountTooHigh}
+                            instagramCaptionMaxLength={INSTAGRAM_CAPTION_MAX_LENGTH}
+                            instagramHashtagMaxCount={INSTAGRAM_HASHTAG_MAX_COUNT}
+                            finalInstagramText={finalInstagramText}
+                            onCaptionChange={handleInstagramCaptionChange}
+                            onHashtagsChange={handleInstagramHashtagsChange}
+                            onMoveImage={handleMoveInstagramImage}
+                            onRemoveImage={handleRemoveInstagramImage}
+                            onDragStart={handleInstagramDragStart}
+                            onDrop={handleInstagramDrop}
+                            onDragEnd={handleInstagramDragEnd}
+                            onCopyText={() => void handleCopyInstagramText()}
+                            onPublish={() => void handlePublishToInstagram()}
+                        />
                     )}
                     </View>
                 </ScrollView>

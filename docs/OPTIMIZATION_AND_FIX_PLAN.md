@@ -158,6 +158,10 @@ Known cleanup:
 - Reduced `TravelWizardStepPublish` coupling:
   - moved Instagram draft state, derived values, and reorder/edit handlers into `components/travel/useInstagramPublishDraft.ts`
   - kept the screen component focused on publish flow and UI wiring
+  - extracted the Instagram publish UI into `components/travel/InstagramPublishPanel.tsx`
+  - extracted moderation/admin actions into `components/travel/PublishModerationAdminPanel.tsx`
+  - extracted status/current-state/quality summary UI into `components/travel/PublishStatusSummaryPanel.tsx`
+  - reduced the size of `TravelWizardStepPublish.tsx` without changing publish behavior
 
 ## Validation after implementation
 
