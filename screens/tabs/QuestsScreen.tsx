@@ -1,21 +1,14 @@
 // src/screens/tabs/QuestsScreen.tsx
 // Redesigned: Two-column layout like search page
-import React, { Suspense, useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
-    View, Text, StyleSheet, Pressable, Platform,
-    ScrollView, ActivityIndicator,
-    ViewStyle, TextStyle,
+    View, StyleSheet, Pressable, Platform,
+    ViewStyle,
 } from 'react-native';
-import { router } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import EmptyState from '@/components/ui/EmptyState';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
-import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { haversineKm } from '@/utils/geo';
@@ -23,10 +16,9 @@ import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
-
-// ---- типы данных ----
-type City = { id: string; name: string; countryCode?: string; lat?: number; lng?: number };
-type NearbyCity = City & { isNearby: true };
+import QuestsContentPanel from './QuestsContentPanel';
+import QuestsSidebar from './QuestsSidebar';
+import type { City, NearbyCity, QuestMeta } from './questsShared';
 
 const COUNTRY_NAMES: Record<string, string> = {
     BY: 'Беларусь',
@@ -39,19 +31,6 @@ const COUNTRY_NAMES: Record<string, string> = {
     EE: 'Эстония',
     GE: 'Грузия',
 };
-type QuestMeta = {
-    id: string;
-    title: string;
-    points: number;
-    durationMin?: number;
-    difficulty?: 'easy' | 'medium' | 'hard';
-    cover?: any;
-    lat: number; lng: number;
-    cityId?: string;
-    cityName?: string;
-    countryName?: string;
-    countryCode?: string;
-};
 
 const STORAGE_SELECTED_CITY = 'quests_selected_city';
 const STORAGE_NEARBY_RADIUS = 'quests_nearby_radius_km';
@@ -59,16 +38,6 @@ const DEFAULT_NEARBY_RADIUS_KM = 15;
 const NEARBY_ID = '__nearby__';
 
 const { spacing, radii, typography } = DESIGN_TOKENS;
-
-/** Склонение слова "квест" */
-const pluralizeQuest = (n: number): string => {
-    const abs = Math.abs(n) % 100;
-    const lastDigit = abs % 10;
-    if (abs > 10 && abs < 20) return `${n} квестов`;
-    if (lastDigit === 1) return `${n} квест`;
-    if (lastDigit >= 2 && lastDigit <= 4) return `${n} квеста`;
-    return `${n} квестов`;
-};
 
 const LazyQuestMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
@@ -1141,159 +1110,6 @@ export default function QuestsScreen() {
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
     }, [selectedCityId, selectedCityName]);
 
-    // ── Sidebar content (reusable for mobile drawer) ──
-    const renderSidebar = () => (
-        <View style={s.sidebar as ViewStyle}>
-            {/* Header with adventure theme */}
-            <View style={s.sidebarHeader as ViewStyle}>
-                <Text style={s.sidebarTitle as TextStyle}>Приключения</Text>
-                <Text style={s.sidebarSubtitle as TextStyle}>
-                    Раскрой тайны городов через загадки и легенды
-                </Text>
-                <View style={s.sidebarActions as ViewStyle}>
-                    <Pressable
-                        style={[
-                            s.actionBtn as ViewStyle,
-                            viewMode === 'map' && (s.actionBtnSecondary as ViewStyle),
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel={viewMode === 'map' ? 'Показать квесты списком' : 'Показать квесты на карте'}
-                        onPress={() => setViewMode((prev) => (prev === 'map' ? 'list' : 'map'))}
-                    >
-                        <Feather name={viewMode === 'map' ? 'list' : 'map'} size={16} color={viewMode === 'map' ? colors.text : colors.textOnPrimary} />
-                        <Text style={[s.actionBtnText as TextStyle, viewMode === 'map' && (s.actionBtnTextSecondary as TextStyle)]}>
-                            {viewMode === 'map' ? 'Показать списком' : 'Показать на карте'}
-                        </Text>
-                    </Pressable>
-                </View>
-            </View>
-
-            <ScrollView
-                style={s.sidebarScroll as ViewStyle}
-                contentContainerStyle={{ paddingBottom: spacing.md }}
-                showsVerticalScrollIndicator
-            >
-                {/* Nearby option - adventure themed */}
-                <View style={s.cityListSection as ViewStyle}>
-                    <Text style={s.cityListLabel as TextStyle}>Выбор местоположения</Text>
-                    <Pressable
-                        onPress={() => handleSelectCity(NEARBY_ID)}
-                        style={[s.cityItem as ViewStyle, selectedCityId === NEARBY_ID && (s.cityItemActive as ViewStyle)]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Рядом, ${pluralizeQuest(cityQuestCountById[NEARBY_ID] || 0)}`}
-                        accessibilityState={{ selected: selectedCityId === NEARBY_ID }}
-                    >
-                        <View style={s.cityItemLeft as ViewStyle}>
-                            <View style={[s.cityItemIcon as ViewStyle, selectedCityId === NEARBY_ID && (s.cityItemIconActive as ViewStyle)]}>
-                                <Feather name="navigation" size={18} color={selectedCityId === NEARBY_ID ? colors.textOnPrimary : colors.textMuted} />
-                            </View>
-                            <Text style={[s.cityItemText as TextStyle, selectedCityId === NEARBY_ID && (s.cityItemTextActive as TextStyle)]}>
-                                Рядом со мной
-                            </Text>
-                        </View>
-                    </Pressable>
-                </View>
-
-                {citiesByCountry.length > 0 && (
-                    <View style={s.countryToolsSection as ViewStyle}>
-                        <Pressable
-                            onPress={handleToggleAllCountryGroups}
-                            style={s.collapseAllBtn as ViewStyle}
-                            accessibilityRole="button"
-                            accessibilityLabel={areAllCountryGroupsCollapsed ? 'Развернуть все страны' : 'Свернуть все страны'}
-                        >
-                            <Feather
-                                name={areAllCountryGroupsCollapsed ? 'chevrons-down' : 'chevrons-up'}
-                                size={14}
-                                color={colors.textMuted}
-                            />
-                            <Text style={s.collapseAllBtnText as TextStyle}>
-                                {areAllCountryGroupsCollapsed ? 'Развернуть все' : 'Свернуть все'}
-                            </Text>
-                        </Pressable>
-                    </View>
-                )}
-
-                {/* Cities grouped by country - adventure themed */}
-                {citiesByCountry.map((group) => {
-                    const isCollapsed = collapsedCountryCodes[group.code] ?? false;
-                    const countryQuestCount = group.cities.reduce((acc, city) => acc + (cityQuestCountById[city.id] || 0), 0);
-                    return (
-                        <View key={group.code} style={s.cityListSection as ViewStyle}>
-                            <Pressable
-                                onPress={() => handleToggleCountryGroup(group.code)}
-                                style={s.countryHeader as ViewStyle}
-                                accessibilityRole="button"
-                                accessibilityLabel={`${isCollapsed ? 'Развернуть' : 'Свернуть'} группу ${group.name || group.code}, ${pluralizeQuest(countryQuestCount)}`}
-                                accessibilityState={{ expanded: !isCollapsed }}
-                            >
-                                <Text style={s.countryLabel as TextStyle}>{group.name}</Text>
-                                <View style={s.countryHeaderActions as ViewStyle}>
-                                    <Text style={s.countryCount as TextStyle}>{pluralizeQuest(countryQuestCount)}</Text>
-                                    <Feather
-                                        name={isCollapsed ? 'chevron-right' : 'chevron-down'}
-                                        size={16}
-                                        color={colors.textMuted}
-                                    />
-                                </View>
-                            </Pressable>
-                            {!isCollapsed && group.cities.map((city) => {
-                                const isActive = selectedCityId === city.id;
-                                const count = cityQuestCountById[city.id] || 0;
-                                return (
-                                    <Pressable
-                                        key={city.id}
-                                        onPress={() => handleSelectCity(city.id)}
-                                        style={[s.cityItem as ViewStyle, isActive && (s.cityItemActive as ViewStyle)]}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={`${city.name}, ${pluralizeQuest(count)}`}
-                                        accessibilityState={{ selected: isActive }}
-                                    >
-                                        <View style={s.cityItemLeft as ViewStyle}>
-                                            <View style={[s.cityItemIcon as ViewStyle, isActive && (s.cityItemIconActive as ViewStyle)]}>
-                                                <Feather name={isActive ? 'compass' : 'map-pin'} size={18} color={isActive ? colors.textOnPrimary : colors.textMuted} />
-                                            </View>
-                                            <Text style={[s.cityItemText as TextStyle, isActive && (s.cityItemTextActive as TextStyle)]}>
-                                                {city.name}
-                                            </Text>
-                                        </View>
-                                        {count > 0 && (
-                                            <View style={[s.cityItemCount as ViewStyle, isActive && (s.cityItemCountActive as ViewStyle)]}>
-                                                <Text style={[s.cityItemCountText as TextStyle, isActive && (s.cityItemCountTextActive as TextStyle)]}>
-                                                    {count}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    );
-                })}
-
-                {/* Radius selector for Nearby */}
-                {selectedCityId === NEARBY_ID && (
-                    <View style={s.radiusSection as ViewStyle}>
-                        <Text style={s.radiusLabel as TextStyle}>Радиус:</Text>
-                        {[5, 10, 15, 20, 30].map((km) => (
-                            <Pressable
-                                key={km}
-                                onPress={() => handleSetRadius(km)}
-                                style={[s.radiusChip as ViewStyle, nearbyRadiusKm === km && (s.radiusChipActive as ViewStyle)]}
-                                accessibilityRole="button"
-                                accessibilityLabel={`Радиус ${km} км`}
-                            >
-                                <Text style={[s.radiusChipText as TextStyle, nearbyRadiusKm === km && (s.radiusChipTextActive as TextStyle)]}>
-                                    {km} км
-                                </Text>
-                            </Pressable>
-                        ))}
-                    </View>
-                )}
-            </ScrollView>
-        </View>
-    );
-
     // ── Render (Two-column layout) ──
     return (
         <View style={s.root as ViewStyle}>
@@ -1319,341 +1135,70 @@ export default function QuestsScreen() {
                         accessibilityLabel="Закрыть меню"
                     />
                     <View style={[s.sidebar as ViewStyle, s.sidebarMobile as ViewStyle]}>
-                        {renderSidebar()}
+                        <QuestsSidebar
+                            styles={s}
+                            colors={colors}
+                            viewMode={viewMode}
+                            selectedCityId={selectedCityId}
+                            nearbyId={NEARBY_ID}
+                            nearbyRadiusKm={nearbyRadiusKm}
+                            areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
+                            collapsedCountryCodes={collapsedCountryCodes}
+                            citiesByCountry={citiesByCountry}
+                            cityQuestCountById={cityQuestCountById}
+                            spacingMd={spacing.md}
+                            onSelectCity={handleSelectCity}
+                            onSetViewMode={setViewMode}
+                            onToggleCountryGroup={handleToggleCountryGroup}
+                            onToggleAllCountryGroups={handleToggleAllCountryGroups}
+                            onSetRadius={handleSetRadius}
+                        />
                     </View>
                 </>
             )}
 
             {/* Desktop: Sidebar always visible */}
-            {!isMobile && renderSidebar()}
-
-            {/* Right content */}
-            <ScrollView
-                style={s.content as ViewStyle}
-                contentContainerStyle={{ flexGrow: 1 }}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Content header */}
-                <View style={s.contentHeader as ViewStyle}>
-                    <View>
-                        <Text style={s.contentTitle as TextStyle}>
-                            {selectedCityId === NEARBY_ID ? 'Квесты поблизости' : selectedCityName || 'Все квесты'}
-                        </Text>
-                        {dataLoaded && <Text style={s.contentCount as TextStyle}>{pluralizeQuest(questsAll.length)}</Text>}
-                    </View>
-                    {isMobile && (
-                        <Pressable
-                            style={s.mobileFilterBtn as ViewStyle}
-                            onPress={() => setFilterDrawerOpen(true)}
-                            accessibilityRole="button"
-                            accessibilityLabel="Выбрать город"
-                        >
-                            <Feather name="filter" size={16} color={colors.text} />
-                            <Text style={s.mobileFilterBtnText as TextStyle}>Город</Text>
-                        </Pressable>
-                    )}
-                </View>
-
-                {/* Content body */}
-                <View style={s.contentBody as ViewStyle}>
-                    {viewMode === 'map' ? (
-                        <View style={s.mapSection as ViewStyle}>
-                            {!dataLoaded && (
-                                <View style={s.mapLoading as ViewStyle}>
-                                    <ActivityIndicator color={colors.primary} />
-                                </View>
-                            )}
-
-                            {dataLoaded && Platform.OS !== 'web' && (
-                                <EmptyState
-                                    icon="map"
-                                    title="Карта доступна в веб-версии"
-                                    description="Откройте страницу квестов в браузере, чтобы увидеть карту"
-                                    variant="empty"
-                                    iconSize={48}
-                                />
-                            )}
-
-                            {dataLoaded && Platform.OS === 'web' && mapPoints.length === 0 && (
-                                <EmptyState
-                                    icon="map-pin"
-                                    title="Нет квестов для отображения на карте"
-                                    description="Измените город или радиус, чтобы увидеть точки на карте"
-                                    variant="empty"
-                                    iconSize={48}
-                                />
-                            )}
-
-                            {dataLoaded && Platform.OS === 'web' && mapPoints.length > 0 && (
-                                <View style={s.mapContainer as ViewStyle}>
-                                    <Suspense fallback={<View style={s.mapLoading as ViewStyle}><ActivityIndicator color={colors.primary} /></View>}>
-                                        <LazyQuestMap
-                                            travel={{ data: mapPoints as any }}
-                                            coordinates={mapCenter}
-                                            mode="radius"
-                                            radius={selectedCityId === NEARBY_ID ? String(Math.max(nearbyRadiusKm, 5)) : '50000'}
-                                            routePoints={[]}
-                                            transportMode="foot"
-                                            onMapClick={() => {}}
-                                            setRouteDistance={() => {}}
-                                            setFullRouteCoords={() => {}}
-                                            onUserLocationChange={handleMapUserLocationChange}
-                                        />
-                                    </Suspense>
-                                </View>
-                            )}
-                        </View>
-                    ) : (
-                        <>
-                            {/* Empty states */}
-                            {selectedCityId === NEARBY_ID && userLoc && questsAll.length === 0 && dataLoaded && (
-                                <EmptyState
-                                    icon="map-pin"
-                                    title="Рядом ничего не найдено"
-                                    description="Попробуйте увеличить радиус поиска"
-                                    variant="empty"
-                                    iconSize={48}
-                                />
-                            )}
-
-                            {selectedCityId === NEARBY_ID && !userLoc && dataLoaded && (
-                                <EmptyState
-                                    icon="navigation"
-                                    title="Геолокация отключена"
-                                    description="Разрешите доступ к геолокации в настройках браузера"
-                                    variant="empty"
-                                    iconSize={48}
-                                />
-                            )}
-
-                            {!selectedCityId && dataLoaded && (
-                                <EmptyState
-                                    icon="compass"
-                                    title="Выберите город"
-                                    description={isMobile ? 'Нажмите «Город» чтобы выбрать' : 'Выберите город из списка слева'}
-                                    variant="empty"
-                                    iconSize={48}
-                                />
-                            )}
-
-                            {/* Skeleton loading */}
-                            {!dataLoaded && (
-                                <View style={s.skeletonGrid as ViewStyle}>
-                                    {Array.from({ length: isMobile ? 2 : 4 }).map((_, i) => (
-                                        <View key={i} style={s.skeletonCard as ViewStyle}>
-                                            <SkeletonLoader width="100%" height={180} borderRadius={radii.lg} />
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-
-                            {/* Quest cards grid */}
-                            {dataLoaded && questsAll.length > 0 && (
-                                <View style={s.questsGrid as ViewStyle}>
-                                    {questsAll.map((quest, index) => (
-                                        <QuestCard
-                                            key={`${quest.id}-${index}`}
-                                            cityId={selectedCityId === NEARBY_ID ? (quest.cityId || '') : (selectedCityId || '')}
-                                            quest={quest}
-                                            nearby={selectedCityId === NEARBY_ID}
-                                            cardWidth={questCardWidth}
-                                        />
-                                    ))}
-                                </View>
-                            )}
-                        </>
-                    )}
-                </View>
-            </ScrollView>
-        </View>
-    );
-}
-
-// ───────────────── Quest card (Magical, Adventurous design) ─────────────────
-
-const loadedQuestImageCache = new Set<string>();
-
-// Adventure category labels for emotional storytelling
-const QUEST_CATEGORIES = [
-    'Городская легенда',
-    'Тайны истории',
-    'Мистическое приключение',
-    'Загадки прошлого',
-    'Секреты города',
-];
-
-// Get difficulty label and color
-const getDifficultyInfo = (difficulty?: 'easy' | 'medium' | 'hard') => {
-    switch (difficulty) {
-        case 'easy': return { label: 'Легко', color: 'rgba(129, 199, 132, 0.9)' };
-        case 'hard': return { label: 'Сложно', color: 'rgba(239, 154, 154, 0.9)' };
-        default: return { label: 'Средне', color: 'rgba(255, 213, 79, 0.9)' };
-    }
-};
-
-function QuestCard({
-    cityId, quest, nearby, cardWidth,
-}: {
-    cityId: string;
-    quest: QuestMeta & { _distanceKm?: number };
-    nearby?: boolean;
-    cardWidth: number;
-}) {
-    const colors = useThemedColors();
-    const { width: screenWidth, isPhone } = useResponsive();
-    const s = useMemo(() => getStyles(colors, screenWidth), [colors, screenWidth]);
-    const [isHovered, setIsHovered] = useState(false);
-    
-    const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 ч';
-    const pointsText = quest.points === 1 ? '1 точка' : quest.points < 5 ? `${quest.points} точки` : `${quest.points} точек`;
-    
-    // Emotional category label (deterministic based on quest id)
-    const categoryIndex = quest.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % QUEST_CATEGORIES.length;
-    const categoryLabel = QUEST_CATEGORIES[categoryIndex];
-    
-    // Difficulty info
-    const difficultyInfo = getDifficultyInfo(quest.difficulty);
-    
-    // Distance text for nearby mode
-    const distanceText = nearby && typeof quest._distanceKm === 'number'
-        ? quest._distanceKm < 1
-            ? `${Math.round(quest._distanceKm * 1000)} м`
-            : `${quest._distanceKm.toFixed(1)} км`
-        : null;
-
-    const imageUrl = typeof quest.cover === 'string' ? quest.cover : null;
-    const cacheKey = imageUrl ? String(imageUrl).trim() : '';
-    const [imageLoaded, setImageLoaded] = useState(() => !!cacheKey && loadedQuestImageCache.has(cacheKey));
-    
-    const handleImageLoad = useCallback(() => {
-        if (cacheKey) loadedQuestImageCache.add(cacheKey);
-        setImageLoaded(true);
-    }, [cacheKey]);
-
-    const handlePress = useCallback(() => {
-        router.push(`/quests/${cityId}/${quest.id}`);
-    }, [cityId, quest.id]);
-
-    const cardHeight = isPhone ? 220 : Math.round((cardWidth / 380) * 260);
-
-    return (
-        <View
-            style={[
-                s.questCard as ViewStyle,
-                { width: cardWidth, maxWidth: '100%' },
-                isHovered && (s.questCardHover as ViewStyle),
-            ]}
-            {...Platform.select({
-                web: {
-                    onClick: handlePress,
-                    onMouseEnter: () => setIsHovered(true),
-                    onMouseLeave: () => setIsHovered(false),
-                    role: 'link',
-                    tabIndex: 0,
-                    'aria-label': `Начать приключение: ${quest.title}`,
-                    onKeyDown: (e: any) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handlePress();
-                        }
-                    },
-                } as any,
-                default: {},
-            })}
-            testID={`quest-card-${quest.id}`}
-        >
-            {Platform.OS !== 'web' && (
-                <Pressable
-                    style={StyleSheet.absoluteFill}
-                    onPress={handlePress}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Начать приключение: ${quest.title}`}
+            {!isMobile && (
+                <QuestsSidebar
+                    styles={s}
+                    colors={colors}
+                    viewMode={viewMode}
+                    selectedCityId={selectedCityId}
+                    nearbyId={NEARBY_ID}
+                    nearbyRadiusKm={nearbyRadiusKm}
+                    areAllCountryGroupsCollapsed={areAllCountryGroupsCollapsed}
+                    collapsedCountryCodes={collapsedCountryCodes}
+                    citiesByCountry={citiesByCountry}
+                    cityQuestCountById={cityQuestCountById}
+                    spacingMd={spacing.md}
+                    onSelectCity={handleSelectCity}
+                    onSetViewMode={setViewMode}
+                    onToggleCountryGroup={handleToggleCountryGroup}
+                    onToggleAllCountryGroups={handleToggleAllCountryGroups}
+                    onSetRadius={handleSetRadius}
                 />
             )}
-            
-            {/* Image container with magical overlays */}
-            <View style={[s.questCardImage as ViewStyle, { height: cardHeight }]}>
-                {/* Shimmer placeholder */}
-                {!imageLoaded && imageUrl && (
-                    <ShimmerOverlay style={StyleSheet.absoluteFill} />
-                )}
-                
-                {/* Quest cover image */}
-                {imageUrl ? (
-                    <ImageCardMedia
-                        src={imageUrl}
-                        alt={quest.title}
-                        fit="cover"
-                        blurBackground
-                        style={StyleSheet.absoluteFill}
-                        loading="lazy"
-                        priority="normal"
-                        onLoad={handleImageLoad}
-                        showImmediately={imageLoaded}
-                    />
-                ) : (
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary, alignItems: 'center', justifyContent: 'center' }]}>
-                        <Feather name="compass" size={40} color={colors.brandAlpha30} />
-                    </View>
-                )}
-                
-                {/* Vignette effect for cinematic feel */}
-                <View style={s.questCardVignette as ViewStyle} />
-                
-                {/* Gradient overlay for text readability */}
-                <View style={[s.questCardGradient as ViewStyle, { pointerEvents: 'none' }]} />
-                
-                {/* Magical glow at bottom */}
-                <View style={s.questCardMagicGlow as ViewStyle} />
-                
-                {/* Distance badge (for nearby mode) */}
-                {distanceText && (
-                    <View style={s.questCardBadge as ViewStyle}>
-                        <Feather name="navigation" size={12} color={colors.textOnDark} />
-                        <Text style={s.questCardBadgeText as TextStyle}>{distanceText}</Text>
-                    </View>
-                )}
-                
-                {/* Difficulty badge */}
-                <View style={s.questCardDifficultyBadge as ViewStyle}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: difficultyInfo.color }} />
-                    <Text style={s.questCardDifficultyText as TextStyle}>{difficultyInfo.label}</Text>
-                </View>
-                
-                {/* Play icon on hover */}
-                <View 
-                    style={[
-                        s.questCardPlayIcon as ViewStyle, 
-                        isHovered && (s.questCardPlayIconVisible as ViewStyle),
-                        { pointerEvents: 'none' },
-                    ]} 
-                >
-                    <Feather name="play" size={18} color={colors.textOnDark} style={{ marginLeft: 2 } as any} />
-                </View>
-                
-                {/* Content overlay */}
-                <View style={[s.questCardContent as ViewStyle, { pointerEvents: 'none' }]}>
-                    {/* Adventure category */}
-                    <Text style={s.questCardCategory as TextStyle}>{categoryLabel}</Text>
-                    
-                    {/* Quest title */}
-                    <Text style={s.questCardTitle as TextStyle} numberOfLines={2}>
-                        {quest.title}
-                    </Text>
-                    
-                    {/* Meta info pills */}
-                    <View style={s.questCardMeta as ViewStyle}>
-                        <View style={s.questCardMetaItem as ViewStyle}>
-                            <Feather name="map-pin" size={13} color="rgba(255,255,255,0.9)" />
-                            <Text style={s.questCardMetaText as TextStyle}>{pointsText}</Text>
-                        </View>
-                        <View style={s.questCardMetaItem as ViewStyle}>
-                            <Feather name="clock" size={13} color="rgba(255,255,255,0.9)" />
-                            <Text style={s.questCardMetaText as TextStyle}>{durationText}</Text>
-                        </View>
-                    </View>
-                </View>
-            </View>
+
+            <QuestsContentPanel
+                styles={s}
+                colors={colors}
+                isMobile={isMobile}
+                dataLoaded={dataLoaded}
+                viewMode={viewMode}
+                selectedCityId={selectedCityId}
+                selectedCityName={selectedCityName}
+                nearbyId={NEARBY_ID}
+                nearbyRadiusKm={nearbyRadiusKm}
+                questsAll={questsAll}
+                questCardWidth={questCardWidth}
+                mapPoints={mapPoints}
+                mapCenter={mapCenter}
+                userLoc={userLoc}
+                radiiLg={radii.lg}
+                LazyQuestMap={LazyQuestMap}
+                onOpenFilterDrawer={() => setFilterDrawerOpen(true)}
+                onMapUserLocationChange={handleMapUserLocationChange}
+            />
         </View>
     );
 }

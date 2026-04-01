@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
-const { ESLint } = require('eslint')
+const minimatch = require('minimatch')
 const { resolveChangedFilesInput, runSelectiveChecks } = require('./run-local-selective-checks')
 
 const parseArgs = (argv) => {
@@ -38,25 +38,45 @@ const parseArgs = (argv) => {
 
 const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|mjs|cjs)$/
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
+const eslintConfig = require(path.resolve(process.cwd(), 'eslint.config.js'))
+const ESLINT_IGNORE_PATTERNS = Array.isArray(eslintConfig?.[0]?.ignores)
+  ? eslintConfig[0].ignores
+  : []
 
-const getLintTargets = async (changedFiles) => {
-  const eslint = new ESLint()
-  const lintableFiles = (changedFiles || []).filter((filePath) => {
+const normalizeForMatching = (filePath) => String(filePath || '').replace(/\\/g, '/')
+
+const matchesIgnorePattern = (filePath, pattern) => {
+  const normalizedFilePath = normalizeForMatching(filePath)
+  const normalizedPattern = normalizeForMatching(pattern)
+
+  if (!normalizedPattern) return false
+  if (minimatch(normalizedFilePath, normalizedPattern, { dot: true })) {
+    return true
+  }
+
+  if (normalizedPattern.endsWith('/')) {
+    return normalizedFilePath.startsWith(normalizedPattern)
+  }
+
+  return false
+}
+
+const isIgnoredLintTarget = (filePath) => {
+  return ESLINT_IGNORE_PATTERNS.some((pattern) => matchesIgnorePattern(filePath, pattern))
+}
+
+const getLintTargets = (changedFiles) => {
+  return (changedFiles || []).filter((filePath) => {
     if (!LINTABLE_FILE_PATTERN.test(filePath)) {
       return false
     }
 
-    return fs.existsSync(path.resolve(process.cwd(), filePath))
+    if (!fs.existsSync(path.resolve(process.cwd(), filePath))) {
+      return false
+    }
+
+    return !isIgnoredLintTarget(filePath)
   })
-
-  const lintTargets = await Promise.all(
-    lintableFiles.map(async (filePath) => {
-      const isIgnored = await eslint.isPathIgnored(filePath)
-      return isIgnored ? null : filePath
-    }),
-  )
-
-  return lintTargets.filter(Boolean)
 }
 
 const buildEslintArgs = (lintTargets) => {
@@ -78,8 +98,8 @@ const runCommand = (command, args) => {
   return result.status ?? 1
 }
 
-const runFastScopeChecks = async ({ changedFiles, dryRun, output }) => {
-  const lintTargets = await getLintTargets(changedFiles)
+const runFastScopeChecks = ({ changedFiles, dryRun, output }) => {
+  const lintTargets = getLintTargets(changedFiles)
   const selectiveChecks = runSelectiveChecks({ changedFiles, dryRun, output })
 
   return {
@@ -107,7 +127,7 @@ const emitJsonSummary = ({ source, changedFiles, lintTargets, selectiveChecks })
   process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`)
 }
 
-const main = async () => {
+const main = () => {
   try {
     const args = parseArgs(process.argv.slice(2))
     if (args.output === 'json' && !args.dryRun) {
@@ -116,7 +136,7 @@ const main = async () => {
     }
 
     const input = resolveChangedFilesInput(args)
-    const result = await runFastScopeChecks({
+    const result = runFastScopeChecks({
       changedFiles: input.files,
       dryRun: args.dryRun,
       output: args.output,
@@ -169,14 +189,16 @@ const main = async () => {
 }
 
 if (require.main === module) {
-  void main()
+  main()
 }
 
 module.exports = {
   LINTABLE_FILE_PATTERN,
+  ESLINT_IGNORE_PATTERNS,
   parseArgs,
   getLintTargets,
   buildEslintArgs,
   ESLINT_CACHE_LOCATION,
+  isIgnoredLintTarget,
   runFastScopeChecks,
 }

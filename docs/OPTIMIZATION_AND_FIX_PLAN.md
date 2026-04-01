@@ -162,8 +162,49 @@ Known cleanup:
   - extracted moderation/admin actions into `components/travel/PublishModerationAdminPanel.tsx`
   - extracted status/current-state/quality summary UI into `components/travel/PublishStatusSummaryPanel.tsx`
   - reduced the size of `TravelWizardStepPublish.tsx` without changing publish behavior
+- Reduced `HomeHero` coupling:
+  - moved the book/slider hero layout into `components/home/HomeHeroBookLayout.tsx`
+  - moved the mobile popular-routes section into `components/home/HomeHeroPopularSection.tsx`
+  - centralized shared quick-filter types in `components/home/homeHeroShared.ts`
+  - kept hero state, preload logic, animation state, analytics, and routing in `components/home/HomeHero.tsx`
+  - reduced `components/home/HomeHero.tsx` below the file-complexity threshold without changing visible hero behavior
+- Reduced `QuestsScreen` coupling:
+  - moved sidebar/filter UI into `screens/tabs/QuestsSidebar.tsx`
+  - moved quest-card UI and hover/media behavior into `screens/tabs/QuestCard.tsx`
+  - moved the right content shell, map/list rendering, empty states, and skeletons into `screens/tabs/QuestsContentPanel.tsx`
+  - centralized shared quest screen types/helpers in `screens/tabs/questsShared.ts`
+  - kept derived data, geolocation, persistence, SEO, and map/list orchestration in `screens/tabs/QuestsScreen.tsx`
+  - reduced `screens/tabs/QuestsScreen.tsx` without changing `/quests` behavior
+- Reduced `MapLogicComponent` coupling:
+  - moved debug overlay UI into `components/MapPage/Map/MapDebugPanel.tsx`
+  - moved Leaflet/debug window registration into `components/MapPage/Map/mapDebugTools.ts`
+  - kept map lifecycle, fitBounds logic, and route/radius behavior in `components/MapPage/Map/MapLogicComponent.tsx`
+  - reduced `components/MapPage/Map/MapLogicComponent.tsx` below the file-complexity threshold without changing route visibility behavior
+- Reduced `EnhancedPdfGeneratorBase` coupling:
+  - moved HTML document shell, print styles, and page-number sync script into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
+  - moved map location-card markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
+  - kept orchestration, parser/renderer lifecycle, and runtime page assembly in `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts`
+  - reduced `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` from 1719 to 1130 lines without changing PDF runtime behavior
+- Restored green full test suite:
+  - removed `ESLint` runtime API usage from `scripts/run-fast-scope-checks.js` to avoid flat-config dynamic-import failures under Jest
+  - aligned `__tests__/scripts/run-fast-scope-checks.test.ts` with the script's synchronous contract
+  - cleared the remaining full-suite failures in `__tests__/scripts/run-fast-scope-checks.test.ts` and `__tests__/components/home/HomeHero.test.tsx`
 
 ## Validation after implementation
 
 - `npm run typecheck` ✅
 - targeted ESLint on touched files ✅
+- `npm run test:run -- __tests__/components/travel/TravelWizardStepPublish.test.tsx` ✅
+- `npm run test:run -- __tests__/components/home/HomeHero.test.tsx` ✅
+- `npx playwright test e2e/travel-wizard.spec.ts -g "должен показать предупреждения на шаге публикации"` ✅
+- `npx playwright test e2e/ui-layout-regressions.spec.ts -g "Home hero:"` ✅
+- targeted ESLint on `QuestsScreen` slice ✅
+- `npx playwright test e2e/quest-video.spec.ts -g "should load quest page and check video in finale"` ✅
+- targeted ESLint on `MapLogicComponent` slice ✅
+- `npm run test:run -- __tests__/components/MapPage/MapLogicComponent.test.tsx __tests__/components/MapPage/MapLogicComponent.zoom-radius.test.tsx` ✅
+- `npx playwright test e2e/map-page.spec.ts -g "desktop: route polyline is visible after entering start/end coordinates"` ✅
+- targeted ESLint on `EnhancedPdfGeneratorBase` slice ✅
+- `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts` ✅
+- `npm run test:run -- __tests__/scripts/run-fast-scope-checks.test.ts __tests__/components/home/HomeHero.test.tsx` ✅
+- `npm run lint` ✅
+- `npm run test:run` ✅
