@@ -9,6 +9,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { uploadImage, deleteImage } from '@/api/misc'
 import { ApiError } from '@/api/client'
 import { useThemedColors } from '@/hooks/useTheme'
+import { validateImageFile } from '@/utils/aiValidation'
 
 import type { GalleryItem, ImageGalleryComponentProps } from './types'
 import { GalleryControls } from './GalleryControls'
@@ -49,6 +50,31 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   const imagesRef = useRef<GalleryItem[]>([])
 
   const hasErrors = useMemo(() => images.some((img) => img.error), [images])
+
+  const validateUploadFile = useCallback((file: File): string | null => {
+    const validation = validateImageFile(file)
+    if (!validation.valid) {
+      return validation.error || 'Ошибка загрузки'
+    }
+
+    const normalizedType = String(file.type || '').toLowerCase()
+    const normalizedName = String(file.name || '').toLowerCase()
+    const supportedWebTypes = new Set([
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ])
+    const supportedWebExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+    const hasSupportedExtension = supportedWebExtensions.some((ext) => normalizedName.endsWith(ext))
+
+    if (Platform.OS === 'web' && normalizedType && !supportedWebTypes.has(normalizedType) && !hasSupportedExtension) {
+      return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP или GIF.'
+    }
+
+    return null
+  }, [])
 
   useEffect(() => {
     setImages((prev) => {
@@ -145,9 +171,35 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
         return
       }
 
-      setBatchUploadProgress({ current: 0, total: files.length })
+      const invalidFiles = files
+        .map((file, index) => {
+          const error = validateUploadFile(file)
+          if (!error) return null
+          const tempId = `invalid-${Date.now()}-${index}`
+          return {
+            id: tempId,
+            stableKey: tempId,
+            url: '',
+            isUploading: false,
+            uploadProgress: 0,
+            error,
+            hasLoaded: false,
+          }
+        })
+        .filter(Boolean) as GalleryItem[]
 
-      const placeholders = files.map((_file, index) => {
+      if (invalidFiles.length > 0) {
+        setImages((prev) => dedupeGalleryItems([...prev, ...invalidFiles]))
+      }
+
+      const validFiles = files.filter((file) => !validateUploadFile(file))
+      if (validFiles.length === 0) {
+        return
+      }
+
+      setBatchUploadProgress({ current: 0, total: validFiles.length })
+
+      const placeholders = validFiles.map((_file, index) => {
         const tempId = `temp-${Date.now()}-${index}`
         return {
           id: tempId,
@@ -161,8 +213,8 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
       setImages((prev) => dedupeGalleryItems([...prev, ...placeholders]))
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i]
         const placeholder = placeholders[i]
 
         try {
@@ -230,11 +282,16 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
 
       setBatchUploadProgress(null)
     },
-    [collection, idTravel, images.length, maxImages],
+    [collection, idTravel, images.length, maxImages, validateUploadFile],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: { 'image/*': [] },
+    accept: {
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp'],
+      'image/gif': ['.gif'],
+    },
     multiple: true,
     disabled: Platform.OS !== 'web',
     onDrop: (acceptedFiles) => handleUploadImages(acceptedFiles),

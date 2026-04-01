@@ -144,4 +144,51 @@ describe('src/api/client.ts apiClient', () => {
     await expect(apiClient.uploadFile('/upload', fd))
       .rejects.toBeInstanceOf(ApiError);
   });
+
+  it('uploadFormData повторяет transient 502 и завершает upload после второго ответа', async () => {
+    mockedGetSecureItem.mockResolvedValueOnce('token');
+
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ url: '/media/retried.jpg' }),
+      } as any);
+
+    const fd = new FormData();
+    const result = await apiClient.uploadFormData<{ url: string }>('/upload', fd);
+
+    expect(result).toEqual({ url: '/media/retried.jpg' });
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+  });
+
+  it('uploadFile повторяет transient 502 и выбрасывает ApiError, если retry тоже падает', async () => {
+    mockedGetSecureItem.mockResolvedValueOnce('token');
+
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+      } as any)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 502,
+        statusText: 'Bad Gateway',
+      } as any);
+
+    const fd = new FormData();
+
+    await expect(apiClient.uploadFile('/upload', fd)).rejects.toEqual(
+      expect.objectContaining({
+        status: 502,
+      }),
+    );
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+  });
 });

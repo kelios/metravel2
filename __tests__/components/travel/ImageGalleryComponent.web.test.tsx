@@ -561,6 +561,23 @@ describe('ImageGalleryComponent.web', () => {
     expect(deleteImageMock).not.toHaveBeenCalled();
   });
 
+  it('blocks unsupported web formats before calling upload API', async () => {
+    const file = new File(['data'], 'iphone.heic', { type: 'image/heic' });
+
+    const { getByText } = renderSafe(
+      <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
+    );
+
+    await runDrop([file]);
+
+    expect(uploadImageMock).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(
+        getByText('Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP или GIF.'),
+      ).toBeTruthy();
+    });
+  });
+
   it('shows delete button for items with missing url and removes them locally', async () => {
     const { getAllByTestId, getByTestId, queryAllByTestId } = renderSafe(
       <ImageGalleryComponent

@@ -58,6 +58,9 @@ const hasLoggableRequestError = (error: unknown): boolean => {
     return true;
 };
 
+const TRANSIENT_UPLOAD_STATUSES = new Set([502, 503, 504]);
+const UPLOAD_RETRY_DELAY_MS = process.env.NODE_ENV === 'test' ? 0 : 350;
+
 /**
  * Единый API клиент
  */
@@ -210,6 +213,38 @@ class ApiClient {
         }
 
         return null as T;
+    }
+
+    private isTransientUploadStatus(status: number): boolean {
+        return TRANSIENT_UPLOAD_STATUSES.has(status);
+    }
+
+    private async wait(ms: number): Promise<void> {
+        await new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    private async fetchUploadWithTransientRetry(
+        endpoint: string,
+        init: RequestInit,
+        timeout: number,
+        retries: number = 1
+    ): Promise<Response> {
+        let attempt = 0;
+
+        while (true) {
+            const response = await fetchWithTimeout(`${this.baseURL}${endpoint}`, init, timeout);
+            const shouldRetry =
+                attempt < retries && !response.ok && this.isTransientUploadStatus(response.status);
+
+            if (!shouldRetry) {
+                return response;
+            }
+
+            attempt += 1;
+            if (UPLOAD_RETRY_DELAY_MS > 0) {
+                await this.wait(UPLOAD_RETRY_DELAY_MS);
+            }
+        }
     }
 
     /**
@@ -616,8 +651,8 @@ class ApiClient {
         };
 
         try {
-            const response = await fetchWithTimeout(
-                `${this.baseURL}${endpoint}`,
+            const response = await this.fetchUploadWithTransientRetry(
+                endpoint,
                 {
                     method: 'POST',
                     headers,
@@ -635,8 +670,8 @@ class ApiClient {
                     Authorization: `Token ${newToken}`,
                 };
 
-                const retryResponse = await fetchWithTimeout(
-                    `${this.baseURL}${endpoint}`,
+                const retryResponse = await this.fetchUploadWithTransientRetry(
+                    endpoint,
                     {
                         method: 'POST',
                         headers: retryHeaders,
@@ -730,6 +765,10 @@ class ApiClient {
                         .then((newToken) => this._uploadViaFetch<T>(endpoint, formData, newToken, method, timeout))
                         .then(resolve)
                         .catch(reject);
+                } else if (this.isTransientUploadStatus(xhr.status)) {
+                    this._uploadViaFetch<T>(endpoint, formData, token, method, timeout)
+                        .then(resolve)
+                        .catch(reject);
                 } else {
                     reject(new ApiError(xhr.status, `Ошибка загрузки: ${xhr.statusText}`));
                 }
@@ -755,8 +794,8 @@ class ApiClient {
         };
 
         try {
-            const response = await fetchWithTimeout(
-                `${this.baseURL}${endpoint}`,
+            const response = await this.fetchUploadWithTransientRetry(
+                endpoint,
                 { method, headers, body: formData },
                 timeout
             );
@@ -769,8 +808,8 @@ class ApiClient {
                 const retryHeaders: HeadersInit = {
                     Authorization: `Token ${newToken}`,
                 };
-                const retryResponse = await fetchWithTimeout(
-                    `${this.baseURL}${endpoint}`,
+                const retryResponse = await this.fetchUploadWithTransientRetry(
+                    endpoint,
                     { method, headers: retryHeaders, body: formData },
                     timeout
                 );

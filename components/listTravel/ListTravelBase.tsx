@@ -3,7 +3,6 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import {
   Alert,
   Platform,
-  StyleSheet,
   View,
   ViewStyle,
 } from 'react-native'
@@ -14,7 +13,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
@@ -25,7 +23,6 @@ import {
   BREAKPOINTS,
   RECOMMENDATIONS_VISIBLE_KEY
 } from './utils/listTravelConstants'
-import { LAYOUT } from '@/constants/layout'
 import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
@@ -35,368 +32,15 @@ import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { deleteTravel } from '@/api/travelsApi'
 import { fetchTravelFacets } from '@/api/travelListQueries'
 import type { FilterOptions } from './utils/listTravelTypes'
-
-const normalizeNamedOptions = (items: unknown): Array<{ id: string; name: string }> => {
-  if (!Array.isArray(items)) return []
-  return items
-    .map((item) => {
-      if (typeof item === 'string' || typeof item === 'number') {
-        const value = String(item)
-        return { id: value, name: value }
-      }
-      if (item && typeof item === 'object') {
-        const record = item as Record<string, unknown>
-        const rawId = record.id
-        const rawName = record.name
-        if ((typeof rawId === 'string' || typeof rawId === 'number') && typeof rawName === 'string') {
-          return { id: String(rawId), name: rawName }
-        }
-      }
-      return null
-    })
-    .filter((item): item is { id: string; name: string } => item !== null)
-}
-
-const normalizeCountryOptions = (items: unknown): Array<{ country_id?: number; id?: string | number; title_ru?: string; name?: string }> => {
-  if (!Array.isArray(items)) return []
-  return items
-    .map((item) => {
-      if (typeof item === 'string' || typeof item === 'number') {
-        const value = String(item)
-        return { id: value, name: value, title_ru: value } as { country_id?: number; id?: string | number; title_ru?: string; name?: string }
-      }
-      if (item && typeof item === 'object') {
-        const record = item as Record<string, unknown>
-        const countryId = typeof record.country_id === 'number' ? record.country_id : undefined
-        const id = typeof record.id === 'string' || typeof record.id === 'number' ? record.id : undefined
-        const titleRu = typeof record.title_ru === 'string' ? record.title_ru : undefined
-        const name = typeof record.name === 'string' ? record.name : undefined
-        if (countryId !== undefined || id !== undefined || titleRu || name) {
-          return { country_id: countryId, id, title_ru: titleRu, name } as { country_id?: number; id?: string | number; title_ru?: string; name?: string }
-        }
-      }
-      return null
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null)
-}
-
-// ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-    // Современный минималистичный layout
-    display: 'flex',
-    flexDirection: 'row',
-    overflowX: 'hidden',
-    width: '100%',
-    maxWidth: '100%',
-    ...Platform.select({
-      web: {
-        minHeight: 900,
-      },
-    }),
-  },
-  rootMobile: {
-    flexDirection: 'column',
-  },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: DESIGN_TOKENS.spacing.lg,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  contentMobile: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingTop: 0,
-    paddingBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  sidebar: {
-    width: 320,
-    flexShrink: 0,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.lg,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
-  },
-  sidebarMobile: {
-    width: '100%',
-    borderRightWidth: 0,
-    borderBottomWidth: 1,
-    ...(Platform.OS === 'web' ? ({
-      position: 'fixed' as any,
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 9000,
-      maxHeight: '100vh',
-      overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      borderBottomWidth: 0,
-      // SRCH-05: slide-up анимация вместо резкого появления
-      animationKeyframes: 'sheet-slide-up',
-      animationDuration: '0.32s',
-      animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-    } as any) : {}),
-  },
-  listContainer: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  listContainerMobile: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingTop: DESIGN_TOKENS.spacing.sm,
-    paddingBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    padding: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
-      } as any,
-      ios: DESIGN_TOKENS.shadowsNative.medium,
-      android: { elevation: 4 },
-      default: DESIGN_TOKENS.shadowsNative.medium,
-    }),
-  },
-  exportBarMobile: {
-    flexDirection: 'column',
-    gap: DESIGN_TOKENS.spacing.sm,
-    alignItems: 'stretch',
-    padding: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarMobileWeb: {
-    marginHorizontal: -DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarInfo: {
-    flex: 1,
-    marginRight: DESIGN_TOKENS.spacing.md,
-  },
-  exportBarInfoTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-  },
-  exportBarInfoSubtitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarInfoActions: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  linkButton: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.primaryText,
-    textDecorationLine: 'underline',
-  },
-  exportBarButtons: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarButtonsMobile: {
-    flexDirection: 'column',
-    width: '100%',
-    alignItems: 'stretch',
-  },
-  progressWrapper: {
-    marginTop: DESIGN_TOKENS.spacing.sm,
-  },
-  recommendationsLoader: {
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    padding: DESIGN_TOKENS.spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    alignItems: 'center',
-  },
-  recommendationsSkeleton: {
-    width: '100%',
-  },
-  recommendationsSkeletonHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.md,
-  },
-  recommendationsSkeletonTitle: {
-    width: 120,
-    height: 20,
-    backgroundColor: colors.borderLight,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-  },
-  recommendationsSkeletonTabs: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  recommendationsSkeletonContent: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  recommendationsSkeletonCard: {
-    flex: 1,
-    height: 80,
-    backgroundColor: colors.borderLight,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-  },
-  // ✅ RIGHT COLUMN: Основной контейнер правой части
-  rightColumn: {
-    flex: 1,
-    minWidth: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    height: '100%',
-    ...Platform.select({
-      web: {
-        minHeight: 900,
-      },
-    }),
-    ...(Platform.OS === 'web' ? ({ paddingTop: DESIGN_TOKENS.spacing.lg } as const) : null),
-  },
-  rightColumnMobile: {
-    width: '100%',
-    paddingTop: 0,
-  },
-  // ✅ SEARCH HEADER: Прикрепленный заголовок поиска
-  searchHeader: {
-    position: 'relative',
-    zIndex: 10,
-    backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
-      } as any,
-      ios: DESIGN_TOKENS.shadowsNative.light,
-      android: { elevation: 2 },
-      default: DESIGN_TOKENS.shadowsNative.light,
-    }),
-  },
-  // ✅ CARDS CONTAINER: Прокручиваемый контейнер для карточек
-  cardsContainer: {
-    flex: 1,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
-    // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
-    paddingTop: DESIGN_TOKENS.spacing.md,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
-    ...Platform.select({
-      web: {
-        minHeight: 900,
-      },
-    }),
-  },
-  cardsContainerMobile: {
-    // Reserve space for the fixed mobile footer/dock so the last card is not covered.
-    // Uses tabBarHeight as a stable dock height across platforms.
-    paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
-    minHeight: 720,
-  },
-  // ✅ CARDS GRID: Flexbox layout for both platforms
-  cardsGrid: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  resultsCount: {
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  resultsCountText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-    color: colors.text,
-  },
-  footerLoader: {
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
-    alignItems: 'center',
-  },
-});
+import {
+  normalizeCountryOptions,
+  normalizeNamedOptions,
+  removeTravelFromInfiniteTravelsCache,
+} from './ListTravelBase.helpers'
+import { createListTravelBaseStyles } from './ListTravelBase.styles'
 
 const MemoizedTravelItem = memo(RenderTravelItem);
 const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
-
-const removeTravelFromInfiniteTravelsCache = (queryClient: ReturnType<typeof useQueryClient>, travelId: number) => {
-  queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: any) => {
-    if (!oldData?.pages || !Array.isArray(oldData.pages)) {
-      return oldData;
-    }
-
-    let removed = false;
-    const pages = oldData.pages.map((page: any) => {
-      if (!page || typeof page !== 'object') {
-        return page;
-      }
-
-      const nextPage = { ...page };
-      const previousDataLength = Array.isArray(nextPage.data) ? nextPage.data.length : null;
-      const previousItemsLength = Array.isArray(nextPage.items) ? nextPage.items.length : null;
-
-      if (Array.isArray(nextPage.data)) {
-        nextPage.data = nextPage.data.filter((item: any) => Number(item?.id) !== travelId);
-      }
-
-      if (Array.isArray(nextPage.items)) {
-        nextPage.items = nextPage.items.filter((item: any) => Number(item?.id) !== travelId);
-      }
-
-      const dataRemoved = previousDataLength !== null && nextPage.data.length !== previousDataLength;
-      const itemsRemoved = previousItemsLength !== null && nextPage.items.length !== previousItemsLength;
-
-      if (!dataRemoved && !itemsRemoved) {
-        return page;
-      }
-
-      removed = true;
-
-      if (typeof nextPage.total === 'number') {
-        nextPage.total = Math.max(0, nextPage.total - 1);
-      } else if (typeof nextPage.total !== 'undefined') {
-        const parsedTotal = Number(nextPage.total);
-        nextPage.total = Number.isFinite(parsedTotal) ? Math.max(0, parsedTotal - 1) : nextPage.total;
-      }
-
-      if (typeof nextPage.count === 'number') {
-        nextPage.count = Math.max(0, nextPage.count - 1);
-      } else if (typeof nextPage.count !== 'undefined') {
-        const parsedCount = Number(nextPage.count);
-        nextPage.count = Number.isFinite(parsedCount) ? Math.max(0, parsedCount - 1) : nextPage.count;
-      }
-
-      return nextPage;
-    });
-
-    if (!removed) {
-      return oldData;
-    }
-
-    return {
-      ...oldData,
-      pages,
-    };
-  });
-};
 
 interface ListTravelProps {
     onTogglePersonalization?: () => void;
@@ -413,7 +57,7 @@ function ListTravelBase({
 }: ListTravelProps = {}) {
     // ✅ ДИЗАЙН: Используем динамические цвета темы
     const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const styles = useMemo(() => createListTravelBaseStyles(colors), [colors]);
     const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
 
     const {
