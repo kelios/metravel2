@@ -655,7 +655,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             }),
         },
         questCardTitle: {
-            color: '#ffffff',
+            color: colors.textOnDark,
             fontSize: isMobileW ? 18 : 20,
             fontWeight: '700',
             letterSpacing: -0.3,
@@ -718,7 +718,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             }),
         },
         questCardBadgeText: {
-            color: '#ffffff',
+            color: colors.textOnDark,
             fontSize: 11,
             fontWeight: '600',
         },
@@ -1592,8 +1592,8 @@ function QuestCard({
                         showImmediately={imageLoaded}
                     />
                 ) : (
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center' }]}>
-                        <Feather name="compass" size={40} color="rgba(255, 146, 43, 0.3)" />
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundTertiary, alignItems: 'center', justifyContent: 'center' }]}>
+                        <Feather name="compass" size={40} color={colors.brandAlpha30} />
                     </View>
                 )}
                 
@@ -1609,7 +1609,7 @@ function QuestCard({
                 {/* Distance badge (for nearby mode) */}
                 {distanceText && (
                     <View style={s.questCardBadge as ViewStyle}>
-                        <Feather name="navigation" size={12} color="#ffffff" />
+                        <Feather name="navigation" size={12} color={colors.textOnDark} />
                         <Text style={s.questCardBadgeText as TextStyle}>{distanceText}</Text>
                     </View>
                 )}
@@ -1628,7 +1628,7 @@ function QuestCard({
                         { pointerEvents: 'none' },
                     ]} 
                 >
-                    <Feather name="play" size={18} color="#ffffff" style={{ marginLeft: 2 } as any} />
+                    <Feather name="play" size={18} color={colors.textOnDark} style={{ marginLeft: 2 } as any} />
                 </View>
                 
                 {/* Content overlay */}

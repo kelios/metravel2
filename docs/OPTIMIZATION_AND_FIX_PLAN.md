@@ -152,6 +152,12 @@ Known cleanup:
   - removed dead preview-window placeholder logic
   - synchronized renderer/theme/runtime call sites
   - removed stale temporary preview test artifact from `tmp/`
+- Reduced local UI debt in `QuestsScreen`:
+  - removed remaining hardcoded hex colors in quest-card UI
+  - switched affected surfaces to themed colors/tokens
+- Reduced `TravelWizardStepPublish` coupling:
+  - moved Instagram draft state, derived values, and reorder/edit handlers into `components/travel/useInstagramPublishDraft.ts`
+  - kept the screen component focused on publish flow and UI wiring
 
 ## Validation after implementation
 
