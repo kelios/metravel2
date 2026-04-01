@@ -16,21 +16,20 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ResponsiveContainer } from '@/components/layout'
-import Button from '@/components/ui/Button'
-import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia'
+import { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { optimizeImageUrl } from '@/utils/imageOptimization'
 import { createHomeHeroStyles } from './homeHeroStyles'
+import HomeHeroBookLayout from './HomeHeroBookLayout'
+import HomeHeroPopularSection from './HomeHeroPopularSection'
+import type { QuickFilterParams, QuickFilterValue } from './homeHeroShared'
 
 interface HomeHeroProps {
   travelsCount?: number
   /** HERO-06: legacy prop, retained for compatibility */
   travelsCountLoading?: boolean
 }
-
-type QuickFilterValue = string | number | Array<string | number>
-type QuickFilterParams = Record<string, QuickFilterValue | undefined>
 
 const normalizeQuickFilterValue = (
   value: QuickFilterValue | undefined,
@@ -629,353 +628,38 @@ const HomeHero = memo(function HomeHero({
     <View testID="home-hero" style={styles.container}>
       <ResponsiveContainer maxWidth={1920} padding>
         <View style={styles.heroShell}>
-          {/* Book wrapper for 3D effect */}
-          <View
-            style={styles.bookWrapper}
-            onLayout={showSideSlider ? handleBookWrapperLayout : undefined}
-          >
-            {/* Book cover shadow/glow */}
-            {isWeb && showSideSlider && <View style={styles.bookCoverOuter} />}
-
-            {/* Hero Row: Left page (text) + Right page (slider) */}
-            <View style={styles.heroRow}>
-              {/* Central book spine */}
-              {isWeb && showSideSlider && <View style={styles.heroBookSpine} />}
-
-              {/* Left Page - Text Content */}
-              <View testID="home-hero-left-page" style={styles.heroSection}>
-                {/* Golden decorative line at top */}
-                {isWeb && showSideSlider && (
-                  <View style={styles.heroPageGoldLine} />
-                )}
-                {/* Page curl effect */}
-                {isWeb && showSideSlider && (
-                  <View style={styles.heroPageCurlLeft} />
-                )}
-                <View
-                  testID="home-hero-left-frame"
-                  style={styles.leftPageFrame}
-                >
-                  {/* Grid row 1: top content (auto height) */}
-                  <View>
-                    {showSideSlider && !isNarrowLayout && (
-                      <View style={styles.chapterHeader}>
-                        <Text style={styles.chapterLabel}>Глава 01</Text>
-                        <View style={styles.chapterDivider} />
-                      </View>
-                    )}
-                    {/* Title */}
-                    <View>
-                      <Text style={styles.title}>
-                        Куда поехать{isNarrowLayout ? ' ' : '\n'}
-                      </Text>
-                      <Text style={styles.titleAccent}>в эти выходные?</Text>
-                    </View>
-
-                    {/* Subtitle */}
-                    <Text style={styles.subtitle}>{heroSubtitle}</Text>
-                  </View>
-
-                  {/* Grid row 2: chips (1fr — fills available space, clips gracefully) */}
-                  {useInlineBookmarkRail && (
-                    <View
-                      testID="home-hero-bookmark-rail"
-                      style={styles.bookmarkRail}
-                    >
-                      {MOOD_CARDS.map((card) => (
-                        <Pressable
-                          key={`inline-${card.title}`}
-                          onPress={() =>
-                            handleQuickFilterPress(
-                              card.title,
-                              card.filters as unknown as QuickFilterParams,
-                              card.route,
-                            )
-                          }
-                          style={({ pressed, hovered }) => [
-                            styles.bookmarkChip,
-                            (pressed || hovered) && styles.bookmarkChipHover,
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${card.title}. Идея поездки`}
-                        >
-                          <Feather
-                            name={card.icon as any}
-                            size={16}
-                            color={colors.textMuted}
-                          />
-                          <Text style={styles.moodChipTitle}>{card.title}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-
-                  {/* Tablet layout: compact 2x2 feature grid */}
-                  {isTabletLayout && (
-                    <View style={styles.tabletFeatureGrid}>
-                      {HERO_HIGHLIGHTS.map((item) => (
-                        <Pressable
-                          key={item.title}
-                          style={({ hovered }) => [
-                            styles.tabletFeatureCard,
-                            hovered && styles.tabletFeatureCardHover,
-                          ]}
-                        >
-                          <View style={styles.tabletFeatureIconWrap}>
-                            <Feather
-                              name={item.icon as any}
-                              size={16}
-                              color={colors.textOnPrimary}
-                            />
-                          </View>
-                          <View style={styles.tabletFeatureTextWrap}>
-                            <Text style={styles.tabletFeatureTitle}>
-                              {item.title}
-                            </Text>
-                            <Text style={styles.tabletFeatureSubtitle}>
-                              {item.subtitle}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-
-                  {/* Grid row 3: CTA (auto height, pinned to bottom by grid) */}
-                  <View
-                    testID="home-hero-cta-row"
-                    style={styles.buttonsContainer}
-                  >
-                    <Button
-                      onPress={handleOpenSearch}
-                      label="Смотреть маршруты"
-                      variant="secondary"
-                      size="md"
-                      fullWidth={useStackedCtas}
-                      icon={
-                        <Feather name="compass" size={16} color={colors.text} />
-                      }
-                      style={[styles.secondaryButton, styles.singleCtaButton]}
-                      labelStyle={styles.secondaryButtonText}
-                      hoverStyle={styles.secondaryButtonHover}
-                      pressedStyle={styles.secondaryButtonHover}
-                      accessibilityLabel="Смотреть маршруты"
-                    />
-                  </View>
-                </View>
-
-                {/* Page number on left page */}
-                {showSideSlider && (
-                  <Text
-                    style={[styles.bookPageNumber, styles.bookPageNumberLeft]}
-                  >
-                    1
-                  </Text>
-                )}
-              </View>
-
-              {/* Tablet layout: Featured image on the right */}
-              {isTabletLayout && (
-                <Pressable
-                  onPress={() => handleOpenArticles(BOOK_IMAGES[0].href)}
-                  style={styles.tabletHeroRight}
-                  accessibilityRole="link"
-                  accessibilityLabel={`Открыть маршрут: ${BOOK_IMAGES[0].title}`}
-                >
-                  <ImageCardMedia
-                    source={BOOK_IMAGES[0].source}
-                    width={width * 0.45}
-                    height={340}
-                    borderRadius={0}
-                    fit="contain"
-                    blurBackground
-                    allowCriticalWebBlur
-                    quality={75}
-                    alt={BOOK_IMAGES[0].alt}
-                    loading="eager"
-                    priority="high"
-                    style={styles.tabletFeaturedImage}
-                  />
-                  <View style={styles.tabletFeaturedOverlay}>
-                    <View style={styles.slideEyebrow}>
-                      <Feather name="map-pin" size={11} color={colors.textOnDark} />
-                      <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
-                    </View>
-                    <Text style={styles.tabletFeaturedTitle}>
-                      {BOOK_IMAGES[0].title}
-                    </Text>
-                    <Text style={styles.tabletFeaturedSubtitle}>
-                      {BOOK_IMAGES[0].subtitle}
-                    </Text>
-                  </View>
-                </Pressable>
-              )}
-
-              {/* Right Page - Slider Section */}
-              {showSideSlider && (
-                <View style={styles.sliderSection}>
-                  {/* Golden decorative line at top */}
-                  {isWeb && <View style={styles.sliderPageGoldLine} />}
-                  {/* Page curl effect */}
-                  {isWeb && <View style={styles.heroPageCurlRight} />}
-                  {/* Page number */}
-                  <Text style={styles.sliderPageNumber}>2</Text>
-                  <View
-                    testID="home-hero-slider-frame"
-                    style={styles.sliderFrame}
-                  >
-                    <Pressable
-                      onPress={() => handleOpenArticles(currentSlide.href)}
-                      testID="home-hero-slider-container"
-                      style={styles.sliderContainer}
-                      {...((isWeb
-                        ? { dataSet: { bookSlider: 'true' } }
-                        : {}) as any)}
-                      accessibilityRole="link"
-                      accessibilityLabel={`Маршрут недели: ${currentSlide.title}. ${currentSlide.subtitle}`}
-                      accessibilityHint="Открыть маршрут"
-                    >
-                      {renderedSlideIndices.map((slideIndex) => {
-                        const slide = BOOK_IMAGES[slideIndex]
-                        const isCurrentVisibleSlide = slideIndex === visibleSlide
-                        const isSlideLoaded = loadedSlides.has(slideIndex)
-
-                        return (
-                          <View
-                            key={`hero-slide-${slideIndex}`}
-                            style={[
-                              styles.slideWrapper,
-                              Platform.OS === 'web'
-                                ? ({
-                                    opacity: isCurrentVisibleSlide ? 1 : 0,
-                                    zIndex: isCurrentVisibleSlide ? 2 : 1,
-                                  } as any)
-                                : null,
-                            ]}
-                            pointerEvents="none"
-                          >
-                            <ImageCardMedia
-                              source={slide.source}
-                              recyclingKey={`home-hero-slide-${slideIndex}`}
-                              width={sliderMediaWidth}
-                              height={sliderHeight}
-                              borderRadius={0}
-                              fit="contain"
-                              blurBackground={!disableHeroSliderBlur}
-                              allowCriticalWebBlur={!disableHeroSliderBlur}
-                              quality={75}
-                              alt={slide.alt}
-                              loading={slideIndex === 0 ? 'eager' : (isSlideLoaded ? 'eager' : 'lazy')}
-                              priority={slideIndex === 0 ? 'high' : 'normal'}
-                              showImmediately={isSlideLoaded}
-                              style={styles.slideImage}
-                              onLoad={() => markSlideAsLoaded(slideIndex)}
-                            />
-                            <View style={styles.slideOverlay}>
-                              <View style={styles.slideEyebrow}>
-                                <Feather
-                                  name="map-pin"
-                                  size={11}
-                                  color={sliderIconColor}
-                                />
-                                <Text style={styles.slideEyebrowText}>
-                                  Маршрут недели
-                                </Text>
-                              </View>
-                              <View style={styles.slideCaption}>
-                                <Text style={styles.slideTitle}>
-                                  {slide.title}
-                                </Text>
-                                <Text style={styles.slideSubtitle}>
-                                  {slide.subtitle}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                        )
-                      })}
-                      {isWeb && (
-                        <>
-                          <View style={styles.sliderPaperInset} />
-                          <View style={styles.sliderPaperFrame} />
-                        </>
-                      )}
-                      {isWeb && (
-                        <>
-                          <View style={styles.sliderTopBlur} />
-                          <View
-                            style={[
-                              styles.sliderEdgeBlur,
-                              styles.sliderEdgeBlurLeft,
-                            ]}
-                          />
-                          <View
-                            style={[
-                              styles.sliderEdgeBlur,
-                              styles.sliderEdgeBlurRight,
-                            ]}
-                          />
-                          {showSideSlider && (
-                            <>
-                              <Animated.View
-                                testID="home-hero-slider-wave-top"
-                                style={[
-                                  styles.sliderPageWave,
-                                  styles.sliderPageWaveTop,
-                                  topWaveAnimatedStyle,
-                                ]}
-                              />
-                              <Animated.View
-                                testID="home-hero-slider-wave-bottom"
-                                style={[
-                                  styles.sliderPageWave,
-                                  styles.sliderPageWaveBottom,
-                                  bottomWaveAnimatedStyle,
-                                ]}
-                              />
-                            </>
-                          )}
-                        </>
-                      )}
-                      {/* Navigation arrows — inside sliderContainer to stay within book page bounds */}
-                      <View style={styles.sliderNav}>
-                        <Pressable
-                          onPress={handlePrevSlide}
-                          style={({ hovered }) => [
-                            styles.sliderNavBtn,
-                            hovered && styles.sliderNavBtnHover,
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel="Предыдущий слайд"
-                        >
-                          <Feather
-                            name="chevron-left"
-                            size={14}
-                            color={sliderIconColor}
-                          />
-                        </Pressable>
-                        <Pressable
-                          onPress={handleNextSlide}
-                          style={({ hovered }) => [
-                            styles.sliderNavBtn,
-                            hovered && styles.sliderNavBtnHover,
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityLabel="Следующий слайд"
-                        >
-                          <Feather
-                            name="chevron-right"
-                            size={14}
-                            color={sliderIconColor}
-                          />
-                        </Pressable>
-                      </View>
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
+          <HomeHeroBookLayout
+            colors={colors}
+            styles={styles}
+            isWeb={isWeb}
+            isNarrowLayout={isNarrowLayout}
+            isTabletLayout={isTabletLayout}
+            showSideSlider={showSideSlider}
+            useInlineBookmarkRail={useInlineBookmarkRail}
+            width={width}
+            sliderHeight={sliderHeight}
+            sliderMediaWidth={sliderMediaWidth}
+            sliderIconColor={sliderIconColor}
+            disableHeroSliderBlur={disableHeroSliderBlur}
+            heroSubtitle={heroSubtitle}
+            moodCards={MOOD_CARDS}
+            heroHighlights={HERO_HIGHLIGHTS}
+            bookImages={BOOK_IMAGES}
+            currentSlide={currentSlide}
+            renderedSlideIndices={renderedSlideIndices}
+            visibleSlide={visibleSlide}
+            loadedSlides={loadedSlides}
+            useStackedCtas={useStackedCtas}
+            topWaveAnimatedStyle={topWaveAnimatedStyle}
+            bottomWaveAnimatedStyle={bottomWaveAnimatedStyle}
+            onBookWrapperLayout={handleBookWrapperLayout}
+            onQuickFilterPress={handleQuickFilterPress}
+            onOpenArticle={handleOpenArticles}
+            onOpenSearch={handleOpenSearch}
+            onPrevSlide={handlePrevSlide}
+            onNextSlide={handleNextSlide}
+            onMarkSlideLoaded={markSlideAsLoaded}
+          />
           {!useInlineBookmarkRail && (
             <View style={styles.moodChipsContainer}>
               <View
@@ -1040,98 +724,16 @@ const HomeHero = memo(function HomeHero({
 
         {/* Popular Routes Section - only on mobile (not tablet) */}
         {!showSideSlider && !isTabletLayout && (
-          <View style={styles.popularSection}>
-            {/* Featured изображение маршрута — даёт визуальный контекст сразу без скролла */}
-            <Pressable
-              onPress={() => handleOpenArticles(BOOK_IMAGES[0].href)}
-              style={({ pressed, hovered }) => [
-                styles.featuredCard,
-                (pressed || hovered) && styles.featuredCardHover,
-              ]}
-              accessibilityRole="link"
-              accessibilityLabel={`Открыть маршрут: ${BOOK_IMAGES[0].title}`}
-            >
-              <ImageCardMedia
-                source={BOOK_IMAGES[0].source}
-                width={featuredCardWidth}
-                height={featuredCardHeight}
-                borderRadius={0}
-                fit="contain"
-                blurBackground
-                allowCriticalWebBlur
-                quality={72}
-                alt={BOOK_IMAGES[0].alt}
-                loading="eager"
-                style={styles.featuredCardImage}
-              />
-              <View style={styles.featuredCardOverlay}>
-                <View style={styles.slideEyebrow}>
-                  <Feather name="map-pin" size={11} color={colors.textOnDark} />
-                  <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
-                </View>
-                <Text style={styles.featuredCardTitle} numberOfLines={1}>
-                  {BOOK_IMAGES[0].title}
-                </Text>
-                <Text style={styles.featuredCardSubtitle} numberOfLines={1}>
-                  {BOOK_IMAGES[0].subtitle}
-                </Text>
-              </View>
-            </Pressable>
-            <Text style={styles.popularTitle}>Популярные маршруты</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={
-                isWeb
-                  ? ({
-                      touchAction: 'pan-x pan-y',
-                      WebkitOverflowScrolling: 'touch',
-                      overflowX: 'auto',
-                      overflowY: 'hidden',
-                      overscrollBehaviorX: 'contain',
-                    } as any)
-                  : undefined
-              }
-              contentContainerStyle={styles.popularScrollContent}
-              directionalLockEnabled={Platform.OS === 'ios'}
-              nestedScrollEnabled={Platform.OS === 'android'}
-            >
-              {BOOK_IMAGES.map((image) => (
-                <Pressable
-                  key={image.title}
-                  onPress={() => handleOpenArticles(image.href)}
-                  style={({ pressed, hovered }) => [
-                    styles.imageCard,
-                    (pressed || hovered) && styles.imageCardHover,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={image.title}
-                >
-                  <ImageCardMedia
-                    source={image.source}
-                    width={isMobile ? 195 : 215}
-                    height={isMobile ? 130 : 148}
-                    borderRadius={0}
-                    fit="cover"
-                    blurBackground
-                    allowCriticalWebBlur
-                    quality={85}
-                    alt={image.alt}
-                    loading="lazy"
-                    style={styles.imageCardImage}
-                  />
-                  <View style={styles.imageCardContent}>
-                    <Text style={styles.imageCardTitle} numberOfLines={1}>
-                      {image.title}
-                    </Text>
-                    <Text style={styles.imageCardSubtitle} numberOfLines={1}>
-                      {image.subtitle}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+          <HomeHeroPopularSection
+            colors={colors}
+            styles={styles}
+            isMobile={isMobile}
+            isWeb={isWeb}
+            featuredCardWidth={featuredCardWidth}
+            featuredCardHeight={featuredCardHeight}
+            bookImages={BOOK_IMAGES}
+            onOpenArticle={handleOpenArticles}
+          />
         )}
       </ResponsiveContainer>
     </View>
