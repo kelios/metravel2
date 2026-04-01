@@ -185,8 +185,12 @@ Known cleanup:
   - moved map location-card markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
   - moved separator-page markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
   - moved stats mini-card and running-header markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
+  - moved inline-gallery markup generation into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
+  - moved travel-content runtime prep (`descriptionHtml`, parsed blocks, gallery flags) into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
+  - moved map-page runtime prep (route-file parsing, route info, snapshot fallbacks, location-card data assembly) into `services/pdf-export/generators/v2/runtime/pdfRuntimeMapData.ts`
+  - removed stale forwarding helpers left behind in `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` after the runtime extractions, while keeping the helper surface still covered by tests
   - kept orchestration, parser/renderer lifecycle, and runtime page assembly in `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts`
-  - reduced `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` from 1719 to 882 lines without changing PDF runtime behavior
+  - reduced `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` from 1719 to 651 lines without changing PDF runtime behavior
 - Restored green full test suite:
   - removed `ESLint` runtime API usage from `scripts/run-fast-scope-checks.js` to avoid flat-config dynamic-import failures under Jest
   - aligned `__tests__/scripts/run-fast-scope-checks.test.ts` with the script's synchronous contract
@@ -209,6 +213,14 @@ Known cleanup:
 - `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts` ✅
 - targeted ESLint on the follow-up `EnhancedPdfGeneratorBase` runtime-markup slice ✅
 - `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts` after the follow-up runtime-markup extraction ✅
+- targeted ESLint on the inline-gallery runtime-markup slice ✅
+- `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts` after the inline-gallery extraction ✅
+- targeted ESLint on the travel-content prep extraction ✅
+- `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts` after the travel-content prep extraction ✅
+- targeted ESLint on the map-runtime extraction ✅
+- `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts __tests__/services/pdf-export/generators/v2/runtime/renderers/MapPageRenderer.test.ts` after the map-runtime extraction ✅
+- targeted ESLint after stale runtime-wrapper cleanup ✅
+- `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts __tests__/services/pdf-export/generators/v2/runtime/renderers/MapPageRenderer.test.ts` after stale runtime-wrapper cleanup ✅
 - `npm run test:run -- __tests__/scripts/run-fast-scope-checks.test.ts __tests__/components/home/HomeHero.test.tsx` ✅
 - `npm run lint` ✅
 - `npm run test:run` ✅

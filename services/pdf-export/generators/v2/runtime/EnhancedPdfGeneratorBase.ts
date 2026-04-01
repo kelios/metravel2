@@ -18,11 +18,8 @@ import {
   buildRouteSvg as sharedBuildRouteSvg,
   buildTravelMeta as sharedBuildTravelMeta,
   calculateRouteDistanceFromPreview as sharedCalculateRouteDistanceFromPreview,
-  getBestCoverImage as sharedGetBestCoverImage,
   getYearRange as sharedGetYearRange,
   normalizeLocations as sharedNormalizeLocations,
-  parseCoordinates as sharedParseCoordinates,
-  resolveCoverImage as sharedResolveCoverImage,
   sortTravels as sharedSortTravels,
 } from './bookData';
 import type { NormalizedLocation, TravelSectionMeta } from './types';
@@ -38,12 +35,15 @@ import {
 } from './pdfVisualHelpers';
 import { renderTravelPhotoPageMarkup } from './travelPhotoPage';
 import { renderTravelContentPageMarkup } from './travelContentPage';
+import { buildPdfMapRuntimeData } from './pdfRuntimeMapData';
 import {
   buildPdfHtmlDocument,
+  buildPdfInlineGallerySection,
   buildPdfLocationCards,
   buildPdfRunningHeader,
   buildPdfSeparatorPage,
   buildPdfStatsMiniCard,
+  buildPdfTravelContentRuntimeData,
 } from './pdfRuntimeMarkup';
 import { RuntimeFinalRenderer } from './renderers/FinalPageRenderer';
 import { RuntimeGalleryRenderer } from './renderers/GalleryPageRenderer';
@@ -200,144 +200,26 @@ export class EnhancedPdfGeneratorBase {
     typography: ReturnType<typeof getThemeConfig>['typography'],
     spacing: ReturnType<typeof getThemeConfig>['spacing']
   ): string {
-    const rawPhotos = travel.gallery || [];
-    const photos = rawPhotos
-      .map((item) => {
-        const url = typeof item === 'string' ? item : item?.url;
-        return this.buildSafeImageUrl(url);
-      })
-      .filter((url): url is string => !!url && url.trim().length > 0);
-
-    if (!photos.length) return '';
-
-    // Для 5+ фото показываем только превью с указанием на отдельную страницу галереи
-    if (photos.length >= 5) {
-      const previewPhotos = photos.slice(0, 4);
-      const remaining = photos.length - 4;
-      
-      return `
-        <div style="margin-bottom: ${spacing.sectionSpacing};">
-          <div style="
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: ${spacing.elementSpacing};
-            padding-bottom: 8px;
-            border-bottom: 2px solid ${colors.accentSoft};
-          ">
-            ${this.renderPdfIcon('camera', colors.text, 20)}
-            <h2 style="
-              font-size: ${typography.h2.size};
-              font-weight: ${typography.h2.weight};
-              color: ${colors.accent};
-              margin: 0;
-              font-family: ${typography.headingFont};
-            ">Фотогалерея</h2>
-            <span style="
-              font-size: ${typography.small.size};
-              color: ${colors.textMuted};
-              font-family: ${typography.bodyFont};
-            ">(${photos.length} ${this.getPhotoLabel(photos.length)})</span>
-          </div>
-          <div style="
-            display: flex;
-            gap: 4mm;
-            flex-wrap: nowrap;
-          ">
-            ${previewPhotos.map((photo, index) => `
-              <div style="
-                width: calc((100% - 12mm) / 4);
-                border-radius: ${this.theme.blocks.borderRadius};
-                overflow: hidden;
-                background: ${colors.surfaceAlt};
-                box-shadow: ${this.theme.blocks.shadow};
-                position: relative;
-              ">
-                ${this.buildContainImage(photo, `Фото ${index + 1}`, '48mm', { onerrorBg: colors.surfaceAlt })}
-                ${index === 3 ? `
-                  <div style="
-                    position: absolute;
-                    top: 0; right: 0; bottom: 0; left: 0;
-                    background: rgba(0,0,0,0.7);
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 24pt;
-                    font-weight: 700;
-                    font-family: ${typography.headingFont};
-                  ">+${remaining}</div>
-                ` : ''}
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
-
     const { layout, columns: configuredColumns, showCaptions, captionPosition, spacing: gallerySpacing } =
       this.getGalleryOptions();
-
-    const gapMm = this.getGalleryGapMm(gallerySpacing);
-
-    // Для 1-4 фото: компактная встроенная галерея
-    if (photos.length === 1) {
-      const caption = showCaptions ? this.buildGalleryCaption(0, captionPosition, typography) : null;
-      return `
-        <div style="margin-bottom: ${spacing.sectionSpacing};">
-          <div style="
-            border-radius: ${this.theme.blocks.borderRadius};
-            overflow: hidden;
-            box-shadow: ${this.theme.blocks.shadow};
-            background: ${colors.surfaceAlt};
-            position: relative;
-          ">
-            ${this.buildContainImage(photos[0], 'Фото путешествия', '85mm', { onerrorBg: colors.surfaceAlt })}
-            ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
-          </div>
-        </div>
-      `;
-    }
-
-    // Для 2-4 фото: сетка
-    const defaultColumns = photos.length === 2 ? 2 : photos.length === 3 ? 3 : 2;
-    const gridColumns =
-      layout === 'grid' || layout === 'masonry'
-        ? Math.max(1, Math.min(4, configuredColumns ?? defaultColumns))
-        : defaultColumns;
-    const imageHeight = gridColumns >= 3 ? '55mm' : '62mm';
-
-    return `
-      <div style="margin-bottom: ${spacing.sectionSpacing};">
-        <div style="
-          display: grid;
-          grid-template-columns: repeat(${gridColumns}, 1fr);
-          gap: ${gapMm}mm;
-        ">
-          ${photos
-            .map((photo, index) => {
-              const caption = showCaptions ? this.buildGalleryCaption(index, captionPosition, typography) : null;
-              return `
-            <div style="
-              border-radius: ${this.theme.blocks.borderRadius};
-              overflow: hidden;
-              background: ${colors.surfaceAlt};
-              box-shadow: ${this.theme.blocks.shadow};
-              position: relative;
-              ${layout === 'polaroid' ? `padding: 6mm 6mm 10mm 6mm; background: #fff;` : ''}
-              ${layout === 'polaroid' ? `transform: rotate(${index % 2 === 0 ? '-1.2deg' : '1.1deg'});` : ''}
-            ">
-              ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              ${this.buildContainImage(photo, `Фото ${index + 1}`, imageHeight, { onerrorBg: colors.surfaceAlt })}
-              ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              ${caption && captionPosition === 'bottom' ? caption.wrapperStart + caption.wrapperEnd : ''}
-            </div>
-          `;
-            })
-            .join('')}
-        </div>
-      </div>
-    `;
+    return buildPdfInlineGallerySection({
+      travel,
+      theme: this.theme,
+      colors,
+      typography,
+      spacing,
+      layout,
+      columns: configuredColumns,
+      showCaptions,
+      captionPosition,
+      galleryGapMm: this.getGalleryGapMm(gallerySpacing),
+      buildSafeImageUrl: (url) => this.buildSafeImageUrl(url),
+      buildContainImage: (src, alt, height, opts) => this.buildContainImage(src, alt, height, opts),
+      buildGalleryCaption: (index, position, currentTypography) =>
+        this.buildGalleryCaption(index, position, currentTypography),
+      renderPdfIcon: (name, color, sizePt) => this.renderPdfIcon(name, color, sizePt),
+      getPhotoLabel: (count) => this.getPhotoLabel(count),
+    });
   }
 
   /**
@@ -399,23 +281,17 @@ export class EnhancedPdfGeneratorBase {
   ): string {
     const { colors, typography, spacing } = this.theme;
     const parser = this.getParserSync();
-    
-    // Описание рендерим через renderRichText (с умной раскладкой изображений)
-    const descriptionHtml = this.blockRenderer && travel.description
-      ? this.blockRenderer.renderRichText(travel.description)
-      : '';
-    const recommendationBlocks = travel.recommendation
-      ? parser.parse(travel.recommendation)
-      : [];
-    const plusBlocks = travel.plus ? parser.parse(travel.plus) : [];
-    const minusBlocks = travel.minus ? parser.parse(travel.minus) : [];
-
-    // Не показываем inline-галерею если есть отдельная страница галереи (избегаем дублирования фото)
-    const hasGalleryPage = this.currentSettings?.includeGallery !== false &&
-      (travel.gallery || []).some((item) => {
-        return !!this.buildSafeImageUrl(typeof item === 'string' ? item : item?.url);
-      });
-    const inlineGallery = this.buildInlineGallerySection(travel, colors, typography, spacing);
+    const contentRuntimeData = buildPdfTravelContentRuntimeData({
+      travel,
+      includeGallery: this.currentSettings?.includeGallery,
+      descriptionHtml:
+        this.blockRenderer && travel.description
+          ? this.blockRenderer.renderRichText(travel.description)
+          : '',
+      parseBlocks: (content) => parser.parse(content),
+      buildInlineGallerySection: () => this.buildInlineGallerySection(travel, colors, typography, spacing),
+      buildSafeImageUrl: (url) => this.buildSafeImageUrl(url),
+    });
 
     return renderTravelContentPageMarkup({
       travel,
@@ -423,19 +299,19 @@ export class EnhancedPdfGeneratorBase {
       theme: this.theme,
       qrCode,
       variant: 'runtime',
-      descriptionHtml,
-      recommendationBlocks,
-      plusBlocks,
-      minusBlocks,
+      descriptionHtml: contentRuntimeData.descriptionHtml,
+      recommendationBlocks: contentRuntimeData.recommendationBlocks,
+      plusBlocks: contentRuntimeData.plusBlocks,
+      minusBlocks: contentRuntimeData.minusBlocks,
       renderBlocks: (blocks) => this.renderBlocks(blocks),
       renderPdfIcon: (name, color, size) => this.renderPdfIcon(name as any, color, size),
       escapeHtml: (value) => this.escapeHtml(value),
       headerHtml: this.buildRunningHeader(travel.name, pageNumber),
       statsHtml: this.buildStatsMiniCard(travel, colors, typography, spacing),
-      inlineGalleryHtml: inlineGallery,
+      inlineGalleryHtml: contentRuntimeData.inlineGalleryHtml,
       showInlineGallery: true,
       includeGallery: this.currentSettings?.includeGallery,
-      hasGalleryMedia: hasGalleryPage,
+      hasGalleryMedia: contentRuntimeData.hasGalleryMedia,
     });
   }
 
@@ -459,111 +335,25 @@ export class EnhancedPdfGeneratorBase {
     pageNumber: number
   ): Promise<string> {
     if (!locations.length) return '';
-
-    const pointsWithCoords = locations.filter(
-      (location) => typeof location.lat === 'number' && typeof location.lng === 'number'
-    );
-
-    // Загружаем route files для получения линии маршрута и профиля высот
-    let routePreview: import('@/types/travelRoutes').ParsedRoutePreview | null = null;
-    let routeLineCoords: Array<[number, number]> = [];
-    let routeInfo: string | undefined;
-
-    try {
-      const { listTravelRouteFiles, downloadTravelRouteFileBlob } = await import('@/api/travelRoutes');
-      const { parseRouteFilePreview } = await import('@/utils/routeFileParser');
-
-      const routeFiles = await listTravelRouteFiles(travel.id);
-      const supportedExts = new Set(['gpx', 'kml']);
-      const supportedFile = routeFiles.find((f) => {
-        const ext = String(f.ext ?? f.original_name?.split('.').pop() ?? '').toLowerCase().replace(/^\./, '');
-        return supportedExts.has(ext);
-      });
-
-      if (supportedFile) {
-        const ext = String(supportedFile.ext ?? supportedFile.original_name?.split('.').pop() ?? '')
-          .toLowerCase()
-          .replace(/^\./, '');
-        const downloaded = await downloadTravelRouteFileBlob(travel.id, supportedFile.id);
-        const parsed = parseRouteFilePreview(downloaded.text, ext);
-
-        if (parsed.linePoints.length >= 2) {
-          routePreview = parsed;
-          routeLineCoords = parsed.linePoints
-            .map((p) => {
-              const [latStr, lngStr] = String(p.coord ?? '').replace(/;/g, ',').split(',');
-              const lat = Number(latStr);
-              const lng = Number(lngStr);
-              if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-              return [lat, lng] as [number, number];
-            })
-            .filter((c): c is [number, number] => c !== null);
-
-          // Формируем информацию о маршруте
-          const distanceKm = this.calculateRouteDistanceFromPreview(parsed);
-          if (distanceKm > 0) {
-            routeInfo = `${supportedFile.original_name || 'Загруженный маршрут'} • ${Math.round(distanceKm * 10) / 10} км`;
-          } else {
-            routeInfo = supportedFile.original_name || 'Загруженный маршрут';
-          }
-        }
-      }
-    } catch {
-      // Игнорируем ошибки загрузки route files
-    }
-
-    const mapSvg = this.buildRouteSvg(locations, { routeLineCoords });
-
-    let snapshotDataUrl: string | null = null;
-    const hasRouteLineForMap = routeLineCoords.length >= 2;
-
-    const mapPoints = pointsWithCoords.map((location) => ({
-      lat: location.lat as number,
-      lng: location.lng as number,
-      label: location.address,
-    }));
-    const mapRouteOpts = hasRouteLineForMap ? routeLineCoords : undefined;
-
-    // 1) Canvas-based renderer — самый надёжный метод (без html2canvas / внешних сервисов)
-    if (mapPoints.length || hasRouteLineForMap) {
-      try {
-        const { generateCanvasMapSnapshot } = await import('@/utils/mapImageGenerator');
-        snapshotDataUrl = await generateCanvasMapSnapshot(mapPoints, {
-          width: 1600,
-          height: 1040,
-          routeLine: mapRouteOpts,
-        });
-      } catch {
-        snapshotDataUrl = null;
-      }
-    }
-
-    // 2) Leaflet + html2canvas fallback
-    if (!snapshotDataUrl && (mapPoints.length || hasRouteLineForMap)) {
-      try {
-        const generateLeafletRouteSnapshot = await this.getLeafletRouteSnapshot();
-        snapshotDataUrl = await generateLeafletRouteSnapshot(mapPoints, {
-          width: 1600,
-          height: 1040,
-          routeLine: mapRouteOpts,
-        });
-      } catch {
-        snapshotDataUrl = null;
-      }
-    }
-
-    const locationQRCodes = await this.generateLocationQRCodes(locations);
-    const locationCards = this.buildLocationCards(locations, locationQRCodes);
+    const mapRuntimeData = await buildPdfMapRuntimeData({
+      travel,
+      locations,
+      buildRouteSvg: (mapLocations, options) => this.buildRouteSvg(mapLocations, options),
+      calculateRouteDistanceFromPreview: (preview) => this.calculateRouteDistanceFromPreview(preview),
+      generateLocationQRCodes: (mapLocations) => this.generateLocationQRCodes(mapLocations),
+      buildLocationCards: (mapLocations, qrCodes) => this.buildLocationCards(mapLocations, qrCodes),
+      getLeafletRouteSnapshot: () => this.getLeafletRouteSnapshot(),
+    });
 
     return this.mapRenderer.render({
       travelName: travel.name,
-      snapshotDataUrl,
-      mapSvg,
-      locationCards,
+      snapshotDataUrl: mapRuntimeData.snapshotDataUrl,
+      mapSvg: mapRuntimeData.mapSvg,
+      locationCards: mapRuntimeData.locationCards,
       locationCount: locations.length,
       pageNumber,
-      routeInfo,
-      routePreview,
+      routeInfo: mapRuntimeData.routeInfo,
+      routePreview: mapRuntimeData.routePreview,
     });
   }
 
@@ -665,17 +455,6 @@ export class EnhancedPdfGeneratorBase {
     return sharedGetYearRange(travels);
   }
 
-  private resolveCoverImage(
-    travels: TravelForBook[],
-    settings: BookSettings
-  ): string | undefined {
-    return sharedResolveCoverImage(travels, settings);
-  }
-
-  private getBestCoverImage(travels: TravelForBook[]): string | undefined {
-    return sharedGetBestCoverImage(travels);
-  }
-
   private async generateQRCodes(travels: TravelForBook[]): Promise<string[]> {
     const QRCode = await this.getQRCode();
     return Promise.all(
@@ -709,12 +488,6 @@ export class EnhancedPdfGeneratorBase {
     return sharedNormalizeLocations(travel);
   }
 
-  private parseCoordinates(
-    coord?: string | null
-  ): { lat: number; lng: number } | null {
-    return sharedParseCoordinates(coord);
-  }
-
   private buildRouteSvg(
     locations: NormalizedLocation[],
     options?: { routeLineCoords?: Array<[number, number]> }
@@ -726,15 +499,11 @@ export class EnhancedPdfGeneratorBase {
     return sharedBuildMapPlaceholder(this.theme);
   }
 
-  private buildGoogleMapsUrl(location: NormalizedLocation): string {
-    return sharedBuildGoogleMapsUrl(location);
-  }
-
   private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
     const QRCode = await this.getQRCode();
     return Promise.all(
       locations.map(async (location) => {
-        const url = this.buildGoogleMapsUrl(location);
+        const url = sharedBuildGoogleMapsUrl(location);
         if (!url) return '';
         try {
           return await QRCode.toDataURL(url, { margin: 1, scale: 4, width: 120 });
