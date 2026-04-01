@@ -2,17 +2,23 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { loadLeafletRuntime } from '@/utils/loadLeafletRuntime';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
 import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
-
-const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
+import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
+import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
+import {
+    CenterOnActive,
+    FitBounds,
+    MapClickHandler,
+    createMarkerIcon,
+    hasValidMarkerCoordinates,
+    loadingStyle,
+    mapHeightStyle,
+} from '@/components/travel/WebMapLeafletLayers';
 
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
@@ -316,81 +322,7 @@ const WebMapComponent = ({
     const isValidCoordinates = ({ lat, lng }: { lat: number; lng: number }) =>
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
-    const markerIcon = useMemo(() => {
-        if (!L || typeof L.divIcon !== 'function') return null;
-        const bg = DESIGN_TOKENS.colors.mapPin;
-        const html = `
-          <div style="
-            position: relative;
-            width: 34px;
-            height: 46px;
-            box-sizing: border-box;
-            pointer-events: none;
-            user-select: none;
-          ">
-            <div style="
-              position: absolute;
-              top: 0;
-              left: 50%;
-              width: 26px;
-              height: 26px;
-              transform: translateX(-50%) rotate(-45deg);
-              transform-origin: 50% 50%;
-              background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 55%), ${bg};
-              border: none;
-              outline: none;
-              border-radius: 50% 50% 50% 0;
-              box-shadow: 0 8px 18px rgba(0,0,0,0.18);
-              box-sizing: border-box;
-            "></div>
-            <div style="
-              position: absolute;
-              top: 9px;
-              left: 50%;
-              width: 10px;
-              height: 10px;
-              margin-left: -5px;
-              background: rgba(255,255,255,0.96);
-              border-radius: 50%;
-              z-index: 1;
-              box-sizing: border-box;
-            "></div>
-            <div style="
-              position: absolute;
-              top: 11px;
-              left: 50%;
-              width: 6px;
-              height: 6px;
-              margin-left: -3px;
-              background: ${bg};
-              border-radius: 50%;
-              z-index: 2;
-              box-sizing: border-box;
-            "></div>
-            <div style="
-              position: absolute;
-              top: 4px;
-              left: 50%;
-              width: 10px;
-              height: 6px;
-              margin-left: -5px;
-              background: rgba(255,255,255,0.35);
-              border-radius: 999px;
-              transform: rotate(-20deg);
-              z-index: 3;
-              filter: blur(0.2px);
-              box-sizing: border-box;
-            "></div>
-          </div>
-        `;
-        return L.divIcon({
-            className: 'metravel-pin-marker',
-            html,
-            iconSize: [34, 46],
-            iconAnchor: [17, 42],
-            popupAnchor: [0, -41],
-        });
-    }, [L]);
+    const markerIcon = useMemo(() => createMarkerIcon(L, DESIGN_TOKENS.colors.mapPin), [L]);
 
     const addMarker = async (latlng: any, options?: { image?: string | null }) => {
         if (!isValidCoordinates(latlng)) return null;
@@ -560,172 +492,10 @@ const WebMapComponent = ({
         if (editingIndex === index) setEditingIndex(null);
     };
 
-    // ✅ УЛУЧШЕНИЕ: динамические стили с поддержкой тем
-    const styles = useMemo(() => ({
-        splitLayout: {
-            display: 'flex',
-            flexDirection: 'row' as const,
-            gap: '16px',
-            alignItems: 'flex-start' as const,
-            width: '100%',
-            boxSizing: 'border-box' as const,
-        },
-        mapPane: {
-            flex: '1 1 60%',
-            minWidth: 0,
-            boxSizing: 'border-box' as const,
-        },
-        listPane: {
-            flex: '0 0 420px',
-            maxWidth: '420px',
-            border: `1px solid ${colors.border}`,
-            borderRadius: `${DESIGN_TOKENS.radii.md}px`,
-            padding: `${DESIGN_TOKENS.spacing.md}px`,
-            height: '600px',
-            overflow: 'hidden' as const,
-            backgroundColor: colors.backgroundSecondary,
-            boxShadow: DESIGN_TOKENS.shadows.card,
-            boxSizing: 'border-box' as const,
-        },
-        listScrollArea: {
-            height: '100%',
-            overflowY: 'auto' as const,
-            paddingRight: '6px',
-        },
-        mapCard: {
-            border: `1px solid ${colors.border}`,
-            borderRadius: `${DESIGN_TOKENS.radii.md}px`,
-            overflow: 'hidden' as const,
-            backgroundColor: colors.surface,
-            boxShadow: DESIGN_TOKENS.shadows.card,
-        },
-        popupContent: {
-            display: 'flex',
-            flexDirection: 'column' as const,
-            gap: '8px',
-            width: '240px',
-            color: colors.text,
-        },
-        popupImageWrap: {
-            width: '100%',
-            height: '120px',
-            borderRadius: `${DESIGN_TOKENS.radii.sm}px`,
-            backgroundColor: colors.backgroundSecondary,
-            overflow: 'hidden' as const,
-        },
-        popupButtons: {
-            display: 'flex',
-            justifyContent: 'space-between' as const,
-            gap: '8px',
-        },
-        editButton: {
-            backgroundColor: colors.primary,
-            color: colors.textInverse,
-            border: 'none',
-            padding: '6px 12px',
-            borderRadius: `${DESIGN_TOKENS.radii.sm}px`,
-            cursor: 'pointer',
-        },
-        deleteButton: {
-            backgroundColor: colors.danger,
-            color: colors.textInverse,
-            border: 'none',
-            padding: '6px 12px',
-            borderRadius: `${DESIGN_TOKENS.radii.sm}px`,
-            cursor: 'pointer',
-        },
-        toggleButton: {
-            padding: '8px 16px',
-            backgroundColor: colors.primary,
-            color: colors.textInverse,
-            border: 'none',
-            borderRadius: `${DESIGN_TOKENS.radii.sm}px`,
-            cursor: 'pointer',
-            marginBottom: '8px',
-            fontWeight: 'bold' as const,
-            fontSize: '14px',
-        },
-        mobileMapShell: {
-            position: 'relative' as const,
-        },
-        mobileToggleButton: {
-            position: 'absolute' as const,
-            zIndex: 1001,
-            top: '10px',
-            right: '10px',
-            padding: '8px 12px',
-            backgroundColor: colors.primary,
-            color: colors.textInverse,
-            border: 'none',
-            borderRadius: `${DESIGN_TOKENS.radii.pill}px`,
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: '13px',
-            boxShadow: DESIGN_TOKENS.shadows.hover,
-        },
-        mobileSheet: {
-            position: 'absolute' as const,
-            zIndex: 1002,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            maxHeight: '72%',
-            backgroundColor: colors.surface,
-            borderTopLeftRadius: `${DESIGN_TOKENS.radii.lg}px`,
-            borderTopRightRadius: `${DESIGN_TOKENS.radii.lg}px`,
-            borderTop: `1px solid ${colors.border}`,
-            boxShadow: DESIGN_TOKENS.shadows.modal,
-            overflow: 'hidden' as const,
-        },
-        mobileSheetHandleRow: {
-            display: 'flex',
-            justifyContent: 'center' as const,
-            paddingTop: '8px',
-            paddingBottom: '6px',
-        },
-        mobileSheetHandle: {
-            width: '44px',
-            height: '4px',
-            borderRadius: '999px',
-            backgroundColor: colors.border,
-        },
-        mobileSheetHeader: {
-            display: 'flex',
-            flexDirection: 'row' as const,
-            alignItems: 'center' as const,
-            justifyContent: 'space-between' as const,
-            padding: '10px 12px',
-            borderBottom: `1px solid ${colors.border}`,
-            backgroundColor: colors.surface,
-        },
-        mobileSheetTitle: {
-            fontSize: '14px',
-            fontWeight: 800,
-            color: colors.text,
-        },
-        mobileSheetClose: {
-            border: 'none',
-            backgroundColor: 'transparent',
-            cursor: 'pointer',
-            fontSize: '18px',
-            lineHeight: '18px',
-            padding: '4px 6px',
-            color: colors.textMuted,
-        },
-        mobileSheetBody: {
-            overflowY: 'auto' as const,
-            WebkitOverflowScrolling: 'touch' as const,
-            padding: '10px 10px 18px',
-            maxHeight: 'calc(72vh - 52px)',
-        },
-    }), [colors]);
+    const styles = useMemo(() => createWebMapStyles(colors), [colors]);
 
     if (!L || !rl || !markerIcon) {
-        return (
-            <div style={{ padding: DESIGN_TOKENS.spacing.lg, color: colors.textMuted }}>
-                Загрузка карты…
-            </div>
-        );
+        return <div style={loadingStyle(colors)}>Загрузка карты…</div>;
     }
 
     const MapContainer: any = (rl as any).MapContainer;
@@ -734,87 +504,6 @@ const WebMapComponent = ({
     const Popup: any = (rl as any).Popup;
     const useMap: any = (rl as any).useMap;
     const useMapEvents: any = (rl as any).useMapEvents;
-
-    // ✅ FIX: Используем ref для отслеживания предыдущего activeIndex, чтобы не центрировать карту повторно
-    const CenterOnActive = ({ activeIndex, markers }: { activeIndex: number | null; markers: any[] }) => {
-        const map = useMap();
-        const prevActiveIndexRef = useRef<number | null>(null);
-        const hasCenteredRef = useRef<Set<string>>(new Set());
-
-        useEffect(() => {
-            if (activeIndex == null) return;
-
-            // If the active marker was chosen by clicking the marker on the map,
-            // Leaflet will already open the popup at the correct location. Extra setView
-            // here causes a visible "jerk" (autoPan + setView animate).
-            if (activeSetByMarkerClickRef.current) {
-                activeSetByMarkerClickRef.current = false;
-                prevActiveIndexRef.current = activeIndex;
-                return;
-            }
-            
-            // ✅ FIX: Центрируем только если activeIndex изменился И мы еще не центрировались на этом маркере
-            if (prevActiveIndexRef.current === activeIndex) return;
-            
-            const marker = markers[activeIndex];
-            if (!marker) return;
-            const lat = Number(marker.lat);
-            const lng = Number(marker.lng);
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
-
-            prevActiveIndexRef.current = activeIndex;
-            
-            // ✅ FIX: Центрируем только один раз для каждого нового маркера
-            const markerKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-            if (hasCenteredRef.current.has(markerKey)) return;
-            hasCenteredRef.current.add(markerKey);
-
-            const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : 13;
-            const nextZoom = Math.max(currentZoom, 14);
-            map.setView([lat, lng], nextZoom, { animate: true });
-        }, [activeIndex, markers, map]);
-
-        return null;
-    };
-
-    const FitBounds = ({ markers, initialFitAllowed }: { markers: any[]; initialFitAllowed: boolean }) => {
-        const map = useMap();
-        const hasFit = useRef(false);
-
-        useEffect(() => {
-            if (!initialFitAllowed) return;
-            if (!hasFit.current && markers.length > 0) {
-                // Фильтруем маркеры с валидными координатами
-                const validMarkers = markers.filter((m: any) =>
-                    Number.isFinite(m.lat) &&
-                    Number.isFinite(m.lng) &&
-                    m.lat >= -90 && m.lat <= 90 &&
-                    m.lng >= -180 && m.lng <= 180
-                );
-
-                if (validMarkers.length === 0) return;
-
-                const bounds = (L as any).latLngBounds(validMarkers.map((m: any) => [m.lat, m.lng]));
-                if (!bounds.isValid()) return;
-
-                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
-                hasFit.current = true;
-            }
-        }, [markers, map, initialFitAllowed]);
-
-        return null;
-    };
-
-    const MapClickHandler = ({ addMarker }: { addMarker: (latlng: any) => void }) => {
-        useMapEvents({
-            click(e: any) {
-                addMarker(e.latlng);
-            },
-        });
-        return null;
-    };
-
 
     return (
         <div
@@ -826,53 +515,7 @@ const WebMapComponent = ({
                 boxSizing: 'border-box',
             }}
         >
-            <style>
-                {`
-                .metravel-webmap .leaflet-popup-content-wrapper,
-                .metravel-webmap .leaflet-popup-tip {
-                  background: ${colors.surface} !important;
-                  opacity: 1 !important;
-                }
-                .metravel-webmap .leaflet-popup-content-wrapper {
-                  color: ${colors.text} !important;
-                  border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
-                  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-                  border: 1px solid ${colors.border} !important;
-                  padding: ${DESIGN_TOKENS.spacing.md}px !important;
-                }
-                .metravel-webmap .leaflet-popup-content {
-                  margin: 0 !important;
-                  color: ${colors.text} !important;
-                  width: 320px !important;
-                  max-width: calc(100vw - 60px) !important;
-                }
-                @media (max-width: 640px) {
-                  .metravel-webmap .leaflet-popup-content {
-                    width: min(300px, calc(100vw - 40px)) !important;
-                  }
-                }
-                .metravel-webmap .leaflet-popup-close-button {
-                  display: block !important;
-                  width: 28px !important;
-                  height: 28px !important;
-                  line-height: 26px !important;
-                  text-align: center !important;
-                  border-radius: 999px !important;
-                  border: 1px solid ${colors.border} !important;
-                  background: ${colors.surface} !important;
-                  top: 8px !important;
-                  right: 8px !important;
-                  color: ${colors.textMuted} !important;
-                  font-size: 18px !important;
-                  transition: all 0.2s !important;
-                }
-                .metravel-webmap .leaflet-popup-close-button:hover {
-                  color: ${colors.text} !important;
-                  background: ${colors.backgroundSecondary} !important;
-                  transform: scale(1.05) !important;
-                }
-                `}
-            </style>
+            <style>{buildLeafletPopupCss(colors)}</style>
             <div style={isWideLayout ? styles.splitLayout : undefined}>
                 <div style={isWideLayout ? styles.mapPane : undefined}>
                     <div style={isWideLayout ? styles.mapCard : undefined}>
@@ -898,19 +541,24 @@ const WebMapComponent = ({
                                     mapRef.current = map;
                                     setMapCreatedNonce((n) => n + 1);
                                 }}
-                                style={{ height: isWideLayout ? 600 : 460, width: '100%' }}
+                                style={mapHeightStyle(isWideLayout)}
                             >
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                                <MapClickHandler addMarker={addMarker} />
-                                <FitBounds markers={localMarkers} initialFitAllowed={hasInitialMarkersRef.current} />
-                                <CenterOnActive activeIndex={activeIndex} markers={localMarkers} />
+                                <MapClickHandler addMarker={addMarker} useMapEventsHook={useMapEvents} />
+                                <FitBounds
+                                    markers={localMarkers}
+                                    initialFitAllowed={hasInitialMarkersRef.current}
+                                    useMapHook={useMap}
+                                    L={L}
+                                />
+                                <CenterOnActive
+                                    activeIndex={activeIndex}
+                                    markers={localMarkers}
+                                    useMapHook={useMap}
+                                    activeSetByMarkerClickRef={activeSetByMarkerClickRef}
+                                />
                                 {localMarkers
-                                    .filter((marker: any) =>
-                                        Number.isFinite(marker.lat) &&
-                                        Number.isFinite(marker.lng) &&
-                                        marker.lat >= -90 && marker.lat <= 90 &&
-                                        marker.lng >= -180 && marker.lng <= 180
-                                    )
+                                    .filter(hasValidMarkerCoordinates)
                                     .map((marker: any, idx: number) => (
                                     <Marker
                                         key={idx}
@@ -925,160 +573,14 @@ const WebMapComponent = ({
                                         }}
                                     >
                                         <Popup>
-                                            <div style={{
-                                                width: '100%',
-                                                maxWidth: 320,
-                                                padding: 0,
-                                            }}>
-                                                {marker.image && (
-                                                    <div style={{
-                                                        width: '100%',
-                                                        height: 160,
-                                                        borderRadius: DESIGN_TOKENS.radii.md,
-                                                        overflow: 'hidden',
-                                                        marginBottom: DESIGN_TOKENS.spacing.sm,
-                                                        backgroundColor: colors.backgroundSecondary,
-                                                    }}>
-                                                        <ImageCardMedia
-                                                            src={normalizeImageUrl(marker.image)}
-                                                            alt="Фото"
-                                                            fit="contain"
-                                                            blurBackground
-                                                            allowCriticalWebBlur
-                                                            loading="lazy"
-                                                            priority="low"
-                                                            borderRadius={DESIGN_TOKENS.radii.md}
-                                                            style={{ width: '100%', height: '100%' } as any}
-                                                        />
-                                                    </div>
-                                                )}
-                                                
-                                                <div style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    gap: DESIGN_TOKENS.spacing.sm,
-                                                }}>
-                                                    {marker.address && (
-                                                        <div style={{
-                                                            fontSize: 14,
-                                                            fontWeight: 600,
-                                                            color: colors.text,
-                                                            lineHeight: 1.4,
-                                                        }}>
-                                                            {marker.address}
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {marker.categories.length > 0 && (
-                                                        <div style={{
-                                                            display: 'flex',
-                                                            flexWrap: 'wrap',
-                                                            gap: 6,
-                                                        }}>
-                                                            {marker.categories
-                                                                .map((catId: any) => {
-                                                                    const targetId = String(catId);
-                                                                    const found = categoryTravelAddress.find((c: any) => String(c.id) === targetId);
-                                                                    return found?.name ?? null;
-                                                                })
-                                                                .filter(Boolean)
-                                                                .map((name: string, i: number) => (
-                                                                    <div
-                                                                        key={i}
-                                                                        style={{
-                                                                            display: 'inline-flex',
-                                                                            alignItems: 'center',
-                                                                            padding: '4px 10px',
-                                                                            borderRadius: 999,
-                                                                            backgroundColor: colors.backgroundTertiary,
-                                                                            border: `1px solid ${colors.border}`,
-                                                                            fontSize: 11,
-                                                                            fontWeight: 600,
-                                                                            color: colors.textMuted,
-                                                                        }}
-                                                                    >
-                                                                        {name}
-                                                                    </div>
-                                                                ))}
-                                                        </div>
-                                                    )}
-                                                    
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        gap: 8,
-                                                        marginTop: 4,
-                                                    }}>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEditMarker(idx);
-                                                            }}
-                                                            style={{
-                                                                flex: 1,
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                gap: 6,
-                                                                padding: '8px 12px',
-                                                                borderRadius: DESIGN_TOKENS.radii.sm,
-                                                                border: `1px solid ${colors.border}`,
-                                                                backgroundColor: colors.surface,
-                                                                color: colors.text,
-                                                                fontSize: 13,
-                                                                fontWeight: 600,
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.backgroundColor = colors.surface;
-                                                            }}
-                                                        >
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                            </svg>
-                                                            Редактировать
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleMarkerRemove(idx);
-                                                            }}
-                                                            style={{
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                padding: '8px 12px',
-                                                                borderRadius: DESIGN_TOKENS.radii.sm,
-                                                                border: `1px solid ${colors.border}`,
-                                                                backgroundColor: colors.surface,
-                                                                color: colors.textMuted,
-                                                                fontSize: 13,
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = colors.dangerSoft;
-                                                                e.currentTarget.style.borderColor = colors.danger;
-                                                                e.currentTarget.style.color = colors.danger;
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.backgroundColor = colors.surface;
-                                                                e.currentTarget.style.borderColor = colors.border;
-                                                                e.currentTarget.style.color = colors.textMuted;
-                                                            }}
-                                                        >
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <polyline points="3 6 5 6 21 6"></polyline>
-                                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <WebMapMarkerPopup
+                                                marker={marker}
+                                                markerIndex={idx}
+                                                categoryTravelAddress={categoryTravelAddress}
+                                                colors={colors}
+                                                onEdit={handleEditMarker}
+                                                onRemove={handleMarkerRemove}
+                                            />
                                         </Popup>
                                     </Marker>
                                 ))}
