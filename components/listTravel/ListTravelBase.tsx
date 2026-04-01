@@ -1248,7 +1248,6 @@ function ListTravelBase({
                 lastSettings={lastSettings}
                 settingsSummary={settingsSummary}
                 setLastSettings={setLastSettings}
-                styles={styles}
               />
             </Suspense>
           ) : null

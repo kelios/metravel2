@@ -361,7 +361,6 @@ export class EnhancedPdfGeneratorBase {
         return this.formatDays(days);
       },
       getTravelLabel: (count) => this.getTravelLabel(count),
-      renderPdfIcon: (name, color, size) => this.renderPdfIcon(name, color, size),
       getImageFilterStyle: () => this.getImageFilterStyle(),
     });
   }

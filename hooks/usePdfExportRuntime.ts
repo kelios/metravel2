@@ -153,6 +153,8 @@ async function loadDetailedTravels(
           }
         }
       }
+
+      return travel;
     }),
     );
 
@@ -187,12 +189,9 @@ export async function runPdfExport({
     return;
   }
 
-  const pendingWindow: Window | null = null;
-
   const htmlService = await getBookHtmlExportService();
 
   if (!isMountedRef.current) {
-    if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
     Alert.alert('Ошибка', 'Предпросмотр книги недоступен');
     return;
   }
@@ -207,7 +206,6 @@ export async function runPdfExport({
 
     const travelsForExport = await loadDetailedTravels(selected, settings, config, travelCacheRef, updateProgress);
     if (!travelsForExport.length) {
-      if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
       Alert.alert('Внимание', 'Выберите хотя бы одно путешествие для экспорта');
       return;
     }
@@ -237,7 +235,7 @@ export async function runPdfExport({
       'Финализация документа',
     ]);
 
-    await openBookPreview(html, pendingWindow);
+    await openBookPreview(html);
 
     const elapsedTime = Math.round((Date.now() - startTime) / 1000);
 
@@ -245,7 +243,6 @@ export async function runPdfExport({
       updateProgress(ExportStage.COMPLETE, 100, `Готово! (${elapsedTime} сек)`, ['Документ создан ✓']);
     }
   } catch (err) {
-    if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
     const error = err instanceof Error ? err : new Error(String(err));
     if (isMountedRef.current) {
       setError(error);

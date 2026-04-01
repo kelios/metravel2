@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { Travel } from '@/types/types';
@@ -66,6 +66,8 @@ export default function SelectedTravelOrderCard({
 }: Props) {
   const colors = useThemedColors();
   const cover = useMemo(() => resolveTravelCover(travel), [travel]);
+  const asViewStyle = (style: unknown): StyleProp<ViewStyle> => style as StyleProp<ViewStyle>;
+  const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
 
   if (Platform.OS === 'web') {
     const cardShellStyle: React.CSSProperties = {
@@ -271,36 +273,12 @@ export default function SelectedTravelOrderCard({
   return (
     <View
       style={[
-        styles.selectedOrderItem,
-        isDragging ? styles.selectedOrderItemDragging : null,
-        isDropTarget ? styles.selectedOrderItemDropTarget : null,
+        asViewStyle(styles.selectedOrderItem),
+        isDragging ? asViewStyle(styles.selectedOrderItemDragging) : null,
+        isDropTarget ? asViewStyle(styles.selectedOrderItemDropTarget) : null,
       ]}
-      {...(Platform.OS === 'web'
-        ? ({
-            draggable: true,
-            onDragStart: (event: any) => {
-              if (event.dataTransfer) {
-                event.dataTransfer.setData('text/plain', itemId);
-                event.dataTransfer.effectAllowed = 'move';
-              }
-              onDragStart();
-            },
-            onDragEnter: (event: any) => {
-              event.preventDefault?.();
-              onDragEnter();
-            },
-            onDragOver: (event: any) => {
-              event.preventDefault?.();
-            },
-            onDrop: (event: any) => {
-              event.preventDefault?.();
-              onDrop(event.dataTransfer?.getData?.('text/plain'));
-            },
-            onDragEnd: () => onDragEnd(),
-          } as any)
-        : null)}
     >
-      <View style={styles.selectedOrderMediaWrap}>
+      <View style={asViewStyle(styles.selectedOrderMediaWrap)}>
         {cover ? (
           <ImageCardMedia
             src={cover}
@@ -313,43 +291,43 @@ export default function SelectedTravelOrderCard({
             allowCriticalWebBlur
             priority="low"
             loading="lazy"
-            style={styles.selectedOrderMedia}
+            style={asViewStyle(styles.selectedOrderMedia)}
           />
         ) : (
           <View
             style={[
-              styles.selectedOrderMedia,
-              styles.selectedOrderMediaPlaceholder,
+              asViewStyle(styles.selectedOrderMedia),
+              asViewStyle(styles.selectedOrderMediaPlaceholder),
             ]}
           />
         )}
-        <View style={styles.selectedOrderIndexBadge}>
+        <View style={asViewStyle(styles.selectedOrderIndexBadge)}>
           <Caption
             muted={false}
-            style={styles.selectedOrderIndex}
+            style={asTextStyle(styles.selectedOrderIndex)}
           >
             {index + 1}
           </Caption>
         </View>
-        <View style={styles.selectedOrderTitleOverlay}>
+        <View style={asViewStyle(styles.selectedOrderTitleOverlay)}>
           <Caption
             muted={false}
-            style={styles.selectedOrderOverlayTitle}
+            style={asTextStyle(styles.selectedOrderOverlayTitle)}
             numberOfLines={2}
             ellipsizeMode="tail"
           >
             {travel.name || 'Без названия'}
           </Caption>
         </View>
-        <View style={styles.selectedOrderControlsOverlay}>
+        <View style={asViewStyle(styles.selectedOrderControlsOverlay)}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Поднять ${travel.name || 'путешествие'} выше`}
             disabled={!canMoveUp}
             onPress={onMoveUp}
             style={[
-              styles.selectedOrderActionButton,
-              !canMoveUp && styles.selectedOrderActionButtonDisabled,
+              asViewStyle(styles.selectedOrderActionButton),
+              !canMoveUp ? asViewStyle(styles.selectedOrderActionButtonDisabled) : null,
             ]}
           >
             <Feather
@@ -364,8 +342,8 @@ export default function SelectedTravelOrderCard({
             disabled={!canMoveDown}
             onPress={onMoveDown}
             style={[
-              styles.selectedOrderActionButton,
-              !canMoveDown && styles.selectedOrderActionButtonDisabled,
+              asViewStyle(styles.selectedOrderActionButton),
+              !canMoveDown ? asViewStyle(styles.selectedOrderActionButtonDisabled) : null,
             ]}
           >
             <Feather

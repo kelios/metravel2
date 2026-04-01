@@ -118,7 +118,7 @@ type MapWebLeafletCanvasProps = {
   safeZoom: number
   mapInstanceKey: string
   circleCenterLatLng: { lat: number; lng: number } | null
-  radiusInMeters: number
+  radiusInMeters: number | null
   userLocationLatLng: { lat: number; lng: number } | null
   customIcons: any
   mapInstance: any
@@ -145,11 +145,11 @@ type MapWebLeafletCanvasProps = {
   setRoutingLoading?: (loading: boolean) => void
   setErrors: (next: any) => void
   setRoutingError?: (value: string | null) => void
-  setRouteDistance?: (distance: number | null) => void
-  setRouteDuration?: (duration: number | null) => void
-  setFullRouteCoords?: (coords: any) => void
-  setRouteElevationStats?: (stats: any) => void
-  orsApiKey: string
+  setRouteDistance: (distance: number) => void
+  setRouteDuration?: (durationSeconds: number) => void
+  setFullRouteCoords: (coords: [number, number][]) => void
+  setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void
+  orsApiKey: string | undefined
   canRenderTravelPoints: boolean
   markers: Point[]
   shouldRenderClusters: boolean

@@ -48,13 +48,12 @@ function IconButton({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={label}
-      accessibilityState={{ disabled, selected: active }}
-      disabled={disabled}
-      onPress={handlePress}
-      testID={testID}
-      title={Platform.OS === 'web' ? label : undefined}
-      android_ripple={!disabled ? { color: 'rgba(0,0,0,0.12)', borderless: false } : undefined}
-      style={({ pressed, hovered }) => [
+        accessibilityState={{ disabled, selected: active }}
+        disabled={disabled}
+        onPress={handlePress}
+        testID={testID}
+        android_ripple={!disabled ? { color: 'rgba(0,0,0,0.12)', borderless: false } : undefined}
+        style={({ pressed, hovered }) => [
           styles.labeledBase,
           globalFocusStyles.focusable,
           {
@@ -90,7 +89,6 @@ function IconButton({
       disabled={disabled}
       onPress={handlePress}
       testID={testID}
-      title={Platform.OS === 'web' ? label : undefined}
       android_ripple={!disabled ? { color: 'rgba(0,0,0,0.12)', borderless: true } : undefined}
       onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
       onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}

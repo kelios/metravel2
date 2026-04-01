@@ -293,10 +293,10 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         : null),
     },
     selectedOrderGrid: {
-      display: 'grid',
+      display: 'grid' as any,
       gridTemplateColumns: 'repeat(auto-fill, minmax(128px, 1fr))',
       gap: DESIGN_TOKENS.spacing.sm,
-      alignItems: 'start',
+      alignItems: 'start' as any,
       width: '100%',
       minHeight: '100%',
       overflowY: 'auto',

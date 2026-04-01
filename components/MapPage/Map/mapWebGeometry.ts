@@ -9,8 +9,8 @@ export function getSafeCenter(coordinates?: { latitude?: number; longitude?: num
     return [DEFAULT_LAT, DEFAULT_LNG]
   }
 
-  const lat = coordinates.latitude
-  const lng = coordinates.longitude
+  const lat = Number(coordinates.latitude)
+  const lng = Number(coordinates.longitude)
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     return [DEFAULT_LAT, DEFAULT_LNG]

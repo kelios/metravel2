@@ -14,6 +14,7 @@ import {
 type MapApp = 'google' | 'apple' | 'yandex' | 'organic' | 'mapsme'
 
 type PointLike = {
+  id?: string
   title?: string
   image?: unknown
   lat: number
@@ -55,7 +56,7 @@ export function QuestDesktopMapPanel({
   copyCurrentStepCoords,
 }: SharedProps & {
   currentStep: PointLike
-  steps: Array<{ id: string }>
+  steps: PointLike[]
   compactDesktopLayout: boolean
   useWideInlineLayout: boolean
   desktopNavExpanded: boolean
@@ -104,7 +105,7 @@ export function QuestDesktopMapPanel({
             >
               <Text style={styles.coordsButtonText}>{currentStep.lat.toFixed(4)}, {currentStep.lng.toFixed(4)}</Text>
             </Pressable>
-            {currentStep.image && (
+            {Boolean(currentStep.image) && (
               <Pressable
                 style={styles.photoToggle}
                 onPress={toggleMap}

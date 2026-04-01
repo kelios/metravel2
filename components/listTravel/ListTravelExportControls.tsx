@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import type { Travel } from '@/types/types';
@@ -13,8 +13,7 @@ import BookSettingsModal from '@/components/export/BookSettingsModal';
 import SelectedTravelOrderCard from './SelectedTravelOrderCard';
 import { createStyles } from './listTravelStyles';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
-
-type ExportBarStyles = ReturnType<typeof createStyles>;
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
   isMobile: boolean;
@@ -32,7 +31,6 @@ type Props = {
   lastSettings: BookSettings;
   settingsSummary: string;
   setLastSettings: React.Dispatch<React.SetStateAction<BookSettings>>;
-  styles: Record<string, unknown>;
 };
 
 function CompactActionLink({
@@ -44,8 +42,11 @@ function CompactActionLink({
   label: string;
   onPress: () => void;
   icon?: string;
-  style?: any;
+  style?: StyleProp<TextStyle>;
 }) {
+  const resolvedTextStyle = StyleSheet.flatten(style) ?? {};
+  const accentColor = typeof resolvedTextStyle.color === 'string' ? resolvedTextStyle.color : '#000';
+
   const pillStyle: React.CSSProperties = {
     cursor: 'pointer',
     display: 'inline-flex',
@@ -53,11 +54,11 @@ function CompactActionLink({
     gap: 4,
     padding: '4px 10px',
     borderRadius: 999,
-    border: `1px solid ${style?.color ?? 'currentColor'}22`,
-    backgroundColor: `${style?.color ?? 'currentColor'}0d`,
+    border: `1px solid ${accentColor}22`,
+    backgroundColor: `${accentColor}0d`,
     fontSize: 13,
     fontWeight: 500,
-    color: style?.color,
+    color: accentColor,
     lineHeight: '1',
     transition: 'background 0.15s',
     textDecoration: 'none',
@@ -78,11 +79,11 @@ function CompactActionLink({
           paddingVertical: 4,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: style?.color ? `${style.color}33` : '#ccc',
-          backgroundColor: pressed ? `${style?.color ?? '#000'}22` : `${style?.color ?? '#000'}0d`,
+          borderColor: resolvedTextStyle.color ? `${accentColor}33` : '#ccc',
+          backgroundColor: pressed ? `${accentColor}22` : `${accentColor}0d`,
         })}
       >
-        {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
+        {icon ? <Feather name={icon as any} size={13} color={accentColor} /> : null}
         <Text style={[style, { textDecorationLine: 'none' }]}>{label}</Text>
       </Pressable>
     );
@@ -100,7 +101,7 @@ function CompactActionLink({
       }}
       style={pillStyle}
     >
-      {icon ? <Feather name={icon as any} size={13} color={style?.color} /> : null}
+      {icon ? <Feather name={icon as any} size={13} color={accentColor} /> : null}
       <Text style={[style, { textDecorationLine: 'none', fontSize: 13 }]}>{label}</Text>
     </div>
   );
@@ -122,13 +123,15 @@ function ListTravelExportControls({
   lastSettings,
   settingsSummary: _settingsSummary,
   setLastSettings,
-  styles,
 }: Props) {
+  const colors = useThemedColors();
   const pdfExport = usePdfExport(selected, pdfConfig);
   const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const s = styles as ExportBarStyles;
+  const s = useMemo(() => createStyles(colors), [colors]);
+  const asViewStyle = (style: unknown): StyleProp<ViewStyle> => style as StyleProp<ViewStyle>;
+  const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
 
   const handleCloseSettings = useCallback(() => {
     setIsBookSettingsOpen(false);
@@ -166,7 +169,7 @@ function ListTravelExportControls({
     : 'Выберите путешествия для экспорта';
 
   const selectedOrderListStyle = useMemo(
-    () => [s.selectedOrderList],
+    () => [asViewStyle(s.selectedOrderList)] as StyleProp<ViewStyle>,
     [s.selectedOrderList]
   );
 
@@ -242,7 +245,7 @@ function ListTravelExportControls({
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={!isMobile}
         contentContainerStyle={
-          isMobile ? selectedOrderListStyle : s.selectedOrderGrid
+          isMobile ? selectedOrderListStyle : asViewStyle(s.selectedOrderGrid)
         }
       >
         {cards}
@@ -263,34 +266,34 @@ function ListTravelExportControls({
         mode="save"
       />
 
-      <View style={[s.exportWorkspace, isMobile && s.exportWorkspaceMobile]}>
+      <View style={[asViewStyle(s.exportWorkspace), isMobile ? asViewStyle(s.exportWorkspaceMobile) : null]}>
         {/* Header row: selection info + actions + PDF button */}
-        <View style={[s.exportBar, isMobile && s.exportBarMobile]}>
-          <View style={s.exportBarTitleRow}>
-            <Text style={s.exportBarInfoTitle as any}>{selectionText}</Text>
+        <View style={[asViewStyle(s.exportBar), isMobile ? asViewStyle(s.exportBarMobile) : null]}>
+          <View style={asViewStyle(s.exportBarTitleRow)}>
+            <Text style={asTextStyle(s.exportBarInfoTitle)}>{selectionText}</Text>
             <CompactActionLink
               label={selectionCount === travels.length && travels.length > 0 ? 'Снять все' : 'Выбрать все'}
               onPress={toggleSelectAll}
               icon={selectionCount === travels.length && travels.length > 0 ? 'minus-circle' : 'check-circle'}
-              style={s.linkButton as any}
+              style={asTextStyle(s.linkButton)}
             />
             {hasSelection && (
               <CompactActionLink
                 label="Очистить"
                 onPress={clearSelection}
                 icon="x"
-                style={s.linkButtonDanger as any}
+                style={asTextStyle(s.linkButtonDanger)}
               />
             )}
           </View>
 
-          <View style={[s.exportBarButtons, isMobile && s.exportBarButtonsMobile]}>
+          <View style={[asViewStyle(s.exportBarButtons), isMobile ? asViewStyle(s.exportBarButtonsMobile) : null]}>
             {hasSelection && (
               <CompactActionLink
                 label="Настройки"
                 onPress={handleOpenSettings}
                 icon="sliders"
-                style={s.linkButton as any}
+                style={asTextStyle(s.linkButton)}
               />
             )}
             <UIButton
@@ -305,7 +308,7 @@ function ListTravelExportControls({
 
         {/* Progress bar */}
         {pdfExport.isGenerating && isWeb && (
-          <View style={s.progressWrapper}>
+          <View style={asViewStyle(s.progressWrapper)}>
             <ProgressIndicator
               progress={pdfExport.progress ?? 0}
               stage={
@@ -334,15 +337,15 @@ function ListTravelExportControls({
         {/* Compact order strip */}
         {hasSelection && (
           <>
-            <View style={[s.exportWorkspaceDivider, isMobile && s.exportWorkspaceDividerMobile]} />
-            <View style={s.selectedOrderStrip}>
-              <View style={s.selectedOrderStripHeader}>
+            <View style={[asViewStyle(s.exportWorkspaceDivider), isMobile ? asViewStyle(s.exportWorkspaceDividerMobile) : null]} />
+            <View style={asViewStyle(s.selectedOrderStrip)}>
+              <View style={asViewStyle(s.selectedOrderStripHeader)}>
                 <Feather name="layers" size={13} color={undefined} style={s.selectedOrderStripIcon as any} />
-                <Caption style={s.selectedOrderStripLabel}>
+                <Caption style={asTextStyle(s.selectedOrderStripLabel)}>
                   {`Порядок в книге${Platform.OS === 'web' ? ' · перетащите для сортировки' : ''}`}
                 </Caption>
               </View>
-              <View style={s.selectedOrderScroller}>
+              <View style={asViewStyle(s.selectedOrderScroller)}>
                 {renderOrderCards()}
               </View>
             </View>

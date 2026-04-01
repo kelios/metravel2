@@ -304,7 +304,7 @@ export class RuntimeMapRenderer {
 
     // Colors matching the travel page
     const accentColor = colors.accent
-    const infoColor = colors.info ?? '#3b82f6'
+    const infoColor = colors.accentStrong ?? accentColor
 
     // 6 summary cards (matches summaryCards in RouteElevationProfile.tsx)
     const summaryCards = [
@@ -349,7 +349,7 @@ export class RuntimeMapRenderer {
               padding: 7px 8px;
               border-radius: 10px;
               border: 1px solid ${c.accent ? colors.border : colors.borderLight};
-              background: ${c.accent ? colors.backgroundSecondary ?? colors.surfaceAlt : colors.surfaceAlt};
+              background: ${c.accent ? colors.surfaceAlt : colors.surfaceAlt};
             ">
               <div style="font-size: 8pt; color: ${colors.textMuted}; margin-bottom: 2px;">${escapeHtml(c.label)}</div>
               <div style="font-size: 10pt; font-weight: 700; color: ${colors.text}; font-family: ${typography.headingFont};">${escapeHtml(c.value)}</div>
@@ -362,7 +362,7 @@ export class RuntimeMapRenderer {
           position: relative;
           border-radius: 10px;
           border: 1px solid ${colors.borderLight};
-          background: ${colors.backgroundSecondary ?? colors.surfaceAlt};
+          background: ${colors.surfaceAlt};
           overflow: hidden;
           margin-bottom: 6px;
         ">

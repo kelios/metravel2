@@ -41,7 +41,7 @@ export function renderTravelPhotoPageMarkup(args: {
   ].filter(Boolean)
   const metaHtml = metaPieces.length ? escapeHtml(metaPieces.join(' \u2022 ')) : ''
 
-  const travelIndex = travel.index != null ? travel.index : pageNumber
+  const travelIndex = pageNumber
 
   const noImageFallback = `
       <div style="

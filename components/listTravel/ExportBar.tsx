@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useMemo, useRef } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import UIButton from '@/components/ui/Button';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import { createStyles } from './listTravelStyles';
@@ -15,7 +15,7 @@ function WebTextButton({
   label: string;
   onPress: () => void;
   accessibilityLabel?: string;
-  style?: any;
+  style?: StyleProp<TextStyle>;
 }) {
   const isWeb = Platform.OS === 'web';
   const ref = useRef<any>(null);
@@ -97,6 +97,8 @@ export const ExportBar = memo(function ExportBar({
 }) {
   const colors = useThemedColors();
   const resolvedStyles = useMemo(() => styles ?? createStyles(colors), [colors, styles]);
+  const asViewStyle = (style: unknown): StyleProp<ViewStyle> => style as StyleProp<ViewStyle>;
+  const asTextStyle = (style: unknown): StyleProp<TextStyle> => style as StyleProp<TextStyle>;
   const selectionText = selectedCount
     ? `Выбрано ${selectedCount} ${getTravelLabel(selectedCount)}`
     : 'Выберите путешествия для экспорта';
@@ -104,30 +106,30 @@ export const ExportBar = memo(function ExportBar({
   return (
     <View
       style={[
-        resolvedStyles.exportBar,
-        isMobile && resolvedStyles.exportBarMobile,
-        Platform.OS === 'web' && isMobile && resolvedStyles.exportBarMobileWeb,
+        asViewStyle(resolvedStyles.exportBar),
+        isMobile ? asViewStyle(resolvedStyles.exportBarMobile) : null,
+        Platform.OS === 'web' && isMobile ? asViewStyle(resolvedStyles.exportBarMobileWeb) : null,
       ]}
     >
-      <View style={resolvedStyles.exportBarInfo}>
-        <Text style={resolvedStyles.exportBarInfoTitle as any}>{selectionText}</Text>
-        <View style={resolvedStyles.exportBarMetaRow}>
-          <Text style={resolvedStyles.exportBarInfoSubtitle as any}>
+      <View style={asViewStyle(resolvedStyles.exportBarInfo)}>
+        <Text style={asTextStyle(resolvedStyles.exportBarInfoTitle)}>{selectionText}</Text>
+        <View style={asViewStyle(resolvedStyles.exportBarMetaRow)}>
+          <Text style={asTextStyle(resolvedStyles.exportBarInfoSubtitle)}>
             {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
           </Text>
-          <View style={resolvedStyles.exportBarInfoActions}>
+          <View style={asViewStyle(resolvedStyles.exportBarInfoActions)}>
             <WebTextButton
               label={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
               onPress={onToggleSelectAll}
               accessibilityLabel={selectedCount === allCount && allCount > 0 ? 'Снять выделение' : 'Выбрать все'}
-              style={resolvedStyles.linkButton as any}
+              style={asTextStyle(resolvedStyles.linkButton)}
             />
             {hasSelection && (
               <WebTextButton
                 label="Очистить выбор"
                 onPress={onClearSelection}
                 accessibilityLabel="Очистить выбор"
-                style={resolvedStyles.linkButton as any}
+                style={asTextStyle(resolvedStyles.linkButton)}
               />
             )}
             {hasSelection && (
@@ -135,14 +137,14 @@ export const ExportBar = memo(function ExportBar({
                 label="Настройки"
                 onPress={onSettings}
                 accessibilityLabel="Настройки экспорта"
-                style={resolvedStyles.linkButton as any}
+                style={asTextStyle(resolvedStyles.linkButton)}
               />
             )}
           </View>
         </View>
       </View>
 
-      <View style={[resolvedStyles.exportBarButtons, isMobile && resolvedStyles.exportBarButtonsMobile]}>
+      <View style={[asViewStyle(resolvedStyles.exportBarButtons), isMobile ? asViewStyle(resolvedStyles.exportBarButtonsMobile) : null]}>
         <UIButton
           label={isGenerating ? `Генерация... ${progress || 0}%` : 'Сохранить PDF'}
           onPress={onSave}
@@ -151,7 +153,7 @@ export const ExportBar = memo(function ExportBar({
       </View>
 
       {isGenerating && Platform.OS === 'web' && (
-        <View style={resolvedStyles.progressWrapper}>
+        <View style={asViewStyle(resolvedStyles.progressWrapper)}>
           <ProgressIndicator
             progress={progress ?? 0}
             stage={
