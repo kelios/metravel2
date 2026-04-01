@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-03-10T22:35:51.790Z",
+  "timestamp": "2026-04-01T20:47:57.601Z",
   "phase": 4,
   "week": 1,
   "dependencies": {
-    "total": 116,
-    "production": 77,
+    "total": 114,
+    "production": 75,
     "dev": 39,
     "heavyDependencies": [
       {
@@ -46,21 +46,11 @@
         "name": "@tanstack/react-query",
         "weight": 80,
         "category": "State"
-      },
-      {
-        "name": "lucide-react-native",
-        "weight": 60,
-        "category": "Icons"
-      },
-      {
-        "name": "lucide-react",
-        "weight": 60,
-        "category": "Icons"
       }
     ]
   },
   "estimatedBundleSize": {
-    "heavyDependenciesTotal": "1500KB",
+    "heavyDependenciesTotal": "1380KB",
     "estimatedMinified": "~800-1000KB",
     "estimatedGzipped": "~250-350KB",
     "target": {

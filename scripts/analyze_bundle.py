@@ -58,9 +58,7 @@ def main():
         {'name': 'pdf-lib', 'weight': 200, 'category': 'PDF'},
         {'name': '@react-navigation/native', 'weight': 150, 'category': 'Navigation'},
         {'name': 'react-native-gesture-handler', 'weight': 150, 'category': 'Gestures'},
-        {'name': '@tanstack/react-query', 'weight': 80, 'category': 'State'},
-        {'name': 'lucide-react-native', 'weight': 60, 'category': 'Icons'},
-        {'name': 'lucide-react', 'weight': 60, 'category': 'Icons'}
+        {'name': '@tanstack/react-query', 'weight': 80, 'category': 'State'}
     ]
 
     print('📦 HEAVY DEPENDENCIES (Estimated Size)')
@@ -176,4 +174,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

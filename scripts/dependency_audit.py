@@ -84,12 +84,6 @@ def main():
             'savings': '~200KB if consolidated'
         },
         {
-            'packages': ['lucide-react', 'lucide-react-native', '@expo/vector-icons'],
-            'reason': 'Icon libraries (some redundancy)',
-            'recommendation': 'Standardize on one for each platform',
-            'savings': '~50KB if optimized'
-        },
-        {
             'packages': ['react-leaflet', '@teovilla/react-native-web-maps', 'react-native-maps'],
             'reason': 'Multiple mapping solutions',
             'recommendation': 'Consolidate mapping approach',
@@ -213,4 +207,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

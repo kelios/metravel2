@@ -149,10 +149,6 @@ describe('Android Dependencies Tests', () => {
     it('should have @expo/vector-icons', () => {
       expect(packageJson.dependencies['@expo/vector-icons']).toBeDefined();
     });
-
-    it('should have lucide-react-native', () => {
-      expect(packageJson.dependencies['lucide-react-native']).toBeDefined();
-    });
   });
 
   describe('Form and Validation', () => {

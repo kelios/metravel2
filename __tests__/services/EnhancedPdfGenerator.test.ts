@@ -2,6 +2,12 @@ import { EnhancedPdfGenerator } from '@/services/pdf-export/generators/EnhancedP
 import type { TravelForBook } from '@/types/pdf-export'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import { generateCanvasMapSnapshot } from '@/utils/mapImageGenerator'
+import {
+  buildMapPlaceholder,
+  buildRouteSvg,
+  getYearRange,
+  normalizeLocations,
+} from '@/services/pdf-export/generators/v2/runtime/bookData'
 
 jest.mock('qrcode', () => ({
   toDataURL: jest.fn(() => Promise.resolve('qr-data')),
@@ -94,7 +100,7 @@ describe('EnhancedPdfGenerator helpers', () => {
     const byCountry = generator.sortTravels([travelA, travelB], 'country')
     expect(byCountry[0].countryName).toBe('Austria')
 
-    expect(generator.getYearRange([travelA, travelB])).toBe('2021 - 2023')
+    expect(getYearRange([travelA, travelB])).toBe('2021 - 2023')
   })
 
   it('builds gallery, checklist and map sections', async () => {
@@ -111,7 +117,7 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(checklist).toContain('Одежда')
     expect(checklist).toContain('пунктов')
 
-    const locations = generator.normalizeLocations(travelA)
+    const locations = normalizeLocations(travelA)
     const mapPage = await generator.renderMapPage(travelA, locations, 4)
     expect(mapPage).toContain('Маршрут')
     expect(mapPage).toContain('map-location-card')
@@ -125,7 +131,7 @@ describe('EnhancedPdfGenerator helpers', () => {
   it('falls back to leaflet when canvas snapshot is unavailable', async () => {
     ;(generateCanvasMapSnapshot as jest.Mock).mockResolvedValueOnce(null)
 
-    const locations = generator.normalizeLocations(travelA)
+    const locations = normalizeLocations(travelA)
     const mapPage = await generator.renderMapPage(travelA, locations, 4)
 
     expect(mapPage).toContain('leaflet-snapshot')
@@ -190,12 +196,12 @@ describe('EnhancedPdfGenerator helpers', () => {
   })
 
   it('normalizes locations, builds SVG, formats labels and escapes', () => {
-    const normalized = generator.normalizeLocations(travelA)
+    const normalized = normalizeLocations(travelA)
     expect(normalized[0].lat).toBeCloseTo(53.9)
 
-    const svg = generator.buildRouteSvg(normalized)
+    const svg = buildRouteSvg(normalized, generator.theme)
     expect(svg).toContain('<svg')
-    expect(generator.buildMapPlaceholder()).toContain('Недостаточно данных')
+    expect(buildMapPlaceholder(generator.theme)).toContain('Недостаточно данных')
 
     expect(generator.formatDays(1)).toBe('1 день')
     expect(generator.getTravelLabel(3)).toBe('путешествия')

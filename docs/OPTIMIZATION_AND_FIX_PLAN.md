@@ -189,8 +189,9 @@ Known cleanup:
   - moved travel-content runtime prep (`descriptionHtml`, parsed blocks, gallery flags) into `services/pdf-export/generators/v2/runtime/pdfRuntimeMarkup.ts`
   - moved map-page runtime prep (route-file parsing, route info, snapshot fallbacks, location-card data assembly) into `services/pdf-export/generators/v2/runtime/pdfRuntimeMapData.ts`
   - removed stale forwarding helpers left behind in `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` after the runtime extractions, while keeping the helper surface still covered by tests
+  - moved helper-oriented assertions in `__tests__/services/EnhancedPdfGenerator.test.ts` onto extracted runtime modules where those helpers now actually live
   - kept orchestration, parser/renderer lifecycle, and runtime page assembly in `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts`
-  - reduced `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` from 1719 to 651 lines without changing PDF runtime behavior
+  - reduced `services/pdf-export/generators/v2/runtime/EnhancedPdfGeneratorBase.ts` from 1719 to 634 lines without changing PDF runtime behavior
 - Restored green full test suite:
   - removed `ESLint` runtime API usage from `scripts/run-fast-scope-checks.js` to avoid flat-config dynamic-import failures under Jest
   - aligned `__tests__/scripts/run-fast-scope-checks.test.ts` with the script's synchronous contract
@@ -221,6 +222,8 @@ Known cleanup:
 - `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts __tests__/services/pdf-export/generators/v2/runtime/renderers/MapPageRenderer.test.ts` after the map-runtime extraction ✅
 - targeted ESLint after stale runtime-wrapper cleanup ✅
 - `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts __tests__/services/pdf-export/generators/v2/runtime/renderers/MapPageRenderer.test.ts` after stale runtime-wrapper cleanup ✅
+- targeted ESLint after shifting helper assertions to extracted modules ✅
+- `npm run test:run -- __tests__/services/EnhancedPdfGenerator.test.ts __tests__/services/pdf-v2/EnhancedPdfGeneratorEntrypoint.test.ts __tests__/services/pdf-export/generators/v2/runtime/renderers/MapPageRenderer.test.ts` after shifting helper assertions ✅
 - `npm run test:run -- __tests__/scripts/run-fast-scope-checks.test.ts __tests__/components/home/HomeHero.test.tsx` ✅
 - `npm run lint` ✅
 - `npm run test:run` ✅

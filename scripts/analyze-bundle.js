@@ -35,9 +35,7 @@ const heavyDeps = [
   { name: 'pdf-lib', weight: 200, category: 'PDF' },
   { name: '@react-navigation/native', weight: 150, category: 'Navigation' },
   { name: 'react-native-gesture-handler', weight: 150, category: 'Gestures' },
-  { name: '@tanstack/react-query', weight: 80, category: 'State' },
-  { name: 'lucide-react-native', weight: 60, category: 'Icons' },
-  { name: 'lucide-react', weight: 60, category: 'Icons' }
+  { name: '@tanstack/react-query', weight: 80, category: 'State' }
 ];
 
 
@@ -114,5 +112,4 @@ const baselineMetrics = {
 
 const metricsPath = path.join(__dirname, '../BASELINE_METRICS.json');
 fs.writeFileSync(metricsPath, JSON.stringify(baselineMetrics, null, 2));
-
 

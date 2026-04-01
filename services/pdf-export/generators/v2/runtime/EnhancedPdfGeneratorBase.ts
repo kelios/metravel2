@@ -14,11 +14,9 @@ import { buildSafeImageUrl, escapeHtml as sharedEscapeHtml } from '../../../util
 import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../../../utils/pluralize';
 import {
   buildGoogleMapsUrl as sharedBuildGoogleMapsUrl,
-  buildMapPlaceholder as sharedBuildMapPlaceholder,
   buildRouteSvg as sharedBuildRouteSvg,
   buildTravelMeta as sharedBuildTravelMeta,
   calculateRouteDistanceFromPreview as sharedCalculateRouteDistanceFromPreview,
-  getYearRange as sharedGetYearRange,
   normalizeLocations as sharedNormalizeLocations,
   sortTravels as sharedSortTravels,
 } from './bookData';
@@ -338,7 +336,7 @@ export class EnhancedPdfGeneratorBase {
     const mapRuntimeData = await buildPdfMapRuntimeData({
       travel,
       locations,
-      buildRouteSvg: (mapLocations, options) => this.buildRouteSvg(mapLocations, options),
+      buildRouteSvg: (mapLocations, options) => sharedBuildRouteSvg(mapLocations, this.theme, options),
       calculateRouteDistanceFromPreview: (preview) => this.calculateRouteDistanceFromPreview(preview),
       generateLocationQRCodes: (mapLocations) => this.generateLocationQRCodes(mapLocations),
       buildLocationCards: (mapLocations, qrCodes) => this.buildLocationCards(mapLocations, qrCodes),
@@ -451,10 +449,6 @@ export class EnhancedPdfGeneratorBase {
     return sharedSortTravels(travels, sortOrder);
   }
 
-  private getYearRange(travels: TravelForBook[]): string | undefined {
-    return sharedGetYearRange(travels);
-  }
-
   private async generateQRCodes(travels: TravelForBook[]): Promise<string[]> {
     const QRCode = await this.getQRCode();
     return Promise.all(
@@ -486,17 +480,6 @@ export class EnhancedPdfGeneratorBase {
 
   private normalizeLocations(travel: TravelForBook): NormalizedLocation[] {
     return sharedNormalizeLocations(travel);
-  }
-
-  private buildRouteSvg(
-    locations: NormalizedLocation[],
-    options?: { routeLineCoords?: Array<[number, number]> }
-  ): string {
-    return sharedBuildRouteSvg(locations, this.theme, options);
-  }
-
-  private buildMapPlaceholder(): string {
-    return sharedBuildMapPlaceholder(this.theme);
   }
 
   private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
