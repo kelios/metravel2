@@ -39,7 +39,7 @@ const CONCURRENCY = Math.max(1, Number.parseInt(getArg('concurrency', '12'), 10)
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.'
 const GENERIC_TITLES = new Set(['Metravel', 'MeTravel', 'Статья | Metravel'])
 
-function fetchUrl(url, redirectDepth = 0) {
+function fetchUrl(url, redirectDepth = 0, originalUrl = url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http
     const opts = {
@@ -58,7 +58,7 @@ function fetchUrl(url, redirectDepth = 0) {
         const nextUrl = res.headers.location.startsWith('http')
           ? res.headers.location
           : new URL(res.headers.location, url).toString()
-        fetchUrl(nextUrl, redirectDepth + 1).then(resolve, reject)
+        fetchUrl(nextUrl, redirectDepth + 1, originalUrl).then(resolve, reject)
         return
       }
 
@@ -67,7 +67,7 @@ function fetchUrl(url, redirectDepth = 0) {
       res.on('data', (chunk) => { body += chunk })
       res.on('end', () => {
         resolve({
-          url,
+          url: originalUrl,
           finalUrl: url,
           status,
           headers: res.headers,
@@ -91,6 +91,16 @@ function normalizeComparableUrl(input) {
     if (parsed.pathname !== '/') {
       parsed.pathname = parsed.pathname.replace(/\/+$/, '')
     }
+    return parsed.toString()
+  } catch {
+    return String(input || '').trim()
+  }
+}
+
+function normalizeFetchedUrl(input) {
+  try {
+    const parsed = new URL(input)
+    parsed.hash = ''
     return parsed.toString()
   } catch {
     return String(input || '').trim()
@@ -394,6 +404,14 @@ function validatePageResult(result) {
     })
   }
 
+  if (normalizeFetchedUrl(result.url) !== normalizeFetchedUrl(result.finalUrl)) {
+    issues.push({
+      severity: 'error',
+      code: 'http.redirect',
+      message: `URL redirected: "${result.url}" -> "${result.finalUrl}"`,
+    })
+  }
+
   issues.push(...validateTitle(title, pageType))
   issues.push(...validateDescription(desc, descriptions.length))
   issues.push(...validateCanonical(canonical, html, result.finalUrl))
@@ -546,6 +564,7 @@ if (typeof module !== 'undefined' && module.exports) {
     extractCanonical,
     extractMetaContents,
     normalizeComparableUrl,
+    normalizeFetchedUrl,
     parseSitemapUrls,
     validateCanonical,
     validateDescription,

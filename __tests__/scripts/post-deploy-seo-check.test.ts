@@ -117,4 +117,37 @@ describe('post-deploy SEO check helpers', () => {
 
     expect(result.issues).toEqual([])
   })
+
+  it('fails when a checked URL redirects before the final HTML', () => {
+    const html = [
+      '<!DOCTYPE html>',
+      '<html lang="ru">',
+      '<head>',
+      '<title>About | Metravel</title>',
+      '<meta name="description" content="1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890"/>',
+      '<link rel="canonical" href="https://metravel.by/about"/>',
+      '<meta property="og:title" content="About | Metravel"/>',
+      '<meta property="og:description" content="1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890"/>',
+      '<meta property="og:image" content="https://metravel.by/image.jpg"/>',
+      '<meta property="og:url" content="https://metravel.by/about"/>',
+      '<meta property="og:type" content="website"/>',
+      '<meta name="twitter:card" content="summary_large_image"/>',
+      '<meta name="twitter:title" content="About | Metravel"/>',
+      '<meta name="twitter:description" content="1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890 1234567890"/>',
+      '<meta name="twitter:image" content="https://metravel.by/image.jpg"/>',
+      '</head>',
+      '<body></body>',
+      '</html>',
+    ].join('')
+
+    const result = validatePageResult({
+      url: 'https://metravel.by/about/',
+      finalUrl: 'https://metravel.by/about',
+      status: 200,
+      headers: {},
+      body: html,
+    })
+
+    expect(result.issues.map((issue: any) => issue.code)).toContain('http.redirect')
+  })
 })
