@@ -1,5 +1,5 @@
-import React from 'react'
-import { ActivityIndicator, Platform, Text, View } from 'react-native'
+import React, { useMemo } from 'react'
+import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
@@ -104,6 +104,29 @@ export const NoPointsMessage: React.FC = () => (
     <Text>Маршрут построен. Вдоль маршрута нет доступных точек в радиусе 2 км.</Text>
   </View>
 )
+
+export const getClusterZoomFitBoundsOptions = (viewport: { width?: number; height?: number }) => {
+  const width = Number.isFinite(viewport.width) ? Number(viewport.width) : 1024
+  const height = Number.isFinite(viewport.height) ? Number(viewport.height) : 768
+  const isNarrow = width <= 640
+  const isVeryShort = height <= 720
+
+  if (!isNarrow) {
+    return {
+      animate: true,
+      paddingTopLeft: [30, 34] as [number, number],
+      paddingBottomRight: [30, 34] as [number, number],
+      maxZoom: 16,
+    }
+  }
+
+  return {
+    animate: true,
+    paddingTopLeft: [16, 104] as [number, number],
+    paddingBottomRight: [16, isVeryShort ? 188 : 224] as [number, number],
+    maxZoom: 15,
+  }
+}
 
 type MapWebLeafletCanvasProps = {
   rl: ReactLeafletNS
@@ -220,6 +243,12 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   setExpandedCluster,
   travelMarkerOpacity,
 }) => {
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions()
+  const clusterZoomFitBoundsOptions = useMemo(
+    () => getClusterZoomFitBoundsOptions({ width: viewportWidth, height: viewportHeight }),
+    [viewportWidth, viewportHeight]
+  )
+
   if (!canRenderMap || !hasValidReactLeafletHooks) return null
 
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rl
@@ -402,7 +431,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
           onClusterZoom={({ center: _center, bounds, key, items }) => {
             setExpandedCluster({ key, items })
             try {
-              mapRef.current?.fitBounds?.(bounds as any, { animate: true, padding: [30, 30] } as any)
+              mapRef.current?.fitBounds?.(bounds as any, clusterZoomFitBoundsOptions as any)
             } catch {
               // noop
             }
