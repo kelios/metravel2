@@ -51,6 +51,27 @@ const MapControlsReactive: React.FC<Omit<React.ComponentProps<typeof MapControls
   return <MapControls {...props} bottomOffset={bottomOffset} />;
 };
 
+export const getMarkerFocusPlan = ({
+  currentZoom,
+  maxZoom,
+  bottomSheetState,
+}: {
+  currentZoom: number;
+  maxZoom: number;
+  bottomSheetState: 'collapsed' | 'quarter' | 'half' | 'full';
+}) => {
+  const safeCurrentZoom = Number.isFinite(currentZoom) ? currentZoom : 11;
+  const safeMaxZoom = Number.isFinite(maxZoom) ? maxZoom : 18;
+  const shouldCollapseSheet = bottomSheetState !== 'collapsed';
+  const targetZoom = Math.min(Math.max(safeCurrentZoom + 2, 14), safeMaxZoom || 18);
+
+  return {
+    shouldCollapseSheet,
+    targetZoom,
+    shouldSkipZoom: safeCurrentZoom >= 14,
+  };
+};
+
 const MapPageComponent: React.FC<Props> = (props) => {
   const {
     travel = { data: [] },
@@ -92,6 +113,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset());
+  const bottomSheetState = useBottomSheetStore((s) => s.state);
+  const requestBottomSheetCollapse = useBottomSheetStore((s) => s.requestCollapse);
 
   useEffect(() => {
     if (isTestEnv) return;
@@ -323,19 +346,26 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!isValidCoordinate(coords.lat, coords.lng)) return;
     const map = mapRef.current;
     const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom;
-    if (Number.isFinite(currentZoom) && currentZoom >= 14) return;
     const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : 18;
-    const targetZoom = Math.min(Math.max(currentZoom + 2, 14), maxZoom || 18);
+    const focusPlan = getMarkerFocusPlan({
+      currentZoom,
+      maxZoom,
+      bottomSheetState,
+    });
+    if (focusPlan.shouldCollapseSheet) {
+      requestBottomSheetCollapse();
+    }
+    if (focusPlan.shouldSkipZoom) return;
     try {
       if (typeof map.flyTo === 'function') {
-        map.flyTo([coords.lat, coords.lng], targetZoom, { animate: true, duration: 0.35 } as any);
+        map.flyTo([coords.lat, coords.lng], focusPlan.targetZoom, { animate: true, duration: 0.35 } as any);
       } else if (typeof map.setView === 'function') {
-        map.setView([coords.lat, coords.lng], targetZoom, { animate: true } as any);
+        map.setView([coords.lat, coords.lng], focusPlan.targetZoom, { animate: true } as any);
       }
     } catch {
       // noop
     }
-  }, [mapZoom]);
+  }, [bottomSheetState, mapZoom, requestBottomSheetCollapse]);
 
   useEffect(() => {
     if (!errors?.routing) return;

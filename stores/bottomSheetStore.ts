@@ -20,41 +20,52 @@ interface BottomSheetStore {
   /** Установить высоту Bottom Sheet */
   setHeightPx: (height: number) => void;
 
+  /** Сигнал на сворачивание Bottom Sheet из внешних слоев карты */
+  collapseNonce: number;
+  requestCollapse: () => void;
+
   /** Получить рекомендуемый отступ снизу для контролов карты */
   getControlsBottomOffset: () => number;
 }
 
+export const getBottomSheetControlsOffset = (
+  state: BottomSheetState,
+  heightPx: number
+) => {
+  const safeHeight = Number.isFinite(heightPx) ? Math.max(0, heightPx) : 0;
+
+  if (state === 'collapsed') {
+    return 120;
+  }
+
+  if (state === 'quarter') {
+    return Math.max(safeHeight + 16, 150);
+  }
+
+  if (state === 'half') {
+    return Math.max(safeHeight + 16, 220);
+  }
+
+  if (state === 'full') {
+    return Math.max(safeHeight + 16, 400);
+  }
+
+  return 120;
+};
+
 export const useBottomSheetStore = create<BottomSheetStore>((set, get) => ({
   state: 'collapsed',
   heightPx: 0,
+  collapseNonce: 0,
 
   setState: (state) => set({ state }),
 
   setHeightPx: (height) => set({ heightPx: height }),
 
+  requestCollapse: () => set((s) => ({ collapseNonce: s.collapseNonce + 1 })),
+
   getControlsBottomOffset: () => {
     const { state, heightPx } = get();
-
-    // В collapsed состоянии отступ минимальный (peek preview)
-    if (state === 'collapsed') {
-      return 120; // Примерно высота peek preview + запас
-    }
-
-    // В quarter состоянии — компактный preview
-    if (state === 'quarter') {
-      return Math.max(heightPx * 0.25 + 20, 150);
-    }
-
-    // В half/full состоянии используем фактическую высоту + запас
-    if (state === 'half') {
-      return Math.max(heightPx * 0.5 + 20, 200);
-    }
-
-    if (state === 'full') {
-      return Math.max(heightPx * 0.9 + 20, 400);
-    }
-
-    return 120;
+    return getBottomSheetControlsOffset(state, heightPx);
   },
 }));
-

@@ -94,6 +94,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // Синхронизация состояния Bottom Sheet с глобальным store
   const setBottomSheetState = useBottomSheetStore((s) => s.setState);
   const bottomSheetState = useBottomSheetStore((s) => s.state);
+  const collapseNonce = useBottomSheetStore((s) => s.collapseNonce);
 
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'quarter' | 'half' | 'full') => {
     sheetStateRef.current = state;
@@ -123,6 +124,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     }
     bottomSheetRef.current?.snapToCollapsed();
   }, [toggleNonce]);
+
+  useEffect(() => {
+    if (!collapseNonce) return;
+    if (sheetStateRef.current === 'collapsed') return;
+    bottomSheetRef.current?.snapToCollapsed();
+  }, [collapseNonce]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
@@ -172,6 +179,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const handleOpenList = useCallback(() => {
     setTabDeferred('list');
     bottomSheetRef.current?.snapToHalf();
+  }, [setTabDeferred]);
+
+  const handleToggleListPanel = useCallback(() => {
+    if (sheetStateRef.current === 'collapsed') {
+      setTabDeferred('list');
+      bottomSheetRef.current?.snapToHalf();
+      return;
+    }
+    bottomSheetRef.current?.snapToCollapsed();
   }, [setTabDeferred]);
 
   const filtersContextProps = filtersPanelProps?.props ?? filtersPanelProps?.contextValue;
@@ -416,10 +432,27 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                 </Pressable>
               </>
             )}
-            <Pressable
-              testID="map-panel-close"
-              onPress={() => bottomSheetRef.current?.snapToCollapsed()}
-              accessibilityRole="button"
+                <Pressable
+                  testID="map-panel-open"
+                  onPress={handleToggleListPanel}
+                  accessibilityRole="button"
+                  accessibilityLabel="Вернуться к карте"
+                  hitSlop={6}
+                  style={({ pressed }) => [
+                    styles.sheetBackToMapButton,
+                    compactSheetActions && styles.sheetBackToMapButtonCompact,
+                    pressed && { opacity: 0.72 },
+                  ]}
+                >
+                  <Feather name="map" size={15} color={colors.textMuted} />
+                  {!compactSheetActions && (
+                    <RNText style={styles.sheetBackToMapText}>Карта</RNText>
+                  )}
+                </Pressable>
+                <Pressable
+                  testID="map-panel-close"
+                  onPress={() => bottomSheetRef.current?.snapToCollapsed()}
+                  accessibilityRole="button"
               accessibilityLabel="Закрыть панель"
               hitSlop={8}
               style={({ pressed }) => [
@@ -458,10 +491,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onRefresh,
     onToggleFavorite,
     handleOpenList,
+    handleToggleListPanel,
     setTabDeferred,
     setFiltersMode,
     styles.sheetToolbarActions,
     styles.sheetCloseButton,
+    styles.sheetBackToMapButton,
+    styles.sheetBackToMapButtonCompact,
+    styles.sheetBackToMapText,
     styles.sheetShowResultsButton,
     styles.sheetShowResultsButtonCompact,
     styles.sheetResultsBadge,
@@ -526,7 +563,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             testID="map-panel-open"
             accessibilityRole="button"
             accessibilityLabel={`Открыть список (${travelsData.length} мест)`}
-            onPress={handleOpenList}
+            onPress={handleToggleListPanel}
             style={[styles.quickOpenButton, { bottom: quickOpenButtonBottomOffset }]}
           >
             <Feather name="list" size={16} color={colors.textOnPrimary} />
@@ -721,6 +758,37 @@ const getStyles = (
     sheetShowResultsButtonCompact: {
       height: 40,
       paddingHorizontal: 10,
+    },
+    sheetBackToMapButton: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 6,
+      height: 44,
+      minWidth: 44,
+      paddingHorizontal: 12,
+      borderRadius: 999,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.backgroundSecondary,
+      flexShrink: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: 'none',
+            cursor: 'pointer',
+          } as any)
+        : null),
+    },
+    sheetBackToMapButtonCompact: {
+      width: 40,
+      height: 40,
+      paddingHorizontal: 0,
+      borderRadius: 12,
+    },
+    sheetBackToMapText: {
+      fontSize: 12,
+      fontWeight: '700' as const,
+      color: colors.textMuted,
     },
     sheetIconButtonCompact: {
       width: 40,
