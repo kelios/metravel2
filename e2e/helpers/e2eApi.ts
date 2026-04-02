@@ -326,7 +326,7 @@ export async function loginAsUser(page: any): Promise<{ userId?: string }> {
     return { userId: '1' };
   }
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await ensureLoginFormReady(page);
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.getByRole('button', { name: /^войти$/i }).click();
@@ -361,7 +361,7 @@ export async function loginAsAdmin(page: any): Promise<{ userId?: string }> {
     return { userId: '2' };
   }
 
-  await page.goto('/login', { waitUntil: 'domcontentloaded' });
+  await ensureLoginFormReady(page);
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.getByRole('button', { name: /^войти$/i }).click();
@@ -369,6 +369,38 @@ export async function loginAsAdmin(page: any): Promise<{ userId?: string }> {
 
   const userId = await getUserIdFromPage(page);
   return userId ? { userId } : {};
+}
+
+async function ensureLoginFormReady(page: any): Promise<void> {
+  const emailInput = page.locator('input[type="email"]');
+  const passwordInput = page.locator('input[type="password"]');
+  const loginButton = page.getByRole('button', { name: /^войти$/i });
+  const notFound = page.getByText(/^Not found$/i);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+
+    try {
+      await Promise.race([
+        emailInput.waitFor({ state: 'visible', timeout: 10_000 }),
+        notFound.waitFor({ state: 'visible', timeout: 10_000 }),
+      ]);
+    } catch {
+      // retry below
+    }
+
+    if (
+      (await emailInput.isVisible().catch(() => false)) &&
+      (await passwordInput.isVisible().catch(() => false)) &&
+      (await loginButton.isVisible().catch(() => false))
+    ) {
+      return;
+    }
+
+    await page.waitForTimeout(500 * (attempt + 1));
+  }
+
+  await emailInput.waitFor({ state: 'visible', timeout: 30_000 });
 }
 
 export async function createTestTravel(): Promise<any> {
