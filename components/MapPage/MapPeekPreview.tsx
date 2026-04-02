@@ -167,7 +167,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
         })}
       </ScrollView>
 
-      {places.length > 3 && (
+      {places.length > topPlaces.length && (
         <Button
           label={`Ещё ${places.length - 3}`}
           icon={<MapIcon name="expand-less" size={20} color={colors.primary} />}

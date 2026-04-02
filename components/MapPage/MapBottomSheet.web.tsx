@@ -116,6 +116,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       onStateChange?.('quarter');
     }, [onStateChange]);
 
+    const bottomStyle = Platform.OS === 'web'
+      ? ({ bottom: `calc(${bottomInset}px + env(safe-area-inset-bottom, 0px))` } as any)
+      : { bottom: bottomInset };
+
     return (
       <View
         ref={webRefCallback}
@@ -123,7 +127,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           styles.webRoot,
           isCollapsed ? styles.webRootCollapsed : null,
           isCollapsed && !peekContent ? styles.webRootHidden : null,
-          { bottom: bottomInset, pointerEvents: isCollapsed && !peekContent ? 'none' as const : 'auto' as const },
+          { ...bottomStyle, pointerEvents: isCollapsed && !peekContent ? 'none' as const : 'auto' as const },
         ]}
         accessibilityLabel="Панель карты"
       >
@@ -189,12 +193,13 @@ const getStyles = (colors: ThemedColors) =>
     dragHandleArea: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 5,
+      paddingTop: 10,
+      paddingBottom: 8,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', touchAction: 'manipulation' } as any) : null),
     },
     dragHandle: {
-      width: 28,
-      height: 3,
+      width: 40,
+      height: 4,
       borderRadius: 2,
       backgroundColor: colors.borderStrong,
     },

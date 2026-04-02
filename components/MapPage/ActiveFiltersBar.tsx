@@ -66,7 +66,8 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      height: 32,
+      minHeight: 32,
+      paddingVertical: 4,
       justifyContent: 'center',
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,

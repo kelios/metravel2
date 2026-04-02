@@ -42,7 +42,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
 }) => {
   const colors = useThemedColors();
   const { width } = useWindowDimensions();
-  const isNarrow = width > 0 && width <= 420;
+  const isNarrow = width > 0 && width <= 390;
   const isVeryNarrow = width > 0 && width <= 360;
   const styles = useMemo(() => getStyles(colors, { isNarrow, isVeryNarrow }), [colors, isNarrow, isVeryNarrow]);
   const effectiveMaxVisible = isVeryNarrow ? Math.min(maxVisible, 2) : isNarrow ? Math.min(maxVisible, 3) : maxVisible;
@@ -64,40 +64,44 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
 
   if (!visible.length) return null;
 
+  // Show fade hint when there are more items than visible (hidden chips or action chip)
+  const showFadeHint = hiddenCount > 0 || shouldShowActionChip;
+
   return (
     <View style={[styles.container, { pointerEvents: 'box-none' }]}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={[styles.scroll, Platform.OS === 'web' && styles.scrollWeb]}
-      >
-        {visible.map((cat) => {
-          const isSelected = selectedCategories.includes(cat.name);
-          const iconName = CATEGORY_ICONS[cat.name];
+      <View style={styles.scrollWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          style={[styles.scroll, Platform.OS === 'web' && styles.scrollWeb]}
+        >
+          {visible.map((cat) => {
+            const isSelected = selectedCategories.includes(cat.name);
+            const iconName = CATEGORY_ICONS[cat.name];
 
-          return (
-            <CardActionPressable
-              key={cat.id}
-              accessibilityLabel={`${isSelected ? 'Убрать' : 'Добавить'} фильтр: ${cat.name}`}
-              accessibilityState={{ selected: isSelected }}
-              onPress={() => onToggleCategory(cat.name)}
-              title={cat.name}
-              style={({ pressed }) => [
-                styles.chip,
-                isSelected && styles.chipActive,
-                pressed && styles.chipPressed,
-              ]}
-            >
-              {isSelected ? (
-                <Feather name="x" size={14} color={colors.textOnPrimary} />
-              ) : iconName ? (
-                <Feather name={iconName} size={14} color={colors.text} />
-              ) : null}
-              <Text
-                style={[styles.chipText, isSelected && styles.chipTextActive]}
-                numberOfLines={1}
+            return (
+              <CardActionPressable
+                key={cat.id}
+                accessibilityLabel={`${isSelected ? 'Убрать' : 'Добавить'} фильтр: ${cat.name}`}
+                accessibilityState={{ selected: isSelected }}
+                onPress={() => onToggleCategory(cat.name)}
+                title={cat.name}
+                style={({ pressed }) => [
+                  styles.chip,
+                  isSelected && styles.chipActive,
+                  pressed && styles.chipPressed,
+                ]}
               >
+                {isSelected ? (
+                  <Feather name="x" size={14} color={colors.textOnPrimary} />
+                ) : iconName ? (
+                  <Feather name={iconName} size={14} color={colors.text} />
+                ) : null}
+                <Text
+                  style={[styles.chipText, isSelected && styles.chipTextActive]}
+                  numberOfLines={1}
+                >
                 {cat.name}
               </Text>
             </CardActionPressable>
@@ -128,6 +132,10 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
           </CardActionPressable>
         )}
       </ScrollView>
+      {showFadeHint && Platform.OS === 'web' && (
+        <View style={styles.fadeHint} pointerEvents="none" />
+      )}
+      </View>
     </View>
   );
 });
@@ -143,6 +151,23 @@ const getStyles = (
       left: options.isNarrow ? 12 : 16,
       right: options.isNarrow ? 12 : 16,
       zIndex: 5,
+    },
+    scrollWrapper: {
+      position: 'relative',
+      flexShrink: 0,
+    },
+    fadeHint: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: 32,
+      ...(Platform.OS === 'web'
+        ? ({
+            background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.85) 100%)',
+            pointerEvents: 'none',
+          } as any)
+        : null),
     },
     scroll: {
       flexGrow: 0,

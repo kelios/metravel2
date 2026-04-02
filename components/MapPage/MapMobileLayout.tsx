@@ -572,7 +572,16 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       {/* Quick actions for mobile web */}
       {Platform.OS === 'web' && bottomSheetState === 'collapsed' && sheetState === 'collapsed' && (
         <>
-          <View style={[styles.quickActionsRail, { bottom: quickActionsBottomOffset }]}>
+          <View
+            style={[
+              styles.quickActionsRail,
+              {
+                bottom: Platform.OS === 'web'
+                  ? (`calc(${quickActionsBottomOffset}px + env(safe-area-inset-bottom, 0px))` as any)
+                  : quickActionsBottomOffset,
+              },
+            ]}
+          >
             <CardActionPressable
               testID="map-mobile-fab"
               accessibilityRole="button"
@@ -598,7 +607,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             accessibilityRole="button"
             accessibilityLabel={`Открыть список (${travelsData.length} мест)`}
             onPress={handleToggleListPanel}
-            style={[styles.quickOpenButton, { bottom: quickOpenButtonBottomOffset }]}
+            style={[
+              styles.quickOpenButton,
+              {
+                bottom: Platform.OS === 'web'
+                  ? (`calc(${quickOpenButtonBottomOffset}px + env(safe-area-inset-bottom, 0px))` as any)
+                  : quickOpenButtonBottomOffset,
+              },
+            ]}
           >
             <Feather name="list" size={16} color={colors.textOnPrimary} />
             <RNText style={styles.quickOpenButtonText}>Список</RNText>
