@@ -14,9 +14,9 @@ import TravelListPanel from './TravelListPanel';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import Button from '@/components/ui/Button';
-import { MapFAB } from './MapFAB';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 interface MapMobileLayoutProps {
   // Map props
@@ -79,6 +79,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
   const pathname = usePathname();
   const isActiveWebRoute = Platform.OS === 'web' && (pathname === '/map' || String(pathname).startsWith('/map/'));
+  const [consentBannerVisible, setConsentBannerVisible] = useState(false);
 
   const [uiTab, setUiTab] = useState<'list' | 'filters'>('list');
   const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
@@ -122,6 +123,28 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     }
     bottomSheetRef.current?.snapToCollapsed();
   }, [toggleNonce]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const body = document.body;
+    if (!body) return;
+
+    const update = () => {
+      setConsentBannerVisible(body.getAttribute('data-consent-banner-open') === 'true');
+    };
+
+    update();
+
+    const observer = new MutationObserver(update);
+    observer.observe(body, {
+      attributes: true,
+      attributeFilter: ['data-consent-banner-open'],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   const setTabDeferred = useCallback(
     (next: 'list' | 'filters') => {
@@ -253,6 +276,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   ]);
 
   const sheetPeekContent = Platform.OS === 'web' ? null : peekContent;
+  const quickActionsBottomOffset = consentBannerVisible ? 344 : 260;
+  const quickOpenButtonBottomOffset = consentBannerVisible ? 280 : 196;
 
   // Content based on active tab
   const sheetContent = useMemo(() => {
@@ -473,30 +498,48 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         {mapComponent}
       </View>
 
-      {/* FAB for mobile web */}
+      {/* Quick actions for mobile web */}
       {Platform.OS === 'web' && bottomSheetState === 'collapsed' && sheetState === 'collapsed' && (
-        <MapFAB
-          mainAction={{
-            icon: 'my-location',
-            label: 'Моё местоположение',
-            onPress: onCenterOnUser,
-          }}
-          actions={[
-            {
-              icon: 'list',
-              label: 'Открыть список',
-              onPress: handleOpenList,
-            },
-            {
-              icon: 'filter-list',
-              label: 'Открыть фильтры',
-              onPress: onOpenFilters,
-            },
-          ]}
-          position="bottom-right"
-          containerStyle={styles.fab}
-          mainActionTestID="map-mobile-fab"
-        />
+        <>
+          <View style={[styles.quickActionsRail, { bottom: quickActionsBottomOffset }]}>
+            <CardActionPressable
+              testID="map-mobile-fab"
+              accessibilityRole="button"
+              accessibilityLabel="Моё местоположение"
+              onPress={onCenterOnUser}
+              style={styles.quickCircleButton}
+            >
+              <Feather name="crosshair" size={20} color={colors.text} />
+            </CardActionPressable>
+
+            <CardActionPressable
+              accessibilityRole="button"
+              accessibilityLabel="Открыть фильтры"
+              onPress={onOpenFilters}
+              style={styles.quickCircleButton}
+            >
+              <Feather name="sliders" size={20} color={colors.text} />
+            </CardActionPressable>
+          </View>
+
+          <CardActionPressable
+            testID="map-panel-open"
+            accessibilityRole="button"
+            accessibilityLabel={`Открыть список (${travelsData.length} мест)`}
+            onPress={handleOpenList}
+            style={[styles.quickOpenButton, { bottom: quickOpenButtonBottomOffset }]}
+          >
+            <Feather name="list" size={16} color={colors.textOnPrimary} />
+            <RNText style={styles.quickOpenButtonText}>Список</RNText>
+            {travelsData.length > 0 && (
+              <View style={styles.quickOpenBadge}>
+                <RNText style={styles.quickOpenBadgeText}>
+                  {travelsData.length > 999 ? '999+' : String(travelsData.length)}
+                </RNText>
+              </View>
+            )}
+          </CardActionPressable>
+        </>
       )}
 
       {/* Bottom Sheet */}
@@ -537,6 +580,57 @@ const getStyles = (
             position: 'relative',
           } as any)
         : null),
+    },
+    quickActionsRail: {
+      position: 'absolute',
+      right: 16,
+      gap: 10,
+      zIndex: 810,
+      alignItems: 'center',
+    },
+    quickCircleButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      boxShadow: '0 8px 18px rgba(0,0,0,0.14)' as any,
+    },
+    quickOpenButton: {
+      position: 'absolute',
+      right: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minHeight: 48,
+      paddingLeft: 14,
+      paddingRight: 12,
+      borderRadius: 999,
+      backgroundColor: colors.primary,
+      zIndex: 810,
+      boxShadow: '0 10px 24px rgba(0,0,0,0.18)' as any,
+    },
+    quickOpenButtonText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textOnPrimary,
+    },
+    quickOpenBadge: {
+      minWidth: 24,
+      height: 24,
+      paddingHorizontal: 7,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    quickOpenBadgeText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.primary,
     },
     sheetRoot: {
       flexGrow: 1,

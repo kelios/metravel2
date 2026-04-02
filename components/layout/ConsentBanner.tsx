@@ -54,6 +54,23 @@ function ConsentBanner() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isWeb || typeof document === 'undefined') return;
+    const body = document.body;
+    if (!body) return;
+
+    const shouldExposeBanner = visible && !suspendForOverlay;
+    if (shouldExposeBanner) {
+      body.setAttribute('data-consent-banner-open', 'true');
+    } else {
+      body.removeAttribute('data-consent-banner-open');
+    }
+
+    return () => {
+      body.removeAttribute('data-consent-banner-open');
+    };
+  }, [suspendForOverlay, visible]);
+
   const handleAcceptAll = () => {
     const consent: ConsentState = {
       necessary: true,

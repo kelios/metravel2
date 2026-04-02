@@ -38,6 +38,35 @@ const stripCountryFromCategoryString = (raw: unknown, address?: string | null) =
   return filtered.join(', ');
 };
 
+const buildPopupTitleParts = (point: Point): { title: string; subtitle?: string } => {
+  const rawName = String((point as any)?.name ?? '').trim();
+  const rawAddress = String(point.address ?? '').trim();
+
+  if (rawName && rawAddress && rawName.localeCompare(rawAddress, undefined, { sensitivity: 'accent' }) !== 0) {
+    return { title: rawName, subtitle: rawAddress };
+  }
+
+  if (rawName) {
+    return { title: rawName };
+  }
+
+  if (!rawAddress) {
+    return { title: 'Точка маршрута' };
+  }
+
+  const [head, ...tail] = rawAddress
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!head) {
+    return { title: rawAddress };
+  }
+
+  const subtitle = tail.join(', ').trim();
+  return subtitle ? { title: head, subtitle } : { title: head };
+};
+
 export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = false }: CreatePopupComponentArgs) => {
   const PopupComponent: React.FC<{ point: Point }> = ({ point }) => {
     const [isAdding, setIsAdding] = useState(false);
@@ -169,6 +198,7 @@ export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = 
       () => stripCountryFromCategoryString(rawCategoryName, point.address),
       [rawCategoryName, point.address],
     );
+    const popupTitle = useMemo(() => buildPopupTitleParts(point), [point]);
 
     const handleAddPoint = useCallback(async () => {
       if (!authReady) return;
@@ -237,7 +267,8 @@ export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = 
 
     return (
       <PlacePopupCard
-        title={point.address || ''}
+        title={popupTitle.title}
+        subtitle={popupTitle.subtitle}
         imageUrl={point.imageUrl || point.travelImageThumbUrl}
         categoryLabel={categoryLabel}
         coord={coord}

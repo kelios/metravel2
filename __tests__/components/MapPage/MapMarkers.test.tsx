@@ -33,4 +33,47 @@ describe('MapMarkers', () => {
 
     expect(queryAllByTestId('marker').length).toBe(2);
   });
+
+  it('opens popup immediately on marker click before running follow-up map behavior', () => {
+    const RN = require('react-native');
+    const View = RN.View;
+
+    let markerProps: any = null;
+    const markerOpenPopup = jest.fn();
+    const onMarkerClick = jest.fn(() => {
+      expect(markerOpenPopup).toHaveBeenCalledTimes(1);
+    });
+
+    const Marker = (props: any) => {
+      markerProps = props;
+      return <View testID="marker" {...props} />;
+    };
+    const Popup = ({ children }: any) => <View testID="popup">{children}</View>;
+    const PopupContent = ({ point }: any) => <View testID="popup-content" data-address={point?.address} />;
+
+    render(
+      <MapMarkers
+        points={[
+          { id: 1, coord: '50.0619474,19.9368564', address: 'A', travelImageThumbUrl: '', categoryName: '' },
+        ]}
+        icon={{}}
+        Marker={Marker}
+        Popup={Popup}
+        PopupContent={PopupContent}
+        onMarkerClick={onMarkerClick}
+      />
+    );
+
+    expect(typeof markerProps?.eventHandlers?.click).toBe('function');
+
+    markerProps.eventHandlers.click({
+      originalEvent: { stopPropagation: jest.fn() },
+      target: {
+        openPopup: markerOpenPopup,
+      },
+    });
+
+    expect(markerOpenPopup).toHaveBeenCalledTimes(1);
+    expect(onMarkerClick).toHaveBeenCalledTimes(1);
+  });
 });

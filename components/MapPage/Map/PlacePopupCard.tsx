@@ -9,6 +9,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type Props = {
   title: string;
+  subtitle?: string | null;
   imageUrl?: string | null;
   categoryLabel?: string | null;
   coord?: string | null;
@@ -280,6 +281,7 @@ const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
 
 const PlacePopupCard: React.FC<Props> = ({
   title,
+  subtitle,
   imageUrl,
   categoryLabel,
   coord,
@@ -371,6 +373,11 @@ const PlacePopupCard: React.FC<Props> = ({
         <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 3 : 2}>
           {title}
         </Text>
+        {!!subtitle && (
+          <Text style={styles.subtitleText} numberOfLines={2}>
+            {subtitle}
+          </Text>
+        )}
 
         <View style={styles.metaRow}>
           {!!categoryLabel && (
@@ -404,7 +411,7 @@ const PlacePopupCard: React.FC<Props> = ({
           title={POPUP_TOOLTIPS.copyCoords}
           style={styles.coordRow}
         >
-          <Feather name="map-pin" size={15} color={colors.primary} style={{ flexShrink: 0 } as any} />
+          <Feather name="map-pin" size={15} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
           <Text style={styles.coordText} numberOfLines={1} selectable>{coord}</Text>
           {onCopyCoord && <Feather name="copy" size={16} color={colors.textMuted} style={{ flexShrink: 0 } as any} />}
         </CardActionPressable>
@@ -487,9 +494,9 @@ const PlacePopupCard: React.FC<Props> = ({
           ]}
         >
           {isAdding ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={colors.textOnPrimary ?? colors.textOnDark} />
           ) : (
-            <Feather name="plus" size={16} color={colors.primary} />
+            <Feather name="plus" size={16} color={colors.textOnPrimary ?? colors.textOnDark} />
           )}
           <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
@@ -518,6 +525,9 @@ const PlacePopupCard: React.FC<Props> = ({
     onOpenOrganicMaps,
     onShareTelegram,
     styles,
+    colors.textOnDark,
+    colors.textOnPrimary,
+    subtitle,
     title,
     useCompactLayout,
   ]);
@@ -679,6 +689,19 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
           } as any)
         : null),
     },
+    subtitleText: {
+      fontSize: compactLayout ? fs.small - 1 : fs.small,
+      color: colors.textMuted,
+      lineHeight: (compactLayout ? fs.small - 1 : fs.small) * 1.4,
+      ...(Platform.OS === 'web'
+        ? ({
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          } as any)
+        : null),
+    },
     categoryText: {
       fontSize: fs.small,
       color: colors.textMuted,
@@ -701,14 +724,14 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       paddingHorizontal: compactLayout ? 12 : 14,
       paddingVertical: compactLayout ? 10 : 12,
       borderRadius: compactLayout ? compactSp.radius : sp.radius,
-      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
-      borderWidth: 1.5,
-      borderColor: colors.primaryAlpha30 ?? colors.border,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
     },
     coordText: {
-      fontSize: fs.coord,
-      fontWeight: '500',
-      color: colors.text,
+      fontSize: compactLayout ? fs.small : fs.coord - 1,
+      fontWeight: '400',
+      color: colors.textMuted,
       flex: 1,
       minWidth: 0,
       fontFamily:
@@ -774,7 +797,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       borderRadius: DESIGN_TOKENS.radii.pill,
       borderWidth: 1.5,
       borderColor: colors.primary,
-      backgroundColor: colors.primarySoft ?? 'transparent',
+      backgroundColor: colors.primary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     addBtnDisabled: {
@@ -787,7 +810,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     addBtnText: {
       fontSize: compactLayout ? fs.small - 1 : bp === 'narrow' ? 14 : fs.small,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.textOnPrimary ?? colors.textOnDark,
     },
   });
 };

@@ -83,37 +83,15 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         // noop
       }
 
-      onMarkerClick?.(point, coords);
       if (e?.target?.openPopup) {
-        const map = e?.target?._map;
-        let didOpen = false;
         try {
-          if (map && typeof map.once === 'function') {
-            map.once('moveend', () => {
-              if (didOpen) return;
-              didOpen = true;
-              try {
-                e.target.openPopup();
-              } catch {
-                // noop
-              }
-            });
-          }
+          e.target.openPopup();
         } catch {
           // noop
         }
-
-        // Shorter timeout for snappier mobile UX
-        setTimeout(() => {
-          if (didOpen) return;
-          didOpen = true;
-          try {
-            e.target.openPopup();
-          } catch {
-            // noop
-          }
-        }, 250);
       }
+
+      onMarkerClick?.(point, coords);
     },
     [onMarkerClick]
   );

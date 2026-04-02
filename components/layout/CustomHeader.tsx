@@ -41,7 +41,10 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const lastHeightRef = useRef(0);
     const isTravelRoute =
         pathname.startsWith('/travels/') || pathname.startsWith('/travel/');
-    const showHeaderContextBar = !(Platform.OS === 'web' && !isMobile && isTravelRoute);
+    const isMapRoute = pathname === '/map' || pathname.startsWith('/map/');
+    const showHeaderContextBar =
+      !(Platform.OS === 'web' && !isMobile && isTravelRoute) &&
+      !(Platform.OS === 'web' && isMobile && isMapRoute);
     const showNavSection = true;
     const showAccountSection = true;
 

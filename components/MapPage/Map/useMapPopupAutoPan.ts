@@ -32,12 +32,14 @@ export function useMapPopupAutoPan({
         }
 
         const isNarrowMap = mapRect.width <= 640
-        const horizontalPadding = mapRect.width <= 420 ? 12 : isNarrowMap ? 16 : 24
-        const verticalPadding = isNarrowMap ? 18 : 24
+        const isVeryNarrowMap = mapRect.width <= 420
+        const horizontalPadding = isVeryNarrowMap ? 12 : isNarrowMap ? 16 : 24
+        const verticalPadding = isVeryNarrowMap ? 22 : isNarrowMap ? 18 : 24
+        const topSafePadding = isVeryNarrowMap ? 110 : isNarrowMap ? 92 : verticalPadding
         const bottomSafePadding = isNarrowMap
           ? Math.min(
-              Math.max(verticalPadding, popupBottomOffset + 20),
-              Math.max(verticalPadding, Math.round(mapRect.height * 0.4))
+              Math.max(124, popupBottomOffset + 28),
+              Math.max(124, Math.round(mapRect.height * 0.42))
             )
           : verticalPadding
         let dx = 0
@@ -47,7 +49,7 @@ export function useMapPopupAutoPan({
         const popupCenterY = popupRect.top + popupRect.height / 2
         const safeLeft = horizontalPadding
         const safeRight = mapRect.width - horizontalPadding
-        const safeTop = verticalPadding
+        const safeTop = topSafePadding
         const safeBottom = mapRect.height - bottomSafePadding
         const safeCenterX = (safeLeft + safeRight) / 2
         const safeCenterY = (safeTop + safeBottom) / 2
@@ -149,10 +151,15 @@ export function useMapPopupAutoPan({
       : isNarrowViewport
         ? Math.min(280, Math.max(240, maxWidth - 56))
         : Math.min(336, Math.max(280, maxWidth - 88))
+    const topPadding = isVeryNarrow
+      ? 110
+      : isNarrowViewport
+        ? 92
+        : 140
     const bottomPadding = isNarrowViewport
       ? Math.min(
-          Math.max(72, popupBottomOffset + 20),
-          Math.max(72, Math.round((typeof window !== 'undefined' ? window.innerHeight : 844) * 0.32))
+          Math.max(124, popupBottomOffset + 28),
+          Math.max(124, Math.round((typeof window !== 'undefined' ? window.innerHeight : 844) * 0.36))
         )
       : 140
 
@@ -162,7 +169,7 @@ export function useMapPopupAutoPan({
       maxWidth,
       minWidth,
       className: 'metravel-place-popup',
-      autoPanPaddingTopLeft: isNarrowViewport ? [12, 72] : [24, 140],
+      autoPanPaddingTopLeft: isNarrowViewport ? [12, topPadding] : [24, 140],
       autoPanPaddingBottomRight: isNarrowViewport ? [12, bottomPadding] : [24, 140],
       eventHandlers: {
         popupopen: handlePopupOpen,
