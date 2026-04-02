@@ -173,7 +173,6 @@ type MapWebLeafletCanvasProps = {
   setFullRouteCoords: (coords: [number, number][]) => void
   setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void
   orsApiKey: string | undefined
-  canRenderTravelPoints: boolean
   markers: Point[]
   shouldRenderClusters: boolean
   PopupComponent: any
@@ -231,7 +230,6 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   setFullRouteCoords,
   setRouteElevationStats,
   orsApiKey,
-  canRenderTravelPoints,
   markers,
   shouldRenderClusters,
   PopupComponent,
@@ -389,7 +387,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         />
       ) : null}
 
-      {canRenderTravelPoints &&
+      {canRenderMap &&
       customIcons?.meTravel &&
       markers.length > 0 &&
       !shouldRenderClusters &&
@@ -410,7 +408,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         />
       ) : null}
 
-      {canRenderTravelPoints &&
+      {canRenderMap &&
       customIcons?.meTravel &&
       markers.length > 0 &&
       shouldRenderClusters &&

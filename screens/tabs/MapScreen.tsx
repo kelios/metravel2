@@ -22,6 +22,7 @@ import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
 import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
 import { MapShowListButton } from '@/components/MapPage/MapShowListButton';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
 import { useRouteStore } from '@/stores/routeStore';
 
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
@@ -30,9 +31,6 @@ const LazyMapMobileLayout = lazy(() =>
     import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout }))
 );
 
-const MAP_SEO_DESCRIPTION =
-    'Интерактивная карта путешествий Metravel: находите маршруты, достопримечательности и идеи поездок, фильтруйте точки и стройте свой путь.';
-const MAP_SEO_TITLE = 'Карта маршрутов и достопримечательностей Беларуси | Metravel';
 
 type RouteHintContent = {
     icon: ComponentProps<typeof Feather>['name'];

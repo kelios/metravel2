@@ -7,6 +7,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { useResponsive } from '@/hooks/useResponsive'
+import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
 
 const WEB_SR_ONLY_STYLE = {
   position: 'absolute',
@@ -29,9 +30,8 @@ export default function MapScreen() {
   const [hydrated, setHydrated] = useState(Platform.OS !== 'web')
   const { isHydrated: isResponsiveHydrated = true } = useResponsive()
   const canMountContent = hydrated && isResponsiveHydrated
-  const title = 'Карта маршрутов и достопримечательностей Беларуси | Metravel'
-  const description =
-    'Интерактивная карта путешествий Metravel: находите маршруты, достопримечательности и идеи поездок, фильтруйте точки и стройте свой путь.'
+  const title = MAP_SEO_TITLE
+  const description = MAP_SEO_DESCRIPTION
 
   useEffect(() => {
     if (Platform.OS !== 'web') return

@@ -66,8 +66,8 @@ describe('Map Mobile Layout Styles', () => {
     it('should have left border-radius on desktop for visual integration', () => {
       const styles = getStyles(false, 0, 0, 1024, mockThemedColors as any);
       
-      expect(styles.rightPanel.borderTopLeftRadius).toBe(0);
-      expect(styles.rightPanel.borderTopRightRadius).toBe(0);
+      expect(styles.rightPanel.borderTopLeftRadius).toBe(24);
+      expect(styles.rightPanel.borderTopRightRadius).toBe(24);
     });
 
     it('should position panel on right side on desktop', () => {

@@ -263,17 +263,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!leafletReady) return;
     if (typeof document === 'undefined') return;
 
-    const ENABLE_OSM_TILE_PRELOAD = false;
-
     try {
-      const zoomCandidate = Number.isFinite(safeCoordinates.zoom)
-        ? Number(safeCoordinates.zoom)
-        : 11;
-      const zoom = Math.min(19, Math.max(0, Math.round(zoomCandidate)));
-      const lat = Number(safeCoordinates.latitude);
-      const lng = Number(safeCoordinates.longitude);
-      if (!Number.isFinite(zoom) || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
       const ensurePreconnect = (origin: string) => {
         if (document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) return;
         const link = document.createElement('link');
@@ -283,63 +273,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
         document.head.appendChild(link);
       };
 
-      const ensurePreload = (href: string) => {
-        if (!ENABLE_OSM_TILE_PRELOAD) return;
-        if (document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) return;
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'image';
-        link.href = href;
-        try {
-          (link as any).fetchPriority = 'high';
-          link.setAttribute('fetchPriority', 'high');
-        } catch {
-          // noop
-        }
-        document.head.appendChild(link);
-      };
-
-      ensurePreconnect('https://a.tile.openstreetmap.org');
-      ensurePreconnect('https://b.tile.openstreetmap.org');
-      ensurePreconnect('https://c.tile.openstreetmap.org');
-
-      if (!ENABLE_OSM_TILE_PRELOAD) return;
-
-      const n = Math.pow(2, zoom);
-      const xRaw = Math.floor(((lng + 180) / 360) * n);
-      const latRad = (lat * Math.PI) / 180;
-      const yRaw = Math.floor(
-        ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
-      );
-
-      const x = Math.min(n - 1, Math.max(0, xRaw));
-      const y = Math.min(n - 1, Math.max(0, yRaw));
-
-      const origins = [
-        'https://a.tile.openstreetmap.org',
-        'https://b.tile.openstreetmap.org',
-        'https://c.tile.openstreetmap.org',
-      ];
-
-      const tileCoords: Array<[number, number]> = [
-        [x, y],
-        [Math.min(n - 1, x + 1), y],
-        [x, Math.min(n - 1, y + 1)],
-        [Math.min(n - 1, x + 1), Math.min(n - 1, y + 1)],
-      ];
-
-      tileCoords.forEach(([tx, ty], index) => {
-        const origin = origins[index % origins.length];
-        ensurePreload(`${origin}/${zoom}/${tx}/${ty}.png`);
-      });
+      ensurePreconnect('https://tile.openstreetmap.org');
     } catch {
       // noop
     }
-  }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom, leafletReady]);
-
-  const canRenderTravelPoints = useMemo(() => {
-    return true;
-  }, []);
+  }, [leafletReady]);
 
   const handleMarkerZoom = useCallback((_point: Point, coords: { lat: number; lng: number }) => {
     if (!mapRef.current) return;
@@ -585,7 +523,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
         setFullRouteCoords={setFullRouteCoords}
         setRouteElevationStats={setRouteElevationStats}
         orsApiKey={ORS_API_KEY}
-        canRenderTravelPoints={canRenderTravelPoints}
         markers={markers}
         shouldRenderClusters={shouldRenderClusters}
         PopupComponent={PopupComponent}
