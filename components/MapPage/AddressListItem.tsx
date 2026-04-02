@@ -411,24 +411,15 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
     catChip: {
         backgroundColor: colors.surface,
         borderRadius: 16,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderWidth: 1,
-        borderColor: colors.border,
-        ...colors.shadows.light,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderLight,
     },
     catText: {
         color: colors.text,
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.3,
-        ...(Platform.OS === 'web'
-          ? ({ textShadow: `0px 1px 3px ${colors.overlay}` } as any)
-          : {
-              textShadowColor: colors.overlay,
-              textShadowOffset: { width: 0, height: 1 },
-              textShadowRadius: 3,
-            }),
+        fontSize: 12,fontWeight: '600',
+        letterSpacing: 0.2,
     },
     addButtonRow: {
         marginTop: DESIGN_TOKENS.spacing.md,

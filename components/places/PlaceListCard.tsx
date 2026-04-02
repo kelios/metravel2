@@ -287,8 +287,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, compact: boole
       paddingVertical: compact ? 3 : 4,
       borderRadius: 999,
       backgroundColor: colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderWidth: 0,
+      borderColor: 'transparent',
     },
     metaChipText: {
       fontSize: 10,
@@ -311,6 +311,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, compact: boole
       ...Platform.select({
         web: {
           cursor: 'pointer' as any,
+          transition: 'background-color 0.15s ease',
         },
       }),
     },
@@ -321,13 +322,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, compact: boole
       gap: compact ? 5 : 6,
       paddingVertical: compact ? 5 : 6,
       paddingHorizontal: compact ? 10 : 12,
-      borderRadius: 8,
+      borderRadius: 10,
       borderWidth: 1,
-      borderColor: colors.primary,
+      borderColor: colors.borderLight ?? colors.border,
       backgroundColor: 'transparent',
       ...Platform.select({
         web: {
           cursor: 'pointer' as any,
+          transition: 'opacity 0.15s ease',
         },
       }),
     },

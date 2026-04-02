@@ -205,9 +205,9 @@ const getStyles = (
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
-            boxShadow: '0 8px 24px rgba(15,23,42,0.10), 0 2px 8px rgba(15,23,42,0.06)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 4px 16px rgba(15,23,42,0.07), 0 1px 4px rgba(15,23,42,0.04)',
             cursor: 'pointer',
             transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
           } as any)
@@ -218,7 +218,7 @@ const getStyles = (
       borderColor: colors.brand,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 10px 28px rgba(255, 146, 43, 0.28), 0 2px 10px rgba(255, 146, 43, 0.18)',
+            boxShadow: '0 6px 20px rgba(255, 146, 43, 0.22), 0 1px 6px rgba(255, 146, 43, 0.14)',
             transform: 'translateY(-1px)',
           } as any)
         : null),
@@ -256,7 +256,7 @@ const getStyles = (
     },
     chipText: {
       fontSize: options.isVeryNarrow ? 12 : 13,
-      fontWeight: '700',
+      fontWeight: '600',
       color: colors.text,
       letterSpacing: 0.1,
     },

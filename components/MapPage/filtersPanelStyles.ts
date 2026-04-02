@@ -31,7 +31,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       alignSelf: isMobile ? 'stretch' : 'flex-start',
       ...(Platform.OS === 'web' && !isMobile
         ? ({
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)',
+            boxShadow: '0 8px 28px rgba(0,0,0,0.06), 0 1px 6px rgba(0,0,0,0.03)',
           } as any)
         : null),
     },
