@@ -134,9 +134,11 @@ export const getStyles = (
           ? ({
               boxShadow: isMobile
                 ? themedColors.boxShadows.heavy
-                : '1px 0 0 rgba(0,0,0,0.05), 4px 0 16px rgba(0,0,0,0.04)',
-              borderTopLeftRadius: isMobile ? 20 : 0,
-              borderTopRightRadius: isMobile ? 20 : 0,
+                : '0 14px 36px rgba(15,23,42,0.08), 0 2px 10px rgba(15,23,42,0.05)',
+              borderTopLeftRadius: isMobile ? 20 : 24,
+              borderTopRightRadius: isMobile ? 20 : 24,
+              borderBottomLeftRadius: isMobile ? 0 : 24,
+              overflow: 'hidden',
               borderRightWidth: 0,
             } as any)
           : Platform.OS === 'ios'
@@ -219,7 +221,7 @@ export const getStyles = (
         columnGap: 8,
         minHeight: isMobile ? 46 : undefined,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: '0 1px 0 rgba(0,0,0,0.05)' } as any)
+          ? ({ boxShadow: '0 1px 0 rgba(15,23,42,0.05)' } as any)
           : null),
       },
       tabsSegment: {
@@ -514,7 +516,8 @@ export const getStyles = (
         position: 'absolute',
         bottom: isMobile && Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT + 16 : 20,
         left: 16,
-        right: 16,
+        right: isMobile ? 16 : undefined,
+        maxWidth: isMobile ? undefined : 280,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
@@ -555,7 +558,7 @@ export const getStyles = (
         top: Platform.OS === 'web' ? (isMobile ? 72 : 84) : 16,
         left: 16,
         right: isMobile ? 16 : undefined,
-        maxWidth: isMobile ? undefined : 420,
+        maxWidth: isMobile ? undefined : 460,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
@@ -576,6 +579,8 @@ export const getStyles = (
       },
       routeHintBadge: {
         alignSelf: 'flex-start',
+        minWidth: 58,
+        alignItems: 'center',
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 999,
@@ -608,9 +613,9 @@ export const getStyles = (
         color: themedColors.textMuted,
       },
       routeHintAction: {
-        minHeight: 36,
-        paddingHorizontal: 12,
-        borderRadius: 12,
+        minHeight: 38,
+        paddingHorizontal: 14,
+        borderRadius: 999,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.backgroundSecondary,

@@ -41,10 +41,12 @@ export const MapShowListButton: React.FC<MapShowListButtonProps> = React.memo(({
       title={ariaLabel}
       style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
     >
-      <Feather name="list" size={13} color={colors.textOnPrimary} />
-      <Text style={styles.text}>Список</Text>
+      <View style={styles.iconBubble}>
+        <Feather name="list" size={13} color={colors.textOnPrimary} />
+      </View>
+      <Text style={styles.text}>Открыть список</Text>
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>{count > 999 ? '999+' : shortLabel}</Text>
+        <Text style={styles.badgeText}>{count > 999 ? '999+' : count}</Text>
       </View>
     </CardActionPressable>
   );
@@ -72,7 +74,7 @@ const getStyles = (colors: ThemedColors, bottomOffset: number = 0) =>
         ? ({
             boxShadow: `0 4px 20px ${colors.primary}55, 0 1px 4px rgba(0,0,0,0.08)`,
             cursor: 'pointer',
-            transition: 'opacity 0.12s ease, box-shadow 0.12s ease',
+            transition: 'opacity 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease',
           } as any)
         : {
             shadowColor: colors.primary,
@@ -84,15 +86,26 @@ const getStyles = (colors: ThemedColors, bottomOffset: number = 0) =>
     },
     buttonPressed: {
       opacity: 0.82,
+      ...(Platform.OS === 'web' ? ({ transform: 'translateY(1px)' } as any) : null),
+    },
+    iconBubble: {
+      width: 22,
+      height: 22,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.16)',
     },
     text: {
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.textOnPrimary,
       letterSpacing: 0.1,
     },
     badge: {
-      backgroundColor: 'rgba(255,255,255,0.20)',
+      minWidth: 26,
+      alignItems: 'center',
+      backgroundColor: 'rgba(255,255,255,0.24)',
       borderRadius: 999,
       paddingHorizontal: 7,
       paddingVertical: 2,

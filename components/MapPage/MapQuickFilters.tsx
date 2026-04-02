@@ -4,6 +4,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { LinearGradient } from 'expo-linear-gradient';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
@@ -133,7 +134,13 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
         )}
       </ScrollView>
       {showFadeHint && Platform.OS === 'web' && (
-        <View style={styles.fadeHint} pointerEvents="none" />
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(253, 252, 251, 0)', 'rgba(253, 252, 251, 0.84)', colors.background]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.fadeHint}
+        />
       )}
       </View>
     </View>
@@ -161,13 +168,9 @@ const getStyles = (
       top: 0,
       right: 0,
       bottom: 0,
-      width: 32,
-      ...(Platform.OS === 'web'
-        ? ({
-            background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.85) 100%)',
-            pointerEvents: 'none',
-          } as any)
-        : null),
+      width: 44,
+      borderTopRightRadius: 24,
+      borderBottomRightRadius: 24,
     },
     scroll: {
       flexGrow: 0,
@@ -197,24 +200,26 @@ const getStyles = (
       paddingHorizontal: options.isVeryNarrow ? 12 : options.isNarrow ? 14 : 16,
       paddingVertical: options.isVeryNarrow ? 8 : options.isNarrow ? 9 : 10,
       borderRadius: options.isVeryNarrow ? 20 : 24,
-      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderWidth: 0,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)',
+            backdropFilter: 'blur(18px)',
+            WebkitBackdropFilter: 'blur(18px)',
+            boxShadow: '0 8px 24px rgba(15,23,42,0.10), 0 2px 8px rgba(15,23,42,0.06)',
             cursor: 'pointer',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
           } as any)
         : colors.shadows.light),
     },
     chipActive: {
       backgroundColor: colors.brand,
+      borderColor: colors.brand,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 6px 24px rgba(255, 146, 43, 0.4), 0 2px 8px rgba(255, 146, 43, 0.2)',
-            transform: 'scale(1.05)',
+            boxShadow: '0 10px 28px rgba(255, 146, 43, 0.28), 0 2px 10px rgba(255, 146, 43, 0.18)',
+            transform: 'translateY(-1px)',
           } as any)
         : null),
     },
@@ -222,18 +227,18 @@ const getStyles = (
       opacity: 0.85,
       ...(Platform.OS === 'web'
         ? ({
-            transform: 'scale(0.98)',
+            transform: 'translateY(0px) scale(0.985)',
           } as any)
         : null),
     },
     actionChip: {
       borderWidth: 1,
       borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.backgroundSecondary,
     },
     actionChipActive: {
       borderColor: colors.primary,
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.surface,
     },
     actionBadge: {
       minWidth: 20,

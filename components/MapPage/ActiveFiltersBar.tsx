@@ -30,6 +30,10 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
 
   return (
     <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Text style={styles.caption}>Активные фильтры</Text>
+        <Text style={styles.captionCount}>{filters.length}</Text>
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -66,21 +70,47 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
-      minHeight: 32,
-      paddingVertical: 4,
-      justifyContent: 'center',
+      minHeight: 40,
+      paddingTop: 8,
+      paddingBottom: 6,
       backgroundColor: colors.surface,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 1px 0 rgba(0,0,0,0.04)',
+            boxShadow: '0 1px 0 rgba(15,23,42,0.04)',
           } as any)
         : null),
     },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 10,
+      paddingBottom: 6,
+    },
+    caption: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.textMuted,
+      letterSpacing: 0.3,
+      textTransform: 'uppercase',
+    },
+    captionCount: {
+      minWidth: 22,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 999,
+      overflow: 'hidden',
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.text,
+      backgroundColor: colors.backgroundSecondary,
+      textAlign: 'center',
+    },
     scrollContent: {
-      paddingHorizontal: 8,
-      gap: 4,
+      paddingHorizontal: 10,
+      gap: 6,
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? ({ minWidth: 'max-content', touchAction: 'pan-x pan-y' } as any)
@@ -100,40 +130,41 @@ const getStyles = (colors: ThemedColors) =>
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 12,
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
       backgroundColor: colors.brandSoft ?? colors.brandLight,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.brand,
       ...(Platform.OS === 'web' ? ({
         cursor: 'pointer',
-        transition: 'opacity 0.12s ease',
+        transition: 'opacity 0.12s ease, transform 0.12s ease',
       } as any) : null),
     },
     chipPressed: {
       opacity: 0.65,
+      ...(Platform.OS === 'web' ? ({ transform: 'translateY(1px)' } as any) : null),
     },
     chipText: {
-      fontSize: 10,
-      fontWeight: '600',
+      fontSize: 11,
+      fontWeight: '700',
       color: colors.brandText,
-      maxWidth: 88,
+      maxWidth: 120,
       letterSpacing: 0.1,
     },
     clearBtn: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
       backgroundColor: colors.backgroundSecondary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     clearText: {
-      fontSize: 10,
-      fontWeight: '500',
+      fontSize: 11,
+      fontWeight: '600',
       color: colors.textMuted,
     },
   });
