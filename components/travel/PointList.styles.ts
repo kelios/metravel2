@@ -58,6 +58,10 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       web: {
         transition: 'background-color 0.2s ease, border-color 0.2s ease',
         cursor: 'pointer' as any,
+        ':hover': {
+          backgroundColor: colors.backgroundSecondary,
+          borderColor: colors.border,
+        } as any,
       },
     }),
   },
@@ -491,6 +495,10 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease',
+        ':hover': {
+          backgroundColor: colors.backgroundSecondary,
+          borderColor: colors.border,
+        } as any,
       },
     }),
   },
@@ -518,7 +526,11 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        transition: 'border-color 0.2s ease',
+        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+        ':hover': {
+          borderColor: colors.border,
+          boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+        } as any,
       },
     }),
   },
@@ -611,7 +623,13 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     borderRadius: 7,
     backgroundColor: colors.backgroundSecondary ?? colors.surface,
     ...Platform.select({
-      web: { cursor: 'pointer' as any },
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'background-color 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.backgroundTertiary,
+        } as any,
+      },
     }),
   },
   listRowMapChip: {
@@ -622,7 +640,14 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderLight,
     ...Platform.select({
-      web: { cursor: 'pointer' as any },
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.backgroundTertiary,
+          borderColor: colors.border,
+        } as any,
+      },
     }),
   },
   listRowMapChipText: {
@@ -642,7 +667,13 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     backgroundColor: 'transparent',
     marginLeft: 'auto' as any,
     ...Platform.select({
-      web: { cursor: 'pointer' as any },
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'background-color 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.primarySoft,
+        } as any,
+      },
     }),
   },
   listRowAddBtnText: {

@@ -154,7 +154,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...Platform.select({
           web: {
             cursor: 'pointer' as any,
-            transition: 'background-color 0.2s ease' as any,
+            transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
+            ':hover': {
+              backgroundColor: colors.backgroundSecondary,
+              borderColor: colors.border,
+            } as any,
           },
         }),
     },
