@@ -550,6 +550,87 @@ export const getStyles = (
           ? ({ cursor: 'pointer' } as any)
           : null),
       },
+      routeHintFloating: {
+        position: 'absolute',
+        top: Platform.OS === 'web' ? (isMobile ? 72 : 84) : 16,
+        left: 16,
+        right: isMobile ? 16 : undefined,
+        maxWidth: isMobile ? undefined : 420,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingHorizontal: isMobile ? 12 : 14,
+        paddingVertical: isMobile ? 10 : 12,
+        backgroundColor: themedColors.surface,
+        borderRadius: 18,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
+        zIndex: 1011,
+        ...(Platform.OS === 'web'
+          ? ({
+              boxShadow: '0 10px 30px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+            } as any)
+          : themedColors.shadows.medium),
+      },
+      routeHintBadge: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: themedColors.primarySoft,
+      },
+      routeHintBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: themedColors.primary,
+      },
+      routeHintBody: {
+        flex: 1,
+        minWidth: 0,
+        gap: 3,
+      },
+      routeHintTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+      },
+      routeHintTitle: {
+        flexShrink: 1,
+        fontSize: 14,
+        fontWeight: '700',
+        color: themedColors.text,
+      },
+      routeHintDescription: {
+        fontSize: 12,
+        lineHeight: 17,
+        color: themedColors.textMuted,
+      },
+      routeHintAction: {
+        minHeight: 36,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: themedColors.backgroundSecondary,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: themedColors.borderLight,
+        ...(Platform.OS === 'web'
+          ? ({
+              cursor: 'pointer',
+              transition: 'opacity 0.15s ease, transform 0.15s ease',
+            } as any)
+          : null),
+      },
+      routeHintActionPressed: {
+        opacity: 0.72,
+      },
+      routeHintActionText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: themedColors.text,
+      },
   });
 };
 

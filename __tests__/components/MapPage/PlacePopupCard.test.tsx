@@ -82,8 +82,8 @@ describe('PlacePopupCard', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
     expect(props.fit).toBe('contain');
-    expect(props.width).toBe(436);
-    expect(props.height).toBe(320);
+    expect(props.width).toBe(174);
+    expect(props.height).toBe(235);
     expect(props.blurBackground).toBe(true);
     expect(props.allowCriticalWebBlur).toBe(true);
   });

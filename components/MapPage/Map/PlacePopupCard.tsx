@@ -279,6 +279,9 @@ const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
   default: 156,
 };
 
+const SPLIT_LAYOUT_MIN_VIEWPORT = 820;
+const SPLIT_LAYOUT_MIN_POPUP_WIDTH = 380;
+
 const PlacePopupCard: React.FC<Props> = ({
   title,
   subtitle,
@@ -327,6 +330,40 @@ const PlacePopupCard: React.FC<Props> = ({
     return `${kmLabel} · ${mins} мин`;
   }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
 
+  const primaryAction = useMemo(() => {
+    if (onBuildRoute) {
+      return {
+        label: 'Маршрут сюда',
+        icon: 'corner-up-right' as const,
+        onPress: onBuildRoute,
+        tooltip: POPUP_TOOLTIPS.buildRoute,
+        accessibilityLabel: 'Построить маршрут сюда',
+      };
+    }
+
+    if (hasArticle) {
+      return {
+        label: 'Открыть точку',
+        icon: 'book-open' as const,
+        onPress: onOpenArticle!,
+        tooltip: POPUP_TOOLTIPS.openArticle,
+        accessibilityLabel: 'Открыть статью',
+      };
+    }
+
+    if (hasCoord && onOpenGoogleMaps) {
+      return {
+        label: 'Открыть в Google Maps',
+        icon: 'map' as const,
+        onPress: onOpenGoogleMaps,
+        tooltip: POPUP_TOOLTIPS.openGoogleMaps,
+        accessibilityLabel: 'Открыть точку в Google Maps',
+      };
+    }
+
+    return null;
+  }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps]);
+
   const { width: viewportWidth } = useWindowDimensions();
   const bp = getBreakpoint(viewportWidth);
   const isNarrow = bp === 'narrow';
@@ -342,16 +379,28 @@ const PlacePopupCard: React.FC<Props> = ({
     ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
     : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
   const maxPopupWidth = Math.min(width, popupWidthCap, safeViewportWidth);
-  const heroWidth = maxPopupWidth;
-  const heroHeight = Math.max(
-    1,
-    Math.min(
-      imageHeightCap,
-      Math.round(heroWidth / IMAGE_ASPECT[bp])
-    )
-  );
+  const useSplitLayout =
+    Boolean(imageUrl) &&
+    !useCompactLayout &&
+    viewportWidth >= SPLIT_LAYOUT_MIN_VIEWPORT &&
+    maxPopupWidth >= SPLIT_LAYOUT_MIN_POPUP_WIDTH;
+  const heroWidth = useSplitLayout
+    ? Math.max(156, Math.min(188, Math.round(maxPopupWidth * 0.4)))
+    : maxPopupWidth;
+  const heroHeight = useSplitLayout
+    ? Math.max(200, Math.min(imageHeightCap, Math.round(maxPopupWidth * 0.54)))
+    : Math.max(
+        1,
+        Math.min(
+          imageHeightCap,
+          Math.round(heroWidth / IMAGE_ASPECT[bp])
+        )
+      );
 
-  const styles = useMemo(() => getStyles(colors, bp, heroHeight, useCompactLayout), [colors, bp, heroHeight, useCompactLayout]);
+  const styles = useMemo(
+    () => getStyles(colors, bp, heroHeight, useCompactLayout, useSplitLayout),
+    [colors, bp, heroHeight, useCompactLayout, useSplitLayout],
+  );
 
   const actionBtnStyle = useMemo(
     () =>
@@ -418,8 +467,23 @@ const PlacePopupCard: React.FC<Props> = ({
       )}
 
       <View style={styles.actionsGroup}>
+        {primaryAction && (
+          <CardActionPressable
+            accessibilityLabel={primaryAction.accessibilityLabel}
+            onPress={primaryAction.onPress}
+            title={primaryAction.tooltip}
+            testID="popup-primary-action"
+            style={({ pressed }) => [
+              styles.primaryActionBtn,
+              pressed && styles.primaryActionBtnPressed,
+            ]}
+          >
+            <Feather name={primaryAction.icon} size={16} color={colors.textOnPrimary ?? colors.textOnDark} />
+            <Text style={styles.primaryActionText}>{primaryAction.label}</Text>
+          </CardActionPressable>
+        )}
         <View style={styles.actionsRow}>
-        {hasCoord && onOpenGoogleMaps && (
+        {hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps && (
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
             onPress={onOpenGoogleMaps}
@@ -452,7 +516,7 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         )}
 
-        {hasArticle && (
+        {hasArticle && primaryAction?.onPress !== onOpenArticle && (
           <CardActionPressable
             accessibilityLabel="Открыть статью"
             onPress={onOpenArticle}
@@ -463,7 +527,7 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         )}
 
-        {onBuildRoute && (
+        {onBuildRoute && primaryAction?.onPress !== onBuildRoute && (
           <CardActionPressable
             accessibilityLabel="Маршрут сюда"
             onPress={onBuildRoute}
@@ -494,9 +558,9 @@ const PlacePopupCard: React.FC<Props> = ({
           ]}
         >
           {isAdding ? (
-            <ActivityIndicator size="small" color={colors.textOnPrimary ?? colors.textOnDark} />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <Feather name="plus" size={16} color={colors.textOnPrimary ?? colors.textOnDark} />
+            <Feather name="plus" size={16} color={colors.primary} />
           )}
           <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
@@ -524,6 +588,7 @@ const PlacePopupCard: React.FC<Props> = ({
     onOpenGoogleMaps,
     onOpenOrganicMaps,
     onShareTelegram,
+    primaryAction,
     styles,
     colors.textOnDark,
     colors.textOnPrimary,
@@ -534,11 +599,11 @@ const PlacePopupCard: React.FC<Props> = ({
 
   return (
     <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
-      <View style={styles.popupCard}>
+      <View style={[styles.popupCard, useSplitLayout && styles.popupCardSplit]}>
         {imageUrl && (
           <Pressable
             onPress={handleOpenFullscreen}
-            style={styles.imageContainer}
+            style={[styles.imageContainer, useSplitLayout && styles.imageContainerSplit]}
             accessibilityRole="button"
             accessibilityLabel="Открыть фото на весь экран"
           >
@@ -551,7 +616,7 @@ const PlacePopupCard: React.FC<Props> = ({
               revealOnLoadOnly={revealPopupImageOnLoadOnly}
               priority="high"
               loading="eager"
-              width={maxPopupWidth}
+              width={heroWidth}
               height={heroHeight}
               style={StyleSheet.absoluteFill}
             />
@@ -561,7 +626,7 @@ const PlacePopupCard: React.FC<Props> = ({
           </Pressable>
         )}
 
-        <View style={styles.contentContainer}>
+        <View style={[styles.contentContainer, useSplitLayout && styles.contentContainerSplit]}>
           {contentSlot}
         </View>
       </View>
@@ -584,7 +649,13 @@ const IMAGE_ASPECT: Record<BreakpointKey, number> = {
   default: 1.35,
 };
 
-const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, compactLayout: boolean) => {
+const getStyles = (
+  colors: ThemedColors,
+  bp: BreakpointKey,
+  heroHeight: number,
+  compactLayout: boolean,
+  splitLayout: boolean,
+) => {
   const sp = SPACING[bp];
   const fs = FONT_SIZES[bp];
   const compactSp = COMPACT_LAYOUT_SPACING[bp];
@@ -627,12 +698,25 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
             elevation: 3,
           }),
     },
+    popupCardSplit: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+    },
     imageContainer: {
       width: '100%',
       height: heroHeight > 0 ? heroHeight : undefined,
       minHeight: heroHeight > 0 ? heroHeight : 0,
       position: 'relative',
       backgroundColor: colors.backgroundSecondary,
+    },
+    imageContainerSplit: {
+      width: '40%',
+      minWidth: 156,
+      maxWidth: 188,
+      height: 'auto',
+      minHeight: heroHeight > 0 ? heroHeight : 0,
+      alignSelf: 'stretch',
+      flexShrink: 0,
     },
     imageExpandButton: {
       position: 'absolute',
@@ -650,6 +734,14 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       paddingHorizontal: horizontalPadding,
       paddingTop: topPadding,
       paddingBottom: bottomPadding,
+    },
+    contentContainerSplit: {
+      flex: 1,
+      minWidth: 0,
+      paddingLeft: splitLayout ? 12 : horizontalPadding,
+      paddingRight: splitLayout ? 12 : horizontalPadding,
+      paddingTop: splitLayout ? 12 : topPadding,
+      paddingBottom: splitLayout ? 12 : bottomPadding,
     },
     content: {
       gap: compactLayout ? compactSp.sectionGap : sp.sectionGap,
@@ -754,7 +846,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     actionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: compactLayout ? 8 : bp === 'narrow' ? 8 : 10,
+      gap: splitLayout ? 8 : compactLayout ? 8 : bp === 'narrow' ? 8 : 10,
     },
     iconBtn: {
       alignItems: 'center',
@@ -782,6 +874,28 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       opacity: 0.78,
       transform: [{ scale: 0.98 }],
     },
+    primaryActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, compactLayout ? compactSp.addBtnMinHeight : 46),
+      paddingVertical: compactLayout ? sp.btnPadV : sp.btnPadV + 1,
+      paddingHorizontal: compactLayout ? sp.btnPadH : sp.btnPadH + 2,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.primary,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    primaryActionBtnPressed: {
+      opacity: 0.78,
+    },
+    primaryActionText: {
+      fontSize: compactLayout ? fs.small - 1 : fs.small,
+      fontWeight: '700',
+      color: colors.textOnPrimary ?? colors.textOnDark,
+    },
     routeBtn: {
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
       borderColor: colors.primaryAlpha30 ?? colors.border,
@@ -795,9 +909,9 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
       paddingVertical: compactLayout ? sp.btnPadV : sp.btnPadV + 2,
       paddingHorizontal: compactLayout ? sp.btnPadH + 2 : sp.btnPadH + 6,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 1.5,
-      borderColor: colors.primary,
-      backgroundColor: colors.primary,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
+      backgroundColor: colors.surface,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     addBtnDisabled: {
@@ -810,7 +924,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey, heroHeight: number, 
     addBtnText: {
       fontSize: compactLayout ? fs.small - 1 : bp === 'narrow' ? 14 : fs.small,
       fontWeight: '600',
-      color: colors.textOnPrimary ?? colors.textOnDark,
+      color: colors.text,
     },
   });
 };

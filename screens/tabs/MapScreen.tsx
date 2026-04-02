@@ -1,5 +1,5 @@
 // src/screens/tabs/MapScreen.tsx
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -33,6 +33,58 @@ const LazyMapMobileLayout = lazy(() =>
 const MAP_SEO_DESCRIPTION =
     'Интерактивная карта путешествий Metravel: находите маршруты, достопримечательности и идеи поездок, фильтруйте точки и стройте свой путь.';
 const MAP_SEO_TITLE = 'Карта маршрутов и достопримечательностей Беларуси | Metravel';
+
+type RouteHintContent = {
+    icon: ComponentProps<typeof Feather>['name'];
+    badge: string;
+    title: string;
+    description: string;
+    actionLabel: string;
+};
+
+function getRouteHintContent(
+    routePointsCount: number,
+    routingLoading: boolean,
+    routeDistance: number | null | undefined,
+): RouteHintContent {
+    if (routingLoading) {
+        return {
+            icon: 'loader',
+            badge: 'Маршрут',
+            title: 'Строим маршрут',
+            description: 'Обычно это занимает пару секунд. Следующий клик заменит финиш.',
+            actionLabel: 'Открыть',
+        };
+    }
+
+    if (routeDistance != null) {
+        return {
+            icon: 'check-circle',
+            badge: 'Готово',
+            title: 'Маршрут обновлён',
+            description: 'Следующий клик по карте заменит финиш. Панель маршрута всегда можно открыть.',
+            actionLabel: 'Маршрут',
+        };
+    }
+
+    if (routePointsCount <= 0) {
+        return {
+            icon: 'navigation',
+            badge: 'Шаг 1/2',
+            title: 'Выберите старт',
+            description: 'Нажмите на карте, чтобы поставить точку A, или введите адрес вручную.',
+            actionLabel: 'Панель',
+        };
+    }
+
+    return {
+        icon: 'flag',
+        badge: 'Шаг 2/2',
+        title: 'Старт добавлен',
+        description: 'Нажмите на карте ещё раз, чтобы поставить точку B и построить маршрут.',
+        actionLabel: 'Маршрут',
+    };
+}
 
 export default function MapScreen() {
     const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
@@ -160,6 +212,14 @@ export default function MapScreen() {
 
     const currentMode = filtersPanelProps?.contextValue?.mode ?? 'radius';
     const currentTransport = transportMode ?? 'car';
+    const routePointsCount = filtersPanelProps?.contextValue?.routePoints?.length ?? 0;
+    const routeDistance = filtersPanelProps?.contextValue?.routeDistance ?? null;
+    const routingLoading = Boolean(filtersPanelProps?.contextValue?.routingLoading);
+
+    const routeHintContent = useMemo(
+        () => getRouteHintContent(routePointsCount, routingLoading, routeDistance),
+        [routeDistance, routePointsCount, routingLoading],
+    );
 
     const activeFilterItems = useMemo(() => {
         const items: { key: string; label: string }[] = [];
@@ -201,6 +261,25 @@ export default function MapScreen() {
     }, [filtersPanelProps?.contextValue?.resetFilters]);
 
     const requestOpenBottomSheet = useMapPanelStore((s) => s.requestOpen);
+
+    const handleOpenRoutePanel = useCallback(() => {
+        selectFiltersTab();
+        if (isDesktopCollapsed && !isMobile) {
+            toggleDesktopCollapse();
+        }
+        if (isMobile) {
+            requestOpenBottomSheet('filters');
+            return;
+        }
+        openRightPanel();
+    }, [
+        isDesktopCollapsed,
+        isMobile,
+        openRightPanel,
+        requestOpenBottomSheet,
+        selectFiltersTab,
+        toggleDesktopCollapse,
+    ]);
 
     const handleExpandRadius = useCallback(() => {
         const onChange = filtersPanelProps?.contextValue?.onFilterChange;
@@ -255,9 +334,37 @@ export default function MapScreen() {
                         </Pressable>
                     </View>
                 )}
+                {currentMode === 'route' && (
+                    <View style={styles.routeHintFloating} testID="map-route-hint-floating">
+                        <View style={styles.routeHintBadge}>
+                            <Text style={styles.routeHintBadgeText}>{routeHintContent.badge}</Text>
+                        </View>
+                        <View style={styles.routeHintBody}>
+                            <View style={styles.routeHintTitleRow}>
+                                <Feather name={routeHintContent.icon} size={14} color={themedColors.primary} />
+                                <Text style={styles.routeHintTitle}>{routeHintContent.title}</Text>
+                            </View>
+                            <Text style={styles.routeHintDescription}>
+                                {routeHintContent.description}
+                            </Text>
+                        </View>
+                        <Pressable
+                            onPress={handleOpenRoutePanel}
+                            accessibilityRole="button"
+                            accessibilityLabel="Открыть панель маршрута"
+                            style={({ pressed }) => [
+                                styles.routeHintAction,
+                                pressed && styles.routeHintActionPressed,
+                            ]}
+                        >
+                            <Text style={styles.routeHintActionText}>{routeHintContent.actionLabel}</Text>
+                        </Pressable>
+                    </View>
+                )}
             </View>
         ),
         [
+            currentMode,
             isFetching,
             isMobile,
             mapPanelPlaceholder,
@@ -271,14 +378,31 @@ export default function MapScreen() {
             selectFiltersTab,
             selectTravelsTab,
             travelsData.length,
+            handleOpenRoutePanel,
+            routeHintContent.actionLabel,
+            routeHintContent.badge,
+            routeHintContent.description,
+            routeHintContent.icon,
+            routeHintContent.title,
             styles.mapArea,
             showGeoBanner,
             dismissGeoBanner,
             themedColors.warning,
+            themedColors.primary,
             themedColors.textMuted,
             styles.geoBanner,
             styles.geoBannerText,
             styles.geoBannerClose,
+            styles.routeHintFloating,
+            styles.routeHintBadge,
+            styles.routeHintBadgeText,
+            styles.routeHintBody,
+            styles.routeHintTitleRow,
+            styles.routeHintTitle,
+            styles.routeHintDescription,
+            styles.routeHintAction,
+            styles.routeHintActionPressed,
+            styles.routeHintActionText,
         ]
     );
 
