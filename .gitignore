@@ -44,6 +44,7 @@ eslint-report.json
 .playwright-report-extracted/
 /e2e/.auth/
 .pwtrace_tmp*/
+/playwright-cli-*.tgz
 
 .pwtrace_tmp/
 **/*-snapshots/
