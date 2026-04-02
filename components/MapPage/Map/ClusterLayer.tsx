@@ -55,6 +55,17 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   hintCenter,
 }) => {
   const colors = useThemedColors();
+  const viewportWidth =
+    typeof window !== 'undefined' && Number.isFinite(window.innerWidth)
+      ? Number(window.innerWidth)
+      : 1024;
+  const isNarrowViewport = viewportWidth <= 420;
+  const clusterOuterSize = isNarrowViewport ? 48 : 56;
+  const clusterInnerSize = isNarrowViewport ? 40 : 48;
+  const clusterCoreSize = isNarrowViewport ? 34 : 40;
+  const clusterAnchor = Math.round(clusterOuterSize / 2);
+  const clusterInset = isNarrowViewport ? 4 : 4;
+  const clusterFontSize = isNarrowViewport ? 16 : 18;
 
   const safeClusters = useMemo(() => {
     return Array.isArray(clusters) ? clusters : [];
@@ -66,14 +77,14 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
     const cache = new Map();
     const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
-    const muted = sanitizeCssValue(
-      root?.getPropertyValue('--color-textMuted')?.trim() || colors.textMuted
+    const accent = sanitizeCssValue(
+      root?.getPropertyValue('--color-primary')?.trim() || colors.primary
     );
     const surface = sanitizeCssValue(
       root?.getPropertyValue('--color-surface')?.trim() || colors.surface
     );
-    const textOnDark = sanitizeCssValue(
-      root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark
+    const textColor = sanitizeCssValue(
+      root?.getPropertyValue('--color-text')?.trim() || colors.text
     );
     const shadow = sanitizeCssValue(
       root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium
@@ -83,8 +94,8 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     );
     const boxShadow = shadow || '0 4px 16px rgba(0,0,0,0.35)';
     const borderColor = border || 'rgba(0,0,0,0.1)';
-    const badgeColor = muted || colors.textMuted;
-    const badgeTextColor = textOnDark || colors.textOnDark;
+    const badgeColor = accent || colors.primary;
+    const badgeTextColor = textColor || colors.text;
     const surfaceColor = surface || colors.surface;
 
     [2, 5, 10, 20, 50, 100, 200].forEach(count => {
@@ -93,8 +104,8 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         html: `
           <div style="
             position: relative;
-            width: 56px;
-            height: 56px;
+            width: ${clusterOuterSize}px;
+            height: ${clusterOuterSize}px;
             background: ${surfaceColor};
             border-radius: 50%;
             border: 1px solid ${borderColor};
@@ -102,10 +113,10 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           ">
             <div style="
               position: absolute;
-              top: 4px;
-              left: 4px;
-              width: 48px;
-              height: 48px;
+              top: ${clusterInset}px;
+              left: ${clusterInset}px;
+              width: ${clusterInnerSize}px;
+              height: ${clusterInnerSize}px;
               background: ${badgeColor};
               border-radius: 50%;
               display: flex;
@@ -114,30 +125,29 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             ">
               <div style="
                 position: absolute;
-                width: 40px;
-                height: 40px;
-                background: rgba(255,255,255,0.15);
+                width: ${clusterCoreSize}px;
+                height: ${clusterCoreSize}px;
+                background: rgba(255,255,255,0.18);
                 border-radius: 50%;
               "></div>
               <span style="
                 position: relative;
                 color: ${badgeTextColor};
                 font-weight: 800;
-                font-size: 18px;
-                text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                font-size: ${clusterFontSize}px;
                 z-index: 1;
               ">${count}</span>
             </div>
           </div>
         `,
-        iconSize: [56, 56],
-        iconAnchor: [28, 28],
+        iconSize: [clusterOuterSize, clusterOuterSize],
+        iconAnchor: [clusterAnchor, clusterAnchor],
       });
       cache.set(count, icon);
     });
 
     return cache;
-  }, [L, colors]);
+  }, [L, clusterAnchor, clusterCoreSize, clusterFontSize, clusterInnerSize, clusterInset, clusterOuterSize, colors]);
 
   const clusterIcon = useCallback(
     (count: number, thumbUrl?: string) => {
@@ -155,14 +165,14 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
       const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
 
-      const muted = sanitizeCssValue(
-      root?.getPropertyValue('--color-textMuted')?.trim() || colors.textMuted
-    );
+      const accent = sanitizeCssValue(
+        root?.getPropertyValue('--color-primary')?.trim() || colors.primary
+      );
       const surface = sanitizeCssValue(
         root?.getPropertyValue('--color-surface')?.trim() || colors.surface
       );
-      const textOnDark = sanitizeCssValue(
-        root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark
+      const textColor = sanitizeCssValue(
+        root?.getPropertyValue('--color-text')?.trim() || colors.text
       );
       const shadow = sanitizeCssValue(
         root?.getPropertyValue('--shadow-medium')?.trim() || colors.boxShadows.medium
@@ -172,8 +182,8 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
       );
       const boxShadow = shadow || '0 4px 16px rgba(0,0,0,0.35)';
       const borderColor = border || 'rgba(0,0,0,0.1)';
-      const badgeColor = muted || colors.textMuted;
-      const badgeTextColor = textOnDark || colors.textOnDark;
+      const badgeColor = accent || colors.primary;
+      const badgeTextColor = textColor || colors.text;
       const surfaceColor = surface || colors.surface;
 
       const safeCount = Math.floor(count);
@@ -182,16 +192,16 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         ? `<img src="${thumbUrl}" style="
             position: absolute;
             top: 0; left: 0;
-            width: 56px; height: 56px;
+            width: ${clusterOuterSize}px; height: ${clusterOuterSize}px;
             border-radius: 50%;
             object-fit: cover;
           " loading="lazy" alt="" />
           <div style="
             position: absolute;
             top: 0; left: 0;
-            width: 56px; height: 56px;
+            width: ${clusterOuterSize}px; height: ${clusterOuterSize}px;
             border-radius: 50%;
-            background: rgba(0,0,0,0.35);
+            background: rgba(0,0,0,0.22);
           "></div>`
         : '';
 
@@ -208,8 +218,8 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         html: `
           <div style="
             position: relative;
-            width: 56px;
-            height: 56px;
+            width: ${clusterOuterSize}px;
+            height: ${clusterOuterSize}px;
             ${bgStyle}
             border-radius: 50%;
             border: 1px solid ${borderColor};
@@ -219,10 +229,10 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             ${thumbHtml}
             <div style="
               position: absolute;
-              top: 4px;
-              left: 4px;
-              width: 48px;
-              height: 48px;
+              top: ${clusterInset}px;
+              left: ${clusterInset}px;
+              width: ${clusterInnerSize}px;
+              height: ${clusterInnerSize}px;
               ${innerBg}
               border-radius: 50%;
               display: flex;
@@ -231,27 +241,26 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             ">
               <div style="
                 position: absolute;
-                width: 40px;
-                height: 40px;
-                background: rgba(255,255,255,0.15);
+                width: ${clusterCoreSize}px;
+                height: ${clusterCoreSize}px;
+                background: rgba(255,255,255,0.18);
                 border-radius: 50%;
               "></div>
               <span style="
                 position: relative;
                 color: ${badgeTextColor};
                 font-weight: 800;
-                font-size: 18px;
-                text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                font-size: ${clusterFontSize}px;
                 z-index: 1;
               ">${safeCount}</span>
             </div>
           </div>
         `,
-        iconSize: [56, 56],
-        iconAnchor: [28, 28],
+        iconSize: [clusterOuterSize, clusterOuterSize],
+        iconAnchor: [clusterAnchor, clusterAnchor],
       });
     },
-    [L, colors, clusterIconsCache]
+    [L, clusterAnchor, clusterCoreSize, clusterFontSize, clusterIconsCache, clusterInnerSize, clusterInset, clusterOuterSize, colors]
   );
 
   const handleMarkerClick = useCallback(
@@ -266,13 +275,11 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
       onMarkerClick?.(point, coords);
       if (e?.target?.openPopup) {
-        setTimeout(() => {
-          try {
-            e.target.openPopup();
-          } catch {
-            // noop
-          }
-        }, 250);
+        try {
+          e.target.openPopup();
+        } catch {
+          // noop
+        }
       }
     },
     [onMarkerClick]
