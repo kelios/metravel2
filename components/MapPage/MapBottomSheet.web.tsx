@@ -193,8 +193,8 @@ const getStyles = (colors: ThemedColors) =>
     dragHandleArea: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingTop: 10,
-      paddingBottom: 8,
+      paddingTop: 8,
+      paddingBottom: 6,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', touchAction: 'manipulation' } as any) : null),
     },
     dragHandle: {

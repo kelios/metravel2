@@ -70,8 +70,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrow = viewportWidth <= 390;
   const isVeryNarrow = viewportWidth <= 350;
-  const compactSheetActions = viewportWidth <= 360;
-  const stackSheetToolbar = viewportWidth <= 390;
+  const compactSheetActions = viewportWidth <= 380;
+  const stackSheetToolbar = viewportWidth <= 340;
   const styles = useMemo(
     () => getStyles(colors, { isNarrow, compactSheetActions, stackSheetToolbar }),
     [colors, isNarrow, compactSheetActions, stackSheetToolbar]
@@ -726,11 +726,11 @@ const getStyles = (
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
       alignItems: options.stackSheetToolbar ? 'stretch' : 'center',
-      gap: options.stackSheetToolbar ? 8 : options.isNarrow ? 6 : 8,
-      minHeight: options.stackSheetToolbar ? undefined : (options.isNarrow ? 44 : 48),
-      paddingVertical: options.isNarrow ? 6 : 8,
-      paddingLeft: options.isNarrow ? 10 : 14,
-      paddingRight: options.isNarrow ? 10 : 14,
+      gap: options.stackSheetToolbar ? 6 : options.isNarrow ? 4 : 8,
+      minHeight: options.stackSheetToolbar ? undefined : (options.isNarrow ? 40 : 48),
+      paddingVertical: options.isNarrow ? 4 : 8,
+      paddingLeft: options.isNarrow ? 8 : 14,
+      paddingRight: options.isNarrow ? 8 : 14,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
@@ -766,9 +766,9 @@ const getStyles = (
       justifyContent: 'flex-end' as const,
     },
     sheetCloseButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 14,
+      width: options.isNarrow ? 38 : 44,
+      height: options.isNarrow ? 38 : 44,
+      borderRadius: options.isNarrow ? 12 : 14,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderWidth: StyleSheet.hairlineWidth,
@@ -792,10 +792,10 @@ const getStyles = (
     },
     sheetShowResultsButton: {
       flexDirection: 'row' as const,
-      height: 44,
-      minWidth: 44,
-      paddingHorizontal: 12,
-      gap: 5,
+      height: options.isNarrow ? 38 : 44,
+      minWidth: options.isNarrow ? 38 : 44,
+      paddingHorizontal: options.isNarrow ? 8 : 12,
+      gap: 4,
       borderRadius: 999,
       borderWidth: 0,
       alignItems: 'center' as const,
@@ -804,17 +804,17 @@ const getStyles = (
       ...(Platform.OS === 'web' ? ({ boxShadow: 'none', cursor: 'pointer' } as any) : null),
     },
     sheetShowResultsButtonCompact: {
-      height: 40,
-      paddingHorizontal: 10,
+      height: 36,
+      paddingHorizontal: 8,
     },
     sheetBackToMapButton: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
-      gap: 6,
-      height: 44,
-      minWidth: 44,
-      paddingHorizontal: 12,
+      gap: 4,
+      height: options.isNarrow ? 38 : 44,
+      minWidth: options.isNarrow ? 38 : 44,
+      paddingHorizontal: options.isNarrow ? 8 : 12,
       borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
@@ -828,10 +828,10 @@ const getStyles = (
         : null),
     },
     sheetBackToMapButtonCompact: {
-      width: 40,
-      height: 40,
+      width: 36,
+      height: 36,
       paddingHorizontal: 0,
-      borderRadius: 12,
+      borderRadius: 10,
     },
     sheetBackToMapText: {
       fontSize: 12,
@@ -839,9 +839,9 @@ const getStyles = (
       color: colors.textMuted,
     },
     sheetIconButtonCompact: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 10,
     },
     sheetResultsBadge: {
       fontSize: options.compactSheetActions ? 10 : 11,
@@ -859,9 +859,9 @@ const getStyles = (
       flexShrink: 1,
     },
     sheetToolbarSummary: {
-      marginTop: 6,
-      fontSize: 11,
-      lineHeight: 15,
+      marginTop: options.isNarrow ? 3 : 6,
+      fontSize: options.isNarrow ? 10 : 11,
+      lineHeight: options.isNarrow ? 13 : 15,
       fontWeight: '600' as const,
       color: colors.textMuted,
     },
@@ -929,7 +929,7 @@ const getStyles = (
       minHeight: 0,
       ...Platform.select({
         web: {
-          paddingHorizontal: options.isNarrow ? 8 : 14,
+          paddingHorizontal: options.isNarrow ? 6 : 14,
         },
       }),
     },

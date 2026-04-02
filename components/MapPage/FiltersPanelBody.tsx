@@ -126,12 +126,12 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     >
       <View style={styles.filtersStatusCard} testID="filters-panel-status">
         <View style={styles.filtersStatusHeader}>
-          <Text style={styles.filtersStatusTitle}>{statusTitle}</Text>
+          <Text style={styles.filtersStatusTitle} numberOfLines={1}>{statusTitle}</Text>
           <View style={styles.filtersStatusBadge}>
             <Text style={styles.filtersStatusBadgeText}>{statusBadge}</Text>
           </View>
         </View>
-        <Text style={styles.filtersStatusDescription}>{statusDescription}</Text>
+        <Text style={styles.filtersStatusDescription} numberOfLines={isMobile ? 2 : undefined}>{statusDescription}</Text>
       </View>
 
       <View style={styles.sectionCard} testID="filters-block-main">
