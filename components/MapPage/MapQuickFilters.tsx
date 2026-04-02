@@ -2,7 +2,7 @@
  * MapQuickFilters — горизонтальный scroll с chip-кнопками категорий поверх карты
  */
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -39,11 +39,15 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   maxVisible = 5,
 }) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const { width } = useWindowDimensions();
+  const isNarrow = width > 0 && width <= 420;
+  const isVeryNarrow = width > 0 && width <= 360;
+  const styles = useMemo(() => getStyles(colors, { isNarrow, isVeryNarrow }), [colors, isNarrow, isVeryNarrow]);
+  const effectiveMaxVisible = isVeryNarrow ? Math.min(maxVisible, 2) : isNarrow ? Math.min(maxVisible, 3) : maxVisible;
 
   const visible = useMemo(
-    () => categories.slice(0, maxVisible),
-    [categories, maxVisible],
+    () => categories.slice(0, effectiveMaxVisible),
+    [categories, effectiveMaxVisible],
   );
 
   if (!visible.length) return null;
@@ -92,13 +96,16 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   );
 });
 
-const getStyles = (colors: ThemedColors) =>
+const getStyles = (
+  colors: ThemedColors,
+  options: { isNarrow: boolean; isVeryNarrow: boolean }
+) =>
   StyleSheet.create({
     container: {
       position: 'absolute',
-      top: 16,
-      left: 16,
-      right: 16,
+      top: options.isNarrow ? 10 : 16,
+      left: options.isNarrow ? 12 : 16,
+      right: options.isNarrow ? 12 : 16,
       zIndex: 5,
     },
     scroll: {
@@ -116,8 +123,8 @@ const getStyles = (colors: ThemedColors) =>
         : null),
     },
     scrollContent: {
-      gap: 10,
-      paddingRight: 10,
+      gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
+      paddingRight: options.isNarrow ? 4 : 10,
       ...(Platform.OS === 'web'
         ? ({ minWidth: 'max-content', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' } as any)
         : null),
@@ -125,10 +132,10 @@ const getStyles = (colors: ThemedColors) =>
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 24,
+      gap: options.isVeryNarrow ? 6 : 8,
+      paddingHorizontal: options.isVeryNarrow ? 12 : options.isNarrow ? 14 : 16,
+      paddingVertical: options.isVeryNarrow ? 8 : options.isNarrow ? 9 : 10,
+      borderRadius: options.isVeryNarrow ? 20 : 24,
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       borderWidth: 0,
       ...(Platform.OS === 'web'
@@ -159,7 +166,7 @@ const getStyles = (colors: ThemedColors) =>
         : null),
     },
     chipText: {
-      fontSize: 13,
+      fontSize: options.isVeryNarrow ? 12 : 13,
       fontWeight: '700',
       color: colors.text,
       letterSpacing: 0.1,
