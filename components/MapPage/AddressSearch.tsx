@@ -269,9 +269,9 @@ const getStyles = (colors: ThemedColors, dense: boolean) => StyleSheet.create({
   clearButton: {
     marginLeft: dense ? 6 : 8,
     padding: 0,
-    width: dense ? 24 : 28,
-    height: dense ? 24 : 28,
-    borderRadius: dense ? 12 : 14,
+    width: dense ? 28 : 32,
+    height: dense ? 28 : 32,
+    borderRadius: dense ? 14 : 16,
     backgroundColor: 'transparent',
     shadowColor: 'transparent',
     shadowOpacity: 0,

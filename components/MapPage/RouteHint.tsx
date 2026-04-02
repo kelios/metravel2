@@ -75,9 +75,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     lineHeight: 18,
   },
   closeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     padding: 0,
     marginLeft: 8,
     marginHorizontal: 0,

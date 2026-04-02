@@ -92,7 +92,7 @@ const getStyles = (colors: ThemedColors) =>
       borderWidth: 1,
       borderColor: colors.borderLight,
       paddingHorizontal: 9,
-      height: 36,
+      minHeight: 40,
       ...(Platform.OS === 'web'
         ? ({ transition: 'border-color 0.15s ease, box-shadow 0.15s ease' } as any)
         : null),
