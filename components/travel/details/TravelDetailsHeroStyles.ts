@@ -58,6 +58,9 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
         ? ({
             transition: 'background-color 0.2s ease, color 0.2s ease',
             cursor: 'pointer',
+            ':hover': {
+              backgroundColor: colors.backgroundTertiary,
+            } as any,
           } as any)
         : {}),
     },

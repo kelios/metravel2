@@ -949,7 +949,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.borderLight,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer' as any,
-      transition: 'background-color 0.15s ease',
+      transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
+      ':hover': {
+        backgroundColor: colors.backgroundSecondary,
+        borderColor: colors.border,
+      } as any,
     } as any : {}),
   },
   actionBtnPressed: {
@@ -1078,6 +1082,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer' as any,
       transition: 'background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+      ':hover': {
+        backgroundColor: colors.backgroundSecondary,
+      } as any,
     } : {}),
   },
   linkLeft: {

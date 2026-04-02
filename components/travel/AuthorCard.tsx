@@ -412,6 +412,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
+        transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
+        ':hover': {
+          backgroundColor: colors.backgroundSecondary,
+          borderColor: colors.border,
+        } as any,
       },
     }),
   },
@@ -594,7 +599,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'background-color 0.2s ease' as any,
+        transition: 'background-color 0.2s ease, box-shadow 0.2s ease' as any,
+        ':hover': {
+          backgroundColor: colors.backgroundTertiary,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+        } as any,
       },
     }),
   },
@@ -608,6 +617,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
+        transition: 'background-color 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.backgroundSecondary,
+        } as any,
       },
     }),
   },
@@ -656,6 +669,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.primarySoft,
+          borderColor: colors.primary,
+        } as any,
       },
     }),
   },

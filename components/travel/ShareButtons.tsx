@@ -528,6 +528,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: {
         cursor: 'pointer' as any,
         transition: 'background-color 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.backgroundTertiary,
+        } as any,
       },
     }),
   },
