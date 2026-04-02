@@ -17,6 +17,7 @@ interface MapQuickFiltersProps {
   selectedCategories: string[];
   onToggleCategory: (categoryName: string) => void;
   maxVisible?: number;
+  onOpenFilters?: () => void;
 }
 
 export const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']> = {
@@ -37,6 +38,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   selectedCategories,
   onToggleCategory,
   maxVisible = 5,
+  onOpenFilters,
 }) => {
   const colors = useThemedColors();
   const { width } = useWindowDimensions();
@@ -49,6 +51,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
     () => categories.slice(0, effectiveMaxVisible),
     [categories, effectiveMaxVisible],
   );
+  const hiddenCount = Math.max(categories.length - visible.length, 0);
 
   if (!visible.length) return null;
 
@@ -91,6 +94,27 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
             </CardActionPressable>
           );
         })}
+
+        {typeof onOpenFilters === 'function' && hiddenCount > 0 && (
+          <CardActionPressable
+            accessibilityLabel={`Открыть все фильтры, скрыто ещё ${hiddenCount}`}
+            onPress={onOpenFilters}
+            title="Фильтры"
+            style={({ pressed }) => [
+              styles.chip,
+              styles.actionChip,
+              pressed && styles.chipPressed,
+            ]}
+          >
+            <Feather name="sliders" size={14} color={colors.text} />
+            <Text style={styles.chipText} numberOfLines={1}>
+              Фильтры
+            </Text>
+            <View style={styles.actionBadge}>
+              <Text style={styles.actionBadgeText}>{hiddenCount}</Text>
+            </View>
+          </CardActionPressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -164,6 +188,25 @@ const getStyles = (
             transform: 'scale(0.98)',
           } as any)
         : null),
+    },
+    actionChip: {
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+    },
+    actionBadge: {
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      paddingHorizontal: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+    },
+    actionBadgeText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: colors.textMuted,
     },
     chipText: {
       fontSize: options.isVeryNarrow ? 12 : 13,

@@ -1,6 +1,6 @@
 // components/MapPage/map/ClusterLayer.tsx
 import React, { useMemo, useCallback } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, useWindowDimensions } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { strToLatLng } from './utils';
 import type { Point, ClusterData } from './types';
@@ -55,10 +55,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   hintCenter,
 }) => {
   const colors = useThemedColors();
-  const viewportWidth =
-    typeof window !== 'undefined' && Number.isFinite(window.innerWidth)
-      ? Number(window.innerWidth)
-      : 1024;
+  const { width: viewportWidth } = useWindowDimensions();
   const isNarrowViewport = viewportWidth <= 420;
   const clusterOuterSize = isNarrowViewport ? 48 : 56;
   const clusterInnerSize = isNarrowViewport ? 40 : 48;
@@ -273,7 +270,6 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         // noop
       }
 
-      onMarkerClick?.(point, coords);
       if (e?.target?.openPopup) {
         try {
           e.target.openPopup();
@@ -281,6 +277,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           // noop
         }
       }
+      onMarkerClick?.(point, coords);
     },
     [onMarkerClick]
   );

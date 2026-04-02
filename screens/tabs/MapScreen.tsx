@@ -220,6 +220,10 @@ export default function MapScreen() {
                         selectedCategories={quickFilterSelected}
                         onToggleCategory={quickFilterToggle}
                         maxVisible={isMobile ? 3 : 5}
+                        onOpenFilters={isMobile ? (() => {
+                            selectFiltersTab();
+                            requestOpenBottomSheet('filters');
+                        }) : undefined}
                     />
                 )}
                 {Platform.OS === 'web' && !isMobile && travelsData.length > 0 && rightPanelTab !== 'travels' && (
@@ -263,6 +267,8 @@ export default function MapScreen() {
             quickFilterSelected,
             quickFilterToggle,
             rightPanelTab,
+            requestOpenBottomSheet,
+            selectFiltersTab,
             selectTravelsTab,
             travelsData.length,
             styles.mapArea,
