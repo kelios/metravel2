@@ -57,7 +57,11 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   const shouldShowActionChip =
     typeof onOpenFilters === 'function' && (hiddenCount > 0 || selectedCount > 0);
   const actionBadgeLabel =
-    hiddenCount > 0 ? `+${hiddenCount}` : selectedCount > 0 ? String(selectedCount) : '';
+    selectedCount > 0
+      ? String(selectedCount)
+      : hiddenCount > 0
+        ? `+${hiddenCount}`
+        : '';
   const actionAccessibilityLabel =
     hiddenCount > 0
       ? `Открыть все фильтры, скрыто ещё ${hiddenCount}`
@@ -168,7 +172,7 @@ const getStyles = (
       top: 0,
       right: 0,
       bottom: 0,
-      width: 44,
+      width: 60,
       borderTopRightRadius: 24,
       borderBottomRightRadius: 24,
     },

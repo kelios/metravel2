@@ -58,7 +58,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   coordinates,
   transportMode,
   buildRouteTo,
-  onCenterOnUser,
+  onCenterOnUser: _onCenterOnUser,
   onOpenFilters,
   filtersPanelProps,
   onToggleFavorite,
@@ -582,15 +582,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               },
             ]}
           >
-            <CardActionPressable
-              testID="map-mobile-fab"
-              accessibilityRole="button"
-              accessibilityLabel="Моё местоположение"
-              onPress={onCenterOnUser}
-              style={styles.quickCircleButton}
-            >
-              <Feather name="crosshair" size={20} color={colors.text} />
-            </CardActionPressable>
 
             <CardActionPressable
               accessibilityRole="button"
@@ -688,7 +679,6 @@ const getStyles = (
     },
     quickOpenButton: {
       position: 'absolute',
-      right: 16,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
@@ -698,6 +688,14 @@ const getStyles = (
       borderRadius: 999,
       backgroundColor: colors.primary,
       zIndex: 810,
+      ...(Platform.OS === 'web'
+        ? ({
+            left: '50%',
+            transform: 'translateX(-50%)',
+          } as any)
+        : {
+            alignSelf: 'center',
+          }),
       boxShadow: '0 10px 24px rgba(0,0,0,0.18)' as any,
     },
     quickOpenButtonText: {

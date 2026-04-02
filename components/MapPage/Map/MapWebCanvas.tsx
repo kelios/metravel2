@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from 'react-native'
+import React from 'react'
+import { ActivityIndicator, Platform, Text, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
@@ -8,8 +8,7 @@ import RoutingMachine from '../RoutingMachine'
 import type { Point } from './types'
 import { MapLayers } from './MapLayers'
 import { MapLogicComponent } from './MapLogicComponent'
-import MapMarkers from './MapMarkers'
-import ClusterLayer from './ClusterLayer'
+import MarkerClusterGroup from './MarkerClusterGroup'
 import { RouteMarkersLayer } from './RouteMarkersLayer'
 
 type ReactLeafletNS = typeof import('react-leaflet')
@@ -174,14 +173,10 @@ type MapWebLeafletCanvasProps = {
   setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void
   orsApiKey: string | undefined
   markers: Point[]
-  shouldRenderClusters: boolean
   PopupComponent: any
   popupAutoPanPadding: any
   handleMarkerZoom: (_point: Point, coords: { lat: number; lng: number }) => void
   markerByCoordRef: React.MutableRefObject<Map<string, any>>
-  clusters: any
-  expandedCluster: { key: string; items: Point[] } | null
-  setExpandedCluster: (value: { key: string; items: Point[] } | null) => void
   travelMarkerOpacity: number
 }
 
@@ -231,22 +226,12 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
   setRouteElevationStats,
   orsApiKey,
   markers,
-  shouldRenderClusters,
   PopupComponent,
   popupAutoPanPadding,
   handleMarkerZoom,
   markerByCoordRef,
-  clusters,
-  expandedCluster,
-  setExpandedCluster,
   travelMarkerOpacity,
 }) => {
-  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions()
-  const clusterZoomFitBoundsOptions = useMemo(
-    () => getClusterZoomFitBoundsOptions({ width: viewportWidth, height: viewportHeight }),
-    [viewportWidth, viewportHeight]
-  )
-
   if (!canRenderMap || !hasValidReactLeafletHooks) return null
 
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rl
@@ -390,54 +375,22 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       {canRenderMap &&
       customIcons?.meTravel &&
       markers.length > 0 &&
-      !shouldRenderClusters &&
       PopupComponent ? (
-        <MapMarkers
-          points={markers}
-          icon={customIcons.meTravel}
-          Marker={Marker}
-          Popup={Popup}
-          Tooltip={Tooltip}
-          PopupContent={PopupComponent}
-          popupProps={popupAutoPanPadding}
-          onMarkerClick={handleMarkerZoom}
-          hintCenter={hintCenterLatLng}
-          onMarkerInstance={(coord, marker) => {
-            markerByCoordRef.current.set(coord, marker)
-          }}
-        />
-      ) : null}
-
-      {canRenderMap &&
-      customIcons?.meTravel &&
-      markers.length > 0 &&
-      shouldRenderClusters &&
-      PopupComponent ? (
-        <ClusterLayer
+        <MarkerClusterGroup
           L={L}
-          clusters={clusters as any}
-          Marker={Marker}
-          Popup={Popup}
-          Tooltip={Tooltip}
-          PopupContent={PopupComponent}
-          popupProps={popupAutoPanPadding}
+          useMap={useMap as any}
+          points={markers}
           markerIcon={customIcons.meTravel}
           markerOpacity={travelMarkerOpacity}
-          expandedClusterKey={expandedCluster?.key}
-          expandedClusterItems={expandedCluster?.items}
-          hintCenter={hintCenterLatLng}
-          onClusterZoom={({ center: _center, bounds, key, items }) => {
-            setExpandedCluster({ key, items })
-            try {
-              mapRef.current?.fitBounds?.(bounds as any, clusterZoomFitBoundsOptions as any)
-            } catch {
-              // noop
-            }
-          }}
+          PopupContent={PopupComponent}
+          Popup={Popup}
+          Tooltip={Tooltip}
+          popupProps={popupAutoPanPadding}
           onMarkerClick={handleMarkerZoom}
           onMarkerInstance={(coord, marker) => {
             markerByCoordRef.current.set(coord, marker)
           }}
+          hintCenter={hintCenterLatLng}
         />
       ) : null}
     </MapContainer>

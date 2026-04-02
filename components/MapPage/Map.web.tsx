@@ -103,7 +103,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [showInitialLoader, setShowInitialLoader] = useState(Platform.OS !== 'web');
   const [errors, setErrors] = useState<any>({ routing: false });
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
-  const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [mapInstance, setMapInstance] = useState<any>(null);
 
@@ -245,14 +244,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   // Use new markers hook
   const {
-    shouldRenderClusters,
-    clusters,
     markers,
     markerOpacity: travelMarkerOpacity,
   } = useMapMarkers({
     travelData: filteredTravelData,
     mapZoom,
-    expandedClusterKey: expandedCluster?.key,
     mode,
     hintCenter: hintCenterForMarkers,
   });
@@ -524,14 +520,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
         setRouteElevationStats={setRouteElevationStats}
         orsApiKey={ORS_API_KEY}
         markers={markers}
-        shouldRenderClusters={shouldRenderClusters}
         PopupComponent={PopupComponent}
         popupAutoPanPadding={popupAutoPanPadding}
         handleMarkerZoom={handleMarkerZoom}
         markerByCoordRef={markerByCoordRef}
-        clusters={clusters}
-        expandedCluster={expandedCluster}
-        setExpandedCluster={setExpandedCluster}
         travelMarkerOpacity={travelMarkerOpacity}
       />
 

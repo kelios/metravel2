@@ -12,6 +12,9 @@ export function ensureLeafletCss(): boolean {
     link.setAttribute('data-metravel-leaflet-css', 'cdn')
     document.head.appendChild(link)
 
+    // Inject MarkerCluster CSS
+    ensureMarkerClusterCss()
+
     // Inject Leaflet overrides (extracted from global.css to reduce CSS on non-map pages)
     ensureLeafletOverrides()
 
@@ -22,6 +25,39 @@ export function ensureLeafletCss(): boolean {
   } catch {
     return false
   }
+}
+
+function ensureMarkerClusterCss(): void {
+  const id = 'metravel-markercluster-css'
+  if (document.getElementById(id)) return
+
+  const link = document.createElement('link')
+  link.id = id
+  link.rel = 'stylesheet'
+  link.href = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css'
+  document.head.appendChild(link)
+
+  // Custom cluster styles instead of the default blue/green/yellow circles
+  const style = document.createElement('style')
+  style.id = 'metravel-markercluster-overrides'
+  style.textContent = getMarkerClusterOverridesCSS()
+  document.head.appendChild(style)
+}
+
+function getMarkerClusterOverridesCSS(): string {
+  return [
+    '.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background:rgba(255,138,0,0.2)!important;border-radius:50%!important}',
+    '.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background:var(--color-primary,#ff8a00)!important;color:#fff!important;border-radius:50%!important;font-weight:800!important;font-size:14px!important;font-family:Inter,system-ui,-apple-system,sans-serif!important;display:flex!important;align-items:center!important;justify-content:center!important}',
+    '.marker-cluster-small{width:36px!important;height:36px!important}',
+    '.marker-cluster-small div{width:28px!important;height:28px!important;margin-left:4px!important;margin-top:4px!important;line-height:28px!important}',
+    '.marker-cluster-medium{width:44px!important;height:44px!important}',
+    '.marker-cluster-medium div{width:34px!important;height:34px!important;margin-left:5px!important;margin-top:5px!important;line-height:34px!important;font-size:15px!important}',
+    '.marker-cluster-large{width:52px!important;height:52px!important}',
+    '.marker-cluster-large div{width:40px!important;height:40px!important;margin-left:6px!important;margin-top:6px!important;line-height:40px!important;font-size:16px!important}',
+    '.marker-cluster{box-shadow:0 4px 16px rgba(0,0,0,0.2)!important;transition:transform 0.15s ease!important}',
+    '.marker-cluster:hover{transform:scale(1.1)!important}',
+    '.leaflet-cluster-anim .leaflet-marker-icon,.leaflet-cluster-anim .leaflet-marker-shadow{transition:transform 0.3s ease-out,opacity 0.3s ease-out!important}',
+  ].join('\n')
 }
 
 function ensureLeafletOverrides(): void {

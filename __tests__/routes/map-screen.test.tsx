@@ -302,16 +302,14 @@ describe('MapScreen (map tab)', () => {
   it('does not render floating list pill on mobile web', async () => {
     mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 };
 
-    const { queryByLabelText, getByTestId } = renderWithClient();
+    const { queryByLabelText } = renderWithClient();
 
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled();
     });
 
-    await waitFor(() => {
-      expect(getByTestId('map-mobile-fab')).toBeTruthy();
-    });
-
+    // On mobile web, the separate floating list pill (MapShowListButton) should NOT render
+    // (it is only for desktop). Mobile uses the integrated bottom sheet list.
     expect(queryByLabelText('Показать 2 места списком')).toBeNull();
   });
 

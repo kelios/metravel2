@@ -120,6 +120,19 @@ jest.mock('@/components/MapPage/Map/MapMarkers', () => {
   }
 })
 
+jest.mock('@/components/MapPage/Map/MarkerClusterGroup', () => {
+  const RN = require('react-native')
+  const View = RN.View
+  return function MarkerClusterGroup(props: any) {
+    const point = props?.points?.[0]
+    return (
+      <View testID="marker-cluster-group">
+        {point && props.PopupContent ? <props.PopupContent point={point} /> : null}
+      </View>
+    )
+  }
+})
+
 jest.mock('@/components/MapPage/Map/MapControls', () => {
   const RN = require('react-native')
   const Pressable = RN.Pressable
@@ -949,16 +962,12 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(Array.isArray(markers)).toBe(true)
     })
 
-    it('expands clusters into individual markers on high zoom', async () => {
+    it('renders MarkerClusterGroup with many points', async () => {
       const { Platform } = require('react-native')
       ;(Platform as any).OS = 'web'
 
       const rl = require('react-leaflet')
-      // start at low zoom (cluster bubble)
       rl.__setZoomForTests(11)
-
-      const clustering = require('@/components/MapPage/Map/useClustering')
-      clustering.__setShouldRenderClustersForTests(true)
 
       const travel = {
         data: Array.from({ length: 51 }).map((_, i) => ({
@@ -970,7 +979,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         })),
       }
 
-      renderWithProviders(
+      const { queryByTestId } = renderWithProviders(
         <MapPageComponent
           {...defaultProps}
           mode="radius"
@@ -980,8 +989,8 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
       await act(async () => {})
 
-      // Cluster layer should render and use Leaflet divIcon (simulated in the ClusterLayer mock)
-      expect(mockLeaflet.divIcon).toHaveBeenCalled()
+      // MarkerClusterGroup should be rendered
+      expect(queryByTestId('marker-cluster-group')).toBeTruthy()
     })
   })
 
