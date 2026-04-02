@@ -114,10 +114,14 @@ export default function TabLayout() {
                 <Tabs.Screen name="messages" options={HIDDEN} />
                 <Tabs.Screen name="subscriptions" options={HIDDEN} />
                 <Tabs.Screen name="travels/[param]" options={travelDetailsOptions} />
+                <Tabs.Screen name="quests/index" options={HIDDEN} />
+                <Tabs.Screen name="quests/map" options={HIDDEN} />
+                <Tabs.Screen name="quests/[city]/[questId]" options={HIDDEN} />
                 <Tabs.Screen name="user/[id]" options={HIDDEN} />
 
                 {/* полностью скрытые из линкинга */}
-                <Tabs.Screen name="about" options={HIDDEN_NOHREF} />
+                <Tabs.Screen name="about" options={HIDDEN} />
+                <Tabs.Screen name="privacy" options={HIDDEN} />
                 <Tabs.Screen name="login" options={HIDDEN_NOHREF} />
                 <Tabs.Screen name="registration" options={HIDDEN_NOHREF} />
                 <Tabs.Screen name="set-password" options={HIDDEN_NOHREF} />
