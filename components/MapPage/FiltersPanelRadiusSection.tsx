@@ -12,6 +12,16 @@ import { CATEGORY_ICONS } from './MapQuickFilters';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 
+const getPlacesLabel = (count: number) => {
+  const absCount = Math.abs(count);
+  const mod10 = absCount % 10;
+  const mod100 = absCount % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return `${count} место`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} места`;
+  return `${count} мест`;
+};
+
 interface FiltersPanelRadiusSectionProps {
   colors: ThemedColors;
   styles: any;
@@ -140,6 +150,36 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   const selectedCategoriesCount = Array.isArray(filterValue.categories)
     ? filterValue.categories.length
     : 0;
+  const selectedCategoryNames = useMemo(
+    () =>
+      (Array.isArray(filterValue.categories) ? filterValue.categories : [])
+        .map((cat) => {
+          if (typeof cat === 'string') return cat;
+          if (cat && typeof cat === 'object' && 'value' in cat) return String((cat as any).value);
+          if (cat && typeof cat === 'object' && 'name' in cat) return String((cat as any).name);
+          return '';
+        })
+        .filter(Boolean),
+    [filterValue.categories]
+  );
+  const effectiveRadius = filterValue.radius || DEFAULT_RADIUS_KM;
+  const radiusResultCount = useMemo(() => {
+    if (selectedCategoryNames.length === 0) return travelsData.length;
+    const normalizedSelected = new Set(selectedCategoryNames.map((name) => name.toLowerCase().trim()));
+
+    return travelsData.filter((travel) => {
+      const categoryNames = String(travel.categoryName || '')
+        .split(',')
+        .map((entry) => entry.toLowerCase().trim())
+        .filter(Boolean);
+      return categoryNames.some((categoryName) => normalizedSelected.has(categoryName));
+    }).length;
+  }, [selectedCategoryNames, travelsData]);
+  const hasSelectionSummary = Boolean(searchQuery.trim()) || selectedCategoryNames.length > 0 || effectiveRadius !== DEFAULT_RADIUS_KM;
+  const categoryPreview = selectedCategoryNames.slice(0, 2).join(', ');
+  const categorySummary = selectedCategoryNames.length > 2
+    ? `${categoryPreview} +${selectedCategoryNames.length - 2}`
+    : categoryPreview;
 
   return (
     <>
@@ -288,8 +328,43 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                 );
               })}
             </View>
+            <Text style={styles.radiusSelectionHint}>
+              {`Сейчас ищем в радиусе ${effectiveRadius} км.`}
+              {' '}
+              {radiusResultCount > 0
+                ? `${getPlacesLabel(radiusResultCount)} попадает в выбранные условия.`
+                : 'Под выбранные условия пока ничего не попадает.'}
+            </Text>
 
           </CollapsibleSection>
+        )}
+
+        {hasSelectionSummary && (
+          <View style={styles.filterSelectionSummary} testID="radius-selection-summary">
+            <Text style={styles.filterSelectionSummaryTitle}>Текущий фильтр</Text>
+            <View style={styles.filterSelectionChips}>
+              {searchQuery.trim() ? (
+                <View style={styles.filterSelectionChip}>
+                  <Feather name="search" size={12} color={colors.primary} />
+                  <Text style={styles.filterSelectionChipText} numberOfLines={1}>
+                    {searchQuery.trim()}
+                  </Text>
+                </View>
+              ) : null}
+              {selectedCategoryNames.length > 0 ? (
+                <View style={styles.filterSelectionChip}>
+                  <Feather name="grid" size={12} color={colors.primary} />
+                  <Text style={styles.filterSelectionChipText} numberOfLines={1}>
+                    {categorySummary}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.filterSelectionChip}>
+                <Feather name="radio" size={12} color={colors.primary} />
+                <Text style={styles.filterSelectionChipText}>{effectiveRadius} км</Text>
+              </View>
+            </View>
+          </View>
         )}
       </View>
     </>

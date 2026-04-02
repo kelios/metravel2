@@ -71,8 +71,8 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
       {showResultsHint && (
         <Text style={styles.resultsHint}>
           {resultsCount === 0
-            ? 'Ничего не найдено'
-            : `Найдено: ${resultsCount}`}
+            ? 'Ничего не найдено, попробуйте другой запрос'
+            : `На карте подходит: ${resultsCount}`}
         </Text>
       )}
     </View>

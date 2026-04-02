@@ -20,6 +20,15 @@ type PointLike = {
   updated_at?: string;
 };
 
+const getPointsLabel = (count: number) => {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return 'точка';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'точки';
+  return 'точек';
+};
+
 export const PointListToggleButton = React.memo(function PointListToggleButton({
   colors,
   globalFocusStyle,
@@ -65,22 +74,31 @@ export const PointListToggleButton = React.memo(function PointListToggleButton({
 });
 
 export const PointListPreview = React.memo(function PointListPreview({
+  colors,
   hiddenPreviewCount,
   onPress,
+  pointsCount,
   previewPoints,
   styles,
 }: {
+  colors: {
+    primary: string;
+    textMuted: string;
+  };
   hiddenPreviewCount: number;
   onPress: () => void;
+  pointsCount: number;
   previewPoints: Array<Pick<PointLike, 'id' | 'address' | 'coord'>>;
   styles: Record<string, any>;
 }) {
+  const pointsLabel = `${pointsCount} ${getPointsLabel(pointsCount)}`;
+
   return (
     <Pressable
       onPress={onPress}
       style={styles.previewContainer}
       accessibilityRole="button"
-      accessibilityLabel="Показать все точки маршрута"
+      accessibilityLabel={`Открыть список точек, всего ${pointsLabel}`}
     >
       {previewPoints.map((pt, idx) => (
         <View key={pt.id} style={styles.previewRow}>
@@ -104,7 +122,57 @@ export const PointListPreview = React.memo(function PointListPreview({
           + ещё {hiddenPreviewCount}
         </Text>
       )}
+      <View style={styles.previewFooter}>
+        <View style={styles.previewFooterLead}>
+          <Feather name="list" size={14} color={colors.primary} />
+          <Text style={styles.previewFooterText}>
+            Открыть список: {pointsLabel}
+          </Text>
+        </View>
+        <Feather name="chevron-right" size={16} color={colors.primary} />
+      </View>
     </Pressable>
+  );
+});
+
+export const PointListStatus = React.memo(function PointListStatus({
+  isInteractiveOpen,
+  pointCount,
+  showList,
+  styles,
+  viewMode,
+}: {
+  isInteractiveOpen: boolean;
+  pointCount: number;
+  showList: boolean;
+  styles: Record<string, any>;
+  viewMode: 'cards' | 'list';
+}) {
+  const pointsLabel = `${pointCount} ${getPointsLabel(pointCount)}`;
+
+  const title = showList
+    ? (viewMode === 'list' ? 'Быстрый список точек' : 'Карточки точек')
+    : 'Точки маршрута';
+  const description = showList
+    ? (
+      isInteractiveOpen
+        ? 'Клик по точке открывает её детали, остальные кнопки остаются вторичными.'
+        : 'Клик по точке сразу открывает координаты на карте, кнопки рядом дают быстрые действия.'
+    )
+    : 'Раскройте список, чтобы выбрать точку быстрее, чем искать её вручную на карте.';
+
+  return (
+    <View style={styles.statusCard} testID="point-list-status">
+      <View style={styles.statusHeader}>
+        <View style={styles.statusTextWrap}>
+          <Text style={styles.statusTitle}>{title}</Text>
+          <Text style={styles.statusHint}>{description}</Text>
+        </View>
+        <View style={styles.statusBadge}>
+          <Text style={styles.statusBadgeText}>{pointsLabel}</Text>
+        </View>
+      </View>
+    </View>
   );
 });
 
@@ -161,6 +229,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   getCategoryLabel,
   getImageUrl,
   handleAddPoint,
+  isWebGrid,
   keyExtractor,
   numColumns,
   onCopy,
@@ -186,6 +255,7 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   getCategoryLabel: (raw: PointLike['categoryName'] | null | undefined) => string;
   getImageUrl: (url?: string, updatedAt?: string) => string | undefined;
   handleAddPoint: (point: PointLike) => void | Promise<void>;
+  isWebGrid?: boolean;
   keyExtractor: (item: PointLike) => string;
   numColumns: number;
   onCopy: (coordStr: string) => void | Promise<void>;
@@ -238,18 +308,28 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
         })}
       </View>
     ) : shouldRenderWebCardsMode ? (
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator
-        contentContainerStyle={styles.horizontalListContent}
-        style={styles.horizontalScroll}
-      >
-        {safePoints.map((item) => (
-          <React.Fragment key={keyExtractor(item)}>
-            {renderItem({ item })}
-          </React.Fragment>
-        ))}
-      </ScrollView>
+      isWebGrid ? (
+        <View style={styles.webGridWrap}>
+          {safePoints.map((item) => (
+            <React.Fragment key={keyExtractor(item)}>
+              {renderItem({ item })}
+            </React.Fragment>
+          ))}
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator
+          contentContainerStyle={styles.horizontalListContent}
+          style={styles.horizontalScroll}
+        >
+          {safePoints.map((item) => (
+            <React.Fragment key={keyExtractor(item)}>
+              {renderItem({ item })}
+            </React.Fragment>
+          ))}
+        </ScrollView>
+      )
     ) : null
   ) : (
     shouldRenderNativeList ? <FlashList

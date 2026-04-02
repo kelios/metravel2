@@ -72,6 +72,7 @@ const MOBILE_WEB_PLACE_CARD_STYLE = {
 const PointListCardRenderer = React.memo(function PointListCardRenderer({
   colors,
   isMobile,
+  isWebGrid = false,
   item,
   itemModel,
   numColumns,
@@ -92,7 +93,9 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
     <View
       style={[
         styles.col,
-        Platform.OS === 'web' ? styles.colHorizontal : (numColumns === 2 ? styles.col2 : styles.col1),
+        Platform.OS === 'web'
+          ? (isWebGrid ? styles.colWebGrid : styles.colHorizontal)
+          : (numColumns === 2 ? styles.col2 : styles.col1),
       ]}
     >
       {Platform.OS === 'web' ? (
@@ -111,9 +114,9 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
           addLabel={isMobileWeb ? 'В мои точки' : 'Мои точки'}
           addDisabled={itemModel.addDisabled}
           isAdding={itemModel.isAdding}
-          imageHeight={isMobileWeb ? 164 : 180}
-          width={isMobileWeb ? undefined : 300}
-          style={isMobileWeb ? MOBILE_WEB_PLACE_CARD_STYLE : POINT_CARD_MARGIN_STYLE}
+          imageHeight={isWebGrid ? 220 : (isMobileWeb ? 164 : 180)}
+          width={isWebGrid ? undefined : (isMobileWeb ? undefined : 300)}
+          style={isWebGrid ? undefined : (isMobileWeb ? MOBILE_WEB_PLACE_CARD_STYLE : POINT_CARD_MARGIN_STYLE)}
           webTouchAction={isMobileWeb ? 'pan-x pan-y' : undefined}
           compact={isMobileWeb}
           testID={`travel-point-card-${item.id}`}

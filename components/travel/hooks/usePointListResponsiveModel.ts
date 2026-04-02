@@ -62,7 +62,7 @@ export function usePointListResponsiveModel({
   }, [isLargeDesktop, isMobile, isTablet, width]);
 
   const numColumns = useMemo(() => {
-    if (width >= 1024) return 2;
+    if (width >= 1280) return 3;
     if (width >= 768) return 2;
     return 1;
   }, [width]);

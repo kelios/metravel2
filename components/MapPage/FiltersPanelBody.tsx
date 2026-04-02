@@ -12,6 +12,16 @@ import type { MapUiApi } from '@/types/mapUi';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 
+const getPlacesLabel = (count: number) => {
+  const absCount = Math.abs(count);
+  const mod10 = absCount % 10;
+  const mod100 = absCount % 100;
+
+  if (mod10 === 1 && mod100 !== 11) return `${count} место`;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} места`;
+  return `${count} мест`;
+};
+
 interface FiltersPanelBodyProps {
   colors: ThemedColors;
   styles: any;
@@ -89,6 +99,22 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   userLocation,
   onPlaceSelect,
 }) => {
+  const radiusValue = filterValue.radius || '60';
+  const statusBadge =
+    mode === 'radius'
+      ? `${radiusValue} км`
+      : canBuildRoute
+        ? 'Можно строить'
+        : 'Нужно 2 точки';
+  const statusTitle =
+    mode === 'radius' ? 'Поиск обновляется сразу' : 'Маршрут собирается по шагам';
+  const statusDescription =
+    mode === 'radius'
+      ? `${getPlacesLabel(totalPoints)} на карте. Меняйте поиск, категории и радиус, чтобы сразу видеть новый результат.`
+      : canBuildRoute
+        ? 'Старт и финиш уже выбраны. Проверьте транспорт и запускайте построение маршрута.'
+        : 'Выберите транспорт, затем поставьте старт и финиш кликом по карте или через адресные поля.';
+
   return (
     <ScrollView
       testID="filters-panel-scroll"
@@ -98,6 +124,16 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       keyboardShouldPersistTaps="handled"
       nestedScrollEnabled={true}
     >
+      <View style={styles.filtersStatusCard} testID="filters-panel-status">
+        <View style={styles.filtersStatusHeader}>
+          <Text style={styles.filtersStatusTitle}>{statusTitle}</Text>
+          <View style={styles.filtersStatusBadge}>
+            <Text style={styles.filtersStatusBadgeText}>{statusBadge}</Text>
+          </View>
+        </View>
+        <Text style={styles.filtersStatusDescription}>{statusDescription}</Text>
+      </View>
+
       <View style={styles.sectionCard} testID="filters-block-main">
         {mode === 'radius' ? (
           <FiltersPanelRadiusSection

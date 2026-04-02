@@ -202,12 +202,39 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const routingLoading = Boolean(filtersContextProps?.routingLoading);
   const routeDistance = filtersContextProps?.routeDistance as number | null | undefined;
+  const routePointsCount = Array.isArray(filtersContextProps?.routePoints) ? filtersContextProps.routePoints.length : 0;
+  const activeRadius = filtersContextProps?.filterValue?.radius || '60';
 
   const routeCtaLabel = useMemo(() => {
     if (routingLoading) return 'Строим…';
     if (routeDistance != null) return 'Пересчитать маршрут';
     return canBuildRoute ? 'Построить маршрут' : 'Добавьте старт и финиш';
   }, [routingLoading, routeDistance, canBuildRoute]);
+
+  const filterToolbarSummary = useMemo(() => {
+    if (filtersMode === 'route') {
+      if (routingLoading) return 'Маршрут обновляется';
+      if (canBuildRoute && routeDistance != null) return 'Маршрут готов, можно открыть список точек';
+      return routePointsCount > 0
+        ? `Выбрана ${routePointsCount} из 2 точек`
+        : 'Выберите старт и финиш кликом по карте';
+    }
+
+    const selectedCategories = Array.isArray(filtersContextProps?.filterValue?.categories)
+      ? filtersContextProps.filterValue.categories.length
+      : 0;
+    const categoriesLabel = selectedCategories > 0 ? `категорий: ${selectedCategories}` : 'все категории';
+    return `${travelsData.length > 999 ? '999+' : travelsData.length} мест · ${activeRadius} км · ${categoriesLabel}`;
+  }, [
+    activeRadius,
+    canBuildRoute,
+    filtersContextProps?.filterValue?.categories,
+    filtersMode,
+    routeDistance,
+    routePointsCount,
+    routingLoading,
+    travelsData.length,
+  ]);
 
   const listTabsOptions = useMemo(
     () => [
@@ -389,6 +416,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               tone="subtle"
               accessibilityLabel="Переключение между фильтрами и списком"
             />
+            {uiTab === 'filters' && (
+              <RNText style={styles.sheetToolbarSummary} numberOfLines={2} testID="map-mobile-toolbar-summary">
+                {filterToolbarSummary}
+              </RNText>
+            )}
           </View>
 
           <View style={[styles.sheetToolbarActions, stackSheetToolbar && styles.sheetToolbarActionsStacked]}>
@@ -504,6 +536,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     styles.sheetResultsBadge,
     styles.filtersModeBar,
     styles.sheetToolbarLeft,
+    styles.sheetToolbarSummary,
     styles.sheetToolbarActionsStacked,
     styles.sheetBody,
     styles.sheetRoot,
@@ -517,6 +550,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onExpandRadius,
     onResetFilters,
     listTabsOptions,
+    filterToolbarSummary,
     modeTabsOptions,
     compactSheetActions,
     isNarrow,
@@ -809,6 +843,13 @@ const getStyles = (
       flex: options.stackSheetToolbar ? 0 : 1,
       minWidth: 0,
       flexShrink: 1,
+    },
+    sheetToolbarSummary: {
+      marginTop: 6,
+      fontSize: 11,
+      lineHeight: 15,
+      fontWeight: '600' as const,
+      color: colors.textMuted,
     },
     sheetToolbarRight: {
       flex: options.stackSheetToolbar ? 0 : 1,

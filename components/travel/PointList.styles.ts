@@ -5,6 +5,48 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<any>({
   wrapper: { width: '100%', marginTop: DESIGN_TOKENS.spacing.lg },
+  statusCard: {
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  statusTextWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  statusTitle: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  statusHint: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    lineHeight: 16,
+    color: colors.textMuted,
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  statusBadgeText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '700',
+    color: colors.primaryText,
+  },
   toggle: {
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.md,
@@ -92,6 +134,27 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     color: colors.primaryText,
     textAlign: 'center',
     paddingTop: DESIGN_TOKENS.spacing.xs,
+  },
+  previewFooter: {
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    paddingTop: DESIGN_TOKENS.spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  previewFooterLead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  previewFooterText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '600',
+    color: colors.primary,
   },
   listContent: {
     paddingBottom: DESIGN_TOKENS.spacing.xxl,
@@ -452,15 +515,15 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     }),
   },
   listRowThumb: {
-    width: 80,
-    minHeight: 80,
+    width: 96,
+    minHeight: 96,
     backgroundColor: colors.backgroundSecondary,
     position: 'relative',
     overflow: 'hidden',
   },
   listRowThumbPlaceholder: {
-    width: 80,
-    minHeight: 80,
+    width: 96,
+    minHeight: 96,
     backgroundColor: colors.backgroundTertiary,
   },
   listRowInfo: {

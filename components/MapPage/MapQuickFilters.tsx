@@ -52,6 +52,15 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
     [categories, effectiveMaxVisible],
   );
   const hiddenCount = Math.max(categories.length - visible.length, 0);
+  const selectedCount = selectedCategories.length;
+  const shouldShowActionChip =
+    typeof onOpenFilters === 'function' && (hiddenCount > 0 || selectedCount > 0);
+  const actionBadgeLabel =
+    hiddenCount > 0 ? `+${hiddenCount}` : selectedCount > 0 ? String(selectedCount) : '';
+  const actionAccessibilityLabel =
+    hiddenCount > 0
+      ? `Открыть все фильтры, скрыто ещё ${hiddenCount}`
+      : `Открыть все фильтры, выбрано ${selectedCount}`;
 
   if (!visible.length) return null;
 
@@ -95,24 +104,27 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
           );
         })}
 
-        {typeof onOpenFilters === 'function' && hiddenCount > 0 && (
+        {shouldShowActionChip && (
           <CardActionPressable
-            accessibilityLabel={`Открыть все фильтры, скрыто ещё ${hiddenCount}`}
+            accessibilityLabel={actionAccessibilityLabel}
             onPress={onOpenFilters}
-            title="Фильтры"
+            title="Все фильтры"
             style={({ pressed }) => [
               styles.chip,
               styles.actionChip,
+              selectedCount > 0 && styles.actionChipActive,
               pressed && styles.chipPressed,
             ]}
           >
             <Feather name="sliders" size={14} color={colors.text} />
             <Text style={styles.chipText} numberOfLines={1}>
-              Фильтры
+              Все фильтры
             </Text>
-            <View style={styles.actionBadge}>
-              <Text style={styles.actionBadgeText}>{hiddenCount}</Text>
-            </View>
+            {actionBadgeLabel ? (
+              <View style={styles.actionBadge}>
+                <Text style={styles.actionBadgeText}>{actionBadgeLabel}</Text>
+              </View>
+            ) : null}
           </CardActionPressable>
         )}
       </ScrollView>
@@ -193,6 +205,10 @@ const getStyles = (
       borderWidth: 1,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
+    },
+    actionChipActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
     },
     actionBadge: {
       minWidth: 20,

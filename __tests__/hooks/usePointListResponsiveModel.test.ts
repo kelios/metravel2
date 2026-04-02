@@ -51,7 +51,7 @@ describe('usePointListResponsiveModel', () => {
       })
     );
 
-    expect(result.current.numColumns).toBe(2);
+    expect(result.current.numColumns).toBe(3);
     expect(result.current.responsive).toEqual({
       aspectRatio: 4 / 3,
       coordSize: 14,

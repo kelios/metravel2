@@ -32,10 +32,33 @@ describe('MapQuickFilters', () => {
 
     expect(getByText('Горы')).toBeTruthy();
     expect(getByText('Пляжи')).toBeTruthy();
-    expect(getByText('Фильтры')).toBeTruthy();
-    expect(getByText('1')).toBeTruthy();
+    expect(getByText('Все фильтры')).toBeTruthy();
+    expect(getByText('+1')).toBeTruthy();
 
     fireEvent.press(getByLabelText('Открыть все фильтры, скрыто ещё 1'));
+    expect(onOpenFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the full filters chip visible when categories are selected', () => {
+    const onOpenFilters = jest.fn();
+
+    const { getByText, getByLabelText } = render(
+      <MapQuickFilters
+        categories={[
+          { id: 1, name: 'Горы' },
+          { id: 2, name: 'Пляжи' },
+        ]}
+        selectedCategories={['Горы']}
+        onToggleCategory={jest.fn()}
+        maxVisible={3}
+        onOpenFilters={onOpenFilters}
+      />
+    );
+
+    expect(getByText('Все фильтры')).toBeTruthy();
+    expect(getByText('1')).toBeTruthy();
+
+    fireEvent.press(getByLabelText('Открыть все фильтры, выбрано 1'));
     expect(onOpenFilters).toHaveBeenCalledTimes(1);
   });
 });

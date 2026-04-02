@@ -150,7 +150,7 @@ describe('FiltersPanel', () => {
         expect(defaultProps.onFilterChange).toHaveBeenCalled();
     });
 
-    it('shows categories section when data is available', () => {
+  it('shows categories section when data is available', () => {
       const propsWithData = {
         ...defaultProps,
         filterValue: {
@@ -165,6 +165,50 @@ describe('FiltersPanel', () => {
       };
       const { getByText } = renderWithTheme(<FiltersPanel />, propsWithData);
       expect(getByText('Категории')).toBeTruthy();
+  });
+
+  it('shows a mobile radius footer with result summary and list CTA', () => {
+    const onOpenList = jest.fn();
+    const { getByTestId, getByText } = renderWithTheme(
+      <FiltersPanel />,
+      {
+        ...defaultProps,
+        isMobile: true,
+        travelsData: [{ categoryName: 'Музеи' }, { categoryName: 'Парки' }, { categoryName: 'Парки' }],
+        filteredTravelsData: [{ categoryName: 'Музеи' }, { categoryName: 'Парки' }, { categoryName: 'Парки' }],
+        onOpenList,
+      }
+    );
+
+    expect(getByTestId('filters-mobile-summary-text').props.children).toContain('3');
+    expect(getByText('Показать 3')).toBeTruthy();
+
+    fireEvent.press(getByTestId('filters-mobile-results-button'));
+    expect(onOpenList).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an inline radius selection summary after choosing search and categories', () => {
+    const { getByTestId, getByText, getAllByText } = renderWithTheme(
+      <FiltersPanel />,
+      {
+        ...defaultProps,
+        travelsData: [
+          { categoryName: 'Музеи', name: 'Несвижский замок', address: 'Несвиж' },
+          { categoryName: 'Парки', name: 'Лошицкий парк', address: 'Минск' },
+        ],
+        filterValue: {
+          ...mockFilterValue,
+          radius: '100',
+          categories: ['Музеи', 'Парки'],
+          searchQuery: 'Замок',
+        } as any,
+      }
+    );
+
+    expect(getByTestId('radius-selection-summary')).toBeTruthy();
+    expect(getByText('Замок')).toBeTruthy();
+    expect(getByText('Музеи, Парки')).toBeTruthy();
+    expect(getAllByText('100 км').length).toBeGreaterThan(0);
   });
 
   it('keeps build button disabled until start and finish are set', () => {

@@ -73,18 +73,23 @@ describe('PointList (web coordinates list uses popup template)', () => {
       <PointList points={points as any} baseUrl="https://example.com/travel-page" />
     );
 
+    expect(getByText('Точки маршрута')).toBeTruthy();
+    expect(getByText('4 точки')).toBeTruthy();
     expect(getByText('A')).toBeTruthy();
     expect(getByText('B')).toBeTruthy();
     expect(getByText('C')).toBeTruthy();
     expect(getByText('+ ещё 1')).toBeTruthy();
+    expect(getByText('Открыть список: 4 точки')).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Показать все точки маршрута'));
+    fireEvent.press(getByLabelText('Открыть список точек, всего 4 точки'));
 
+    expect(getByText('Карточки точек')).toBeTruthy();
     expect(getByLabelText('Карточки')).toBeTruthy();
     expect(getByLabelText('Список')).toBeTruthy();
     expect(queryByText('+ ещё 1')).toBeNull();
 
     fireEvent.press(getByLabelText('Список'));
+    expect(getByText('Быстрый список точек')).toBeTruthy();
     expect(getByText('A')).toBeTruthy();
 
     (Platform as any).OS = prevOs;

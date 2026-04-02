@@ -1,6 +1,7 @@
 // components/travel/PointList.tsx
 import React, { useCallback, useMemo } from 'react';
 import {
+  Platform,
   View,
 } from 'react-native';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
@@ -10,6 +11,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import {
   PointListExpandedContent,
   PointListPreview,
+  PointListStatus,
   PointListToggleButton,
   PointListViewModeBar,
 } from '@/components/travel/PointListChrome';
@@ -152,6 +154,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
   const { width, isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isLargeDesktop = width >= 1440;
+  const isWebGrid = Platform.OS === 'web' && !isMobile;
   const {
     hiddenPreviewCount,
     previewPoints,
@@ -220,6 +223,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         <PointListCardRenderer
           colors={colors}
           isMobile={isMobile}
+          isWebGrid={isWebGrid}
           item={item}
           itemModel={itemModel}
           numColumns={numColumns}
@@ -242,6 +246,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       colors,
       handleAddPoint,
       isMobile,
+      isWebGrid,
       numColumns,
       onCopy,
       onOpenArticle,
@@ -255,6 +260,14 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
 
   return (
     <View style={styles.wrapper}>
+      <PointListStatus
+        isInteractiveOpen={Boolean(onPointCardPress)}
+        pointCount={safePoints.length}
+        showList={showList}
+        styles={styles}
+        viewMode={viewMode}
+      />
+
       <PointListToggleButton
         colors={colors}
         globalFocusStyle={globalFocusStyles.focusable}
@@ -268,8 +281,10 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       {/* P2-5: Компактное превью первых 3 точек когда список свёрнут */}
       {shouldShowPreview && (
         <PointListPreview
+          colors={colors}
           hiddenPreviewCount={hiddenPreviewCount}
           onPress={() => setShowList(true)}
+          pointsCount={safePoints.length}
           previewPoints={previewPoints}
           styles={styles}
         />
@@ -294,6 +309,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           getCategoryLabel={normalizeCategoryNameToString}
           getImageUrl={getOptimizedImageUrl}
           handleAddPoint={handleAddPoint}
+          isWebGrid={isWebGrid}
           keyExtractor={keyExtractor}
           numColumns={numColumns}
           onCopy={onCopy}

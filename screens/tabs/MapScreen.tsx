@@ -262,7 +262,7 @@ export default function MapScreen() {
 
     const requestOpenBottomSheet = useMapPanelStore((s) => s.requestOpen);
 
-    const handleOpenRoutePanel = useCallback(() => {
+    const handleOpenFiltersPanel = useCallback(() => {
         selectFiltersTab();
         if (isDesktopCollapsed && !isMobile) {
             toggleDesktopCollapse();
@@ -299,10 +299,7 @@ export default function MapScreen() {
                         selectedCategories={quickFilterSelected}
                         onToggleCategory={quickFilterToggle}
                         maxVisible={isMobile ? 3 : 5}
-                        onOpenFilters={isMobile ? (() => {
-                            selectFiltersTab();
-                            requestOpenBottomSheet('filters');
-                        }) : undefined}
+                        onOpenFilters={handleOpenFiltersPanel}
                     />
                 )}
                 {Platform.OS === 'web' && !isMobile && travelsData.length > 0 && rightPanelTab !== 'travels' && (
@@ -349,7 +346,7 @@ export default function MapScreen() {
                             </Text>
                         </View>
                         <Pressable
-                            onPress={handleOpenRoutePanel}
+                            onPress={handleOpenFiltersPanel}
                             accessibilityRole="button"
                             accessibilityLabel="Открыть панель маршрута"
                             style={({ pressed }) => [
@@ -374,11 +371,9 @@ export default function MapScreen() {
             quickFilterSelected,
             quickFilterToggle,
             rightPanelTab,
-            requestOpenBottomSheet,
-            selectFiltersTab,
             selectTravelsTab,
             travelsData.length,
-            handleOpenRoutePanel,
+            handleOpenFiltersPanel,
             routeHintContent.actionLabel,
             routeHintContent.badge,
             routeHintContent.description,
