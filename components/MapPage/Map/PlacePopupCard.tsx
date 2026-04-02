@@ -281,6 +281,7 @@ const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
 
 const SPLIT_LAYOUT_MIN_VIEWPORT = 820;
 const SPLIT_LAYOUT_MIN_POPUP_WIDTH = 380;
+const SPLIT_LAYOUT_IMAGE_ASPECT = 1.24;
 
 const PlacePopupCard: React.FC<Props> = ({
   title,
@@ -385,10 +386,10 @@ const PlacePopupCard: React.FC<Props> = ({
     viewportWidth >= SPLIT_LAYOUT_MIN_VIEWPORT &&
     maxPopupWidth >= SPLIT_LAYOUT_MIN_POPUP_WIDTH;
   const heroWidth = useSplitLayout
-    ? Math.max(156, Math.min(188, Math.round(maxPopupWidth * 0.4)))
+    ? Math.max(148, Math.min(166, Math.round(maxPopupWidth * 0.36)))
     : maxPopupWidth;
   const heroHeight = useSplitLayout
-    ? Math.max(200, Math.min(imageHeightCap, Math.round(maxPopupWidth * 0.54)))
+    ? Math.max(124, Math.min(148, Math.round(heroWidth / SPLIT_LAYOUT_IMAGE_ASPECT)))
     : Math.max(
         1,
         Math.min(
@@ -398,8 +399,8 @@ const PlacePopupCard: React.FC<Props> = ({
       );
 
   const styles = useMemo(
-    () => getStyles(colors, bp, heroHeight, useCompactLayout, useSplitLayout),
-    [colors, bp, heroHeight, useCompactLayout, useSplitLayout],
+    () => getStyles(colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout),
+    [colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout],
   );
 
   const actionBtnStyle = useMemo(
@@ -652,6 +653,7 @@ const IMAGE_ASPECT: Record<BreakpointKey, number> = {
 const getStyles = (
   colors: ThemedColors,
   bp: BreakpointKey,
+  heroWidth: number,
   heroHeight: number,
   compactLayout: boolean,
   splitLayout: boolean,
@@ -710,12 +712,11 @@ const getStyles = (
       backgroundColor: colors.backgroundSecondary,
     },
     imageContainerSplit: {
-      width: '40%',
-      minWidth: 156,
-      maxWidth: 188,
-      height: 'auto',
+      width: heroWidth,
+      minWidth: heroWidth,
+      maxWidth: heroWidth,
+      height: heroHeight > 0 ? heroHeight : undefined,
       minHeight: heroHeight > 0 ? heroHeight : 0,
-      alignSelf: 'stretch',
       flexShrink: 0,
     },
     imageExpandButton: {
@@ -738,10 +739,10 @@ const getStyles = (
     contentContainerSplit: {
       flex: 1,
       minWidth: 0,
-      paddingLeft: splitLayout ? 12 : horizontalPadding,
-      paddingRight: splitLayout ? 12 : horizontalPadding,
-      paddingTop: splitLayout ? 12 : topPadding,
-      paddingBottom: splitLayout ? 12 : bottomPadding,
+      paddingLeft: splitLayout ? 14 : horizontalPadding,
+      paddingRight: splitLayout ? 14 : horizontalPadding,
+      paddingTop: splitLayout ? 14 : topPadding,
+      paddingBottom: splitLayout ? 14 : bottomPadding,
     },
     content: {
       gap: compactLayout ? compactSp.sectionGap : sp.sectionGap,
@@ -775,7 +776,7 @@ const getStyles = (
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
-            WebkitLineClamp: bp === 'narrow' ? 3 : 2,
+            WebkitLineClamp: splitLayout || bp === 'narrow' ? 3 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           } as any)
@@ -878,6 +879,7 @@ const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      alignSelf: 'stretch',
       gap: 8,
       minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, compactLayout ? compactSp.addBtnMinHeight : 46),
       paddingVertical: compactLayout ? sp.btnPadV : sp.btnPadV + 1,
@@ -904,6 +906,7 @@ const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      alignSelf: 'stretch',
       gap: compactLayout ? 7 : 9,
       minHeight: Math.max(DESIGN_TOKENS.touchTarget.minHeight, compactLayout ? compactSp.addBtnMinHeight : 48),
       paddingVertical: compactLayout ? sp.btnPadV : sp.btnPadV + 2,

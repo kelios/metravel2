@@ -118,22 +118,27 @@ function NavigationArrows({
     containerMobile: {
       flexDirection: 'column',
       gap: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: 4,
+      paddingHorizontal: 0,
     },
     navCard: {
       flex: 1,
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.md,
-      padding: DESIGN_TOKENS.spacing.lg,
+      padding: DESIGN_TOKENS.spacing.md,
       borderWidth: 1,
       borderColor: colors.borderLight,
       minHeight: 80,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-          transition: 'background-color 0.2s ease' as any,
-        },
-      }),
+      ...(Platform.OS === 'web'
+        ? ({
+            cursor: 'pointer' as any,
+            transition: 'background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease' as any,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)' as any,
+            ':hover': {
+              borderColor: colors.border,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.10)' as any,
+            } as any,
+          } as any)
+        : { ...(colors.shadows?.light ?? {}) }),
     },
     prevCard: {},
     nextCard: {},
@@ -150,21 +155,23 @@ function NavigationArrows({
       fontSize: DESIGN_TOKENS.typography.sizes.xs,
       color: colors.textMuted,
       fontWeight: '500',
-      // TYPO-04: capitalize вместо uppercase — лучше читаемость на кириллице
       textTransform: 'capitalize',
       letterSpacing: 0.5,
     },
     navTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.text,
       fontWeight: '600',
+      lineHeight: Platform.select({ default: 20, web: 20 }),
     },
     navImageWrap: {
-      width: 60,
-      height: 60,
-      borderRadius: 8,
+      width: 68,
+      height: 68,
+      borderRadius: DESIGN_TOKENS.radii.sm,
       overflow: 'hidden',
-      backgroundColor: colors.background,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
     },
   }), [colors]);
 

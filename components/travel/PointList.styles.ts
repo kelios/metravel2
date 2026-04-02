@@ -187,6 +187,21 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       },
     }),
   },
+  webGridWrap: Platform.OS === 'web' ? {
+    display: 'grid' as any,
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' as any,
+    gap: DESIGN_TOKENS.spacing.md,
+    width: '100%' as any,
+  } : {
+    flexDirection: 'row' as any,
+    flexWrap: 'wrap' as any,
+    gap: DESIGN_TOKENS.spacing.md,
+  },
+  colWebGrid: {
+    width: '100%' as any,
+    minWidth: 0,
+    marginBottom: 0, // grid gap handles spacing — override col.marginBottom
+  },
   horizontalListContent: {
     flexDirection: 'row' as any,
     gap: DESIGN_TOKENS.spacing.md,

@@ -37,12 +37,15 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       minHeight: Platform.select({
-        default: 34,
-        web: 34,
+        default: 44,
+        web: 36,
       }),
-      paddingVertical: 8,
+      paddingVertical: Platform.select({
+        default: 10,
+        web: 8,
+      }),
       paddingHorizontal: Platform.select({
-        default: 14,
+        default: 16,
         web: 16,
       }),
       borderRadius: DESIGN_TOKENS.radii.pill,

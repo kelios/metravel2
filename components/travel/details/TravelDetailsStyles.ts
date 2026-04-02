@@ -424,8 +424,12 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       minHeight: 52,
       ...(Platform.OS === 'web'
         ? ({
-            transition: 'background-color 0.2s ease, border-color 0.2s ease',
+            transition: 'background-color 0.15s ease, border-color 0.15s ease',
             cursor: 'pointer',
+            ':hover': {
+              backgroundColor: colors.backgroundSecondary,
+              borderColor: colors.border,
+            } as any,
           } as any)
         : {}),
     },
@@ -749,6 +753,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       flexDirection: 'row' as const,
       justifyContent: 'center' as const,
       gap: 6,
+      minHeight: 44,
     },
     mobileInsightChipActive: {
       borderBottomColor: colors.primary,
