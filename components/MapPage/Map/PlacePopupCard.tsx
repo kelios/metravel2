@@ -238,54 +238,54 @@ const getBreakpoint = (viewportWidth: number): BreakpointKey => {
 };
 
 const FONT_SIZES: Record<BreakpointKey, { title: number; small: number; coord: number }> = {
-  narrow: { title: 16, small: 12, coord: 12 },
-  compact: { title: 17, small: 13, coord: 13 },
-  default: { title: 18, small: 13, coord: 13 },
+  narrow: { title: 15, small: 12, coord: 11 },
+  compact: { title: 15, small: 12, coord: 12 },
+  default: { title: 16, small: 12, coord: 12 },
 };
 
 const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: number; radius: number; iconButtonSize: number; sectionGap: number }> = {
-  narrow: { gap: 10, btnPadV: 8, btnPadH: 12, radius: 14, iconButtonSize: 40, sectionGap: 16 },
-  compact: { gap: 12, btnPadV: 9, btnPadH: 14, radius: 16, iconButtonSize: 42, sectionGap: 18 },
-  default: { gap: 14, btnPadV: 10, btnPadH: 16, radius: 16, iconButtonSize: 44, sectionGap: 20 },
+  narrow: { gap: 6, btnPadV: 6, btnPadH: 10, radius: 12, iconButtonSize: 34, sectionGap: 8 },
+  compact: { gap: 8, btnPadV: 7, btnPadH: 12, radius: 14, iconButtonSize: 36, sectionGap: 10 },
+  default: { gap: 8, btnPadV: 7, btnPadH: 14, radius: 14, iconButtonSize: 36, sectionGap: 10 },
 };
 
 const COMPACT_LAYOUT_SPACING: Record<BreakpointKey, { radius: number; iconButtonSize: number; sectionGap: number; horizontalPadding: number; topPadding: number; bottomPadding: number; metaMinHeight: number; coordMinHeight: number; addBtnMinHeight: number }> = {
-  narrow: { radius: 12, iconButtonSize: 36, sectionGap: 10, horizontalPadding: 10, topPadding: 10, bottomPadding: 12, metaMinHeight: 24, coordMinHeight: 38, addBtnMinHeight: 38 },
-  compact: { radius: 14, iconButtonSize: 40, sectionGap: 12, horizontalPadding: 12, topPadding: 12, bottomPadding: 14, metaMinHeight: 26, coordMinHeight: 40, addBtnMinHeight: 40 },
-  default: { radius: 14, iconButtonSize: 42, sectionGap: 14, horizontalPadding: 14, topPadding: 14, bottomPadding: 16, metaMinHeight: 26, coordMinHeight: 42, addBtnMinHeight: 42 },
+  narrow: { radius: 10, iconButtonSize: 32, sectionGap: 6, horizontalPadding: 8, topPadding: 8, bottomPadding: 8, metaMinHeight: 22, coordMinHeight: 30, addBtnMinHeight: 32 },
+  compact: { radius: 12, iconButtonSize: 34, sectionGap: 8, horizontalPadding: 10, topPadding: 10, bottomPadding: 10, metaMinHeight: 24, coordMinHeight: 32, addBtnMinHeight: 34 },
+  default: { radius: 12, iconButtonSize: 36, sectionGap: 8, horizontalPadding: 10, topPadding: 10, bottomPadding: 10, metaMinHeight: 24, coordMinHeight: 34, addBtnMinHeight: 36 },
 };
 
 const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 300,
-  compact: 348,
-  default: 436,
+  narrow: 280,
+  compact: 320,
+  default: 380,
 };
 
 const COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 228,
-  compact: 268,
-  default: 288,
+  narrow: 220,
+  compact: 248,
+  default: 268,
 };
 
 const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 164,
-  compact: 212,
-  default: 320,
+  narrow: 130,
+  compact: 160,
+  default: 200,
 };
 
 const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 118,
-  compact: 148,
-  default: 156,
+  narrow: 100,
+  compact: 120,
+  default: 130,
 };
 
-const SPLIT_LAYOUT_MIN_VIEWPORT = 820;
-const SPLIT_LAYOUT_MIN_POPUP_WIDTH = 380;
-const SPLIT_LAYOUT_IMAGE_ASPECT = 1.24;
+const SPLIT_LAYOUT_MIN_VIEWPORT = 640;
+const SPLIT_LAYOUT_MIN_POPUP_WIDTH = 320;
+const SPLIT_LAYOUT_IMAGE_ASPECT = 1.1;
 
 const PlacePopupCard: React.FC<Props> = ({
   title,
-  subtitle,
+  subtitle: _subtitle,
   imageUrl,
   categoryLabel,
   coord,
@@ -302,8 +302,8 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Мои точки',
-  width = 436,
-  imageHeight: _imageHeight = 72,
+  width = 380,
+  imageHeight: _imageHeight = 56,
   compactLayout = false,
 }) => {
   const colors = useThemedColors();
@@ -385,10 +385,10 @@ const PlacePopupCard: React.FC<Props> = ({
     viewportWidth >= SPLIT_LAYOUT_MIN_VIEWPORT &&
     maxPopupWidth >= SPLIT_LAYOUT_MIN_POPUP_WIDTH;
   const heroWidth = useSplitLayout
-    ? Math.max(148, Math.min(166, Math.round(maxPopupWidth * 0.36)))
+    ? Math.max(120, Math.min(148, Math.round(maxPopupWidth * 0.38)))
     : maxPopupWidth;
   const heroHeight = useSplitLayout
-    ? Math.max(124, Math.min(148, Math.round(heroWidth / SPLIT_LAYOUT_IMAGE_ASPECT)))
+    ? Math.max(110, Math.min(136, Math.round(heroWidth / SPLIT_LAYOUT_IMAGE_ASPECT)))
     : Math.max(
         1,
         Math.min(
@@ -419,19 +419,14 @@ const PlacePopupCard: React.FC<Props> = ({
   const contentSlot = useMemo(() => (
     <View style={styles.content}>
       <View style={styles.infoSection}>
-        <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 3 : 2}>
+        <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
           {title}
         </Text>
-        {!!subtitle && (
-          <Text style={styles.subtitleText} numberOfLines={2}>
-            {subtitle}
-          </Text>
-        )}
 
         <View style={styles.metaRow}>
           {!!categoryLabel && (
             <View style={styles.metaBadge}>
-              <Feather name="tag" size={13} color={colors.textMuted} />
+              <Feather name="tag" size={12} color={colors.textMuted} />
               <Text style={styles.categoryText} numberOfLines={1}>
                 {categoryLabel}
               </Text>
@@ -440,7 +435,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
           {(isDrivingLoading || hasDrivingInfo) && (
             <View testID="popup-driving-info" style={[styles.drivingRow, styles.metaBadge]}>
-              <Feather name="navigation" size={14} color={colors.textMuted} />
+              <Feather name="navigation" size={12} color={colors.textMuted} />
               {isDrivingLoading ? (
                 <ActivityIndicator size="small" color={colors.textMuted} />
               ) : (
@@ -460,13 +455,13 @@ const PlacePopupCard: React.FC<Props> = ({
           title={POPUP_TOOLTIPS.copyCoords}
           style={styles.coordRow}
         >
-          <Feather name="map-pin" size={15} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
+          <Feather name="map-pin" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />
           <Text style={styles.coordText} numberOfLines={1} selectable>{coord}</Text>
-          {onCopyCoord && <Feather name="copy" size={16} color={colors.textMuted} style={{ flexShrink: 0 } as any} />}
+          {onCopyCoord && <Feather name="copy" size={13} color={colors.textMuted} style={{ flexShrink: 0 } as any} />}
         </CardActionPressable>
       )}
 
-      <View style={styles.actionsGroup}>
+      <View style={styles.actionsRow}>
         {primaryAction && (
           <CardActionPressable
             accessibilityLabel={primaryAction.accessibilityLabel}
@@ -478,11 +473,11 @@ const PlacePopupCard: React.FC<Props> = ({
               pressed && styles.primaryActionBtnPressed,
             ]}
           >
-            <Feather name={primaryAction.icon} size={16} color={colors.textOnPrimary ?? colors.textOnDark} />
+            <Feather name={primaryAction.icon} size={14} color={colors.textOnPrimary ?? colors.textOnDark} />
             <Text style={styles.primaryActionText}>{primaryAction.label}</Text>
           </CardActionPressable>
         )}
-        <View style={styles.actionsRow}>
+
         {hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps && (
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
@@ -490,7 +485,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title={POPUP_TOOLTIPS.openGoogleMaps}
             style={actionBtnStyle}
           >
-            <Feather name="map" size={16} color={colors.textMuted} />
+            <Feather name="map" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -501,7 +496,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title={POPUP_TOOLTIPS.openOrganicMaps}
             style={actionBtnStyle}
           >
-            <Feather name="compass" size={16} color={colors.textMuted} />
+            <Feather name="compass" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -512,7 +507,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title={POPUP_TOOLTIPS.shareTelegram}
             style={actionBtnStyle}
           >
-            <Feather name="send" size={16} color={colors.textMuted} />
+            <Feather name="send" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -523,7 +518,7 @@ const PlacePopupCard: React.FC<Props> = ({
             title={POPUP_TOOLTIPS.openArticle}
             style={actionBtnStyle}
           >
-            <Feather name="book-open" size={16} color={colors.textMuted} />
+            <Feather name="book-open" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -539,32 +534,30 @@ const PlacePopupCard: React.FC<Props> = ({
               pressed && styles.actionBtnPressed,
             ]}
           >
-            <Feather name="corner-up-right" size={16} color={colors.primary} />
+            <Feather name="corner-up-right" size={14} color={colors.primary} />
           </CardActionPressable>
         )}
-        </View>
-      </View>
 
-      {onAddPoint && (
-        <CardActionPressable
-          accessibilityLabel={compactLabel}
-          onPress={() => void onAddPoint()}
-          disabled={addDisabled || isAdding}
-          title={compactLabel}
-          style={({ pressed }) => [
-            styles.addBtn,
-            (addDisabled || isAdding) && styles.addBtnDisabled,
-            pressed && styles.addBtnPressed,
-          ]}
-        >
-          {isAdding ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Feather name="plus" size={16} color={colors.primary} />
-          )}
-          <Text style={styles.addBtnText}>{compactLabel}</Text>
-        </CardActionPressable>
-      )}
+        {onAddPoint && (
+          <CardActionPressable
+            accessibilityLabel={compactLabel}
+            onPress={() => void onAddPoint()}
+            disabled={addDisabled || isAdding}
+            title={compactLabel}
+            style={({ pressed }) => [
+              styles.addBtn,
+              (addDisabled || isAdding) && styles.addBtnDisabled,
+              pressed && styles.addBtnPressed,
+            ]}
+          >
+            {isAdding ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Feather name="plus" size={14} color={colors.primary} />
+            )}
+          </CardActionPressable>
+        )}
+      </View>
     </View>
   ), [
     actionBtnStyle,
@@ -592,7 +585,6 @@ const PlacePopupCard: React.FC<Props> = ({
     styles,
     colors.textOnDark,
     colors.textOnPrimary,
-    subtitle,
     title,
     useCompactLayout,
   ]);
@@ -663,18 +655,18 @@ const getStyles = (
   const horizontalPadding = compactLayout
     ? compactSp.horizontalPadding
     : bp === 'narrow'
-      ? 12
-      : 14;
+      ? 10
+      : 12;
   const topPadding = compactLayout
     ? compactSp.topPadding
     : bp === 'narrow'
-      ? 12
-      : 14;
+      ? 10
+      : 10;
   const bottomPadding = compactLayout
     ? compactSp.bottomPadding
     : bp === 'narrow'
-      ? 14
-      : 16;
+      ? 10
+      : 10;
 
   return StyleSheet.create({
     container: {
@@ -814,10 +806,10 @@ const getStyles = (
     coordRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: compactLayout ? 7 : 8,
-      minHeight: compactLayout ? compactSp.coordMinHeight : splitLayout ? 38 : 42,
-      paddingHorizontal: compactLayout ? 10 : 11,
-      paddingVertical: compactLayout ? 7 : 8,
+      gap: compactLayout ? 5 : 6,
+      minHeight: compactLayout ? compactSp.coordMinHeight : splitLayout ? 30 : 32,
+      paddingHorizontal: compactLayout ? 8 : 9,
+      paddingVertical: compactLayout ? 4 : 5,
       borderRadius: DESIGN_TOKENS.radii.sm,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: 0,
@@ -881,10 +873,9 @@ const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      alignSelf: 'stretch',
-      gap: 7,
-      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 40 : 44,
-      paddingVertical: compactLayout ? sp.btnPadV : splitLayout ? sp.btnPadV - 1 : sp.btnPadV,
+      gap: 5,
+      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 34 : 36,
+      paddingVertical: compactLayout ? 4 : 5,
       paddingHorizontal: compactLayout ? sp.btnPadH : sp.btnPadH,
       borderRadius: DESIGN_TOKENS.radii.sm,
       backgroundColor: colors.primary,
@@ -906,14 +897,10 @@ const getStyles = (
       borderColor: 'transparent',
     },
     addBtn: {
-      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      alignSelf: 'stretch',
-      gap: compactLayout ? 6 : 7,
-      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 40 : 44,
-      paddingVertical: compactLayout ? sp.btnPadV : splitLayout ? sp.btnPadV - 1 : sp.btnPadV,
-      paddingHorizontal: compactLayout ? sp.btnPadH : sp.btnPadH + 4,
+      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
+      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: colors.borderLight ?? colors.border,

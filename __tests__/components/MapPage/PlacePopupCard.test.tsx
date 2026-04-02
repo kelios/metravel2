@@ -82,8 +82,8 @@ describe('PlacePopupCard', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
     expect(props.fit).toBe('contain');
-    expect(props.width).toBe(157);
-    expect(props.height).toBe(127);
+    expect(props.width).toBe(144);
+    expect(props.height).toBe(131);
     expect(props.blurBackground).toBe(true);
     expect(props.allowCriticalWebBlur).toBe(true);
   });
@@ -104,8 +104,8 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.width).toBe(228);
-    expect(props.height).toBe(118);
+    expect(props.width).toBe(220);
+    expect(props.height).toBe(100);
   });
 
   it('uses a compact hero on travel details popup layout', () => {
@@ -123,8 +123,8 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.width).toBe(288);
-    expect(props.height).toBe(156);
+    expect(props.width).toBe(268);
+    expect(props.height).toBe(130);
   });
 
   it('reveals popup hero only after onLoad on iPhone Safari', () => {
