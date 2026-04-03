@@ -1,9 +1,7 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import MapDebugPanel from './MapDebugPanel';
-import { installMapDebugTools } from './mapDebugTools';
 import { strToLatLng } from './utils';
 
 const isTestEnv =
@@ -123,91 +121,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     return 11;
   }, []);
 
-  const debugEnabled = useMemo(() => {
-    try {
-      if (typeof __DEV__ === 'undefined' || !__DEV__) return false;
-      if (typeof window === 'undefined') return false;
-      const sp = new URLSearchParams(window.location.search);
-      const fromQuery = sp.has('mapDebug') && String(sp.get('mapDebug') ?? '1') !== '0';
-      let fromStorage = false;
-      try {
-        fromStorage = window.localStorage?.getItem('metravel.mapDebug') === '1';
-      } catch {
-        fromStorage = false;
-      }
-      if (fromQuery) {
-        try {
-          window.localStorage?.setItem('metravel.mapDebug', '1');
-        } catch {
-          // noop
-        }
-      }
-      return fromQuery || fromStorage;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const [debugOpen, setDebugOpen] = useState(true);
-  const [debugSnapshot, setDebugSnapshot] = useState<any>(null);
-  const lastDebugSnapshotTsRef = useRef(0);
-
-  const refreshDebugSnapshot = useCallback(
-    (reason?: string) => {
-      try {
-        if (!debugEnabled) return;
-        if (typeof window === 'undefined') return;
-        const now = Date.now();
-        if (now - lastDebugSnapshotTsRef.current < 250) return;
-        lastDebugSnapshotTsRef.current = now;
-
-        const dbg = (window as any).__metravelMapDebug;
-        const payload = typeof dbg?.dump === 'function' ? dbg.dump() : null;
-        setDebugSnapshot({
-          ts: now,
-          reason: reason || null,
-          payload,
-        });
-      } catch {
-        // noop
-      }
-    },
-    [debugEnabled]
-  );
-
-  const copyDebugJson = useCallback(async () => {
-    try {
-      if (typeof window === 'undefined') return;
-      const dbg = (window as any).__metravelMapDebug;
-      const text =
-        typeof dbg?.dumpJson === 'function'
-          ? String(dbg.dumpJson())
-          : JSON.stringify(debugSnapshot ?? null, null, 2);
-
-      if (typeof navigator !== 'undefined' && (navigator as any).clipboard?.writeText) {
-        await (navigator as any).clipboard.writeText(text);
-        return;
-      }
-
-      try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        ta.style.top = '0';
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      } catch {
-        // noop
-      }
-    } catch {
-      // noop
-    }
-  }, [debugSnapshot]);
-
   const hasRadiusResults = (travelData ?? []).length > 0;
   const canAutoFitRadiusView =
     hasRadiusResults ||
@@ -229,12 +142,10 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     click: mapClickHandler,
     zoomend: () => {
       syncZoomFromMap();
-      refreshDebugSnapshot('zoomend');
     },
     moveend: () => {
       // fitBounds can sometimes update zoom while zoomend isn't our first reliable signal
       syncZoomFromMap();
-      refreshDebugSnapshot('moveend');
     },
     zoomstart: () => {
       try {
@@ -256,14 +167,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const markReady = () => {
       if (cancelled || hasCalledOnMapReadyRef.current) return;
       hasCalledOnMapReadyRef.current = true;
-
-      installMapDebugTools(map, _leafletOverlayLayersRef);
-
-      try {
-        refreshDebugSnapshot('map-ready');
-      } catch {
-        // noop
-      }
 
       onMapReady(map);
     };
@@ -295,7 +198,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       cancelled = true;
       hasCalledOnMapReadyRef.current = false;
     };
-  }, [map, mapRef, onMapReady, refreshDebugSnapshot, setMapZoom, syncZoomFromMap, _leafletOverlayLayersRef]);
+  }, [map, mapRef, onMapReady, setMapZoom, syncZoomFromMap]);
 
   // Close popup on map click or zoom
   useEffect(() => {
@@ -550,25 +453,6 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
     if (coords.length === 0) return;
 
-    if (__DEV__ && mode === 'radius') {
-      try {
-        const samples = (travelData || []).slice(0, 5).map((p) => {
-          const parsed = strToLatLng(p.coord, hintCenter);
-          return { coord: p.coord, parsed };
-        });
-        console.info('[MapLogicComponent] radius fitBounds debug', {
-          travelCount: (travelData || []).length,
-          circleCenter,
-          radiusInMeters,
-          userLocation,
-          fitMode: shouldFitToPoints ? 'points' : hasValidCircle ? 'circle' : 'none',
-          sample: samples,
-        });
-      } catch {
-        // noop
-      }
-    }
-
     try {
       let bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
       const padding = fitBoundsPadding ?? {};
@@ -658,27 +542,5 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hasRadiusResults,
     canAutoFitRadiusView,
   ]);
-
-  if (!debugEnabled) return null;
-
-  return (
-    <MapDebugPanel
-      mode={mode}
-      debugOpen={debugOpen}
-      debugSnapshot={debugSnapshot}
-      onRefresh={refreshDebugSnapshot}
-      onCopyJson={() => {
-        void copyDebugJson();
-      }}
-      onOpen={() => {
-        try {
-          setDebugOpen(true);
-          refreshDebugSnapshot('open');
-        } catch {
-          // noop
-        }
-      }}
-      onClose={() => setDebugOpen(false)}
-    />
-  );
+  return null;
 };

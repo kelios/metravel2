@@ -304,7 +304,6 @@ export function useMapApi({
       },
       setOverlayEnabled: (id: string, enabled: boolean) => {
         try {
-          console.info('[useMapApi] setOverlayEnabled called:', id, enabled);
           const layer = leafletOverlayLayersRef.current.get(id);
           if (!layer) {
             pendingOverlayTogglesRef.current.set(id, enabled);
@@ -318,7 +317,6 @@ export function useMapApi({
             return;
           }
 
-          console.info('[useMapApi] Layer found, toggling:', id, enabled);
           if (enabled) {
             layer.addTo(map);
           } else if (map.hasLayer?.(layer)) {
@@ -330,7 +328,6 @@ export function useMapApi({
           const controller = controllers?.get?.(id);
 
           if (controller) {
-            console.info('[useMapApi] Controller found for layer:', id, 'starting:', enabled);
             if (enabled) {
               controller.start?.();
             } else {
@@ -342,9 +339,7 @@ export function useMapApi({
                 (layer as any)?._url ||
                 (typeof (layer as any)?.getContainer === 'function' && (layer as any)?.getContainer())
             );
-            if (looksLikeTileLayer) {
-              console.info('[useMapApi] No controller for tile layer (expected):', id);
-            } else {
+            if (!looksLikeTileLayer) {
               console.warn(
                 '[useMapApi] No controller for non-tile overlay layer:',
                 id,

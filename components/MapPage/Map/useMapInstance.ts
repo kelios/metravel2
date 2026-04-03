@@ -25,8 +25,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     if (typeof map.addLayer !== 'function') return;
 
     const cleanup = () => {
-      console.info('[useMapInstance] Running cleanup - component unmounting');
-      
       try {
         const controllers: Map<string, any> | undefined = (leafletControlRef as any).overlayControllers;
         const overlayLayersSnapshot = new Map(leafletOverlayLayersRef.current);
@@ -120,8 +118,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       if (hasInitializedLayersRef.current) return;
       if (!canInitializeNow()) return;
 
-      console.info('[useMapInstance] Setting up layers...');
-
       // Stop/cleanup any previous controllers/layers (defensive)
       const prevControllers: Map<string, any> | undefined = (leafletControlRef as any).overlayControllers;
       if (prevControllers && typeof prevControllers.forEach === 'function') {
@@ -144,8 +140,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: НЕ удаляем существующие overlay слои!
       // Линия маршрута уже может быть нарисована в overlay pane
       // Мы только добавляем новые слои, не удаляем старые
-      console.info('[useMapInstance] Skipping overlay cleanup to preserve existing layers (e.g., route line)');
-
       // Clean existing base layer only
       try {
         const baseLayer = leafletBaseLayerRef.current;
@@ -182,7 +176,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           (leafletControlRef as any).overpassController = overpassController;
 
           controllers.set(overpassDef.id, overpassController);
-          console.info('[useMapInstance] Created camping overlay controller:', overpassDef.id);
         } catch (e) {
           console.warn('[useMapInstance] Failed to create camping overlay:', e);
         }
@@ -200,7 +193,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           leafletOverlayLayersRef.current.set(poiDef.id, poiController.layer);
           overlays[poiDef.title] = poiController.layer;
           controllers.set(poiDef.id, poiController);
-          console.info('[useMapInstance] Created POI overlay controller:', poiDef.id);
         } catch (e) {
           console.warn('[useMapInstance] Failed to create POI overlay:', e);
         }
@@ -218,7 +210,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           leafletOverlayLayersRef.current.set(routesDef.id, routesController.layer);
           overlays[routesDef.title] = routesController.layer;
           controllers.set(routesDef.id, routesController);
-          console.info('[useMapInstance] Created routes overlay controller:', routesDef.id);
         } catch (e) {
           console.warn('[useMapInstance] Failed to create routes overlay:', e);
         }
@@ -237,17 +228,10 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           overlays[wfsDef.title] = wfsController.layer;
 
           controllers.set(wfsDef.id, wfsController);
-          console.info('[useMapInstance] Created WFS overlay controller:', wfsDef.id);
         } catch (e) {
           console.warn('[useMapInstance] Failed to create WFS overlay:', e);
         }
       }
-
-      // Log summary of created controllers
-      console.info('[useMapInstance] Overlay setup complete:', {
-        layerIds: Array.from(leafletOverlayLayersRef.current.keys()),
-        controllerIds: Array.from(controllers.keys()),
-      });
 
       // Setup other overlay layers (exclude kinds that have dedicated controllers)
       WEB_MAP_OVERLAY_LAYERS
