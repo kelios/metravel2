@@ -46,16 +46,24 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   const isNarrow = width > 0 && width <= 390;
   const isVeryNarrow = width > 0 && width <= 360;
   const styles = useMemo(() => getStyles(colors, { isNarrow, isVeryNarrow }), [colors, isNarrow, isVeryNarrow]);
-  const effectiveMaxVisible = isVeryNarrow ? Math.min(maxVisible, 2) : isNarrow ? Math.min(maxVisible, 3) : maxVisible;
+  const selectedCount = selectedCategories.length;
+  const shouldReserveActionChipSpace =
+    typeof onOpenFilters === 'function' &&
+    (selectedCount > 0 || categories.length > (isVeryNarrow ? 2 : isNarrow ? 2 : maxVisible));
+  const effectiveMaxVisible = isVeryNarrow
+    ? Math.min(maxVisible, 2)
+    : isNarrow
+      ? Math.min(maxVisible, shouldReserveActionChipSpace ? 2 : 3)
+      : maxVisible;
 
   const visible = useMemo(
     () => categories.slice(0, effectiveMaxVisible),
     [categories, effectiveMaxVisible],
   );
   const hiddenCount = Math.max(categories.length - visible.length, 0);
-  const selectedCount = selectedCategories.length;
   const shouldShowActionChip =
     typeof onOpenFilters === 'function' && (hiddenCount > 0 || selectedCount > 0);
+  const actionChipLabel = isNarrow ? 'Все' : 'Все фильтры';
   const actionBadgeLabel =
     selectedCount > 0
       ? String(selectedCount)
@@ -127,7 +135,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
           >
             <Feather name="sliders" size={14} color={colors.text} />
             <Text style={styles.chipText} numberOfLines={1}>
-              Все фильтры
+              {actionChipLabel}
             </Text>
             {actionBadgeLabel ? (
               <View style={styles.actionBadge}>

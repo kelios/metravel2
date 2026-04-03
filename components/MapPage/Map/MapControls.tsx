@@ -16,6 +16,7 @@ interface MapControlsProps {
 }
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
+const MOBILE_WEB_SIDE_GAP = 16;
 
 const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
   width: '44px',
@@ -88,7 +89,13 @@ const MapControls: React.FC<MapControlsProps> = ({
       Platform.OS === 'web'
         ? (`calc(${Math.max(18, bottomOffset)}px + env(safe-area-inset-bottom) + ${MOBILE_WEB_BOTTOM_CHROME_GAP}px)` as any)
         : Math.max(18, bottomOffset),
-    ...(shouldAlignLeft ? { left: 10 } : { right: 10 }),
+    ...(Platform.OS === 'web'
+      ? shouldAlignLeft
+        ? { left: `calc(${MOBILE_WEB_SIDE_GAP}px + env(safe-area-inset-left, 0px))` as any }
+        : { right: `calc(${MOBILE_WEB_SIDE_GAP}px + env(safe-area-inset-right, 0px))` as any }
+      : shouldAlignLeft
+        ? { left: MOBILE_WEB_SIDE_GAP }
+        : { right: MOBILE_WEB_SIDE_GAP }),
     zIndex: 40,
     display: 'flex',
     flexDirection: 'column' as const,
