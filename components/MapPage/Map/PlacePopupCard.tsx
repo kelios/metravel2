@@ -416,44 +416,57 @@ const PlacePopupCard: React.FC<Props> = ({
     setFullscreenVisible(false);
   }, []);
 
-  const contentSlot = useMemo(() => (
-    <View style={styles.content}>
-      <View style={styles.infoSection}>
-        <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
-          {title}
-        </Text>
+  const topInfoSlot = useMemo(() => (
+    <View style={styles.infoSection}>
+      <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
+        {title}
+      </Text>
 
-        {!!_subtitle && (
-          <Text style={styles.subtitleText} numberOfLines={useCompactLayout ? 2 : 1}>
-            {_subtitle}
-          </Text>
+      {!!_subtitle && (
+        <Text style={styles.subtitleText} numberOfLines={useCompactLayout ? 2 : 1}>
+          {_subtitle}
+        </Text>
+      )}
+
+      <View style={styles.metaRow}>
+        {!!categoryLabel && (
+          <View style={styles.metaBadge}>
+            <Feather name="tag" size={12} color={colors.textMuted} />
+            <Text style={styles.categoryText} numberOfLines={1}>
+              {categoryLabel}
+            </Text>
+          </View>
         )}
 
-        <View style={styles.metaRow}>
-          {!!categoryLabel && (
-            <View style={styles.metaBadge}>
-              <Feather name="tag" size={12} color={colors.textMuted} />
-              <Text style={styles.categoryText} numberOfLines={1}>
-                {categoryLabel}
+        {(isDrivingLoading || hasDrivingInfo) && (
+          <View testID="popup-driving-info" style={[styles.drivingRow, styles.metaBadge]}>
+            <Feather name="navigation" size={12} color={colors.textMuted} />
+            {isDrivingLoading ? (
+              <ActivityIndicator size="small" color={colors.textMuted} />
+            ) : (
+              <Text style={styles.smallText} numberOfLines={1}>
+                {drivingText}
               </Text>
-            </View>
-          )}
-
-          {(isDrivingLoading || hasDrivingInfo) && (
-            <View testID="popup-driving-info" style={[styles.drivingRow, styles.metaBadge]}>
-              <Feather name="navigation" size={12} color={colors.textMuted} />
-              {isDrivingLoading ? (
-                <ActivityIndicator size="small" color={colors.textMuted} />
-              ) : (
-                <Text style={styles.smallText} numberOfLines={1}>
-                  {drivingText}
-                </Text>
-              )}
-            </View>
-          )}
-        </View>
+            )}
+          </View>
+        )}
       </View>
+    </View>
+  ), [
+    _subtitle,
+    bp,
+    categoryLabel,
+    colors.textMuted,
+    drivingText,
+    hasDrivingInfo,
+    isDrivingLoading,
+    styles,
+    title,
+    useCompactLayout,
+  ]);
 
+  const footerSlot = useMemo(() => (
+    <View style={styles.footerStack}>
       {hasCoord && (
         <CardActionPressable
           accessibilityLabel="Скопировать координаты"
@@ -570,18 +583,13 @@ const PlacePopupCard: React.FC<Props> = ({
   ), [
     actionBtnStyle,
     addDisabled,
-    bp,
-    categoryLabel,
     colors.primary,
     colors.textMuted,
     compactLabel,
     coord,
-    drivingText,
     hasArticle,
     hasCoord,
-    hasDrivingInfo,
     isAdding,
-    isDrivingLoading,
     onAddPoint,
     onBuildRoute,
     onCopyCoord,
@@ -591,44 +599,47 @@ const PlacePopupCard: React.FC<Props> = ({
     onShareTelegram,
     primaryAction,
     styles,
-    _subtitle,
     colors.textOnDark,
     colors.textOnPrimary,
-    title,
-    useCompactLayout,
   ]);
 
   return (
     <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
-      <View style={[styles.popupCard, useSplitLayout && styles.popupCardSplit]}>
-        {imageUrl && (
-          <Pressable
-            onPress={handleOpenFullscreen}
-            style={[styles.imageContainer, useSplitLayout && styles.imageContainerSplit]}
-            accessibilityRole="button"
-            accessibilityLabel="Открыть фото на весь экран"
-          >
-            <ImageCardMedia
-              src={imageUrl}
-              alt={title}
-              fit="contain"
-              blurBackground
-              allowCriticalWebBlur
-              revealOnLoadOnly={revealPopupImageOnLoadOnly}
-              priority="high"
-              loading="eager"
-              width={heroWidth}
-              height={heroHeight}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.imageExpandButton}>
-              <Feather name="maximize-2" size={18} color={colors.textOnDark} />
-            </View>
-          </Pressable>
-        )}
+      <View style={styles.popupCard}>
+        <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
+          {imageUrl && (
+            <Pressable
+              onPress={handleOpenFullscreen}
+              style={[styles.imageContainer, useSplitLayout && styles.imageContainerSplit]}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть фото на весь экран"
+            >
+              <ImageCardMedia
+                src={imageUrl}
+                alt={title}
+                fit="contain"
+                blurBackground
+                allowCriticalWebBlur
+                revealOnLoadOnly={revealPopupImageOnLoadOnly}
+                priority="high"
+                loading="eager"
+                width={heroWidth}
+                height={heroHeight}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.imageExpandButton}>
+                <Feather name="maximize-2" size={18} color={colors.textOnDark} />
+              </View>
+            </Pressable>
+          )}
 
-        <View style={[styles.contentContainer, useSplitLayout && styles.contentContainerSplit]}>
-          {contentSlot}
+          <View style={[styles.contentContainer, useSplitLayout && styles.contentContainerSplit]}>
+            {topInfoSlot}
+          </View>
+        </View>
+
+        <View style={styles.footerContainer}>
+          {footerSlot}
         </View>
       </View>
 
@@ -701,7 +712,10 @@ const getStyles = (
             elevation: 4,
           }),
     },
-    popupCardSplit: {
+    topSection: {
+      width: '100%',
+    },
+    topSectionSplit: {
       flexDirection: 'row',
       alignItems: 'flex-start',
     },
@@ -736,7 +750,7 @@ const getStyles = (
     contentContainer: {
       paddingHorizontal: horizontalPadding + 2,
       paddingTop: topPadding + 2,
-      paddingBottom: bottomPadding + 2,
+      paddingBottom: 0,
     },
     contentContainerSplit: {
       flex: 1,
@@ -744,11 +758,16 @@ const getStyles = (
       paddingLeft: splitLayout ? 12 : horizontalPadding + 2,
       paddingRight: splitLayout ? 12 : horizontalPadding + 2,
       paddingTop: splitLayout ? 8 : topPadding + 2,
-      paddingBottom: splitLayout ? 8 : bottomPadding + 2,
+      paddingBottom: 0,
       justifyContent: 'flex-start',
     },
-    content: {
-      gap: splitLayout ? Math.max(6, sp.sectionGap - 7) : compactLayout ? compactSp.sectionGap : sp.sectionGap,
+    footerContainer: {
+      paddingHorizontal: horizontalPadding + 2,
+      paddingTop: splitLayout ? 10 : 12,
+      paddingBottom: bottomPadding + 2,
+    },
+    footerStack: {
+      gap: splitLayout ? 10 : compactLayout ? compactSp.sectionGap : sp.sectionGap,
     },
     infoSection: {
       gap: compactLayout ? 4 : splitLayout ? 5 : bp === 'narrow' ? 6 : 8,
