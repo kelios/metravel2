@@ -125,6 +125,7 @@ export const WEB_MAP_BASE_LAYERS: WebMapLayerDefinition[] = [
     kind: 'tile',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
     defaultEnabled: true,
   },
 ];

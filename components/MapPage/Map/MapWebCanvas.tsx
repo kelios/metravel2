@@ -245,6 +245,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       id={mapContainerId}
       center={safeCenter}
       zoom={safeZoom}
+      maxZoom={19}
       key={mapInstanceKey}
       zoomControl={false}
       preferCanvas={false}

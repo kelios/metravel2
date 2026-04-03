@@ -50,6 +50,16 @@ describe('mapWebLayers invariants', () => {
     }
   });
 
+  it('default web base tile layer declares maxZoom for marker clustering', () => {
+    const defaultBaseLayer =
+      WEB_MAP_BASE_LAYERS.find((l: WebMapLayerDefinition) => Boolean(l.defaultEnabled)) ||
+      WEB_MAP_BASE_LAYERS[0];
+
+    expect(defaultBaseLayer).toBeTruthy();
+    expect(defaultBaseLayer?.kind).toBe('tile');
+    expect(defaultBaseLayer?.maxZoom).toBe(19);
+  });
+
   it('wms layers define wmsParams.layers', () => {
     const wmsLayers = WEB_MAP_OVERLAY_LAYERS.filter((l: WebMapLayerDefinition) => l.kind === 'wms');
     for (const layer of wmsLayers) {

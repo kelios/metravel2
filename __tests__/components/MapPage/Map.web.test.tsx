@@ -408,6 +408,14 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     })
   })
 
+  it('provides explicit maxZoom to the web map container', async () => {
+    const { getByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
+    await act(async () => {})
+
+    const mapContainer = getByTestId('map-container')
+    expect(mapContainer.props.maxZoom).toBe(19)
+  })
+
   it('auto-requests user location on web (permission + current position)', async () => {
     const prevNodeEnv = process.env.NODE_ENV
     ;(process.env as any).NODE_ENV = 'test'
