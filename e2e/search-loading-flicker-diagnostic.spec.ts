@@ -35,6 +35,11 @@ type LayoutShiftRecord = {
   sources: ShiftSource[];
 };
 
+function isMissingTraceArtifactError(error: unknown): boolean {
+  const message = String((error as { message?: string } | null)?.message || error || '');
+  return message.includes('tracing.stop') && message.includes('ENOENT');
+}
+
 async function captureTimelineScreenshots(page: any, testInfo: any) {
   const startedAt = Date.now();
   for (const ms of SCREENSHOT_TIMELINE_MS) {
@@ -311,11 +316,22 @@ test.describe('@perf search loading flicker diagnostic', () => {
     });
 
     const tracePath = testInfo.outputPath('search-loading-trace.zip');
-    await context.tracing.stop({ path: tracePath });
-    await testInfo.attach('search-loading-trace', {
-      path: tracePath,
-      contentType: 'application/zip',
-    });
+    try {
+      await context.tracing.stop({ path: tracePath });
+      await testInfo.attach('search-loading-trace', {
+        path: tracePath,
+        contentType: 'application/zip',
+      });
+    } catch (error) {
+      if (!isMissingTraceArtifactError(error)) throw error;
+
+      const traceErrorPath = testInfo.outputPath('search-loading-trace-error.log');
+      await fs.writeFile(traceErrorPath, String((error as { message?: string } | null)?.message || error), 'utf8');
+      await testInfo.attach('search-loading-trace-error', {
+        path: traceErrorPath,
+        contentType: 'text/plain',
+      });
+    }
 
     await context.close();
 
