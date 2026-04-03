@@ -24,6 +24,7 @@ const baseIgnores = [
   "web-build/",
   "coverage/",
   "coverage-new/",
+  "tmp/",
   ".claude/",
   ".claude/**",
   "playwright-report/",
