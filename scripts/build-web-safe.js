@@ -5,10 +5,27 @@ const fs = require('fs');
 const path = require('path');
 
 const rootDir = path.resolve(__dirname, '..');
-const distIndex = path.join(rootDir, 'dist', 'index.html');
 
-function hasEntryBundle() {
-  const webDir = path.join(rootDir, 'dist', '_expo', 'static', 'js', 'web');
+function getArgValue(flag, fallback = '') {
+  const index = process.argv.indexOf(flag);
+  if (index >= 0 && index + 1 < process.argv.length) {
+    return String(process.argv[index + 1] || '').trim();
+  }
+  return fallback;
+}
+
+const outputDirArg = getArgValue('--output-dir', 'dist');
+const outputDir = path.resolve(rootDir, outputDirArg);
+const outputIndex = path.join(outputDir, 'index.html');
+const fallbackOutputDir = path.join(rootDir, 'dist');
+const passthroughArgs = process.argv.slice(2).filter((arg, index, args) => {
+  if (arg === '--output-dir') return false;
+  if (index > 0 && args[index - 1] === '--output-dir') return false;
+  return true;
+});
+
+function hasEntryBundle(buildDir) {
+  const webDir = path.join(buildDir, '_expo', 'static', 'js', 'web');
   try {
     const files = fs.readdirSync(webDir);
     return files.some((file) => file.startsWith('entry-') && file.endsWith('.js'));
@@ -25,30 +42,51 @@ function fileExists(filePath) {
   }
 }
 
+function resolveReadyDir() {
+  const candidates = [outputDir];
+  if (fallbackOutputDir !== outputDir) {
+    candidates.push(fallbackOutputDir);
+  }
+
+  return (
+    candidates.find((candidateDir) => {
+      const candidateIndex = path.join(candidateDir, 'index.html');
+      return fileExists(candidateIndex) && hasEntryBundle(candidateDir);
+    }) || null
+  );
+}
+
 // Prevent stale dist artifacts from making the readiness check pass immediately.
 try {
-  fs.rmSync(distIndex, { force: true });
+  fs.rmSync(outputIndex, { force: true });
 } catch {
   // no-op
 }
 
 const child = spawn(
   process.execPath,
-  ['./node_modules/expo/bin/cli', 'export', '-p', 'web'],
+  ['./node_modules/expo/bin/cli', 'export', ...passthroughArgs],
   {
     cwd: rootDir,
     stdio: 'inherit',
-    env: { ...process.env, CI: '1' },
+    env: {
+      ...process.env,
+      CI: '1',
+      EXPO_NO_INTERACTIVE: process.env.EXPO_NO_INTERACTIVE || '1',
+    },
   }
 );
 
 let exportReady = false;
 let terminatedByUs = false;
+let readyDir = null;
 
 const readinessTimer = setInterval(() => {
   if (exportReady) return;
 
-  if (fileExists(distIndex) && hasEntryBundle()) {
+  readyDir = resolveReadyDir();
+
+  if (readyDir) {
     exportReady = true;
 
     // Expo export can hang after writing artifacts; stop it once export is ready.

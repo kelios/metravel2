@@ -42,7 +42,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
       : 'Старт и финиш можно выбрать кликом по карте';
   const helper =
     mode === 'radius'
-      ? 'Фильтры применяются сразу, без отдельной кнопки'
+      ? ''
       : 'Сначала выберите транспорт, затем две точки маршрута';
   const showCompactDetails = !isMobile;
   const compactSummary =

@@ -38,7 +38,11 @@ export async function extractGpsFromImageFile(file: File): Promise<GpsCoords | n
       return isValidGps(coords) ? coords : null;
     }
 
-    const mod: any = await import('exifr');
+    // `exifr` default entry pulls the full ESM bundle, which includes a
+    // webpack-specific dynamic import comment that Hermes fails to parse
+    // during web export. The lite bundle still provides `gps()` and avoids
+    // that problematic code path.
+    const mod: any = await import('exifr/dist/lite.esm.mjs');
     const gpsFn =
       (typeof mod?.gps === 'function' ? mod.gps : null) ||
       (typeof mod?.default?.gps === 'function' ? mod.default.gps : null);
