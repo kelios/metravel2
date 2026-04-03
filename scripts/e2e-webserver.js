@@ -96,6 +96,60 @@ function killProcessTree(child) {
   }, 5000).unref();
 }
 
+function listListeningPids(port) {
+  try {
+    const raw = String(
+      execSync(`lsof -nP -tiTCP:${port} -sTCP:LISTEN`, {
+        cwd: rootDir,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }) || ''
+    )
+      .trim()
+      .split(/\r?\n/)
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    return raw;
+  } catch {
+    return [];
+  }
+}
+
+function readProcessCommand(pid) {
+  try {
+    return String(
+      execSync(`ps -p ${pid} -o command=`, {
+        cwd: rootDir,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }) || ''
+    ).trim();
+  } catch {
+    return '';
+  }
+}
+
+function killStaleLocalWebServers(port) {
+  const listeningPids = listListeningPids(port);
+  for (const pid of listeningPids) {
+    if (pid === process.pid) continue;
+    const command = readProcessCommand(pid);
+    const isManagedE2EServer =
+      command.includes(path.join('scripts', 'serve-web-build.js')) &&
+      command.includes(rootDir);
+
+    if (!isManagedE2EServer) continue;
+
+    console.warn(
+      `[e2e-webserver] Port ${port} is occupied by stale local server (pid=${pid}). Stopping it before restart.`
+    );
+
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      // ignore
+    }
+  }
+}
+
 function sanitizedEnv(baseEnv) {
   const nextEnv = { ...baseEnv };
   if (Object.prototype.hasOwnProperty.call(nextEnv, 'NO_COLOR')) {
@@ -137,6 +191,8 @@ async function main() {
   const e2eWebPort = Number(process.env.E2E_WEB_PORT || '8085');
   const e2eApiBase = `http://127.0.0.1:${e2eWebPort}`;
   const forceRebuild = String(process.env.E2E_FORCE_REBUILD || '') === '1';
+
+  killStaleLocalWebServers(e2eWebPort);
 
   process.env.EXPO_PUBLIC_E2E = 'true';
   process.env.EXPO_PUBLIC_IS_LOCAL_API = 'false';
