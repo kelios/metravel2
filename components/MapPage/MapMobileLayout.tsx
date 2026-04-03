@@ -584,6 +584,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           ]}
         >
           <CardActionPressable
+            testID="map-panel-open"
+            accessibilityRole="button"
+            accessibilityLabel="Открыть список мест"
+            onPress={handleToggleListPanel}
+            style={styles.quickCircleButton}
+          >
+            <Feather name="menu" size={20} color={colors.text} />
+          </CardActionPressable>
+          <CardActionPressable
             accessibilityRole="button"
             accessibilityLabel="Открыть фильтры"
             onPress={onOpenFilters}
