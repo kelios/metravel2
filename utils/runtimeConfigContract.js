@@ -20,6 +20,16 @@ const isLocalHost = (host) =>
   /^10\./.test(host) ||
   /^172\.(1[6-9]|2\d|3[01])\./.test(host)
 
+const isLikelySelfProxyApiUrl = (parsed) => {
+  if (!parsed) return false
+  const host = String(parsed.hostname || '').trim().toLowerCase()
+  const port = String(parsed.port || '').trim()
+  return (
+    (host === 'localhost' || host === '127.0.0.1' || host === '::1') &&
+    (port === '8085' || port === '19006')
+  )
+}
+
 const resolveRoutingApiKeyWithSourceCore = (env = process.env) => {
   for (const key of ROUTING_API_KEY_CANDIDATES) {
     const value = String(env[key] || '').trim()
@@ -93,6 +103,13 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env) => {
           severity: 'error',
           message: `EXPO_PUBLIC_API_URL must use http/https. Current protocol: ${parsed.protocol}`,
         })
+      } else if (isLikelySelfProxyApiUrl(parsed)) {
+        diagnostics.push({
+          code: 'API_URL_SELF_PROXY',
+          severity: 'error',
+          message:
+            'EXPO_PUBLIC_API_URL points to the local Expo web server. This causes /api requests to proxy back into Metro instead of the backend.',
+        })
       } else if (parsed.protocol === 'http:' && !isLocalHost(parsed.hostname)) {
         diagnostics.push({
           code: 'API_URL_UNSAFE_HTTP',
@@ -123,4 +140,3 @@ module.exports = {
   getRoutingConfigDiagnosticsCore,
   getRuntimeConfigDiagnosticsCore,
 }
-

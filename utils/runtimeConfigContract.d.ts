@@ -21,6 +21,7 @@ export type RuntimeConfigDiagnostic = {
   code:
     | 'API_URL_MISSING'
     | 'API_URL_INVALID'
+    | 'API_URL_SELF_PROXY'
     | 'API_URL_UNSAFE_HTTP'
     | 'ROUTING_KEY_MISSING'
     | 'ROUTING_KEY_LEGACY_ALIAS'
@@ -34,4 +35,3 @@ export const ROUTING_API_KEY_CANDIDATES: RoutingApiKeyCandidate[];
 export function resolveRoutingApiKeyWithSourceCore(env?: RoutingApiEnv): RoutingApiKeyResolution;
 export function getRoutingConfigDiagnosticsCore(env?: RoutingApiEnv): RoutingConfigDiagnostic[];
 export function getRuntimeConfigDiagnosticsCore(env?: RoutingApiEnv): RuntimeConfigDiagnostic[];
-

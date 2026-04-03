@@ -31,6 +31,21 @@ describe('getRuntimeConfigDiagnostics', () => {
     );
   });
 
+  it('reports Metro self-proxy API URL', () => {
+    const diagnostics = getRuntimeConfigDiagnostics({
+      EXPO_PUBLIC_API_URL: 'http://127.0.0.1:8085',
+      EXPO_PUBLIC_ORS_API_KEY: 'ok',
+    });
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'API_URL_SELF_PROXY',
+          severity: 'error',
+        }),
+      ])
+    );
+  });
+
   it('reports unsafe non-local HTTP API URL', () => {
     const diagnostics = getRuntimeConfigDiagnostics({
       EXPO_PUBLIC_API_URL: 'http://metravel.by',

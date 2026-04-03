@@ -15,6 +15,7 @@ const { getDefaultConfig } = require('expo/metro-config')
 const fs = require('fs')
 const path = require('path')
 const { pipeline } = require('stream')
+const { URL } = require('url')
 
 // metro-config doesn't export exclusionList in all versions; load it via absolute path.
 const exclusionList = require(path.join(
@@ -25,6 +26,32 @@ const exclusionList = require(path.join(
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
 const previousEnhanceMiddleware = config.server && config.server.enhanceMiddleware
+const DEFAULT_DEV_API_HOST = 'http://192.168.50.36'
+
+const isSameLocalOrigin = (targetUrl, requestHost) => {
+  if (!targetUrl || !requestHost) return false
+
+  try {
+    const parsedTarget = new URL(targetUrl)
+    const parsedRequest = new URL(
+      `http://${String(requestHost).trim().replace(/^https?:\/\//i, '')}`
+    )
+
+    const targetPort = Number(parsedTarget.port || (parsedTarget.protocol === 'https:' ? '443' : '80'))
+    const requestPort = Number(parsedRequest.port || '80')
+    if (targetPort !== requestPort) return false
+
+    const targetHost = parsedTarget.hostname
+    const requestHostname = parsedRequest.hostname
+    return (
+      targetHost === requestHostname ||
+      (targetHost === 'localhost' && requestHostname === '127.0.0.1') ||
+      (targetHost === '127.0.0.1' && requestHostname === 'localhost')
+    )
+  } catch {
+    return false
+  }
+}
 
 // ✅ PERF: Don't watch or crawl large generated folders.
 // This repo contains sizeable build/test artifacts (dist, reports, etc.) that can
@@ -218,7 +245,15 @@ config.resolver.resolveRequest = ((orig) => {
 	        // otherwise dynamic imports from "@/api/*" break with 404.
 	        const isMetroModuleAsset = /\.bundle$|\.map$/i.test(pathname)
 	        if (pathname.startsWith('/api/') && !isMetroModuleAsset) {
-          const apiHost = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.36';
+          const configuredApiHost = String(process.env.EXPO_PUBLIC_API_URL || '').trim()
+          const apiHost = isSameLocalOrigin(configuredApiHost, req.headers.host)
+            ? DEFAULT_DEV_API_HOST
+            : configuredApiHost || DEFAULT_DEV_API_HOST
+          if (configuredApiHost && apiHost !== configuredApiHost) {
+            console.warn(
+              `[Metro CORS Proxy] Ignoring self-proxy EXPO_PUBLIC_API_URL=${configuredApiHost}; using ${apiHost} instead.`
+            )
+          }
           const targetUrl = `${apiHost}${url}`;
 
           // Use node's http/https module for proxying
