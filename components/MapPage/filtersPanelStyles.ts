@@ -447,11 +447,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
     },
-    filterSelectionSummaryTitle: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: colors.text,
-    },
     filterSelectionChips: {
       flexDirection: 'row',
       flexWrap: 'wrap',

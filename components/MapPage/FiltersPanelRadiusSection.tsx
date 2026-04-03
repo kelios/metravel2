@@ -162,7 +162,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         .filter(Boolean),
     [filterValue.categories]
   );
-  const effectiveRadius = filterValue.radius || DEFAULT_RADIUS_KM;
   const radiusResultCount = useMemo(() => {
     if (selectedCategoryNames.length === 0) return travelsData.length;
     const normalizedSelected = new Set(selectedCategoryNames.map((name) => name.toLowerCase().trim()));
@@ -175,7 +174,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       return categoryNames.some((categoryName) => normalizedSelected.has(categoryName));
     }).length;
   }, [selectedCategoryNames, travelsData]);
-  const hasSelectionSummary = Boolean(searchQuery.trim()) || selectedCategoryNames.length > 0 || effectiveRadius !== DEFAULT_RADIUS_KM;
+  const hasSelectionSummary = Boolean(searchQuery.trim()) || selectedCategoryNames.length > 0;
   const categoryPreview = selectedCategoryNames.slice(0, 2).join(', ');
   const categorySummary = selectedCategoryNames.length > 2
     ? `${categoryPreview} +${selectedCategoryNames.length - 2}`
@@ -329,8 +328,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
               })}
             </View>
             <Text style={styles.radiusSelectionHint}>
-              {`Сейчас ищем в радиусе ${effectiveRadius} км.`}
-              {' '}
               {radiusResultCount > 0
                 ? `${getPlacesLabel(radiusResultCount)} попадает в выбранные условия.`
                 : 'Под выбранные условия пока ничего не попадает.'}
@@ -341,7 +338,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 
         {hasSelectionSummary && (
           <View style={styles.filterSelectionSummary} testID="radius-selection-summary">
-            <Text style={styles.filterSelectionSummaryTitle}>Текущий фильтр</Text>
             <View style={styles.filterSelectionChips}>
               {searchQuery.trim() ? (
                 <View style={styles.filterSelectionChip}>
@@ -359,10 +355,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                   </Text>
                 </View>
               ) : null}
-              <View style={styles.filterSelectionChip}>
-                <Feather name="radio" size={12} color={colors.primary} />
-                <Text style={styles.filterSelectionChipText}>{effectiveRadius} км</Text>
-              </View>
             </View>
           </View>
         )}
