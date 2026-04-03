@@ -24,6 +24,8 @@ const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
 const isWeb = Platform.OS === 'web';
 const TOP_SCROLL_PADDING = 8;
+const WEB_ROW_INTRINSIC_SIZE_MOBILE = 'auto 340px';
+const WEB_ROW_INTRINSIC_SIZE_DESKTOP = 'auto 420px';
 
 // Lazy load RecommendationsTabs with proper error boundary
 const RecommendationsTabs = lazy(async () => {
@@ -315,6 +317,14 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                     maxWidth: '100%',
                     minWidth: 0,
                   } as any)),
+              Platform.OS === 'web' && !isExport
+                ? ({
+                    contentVisibility: 'auto',
+                    containIntrinsicSize: isMobile
+                      ? WEB_ROW_INTRINSIC_SIZE_MOBILE
+                      : WEB_ROW_INTRINSIC_SIZE_DESKTOP,
+                  } as any)
+                : null,
             ]}
           >
             {rowItems.map((travel, itemIndex) => (
@@ -401,6 +411,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         renderItem,
         gridColumns,
         isMobile,
+        isExport,
         showNextPageLoading,
         rows.length,
         footerLoaderStyle,
@@ -460,6 +471,95 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     }, [showInitialLoading, travels.length, skeletonDelayMs])
 
     // Always render the search bar, even on mobile
+
+    const loadedResultsContent = useMemo(() => {
+      if (showInitialLoading || isError || showEmptyState || travels.length === 0) {
+        return null
+      }
+
+      if (isWeb) {
+        return (
+          <ScrollView
+            ref={listRef as any}
+            onScroll={webScrollHandler}
+            scrollEventThrottle={32}
+            style={{
+              flex: 1,
+              minHeight: 0,
+              WebkitOverflowScrolling: 'touch',
+              touchAction: isExport ? 'auto' : 'pan-y',
+              overscrollBehaviorY: 'contain',
+            } as any}
+            contentContainerStyle={webContentContainerStyle}
+            testID="right-column-scrollview"
+          >
+            {ListHeader}
+            {rows.map((rowItems, rowIndex) => (
+              <React.Fragment key={`row-${rowIndex}`}>
+                {rowIndex > 0 && <RowSeparator />}
+                {renderRow({ item: rowItems, index: rowIndex })}
+              </React.Fragment>
+            ))}
+            {/* PERF-03: Информативный индикатор при подгрузке страниц */}
+            {showNextPageLoading && (
+              <View style={[footerLoaderStyle, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+                <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
+                <Text style={{ fontSize: 13, color: colors.textMuted }}>Загружаем ещё...</Text>
+              </View>
+            )}
+          </ScrollView>
+        )
+      }
+
+      return (
+        <FlashList
+          ref={listRef as any}
+          data={rows}
+          renderItem={renderRow as any}
+          extraData={gridColumns}
+          keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
+          {...({ estimatedItemSize: 320 } as any)}
+          ListHeaderComponent={ListHeader}
+          ListFooterComponent={showNextPageLoading ? (
+            <View style={footerLoaderStyle}>
+              <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
+            </View>
+          ) : null}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={onEndReachedThreshold}
+          drawDistance={800}
+          contentContainerStyle={nativeContentContainerStyle}
+          testID="right-column-flashlist"
+          scrollEventThrottle={16}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={8}
+          windowSize={5}
+        />
+      )
+    }, [
+      ListHeader,
+      RowSeparator,
+      colors.textMuted,
+      footerLoaderStyle,
+      gridColumns,
+      isError,
+      isExport,
+      isMobile,
+      listRef,
+      nativeContentContainerStyle,
+      onEndReached,
+      onEndReachedThreshold,
+      renderRow,
+      rows,
+      showEmptyState,
+      showInitialLoading,
+      showNextPageLoading,
+      travels.length,
+      webContentContainerStyle,
+      webScrollHandler,
+    ])
 
     return (
       <View testID={testID} style={containerStyle}>
@@ -550,65 +650,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             )}
 
           {/* Travel Cards Grid - Only show when we have data */}
-        {!showInitialLoading && !isError && !showEmptyState && travels.length > 0 && (
-            isWeb ? (
-              <ScrollView
-                ref={listRef as any}
-                onScroll={webScrollHandler}
-                scrollEventThrottle={32}
-                style={{
-                  flex: 1,
-                  minHeight: 0,
-                  WebkitOverflowScrolling: 'touch',
-                  touchAction: isExport ? 'auto' : 'pan-y',
-                  overscrollBehaviorY: 'contain',
-                } as any}
-                contentContainerStyle={webContentContainerStyle}
-                testID="right-column-scrollview"
-              >
-                {ListHeader}
-                {rows.map((rowItems, rowIndex) => (
-                  <React.Fragment key={`row-${rowIndex}`}>
-                    {rowIndex > 0 && <RowSeparator />}
-                    {renderRow({ item: rowItems, index: rowIndex })}
-                  </React.Fragment>
-                ))}
-                {/* PERF-03: Информативный индикатор при подгрузке страниц */}
-                {showNextPageLoading && (
-                  <View style={[footerLoaderStyle, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
-                    <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
-                    <Text style={{ fontSize: 13, color: colors.textMuted }}>Загружаем ещё...</Text>
-                  </View>
-                )}
-              </ScrollView>
-            ) : (
-              <FlashList
-                ref={listRef as any}
-                data={rows}
-                renderItem={renderRow as any}
-                extraData={gridColumns}
-                keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
-                {...({ estimatedItemSize: 320 } as any)}
-                ListHeaderComponent={ListHeader}
-                ListFooterComponent={showNextPageLoading ? (
-                  <View style={footerLoaderStyle}>
-                    <ActivityIndicator size="small" accessibilityLabel="Загружаем ещё маршруты" />
-                  </View>
-                ) : null}
-                onEndReached={onEndReached}
-                onEndReachedThreshold={onEndReachedThreshold}
-                drawDistance={800}
-                contentContainerStyle={nativeContentContainerStyle}
-                testID="right-column-flashlist"
-                scrollEventThrottle={16}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                updateCellsBatchingPeriod={50}
-                initialNumToRender={8}
-                windowSize={5}
-              />
-            )
-          )}
+          {loadedResultsContent}
         </View>
       </View>
     )
@@ -627,6 +669,7 @@ export default memo(RightColumn, (prev, next) => {
     prev.showInitialLoading === next.showInitialLoading &&
     prev.isSearchPending === next.isSearchPending &&
     prev.isError === next.isError &&
+    prev.isExport === next.isExport &&
     prev.showNextPageLoading === next.showNextPageLoading &&
     prev.activeFiltersCount === next.activeFiltersCount &&
     prev.isRecommendationsVisible === next.isRecommendationsVisible

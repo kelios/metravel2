@@ -63,4 +63,33 @@ describe('MapQuickFilters', () => {
     fireEvent.press(getByLabelText(/Открыть все фильтры, выбрано 1/));
     expect(onOpenFilters).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the overflow action chip compact on 393px mobile widths', () => {
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({
+      width: 393,
+      height: 852,
+      scale: 1,
+      fontScale: 1,
+    });
+
+    const { getByText, getByLabelText, queryByText } = render(
+      <MapQuickFilters
+        categories={[
+          { id: 1, name: 'Парковка' },
+          { id: 2, name: 'Пещера' },
+          { id: 3, name: 'Костёл' },
+          { id: 4, name: 'Родник' },
+        ]}
+        selectedCategories={[]}
+        onToggleCategory={jest.fn()}
+        maxVisible={3}
+        onOpenFilters={jest.fn()}
+      />
+    );
+
+    expect(getByText('Парковка')).toBeTruthy();
+    expect(getByText('Пещера')).toBeTruthy();
+    expect(queryByText('Костёл')).toBeNull();
+    expect(getByLabelText(/Открыть все фильтры, скрыто ещё \d+/)).toBeTruthy();
+  });
 });

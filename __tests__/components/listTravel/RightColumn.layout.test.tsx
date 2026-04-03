@@ -298,4 +298,65 @@ describe('RightColumn layout invariants', () => {
 
     expect(screen.getByText('on-1')).toBeTruthy();
   });
+
+  it('keeps the visible results subtree stable when only search text changes', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    const renderItem = jest.fn((t: any) => {
+      const React = require('react');
+      const { Text } = require('react-native');
+      return React.createElement(Text, { testID: `travel-card-${String(t.id)}` }, t.name);
+    });
+
+    const baseProps = {
+      setSearch: jest.fn(),
+      isRecommendationsVisible: false,
+      handleRecommendationsVisibilityChange: jest.fn(),
+      activeFiltersCount: 0,
+      total: travels.length,
+      contentPadding: 16,
+      showInitialLoading: false,
+      isError: false,
+      showEmptyState: false,
+      getEmptyStateMessage: null,
+      travels: travels as any,
+      gridColumns: 2,
+      isMobile: false,
+      showNextPageLoading: false,
+      refetch: jest.fn(),
+      renderItem: renderItem as any,
+    };
+
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <RightColumn
+            {...baseProps}
+            search=""
+          />
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+
+    const initialRenderCalls = renderItem.mock.calls.length;
+    expect(initialRenderCalls).toBeGreaterThan(0);
+
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <RightColumn
+            {...baseProps}
+            search="минск"
+          />
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
+
+    expect(renderItem.mock.calls).toHaveLength(initialRenderCalls);
+  });
 });

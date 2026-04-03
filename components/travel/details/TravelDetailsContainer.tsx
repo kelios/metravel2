@@ -72,7 +72,14 @@ export default function TravelDetailsContainer() {
   const { contentHorizontalPadding, sideMenuPlatformStyles } = travelDetails.layout
   const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
     travelDetails.navigation
-  const { lcpLoaded, setLcpLoaded, sliderReady, deferAllowed, postLcpRuntimeReady } =
+  const {
+    lcpLoaded,
+    setLcpLoaded,
+    sliderReady,
+    deferAllowed,
+    postLcpRuntimeReady,
+    heroEnhancersReady = postLcpRuntimeReady,
+  } =
     travelDetails.performance
   const { closeMenu, animatedX, menuWidthNum } = travelDetails.menu
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
@@ -253,7 +260,7 @@ export default function TravelDetailsContainer() {
         onFirstImageLoad={handleFirstImageLoad}
         sectionLinks={sectionLinks}
         onQuickJump={scrollToWithMenuClose}
-        deferHeroExtras={!deferAllowed}
+        deferHeroExtras={!heroEnhancersReady}
         activeSection={activeSection}
         closeMenu={closeMenu}
         onNavigate={scrollToWithMenuClose}

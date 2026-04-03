@@ -99,7 +99,7 @@ describe('useTravelDetailsPerformance', () => {
 
     act(() => {})
     expect(result.current.deferAllowed).toBe(true)
-    expect(result.current.postLcpRuntimeReady).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
   })
 
   it('preloads slider runtime automatically after LCP', async () => {
@@ -126,7 +126,7 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.sliderReady).toBe(true)
   })
 
-  it('reveals post-LCP runtime automatically after data loading without user interaction', async () => {
+  it('keeps post-LCP runtime blocked until LCP is ready', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 1, name: 'Demo travel' } as any,
@@ -136,6 +136,68 @@ describe('useTravelDetailsPerformance', () => {
     )
 
     expect(result.current.deferAllowed).toBe(true)
+    expect(result.current.heroEnhancersReady).toBe(false)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
+  })
+
+  it('reveals hero enhancers and post-LCP runtime on user interaction after LCP', async () => {
+    const { result } = renderHook(() =>
+      useTravelDetailsPerformance({
+        travel: { id: 1, name: 'Demo travel' } as any,
+        isMobile: false,
+        isLoading: false,
+      })
+    )
+
+    await act(async () => {
+      result.current.setLcpLoaded(true)
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(result.current.heroEnhancersReady).toBe(false)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
+
+    await act(async () => {
+      window.dispatchEvent(new Event('scroll'))
+    })
+
+    expect(result.current.heroEnhancersReady).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(true)
+  })
+
+  it('reveals hero enhancers on short fallback and post-LCP runtime on late fallback', async () => {
+    const { result } = renderHook(() =>
+      useTravelDetailsPerformance({
+        travel: { id: 1, name: 'Demo travel' } as any,
+        isMobile: false,
+        isLoading: false,
+      })
+    )
+
+    await act(async () => {
+      result.current.setLcpLoaded(true)
+    })
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      jest.advanceTimersByTime(1800)
+      await Promise.resolve()
+    })
+
+    expect(result.current.heroEnhancersReady).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
+
+    await act(async () => {
+      jest.advanceTimersByTime(5200)
+      await Promise.resolve()
+    })
+
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 })

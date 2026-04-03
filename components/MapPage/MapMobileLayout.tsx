@@ -47,6 +47,9 @@ interface MapMobileLayoutProps {
 }
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
+const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430;
+const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 350;
+const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 420;
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   mapComponent,
@@ -68,10 +71,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 }) => {
   const colors = useThemedColors();
   const { width: viewportWidth } = useWindowDimensions();
-  const isNarrow = viewportWidth <= 390;
-  const isVeryNarrow = viewportWidth <= 350;
-  const compactSheetActions = viewportWidth <= 380;
-  const stackSheetToolbar = viewportWidth <= 390;
+  const isNarrow = viewportWidth <= PHONE_COMPACT_LAYOUT_MAX_WIDTH;
+  const isVeryNarrow = viewportWidth <= PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH;
+  const compactSheetActions = viewportWidth <= PHONE_COMPACT_ACTIONS_MAX_WIDTH;
+  const stackSheetToolbar = viewportWidth <= PHONE_COMPACT_LAYOUT_MAX_WIDTH;
   const styles = useMemo(
     () => getStyles(colors, { isNarrow, compactSheetActions, stackSheetToolbar }),
     [colors, isNarrow, compactSheetActions, stackSheetToolbar]
@@ -320,7 +323,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const sheetPeekContent = Platform.OS === 'web' ? null : peekContent;
   const quickActionsBottomOffset = consentBannerVisible ? 344 : 260;
-  const quickOpenButtonBottomOffset = consentBannerVisible ? 280 : 196;
 
   // Content based on active tab
   const sheetContent = useMemo(() => {
@@ -571,53 +573,25 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
       {/* Quick actions for mobile web */}
       {Platform.OS === 'web' && bottomSheetState === 'collapsed' && sheetState === 'collapsed' && (
-        <>
-          <View
-            style={[
-              styles.quickActionsRail,
-              {
-                bottom: Platform.OS === 'web'
-                  ? (`calc(${quickActionsBottomOffset}px + env(safe-area-inset-bottom, 0px))` as any)
-                  : quickActionsBottomOffset,
-              },
-            ]}
-          >
-
-            <CardActionPressable
-              accessibilityRole="button"
-              accessibilityLabel="Открыть фильтры"
-              onPress={onOpenFilters}
-              style={styles.quickCircleButton}
-            >
-              <Feather name="sliders" size={20} color={colors.text} />
-            </CardActionPressable>
-          </View>
-
+        <View
+          style={[
+            styles.quickActionsRail,
+            {
+              bottom: Platform.OS === 'web'
+                ? (`calc(${quickActionsBottomOffset}px + env(safe-area-inset-bottom, 0px))` as any)
+                : quickActionsBottomOffset,
+            },
+          ]}
+        >
           <CardActionPressable
-            testID="map-panel-open"
             accessibilityRole="button"
-            accessibilityLabel={`Открыть список (${travelsData.length} мест)`}
-            onPress={handleToggleListPanel}
-            style={[
-              styles.quickOpenButton,
-              {
-                bottom: Platform.OS === 'web'
-                  ? (`calc(${quickOpenButtonBottomOffset}px + env(safe-area-inset-bottom, 0px))` as any)
-                  : quickOpenButtonBottomOffset,
-              },
-            ]}
+            accessibilityLabel="Открыть фильтры"
+            onPress={onOpenFilters}
+            style={styles.quickCircleButton}
           >
-            <Feather name="list" size={16} color={colors.textOnPrimary} />
-            <RNText style={styles.quickOpenButtonText}>Список</RNText>
-            {travelsData.length > 0 && (
-              <View style={styles.quickOpenBadge}>
-                <RNText style={styles.quickOpenBadgeText}>
-                  {travelsData.length > 999 ? '999+' : String(travelsData.length)}
-                </RNText>
-              </View>
-            )}
+            <Feather name="sliders" size={20} color={colors.text} />
           </CardActionPressable>
-        </>
+        </View>
       )}
 
       {/* Bottom Sheet */}
@@ -676,46 +650,6 @@ const getStyles = (
       borderWidth: 1,
       borderColor: colors.borderLight,
       boxShadow: '0 8px 18px rgba(0,0,0,0.14)' as any,
-    },
-    quickOpenButton: {
-      position: 'absolute',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      minHeight: 48,
-      paddingLeft: 14,
-      paddingRight: 12,
-      borderRadius: 999,
-      backgroundColor: colors.primary,
-      zIndex: 810,
-      ...(Platform.OS === 'web'
-        ? ({
-            left: '50%',
-            transform: 'translateX(-50%)',
-          } as any)
-        : {
-            alignSelf: 'center',
-          }),
-      boxShadow: '0 10px 24px rgba(0,0,0,0.18)' as any,
-    },
-    quickOpenButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.textOnPrimary,
-    },
-    quickOpenBadge: {
-      minWidth: 24,
-      height: 24,
-      paddingHorizontal: 7,
-      borderRadius: 12,
-      backgroundColor: colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    quickOpenBadgeText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.primary,
     },
     sheetRoot: {
       flexGrow: 1,

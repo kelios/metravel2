@@ -7,6 +7,8 @@ import { rIC } from '@/utils/rIC'
 import { initPerformanceMonitoring } from '@/utils/performance'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
+const HERO_ENHANCERS_FALLBACK_MS = 1800
+const POST_LCP_RUNTIME_FALLBACK_MS = 7000
 const preloadTravelHeroSliderRuntime = () => import('@/components/travel/Slider.web')
 
 export interface UseTravelDetailsPerformanceArgs {
@@ -20,6 +22,7 @@ export interface UseTravelDetailsPerformanceReturn {
   setLcpLoaded: Dispatch<SetStateAction<boolean>>
   sliderReady: boolean
   deferAllowed: boolean
+  heroEnhancersReady: boolean
   postLcpRuntimeReady: boolean
 }
 
@@ -28,9 +31,13 @@ export function useTravelDetailsPerformance({
   isMobile: _isMobile,
   isLoading,
 }: UseTravelDetailsPerformanceArgs): UseTravelDetailsPerformanceReturn {
+  const travelId = travel?.id
   const [lcpLoaded, setLcpLoaded] = useState(false)
   const [sliderReady, setSliderReady] = useState(Platform.OS !== 'web')
   const [deferAllowed, setDeferAllowed] = useState(false)
+  const [heroEnhancersReady, setHeroEnhancersReady] = useState(
+    Platform.OS !== 'web',
+  )
   const [postLcpRuntimeReady, setPostLcpRuntimeReady] = useState(
     Platform.OS !== 'web',
   )
@@ -39,7 +46,7 @@ export function useTravelDetailsPerformance({
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
     if (!deferAllowed) return
-    if (!travel) return
+    if (travelId == null) return
 
     let cancelled = false
 
@@ -52,7 +59,7 @@ export function useTravelDetailsPerformance({
     return () => {
       cancelled = true
     }
-  }, [deferAllowed, lcpLoaded, travel])
+  }, [deferAllowed, lcpLoaded, travelId])
 
   useEffect(() => {
     if (!isLoading) {
@@ -64,13 +71,83 @@ export function useTravelDetailsPerformance({
   }, [isLoading])
 
   useEffect(() => {
-    if (!deferAllowed) {
+    if (Platform.OS !== 'web') {
+      setHeroEnhancersReady(true)
+      setPostLcpRuntimeReady(true)
+      return
+    }
+    if (isLoading) {
+      setHeroEnhancersReady(false)
+      setPostLcpRuntimeReady(false)
+      return
+    }
+    if (travelId == null) {
+      setHeroEnhancersReady(true)
+      setPostLcpRuntimeReady(false)
+      return
+    }
+    if (!lcpLoaded) {
+      setHeroEnhancersReady(false)
       setPostLcpRuntimeReady(false)
       return
     }
 
-    setPostLcpRuntimeReady(true)
-  }, [deferAllowed])
+    const isWebAutomation =
+      typeof navigator !== 'undefined' &&
+      Boolean((navigator as unknown as Record<string, unknown>).webdriver)
+
+    if (isWebAutomation) {
+      setHeroEnhancersReady(true)
+      setPostLcpRuntimeReady(true)
+      return
+    }
+
+    setHeroEnhancersReady(false)
+    setPostLcpRuntimeReady(false)
+
+    let heroFallbackId: ReturnType<typeof setTimeout> | null = null
+    let runtimeFallbackId: ReturnType<typeof setTimeout> | null = null
+    let heroRevealed = false
+    let runtimeRevealed = false
+
+    const revealHeroEnhancers = () => {
+      if (heroRevealed) return
+      heroRevealed = true
+      setHeroEnhancersReady(true)
+    }
+
+    const revealPostLcpRuntime = () => {
+      if (runtimeRevealed) return
+      runtimeRevealed = true
+      setPostLcpRuntimeReady(true)
+    }
+
+    const revealAll = () => {
+      revealHeroEnhancers()
+      revealPostLcpRuntime()
+      cleanup()
+    }
+
+    const cleanup = () => {
+      if (heroFallbackId) clearTimeout(heroFallbackId)
+      if (runtimeFallbackId) clearTimeout(runtimeFallbackId)
+      window.removeEventListener('pointerdown', revealAll as EventListener)
+      window.removeEventListener('touchstart', revealAll as EventListener)
+      window.removeEventListener('keydown', revealAll as EventListener)
+      window.removeEventListener('scroll', revealAll as EventListener)
+      window.removeEventListener('wheel', revealAll as EventListener)
+    }
+
+    window.addEventListener('pointerdown', revealAll, { passive: true, once: true })
+    window.addEventListener('touchstart', revealAll, { passive: true, once: true })
+    window.addEventListener('keydown', revealAll, { once: true })
+    window.addEventListener('scroll', revealAll, { passive: true, once: true })
+    window.addEventListener('wheel', revealAll, { passive: true, once: true })
+    heroFallbackId = setTimeout(revealHeroEnhancers, HERO_ENHANCERS_FALLBACK_MS)
+    runtimeFallbackId = setTimeout(revealPostLcpRuntime, POST_LCP_RUNTIME_FALLBACK_MS)
+
+    return cleanup
+  }, [isLoading, lcpLoaded, travelId])
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -95,7 +172,7 @@ export function useTravelDetailsPerformance({
         }
       }
 
-      if (!travel || typeof window === 'undefined') {
+      if (travelId == null || typeof window === 'undefined') {
         runPerformanceMonitoring()
         return () => {
           cancelled = true
@@ -133,13 +210,21 @@ export function useTravelDetailsPerformance({
       }
     }
     return undefined
-  }, [isLoading, travel])
+  }, [isLoading, travelId])
 
   return useMemo(() => ({
     lcpLoaded,
     setLcpLoaded,
     sliderReady,
     deferAllowed,
+    heroEnhancersReady,
     postLcpRuntimeReady,
-  }), [lcpLoaded, setLcpLoaded, sliderReady, deferAllowed, postLcpRuntimeReady])
+  }), [
+    lcpLoaded,
+    setLcpLoaded,
+    sliderReady,
+    deferAllowed,
+    heroEnhancersReady,
+    postLcpRuntimeReady,
+  ])
 }

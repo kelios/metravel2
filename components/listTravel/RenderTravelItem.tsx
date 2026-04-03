@@ -10,6 +10,39 @@ interface ContainerStyle extends ViewStyle {
     transition?: string;
 }
 
+const hasSameRenderedTravelSnapshot = (prev: Travel, next: Travel) => {
+    const prevUser = (prev as any)?.user;
+    const nextUser = (next as any)?.user;
+
+    return (
+        prev.id === next.id &&
+        prev.slug === next.slug &&
+        prev.travel_image_thumb_url === next.travel_image_thumb_url &&
+        prev.name === next.name &&
+        prev.countryName === next.countryName &&
+        prev.userName === next.userName &&
+        prev.countUnicIpView === next.countUnicIpView &&
+        (prev as any)?.url === (next as any)?.url &&
+        (prev as any)?.rating === (next as any)?.rating &&
+        (prev as any)?.rating_count === (next as any)?.rating_count &&
+        (prev as any)?.created_at === (next as any)?.created_at &&
+        (prev as any)?.updated_at === (next as any)?.updated_at &&
+        (prev as any)?.userIds === (next as any)?.userIds &&
+        (prev as any)?.userId === (next as any)?.userId &&
+        (prev as any)?.user_id === (next as any)?.user_id &&
+        (prev as any)?.ownerId === (next as any)?.ownerId &&
+        (prev as any)?.owner_id === (next as any)?.owner_id &&
+        (prev as any)?.author_name === (next as any)?.author_name &&
+        (prev as any)?.authorName === (next as any)?.authorName &&
+        (prev as any)?.owner_name === (next as any)?.owner_name &&
+        (prev as any)?.ownerName === (next as any)?.ownerName &&
+        prevUser?.id === nextUser?.id &&
+        prevUser?.name === nextUser?.name &&
+        prevUser?.first_name === nextUser?.first_name &&
+        prevUser?.last_name === nextUser?.last_name
+    );
+}
+
 type RenderTravelItemProps = {
     item: Travel;
     index?: number;
@@ -105,8 +138,8 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     if (prev.isSelected !== next.isSelected) return false;
     if (prev.index !== next.index) return false;
     
-    // 2. Проверка ссылки на объект данных (меняется при обновлении данных)
-    if (prev.item !== next.item) return false;
+    // 2. Пропускаем refresh с новой ссылкой на item, если карточка визуально не меняется.
+    if (prev.item !== next.item && !hasSameRenderedTravelSnapshot(prev.item, next.item)) return false;
     
     // 3. Режимы работы (меняются при навигации)
     if (prev.selectable !== next.selectable) return false;
@@ -120,6 +153,8 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     // 5. Очень редкие изменения
     if (prev.isFirst !== next.isFirst) return false;
     if (prev.isSingle !== next.isSingle) return false;
+    if (prev.hideAuthor !== next.hideAuthor) return false;
+    if (prev.cardWidth !== next.cardWidth) return false;
     if (prev.viewportWidth !== next.viewportWidth) return false;
     if (prev.imageHeight !== next.imageHeight) return false;
     if (prev.visualVariant !== next.visualVariant) return false;

@@ -55,7 +55,7 @@ export function useMapPopupAutoPan({
         const safeCenterY = (safeTop + safeBottom) / 2
         const overflowLeft = horizontalPadding - popupRect.left
         const overflowRight = popupRect.right - (mapRect.width - horizontalPadding)
-        const overflowTop = verticalPadding - popupRect.top
+        const overflowTop = safeTop - popupRect.top
         const overflowBottom = popupRect.bottom - safeBottom
 
         if (overflowLeft > 0 && overflowRight > 0) {
@@ -107,7 +107,6 @@ export function useMapPopupAutoPan({
     scheduleRun()
 
     let resizeObserver: ResizeObserver | null = null
-    let cleanupTimer: ReturnType<typeof setTimeout> | null = null
     const cleanup = () => {
       if (rafId) {
         cancelAnimationFrame(rafId)
@@ -115,10 +114,6 @@ export function useMapPopupAutoPan({
       }
       resizeObserver?.disconnect()
       resizeObserver = null
-      if (cleanupTimer) {
-        clearTimeout(cleanupTimer)
-        cleanupTimer = null
-      }
       map?.off?.('popupclose', cleanup)
     }
 
@@ -134,7 +129,6 @@ export function useMapPopupAutoPan({
     }
 
     map?.on?.('popupclose', cleanup)
-    cleanupTimer = setTimeout(cleanup, 1000)
   }, [mapRef, popupBottomOffset])
 
   const popupAutoPanPadding = useMemo(() => {

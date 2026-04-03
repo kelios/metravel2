@@ -21,6 +21,9 @@ interface MapQuickFiltersProps {
   onOpenFilters?: () => void;
 }
 
+const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430;
+const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 360;
+
 export const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']> = {
   'Горы': 'triangle',
   'Пляжи': 'sun',
@@ -43,8 +46,8 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
 }) => {
   const colors = useThemedColors();
   const { width } = useWindowDimensions();
-  const isNarrow = width > 0 && width <= 390;
-  const isVeryNarrow = width > 0 && width <= 360;
+  const isNarrow = width > 0 && width <= PHONE_COMPACT_LAYOUT_MAX_WIDTH;
+  const isVeryNarrow = width > 0 && width <= PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH;
   const styles = useMemo(() => getStyles(colors, { isNarrow, isVeryNarrow }), [colors, isNarrow, isVeryNarrow]);
   const selectedCount = selectedCategories.length;
   const shouldReserveActionChipSpace =

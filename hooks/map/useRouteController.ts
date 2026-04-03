@@ -7,6 +7,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
+import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 import { logMessage } from '@/utils/logger';
 import { showRoutePointAddedToast } from '@/utils/mapToasts';
 import type { MapUiApi } from '@/types/mapUi';
@@ -307,6 +308,8 @@ export function useRouteController(
   const buildRouteTo = useCallback(
     (item: TravelCoords) => {
       if (!item?.coord) return;
+      const bottomSheetStore = useBottomSheetStore.getState();
+      const shouldCollapseBottomSheet = bottomSheetStore.state !== 'collapsed';
       const rawCoordStr = String(item.coord);
       const cleanedCoordStr = rawCoordStr.replace(/;/g, ',').replace(/\s+/g, '');
       const parsed = CoordinateConverter.fromLooseString(cleanedCoordStr);
@@ -318,6 +321,15 @@ export function useRouteController(
       const popupCoordCandidates = Array.from(
         new Set([cleanedCoordStr, rawCoordStr, coordStr].filter(Boolean))
       );
+      const popupOpenDelayMs = shouldCollapseBottomSheet ? 520 : 420;
+
+      if (shouldCollapseBottomSheet) {
+        try {
+          bottomSheetStore.requestCollapse();
+        } catch {
+          // noop
+        }
+      }
 
       try {
         mapUiApi?.focusOnCoord?.(coordStr, { zoom: 14 });
@@ -335,7 +347,7 @@ export function useRouteController(
               // noop
             }
           }
-        }, 420);
+        }, popupOpenDelayMs);
       } catch {
         // noop
       }

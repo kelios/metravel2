@@ -17,14 +17,22 @@ import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import { useTravelHeroState } from '@/hooks/useTravelHeroState'
 import { useTravelDetailsHeroCompositionModel } from './hooks/useTravelDetailsHeroCompositionModel'
 import TravelHeroInteractiveSlider from './TravelHeroInteractiveSlider'
-import { TravelHeroFavoriteToggle } from './TravelHeroFavoriteToggle'
-import { TravelHeroExtras } from './TravelHeroExtras'
 import {
   OptimizedLCPHero,
   OVERLAY_TRANSITION_MS,
 } from './TravelDetailsOptimizedLCPHero'
 
 const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
+const TravelHeroFavoriteToggleLazy = React.lazy(() =>
+  import('./TravelHeroFavoriteToggle').then((m) => ({
+    default: m.TravelHeroFavoriteToggle ?? m.default,
+  })),
+)
+const TravelHeroExtrasLazy = React.lazy(() =>
+  import('./TravelHeroExtras').then((m) => ({
+    default: m.TravelHeroExtras ?? m.default,
+  })),
+)
 
 /* ---- TravelHeroSectionInner ---- */
 function TravelHeroSectionInner({
@@ -222,22 +230,26 @@ function TravelHeroSectionInner({
             ) : null}
 
             {(Platform.OS !== 'web' || extrasReady) && (
-              <TravelHeroFavoriteToggle
-                travel={travel}
-                isMobile={isMobile}
-              />
+              <Suspense fallback={null}>
+                <TravelHeroFavoriteToggleLazy
+                  travel={travel}
+                  isMobile={isMobile}
+                />
+              </Suspense>
             )}
           </View>
         </View>
       ) : null}
 
       {extrasReady ? (
-        <TravelHeroExtras
-          travel={travel}
-          isMobile={isMobile}
-          sectionLinks={sectionLinks}
-          onQuickJump={onQuickJump}
-        />
+        <Suspense fallback={null}>
+          <TravelHeroExtrasLazy
+            travel={travel}
+            isMobile={isMobile}
+            sectionLinks={sectionLinks}
+            onQuickJump={onQuickJump}
+          />
+        </Suspense>
       ) : (
         <>
           <View

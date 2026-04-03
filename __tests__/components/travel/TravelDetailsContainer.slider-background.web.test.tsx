@@ -596,7 +596,34 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(galleryAnchors.length).toBeGreaterThan(0)
   })
 
-  it('renders hero enhancers immediately once the critical hero shell is shown', async () => {
+  it('keeps hero enhancers deferred until the container allows them', async () => {
+    mockUseTravelHeroState.mockReturnValueOnce({
+      firstImg: {
+        src: 'https://cdn.example.com/img.jpg',
+        blurhash: null,
+      },
+      heroHeight: 720,
+      galleryImages: [
+        { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+      ],
+      heroSliderImages: [
+        { id: '1', src: 'https://cdn.example.com/img.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+        { id: '2', src: 'https://cdn.example.com/img-2.jpg', width: 1200, height: 800, alt: 'Demo travel' },
+      ],
+      heroAlt: 'Demo travel',
+      aspectRatio: 1200 / 800,
+      setHeroContainerWidth: jest.fn(),
+      heroContainerWidth: 960,
+      webHeroLoaded: true,
+      overlayUnmounted: false,
+      isOverlayFading: false,
+      handleWebHeroLoad: jest.fn(),
+      handleSliderImageLoad: jest.fn(),
+      extrasReady: false,
+      sliderUpgradeAllowed: true,
+    } as any)
+
     const travel: any = {
       id: 3,
       name: 'Enhancer test travel',
@@ -636,6 +663,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
             onFirstImageLoad={() => {}}
             sectionLinks={[{ key: 'map', label: 'Карта маршрута', icon: 'map' }]}
             onQuickJump={() => {}}
+            deferExtras
           />
         </Suspense>,
       )
@@ -644,8 +672,8 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    expect(mockHeroExtrasSpy).toHaveBeenCalled()
-    expect(mockHeroFavoriteToggleSpy).toHaveBeenCalled()
+    expect(mockHeroExtrasSpy).not.toHaveBeenCalled()
+    expect(mockHeroFavoriteToggleSpy).not.toHaveBeenCalled()
   })
 
   it('does not mount Slider on web when hero has only one image', async () => {

@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react'
-
-import TravelDetailsPostLcpRuntime from '@/components/travel/details/TravelDetailsPostLcpRuntime'
+const TravelDetailsPostLcpRuntimeLazy = React.lazy(() =>
+  import('@/components/travel/details/TravelDetailsPostLcpRuntime'),
+)
 
 type DeferProps = {
   when: boolean
@@ -61,7 +62,7 @@ export default function TravelDetailsDeferredRuntimeSlot({
   return (
     <Defer when={deferredChromeReady}>
       <Suspense fallback={null}>
-        <TravelDetailsPostLcpRuntime
+        <TravelDetailsPostLcpRuntimeLazy
           travel={travel}
           isMobile={isMobile}
           screenWidth={screenWidth}
