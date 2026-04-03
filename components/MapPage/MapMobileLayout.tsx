@@ -71,7 +71,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const isNarrow = viewportWidth <= 390;
   const isVeryNarrow = viewportWidth <= 350;
   const compactSheetActions = viewportWidth <= 380;
-  const stackSheetToolbar = viewportWidth <= 340;
+  const stackSheetToolbar = viewportWidth <= 390;
   const styles = useMemo(
     () => getStyles(colors, { isNarrow, compactSheetActions, stackSheetToolbar }),
     [colors, isNarrow, compactSheetActions, stackSheetToolbar]

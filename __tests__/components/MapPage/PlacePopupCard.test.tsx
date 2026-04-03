@@ -27,20 +27,16 @@ jest.mock('@/components/ui/CardActionPressable', () => {
   };
 });
 
-jest.mock('@/hooks/useTheme', () => ({
-  __esModule: true,
-  useThemedColors: () => ({
-    text: '#111',
-    textMuted: '#666',
-    textOnDark: '#fff',
-    primary: '#2f6f62',
-    backgroundSecondary: '#f3f4f6',
-    surface: '#fff',
-    borderLight: '#ddd',
-  }),
-}));
-
 const PlacePopupCard = require('@/components/MapPage/Map/PlacePopupCard').default;
+const mockColors = {
+  text: '#111',
+  textMuted: '#666',
+  textOnDark: '#fff',
+  primary: '#2f6f62',
+  backgroundSecondary: '#f3f4f6',
+  surface: '#fff',
+  borderLight: '#ddd',
+};
 
 describe('PlacePopupCard', () => {
   const originalPlatform = Platform.OS;
@@ -71,6 +67,7 @@ describe('PlacePopupCard', () => {
     renderer.act(() => {
       renderer.create(
         <PlacePopupCard
+          colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
@@ -82,8 +79,8 @@ describe('PlacePopupCard', () => {
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
     expect(props.fit).toBe('contain');
-    expect(props.width).toBe(144);
-    expect(props.height).toBe(131);
+    expect(props.width).toBe(113);
+    expect(props.height).toBe(113);
     expect(props.blurBackground).toBe(true);
     expect(props.allowCriticalWebBlur).toBe(true);
   });
@@ -94,6 +91,7 @@ describe('PlacePopupCard', () => {
     renderer.act(() => {
       renderer.create(
         <PlacePopupCard
+          colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
@@ -104,14 +102,15 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.width).toBe(220);
-    expect(props.height).toBe(100);
+    expect(props.width).toBe(216);
+    expect(props.height).toBe(96);
   });
 
   it('uses a compact hero on travel details popup layout', () => {
     renderer.act(() => {
       renderer.create(
         <PlacePopupCard
+          colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
@@ -123,8 +122,8 @@ describe('PlacePopupCard', () => {
     expect(mockImageCardMedia).toHaveBeenCalled();
     const props = mockImageCardMedia.mock.calls[0]?.[0];
     expect(props).toBeTruthy();
-    expect(props.width).toBe(268);
-    expect(props.height).toBe(130);
+    expect(props.width).toBe(252);
+    expect(props.height).toBe(120);
   });
 
   it('reveals popup hero only after onLoad on iPhone Safari', () => {
@@ -141,6 +140,7 @@ describe('PlacePopupCard', () => {
     renderer.act(() => {
       renderer.create(
         <PlacePopupCard
+          colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
@@ -157,6 +157,7 @@ describe('PlacePopupCard', () => {
     renderer.act(() => {
       renderer.create(
         <PlacePopupCard
+          colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}

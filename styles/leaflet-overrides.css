@@ -71,11 +71,11 @@
 }
 
 .leaflet-popup.metravel-place-popup .leaflet-popup-content {
-  padding: 16px !important;
-  padding-right: 48px !important;
-  font-size: 15px !important;
-  line-height: 22px !important;
-  max-width: min(560px, calc(100vw - 28px)) !important;
+  padding: 12px !important;
+  padding-right: 40px !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  max-width: min(420px, calc(100vw - 28px)) !important;
 }
 
 /* MAP-03: На мобайле popup компактнее и скроллируется, чтобы не перекрывать карту */

@@ -632,6 +632,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
         ref={wrapperRef}
         testID="slider-wrapper"
         {...(isWeb ? { dataSet: { sliderInstance: sliderInstanceId } } as any : {})}
+        {...(isWeb ? ({ tabIndex: 0 } as any) : {})}
         onLayout={onLayout}
         style={[
           styles.wrapper,

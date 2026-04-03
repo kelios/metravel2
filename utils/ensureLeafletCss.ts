@@ -54,8 +54,8 @@ function getMarkerClusterOverridesCSS(): string {
     '.marker-cluster-medium div{width:34px!important;height:34px!important;margin-left:5px!important;margin-top:5px!important;line-height:34px!important;font-size:15px!important}',
     '.marker-cluster-large{width:52px!important;height:52px!important}',
     '.marker-cluster-large div{width:40px!important;height:40px!important;margin-left:6px!important;margin-top:6px!important;line-height:40px!important;font-size:16px!important}',
-    '.marker-cluster{box-shadow:0 4px 16px rgba(0,0,0,0.2)!important;transition:transform 0.15s ease!important}',
-    '.marker-cluster:hover{transform:scale(1.1)!important}',
+    '.marker-cluster{box-shadow:0 4px 16px rgba(0,0,0,0.2)!important;cursor:pointer!important;transition:box-shadow 0.15s ease,filter 0.15s ease!important}',
+    '.marker-cluster:hover{box-shadow:0 6px 18px rgba(0,0,0,0.24)!important;filter:brightness(1.02)!important}',
     '.leaflet-cluster-anim .leaflet-marker-icon,.leaflet-cluster-anim .leaflet-marker-shadow{transition:transform 0.3s ease-out,opacity 0.3s ease-out!important}',
   ].join('\n')
 }
@@ -115,4 +115,3 @@ function getLeafletOverridesCSS(): string {
     '.leaflet-popup-pane{touch-action:auto!important}',
   ].join('\n')
 }
-

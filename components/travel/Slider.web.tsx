@@ -358,6 +358,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ref={wrapperRef}
         testID="slider-wrapper"
         {...({ dataSet: { sliderInstance: sliderInstanceId } } as any)}
+        {...({ tabIndex: 0 } as any)}
         onLayout={onLayout}
         style={[
           styles.wrapper,

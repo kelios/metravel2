@@ -44,13 +44,18 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
     mode === 'radius'
       ? 'Фильтры применяются сразу, без отдельной кнопки'
       : 'Сначала выберите транспорт, затем две точки маршрута';
+  const showCompactDetails = !isMobile;
+  const compactSummary =
+    mode === 'radius'
+      ? `${getPlacesLabel(totalPoints)} · ${radiusValue || '60'} км`
+      : 'Старт и финиш выбираются на карте';
 
   return (
     <View style={styles.stickyTop} testID="filters-panel-header">
       {isMobile && (
         <View style={styles.compactMetaRow}>
           <Text style={styles.compactMetaText} numberOfLines={1}>
-            {summary}
+            {compactSummary}
           </Text>
           <IconButton
             icon={<Feather name="x" size={16} color={colors.textMuted} />}
@@ -74,19 +79,23 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
         tone={isMobile ? 'subtle' : 'default'}
         accessibilityLabel="Выбор режима поиска"
       />
-      <View style={styles.modeSummaryRow}>
-        <Feather
-          name={mode === 'radius' ? 'target' : 'navigation'}
-          size={13}
-          color={colors.primary}
-        />
-        <Text style={styles.modeSummaryText} numberOfLines={1}>
-          {summary}
-        </Text>
-      </View>
-      <Text style={styles.modeSummaryHint} numberOfLines={isMobile ? 2 : 1}>
-        {helper}
-      </Text>
+      {showCompactDetails && (
+        <>
+          <View style={styles.modeSummaryRow}>
+            <Feather
+              name={mode === 'radius' ? 'target' : 'navigation'}
+              size={13}
+              color={colors.primary}
+            />
+            <Text style={styles.modeSummaryText} numberOfLines={1}>
+              {summary}
+            </Text>
+          </View>
+          <Text style={styles.modeSummaryHint} numberOfLines={1}>
+            {helper}
+          </Text>
+        </>
+      )}
     </View>
   );
 };

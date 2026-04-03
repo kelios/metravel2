@@ -2,6 +2,12 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    invalidateQueries: jest.fn(),
+  }),
+}));
+
 jest.mock('@/hooks/useLeafletLoader', () => ({
   useLeafletLoader: jest.fn(),
 }));
@@ -182,7 +188,6 @@ describe('TravelMap (web)', () => {
 
     expect(createMapPopupComponent).toHaveBeenCalledWith(
       expect.objectContaining({
-        useMap: expect.any(Function),
         userLocation: null,
         compactLayout: true,
       })
@@ -196,8 +201,8 @@ describe('TravelMap (web)', () => {
         autoPan: true,
         keepInView: true,
         className: 'metravel-place-popup',
-        maxWidth: 320,
-        minWidth: 264,
+        maxWidth: 300,
+        minWidth: 248,
         autoPanPaddingTopLeft: [12, 72],
         autoPanPaddingBottomRight: [12, 72],
       })
@@ -230,8 +235,8 @@ describe('TravelMap (web)', () => {
     expect(props).toBeTruthy();
     expect(props.popupProps).toEqual(
       expect.objectContaining({
-        maxWidth: 248,
-        minWidth: 220,
+        maxWidth: 236,
+        minWidth: 212,
         autoPanPaddingTopLeft: [8, 56],
         autoPanPaddingBottomRight: [8, 104],
       })

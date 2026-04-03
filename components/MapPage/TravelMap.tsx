@@ -7,11 +7,12 @@
 
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { Platform, View, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
 import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay';
 import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapMarkers from './Map/MapMarkers';
 import ClusterLayer from './Map/ClusterLayer';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
@@ -164,14 +165,13 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, routeC
       pane = typeof map.getPane === 'function' ? map.getPane(paneName) : null;
       if (!pane && typeof map.createPane === 'function') {
         pane = map.createPane(paneName);
-        if (__DEV__) console.info('[TravelMap] RouteLineLayer: created custom pane', paneName);
       }
       if (pane && pane.style) {
         pane.style.zIndex = '450';
         pane.style.pointerEvents = 'none';
       }
-    } catch (e) {
-      if (__DEV__) console.warn('[TravelMap] RouteLineLayer: failed to create pane', e);
+    } catch {
+      // noop
     }
 
     // Convert coords to Leaflet LatLng
@@ -183,12 +183,7 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, routeC
       )
       .map(([lat, lng]) => L.latLng(lat, lng));
 
-    if (latlngs.length < 2) {
-      if (__DEV__) console.warn('[TravelMap] RouteLineLayer: not enough valid coordinates', latlngs.length);
-      return;
-    }
-
-    if (__DEV__) console.info('[TravelMap] RouteLineLayer: drawing route, points:', latlngs.length);
+    if (latlngs.length < 2) return;
 
     // Add polyline with slight delay to ensure pane is ready
     const addPolyline = () => {
@@ -236,8 +231,6 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, routeC
         }
         
         polylineRef.current = routeLayer;
-
-        if (__DEV__) console.info('[TravelMap] RouteLineLayer: polyline added, coords:', latlngs.length);
       } catch (error) {
         console.error('[TravelMap] RouteLineLayer: failed to add polyline', error);
         try {
@@ -279,7 +272,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   routeLineCoords: routeLineCoordsProp,
   routeLines: routeLinesProp,
 }) => {
+  const queryClient = useQueryClient();
   const colors = useThemedColors();
+  const themeContextValue = useTheme();
   const { width: viewportWidth } = useWindowDimensions();
   // `travelData` comes from API and can be null/invalid for some items.
   // Coerce to an array to avoid runtime crashes inside hooks/components that iterate it.
@@ -379,8 +374,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // Popup component
   const PopupComponent = useMemo(() => {
     if (!rl) return null;
-    return createMapPopupComponent({ useMap: rl.useMap, userLocation: null, compactLayout: compact });
-  }, [compact, rl]);
+    return createMapPopupComponent({
+      colors,
+      themeContextValue,
+      userLocation: null,
+      compactLayout: compact,
+      invalidateUserPoints: () => {
+        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+      },
+    });
+  }, [colors, compact, queryClient, rl, themeContextValue]);
 
   const handlePopupOpen = useCallback((e: any) => {
     const popup = e?.popup;
@@ -505,26 +508,26 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     const isVeryNarrow = viewportWidth <= 480;
     const maxWidth = compact
       ? isVeryNarrow
-        ? Math.min(248, Math.max(212, viewportWidth - 20))
+        ? Math.min(236, Math.max(208, viewportWidth - 20))
         : isNarrowViewport
-          ? Math.min(300, Math.max(248, viewportWidth - 28))
-          : Math.min(320, Math.max(264, viewportWidth - 32))
+          ? Math.min(284, Math.max(236, viewportWidth - 28))
+          : Math.min(300, Math.max(248, viewportWidth - 32))
       : isVeryNarrow
-        ? Math.min(300, Math.max(248, viewportWidth - 28))
+        ? Math.min(284, Math.max(240, viewportWidth - 28))
         : isNarrowViewport
-          ? Math.min(348, Math.max(280, viewportWidth - 32))
-          : Math.min(436, Math.max(320, viewportWidth - 40));
+          ? Math.min(320, Math.max(264, viewportWidth - 32))
+          : Math.min(388, Math.max(300, viewportWidth - 40));
     const minWidth = compact
       ? isVeryNarrow
-        ? Math.min(220, Math.max(196, maxWidth - 20))
+        ? Math.min(212, Math.max(188, maxWidth - 20))
         : isNarrowViewport
-          ? Math.min(248, Math.max(220, maxWidth - 36))
-          : Math.min(264, Math.max(240, maxWidth - 56))
+          ? Math.min(236, Math.max(208, maxWidth - 32))
+          : Math.min(248, Math.max(220, maxWidth - 44))
       : isVeryNarrow
-        ? 228
+        ? 220
         : isNarrowViewport
-          ? Math.min(280, Math.max(240, maxWidth - 56))
-          : Math.min(336, Math.max(280, maxWidth - 88));
+          ? Math.min(260, Math.max(228, maxWidth - 44))
+          : Math.min(308, Math.max(256, maxWidth - 72));
 
     return {
       autoPan: true,
@@ -770,9 +773,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         const leafletPoints = points.map(([lat, lng]) => L.latLng(lat, lng));
         const bounds = L.latLngBounds(leafletPoints);
         map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 15 });
-        if (__DEV__) console.info('[TravelMap] fitBounds applied for', points.length, 'points');
-      } catch (e) {
-        if (__DEV__) console.warn('[TravelMap] fitBounds failed:', e);
+      } catch {
+        // noop
       }
     };
 
@@ -791,19 +793,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     if (!enableOverlays || compact) return; // Don't add overlays in compact mode
 
     const map = mapRef.current;
-    if (__DEV__) console.info('[TravelMap] Initializing overlay layers');
 
     const controllersSnapshot = overlayControllersRef.current;
 
     // Cleanup existing overlays
-    controllersSnapshot.forEach((controller, id) => {
+    controllersSnapshot.forEach((controller) => {
       try {
         if (controller.stop) controller.stop();
         if (controller.layer && map) {
           map.removeLayer(controller.layer);
         }
-      } catch (e) {
-        if (__DEV__) console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
+      } catch {
+        // noop
       }
     });
     controllersSnapshot.clear();
@@ -820,10 +821,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         poiController.layer.addTo(map);
         controllersSnapshot.set('osm-poi', poiController);
         poiController.start();
-        if (__DEV__) console.info('[TravelMap] POI overlay initialized');
       }
-    } catch (e) {
-      if (__DEV__) console.warn('[TravelMap] Failed to initialize POI overlay:', e);
+    } catch {
+      // noop
     }
 
     try {
@@ -837,23 +837,21 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         campingController.layer.addTo(map);
         controllersSnapshot.set('osm-camping', campingController);
         campingController.start();
-        if (__DEV__) console.info('[TravelMap] Camping overlay initialized');
       }
-    } catch (e) {
-      if (__DEV__) console.warn('[TravelMap] Failed to initialize camping overlay:', e);
+    } catch {
+      // noop
     }
 
     return () => {
       // Cleanup overlays when unmounting or dependencies change
-      controllersSnapshot.forEach((controller, id) => {
+      controllersSnapshot.forEach((controller) => {
         try {
           if (controller.stop) controller.stop();
           if (controller.layer && map) {
             map.removeLayer(controller.layer);
           }
-          if (__DEV__) console.info('[TravelMap] Cleaned up overlay:', id);
-        } catch (e) {
-          if (__DEV__) console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
+        } catch {
+          // noop
         }
       });
       controllersSnapshot.clear();
@@ -913,12 +911,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           if (!mountedRef.current) return;
           if (map && !mapRef.current) {
             mapRef.current = map;
-            if (__DEV__) console.info('[TravelMap] Map ref set');
           }
         }}
         whenReady={() => {
           if (!mountedRef.current) return;
-          if (__DEV__) console.info('[TravelMap] Map ready event fired');
           setMapReady(true);
         }}
       >

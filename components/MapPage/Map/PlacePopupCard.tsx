@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
@@ -29,6 +29,7 @@ type Props = {
   width?: number;
   imageHeight?: number;
   compactLayout?: boolean;
+  colors: ThemedColors;
 };
 
 const POPUP_TOOLTIPS = {
@@ -41,9 +42,8 @@ const POPUP_TOOLTIPS = {
   buildRoute: 'Построить маршрут сюда',
 } as const;
 
-const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: boolean; onClose: () => void }> = ({ imageUrl, alt, visible, onClose }) => {
+const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: boolean; onClose: () => void; colors: ThemedColors }> = ({ imageUrl, alt, visible, onClose, colors }) => {
   const { width, height } = useWindowDimensions();
-  const colors = useThemedColors();
 
   const portalCreate = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -256,32 +256,32 @@ const COMPACT_LAYOUT_SPACING: Record<BreakpointKey, { radius: number; iconButton
 };
 
 const POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 280,
-  compact: 320,
-  default: 380,
+  narrow: 272,
+  compact: 296,
+  default: 332,
 };
 
 const COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 220,
-  compact: 248,
-  default: 268,
+  narrow: 216,
+  compact: 236,
+  default: 252,
 };
 
 const IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 130,
-  compact: 160,
-  default: 200,
+  narrow: 120,
+  compact: 144,
+  default: 176,
 };
 
 const COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT: Record<BreakpointKey, number> = {
-  narrow: 100,
-  compact: 120,
-  default: 130,
+  narrow: 96,
+  compact: 112,
+  default: 120,
 };
 
 const SPLIT_LAYOUT_MIN_VIEWPORT = 640;
-const SPLIT_LAYOUT_MIN_POPUP_WIDTH = 320;
-const SPLIT_LAYOUT_IMAGE_ASPECT = 1.1;
+const SPLIT_LAYOUT_MIN_POPUP_WIDTH = 300;
+const SPLIT_LAYOUT_IMAGE_ASPECT = 1;
 
 const PlacePopupCard: React.FC<Props> = ({
   title,
@@ -302,11 +302,11 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Мои точки',
-  width = 380,
+  width = 332,
   imageHeight: _imageHeight = 56,
   compactLayout = false,
+  colors,
 }) => {
-  const colors = useThemedColors();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
   const revealPopupImageOnLoadOnly = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
@@ -385,10 +385,10 @@ const PlacePopupCard: React.FC<Props> = ({
     viewportWidth >= SPLIT_LAYOUT_MIN_VIEWPORT &&
     maxPopupWidth >= SPLIT_LAYOUT_MIN_POPUP_WIDTH;
   const heroWidth = useSplitLayout
-    ? Math.max(120, Math.min(148, Math.round(maxPopupWidth * 0.38)))
+    ? Math.max(100, Math.min(118, Math.round(maxPopupWidth * 0.34)))
     : maxPopupWidth;
   const heroHeight = useSplitLayout
-    ? Math.max(110, Math.min(136, Math.round(heroWidth / SPLIT_LAYOUT_IMAGE_ASPECT)))
+    ? Math.max(100, Math.min(118, Math.round(heroWidth / SPLIT_LAYOUT_IMAGE_ASPECT)))
     : Math.max(
         1,
         Math.min(
@@ -422,6 +422,12 @@ const PlacePopupCard: React.FC<Props> = ({
         <Text style={styles.titleText} numberOfLines={useCompactLayout ? 2 : bp === 'narrow' ? 2 : 2}>
           {title}
         </Text>
+
+        {!!_subtitle && (
+          <Text style={styles.subtitleText} numberOfLines={useCompactLayout ? 2 : 1}>
+            {_subtitle}
+          </Text>
+        )}
 
         <View style={styles.metaRow}>
           {!!categoryLabel && (
@@ -461,7 +467,7 @@ const PlacePopupCard: React.FC<Props> = ({
         </CardActionPressable>
       )}
 
-      <View style={styles.actionsRow}>
+      <View style={styles.actionsStack}>
         {primaryAction && (
           <CardActionPressable
             accessibilityLabel={primaryAction.accessibilityLabel}
@@ -473,90 +479,92 @@ const PlacePopupCard: React.FC<Props> = ({
               pressed && styles.primaryActionBtnPressed,
             ]}
           >
-            <Feather name={primaryAction.icon} size={14} color={colors.textOnPrimary ?? colors.textOnDark} />
+            <Feather name={primaryAction.icon} size={15} color={colors.textOnPrimary ?? colors.textOnDark} />
             <Text style={styles.primaryActionText}>{primaryAction.label}</Text>
           </CardActionPressable>
         )}
 
-        {hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps && (
-          <CardActionPressable
-            accessibilityLabel="Открыть в Google Maps"
-            onPress={onOpenGoogleMaps}
-            title={POPUP_TOOLTIPS.openGoogleMaps}
-            style={actionBtnStyle}
-          >
-            <Feather name="map" size={14} color={colors.textMuted} />
-          </CardActionPressable>
-        )}
+        <View style={styles.secondaryActionsRow}>
+          {hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps && (
+            <CardActionPressable
+              accessibilityLabel="Открыть в Google Maps"
+              onPress={onOpenGoogleMaps}
+              title={POPUP_TOOLTIPS.openGoogleMaps}
+              style={actionBtnStyle}
+            >
+              <Feather name="map" size={14} color={colors.textMuted} />
+            </CardActionPressable>
+          )}
 
-        {hasCoord && onOpenOrganicMaps && (
-          <CardActionPressable
-            accessibilityLabel="Открыть в Organic Maps"
-            onPress={onOpenOrganicMaps}
-            title={POPUP_TOOLTIPS.openOrganicMaps}
-            style={actionBtnStyle}
-          >
-            <Feather name="compass" size={14} color={colors.textMuted} />
-          </CardActionPressable>
-        )}
+          {hasCoord && onOpenOrganicMaps && (
+            <CardActionPressable
+              accessibilityLabel="Открыть в Organic Maps"
+              onPress={onOpenOrganicMaps}
+              title={POPUP_TOOLTIPS.openOrganicMaps}
+              style={actionBtnStyle}
+            >
+              <Feather name="compass" size={14} color={colors.textMuted} />
+            </CardActionPressable>
+          )}
 
-        {hasCoord && onShareTelegram && (
-          <CardActionPressable
-            accessibilityLabel="Поделиться в Telegram"
-            onPress={onShareTelegram}
-            title={POPUP_TOOLTIPS.shareTelegram}
-            style={actionBtnStyle}
-          >
-            <Feather name="send" size={14} color={colors.textMuted} />
-          </CardActionPressable>
-        )}
+          {hasCoord && onShareTelegram && (
+            <CardActionPressable
+              accessibilityLabel="Поделиться в Telegram"
+              onPress={onShareTelegram}
+              title={POPUP_TOOLTIPS.shareTelegram}
+              style={actionBtnStyle}
+            >
+              <Feather name="send" size={14} color={colors.textMuted} />
+            </CardActionPressable>
+          )}
 
-        {hasArticle && primaryAction?.onPress !== onOpenArticle && (
-          <CardActionPressable
-            accessibilityLabel="Открыть статью"
-            onPress={onOpenArticle}
-            title={POPUP_TOOLTIPS.openArticle}
-            style={actionBtnStyle}
-          >
-            <Feather name="book-open" size={14} color={colors.textMuted} />
-          </CardActionPressable>
-        )}
+          {hasArticle && primaryAction?.onPress !== onOpenArticle && (
+            <CardActionPressable
+              accessibilityLabel="Открыть статью"
+              onPress={onOpenArticle}
+              title={POPUP_TOOLTIPS.openArticle}
+              style={actionBtnStyle}
+            >
+              <Feather name="book-open" size={14} color={colors.textMuted} />
+            </CardActionPressable>
+          )}
 
-        {onBuildRoute && primaryAction?.onPress !== onBuildRoute && (
-          <CardActionPressable
-            accessibilityLabel="Маршрут сюда"
-            onPress={onBuildRoute}
-            title={POPUP_TOOLTIPS.buildRoute}
-            testID="popup-build-route"
-            style={({ pressed }) => [
-              styles.iconBtn,
-              styles.routeBtn,
-              pressed && styles.actionBtnPressed,
-            ]}
-          >
-            <Feather name="corner-up-right" size={14} color={colors.primary} />
-          </CardActionPressable>
-        )}
+          {onBuildRoute && primaryAction?.onPress !== onBuildRoute && (
+            <CardActionPressable
+              accessibilityLabel="Маршрут сюда"
+              onPress={onBuildRoute}
+              title={POPUP_TOOLTIPS.buildRoute}
+              testID="popup-build-route"
+              style={({ pressed }) => [
+                styles.iconBtn,
+                styles.routeBtn,
+                pressed && styles.actionBtnPressed,
+              ]}
+            >
+              <Feather name="corner-up-right" size={14} color={colors.primary} />
+            </CardActionPressable>
+          )}
 
-        {onAddPoint && (
-          <CardActionPressable
-            accessibilityLabel={compactLabel}
-            onPress={() => void onAddPoint()}
-            disabled={addDisabled || isAdding}
-            title={compactLabel}
-            style={({ pressed }) => [
-              styles.addBtn,
-              (addDisabled || isAdding) && styles.addBtnDisabled,
-              pressed && styles.addBtnPressed,
-            ]}
-          >
-            {isAdding ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Feather name="plus" size={14} color={colors.primary} />
-            )}
-          </CardActionPressable>
-        )}
+          {onAddPoint && (
+            <CardActionPressable
+              accessibilityLabel={compactLabel}
+              onPress={() => void onAddPoint()}
+              disabled={addDisabled || isAdding}
+              title={compactLabel}
+              style={({ pressed }) => [
+                styles.addBtn,
+                (addDisabled || isAdding) && styles.addBtnDisabled,
+                pressed && styles.addBtnPressed,
+              ]}
+            >
+              {isAdding ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Feather name="plus" size={14} color={colors.primary} />
+              )}
+            </CardActionPressable>
+          )}
+        </View>
       </View>
     </View>
   ), [
@@ -583,6 +591,7 @@ const PlacePopupCard: React.FC<Props> = ({
     onShareTelegram,
     primaryAction,
     styles,
+    _subtitle,
     colors.textOnDark,
     colors.textOnPrimary,
     title,
@@ -629,6 +638,7 @@ const PlacePopupCard: React.FC<Props> = ({
           alt={title || 'Point image'}
           visible={fullscreenVisible}
           onClose={handleCloseFullscreen}
+          colors={colors}
         />
       )}
     </View>
@@ -693,7 +703,7 @@ const getStyles = (
     },
     popupCardSplit: {
       flexDirection: 'row',
-      alignItems: 'stretch',
+      alignItems: 'flex-start',
     },
     imageContainer: {
       width: '100%',
@@ -709,7 +719,7 @@ const getStyles = (
       height: undefined,
       minHeight: heroHeight > 0 ? heroHeight : 0,
       flexShrink: 0,
-      alignSelf: 'stretch',
+      alignSelf: 'flex-start',
     },
     imageExpandButton: {
       position: 'absolute',
@@ -731,70 +741,70 @@ const getStyles = (
     contentContainerSplit: {
       flex: 1,
       minWidth: 0,
-      paddingLeft: splitLayout ? 14 : horizontalPadding + 2,
-      paddingRight: splitLayout ? 14 : horizontalPadding + 2,
-      paddingTop: splitLayout ? 12 : topPadding + 2,
-      paddingBottom: splitLayout ? 12 : bottomPadding + 2,
-      justifyContent: splitLayout ? 'center' : undefined,
+      paddingLeft: splitLayout ? 12 : horizontalPadding + 2,
+      paddingRight: splitLayout ? 12 : horizontalPadding + 2,
+      paddingTop: splitLayout ? 8 : topPadding + 2,
+      paddingBottom: splitLayout ? 8 : bottomPadding + 2,
+      justifyContent: 'flex-start',
     },
     content: {
-      gap: splitLayout ? Math.max(8, sp.sectionGap - 6) : compactLayout ? compactSp.sectionGap : sp.sectionGap,
+      gap: splitLayout ? Math.max(6, sp.sectionGap - 7) : compactLayout ? compactSp.sectionGap : sp.sectionGap,
     },
     infoSection: {
-      gap: compactLayout ? 4 : splitLayout ? 6 : bp === 'narrow' ? 6 : 8,
+      gap: compactLayout ? 4 : splitLayout ? 5 : bp === 'narrow' ? 6 : 8,
     },
     metaRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: bp === 'narrow' ? 'flex-start' : 'center',
-      gap: 6,
+      gap: splitLayout ? 5 : 6,
     },
     metaBadge: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: compactLayout ? 5 : 6,
-      minHeight: compactLayout ? compactSp.metaMinHeight : 26,
-      paddingHorizontal: compactLayout ? 8 : 10,
-      paddingVertical: compactLayout ? 4 : 5,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      minHeight: compactLayout ? compactSp.metaMinHeight : splitLayout ? 24 : 26,
+      paddingHorizontal: compactLayout ? 8 : splitLayout ? 9 : 10,
+      paddingVertical: compactLayout ? 4 : splitLayout ? 4 : 5,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
       borderWidth: 0,
       borderColor: 'transparent',
     },
     titleText: {
-      fontSize: fs.title,
-      fontWeight: '600',
+      fontSize: splitLayout ? fs.title + 1 : fs.title,
+      fontWeight: '700',
       color: colors.text,
-      lineHeight: fs.title * 1.35,
-      letterSpacing: Platform.OS === 'web' ? -0.2 : undefined,
+      lineHeight: (splitLayout ? fs.title + 1 : fs.title) * 1.28,
+      letterSpacing: Platform.OS === 'web' ? -0.35 : undefined,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
-            WebkitLineClamp: splitLayout || bp === 'narrow' ? 3 : 2,
+            WebkitLineClamp: splitLayout ? 2 : bp === 'narrow' ? 3 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           } as any)
         : null),
     },
     subtitleText: {
-      fontSize: compactLayout ? fs.small - 1 : fs.small,
+      fontSize: compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small,
       color: colors.textMuted,
-      lineHeight: (compactLayout ? fs.small - 1 : fs.small) * 1.45,
+      lineHeight: (compactLayout ? fs.small - 1 : splitLayout ? fs.small + 1 : fs.small) * 1.35,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: splitLayout ? 2 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           } as any)
         : null),
     },
     categoryText: {
-      fontSize: fs.small,
+      fontSize: compactLayout ? fs.small - 1 : fs.small,
       color: colors.textMuted,
     },
     smallText: {
-      fontSize: fs.small,
+      fontSize: compactLayout ? fs.small - 1 : fs.small,
       color: colors.textMuted,
     },
     drivingRow: {
@@ -808,17 +818,17 @@ const getStyles = (
       alignItems: 'center',
       gap: compactLayout ? 5 : 6,
       minHeight: compactLayout ? compactSp.coordMinHeight : splitLayout ? 30 : 32,
-      paddingHorizontal: compactLayout ? 8 : 9,
+      paddingHorizontal: compactLayout ? 8 : splitLayout ? 10 : 9,
       paddingVertical: compactLayout ? 4 : 5,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      borderWidth: 0,
-      borderColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
     },
     coordText: {
-      fontSize: compactLayout ? fs.small : fs.coord,
-      fontWeight: '400',
-      color: colors.textMuted,
+      fontSize: compactLayout ? fs.small : splitLayout ? fs.coord - 1 : fs.coord,
+      fontWeight: '500',
+      color: colors.text,
       flex: 1,
       minWidth: 0,
       fontFamily:
@@ -826,43 +836,35 @@ const getStyles = (
           ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
           : undefined,
     },
-    actionsGroup: {
-      gap: 6,
+    actionsStack: {
+      gap: splitLayout ? 8 : 10,
     },
-    sectionLabel: {
-      fontSize: 11,
-      lineHeight: 16,
-      fontWeight: '600',
-      color: colors.textMuted,
-      paddingHorizontal: 2,
-      textTransform: 'uppercase',
-      letterSpacing: Platform.OS === 'web' ? 0.4 : undefined,
-    },
-    actionsRow: {
+    secondaryActionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: splitLayout ? 6 : compactLayout ? 6 : bp === 'narrow' ? 6 : 8,
+      alignItems: 'center',
+      gap: splitLayout ? 7 : compactLayout ? 6 : 8,
     },
     iconBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
-      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
+      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      borderWidth: 0,
-      borderColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease' } as any) : null),
     },
     actionBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
-      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
+      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      borderWidth: 0,
-      borderColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease' } as any) : null),
     },
     actionBtnPressed: {
@@ -873,11 +875,12 @@ const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 5,
-      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 34 : 36,
-      paddingVertical: compactLayout ? 4 : 5,
-      paddingHorizontal: compactLayout ? sp.btnPadH : sp.btnPadH,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      gap: 6,
+      width: '100%',
+      minHeight: compactLayout ? compactSp.addBtnMinHeight : splitLayout ? 38 : 40,
+      paddingVertical: compactLayout ? 4 : 6,
+      paddingHorizontal: compactLayout ? sp.btnPadH : splitLayout ? 14 : sp.btnPadH,
+      borderRadius: DESIGN_TOKENS.radii.lg,
       backgroundColor: colors.primary,
       borderWidth: 0,
       borderColor: 'transparent',
@@ -887,24 +890,24 @@ const getStyles = (
       opacity: 0.72,
     },
     primaryActionText: {
-      fontSize: compactLayout ? fs.small - 1 : fs.small,
+      fontSize: compactLayout ? fs.small : fs.small + 1,
       fontWeight: '600',
       color: colors.textOnPrimary ?? colors.textOnDark,
-      letterSpacing: Platform.OS === 'web' ? 0.1 : undefined,
+      letterSpacing: Platform.OS === 'web' ? 0 : undefined,
     },
     routeBtn: {
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
-      borderColor: 'transparent',
+      borderColor: colors.primarySoft ?? colors.borderLight ?? colors.border,
     },
     addBtn: {
       alignItems: 'center',
       justifyContent: 'center',
-      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
-      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 4 : sp.iconButtonSize,
-      borderRadius: DESIGN_TOKENS.radii.sm,
+      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
+      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
+      borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
-      borderColor: colors.borderLight ?? colors.border,
-      backgroundColor: 'transparent',
+      borderColor: colors.primarySoft ?? colors.borderLight ?? colors.border,
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'opacity 0.15s ease' } as any) : null),
     },
     addBtnDisabled: {

@@ -142,15 +142,15 @@ export function useMapPopupAutoPan({
     const isNarrowViewport = effectiveWidth <= 768
     const isVeryNarrow = effectiveWidth <= 480
     const maxWidth = isVeryNarrow
-      ? Math.min(300, Math.max(248, effectiveWidth - 28))
+      ? Math.min(284, Math.max(240, effectiveWidth - 28))
       : isNarrowViewport
-        ? Math.min(348, Math.max(280, effectiveWidth - 32))
-        : Math.min(436, Math.max(320, effectiveWidth - 40))
+        ? Math.min(320, Math.max(264, effectiveWidth - 32))
+        : Math.min(388, Math.max(300, effectiveWidth - 40))
     const minWidth = isVeryNarrow
-      ? 228
+      ? 220
       : isNarrowViewport
-        ? Math.min(280, Math.max(240, maxWidth - 56))
-        : Math.min(336, Math.max(280, maxWidth - 88))
+        ? Math.min(260, Math.max(228, maxWidth - 44))
+        : Math.min(308, Math.max(256, maxWidth - 72))
     const topPadding = isVeryNarrow
       ? 110
       : isNarrowViewport

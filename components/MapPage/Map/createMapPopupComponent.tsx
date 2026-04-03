@@ -2,20 +2,20 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PlacePopupCard from './PlacePopupCard';
 import type { Point } from './types';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl } from './mapLinks';
-import { useAuth } from '@/context/AuthContext';
 import { showToast } from '@/utils/toast';
 import { userPointsApi } from '@/api/userPoints';
-import { useQueryClient } from '@tanstack/react-query';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
-
-type UseMap = () => any;
+import { useAuthStore } from '@/stores/authStore';
+import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/useTheme';
 
 interface CreatePopupComponentArgs {
-  useMap: UseMap;
   userLocation?: { lat: number; lng: number } | null;
   compactLayout?: boolean;
+  invalidateUserPoints?: () => void;
+  colors: ThemedColors;
+  themeContextValue: ThemeContextType;
 }
 
 const stripCountryFromCategoryString = (raw: unknown, address?: string | null) => {
@@ -67,16 +67,21 @@ const buildPopupTitleParts = (point: Point): { title: string; subtitle?: string 
   return subtitle ? { title: head, subtitle } : { title: head };
 };
 
-export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = false }: CreatePopupComponentArgs) => {
-  const PopupComponent: React.FC<{ point: Point }> = ({ point }) => {
+export const createMapPopupComponent = ({
+  userLocation,
+  compactLayout = false,
+  invalidateUserPoints,
+  colors,
+  themeContextValue,
+}: CreatePopupComponentArgs) => {
+  const PopupComponent: React.FC<{ point: Point; closePopup?: () => void }> = ({ point, closePopup }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [isDrivingLoading, setIsDrivingLoading] = useState(false);
     const [drivingDistanceMeters, setDrivingDistanceMeters] = useState<number | null>(null);
     const [drivingDurationSeconds, setDrivingDurationSeconds] = useState<number | null>(null);
-    const map = useMap();
     const coord = String(point.coord ?? '').trim();
-    const { isAuthenticated, authReady } = useAuth();
-    const queryClient = useQueryClient();
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    const authReady = useAuthStore((s) => s.authReady);
 
     const userLat = userLocation?.lat;
     const userLng = userLocation?.lng;
@@ -85,10 +90,8 @@ export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = 
     const abortDriveRef = useRef<AbortController | null>(null);
 
     const handlePress = useCallback(() => {
-      if (map) {
-        map.closePopup();
-      }
-    }, [map]);
+      closePopup?.();
+    }, [closePopup]);
 
     const handleOpenArticle = useCallback(() => {
       const url = String(point.articleUrl || point.urlTravel || '').trim();
@@ -247,7 +250,7 @@ export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = 
       try {
         await userPointsApi.createPoint(payload);
         void showToast({ type: 'success', text1: 'Точка добавлена в мои точки', position: 'bottom' });
-        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+        invalidateUserPoints?.();
         handlePress();
       } catch {
         void showToast({ type: 'error', text1: 'Не удалось сохранить точку', position: 'bottom' });
@@ -261,30 +264,32 @@ export const createMapPopupComponent = ({ useMap, userLocation, compactLayout = 
       categoryLabel,
       normalizedCoord,
       point,
-      queryClient,
       handlePress,
     ]);
 
     return (
-      <PlacePopupCard
-        title={popupTitle.title}
-        subtitle={popupTitle.subtitle}
-        imageUrl={point.imageUrl || point.travelImageThumbUrl}
-        categoryLabel={categoryLabel}
-        coord={coord}
-        drivingDistanceMeters={drivingDistanceMeters}
-        drivingDurationSeconds={drivingDurationSeconds}
-        isDrivingLoading={isDrivingLoading}
-        onOpenArticle={handleOpenArticle}
-        onCopyCoord={handleCopyCoord}
-        onShareTelegram={handleShareTelegram}
-        onOpenGoogleMaps={handleOpenGoogleMaps}
-        onOpenOrganicMaps={handleOpenOrganicMaps}
-        onAddPoint={handleAddPoint}
-        addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
-        isAdding={isAdding}
-        compactLayout={compactLayout}
-      />
+      <ThemeContext.Provider value={themeContextValue}>
+        <PlacePopupCard
+          colors={colors}
+          title={popupTitle.title}
+          subtitle={popupTitle.subtitle}
+          imageUrl={point.imageUrl || point.travelImageThumbUrl}
+          categoryLabel={categoryLabel}
+          coord={coord}
+          drivingDistanceMeters={drivingDistanceMeters}
+          drivingDurationSeconds={drivingDurationSeconds}
+          isDrivingLoading={isDrivingLoading}
+          onOpenArticle={handleOpenArticle}
+          onCopyCoord={handleCopyCoord}
+          onShareTelegram={handleShareTelegram}
+          onOpenGoogleMaps={handleOpenGoogleMaps}
+          onOpenOrganicMaps={handleOpenOrganicMaps}
+          onAddPoint={handleAddPoint}
+          addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
+          isAdding={isAdding}
+          compactLayout={compactLayout}
+        />
+      </ThemeContext.Provider>
     );
   };
 

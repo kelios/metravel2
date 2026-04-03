@@ -11,6 +11,7 @@ import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import type { LegacyMapPoint } from './types';
+import { useThemedColors } from '@/hooks/useTheme';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -82,6 +83,7 @@ const MapPopup: React.FC<MapPopupConfig> = ({
   userLocation,
   resolveCategoryInfo,
 }) => {
+  const colors = useThemedColors();
   const [isAdding, setIsAdding] = useState(false);
   const [isDrivingLoading, setIsDrivingLoading] = useState(false);
   const [drivingDistanceMeters, setDrivingDistanceMeters] = useState<number | null>(null);
@@ -295,6 +297,7 @@ const MapPopup: React.FC<MapPopupConfig> = ({
 
   return (
     <PlacePopupCard
+      colors={colors}
       title={point.address || ''}
       imageUrl={point.imageUrl || point.travelImageThumbUrl}
       categoryLabel={categoryLabel}
@@ -315,4 +318,3 @@ const MapPopup: React.FC<MapPopupConfig> = ({
 };
 
 export default React.memo(MapPopup);
-

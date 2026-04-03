@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
-import { getRoutingConfigDiagnostics, resolveRoutingApiKey } from '@/utils/routingApiKey';
-import { devWarn } from '@/utils/logger';
+import { resolveRoutingApiKey } from '@/utils/routingApiKey';
 import type { MapMode, MapProps, Point } from './Map/types';
 import { strToLatLng } from './Map/utils';
 
@@ -35,11 +35,6 @@ import {
 } from './Map/mapWebGeometry';
 
 type ReactLeafletNS = typeof import('react-leaflet');
-
-const isTestEnv =
-  typeof process !== 'undefined' &&
-  (process as any).env &&
-  (process as any).env.NODE_ENV === 'test';
 
 const ORS_API_KEY = resolveRoutingApiKey();
 
@@ -110,18 +105,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const wrapperRef = useRef<View | null>(null);
 
   const colors = useThemedColors();
+  const themeContextValue = useTheme();
+  const queryClient = useQueryClient();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const popupBottomOffset = useBottomSheetStore((s) => s.getControlsBottomOffset());
   const bottomSheetState = useBottomSheetStore((s) => s.state);
   const requestBottomSheetCollapse = useBottomSheetStore((s) => s.requestCollapse);
-
-  useEffect(() => {
-    if (isTestEnv) return;
-    const diagnostics = getRoutingConfigDiagnostics();
-    for (const diagnostic of diagnostics) {
-      devWarn(`[Map][Config:${diagnostic.code}] ${diagnostic.message}`);
-    }
-  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -406,8 +395,15 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // Popup component
   const PopupComponent = useMemo(() => {
     if (!rl) return null;
-    return createMapPopupComponent({ useMap: rl.useMap, userLocation: userLocationLatLng });
-  }, [rl, userLocationLatLng]);
+    return createMapPopupComponent({
+      colors,
+      themeContextValue,
+      userLocation: userLocationLatLng,
+      invalidateUserPoints: () => {
+        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+      },
+    });
+  }, [colors, queryClient, rl, themeContextValue, userLocationLatLng]);
 
   const fitBoundsPadding = useMemo(() => {
     // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.

@@ -8,6 +8,12 @@ import React, { useEffect, useRef, useMemo } from 'react'
 import type { Point } from './types'
 import { strToLatLng } from './utils'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
+import { getClusterZoomFitBoundsOptions } from './clusterFitBounds'
+
+interface PopupContentProps {
+  point: Point
+  closePopup?: () => void
+}
 
 interface MarkerClusterGroupProps {
   /** Leaflet namespace (dynamic import) */
@@ -21,7 +27,7 @@ interface MarkerClusterGroupProps {
   /** Opacity for markers (reduced in route mode) */
   markerOpacity?: number
   /** Popup React component */
-  PopupContent: React.ComponentType<{ point: Point }>
+  PopupContent: React.ComponentType<PopupContentProps>
   /** react-leaflet Popup component */
   Popup: React.ComponentType<any>
   /** react-leaflet Tooltip component */
@@ -37,6 +43,28 @@ interface MarkerClusterGroupProps {
 }
 
 const TOOLTIP_MAX_LEN = 30
+
+const scheduleRootUnmount = (root: { unmount: () => void } | null | undefined) => {
+  if (!root) return
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(() => {
+      try {
+        root.unmount()
+      } catch {
+        // noop
+      }
+    })
+    return
+  }
+
+  setTimeout(() => {
+    try {
+      root.unmount()
+    } catch {
+      // noop
+    }
+  }, 0)
+}
 
 const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   L,
@@ -95,7 +123,8 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       maxClusterRadius: 60,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
+      // Handle cluster click explicitly so viewport math stays stable on web.
+      zoomToBoundsOnClick: false,
       disableClusteringAtZoom: 16,
       animate: true,
       animateAddingMarkers: false,
@@ -103,14 +132,44 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       spiderfyDistanceMultiplier: 1.5,
     })
 
+    const handleClusterClick = (event: any) => {
+      try {
+        event?.originalEvent?.preventDefault?.()
+        event?.originalEvent?.stopPropagation?.()
+      } catch {
+        // noop
+      }
+
+      const clusterLayer = event?.layer
+      if (!clusterLayer || typeof clusterLayer.getBounds !== 'function') return
+
+      try {
+        const bounds = clusterLayer.getBounds()
+        if (!bounds?.isValid?.()) return
+
+        const container =
+          typeof map.getContainer === 'function' ? map.getContainer() : null
+        const fitBoundsOptions = getClusterZoomFitBoundsOptions({
+          width: container?.clientWidth ?? (typeof window !== 'undefined' ? window.innerWidth : undefined),
+          height: container?.clientHeight ?? (typeof window !== 'undefined' ? window.innerHeight : undefined),
+        })
+
+        map.fitBounds(bounds, fitBoundsOptions as any)
+      } catch {
+        // noop
+      }
+    }
+
     clusterGroupRef.current = group
     map.addLayer(group)
+    group.on('clusterclick', handleClusterClick)
 
     const currentRenderRootMap = renderRootMapRef.current
     const currentMarkerMap = markerMapRef.current
 
     return () => {
       try {
+        group.off('clusterclick', handleClusterClick)
         map.removeLayer(group)
         group.clearLayers()
       } catch {
@@ -119,11 +178,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       clusterGroupRef.current = null
       // Cleanup render roots
       for (const [, root] of currentRenderRootMap) {
-        try {
-          root.unmount()
-        } catch {
-          // noop
-        }
+        scheduleRootUnmount(root)
       }
       currentRenderRootMap.clear()
       currentMarkerMap.clear()
@@ -145,11 +200,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
 
     // Cleanup old render roots
     for (const [, root] of renderRootMapRef.current) {
-      try {
-        root.unmount()
-      } catch {
-        // noop
-      }
+      scheduleRootUnmount(root)
     }
     renderRootMapRef.current.clear()
 
@@ -198,7 +249,18 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
             const root = createRoot(popupContainer)
             renderRootMapRef.current.set(key, root)
             const React = require('react')
-            root.render(React.createElement(PopupContent, { point }))
+            root.render(
+              React.createElement(PopupContent, {
+                point,
+                closePopup: () => {
+                  try {
+                    map?.closePopup?.()
+                  } catch {
+                    // noop
+                  }
+                },
+              })
+            )
           } catch {
             // Fallback: simple HTML
             popupContainer.innerHTML = `<div style="padding:8px"><strong>${point.address || 'Место'}</strong></div>`
@@ -259,12 +321,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         onMarkerInstance?.(coord, null)
       }
     }
-  }, [L, validPoints, markerIcon, markerOpacity, PopupContent, popupProps, onMarkerClick, onMarkerInstance])
+  }, [L, map, validPoints, markerIcon, markerOpacity, PopupContent, popupProps, onMarkerClick, onMarkerInstance])
 
   return null
 }
 
 export default React.memo(MarkerClusterGroup)
-
-
-
