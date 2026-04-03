@@ -166,6 +166,7 @@ const gotoMapWithRecovery = async (page: any) => {
 test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   test.beforeEach(async ({ page }) => {
     installNoConsoleErrorsGuard(page);
+    await installTileMock(page);
     await preacceptCookies(page);
   });
 
@@ -175,14 +176,14 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     const mapWrapper = page.getByTestId('map-leaflet-wrapper');
     await expect(mapWrapper).toBeVisible({ timeout: 60_000 });
 
-    const tile = page.locator('.leaflet-tile');
-    // Wait for multiple tiles to reduce flakiness (single tile can be a placeholder).
+    const tile = page.locator('.leaflet-tile-loaded');
+    // Wait for multiple fully loaded tiles to reduce flakiness.
     await expect
       .poll(async () => tile.count(), { timeout: 60_000 })
       .toBeGreaterThanOrEqual(4);
     await tile.first().waitFor({ state: 'visible', timeout: 60_000 });
 
-    // Ensure at least one tile image is actually loaded (not just present in DOM).
+    // Ensure at least one loaded tile image has decoded successfully.
     await expect
       .poll(
         async () => {
@@ -209,7 +210,6 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: shows required map attribution (OpenStreetMap)', async ({ page }) => {
-    await installTileMock(page);
     await gotoMapWithRecovery(page);
 
     await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
