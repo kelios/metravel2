@@ -111,7 +111,6 @@ const Slide = memo(function Slide({
   firstImagePreloaded,
   preloadPriority,
   fit = 'contain',
-  contentAspectRatio,
   onSlideLoad,
   prepareBlur = false,
   skipImage = false,
@@ -335,7 +334,7 @@ const Slide = memo(function Slide({
               item.width > 0 &&
               item.height > 0
                 ? item.width / item.height
-                : contentAspectRatio
+                : undefined
             }
           />
         </>
