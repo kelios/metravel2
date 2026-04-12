@@ -292,6 +292,21 @@ const HomeHero = memo(function HomeHero({
     const horizontalPadding = isMobile ? 32 : 48
     return Math.max(280, Math.min(width - horizontalPadding, 800))
   }, [isMobile, isWeb, width])
+  const useMobileGridForPopular = isMobile && width <= 430
+  const popularCardWidth = useMemo(() => {
+    if (!isMobile) return 215
+    if (useMobileGridForPopular) {
+      const available = Math.max(width - 48, 300)
+      return Math.max(148, Math.floor((available - 12) / 2))
+    }
+    return 195
+  }, [isMobile, useMobileGridForPopular, width])
+  const popularCardHeight = useMemo(() => {
+    if (useMobileGridForPopular) {
+      return Math.max(112, Math.round(popularCardWidth * 0.68))
+    }
+    return isMobile ? 130 : 148
+  }, [isMobile, popularCardWidth, useMobileGridForPopular])
   const featuredCardHeight = useMemo(() => {
     if (isMobile) return 220
     if (isTablet) return 280
@@ -662,35 +677,8 @@ const HomeHero = memo(function HomeHero({
           />
           {!useInlineBookmarkRail && (
             <View style={styles.moodChipsContainer}>
-              <View
-                style={
-                  isWeb
-                    ? ({
-                        WebkitMaskImage:
-                          'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-                        maskImage:
-                          'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
-                        overflow: 'hidden',
-                      } as any)
-                    : undefined
-                }
-              >
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={
-                    isWeb
-                      ? ({
-                          touchAction: 'pan-x pan-y',
-                          WebkitOverflowScrolling: 'touch',
-                          overflowX: 'auto',
-                          overflowY: 'hidden',
-                          overscrollBehaviorX: 'contain',
-                        } as any)
-                      : undefined
-                  }
-                  contentContainerStyle={styles.moodChipsScrollContent}
-                >
+              {isMobile ? (
+                <View style={styles.moodChipsWrap}>
                   {MOOD_CARDS.map((card) => (
                     <Pressable
                       key={card.title}
@@ -716,8 +704,65 @@ const HomeHero = memo(function HomeHero({
                       <Text style={styles.moodChipTitle}>{card.title}</Text>
                     </Pressable>
                   ))}
-                </ScrollView>
-              </View>
+                </View>
+              ) : (
+                <View
+                  style={
+                    isWeb
+                      ? ({
+                          WebkitMaskImage:
+                            'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                          maskImage:
+                            'linear-gradient(to right, transparent 0px, black 16px, black calc(100% - 16px), transparent 100%)',
+                          overflow: 'hidden',
+                        } as any)
+                      : undefined
+                  }
+                >
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={
+                      isWeb
+                        ? ({
+                            touchAction: 'pan-x pan-y',
+                            WebkitOverflowScrolling: 'touch',
+                            overflowX: 'auto',
+                            overflowY: 'hidden',
+                            overscrollBehaviorX: 'contain',
+                          } as any)
+                        : undefined
+                    }
+                    contentContainerStyle={styles.moodChipsScrollContent}
+                  >
+                    {MOOD_CARDS.map((card) => (
+                      <Pressable
+                        key={card.title}
+                        onPress={() =>
+                          handleQuickFilterPress(
+                            card.title,
+                            card.filters as unknown as QuickFilterParams,
+                            card.route,
+                          )
+                        }
+                        style={({ pressed, hovered }) => [
+                          styles.moodChip,
+                          (pressed || hovered) && styles.moodChipHover,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${card.title}. Идея поездки`}
+                      >
+                        <Feather
+                          name={card.icon as any}
+                          size={19}
+                          color={colors.textMuted}
+                        />
+                        <Text style={styles.moodChipTitle}>{card.title}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -727,10 +772,12 @@ const HomeHero = memo(function HomeHero({
           <HomeHeroPopularSection
             colors={colors}
             styles={styles}
-            isMobile={isMobile}
             isWeb={isWeb}
+            useMobileGrid={useMobileGridForPopular}
             featuredCardWidth={featuredCardWidth}
             featuredCardHeight={featuredCardHeight}
+            popularCardWidth={popularCardWidth}
+            popularCardHeight={popularCardHeight}
             bookImages={BOOK_IMAGES}
             onOpenArticle={handleOpenArticles}
           />

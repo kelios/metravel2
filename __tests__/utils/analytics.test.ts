@@ -107,6 +107,9 @@ describe('utils/analytics', () => {
     ;(global as any).window = {
       gtag,
       ym,
+      localStorage: {
+        getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
+      },
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
     }
@@ -135,6 +138,9 @@ describe('utils/analytics', () => {
     const ym = jest.fn()
     ;(global as any).window = {
       ym,
+      localStorage: {
+        getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
+      },
       __metravelMetrikaId: 62803912,
       __metravelMetrikaReady: true,
     }
@@ -144,5 +150,69 @@ describe('utils/analytics', () => {
     await sendAnalyticsEvent('Goal: CTA click / hero')
 
     expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'Goal__CTA_click___hero', {})
+  })
+
+  it('queues early web events until analytics providers become ready', async () => {
+    jest.doMock('react-native', () => ({
+      Platform: { OS: 'web' },
+    }))
+
+    jest.doMock('@react-native-async-storage/async-storage', () => ({
+      __esModule: true,
+      default: { getItem: jest.fn(), setItem: jest.fn() },
+    }))
+
+    const listeners: Record<string, Array<() => void>> = {}
+    const addEventListener = jest.fn((name: string, handler: () => void) => {
+      listeners[name] = listeners[name] || []
+      listeners[name].push(handler)
+    })
+    const dispatchEvent = jest.fn((event: { type: string }) => {
+      for (const handler of listeners[event.type] || []) {
+        handler()
+      }
+      return true
+    })
+    const gtag = jest.fn()
+    const ym = jest.fn()
+    const metravelLoadAnalytics = jest.fn()
+    const localStorage = {
+      getItem: jest.fn(() => JSON.stringify({ necessary: true, analytics: true })),
+      setItem: jest.fn(),
+    }
+
+    ;(global as any).window = {
+      addEventListener,
+      dispatchEvent,
+      localStorage,
+      metravelLoadAnalytics,
+      __metravelGaId: 'G-TEST123',
+      __metravelMetrikaId: 62803912,
+      __metravelMetrikaReady: false,
+    }
+
+    const { sendAnalyticsEvent } = require('@/utils/analytics')
+
+    await sendAnalyticsEvent('HomeClick_OpenSearch', { source: 'hero' })
+
+    expect(metravelLoadAnalytics).toHaveBeenCalledTimes(1)
+    expect(gtag).not.toHaveBeenCalled()
+    expect(ym).not.toHaveBeenCalled()
+    expect((global as any).window.__metravelAnalyticsEventQueue).toEqual([
+      { eventName: 'HomeClick_OpenSearch', eventParams: { source: 'hero' } },
+    ])
+
+    ;(global as any).window.gtag = gtag
+    ;(global as any).window.ym = ym
+    ;(global as any).window.__metravelMetrikaReady = true
+    dispatchEvent({ type: 'metravel:analytics-ready' })
+
+    await Promise.resolve()
+
+    expect(gtag).toHaveBeenCalledWith('event', 'HomeClick_OpenSearch', { source: 'hero' })
+    expect(ym).toHaveBeenCalledWith(62803912, 'reachGoal', 'HomeClick_OpenSearch', {
+      source: 'hero',
+    })
+    expect((global as any).window.__metravelAnalyticsEventQueue).toEqual([])
   })
 })

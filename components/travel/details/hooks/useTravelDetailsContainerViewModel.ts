@@ -4,7 +4,7 @@ import { Animated, Platform } from 'react-native'
 import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
 import {
   buildTravelSeoTitle,
-  createTravelArticleJsonLd,
+  createTravelStructuredData,
   getTravelSeoDescription,
 } from '@/utils/travelSeo'
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
@@ -79,7 +79,7 @@ export function useTravelDetailsContainerViewModel({
         ? firstUrl.replace(/^http:\/\//, 'https://')
         : buildOgImageUrl(firstUrl)
       : buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)
-    const structuredData = createTravelArticleJsonLd(travel)
+    const structuredData = createTravelStructuredData(travel)
 
     return {
       readyTitle: title,

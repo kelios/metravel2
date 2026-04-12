@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Platform } from 'react-native'
 
 import type { LayoutChangeEvent } from 'react-native'
@@ -47,33 +47,6 @@ export function useTravelDetailsHeroCompositionModel({
     setFullscreenVisible(false)
   }, [])
 
-  const activateWebSlider = useCallback(() => {
-    if (!hasInteractiveWebGallery) return
-  }, [hasInteractiveWebGallery])
-
-  const handleWebHeroKeyDown = useCallback(
-    (event: any) => {
-      const key = event?.key
-      if (key !== 'Enter' && key !== ' ') return
-      event?.preventDefault?.()
-      activateWebSlider()
-    },
-    [activateWebSlider]
-  )
-
-  const webHeroInteractionProps = useMemo(
-    () =>
-      Platform.OS === 'web' && hasInteractiveWebGallery
-        ? ({
-            tabIndex: 0 as const,
-            'aria-label': 'Открыть интерактивную галерею',
-            onClick: activateWebSlider,
-            onKeyDown: handleWebHeroKeyDown,
-          } as any)
-        : {},
-    [activateWebSlider, handleWebHeroKeyDown, hasInteractiveWebGallery]
-  )
-
   const handleHeroContainerLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const width = e.nativeEvent.layout.width
@@ -94,6 +67,5 @@ export function useTravelDetailsHeroCompositionModel({
     shouldRenderWebOptimizedHero,
     shouldRenderWebSlider,
     sliderPreloadCount,
-    webHeroInteractionProps,
   }
 }

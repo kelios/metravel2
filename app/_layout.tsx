@@ -125,26 +125,29 @@ function useDeferredRootWebChrome(isTravelRoute: boolean, isMounted: boolean) {
     setIsReady(false);
 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let idleId: number | null = null;
+    let cancelled = false;
+
     const reveal = () => {
+      if (cancelled) return;
       setIsReady(true);
-      window.removeEventListener('pointerdown', reveal);
-      window.removeEventListener('touchstart', reveal);
-      window.removeEventListener('keydown', reveal);
-      window.removeEventListener('scroll', reveal);
     };
 
-    window.addEventListener('pointerdown', reveal, { passive: true, once: true });
-    window.addEventListener('touchstart', reveal, { passive: true, once: true });
-    window.addEventListener('keydown', reveal, { passive: true, once: true });
-    window.addEventListener('scroll', reveal, { passive: true, once: true });
-    timeoutId = setTimeout(reveal, 900);
+    if ('requestIdleCallback' in window) {
+      idleId = (window as any).requestIdleCallback(reveal, { timeout: 250 });
+    }
+    timeoutId = setTimeout(reveal, 250);
 
     return () => {
+      cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
-      window.removeEventListener('pointerdown', reveal);
-      window.removeEventListener('touchstart', reveal);
-      window.removeEventListener('keydown', reveal);
-      window.removeEventListener('scroll', reveal);
+      if (idleId !== null) {
+        try {
+          ;(window as any).cancelIdleCallback(idleId);
+        } catch {
+          // noop
+        }
+      }
     };
   }, [isMounted, isTravelRoute]);
 

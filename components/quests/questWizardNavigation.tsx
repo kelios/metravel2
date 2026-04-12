@@ -26,6 +26,7 @@ type StepPillProps = NavigationProps & {
 type StepDotProps = NavigationProps & {
   isIntro?: boolean
   label: string
+  small?: boolean
 }
 
 export function QuestStepPill({
@@ -87,7 +88,9 @@ export function QuestStepDot({
   unlocked = true,
   isIntro = false,
   label,
+  small = false,
 }: StepDotProps) {
+  const smallOverride = small ? { width: 28, height: 28, borderRadius: 14, marginRight: 4 } : undefined
   return (
     <Pressable
       onPress={onPress}
@@ -97,17 +100,18 @@ export function QuestStepDot({
         active && styles.stepDotMiniActive,
         done && styles.stepDotMiniDone,
         !unlocked && styles.stepDotMiniLocked,
+        smallOverride,
       ]}
-      hitSlop={6}
+      hitSlop={small ? 12 : 10}
     >
       {isIntro ? (
         <Feather
           name="play"
-          size={12}
+          size={small ? 10 : 12}
           color={(active || done) ? colors.textOnPrimary : colors.primaryText}
         />
       ) : (
-        <Text style={[styles.stepDotMiniText, (active || done) && { color: colors.textOnPrimary }]}>
+        <Text style={[styles.stepDotMiniText, (active || done) && { color: colors.textOnPrimary }, small && { fontSize: 10 }]}>
           {label}
         </Text>
       )}

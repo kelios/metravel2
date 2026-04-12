@@ -463,6 +463,7 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
   filterGroupTitleText: { color: colors.text, fontSize: isMobile ? 14 : 14, fontWeight: '700', letterSpacing: -0.1 },
 
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: isMobile ? 7 : 8 },
+  chipsWrapMobile: { width: '100%' },
 
   chip: {
     borderRadius: DESIGN_TOKENS.radii.pill, borderWidth: 1, borderColor: colors.borderLight,
@@ -473,6 +474,11 @@ export const createSectionsStyles = (colors: Colors, isMobile: boolean) => Style
       transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
       boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
     } }),
+  },
+  chipMobile: {
+    flexGrow: 0,
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   chipHover: {
     borderColor: colors.primary, backgroundColor: colors.primarySoft,

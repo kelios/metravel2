@@ -11,6 +11,7 @@ import Feather from '@expo/vector-icons/Feather';
 
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
+import { useResponsive } from '@/hooks/useResponsive';
 
 import QuestCard from './QuestCard';
 import { pluralizeQuest, type QuestMeta } from './questsShared';
@@ -28,7 +29,6 @@ type MapPoint = {
 type QuestsContentPanelProps = {
     styles: any;
     colors: any;
-    isMobile: boolean;
     dataLoaded: boolean;
     viewMode: 'list' | 'map';
     selectedCityId: string | null;
@@ -49,7 +49,6 @@ type QuestsContentPanelProps = {
 export default function QuestsContentPanel({
     styles,
     colors,
-    isMobile,
     dataLoaded,
     viewMode,
     selectedCityId,
@@ -66,6 +65,7 @@ export default function QuestsContentPanel({
     onOpenFilterDrawer,
     onMapUserLocationChange,
 }: QuestsContentPanelProps) {
+    const { isMobile } = useResponsive();
     return (
         <ScrollView
             style={styles.content}

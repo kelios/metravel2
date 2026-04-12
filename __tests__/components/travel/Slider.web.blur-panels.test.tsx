@@ -16,14 +16,13 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
 }))
 
-jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => ({
-    width: 1200,
-    height: 900,
-    isPhone: false,
-    isLargePhone: false,
-  }),
-}))
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native')
+  return {
+    ...RN,
+    useWindowDimensions: jest.fn(() => ({ width: 1200, height: 900, scale: 1, fontScale: 1 })),
+  }
+})
 
 jest.mock('@/components/ui/ImageCardMedia', () => {
   const React = require('react')
@@ -38,6 +37,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
       const isSafari = /Safari/i.test(normalizedUserAgent) && !/(Chrome|CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|GSA|Chromium|Firefox)/i.test(normalizedUserAgent)
       return isIOSDevice && isSafari
     },
+    prefetchImage: jest.fn(() => Promise.resolve()),
     default: (props: any) =>
       React.createElement('mock-image-card-media', {
         ...props,
@@ -51,9 +51,12 @@ describe('Slider (web) blur background', () => {
   const originalPlatform = Platform.OS
   const originalUserAgent = window.navigator.userAgent
   const originalMaxTouchPoints = window.navigator.maxTouchPoints
+  const reactNative = jest.requireMock('react-native')
+  const useWindowDimensionsMock = reactNative.useWindowDimensions as jest.Mock
 
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
+    useWindowDimensionsMock.mockReturnValue({ width: 1200, height: 900, scale: 1, fontScale: 1 })
   })
 
   afterEach(() => {
@@ -183,6 +186,28 @@ describe('Slider (web) blur background', () => {
     expect(firstImage.props.fetchPriority).toBe('high')
     expect(secondImage.props.loading).toBe('lazy')
     expect(secondImage.props.fetchPriority).toBe('auto')
+  })
+
+  it('raises preload count on mobile viewport widths for faster swipe response', async () => {
+    useWindowDimensionsMock.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 })
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={images as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+        />,
+      )
+    })
+
+    const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
+    expect(secondImage.props.loading).toBe('eager')
+    expect(secondImage.props.fetchPriority).toBe('high')
   })
 
   it('keeps blur rendering inside slide media instead of a separate shared backdrop track', async () => {

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readConsent } from '@/utils/consent';
 
 const MEASUREMENT_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4;
 const API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET;
@@ -7,6 +8,8 @@ const ANALYTICS_CLIENT_ID_KEY = 'metravel_ga4_client_id';
 let hasWarnedMissingConfig = false;
 let cachedClientId: string | null = null;
 let clientIdRequest: Promise<string> | null = null;
+const WEB_ANALYTICS_QUEUE_KEY = '__metravelAnalyticsEventQueue';
+const WEB_ANALYTICS_LISTENER_KEY = '__metravelAnalyticsQueueListenerAttached';
 
 const generateClientId = () => `${Date.now()}.${Math.floor(Math.random() * 1e9)}`;
 const MAX_YANDEX_GOAL_NAME_LENGTH = 64;
@@ -56,6 +59,52 @@ const toYandexGoalName = (eventName: string) =>
         .replace(/[^A-Za-z0-9_]/g, '_')
         .slice(0, MAX_YANDEX_GOAL_NAME_LENGTH);
 
+type WebAnalyticsEvent = {
+    eventName: string;
+    eventParams: Record<string, unknown>;
+};
+
+const isWebAnalyticsAllowed = () => {
+    const consent = readConsent();
+    return !!consent?.analytics;
+};
+
+const getWebEventQueue = (w: any): WebAnalyticsEvent[] => {
+    if (!Array.isArray(w[WEB_ANALYTICS_QUEUE_KEY])) {
+        w[WEB_ANALYTICS_QUEUE_KEY] = [];
+    }
+    return w[WEB_ANALYTICS_QUEUE_KEY];
+};
+
+const areWebProvidersSettled = (w: any) => {
+    const hasGa = Boolean(w?.__metravelGaId);
+    const hasMetrika = Number(w?.__metravelMetrikaId || 0) > 0;
+    const gaReady = !hasGa || typeof w?.gtag === 'function';
+    const metrikaSettled = !hasMetrika || w?.__metravelMetrikaReady || w?.__metravelMetrikaFailed;
+    return gaReady && metrikaSettled;
+};
+
+const flushQueuedWebAnalyticsEvents = async (w: any) => {
+    const queue = Array.isArray(w?.[WEB_ANALYTICS_QUEUE_KEY]) ? [...w[WEB_ANALYTICS_QUEUE_KEY]] : [];
+    if (!queue.length) return;
+    w[WEB_ANALYTICS_QUEUE_KEY] = [];
+
+    for (const item of queue) {
+        await sendAnalyticsEvent(item.eventName, item.eventParams);
+    }
+};
+
+const ensureWebAnalyticsQueueListener = (w: any) => {
+    if (!w || typeof w.addEventListener !== 'function' || w[WEB_ANALYTICS_LISTENER_KEY]) {
+        return;
+    }
+
+    w[WEB_ANALYTICS_LISTENER_KEY] = true;
+    w.addEventListener('metravel:analytics-ready', () => {
+        void flushQueuedWebAnalyticsEvents(w);
+    });
+};
+
 export const sendAnalyticsEvent = async (
     eventName: string,
     eventParams: Record<string, unknown> = {}
@@ -70,11 +119,16 @@ export const sendAnalyticsEvent = async (
     // Measurement Protocol from the browser triggers CORS and exposes api_secret.
     if (Platform.OS === 'web') {
         const w = typeof window !== 'undefined' ? (window as any) : undefined;
+        ensureWebAnalyticsQueueListener(w);
         const gtag = w?.gtag;
         const ym = w?.ym;
         const metrikaId = Number(w?.__metravelMetrikaId || 0);
         const yandexGoalName = toYandexGoalName(eventName);
         let sentAnyEvent = false;
+
+        if (!isWebAnalyticsAllowed()) {
+            return;
+        }
 
         if (typeof gtag === 'function') {
             try {
@@ -101,6 +155,23 @@ export const sendAnalyticsEvent = async (
 
         if (sentAnyEvent) {
             return;
+        }
+
+        if (w) {
+            const queue = getWebEventQueue(w);
+            queue.push({ eventName, eventParams });
+
+            if (typeof w.metravelLoadAnalytics === 'function') {
+                try {
+                    w.metravelLoadAnalytics();
+                } catch {
+                    // noop
+                }
+            }
+
+            if (areWebProvidersSettled(w)) {
+                await flushQueuedWebAnalyticsEvents(w);
+            }
         }
 
         // GA bootstraps lazily after consent/idle; missing gtag early is expected in production.

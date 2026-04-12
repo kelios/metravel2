@@ -321,6 +321,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
                   }}
                   label={String(index)}
                   isIntro={step.id === 'intro'}
+                  small={screenW < 360}
                 />
               )
             }

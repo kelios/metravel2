@@ -4,6 +4,23 @@ const SEO_HTML_FALLBACK = 'Найди место для путешествия �
 const TRAVEL_FALLBACK_DESCRIPTION = 'Путешествие на Metravel.';
 const SEO_TITLE_MAX_LENGTH = 60;
 const SEO_TITLE_SUFFIX = ' | Metravel';
+const SITE_URL = 'https://metravel.by';
+const ORGANIZATION_ID = `${SITE_URL}/#organization`;
+
+function getTravelCanonicalUrl(travel: Travel | null | undefined): string | null {
+  if (!travel) return null;
+
+  if (travel.slug && /^[a-z0-9-]+$/.test(travel.slug)) {
+    return `${SITE_URL}/travels/${encodeURIComponent(travel.slug)}`;
+  }
+
+  if (typeof travel.id === 'number' || typeof travel.id === 'string') {
+    const id = String(travel.id).trim();
+    if (id) return `${SITE_URL}/travels/${encodeURIComponent(id)}`;
+  }
+
+  return null;
+}
 
 export function stripHtmlForSeo(html?: string | null): string {
   if (!html) return SEO_HTML_FALLBACK;
@@ -91,9 +108,8 @@ export function createTravelArticleJsonLd(
   const imageUrl = getTravelSeoImage(travel);
   if (imageUrl) safeData.image = [imageUrl];
 
-  if (travel.slug && /^[a-z0-9-]+$/.test(travel.slug)) {
-    safeData.url = `https://metravel.by/travels/${encodeURIComponent(travel.slug)}`;
-  }
+  const canonicalUrl = getTravelCanonicalUrl(travel);
+  if (canonicalUrl) safeData.url = canonicalUrl;
 
   if (travel.created_at) {
     const dateStr =
@@ -122,8 +138,111 @@ export function createTravelArticleJsonLd(
   safeData.publisher = {
     '@type': 'Organization',
     name: 'MeTravel',
-    url: 'https://metravel.by',
+    url: SITE_URL,
   };
 
   return safeData;
+}
+
+export function createTravelBreadcrumbJsonLd(
+  travel: Travel | null | undefined
+): Record<string, any> | null {
+  if (!travel?.name) return null;
+
+  const cleanName = stripHtmlForSeo(travel.name).slice(0, 200);
+  const canonicalUrl = getTravelCanonicalUrl(travel);
+  if (!cleanName || !canonicalUrl) return null;
+
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Главная',
+        item: `${SITE_URL}/`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Поиск',
+        item: `${SITE_URL}/search`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: cleanName,
+        item: canonicalUrl,
+      },
+    ],
+  };
+}
+
+export function createTravelStructuredData(
+  travel: Travel | null | undefined
+): Record<string, any> | null {
+  const article = createTravelArticleJsonLd(travel);
+  if (!article) return null;
+
+  const canonicalUrl = getTravelCanonicalUrl(travel);
+  const cleanName = stripHtmlForSeo(travel?.name).slice(0, 200);
+  const breadcrumb = createTravelBreadcrumbJsonLd(travel);
+
+  const graph: Record<string, any>[] = [
+    {
+      '@type': 'Organization',
+      '@id': ORGANIZATION_ID,
+      name: 'MeTravel',
+      url: SITE_URL,
+    },
+  ];
+
+  if (canonicalUrl) {
+    graph.push({
+      '@type': 'WebPage',
+      '@id': `${canonicalUrl}#webpage`,
+      url: canonicalUrl,
+      name: cleanName || article.headline || buildTravelSeoTitle(travel?.name),
+      description: article.description,
+      isPartOf: {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        url: SITE_URL,
+        name: 'MeTravel',
+      },
+      about: {
+        '@id': `${canonicalUrl}#article`,
+      },
+      breadcrumb: breadcrumb
+        ? {
+            '@id': `${canonicalUrl}#breadcrumb`,
+          }
+        : undefined,
+      inLanguage: 'ru',
+    });
+  }
+
+  graph.push({
+    ...article,
+    '@id': canonicalUrl ? `${canonicalUrl}#article` : undefined,
+    mainEntityOfPage: canonicalUrl
+      ? {
+          '@id': `${canonicalUrl}#webpage`,
+        }
+      : undefined,
+  });
+
+  if (breadcrumb && canonicalUrl) {
+    graph.push({
+      ...breadcrumb,
+      '@id': `${canonicalUrl}#breadcrumb`,
+    });
+  }
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': graph.map((item) =>
+      Object.fromEntries(Object.entries(item).filter(([, value]) => value !== undefined))
+    ),
+  };
 }

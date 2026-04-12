@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, AppState, AccessibilityInfo } from 'react-native';
+import { Platform, AppState, AccessibilityInfo, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { prefetchImage } from '@/components/ui/ImageCardMedia';
-import { useResponsive } from '@/hooks/useResponsive';
 import type { SliderImage } from './types';
-import { clamp, clampInt, computeSliderHeight, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './utils';
+import {
+  clamp,
+  clampInt,
+  computeSliderHeight,
+  DEFAULT_AR,
+  getSliderViewportFlags,
+  MOBILE_HEIGHT_PERCENT,
+} from './utils';
 
 export interface UseSliderCoreOptions {
   images: SliderImage[];
@@ -68,9 +74,11 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
   } = options;
 
   const insets = useSafeAreaInsets();
-  const { width: winW, height: winH, isPhone, isLargePhone, isTablet: isTabletBp, isLargeTablet } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
-  const isTablet = isTabletBp || isLargeTablet;
+  const { width: winW, height: winH } = useWindowDimensions();
+  const { isMobile, isTablet } = useMemo(
+    () => getSliderViewportFlags(winW),
+    [winW],
+  );
   const isWeb = Platform.OS === 'web';
 
   const [containerW, setContainerWState] = useState(winW);

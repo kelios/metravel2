@@ -166,12 +166,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     } = useInstagramPublishDraft({ formData, countries });
 
     useEffect(() => {
-        trackWizardEvent('wizard_step_view', {
-            step: currentStep,
-        });
-    }, [currentStep]);
-
-    useEffect(() => {
         return () => {
             if (buttonErrorTimeoutRef.current) {
                 clearTimeout(buttonErrorTimeoutRef.current);

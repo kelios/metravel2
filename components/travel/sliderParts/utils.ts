@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { METRICS } from '@/constants/layout';
 import {
   buildVersionedImageUrl,
   getOptimalImageSize,
@@ -25,6 +26,21 @@ export const clamp = (v: number, min: number, max: number) =>
 
 export const clampInt = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, Math.round(v)));
+
+export interface SliderViewportFlags {
+  isMobile: boolean;
+  isTablet: boolean;
+}
+
+export const getSliderViewportFlags = (width: number): SliderViewportFlags => {
+  const safeWidth = Number.isFinite(width) && width > 0 ? width : 0;
+  const { tablet, largeTablet } = METRICS.breakpoints;
+
+  return {
+    isMobile: safeWidth >= 0 && safeWidth < tablet,
+    isTablet: safeWidth >= tablet && safeWidth < largeTablet,
+  };
+};
 
 /* ---- Native buildUri (used by Slider.tsx) ---- */
 

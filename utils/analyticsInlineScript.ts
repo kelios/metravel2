@@ -71,6 +71,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     // We send page_view manually in trackPage() for SPA navigation,
     // so disable GA automatic page_view to avoid duplicates.
     window.gtag('config', GA_ID, { transport_type: 'beacon', send_page_view: false });
+    try { window.dispatchEvent(new CustomEvent('metravel:analytics-ready')); } catch(_e) {}
 
     var ga = document.createElement('script');
     ga.async = true;
@@ -105,6 +106,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       defer: true,
       triggerEvent: true,
     });
+    try { window.dispatchEvent(new CustomEvent('metravel:analytics-ready')); } catch(_e) {}
   }
 
   function bootstrapMetrika(){
@@ -136,6 +138,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     metrikaScript.onerror = function(){
       window.__metravelMetrikaLoading = false;
       window.__metravelMetrikaFailed = true;
+      try { window.dispatchEvent(new CustomEvent('metravel:analytics-ready')); } catch(_e) {}
     };
 
     if (document.head) {
@@ -145,6 +148,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
     } else {
       window.__metravelMetrikaLoading = false;
       window.__metravelMetrikaFailed = true;
+      try { window.dispatchEvent(new CustomEvent('metravel:analytics-ready')); } catch(_e) {}
     }
   }
 

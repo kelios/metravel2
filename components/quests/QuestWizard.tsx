@@ -32,7 +32,7 @@ import {
 } from './questWizardHelpers';
 import { DESIGN_TOKENS as _DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
+import { useQuestWizardResponsiveModel } from './hooks/useQuestWizardResponsiveModel';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 // ===================== ТИПЫ =====================
@@ -93,7 +93,12 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
-    const { width: screenW, height: screenH, isMobile } = useResponsive();
+    const wizardModel = useQuestWizardResponsiveModel();
+    const {
+        screenW, screenH, isMobile,
+        compactNav, compactDesktopLayout,
+        useWideInlineLayout, useWideExcursionsSidebar,
+    } = wizardModel;
 
     const {
         currentIndex,
@@ -124,12 +129,6 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
     const [desktopHasOrganic, setDesktopHasOrganic] = useState(false);
     const [desktopHasMapsme, setDesktopHasMapsme] = useState(false);
-
-    const compactNav = screenW < 600;
-    const wideDesktop = screenW >= 1100;
-    const compactDesktopLayout = Platform.OS === 'web' && screenW >= 1200;
-    const useWideInlineLayout = wideDesktop;
-    const useWideExcursionsSidebar = wideDesktop && !compactDesktopLayout;
 
     const currentStep = allSteps[currentIndex];
 
@@ -591,14 +590,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
 
     stepDotMini: {
-        width: 36, 
-        height: 36, 
-        borderRadius: 18, 
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         marginRight: 6,
-        alignItems: 'center', 
+        alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.backgroundSecondary,
         borderWidth: 0,
+        // Touch area extended via hitSlop in QuestStepDot component
         ...Platform.select({
             web: {
                 cursor: 'pointer',
@@ -945,6 +945,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     linkText: {
         color: colors.textMuted, fontSize: 13, fontWeight: '500',
+        minHeight: 44, lineHeight: 44,
         ...Platform.select({ web: { cursor: 'pointer' } as any }),
     },
     linkSeparator: { color: colors.borderStrong, fontSize: 13 },
@@ -1042,7 +1043,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     photoHint: { fontSize: 12, color: colors.textMuted, marginBottom: SPACING.xs },
 
-    imagePreview: { borderRadius: 12, overflow: 'hidden', position: 'relative', maxWidth: 480 },
+    imagePreview: { borderRadius: 12, overflow: 'hidden', position: 'relative', width: '100%', maxWidth: 480 },
     previewImage: { width: '100%', aspectRatio: 4 / 3, resizeMode: 'contain' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.overlay, padding: 8, alignItems: 'center' },
     overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '600' },

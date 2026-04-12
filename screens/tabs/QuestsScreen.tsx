@@ -14,6 +14,7 @@ import { buildCanonicalUrl } from '@/utils/seo';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
 import QuestsContentPanel from './QuestsContentPanel';
@@ -53,10 +54,11 @@ type MapPoint = {
 
 // ───────────── Styles (Two-column layout) ─────────────
 
-function getStyles(colors: ThemedColors, screenWidth: number) {
+function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: number) {
     const isMobileW = screenWidth < 768;
+    const isSmallPhone = screenWidth < 360;
     const isTablet = screenWidth >= 768 && screenWidth < 1024;
-    const SIDEBAR_WIDTH = isTablet ? 300 : 340;
+    const SIDEBAR_WIDTH = isTablet ? 260 : 340;
     const headerPadding = isMobileW ? spacing.md : spacing.lg;
     const headerTopPadding = isMobileW ? spacing.lg : spacing.xl;
     const sectionPaddingX = isMobileW ? spacing.sm : spacing.md;
@@ -64,6 +66,8 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
     const countryGapTop = isMobileW ? spacing.xs : spacing.sm;
     const cityItemVertical = isMobileW ? spacing.xxs : spacing.xs;
     const cityIconSize = isMobileW ? 28 : 32;
+    const badgeFontSize = isSmallPhone ? 12 : 11;
+    const categoryFontSize = isSmallPhone ? 12 : 10;
     
     return StyleSheet.create({
         /* ---- Root Layout (Two-column, Premium) ---- */
@@ -92,6 +96,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                     boxShadow: '1px 0 0 0 rgba(0,0,0,0.04)',
                     scrollbarWidth: 'thin',
                     scrollbarColor: `${colors.borderLight} transparent`,
+                    transition: 'width 0.3s ease',
                 } as any,
             }),
         },
@@ -227,6 +232,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             paddingHorizontal: spacing.sm,
             paddingVertical: spacing.xs,
             borderRadius: radii.full,
+            minHeight: isMobileW ? DESIGN_TOKENS.touchTarget.minHeight : undefined,
             ...Platform.select({
                 web: {
                     cursor: 'pointer',
@@ -247,6 +253,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             paddingVertical: cityItemVertical,
             paddingHorizontal: isMobileW ? spacing.xs : spacing.sm,
             borderRadius: radii.md,
+            minHeight: isMobileW ? DESIGN_TOKENS.touchTarget.minHeight : undefined,
             marginBottom: 2,
             ...Platform.select({
                 web: { 
@@ -347,7 +354,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
             backgroundColor: colors.backgroundSecondary,
             borderWidth: 0,
             minWidth: 48,
-            minHeight: 30,
+            minHeight: isMobileW ? DESIGN_TOKENS.touchTarget.minHeight : 30,
             alignItems: 'center',
             justifyContent: 'center',
             ...Platform.select({
@@ -429,7 +436,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         mapContainer: {
             width: '100%',
-            height: isMobileW ? 420 : 620,
+            height: Math.min(isMobileW ? 420 : 620, screenHeight ? screenHeight * 0.6 : 620),
             borderRadius: radii.lg,
             overflow: 'hidden',
             borderWidth: 1,
@@ -438,7 +445,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         mapLoading: {
             width: '100%',
-            height: isMobileW ? 420 : 620,
+            height: Math.min(isMobileW ? 420 : 620, screenHeight ? screenHeight * 0.6 : 620),
             borderRadius: radii.lg,
             borderWidth: 1,
             borderColor: colors.borderLight,
@@ -457,7 +464,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
                     display: 'grid',
                     gridTemplateColumns: isMobileW
                         ? '1fr'
-                        : 'repeat(auto-fit, minmax(min(100%, 760px), 1fr))',
+                        : 'repeat(auto-fill, minmax(min(100%, 380px), 1fr))',
                     justifyItems: 'start',
                     gap: spacing.xl,
                 } as any,
@@ -612,7 +619,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         questCardCategory: {
             color: 'rgba(255, 200, 140, 0.9)',
-            fontSize: 10,
+            fontSize: categoryFontSize,
             fontWeight: '600',
             textTransform: 'uppercase',
             letterSpacing: 1.5,
@@ -688,7 +695,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         questCardBadgeText: {
             color: colors.textOnDark,
-            fontSize: 11,
+            fontSize: badgeFontSize,
             fontWeight: '600',
         },
         questCardDifficultyBadge: {
@@ -710,7 +717,7 @@ function getStyles(colors: ThemedColors, screenWidth: number) {
         },
         questCardDifficultyText: {
             color: 'rgba(255,255,255,0.88)',
-            fontSize: 11,
+            fontSize: badgeFontSize,
             fontWeight: '500',
         },
         questCardPlayIcon: {
@@ -778,9 +785,8 @@ export default function QuestsScreen() {
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
-    const { width, isPhone } = useResponsive();
-    const isMobile = isPhone;
-    const s = useMemo(() => getStyles(colors, width), [colors, width]);
+    const { width, height, isMobile } = useResponsive();
+    const s = useMemo(() => getStyles(colors, width, height), [colors, width, height]);
 
     // ── Persistent city selection ──
     useEffect(() => {
@@ -1008,17 +1014,8 @@ export default function QuestsScreen() {
         return (CITY_QUESTS[selectedCityId] || []).map((q) => ({ ...q }));
     }, [selectedCityId, userLoc, nearbyRadiusKm, ALL_QUESTS, CITY_QUESTS, dataLoaded]);
 
-    const questCardWidth = useMemo(() => {
-        if (isMobile) {
-            return Math.max(280, width - spacing.lg * 2);
-        }
-        const estimatedContentWidth = Math.max(320, width - 340 - spacing.xl * 2);
-        if (questsAll.length >= 2) {
-            const twoColumnWidth = Math.floor((estimatedContentWidth - spacing.lg) / 2);
-            return Math.max(280, Math.min(420, twoColumnWidth));
-        }
-        return Math.min(760, estimatedContentWidth);
-    }, [isMobile, questsAll.length, width]);
+    const catalogModel = useQuestCatalogResponsiveModel(questsAll.length);
+    const questCardWidth = catalogModel.cardWidth;
 
     const mapPoints = useMemo<MapPoint[]>(() => {
         if (!dataLoaded || !selectedCityId) return [];
@@ -1182,7 +1179,6 @@ export default function QuestsScreen() {
             <QuestsContentPanel
                 styles={s}
                 colors={colors}
-                isMobile={isMobile}
                 dataLoaded={dataLoaded}
                 viewMode={viewMode}
                 selectedCityId={selectedCityId}

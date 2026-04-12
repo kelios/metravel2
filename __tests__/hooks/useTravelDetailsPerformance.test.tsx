@@ -140,7 +140,7 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(false)
   })
 
-  it('reveals hero enhancers and post-LCP runtime on user interaction after LCP', async () => {
+  it('reveals hero enhancers and post-LCP runtime automatically after the idle window', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 1, name: 'Demo travel' } as any,
@@ -161,14 +161,22 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(false)
 
     await act(async () => {
-      window.dispatchEvent(new Event('scroll'))
+      jest.advanceTimersByTime(250)
+      await Promise.resolve()
     })
 
     expect(result.current.heroEnhancersReady).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
+
+    await act(async () => {
+      jest.advanceTimersByTime(250)
+      await Promise.resolve()
+    })
+
     expect(result.current.postLcpRuntimeReady).toBe(true)
   })
 
-  it('reveals hero enhancers on short fallback and post-LCP runtime on late fallback', async () => {
+  it('reveals hero enhancers before post-LCP runtime in the idle-first sequence', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 1, name: 'Demo travel' } as any,
@@ -186,7 +194,7 @@ describe('useTravelDetailsPerformance', () => {
     })
 
     await act(async () => {
-      jest.advanceTimersByTime(1800)
+      jest.advanceTimersByTime(250)
       await Promise.resolve()
     })
 
@@ -194,7 +202,7 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(false)
 
     await act(async () => {
-      jest.advanceTimersByTime(5200)
+      jest.advanceTimersByTime(250)
       await Promise.resolve()
     })
 

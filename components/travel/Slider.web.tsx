@@ -11,12 +11,18 @@ import {
   View,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
 import type { SliderProps, SliderRef } from './sliderParts/types';
-import { buildUriWeb, SLIDER_MAX_WIDTH, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
+import {
+  buildUriWeb,
+  SLIDER_MAX_WIDTH,
+  DEFAULT_AR,
+  getSliderViewportFlags,
+  MOBILE_HEIGHT_PERCENT,
+} from './sliderParts/utils';
 import { createSliderStyles, MAX_VISIBLE_DOTS } from './sliderParts/styles';
 import Slide from './sliderParts/Slide';
 import { useSliderCore } from './sliderParts/useSliderCore';
@@ -220,8 +226,11 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   } = props;
 
   const sliderInstanceId = useId();
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobileDevice = isPhone || isLargePhone;
+  const { width: viewportWidth } = useWindowDimensions();
+  const { isMobile: isMobileDevice } = useMemo(
+    () => getSliderViewportFlags(viewportWidth),
+    [viewportWidth],
+  );
   const effectivePreloadCount = isMobileDevice ? Math.max(preloadCountProp, 2) : preloadCountProp;
 
   const buildUri = useCallback(

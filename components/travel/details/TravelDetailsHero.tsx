@@ -1,8 +1,6 @@
 // E11: Refactored — state/logic extracted to useTravelHeroState hook
 import React, {
   Suspense,
-  useEffect,
-  useState,
 } from 'react'
 import {
   Platform,
@@ -55,9 +53,6 @@ function TravelHeroSectionInner({
   deferExtras?: boolean
 }) {
   const styles = useTravelDetailsHeroStyles()
-  const [webSliderChromeVisible, setWebSliderChromeVisible] = useState(
-    Platform.OS !== 'web',
-  )
 
   const {
     firstImg,
@@ -85,7 +80,6 @@ function TravelHeroSectionInner({
     shouldRenderWebOptimizedHero,
     shouldRenderWebSlider,
     sliderPreloadCount,
-    webHeroInteractionProps,
   } = useTravelDetailsHeroCompositionModel({
     firstImg,
     heroContainerWidth,
@@ -96,20 +90,6 @@ function TravelHeroSectionInner({
     sliderUpgradeAllowed,
     webHeroLoaded,
   })
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!overlayUnmounted) {
-      setWebSliderChromeVisible(false)
-      return
-    }
-    const revealTimer = window.setTimeout(() => {
-      setWebSliderChromeVisible(true)
-    }, 0)
-    return () => {
-      window.clearTimeout(revealTimer)
-    }
-  }, [overlayUnmounted])
 
   return (
     <>
@@ -133,7 +113,6 @@ function TravelHeroSectionInner({
               { height: heroHeight },
               Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
             ]}
-            {...webHeroInteractionProps}
             collapsable={false}
             onLayout={handleHeroContainerLayout}
           >
@@ -158,7 +137,7 @@ function TravelHeroSectionInner({
                       isMobile={isMobile}
                       aspectRatio={aspectRatio as number}
                       preloadCount={1}
-                      controlsVisible={webSliderChromeVisible}
+                      controlsVisible
                       onFirstImageLoad={handleSliderImageLoad}
                       firstImagePreloaded={webHeroLoaded}
                       onImagePress={handleImagePress}

@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import {
     View, Text, StyleSheet, Pressable, Platform,
-    ScrollView, TextInput, Modal, Animated, Dimensions,
+    ScrollView, TextInput, Modal, Animated,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import Chip from '@/components/ui/Chip';
@@ -11,16 +11,11 @@ import EmptyState from '@/components/ui/EmptyState';
 import SelectComponent from '@/components/forms/SelectComponent';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 const { spacing, radii, typography } = DESIGN_TOKENS;
 const NEARBY_ID = '__nearby__';
-
-/** Drawer width adapts: 85% of screen (min 260, max 340) */
-const getDrawerWidth = () => {
-    const screenW = Dimensions.get('window').width;
-    return Math.min(340, Math.max(260, Math.round(screenW * 0.85)));
-};
 
 type CityQuickFilter = 'all' | 'withQuests' | 'nearby';
 
@@ -205,7 +200,8 @@ export function QuestsFilterDrawer({
     visible, onClose, ...filterProps
 }: QuestsFilterPanelProps & { visible: boolean; onClose: () => void }) {
     const colors = useThemedColors();
-    const drawerW = useMemo(getDrawerWidth, []);
+    const { width: screenW } = useResponsive();
+    const drawerW = useMemo(() => Math.min(340, Math.max(260, Math.round(screenW * 0.85))), [screenW]);
     const s = useMemo(() => drawerStyles(colors, drawerW), [colors, drawerW]);
     const slideAnim = React.useRef(new Animated.Value(-1)).current;
     const shouldUseNativeDriver = false;

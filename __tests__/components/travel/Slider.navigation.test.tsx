@@ -30,32 +30,30 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ left: 0, right: 0, top: 0, bottom: 0 }),
 }))
 
-const responsiveMock = {
+jest.mock('react-native', () => {
+  const RN = jest.requireActual('react-native')
+  return {
+    ...RN,
+    useWindowDimensions: jest.fn(() => ({ width: 1200, height: 900, scale: 1, fontScale: 1 })),
+  }
+})
+
+const viewportMock = {
   width: 1200,
   height: 900,
-  isPhone: false,
-  isLargePhone: false,
-  isTablet: false,
-  isLargeTablet: false,
 }
-
-jest.mock('@/hooks/useResponsive', () => ({
-  useResponsive: () => responsiveMock,
-}))
 
 describe('Slider navigation - Web', () => {
   const originalPlatform = Platform.OS
+  const RN = require('react-native')
 
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
-    Object.assign(responsiveMock, {
+    Object.assign(viewportMock, {
       width: 1200,
       height: 900,
-      isPhone: false,
-      isLargePhone: false,
-      isTablet: false,
-      isLargeTablet: false,
     })
+    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ ...viewportMock, scale: 1, fontScale: 1 })
   })
 
   afterEach(() => {
@@ -482,13 +480,14 @@ describe('Slider display correctness', () => {
 
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
-    Object.assign(responsiveMock, {
+    Object.assign(viewportMock, {
       width: 1200,
       height: 900,
-      isPhone: false,
-      isLargePhone: false,
-      isTablet: false,
-      isLargeTablet: false,
+    })
+    ;(require('react-native').useWindowDimensions as jest.Mock).mockReturnValue({
+      ...viewportMock,
+      scale: 1,
+      fontScale: 1,
     })
   })
 
@@ -534,13 +533,14 @@ describe('Slider display correctness', () => {
   })
 
   it('uses vertical page pan touch-action on mobile web slides', async () => {
-    Object.assign(responsiveMock, {
+    Object.assign(viewportMock, {
       width: 390,
       height: 844,
-      isPhone: true,
-      isLargePhone: false,
-      isTablet: false,
-      isLargeTablet: false,
+    })
+    ;(require('react-native').useWindowDimensions as jest.Mock).mockReturnValue({
+      ...viewportMock,
+      scale: 1,
+      fontScale: 1,
     })
 
     const images = createImages(3)
@@ -568,13 +568,14 @@ describe('Slider display correctness', () => {
   })
 
   it('shows visible arrows on mobile web when explicitly enabled', async () => {
-    Object.assign(responsiveMock, {
+    Object.assign(viewportMock, {
       width: 390,
       height: 844,
-      isPhone: true,
-      isLargePhone: false,
-      isTablet: false,
-      isLargeTablet: false,
+    })
+    ;(require('react-native').useWindowDimensions as jest.Mock).mockReturnValue({
+      ...viewportMock,
+      scale: 1,
+      fontScale: 1,
     })
 
     const images = createImages(3)

@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
+import { useResponsive } from '@/hooks/useResponsive';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity } from './questsShared';
@@ -50,6 +51,9 @@ export default function QuestsSidebar({
     onToggleAllCountryGroups,
     onSetRadius,
 }: QuestsSidebarProps) {
+    const { isMobile } = useResponsive();
+    const iconSize = isMobile ? 16 : 18;
+
     return (
         <View style={styles.sidebar}>
             <View style={styles.sidebarHeader}>
@@ -91,7 +95,7 @@ export default function QuestsSidebar({
                     >
                         <View style={styles.cityItemLeft}>
                             <View style={[styles.cityItemIcon, selectedCityId === nearbyId && styles.cityItemIconActive]}>
-                                <Feather name="navigation" size={18} color={selectedCityId === nearbyId ? colors.textOnPrimary : colors.textMuted} />
+                                <Feather name="navigation" size={iconSize} color={selectedCityId === nearbyId ? colors.textOnPrimary : colors.textMuted} />
                             </View>
                             <Text style={[styles.cityItemText, selectedCityId === nearbyId && styles.cityItemTextActive]}>
                                 Рядом со мной
@@ -156,7 +160,7 @@ export default function QuestsSidebar({
                                     >
                                         <View style={styles.cityItemLeft}>
                                             <View style={[styles.cityItemIcon, isActive && styles.cityItemIconActive]}>
-                                                <Feather name={isActive ? 'compass' : 'map-pin'} size={18} color={isActive ? colors.textOnPrimary : colors.textMuted} />
+                                                <Feather name={isActive ? 'compass' : 'map-pin'} size={iconSize} color={isActive ? colors.textOnPrimary : colors.textMuted} />
                                             </View>
                                             <Text style={[styles.cityItemText, isActive && styles.cityItemTextActive]}>
                                                 {city.name}

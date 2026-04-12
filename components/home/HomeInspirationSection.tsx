@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
@@ -542,12 +542,7 @@ function FilterGroupCard({
         <Text style={styles.filterGroupTitleText}>{group.title}</Text>
       </View>
       {isMobile ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 7, paddingRight: 16 }}
-          style={{ marginHorizontal: -16, paddingHorizontal: 16 }}
-        >
+        <View style={[styles.chipsWrap, styles.chipsWrapMobile]}>
           {group.chips.map((chip) => {
             const isSelected = selectedChip === chip.label;
             return (
@@ -556,6 +551,7 @@ function FilterGroupCard({
                 onPress={() => onChipPress(chip.label, (chip as any).filters, (chip as any).route)}
                 style={({ pressed }) => [
                   styles.chip,
+                  styles.chipMobile,
                   isSelected && styles.chipSelected,
                   !isSelected && pressed && styles.chipHover,
                 ]}
@@ -569,7 +565,7 @@ function FilterGroupCard({
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
       ) : (
         <View style={styles.chipsWrap}>
           {group.chips.map((chip) => {

@@ -7,9 +7,57 @@ import { rIC } from '@/utils/rIC'
 import { initPerformanceMonitoring } from '@/utils/performance'
 
 const NON_TRAVEL_PERFORMANCE_INIT_DELAY_MS = 1000
-const HERO_ENHANCERS_FALLBACK_MS = 1800
-const POST_LCP_RUNTIME_FALLBACK_MS = 7000
 const preloadTravelHeroSliderRuntime = () => import('@/components/travel/Slider.web')
+
+type IdleCapableWindow = Window & {
+  requestIdleCallback?: (
+    callback: IdleRequestCallback,
+    options?: IdleRequestOptions,
+  ) => number
+  cancelIdleCallback?: (handle: number) => void
+}
+
+const runWhenBrowserIdle = (
+  callback: () => void,
+  fallbackMs = 250,
+): (() => void) => {
+  if (typeof window === 'undefined') {
+    callback()
+    return () => {}
+  }
+
+  const idleWindow = window as IdleCapableWindow
+  let cancelled = false
+  let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+    if (!cancelled) callback()
+  }, fallbackMs)
+  let idleId: number | null = null
+
+  if (typeof idleWindow.requestIdleCallback === 'function') {
+    idleId = idleWindow.requestIdleCallback(
+      () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        if (!cancelled) callback()
+      },
+      { timeout: fallbackMs },
+    )
+  }
+
+  return () => {
+    cancelled = true
+    if (timeoutId) clearTimeout(timeoutId)
+    if (idleId !== null && typeof idleWindow.cancelIdleCallback === 'function') {
+      try {
+        idleWindow.cancelIdleCallback(idleId)
+      } catch {
+        // noop
+      }
+    }
+  }
+}
 
 export interface UseTravelDetailsPerformanceArgs {
   travel?: Travel
@@ -105,48 +153,20 @@ export function useTravelDetailsPerformance({
     setHeroEnhancersReady(false)
     setPostLcpRuntimeReady(false)
 
-    let heroFallbackId: ReturnType<typeof setTimeout> | null = null
-    let runtimeFallbackId: ReturnType<typeof setTimeout> | null = null
-    let heroRevealed = false
-    let runtimeRevealed = false
+    let cleanupHeroIdle: (() => void) | null = null
+    let cleanupRuntimeIdle: (() => void) | null = null
 
-    const revealHeroEnhancers = () => {
-      if (heroRevealed) return
-      heroRevealed = true
+    cleanupHeroIdle = runWhenBrowserIdle(() => {
       setHeroEnhancersReady(true)
-    }
-
-    const revealPostLcpRuntime = () => {
-      if (runtimeRevealed) return
-      runtimeRevealed = true
+    }, 250)
+    cleanupRuntimeIdle = runWhenBrowserIdle(() => {
       setPostLcpRuntimeReady(true)
+    }, 500)
+
+    return () => {
+      cleanupHeroIdle?.()
+      cleanupRuntimeIdle?.()
     }
-
-    const revealAll = () => {
-      revealHeroEnhancers()
-      revealPostLcpRuntime()
-      cleanup()
-    }
-
-    const cleanup = () => {
-      if (heroFallbackId) clearTimeout(heroFallbackId)
-      if (runtimeFallbackId) clearTimeout(runtimeFallbackId)
-      window.removeEventListener('pointerdown', revealAll as EventListener)
-      window.removeEventListener('touchstart', revealAll as EventListener)
-      window.removeEventListener('keydown', revealAll as EventListener)
-      window.removeEventListener('scroll', revealAll as EventListener)
-      window.removeEventListener('wheel', revealAll as EventListener)
-    }
-
-    window.addEventListener('pointerdown', revealAll, { passive: true, once: true })
-    window.addEventListener('touchstart', revealAll, { passive: true, once: true })
-    window.addEventListener('keydown', revealAll, { once: true })
-    window.addEventListener('scroll', revealAll, { passive: true, once: true })
-    window.addEventListener('wheel', revealAll, { passive: true, once: true })
-    heroFallbackId = setTimeout(revealHeroEnhancers, HERO_ENHANCERS_FALLBACK_MS)
-    runtimeFallbackId = setTimeout(revealPostLcpRuntime, POST_LCP_RUNTIME_FALLBACK_MS)
-
-    return cleanup
   }, [isLoading, lcpLoaded, travelId])
 
   useEffect(() => {
@@ -190,23 +210,14 @@ export function useTravelDetailsPerformance({
         }
       }
 
-      let revealed = false
-      const reveal = () => {
-        if (revealed || cancelled) return
-        revealed = true
+      const cleanupIdle = runWhenBrowserIdle(() => {
+        if (cancelled) return
         runPerformanceMonitoring()
-      }
-
-      window.addEventListener('pointerdown', reveal, { passive: true, once: true })
-      window.addEventListener('keydown', reveal, { once: true })
-      window.addEventListener('wheel', reveal, { passive: true, once: true })
+      }, 500)
 
       return () => {
         cancelled = true
-        revealed = true
-        window.removeEventListener('pointerdown', reveal as EventListener)
-        window.removeEventListener('keydown', reveal as EventListener)
-        window.removeEventListener('wheel', reveal as EventListener)
+        cleanupIdle()
       }
     }
     return undefined

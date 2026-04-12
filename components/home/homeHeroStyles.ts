@@ -1580,6 +1580,12 @@ export const createHomeHeroStyles = ({
         } as any,
       }),
     },
+    moodChipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      width: '100%',
+    },
     moodChip: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -1652,6 +1658,13 @@ export const createHomeHeroStyles = ({
           paddingBottom: 4,
         } as any,
       }),
+    },
+    popularGrid: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+      alignItems: 'stretch',
     },
 
     // -- Featured card (mobile hero image) --
@@ -1733,6 +1746,13 @@ export const createHomeHeroStyles = ({
           boxShadow: `0 4px 16px ${warmShadow}, 0 1px 4px rgba(120,90,50,0.06)`,
         },
       }),
+    },
+    imageCardGrid: {
+      width: undefined,
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: '48%',
+      minWidth: 0,
     },
     imageCardHover: {
       ...Platform.select({

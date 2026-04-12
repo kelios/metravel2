@@ -16,10 +16,12 @@ type BookImage = {
 type HomeHeroPopularSectionProps = {
   colors: ThemedColors
   styles: any
-  isMobile: boolean
   isWeb: boolean
+  useMobileGrid: boolean
   featuredCardWidth?: number
   featuredCardHeight: number
+  popularCardWidth: number
+  popularCardHeight: number
   bookImages: readonly BookImage[]
   onOpenArticle: (href?: string | null) => void
 }
@@ -27,13 +29,17 @@ type HomeHeroPopularSectionProps = {
 export default function HomeHeroPopularSection({
   colors,
   styles,
-  isMobile,
   isWeb,
+  useMobileGrid,
   featuredCardWidth,
   featuredCardHeight,
+  popularCardWidth,
+  popularCardHeight,
   bookImages,
   onOpenArticle,
 }: HomeHeroPopularSectionProps) {
+  const popularItems = useMobileGrid ? bookImages.slice(0, 4) : bookImages
+
   return (
     <View style={styles.popularSection}>
       <Pressable
@@ -72,59 +78,100 @@ export default function HomeHeroPopularSection({
         </View>
       </Pressable>
       <Text style={styles.popularTitle}>Популярные маршруты</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={
-          isWeb
-            ? ({
-                touchAction: 'pan-x pan-y',
-                WebkitOverflowScrolling: 'touch',
-                overflowX: 'auto',
-                overflowY: 'hidden',
-                overscrollBehaviorX: 'contain',
-              } as any)
-            : undefined
-        }
-        contentContainerStyle={styles.popularScrollContent}
-        directionalLockEnabled={Platform.OS === 'ios'}
-        nestedScrollEnabled={Platform.OS === 'android'}
-      >
-        {bookImages.map((image) => (
-          <Pressable
-            key={image.title}
-            onPress={() => onOpenArticle(image.href)}
-            style={({ pressed, hovered }) => [
-              styles.imageCard,
-              (pressed || hovered) && styles.imageCardHover,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={image.title}
-          >
-            <ImageCardMedia
-              source={image.source}
-              width={isMobile ? 195 : 215}
-              height={isMobile ? 130 : 148}
-              borderRadius={0}
-              fit="cover"
-              blurBackground
-              allowCriticalWebBlur
-              quality={85}
-              alt={image.alt}
-              loading="lazy"
-              style={styles.imageCardImage}
-            />
-            <View style={styles.imageCardContent}>
-              <Text style={styles.imageCardTitle} numberOfLines={1}>
-                {image.title}
-              </Text>
-              <Text style={styles.imageCardSubtitle} numberOfLines={1}>
-                {image.subtitle}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {useMobileGrid ? (
+        <View style={styles.popularGrid}>
+          {popularItems.map((image) => (
+            <Pressable
+              key={image.title}
+              onPress={() => onOpenArticle(image.href)}
+              style={({ pressed, hovered }) => [
+                styles.imageCard,
+                styles.imageCardGrid,
+                { width: popularCardWidth },
+                (pressed || hovered) && styles.imageCardHover,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={image.title}
+            >
+              <ImageCardMedia
+                source={image.source}
+                width={popularCardWidth}
+                height={popularCardHeight}
+                borderRadius={0}
+                fit="cover"
+                blurBackground
+                allowCriticalWebBlur
+                quality={85}
+                alt={image.alt}
+                loading="lazy"
+                style={[styles.imageCardImage, { width: popularCardWidth, height: popularCardHeight }]}
+              />
+              <View style={styles.imageCardContent}>
+                <Text style={styles.imageCardTitle} numberOfLines={2}>
+                  {image.title}
+                </Text>
+                <Text style={styles.imageCardSubtitle} numberOfLines={2}>
+                  {image.subtitle}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={
+            isWeb
+              ? ({
+                  touchAction: 'pan-x pan-y',
+                  WebkitOverflowScrolling: 'touch',
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  overscrollBehaviorX: 'contain',
+                } as any)
+              : undefined
+          }
+          contentContainerStyle={styles.popularScrollContent}
+          directionalLockEnabled={Platform.OS === 'ios'}
+          nestedScrollEnabled={Platform.OS === 'android'}
+        >
+          {popularItems.map((image) => (
+            <Pressable
+              key={image.title}
+              onPress={() => onOpenArticle(image.href)}
+              style={({ pressed, hovered }) => [
+                styles.imageCard,
+                (pressed || hovered) && styles.imageCardHover,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={image.title}
+            >
+              <ImageCardMedia
+                source={image.source}
+                width={popularCardWidth}
+                height={popularCardHeight}
+                borderRadius={0}
+                fit="cover"
+                blurBackground
+                allowCriticalWebBlur
+                quality={85}
+                alt={image.alt}
+                loading="lazy"
+                style={styles.imageCardImage}
+              />
+              <View style={styles.imageCardContent}>
+                <Text style={styles.imageCardTitle} numberOfLines={1}>
+                  {image.title}
+                </Text>
+                <Text style={styles.imageCardSubtitle} numberOfLines={1}>
+                  {image.subtitle}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
     </View>
   )
 }
