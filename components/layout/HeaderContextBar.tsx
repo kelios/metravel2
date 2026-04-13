@@ -8,7 +8,6 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname, useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import useBreadcrumbModelDefault, {
@@ -19,6 +18,10 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { useTravelSectionsStore } from '@/stores/travelSectionsStore';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import BreadcrumbsJsonLd from '@/components/seo/BreadcrumbsJsonLd';
+import {
+  resolveHeaderContextBarAction,
+  resolveHeaderContextBarIsMobile,
+} from './headerContextBarModel';
 
 const useBreadcrumbModelSafe: () => BreadcrumbModel =
   typeof useBreadcrumbModelNamed === 'function'
@@ -38,20 +41,35 @@ type HeaderContextBarProps = {
   testID?: string;
 };
 
+type ActionButtonProps = {
+  accessibilityLabel: string;
+  children: React.ReactNode;
+  onPress: () => void;
+  style: any;
+  testID?: string;
+};
+
+function ActionButton({ accessibilityLabel, children, onPress, style, testID }: ActionButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={[style, globalFocusStyles.focusable]}
+      testID={testID}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
 function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width } = useResponsive();
   const isJestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
-  const effectiveWidth =
-    Platform.OS === 'web' && !isJestEnv && typeof window !== 'undefined'
-      ? window.innerWidth
-      : width;
-  const isMobile =
-    Platform.OS === 'web'
-      ? effectiveWidth < METRICS.breakpoints.tablet
-      : isPhone || isLargePhone;
+  const isMobile = resolveHeaderContextBarIsMobile({ width, isPhone, isLargePhone, isJestEnv });
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
   const requestToggleMapPanel = useMapPanelStore((s) => s.requestToggle);
 
@@ -78,50 +96,48 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
   }, [isMobile, styles]);
 
   if (isMobile) {
-    const isMap = pathname === '/map';
-    const isUserPoints = pathname === '/userpoints';
-    const canOpenSections = typeof pathname === 'string' && pathname.startsWith('/travels/');
+    const mobileAction = resolveHeaderContextBarAction(pathname);
     return (
       <>
         <BreadcrumbsJsonLd model={model} pathname={pathname} />
         <View testID={testID ?? 'header-context-bar'} style={containerStyle}>
           <View style={styles.mobileRow}>
-          <Pressable
-            onPress={handleBackPress}
-            accessibilityRole="button"
-            accessibilityLabel="Назад"
-            style={[styles.backButton, globalFocusStyles.focusable]}
-          >
-            <Feather name="arrow-left" size={18} color={colors.text} />
-          </Pressable>
-
-          <Text style={styles.mobileTitle} numberOfLines={1}>
-            {model.currentTitle}
-          </Text>
-
-          {isMap || isUserPoints ? (
-            <Pressable
-              onPress={requestToggleMapPanel}
-              accessibilityRole="button"
-              accessibilityLabel="Открыть или закрыть панель"
-              style={[styles.mobileSectionsButton, globalFocusStyles.focusable]}
-              testID="map-panel-open"
+            <ActionButton
+              accessibilityLabel="Назад"
+              onPress={handleBackPress}
+              style={styles.backButton}
             >
-              <Feather name="menu" size={18} color={colors.textMuted} />
-            </Pressable>
-          ) : canOpenSections ? (
-            <Pressable
-              onPress={requestOpen}
-              accessibilityRole="button"
-              accessibilityLabel="Открыть секции"
-              style={[styles.mobileSectionsButton, globalFocusStyles.focusable]}
-              testID="mobile-sections-open"
-            >
-              <Feather name="list" size={18} color={colors.textMuted} />
-            </Pressable>
-          ) : (
-            <View style={styles.mobileRightSpacer} />
-          )}
+              <Feather name="arrow-left" size={18} color={colors.text} />
+            </ActionButton>
+
+            <View style={styles.mobileTitleWrap}>
+              <Text style={styles.mobileEyebrow}>Навигация</Text>
+              <Text style={styles.mobileTitle} numberOfLines={1}>
+                {model.currentTitle}
+              </Text>
+            </View>
+
+            {mobileAction === 'map-panel' ? (
+              <ActionButton
+                accessibilityLabel="Открыть или закрыть панель"
+                onPress={requestToggleMapPanel}
+                style={styles.mobileSectionsButton}
+                testID="map-panel-open"
+              >
+                <Feather name="menu" size={18} color={colors.textMuted} />
+              </ActionButton>
+            ) : mobileAction === 'travel-sections' ? (
+              <ActionButton
+                accessibilityLabel="Открыть секции"
+                onPress={requestOpen}
+                style={styles.mobileSectionsButton}
+                testID="mobile-sections-open"
+              >
+                <Feather name="list" size={18} color={colors.textMuted} />
+              </ActionButton>
+            ) : (
+              <View style={styles.mobileRightSpacer} />
+            )}
           </View>
         </View>
       </>
@@ -143,45 +159,46 @@ function HeaderContextBar({ testID }: HeaderContextBarProps) {
       >
         {model.showBreadcrumbs ? (
           <View style={styles.crumbRow}>
-          <Pressable
-            onPress={() => router.push('/' as any)}
-            accessibilityRole="button"
-            accessibilityLabel="Перейти на Главную"
-            style={({ pressed }) => [styles.crumbItem, pressed && styles.crumbItemPressed, globalFocusStyles.focusable]}
-          >
-            <Text style={styles.crumbLabel}>Главная</Text>
-          </Pressable>
+            <Pressable
+              onPress={() => router.push('/' as any)}
+              accessibilityRole="button"
+              accessibilityLabel="Перейти на Главную"
+              style={({ pressed }) => [styles.crumbItem, pressed && styles.crumbItemPressed, globalFocusStyles.focusable]}
+            >
+              <Feather name="home" size={13} color={colors.textMuted} />
+              <Text style={styles.crumbLabel}>Главная</Text>
+            </Pressable>
 
-          {model.items.map((item, idx) => {
-            const isLast = idx === model.items.length - 1;
-            return (
-              <React.Fragment key={item.path}>
-                <Feather name="chevron-right" size={14} color={colors.textMuted} style={styles.separator} />
-                <Pressable
-                  onPress={() => {
-                    if (isLast) return;
-                    router.push(item.path as any);
-                  }}
-                  disabled={isLast}
-                  accessibilityRole="button"
-                  accessibilityLabel={isLast ? `Текущая страница: ${item.label}` : `Перейти на ${item.label}`}
-                  {...(Platform.OS === 'web' && isLast
-                    ? ({ 'aria-current': 'page' } as any)
-                    : {})}
-                  style={({ pressed }) => [
-                    styles.crumbItem,
-                    isLast && styles.crumbItemLast,
-                    pressed && !isLast && styles.crumbItemPressed,
-                    globalFocusStyles.focusable,
-                  ]}
-                >
-                  <Text style={[styles.crumbLabel, isLast && styles.crumbLabelLast]} numberOfLines={1}>
-                    {item.label}
-                  </Text>
-                </Pressable>
-              </React.Fragment>
-            );
-          })}
+            {model.items.map((item, idx) => {
+              const isLast = idx === model.items.length - 1;
+              return (
+                <React.Fragment key={item.path}>
+                  <Feather name="chevron-right" size={14} color={colors.textMuted} style={styles.separator} />
+                  <Pressable
+                    onPress={() => {
+                      if (isLast) return;
+                      router.push(item.path as any);
+                    }}
+                    disabled={isLast}
+                    accessibilityRole="button"
+                    accessibilityLabel={isLast ? `Текущая страница: ${item.label}` : `Перейти на ${item.label}`}
+                    {...(Platform.OS === 'web' && isLast
+                      ? ({ 'aria-current': 'page' } as any)
+                      : {})}
+                    style={({ pressed }) => [
+                      styles.crumbItem,
+                      isLast && styles.crumbItemLast,
+                      pressed && !isLast && styles.crumbItemPressed,
+                      globalFocusStyles.focusable,
+                    ]}
+                  >
+                    <Text style={[styles.crumbLabel, isLast && styles.crumbLabelLast]} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
+              );
+            })}
           </View>
         ) : (
           <Text style={styles.pageContext} numberOfLines={1}>
@@ -197,7 +214,7 @@ export default React.memo(HeaderContextBar);
 
 const createStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {
-    minHeight: 32,
+    minHeight: 36,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     justifyContent: 'center',
     backgroundColor: Platform.OS === 'web' ? colors.backgroundSecondary : colors.surfaceMuted,
@@ -205,19 +222,29 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     borderTopColor: colors.borderLight,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 0 rgba(0,0,0,0.03)',
+      },
+    }),
   },
   containerMobile: {
-    minHeight: 40,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    minHeight: 52,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
   },
   crumbRow: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 20,
+    flexWrap: 'wrap',
   },
   crumbItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.pill,
   },
   crumbItemLast: {
     opacity: 1,
@@ -245,18 +272,32 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   mobileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   backButton: {
     minWidth: 48,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: DESIGN_TOKENS.radii.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  mobileTitleWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  mobileEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   mobileTitle: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
   },
   mobileRightSpacer: {
@@ -268,6 +309,10 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 0.72,
+    opacity: 0.88,
+    borderRadius: DESIGN_TOKENS.radii.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
 });

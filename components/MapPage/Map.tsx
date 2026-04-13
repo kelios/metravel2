@@ -15,7 +15,7 @@ export default function Map(props: any) {
 
     ;(async () => {
       try {
-        const mod = await import('./OptimizedMap.web')
+        const mod = await import('./Map.web')
         const Comp = (mod as any).default ?? (mod as any)
         if (mounted) setComponent(() => Comp)
       } catch {

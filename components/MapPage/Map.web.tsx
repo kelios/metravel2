@@ -548,4 +548,44 @@ const getStyles = (colors: ThemedColors) =>
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   });
 
-export default React.memo(MapPageComponent);
+// Custom memo comparator — avoids re-renders for micro-changes in coordinates
+const COORD_EPSILON = 0.0001;
+
+export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
+  if (
+    Math.abs(prevProps.coordinates.latitude - nextProps.coordinates.latitude) > COORD_EPSILON ||
+    Math.abs(prevProps.coordinates.longitude - nextProps.coordinates.longitude) > COORD_EPSILON
+  ) return false;
+
+  if (prevProps.mode !== nextProps.mode || prevProps.transportMode !== nextProps.transportMode) return false;
+
+  const prevRP = prevProps.routePoints ?? [];
+  const nextRP = nextProps.routePoints ?? [];
+  if (prevRP.length !== nextRP.length) return false;
+  if (!prevRP.every((p, i) => {
+    const n = nextRP[i];
+    return n && Math.abs(p[0] - n[0]) < COORD_EPSILON && Math.abs(p[1] - n[1]) < COORD_EPSILON;
+  })) return false;
+
+  const prevFull = prevProps.fullRouteCoords ?? [];
+  const nextFull = nextProps.fullRouteCoords ?? [];
+  if (prevFull.length !== nextFull.length) return false;
+  if (prevFull.length > 0 && !prevFull.every((p, i) => {
+    const n = nextFull[i];
+    return n && Math.abs(p[0] - n[0]) < COORD_EPSILON && Math.abs(p[1] - n[1]) < COORD_EPSILON;
+  })) return false;
+
+  if (prevProps.radius !== nextProps.radius) return false;
+
+  const prevData = prevProps.travel?.data ?? [];
+  const nextData = nextProps.travel?.data ?? [];
+  if (prevData.length !== nextData.length) return false;
+  if (!prevData.every((p, i) => {
+    const n = nextData[i];
+    return n && p.id === n.id && p.coord === n.coord && p.address === n.address;
+  })) return false;
+
+  return true;
+};
+
+export default React.memo(MapPageComponent, arePropsEqual);

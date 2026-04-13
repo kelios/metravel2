@@ -30,6 +30,12 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
       flex: 1,
       backgroundColor: colors.surfaceLight,
       position: 'relative',
+      // Subtle map-like background gradient to make skeleton feel more meaningful as LCP
+      ...(Platform.OS === 'web'
+        ? ({
+            backgroundImage: `linear-gradient(135deg, ${colors.surfaceLight} 0%, ${colors.backgroundTertiary} 50%, ${colors.surfaceLight} 100%)`,
+          } as any)
+        : null),
     },
     chipsRow: {
       position: 'absolute',

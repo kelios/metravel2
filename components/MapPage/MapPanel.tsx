@@ -10,7 +10,7 @@ import type { ComponentType } from 'react';
 type LatLng = { latitude: number; longitude: number };
 
 const LazyWebMap = React.lazy(() =>
-  import('@/components/MapPage/OptimizedMap.web').then((m) => ({ default: (m.default ?? m) as ComponentType<any> }))
+  import('@/components/MapPage/Map.web').then((m) => ({ default: (m.default ?? m) as ComponentType<any> }))
 );
 
 interface MapPanelProps {

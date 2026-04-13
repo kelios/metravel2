@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react'
+import React, { Suspense, useEffect } from 'react'
 import { Platform } from 'react-native'
 import { usePathname } from 'expo-router'
 import { useIsFocused } from '@react-navigation/native'
@@ -20,22 +20,28 @@ const WEB_SR_ONLY_STYLE = {
   borderWidth: 0,
 } as const
 
-// Keep the tab route module tiny so it doesn't pull map dependencies into the entry bundle.
-const MapScreenImpl = React.lazy(() => import('@/screens/tabs/MapScreen'))
+// Start loading the MapScreen chunk immediately (module-level) so it downloads in parallel
+// with hydration instead of waiting for Suspense to discover it.
+const mapScreenImport = import('@/screens/tabs/MapScreen')
+const MapScreenImpl = React.lazy(() => mapScreenImport)
+
+// Fire-and-forget CSS injection on module load — no hydration gate needed.
+if (Platform.OS === 'web') {
+  ensureLeafletCss()
+}
 
 export default function MapScreen() {
   const pathname = usePathname()
   const isFocused = useIsFocused()
-  const [hydrated, setHydrated] = useState(Platform.OS !== 'web')
   const title = MAP_SEO_TITLE
   const description = MAP_SEO_DESCRIPTION
   const canonical = buildCanonicalUrl(pathname || '/map')
   const ogImage = buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)
 
+  // Ensure CSS is present even if module-level call ran before document was ready.
   useEffect(() => {
     if (Platform.OS !== 'web') return
     ensureLeafletCss()
-    setHydrated(true)
   }, [])
 
   const seoBlock = Platform.OS === 'web' && isFocused ? (
@@ -53,15 +59,6 @@ export default function MapScreen() {
     <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1>
   ) : null
 
-  if (!hydrated) {
-    return (
-      <>
-        {seoBlock}
-        {srH1}
-        <MapPageSkeleton />
-      </>
-    )
-  }
 
   return (
     <>

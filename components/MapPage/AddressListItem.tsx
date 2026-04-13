@@ -1,6 +1,6 @@
 // components/MapPage/AddressListItem.tsx
 import React, { useEffect, useMemo, useCallback, useState } from 'react';
-import { View, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { Text } from '@/ui/paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
@@ -9,7 +9,6 @@ import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import PlaceListCard from '@/components/places/PlaceListCard';
 import Feather from '@expo/vector-icons/Feather';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
@@ -62,7 +61,9 @@ const AddressListItem: React.FC<Props> = ({
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
 
-    const { width, isPhone, isLargePhone } = useResponsive();
+    const { width } = useWindowDimensions();
+    const isPhone = width >= METRICS.breakpoints.phone && width < METRICS.breakpoints.largePhone;
+    const isLargePhone = width >= METRICS.breakpoints.largePhone && width < METRICS.breakpoints.tablet;
     const isMobile = isMobileProp ?? (isPhone || isLargePhone);
     const isSmallScreen = isPhone;
     const isTablet = width > 480 && width <= METRICS.breakpoints.largeTablet;

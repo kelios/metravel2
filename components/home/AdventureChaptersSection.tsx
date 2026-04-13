@@ -18,6 +18,8 @@ import type { Travel } from '@/types/types';
 import { createAdventureChaptersStyles } from './homeAdventureChaptersStyles';
 
 const PLACEHOLDER_BLURHASH = 'LEHL6nWB2yk8pyo0adR*.7kCMdnj';
+const SECTION_SUBTITLE =
+  'Собрали маршруты, к которым чаще всего возвращаются: для первого вдохновения, быстрого выбора и новых идей на выходные.';
 
 
 function isLikelyWatermarked(url: string | null | undefined): boolean {
@@ -132,6 +134,9 @@ function ChapterCard({ item, index, styles, colors }: ChapterCardProps) {
           <View style={styles.coverGradientNative} />
         )}
 
+        <View style={[styles.chapterLabel, isHovered && styles.chapterLabelHovered]}>
+          <Text style={styles.chapterLabelText}>Глава {index + 1}</Text>
+        </View>
 
         {/* Favorite button — top right */}
         <View
@@ -332,11 +337,19 @@ function AdventureChaptersSection() {
   return (
     <View style={styles.section}>
         <View style={styles.sectionFrame}>
+          <View style={styles.sectionGlow} pointerEvents="none" />
+          <View style={styles.sectionAccent} pointerEvents="none" />
+
           {/* ── Section header ── */}
           <View style={styles.header}>
+            <View style={styles.labelPill}>
+              <Feather name="book-open" size={12} color={colors.primaryText} />
+              <Text style={styles.labelPillText}>Популярные главы</Text>
+            </View>
 
             <Text style={styles.heroTitle}>Главы путешествий,</Text>
             <Text style={styles.heroTitleAccent}>которые выбирают чаще всего</Text>
+            <Text style={styles.heroSubtitle}>{SECTION_SUBTITLE}</Text>
 
           </View>
 
@@ -346,8 +359,14 @@ function AdventureChaptersSection() {
               <View style={styles.emptyIcon}>
                 <Feather name="book-open" size={22} color={colors.primary} />
               </View>
+              <View style={styles.labelPill}>
+                <Feather name="clock" size={12} color={colors.primaryText} />
+                <Text style={styles.labelPillText}>Подборка обновляется</Text>
+              </View>
               <Text style={styles.emptyTitle}>Главы путешествий скоро появятся</Text>
-              <Text style={styles.emptySubtitle}>Загляните в каталог маршрутов</Text>
+              <Text style={styles.emptySubtitle}>
+                Пока показываем только основные маршруты. Полная подборка вернётся после следующего обновления каталога.
+              </Text>
               <Button
                 label="Открыть каталог"
                 onPress={handleViewAll}

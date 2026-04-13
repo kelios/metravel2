@@ -2,7 +2,7 @@
  * MapMobileLayout - мобильная версия карты с Bottom Sheet
  */
 
-import React, { useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
+import React, { Suspense, useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
 import { View, Text as RNText, StyleSheet, Platform, InteractionManager, useWindowDimensions, Pressable } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { usePathname } from 'expo-router';
@@ -350,27 +350,29 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           };
 
           return (
-            <ProviderComponent {...mergedProviderProps}>
-              {showModeToggle && (
-                <View style={styles.filtersModeBar} testID="map-mobile-mode-toggle">
-                  <SegmentedControl
-                    options={modeTabsOptions}
-                    value={filtersMode}
-                    onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
-                    compact={true}
-                    dense={isNarrow}
-                    noOuterMargins={true}
-                    tone="subtle"
-                    accessibilityLabel="Выбор режима поиска"
-                  />
-                </View>
-              )}
-              <PanelComponent
-                hideTopControls={true}
-                hideFooterCta={filtersMode === 'route'}
-                hideFooterReset={filtersMode !== 'radius'}
-              />
-            </ProviderComponent>
+            <Suspense fallback={<View style={styles.sheetRoot} />}>
+              <ProviderComponent {...mergedProviderProps}>
+                {showModeToggle && (
+                  <View style={styles.filtersModeBar} testID="map-mobile-mode-toggle">
+                    <SegmentedControl
+                      options={modeTabsOptions}
+                      value={filtersMode}
+                      onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
+                      compact={true}
+                      dense={isNarrow}
+                      noOuterMargins={true}
+                      tone="subtle"
+                      accessibilityLabel="Выбор режима поиска"
+                    />
+                  </View>
+                )}
+                <PanelComponent
+                  hideTopControls={true}
+                  hideFooterCta={filtersMode === 'route'}
+                  hideFooterReset={filtersMode !== 'radius'}
+                />
+              </ProviderComponent>
+            </Suspense>
           );
         })()
       ) : (

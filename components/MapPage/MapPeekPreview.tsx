@@ -169,7 +169,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
 
       {places.length > topPlaces.length && (
         <Button
-          label={`Ещё ${places.length - 3}`}
+          label={`Ещё ${places.length - topPlaces.length}`}
           icon={<MapIcon name="expand-less" size={20} color={colors.primary} />}
           onPress={onExpandPress}
           variant="ghost"

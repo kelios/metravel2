@@ -1,8 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { lazy, useCallback, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 
-import FiltersPanel from '@/components/MapPage/FiltersPanel';
-import { FiltersProvider } from '@/context/MapFiltersContext';
 import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
@@ -13,6 +11,12 @@ import { useMapFilters } from '@/hooks/map/useMapFilters';
 import { useMapDataController } from '@/hooks/map/useMapDataController';
 import { useMapUIController } from '@/hooks/map/useMapUIController';
 import { useRouteController } from '@/hooks/map/useRouteController';
+
+// Lazy-load filters panel components — only needed when the user opens the filters drawer
+const LazyFiltersPanel = lazy(() => import('@/components/MapPage/FiltersPanel'));
+const LazyFiltersProvider = lazy(() =>
+  import('@/context/MapFiltersContext').then((m) => ({ default: m.FiltersProvider }))
+);
 
 /**
  * Главный контроллер экрана карты (facade pattern).
@@ -294,7 +298,7 @@ export function useMapScreenController() {
       hideFooterReset: !isMobile,
     };
 
-    return { Component: FiltersProvider, contextValue, props: contextValue, Panel: FiltersPanel };
+    return { Component: LazyFiltersProvider, contextValue, props: contextValue, Panel: LazyFiltersPanel };
   }, [
     filters,
     filterValues,

@@ -16,8 +16,9 @@ import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
-import MapOnboarding from '@/components/MapPage/MapOnboarding';
 import MapPanel from '@/components/MapPage/MapPanel';
+
+const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'));
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar';
 import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
 import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
@@ -263,6 +264,11 @@ export default function MapScreen() {
         return typeof reset === 'function' ? reset : undefined;
     }, [filtersPanelProps?.contextValue?.resetFilters]);
 
+    const handleShowList = useCallback(() => {
+        selectTravelsTab();
+        if (isDesktopCollapsed) toggleDesktopCollapse();
+    }, [selectTravelsTab, isDesktopCollapsed, toggleDesktopCollapse]);
+
     const mapComponent = useMemo(
         () => (
             <View style={styles.mapArea}>
@@ -279,7 +285,7 @@ export default function MapScreen() {
                 {Platform.OS === 'web' && !isMobile && travelsData.length > 0 && rightPanelTab !== 'travels' && (
                     <MapShowListButton
                         count={travelsData.length}
-                        onPress={selectTravelsTab}
+                        onPress={handleShowList}
                     />
                 )}
                 {mapReady ? (
@@ -315,7 +321,7 @@ export default function MapScreen() {
             quickFilterSelected,
             quickFilterToggle,
             rightPanelTab,
-            selectTravelsTab,
+            handleShowList,
             travelsData.length,
             handleOpenFiltersPanel,
             styles.mapArea,
@@ -329,11 +335,7 @@ export default function MapScreen() {
         ]
     );
 
-    // Use mobile layout on small screens (including web), desktop keeps side panel
-    const useMobileLayout = isMobile;
-
-
-    if (useMobileLayout) {
+    if (isMobile) {
         return (
             <View style={styles.container}>
                 {seoBlock}
@@ -472,9 +474,15 @@ export default function MapScreen() {
                 <View style={styles.panelContent}>
                     {rightPanelTab === 'filters' ? (
                         filtersPanelProps?.Component ? (
-                            <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
-                                <filtersPanelProps.Panel hideFooterReset={!isMobile} />
-                            </filtersPanelProps.Component>
+                            <Suspense fallback={
+                                <View style={styles.panelPlaceholder}>
+                                    <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
+                                </View>
+                            }>
+                                <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
+                                    <filtersPanelProps.Panel hideFooterReset={!isMobile} />
+                                </filtersPanelProps.Component>
+                            </Suspense>
                         ) : (
                             <View style={styles.panelPlaceholder}>
                                 <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>
@@ -532,7 +540,9 @@ export default function MapScreen() {
             )}
 
             {/* Onboarding для новых пользователей */}
-            <MapOnboarding />
+            <Suspense fallback={null}>
+                <LazyMapOnboarding />
+            </Suspense>
         </View>
     );
 }

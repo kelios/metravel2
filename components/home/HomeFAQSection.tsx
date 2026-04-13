@@ -11,6 +11,71 @@ type FaqItem = {
   a: string;
 };
 
+const FAQ_HIGHLIGHTS = [
+  'Маршруты можно смотреть без регистрации',
+  'Личные поездки остаются приватными',
+  'PDF готовится за пару минут',
+] as const;
+
+function FAQItemCard({
+  colors,
+  index,
+  isOpen,
+  item,
+  onToggle,
+  styles,
+}: {
+  colors: ReturnType<typeof useThemedColors>;
+  index: number;
+  isOpen: boolean;
+  item: FaqItem;
+  onToggle: () => void;
+  styles: ReturnType<typeof StyleSheet.create>;
+}) {
+  return (
+    <View style={[styles.item, isOpen && styles.itemOpen]}>
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityLabel={item.q}
+        accessibilityState={{ expanded: isOpen }}
+        accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
+        style={({ pressed, hovered }) => [
+          styles.itemHeader,
+          isOpen && styles.itemHeaderOpen,
+          !isOpen && (pressed || hovered) && Platform.OS === 'web'
+            ? styles.itemHeaderHover
+            : null,
+        ]}
+      >
+        <View style={styles.questionWrap}>
+          <View style={styles.questionMetaRow}>
+            <Text style={styles.questionMeta}>Вопрос {index + 1}</Text>
+          </View>
+          <Text style={[styles.question, isOpen && styles.questionOpen]}>{item.q}</Text>
+        </View>
+        <View style={[styles.toggleWrap, isOpen && styles.toggleWrapOpen]}>
+          <Feather
+            name={isOpen ? 'minus' : 'plus'}
+            size={16}
+            color={isOpen ? colors.textOnPrimary : colors.textMuted}
+          />
+        </View>
+      </Pressable>
+
+      {Platform.OS === 'web' ? (
+        <View style={[styles.answerWrap, !isOpen && styles.answerWrapCollapsed]}>
+          <Text style={styles.answer}>{item.a}</Text>
+        </View>
+      ) : isOpen ? (
+        <View style={styles.answerWrap}>
+          <Text style={styles.answer}>{item.a}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function HomeFAQSection() {
   const colors = useThemedColors();
 
@@ -120,6 +185,33 @@ function HomeFAQSection() {
       maxWidth: 440,
       letterSpacing: 0.1,
     },
+    highlightsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: 10,
+      marginTop: 6,
+      maxWidth: 760,
+    },
+    highlightPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light as any,
+        },
+      }),
+    },
+    highlightPillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+      letterSpacing: 0.1,
+    },
     list: {
       gap: isMobile ? 8 : 10,
     },
@@ -167,12 +259,26 @@ function HomeFAQSection() {
       backgroundColor: colors.primarySoft,
     },
     question: {
-      flex: 1,
       fontSize: isMobile ? 15 : 17,
       fontWeight: '700',
       color: colors.text,
       lineHeight: isMobile ? 22 : 26,
       letterSpacing: -0.3,
+    },
+    questionWrap: {
+      flex: 1,
+      gap: 6,
+    },
+    questionMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    questionMeta: {
+      fontSize: 11,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 0.9,
+      color: colors.textSubtle,
     },
     questionOpen: {
       color: colors.primary,
@@ -230,9 +336,19 @@ function HomeFAQSection() {
     <View style={styles.band} testID="home-faq">
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
-
+          <View style={styles.eyebrow}>
+            <Feather name="help-circle" size={14} color={colors.primary} />
+            <Text style={styles.eyebrowText}>FAQ</Text>
+          </View>
           <Text style={styles.title}>Всё, что нужно знать</Text>
           <Text style={styles.subtitle}>Ответы на самые частые вопросы о сервисе</Text>
+          <View style={styles.highlightsRow}>
+            {FAQ_HIGHLIGHTS.map((highlight) => (
+              <View key={highlight} style={styles.highlightPill}>
+                <Text style={styles.highlightPillText}>{highlight}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         <View style={styles.inner}>
@@ -240,39 +356,15 @@ function HomeFAQSection() {
             {items.map((item, idx) => {
               const isOpen = openIndex === idx;
               return (
-                <View key={item.q} style={[styles.item, isOpen && styles.itemOpen]}>
-                  <Pressable
-                    onPress={() => toggleItem(idx)}
-                    accessibilityRole="button"
-                    accessibilityLabel={item.q}
-                    accessibilityState={{ expanded: isOpen }}
-                    accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
-                    style={({ pressed, hovered }) => [
-                      styles.itemHeader,
-                      isOpen && styles.itemHeaderOpen,
-                      !isOpen && (pressed || hovered) && Platform.OS === 'web' ? styles.itemHeaderHover : null,
-                    ]}
-                  >
-                    <Text style={[styles.question, isOpen && styles.questionOpen]}>{item.q}</Text>
-                    <View style={[styles.toggleWrap, isOpen && styles.toggleWrapOpen]}>
-                      <Feather
-                        name={isOpen ? 'minus' : 'plus'}
-                        size={16}
-                        color={isOpen ? colors.textOnPrimary : colors.textMuted}
-                      />
-                    </View>
-                  </Pressable>
-
-                  {Platform.OS === 'web' ? (
-                    <View style={[styles.answerWrap, !isOpen && styles.answerWrapCollapsed]}>
-                      <Text style={styles.answer}>{item.a}</Text>
-                    </View>
-                  ) : isOpen ? (
-                    <View style={styles.answerWrap}>
-                      <Text style={styles.answer}>{item.a}</Text>
-                    </View>
-                  ) : null}
-                </View>
+                <FAQItemCard
+                  key={item.q}
+                  colors={colors}
+                  index={idx}
+                  isOpen={isOpen}
+                  item={item}
+                  onToggle={() => toggleItem(idx)}
+                  styles={styles}
+                />
               );
             })}
           </View>

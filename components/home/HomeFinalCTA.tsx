@@ -21,6 +21,12 @@ const TRUST_BADGES = [
   { icon: 'zap', label: 'Мгновенно' },
 ] as const;
 
+const CTA_FEATURES = [
+  { icon: 'bookmark', label: 'Сохраняйте идеи в один список' },
+  { icon: 'file-text', label: 'Собирайте PDF без ручной вёрстки' },
+  { icon: 'send', label: 'Делитесь книгой одной ссылкой' },
+] as const;
+
 function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -50,6 +56,36 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     return 'Открыть мою книгу';
   }, [isAuthenticated, travelsCount]);
 
+  const eyebrowLabel = useMemo(() => {
+    if (!isAuthenticated) return 'Ваш travel-дневник';
+    if (travelsCount === 0) return 'Старт вашей коллекции';
+    return 'Книга уже собирается';
+  }, [isAuthenticated, travelsCount]);
+
+  const subtitle = useMemo(() => {
+    if (!isAuthenticated) {
+      return 'Сохраняйте маршруты с фото и заметками, экспортируйте в красивый PDF и возвращайтесь к идеям поездок без лишней подготовки.';
+    }
+    if (travelsCount === 0) {
+      return 'Добавьте первую поездку, чтобы начать личную книгу маршрутов и собрать её в аккуратный PDF, когда захотите.';
+    }
+    return 'У вас уже есть база для книги. Откройте подборку, добавьте новые поездки и соберите финальный PDF в пару кликов.';
+  }, [isAuthenticated, travelsCount]);
+
+  const statusPills = useMemo(() => {
+    if (!isAuthenticated) {
+      return ['Без оплаты', 'Регистрация за минуту', 'PDF после первых поездок'];
+    }
+    if (travelsCount === 0) {
+      return ['Начните с одной поездки', 'Фото и заметки внутри', 'Экспорт готов позже'];
+    }
+    return [
+      `${travelsCount} ${travelsCount === 1 ? 'поездка в книге' : travelsCount < 5 ? 'поездки в книге' : 'поездок в книге'}`,
+      'Добавляйте новые главы',
+      'Экспорт в PDF готов',
+    ];
+  }, [isAuthenticated, travelsCount]);
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
@@ -72,8 +108,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       width: '100%',
       alignSelf: 'center',
       alignItems: 'center',
-      gap: isMobile ? 18 : 32,
-      maxWidth: 680,
+      gap: isMobile ? 18 : 28,
+      maxWidth: 760,
       borderRadius: DESIGN_TOKENS.radii.xl,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
@@ -107,8 +143,33 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       fontWeight: '700',
       color: colors.primaryText,
       letterSpacing: 0.8,
-      // TYPO-04: capitalize вместо uppercase — лучше читаемость на кириллице
       textTransform: 'capitalize',
+    },
+    statusPills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: 10,
+      maxWidth: 620,
+    },
+    statusPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light as any,
+        },
+      }),
+    },
+    statusPillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+      letterSpacing: 0.1,
     },
     iconWrap: {
       width: isMobile ? 64 : 76,
@@ -149,9 +210,51 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       color: colors.textMuted,
       textAlign: 'center',
       lineHeight: isMobile ? 22 : 27,
-      maxWidth: 460,
+      maxWidth: 560,
       fontWeight: '400',
       letterSpacing: 0.1,
+    },
+    featuresGrid: {
+      width: '100%',
+      flexDirection: isMobile ? 'column' : 'row',
+      gap: 12,
+    },
+    featureCard: {
+      flex: 1,
+      minHeight: isMobile ? 68 : 88,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      ...Platform.select({
+        web: {
+          boxShadow: '0 4px 18px rgba(0,0,0,0.05)',
+          backgroundImage: `linear-gradient(180deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
+        },
+      }),
+    },
+    featureIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      flexShrink: 0,
+    },
+    featureText: {
+      flex: 1,
+      fontSize: 13,
+      lineHeight: 19,
+      fontWeight: '600',
+      color: colors.text,
     },
     buttonsContainer: {
       flexDirection: isMobile ? 'column' : 'row',
@@ -247,9 +350,9 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     <View style={styles.container}>
       <ResponsiveContainer maxWidth="lg" padding>
         <View style={styles.content}>
-          <View style={styles.eyebrow}>
+        <View style={styles.eyebrow}>
             <Feather name="star" size={12} color={colors.primaryText} />
-            <Text style={styles.eyebrowText}>Ваш travel-дневник</Text>
+            <Text style={styles.eyebrowText}>{eyebrowLabel}</Text>
           </View>
 
           <View style={styles.iconWrap}>
@@ -261,9 +364,26 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
             <Text style={styles.titleAccent}>книгу путешествий</Text>
           </View>
 
-          <Text style={styles.subtitle}>
-            Сохраняйте маршруты с фото и заметками, экспортируйте в красивый PDF — бесплатно и без лишнего
-          </Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+
+          <View style={styles.statusPills}>
+            {statusPills.map((item) => (
+              <View key={item} style={styles.statusPill}>
+                <Text style={styles.statusPillText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.featuresGrid}>
+            {CTA_FEATURES.map((feature) => (
+              <View key={feature.label} style={styles.featureCard}>
+                <View style={styles.featureIcon}>
+                  <Feather name={feature.icon as any} size={16} color={colors.primary} />
+                </View>
+                <Text style={styles.featureText}>{feature.label}</Text>
+              </View>
+            ))}
+          </View>
 
           <View style={styles.buttonsContainer}>
             <Button

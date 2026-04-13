@@ -10,6 +10,7 @@ import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
 import Button from '@/components/ui/Button';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import AdventureChaptersSection from './AdventureChaptersSection';
 import { createSectionStyles, createSectionsStyles } from './homeInspirationStyles';
@@ -126,6 +127,18 @@ const EMPTY_STATE_TEXT: Record<string, { title: string; subtitle: string }> = {
   },
 };
 
+const SECTION_BADGES: Record<string, string> = {
+  'home-travels-of-month': 'Подборка выходного дня',
+  'home-random-travels': 'Быстрый старт',
+  'home-popular-travels': 'Популярное',
+};
+
+const SECTION_META: Record<string, string> = {
+  'home-travels-of-month': '1-2 дня',
+  'home-random-travels': 'Спонтанно',
+  'home-popular-travels': 'По интересу',
+};
+
 export function HomeInspirationSection({
   title,
   titleAccent,
@@ -181,6 +194,8 @@ export function HomeInspirationSection({
     title: 'Пока здесь пусто',
     subtitle: 'Попробуйте открыть каталог маршрутов.',
   };
+  const sectionBadge = SECTION_BADGES[queryKey];
+  const sectionMeta = SECTION_META[queryKey];
 
   const styles = useMemo(() => createSectionStyles(colors, isMobile), [colors, isMobile]);
   const isDesktopEditorial = Platform.OS === 'web' && !isMobile;
@@ -279,17 +294,68 @@ export function HomeInspirationSection({
     <View style={[styles.section, isMobile && styles.sectionMobile]}>
       <View style={[styles.sectionFrame, isWeekendShowcase && styles.showcaseSectionFrame]}>
         <View style={[styles.heroHeader, { marginBottom: isMobile ? 20 : 32 }]}>
+          {sectionBadge ? (
+            <View style={styles.sectionBadge}>
+              <Feather name="star" size={12} color={colors.textMuted} />
+              <Text style={styles.sectionBadgeText}>{sectionBadge}</Text>
+            </View>
+          ) : null}
           <View style={{ alignItems: 'center', gap: isMobile ? 6 : 10 }}>
             <Text style={styles.heroTitle}>{title}</Text>
             {titleAccent && <Text style={styles.heroTitleAccent}>{titleAccent}</Text>}
           </View>
           {subtitle && <Text style={styles.heroSubtitle}>{subtitle}</Text>}
+          {sectionMeta ? (
+            <View
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: DESIGN_TOKENS.radii.pill,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.borderLight,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: 13,
+                  fontWeight: '600',
+                  letterSpacing: 0.1,
+                }}
+              >
+                {sectionMeta}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
         {travelsList.length === 0 ? (
           <View style={styles.emptyState} testID={`home-empty-${queryKey}`}>
             <View style={styles.emptyStateIconWrap}>
               <Feather name="compass" size={22} color={colors.primary} />
+            </View>
+            <View
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: DESIGN_TOKENS.radii.pill,
+                backgroundColor: colors.primarySoft,
+                borderWidth: 1,
+                borderColor: colors.primaryAlpha30,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.primaryText,
+                  fontSize: 11,
+                  fontWeight: '700',
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Пока без совпадений
+              </Text>
             </View>
             <Text style={[styles.emptyStateTitle, { textAlign: 'center' }]}>{emptyState.title}</Text>
             <Text style={[styles.emptyStateSubtitle, { textAlign: 'center' }]}>{emptyState.subtitle}</Text>
@@ -634,7 +700,10 @@ function HomeInspirationSections() {
             {/* Header */}
             <View style={styles.quickFiltersHeader}>
               <View style={styles.quickFiltersHeaderLeft}>
-
+                <View style={styles.quickFiltersBadge}>
+                  <Feather name="sliders" size={12} color={colors.primary} />
+                  <Text style={styles.quickFiltersBadgeText}>Умный подбор</Text>
+                </View>
                 <Text style={styles.quickFiltersTitle}>Подберите поездку под свой ритм</Text>
                 <Text style={styles.quickFiltersSubtitle}>
                   Комбинируйте формат, сезон и расстояние, чтобы найти идеальный маршрут

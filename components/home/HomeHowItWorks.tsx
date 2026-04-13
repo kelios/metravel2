@@ -36,6 +36,66 @@ const STEPS = [
   },
 ];
 
+const VALUE_PILLS = [
+  'Без сложной подготовки',
+  'PDF за пару кликов',
+  'Подходит для спонтанных выездов',
+] as const;
+
+function StepCard({
+  colors,
+  onPress,
+  showBackgroundNumber,
+  step,
+  styles,
+}: {
+  colors: ReturnType<typeof useThemedColors>
+  onPress: () => void
+  showBackgroundNumber: boolean
+  step: (typeof STEPS)[number]
+  styles: ReturnType<typeof StyleSheet.create>
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed, hovered }) => [
+        styles.step,
+        (pressed || hovered) && styles.stepHover,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${step.number}. ${step.title}`}
+      accessibilityHint={step.description}
+    >
+      {showBackgroundNumber ? (
+        <Text style={styles.stepBgNumber} aria-hidden>
+          {step.number}
+        </Text>
+      ) : null}
+      <View style={styles.stepHeader}>
+        <View style={styles.stepNumber}>
+          <Text style={styles.stepNumberText}>{step.number}</Text>
+        </View>
+        <View style={styles.iconOuter}>
+          <View style={styles.iconInner}>
+            <Feather name={step.icon as any} size={20} color={colors.primary} />
+          </View>
+        </View>
+        <View style={styles.stepHeaderText}>
+          <Text style={styles.stepTitle}>{step.title}</Text>
+          <Text style={styles.stepKicker}>Шаг {step.number}</Text>
+        </View>
+      </View>
+      <Text style={styles.stepDescription}>{step.description}</Text>
+      <View style={styles.stepFooter}>
+        <View style={styles.stepAction}>
+          <Text style={styles.stepActionText}>{step.actionLabel}</Text>
+          <Feather name="arrow-right" size={13} color={colors.primary} />
+        </View>
+      </View>
+    </Pressable>
+  )
+}
+
 function HomeHowItWorks() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
@@ -73,6 +133,29 @@ function HomeHowItWorks() {
       gap: isMobile ? 12 : 20,
       marginBottom: isMobile ? 36 : 64,
     },
+    eyebrow: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light as any,
+        },
+      }),
+    },
+    eyebrowText: {
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 1.2,
+      color: colors.textMuted,
+    },
     title: {
       fontSize: isMobile ? 28 : 46,
       fontWeight: '800',
@@ -88,6 +171,27 @@ function HomeHowItWorks() {
       lineHeight: isMobile ? 23 : 28,
       maxWidth: 520,
       letterSpacing: 0.2,
+    },
+    valuePills: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: 10,
+      maxWidth: 760,
+    },
+    valuePill: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    valuePillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.text,
+      letterSpacing: 0.1,
     },
     stepsContainer: {
       flexDirection: isMobile ? 'column' : 'row',
@@ -111,9 +215,10 @@ function HomeHowItWorks() {
       borderColor: colors.borderLight,
       position: 'relative' as const,
       overflow: 'hidden' as const,
+      minHeight: isMobile ? 220 : 260,
       ...Platform.select({
         web: {
-          boxShadow: '0 4px 20px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
+          boxShadow: DESIGN_TOKENS.shadows.card as any,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           backgroundImage: `linear-gradient(145deg, ${colors.surface} 0%, ${colors.backgroundSecondary} 100%)`,
         },
@@ -122,8 +227,8 @@ function HomeHowItWorks() {
     stepHover: {
       ...Platform.select({
         web: {
-          transform: 'translateY(-8px) scale(1.02)',
-          boxShadow: '0 20px 48px rgba(0,0,0,0.12), 0 6px 16px rgba(0,0,0,0.08)',
+          transform: 'translateY(-6px)',
+          boxShadow: DESIGN_TOKENS.shadows.heavy as any,
           borderColor: colors.primary,
         },
       }),
@@ -146,6 +251,10 @@ function HomeHowItWorks() {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
+    },
+    stepHeaderText: {
+      flex: 1,
+      gap: 4,
     },
     stepNumber: {
       width: 32,
@@ -192,11 +301,23 @@ function HomeHowItWorks() {
       letterSpacing: -0.5,
       lineHeight: isMobile ? 24 : 29,
     },
+    stepKicker: {
+      fontSize: 12,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      color: colors.textSubtle,
+    },
     stepDescription: {
       fontSize: isMobile ? 14 : 15,
       lineHeight: isMobile ? 21 : 23,
       color: colors.textMuted,
       letterSpacing: 0.15,
+      flexGrow: 1,
+    },
+    stepFooter: {
+      marginTop: 'auto',
+      paddingTop: 4,
     },
     stepAction: {
       flexDirection: 'row',
@@ -243,47 +364,34 @@ function HomeHowItWorks() {
     <View testID="home-how-it-works" style={styles.container}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.header}>
-
+          <View style={styles.eyebrow}>
+            <Feather name="book-open" size={14} color={colors.primary} />
+            <Text style={styles.eyebrowText}>Как это работает</Text>
+          </View>
           <Text style={styles.title}>Три шага до вашей книги</Text>
           <Text style={styles.subtitle}>
             Просто выберите маршрут, сохраните поездку и получите красивый PDF
           </Text>
+          <View style={styles.valuePills}>
+            {VALUE_PILLS.map((pill) => (
+              <View key={pill} style={styles.valuePill}>
+                <Text style={styles.valuePillText}>{pill}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         <View style={styles.stepsContainer}>
           {STEPS.map((step, index) => (
             <React.Fragment key={step.number}>
               <View style={styles.stepWrapper}>
-                <Pressable
+                <StepCard
+                  colors={colors}
                   onPress={() => handleStepPress(step.path)}
-                  style={({ pressed, hovered }) => [
-                    styles.step,
-                    (pressed || hovered) && styles.stepHover,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${step.number}. ${step.title}`}
-                  accessibilityHint={step.description}
-                >
-                  {Platform.OS === 'web' && (
-                    <Text style={styles.stepBgNumber} aria-hidden>{step.number}</Text>
-                  )}
-                  <View style={styles.stepHeader}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>{step.number}</Text>
-                    </View>
-                    <View style={styles.iconOuter}>
-                      <View style={styles.iconInner}>
-                        <Feather name={step.icon as any} size={20} color={colors.primary} />
-                      </View>
-                    </View>
-                  </View>
-                  <Text style={styles.stepTitle}>{step.title}</Text>
-                  <Text style={styles.stepDescription}>{step.description}</Text>
-                  <View style={styles.stepAction}>
-                    <Text style={styles.stepActionText}>{step.actionLabel}</Text>
-                    <Feather name="arrow-right" size={13} color={colors.primary} />
-                  </View>
-                </Pressable>
+                  showBackgroundNumber={Platform.OS === 'web'}
+                  step={step}
+                  styles={styles}
+                />
               </View>
 
               {index < STEPS.length - 1 && showConnectors && (
