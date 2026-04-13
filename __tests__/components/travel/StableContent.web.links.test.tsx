@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 
+let StableContent: (typeof import('@/components/travel/StableContent'))['default'];
+
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
     text: '#111111',
@@ -33,6 +35,10 @@ describe('StableContent (web) link styles', () => {
     }
   });
 
+  beforeAll(async () => {
+    StableContent = (await import('@/components/travel/StableContent')).default;
+  });
+
   afterEach(() => {
     const existing = typeof document !== 'undefined'
       ? document.getElementById('travel-rich-text-styles')
@@ -43,8 +49,6 @@ describe('StableContent (web) link styles', () => {
   });
 
   it('scrolls to internal hash anchors on click', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
-
     const scrollIntoView = jest.fn();
     const originalScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = scrollIntoView;
@@ -75,8 +79,6 @@ describe('StableContent (web) link styles', () => {
   });
 
   it('restores direct travel hash navigation with returnTo query on first render', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
-
     const scrollIntoView = jest.fn();
     const originalScrollIntoView = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = scrollIntoView;
@@ -118,8 +120,6 @@ describe('StableContent (web) link styles', () => {
   });
 
   it('injects CSS styles synchronously and keeps <a> tag in rendered HTML', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
-
     const html = '<p>See <a href="https://example.com">Example</a></p>';
 
     const { container } = render(
@@ -147,8 +147,6 @@ describe('StableContent (web) link styles', () => {
   });
 
   it('converts standalone instagram post links into embeds in travel content', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
-
     const html =
       '<p><a href="https://www.instagram.com/p/CScU4bJI2Ud/">https://www.instagram.com/p/CScU4bJI2Ud/</a></p>';
 
@@ -165,8 +163,6 @@ describe('StableContent (web) link styles', () => {
   });
 
   it('opens inline image in a lightbox on click and closes it', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
-
     const { container } = render(
       <StableContent
         html={'<p><img src="https://example.com/photo.jpg" width="800" height="600" alt="Горы" /></p>'}
@@ -200,8 +196,6 @@ describe('StableContent (web) link styles', () => {
   });
 
   it('renders description image containers with blur backdrop styles and contain fit', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
-
     const { container } = render(
       <StableContent
         html={[
@@ -228,8 +222,6 @@ describe('StableContent (web) link styles', () => {
   });
 
   it('adds spacing between consecutive inline images rendered inside one paragraph', async () => {
-    const StableContent = (await import('@/components/travel/StableContent')).default;
-
     render(
       <StableContent
         html={'<p><img src="https://example.com/one.jpg" width="800" height="600" alt="One" /><img src="https://example.com/two.jpg" width="800" height="600" alt="Two" /></p>'}

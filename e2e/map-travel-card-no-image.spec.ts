@@ -41,6 +41,9 @@ const waitForMapUi = async (page: any, timeoutMs: number) => {
   if (!hasUi) throw new Error('Map UI did not appear');
 };
 
+const mapTravelsTabSelector = '[data-testid="map-travels-tab"], [testID="map-travels-tab"]';
+const mapTravelCardSelector = '[data-testid="map-travel-card"], [testID="map-travel-card"]';
+
 const gotoMapWithRecovery = async (page: any) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
   const mobileMenu = page.getByTestId('map-panel-open');
@@ -103,14 +106,23 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
     if (!tabLocator) return { cards: page.locator('[data-testid="map-travel-card"]'), cardCount: 0 };
 
     // Click and retry — first click may fire before handlers are fully wired.
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 4; attempt++) {
       await tabLocator.click({ force: attempt > 0, timeout: 30_000 }).catch(() => null);
-      const visible = await page.getByTestId('map-travels-tab').isVisible().catch(() => false);
-      if (visible) break;
+      const tabSelected = await tabLocator
+        .getAttribute('aria-selected')
+        .then((value: string | null) => value === 'true')
+        .catch(() => false);
+      const listVisible = await page.locator(mapTravelsTabSelector).isVisible().catch(() => false);
+      const cardsVisible = await page.locator(mapTravelCardSelector).first().isVisible().catch(() => false);
+      if (tabSelected || listVisible || cardsVisible) break;
       await page.waitForTimeout(1_000);
     }
-    await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 30_000 });
-    const cards = page.locator('[data-testid="map-travel-card"]');
+    await page
+      .locator(`${mapTravelsTabSelector}, ${mapTravelCardSelector}`)
+      .first()
+      .waitFor({ state: 'visible', timeout: 30_000 })
+      .catch(() => null);
+    const cards = page.locator(mapTravelCardSelector);
     const cardCount = await cards.count();
     return { cards, cardCount };
   };

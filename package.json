@@ -62,7 +62,7 @@
     "format": "npx prettier --write .",
     "build": "npm run build:web",
     "build:web": "node scripts/build-web-safe.js",
-    "build:web:prod": "cp .env.prod .env && rm -rf dist/prod && NODE_ENV=production EXPO_ENV=prod EXPO_PUBLIC_RNW_SLIM=1 EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false node scripts/build-web-safe.js -p web -c && mkdir -p dist/prod && rsync -a --delete --exclude 'prod' dist/ dist/prod/ && node scripts/generate-seo-pages.js --dist dist/prod && node scripts/verify-static-travel-seo.js --dist dist/prod && node scripts/copy-public-files.js dist/prod && node scripts/add-cache-bust-meta.js dist/prod",
+    "build:web:prod": "cp .env.prod .env && rm -rf dist/prod && NODE_ENV=production EXPO_ENV=prod EXPO_PUBLIC_RNW_SLIM=1 EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false node scripts/build-web-safe.js -p web -c && node scripts/prepare-dist-prod.js && node scripts/generate-seo-pages.js --dist dist/prod && node scripts/verify-static-travel-seo.js --dist dist/prod && node scripts/copy-public-files.js dist/prod && node scripts/add-cache-bust-meta.js dist/prod",
     "seo:generate-pages": "node scripts/generate-seo-pages.js --dist dist/prod",
     "fetch:lasy-data": "node scripts/fetch-lasy-wfs-data.js",
     "analyze:bundle": "node scripts/analyze-bundle.js",

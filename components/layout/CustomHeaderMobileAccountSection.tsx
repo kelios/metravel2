@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -11,13 +11,11 @@ import { useAvatarUri } from '@/hooks/useAvatarUri';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 import UserAvatar from './UserAvatar';
-
-const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
-
-const ThemeToggleLazy = lazy(() => import('@/components/layout/ThemeToggle'));
-const CustomHeaderMobileMenuComp = isTestEnv
-  ? (require('./CustomHeaderMobileMenu').default as React.ComponentType<any>)
-  : lazy(() => import('./CustomHeaderMobileMenu'));
+import {
+  CustomHeaderMobileMenuComp,
+  isHeaderMobileMenuTestEnv,
+  ThemeToggleLazy,
+} from './customHeaderMobileLazy';
 
 const useFavoritesSafe = (): { favorites: { length: number } } => {
   try {
@@ -27,40 +25,43 @@ const useFavoritesSafe = (): { favorites: { length: number } } => {
   }
 };
 
-type CustomHeaderMobileAccountSectionProps = {
-  activePath: string;
-  styles: any;
-};
+const isUnitTestEnv = () =>
+  typeof process !== 'undefined' &&
+  (process as any).env &&
+  (process as any).env.NODE_ENV === 'test';
 
-export default function CustomHeaderMobileAccountSection({
-  activePath,
-  styles,
-}: CustomHeaderMobileAccountSectionProps) {
-  const colors = useThemedColors();
+const useCustomHeaderMobileMenuController = ({ logout }: { logout: () => Promise<void> | void }) => {
   const router = useRouter();
   const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const mobileMenuOpenedAtRef = useRef(0);
-  const { isAuthenticated, username, logout, userAvatar, profileRefreshToken } = useAuth();
-  const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken });
-  const { favorites } = useFavoritesSafe();
-  const { count: unreadCount } = useDeferredUnreadCount(
-    isAuthenticated && mobileMenuVisible,
-    mobileMenuVisible
-  );
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!mobileMenuVisible) return;
+    if (Platform.OS !== 'web' || !mobileMenuVisible) return;
 
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
         setMobileMenuVisible(false);
       }
     };
 
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
   }, [mobileMenuVisible]);
+
+  const closeMenu = useCallback(() => {
+    setMobileMenuVisible(false);
+  }, []);
+
+  const closeMenuSafely = useCallback(() => {
+    const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
+    if (!isUnitTestEnv() && sinceOpen < 250) return;
+    setMobileMenuVisible(false);
+  }, []);
+
+  const openMobileMenu = useCallback(() => {
+    mobileMenuOpenedAtRef.current = Date.now();
+    setMobileMenuVisible(true);
+  }, []);
 
   const handleUserAction = useCallback(
     (path: string, extraAction?: () => void) => {
@@ -68,23 +69,8 @@ export default function CustomHeaderMobileAccountSection({
       router.push(path as any);
       setMobileMenuVisible(false);
     },
-    [router]
+    [router],
   );
-
-  const handleMyTravels = useCallback(() => {
-    handleUserAction('/metravel');
-  }, [handleUserAction]);
-
-  const handleLogout = useCallback(async () => {
-    await logout();
-    setMobileMenuVisible(false);
-    router.push('/');
-  }, [logout, router]);
-
-  const openMobileMenu = useCallback(() => {
-    mobileMenuOpenedAtRef.current = Date.now();
-    setMobileMenuVisible(true);
-  }, []);
 
   const handleNavPress = useCallback(
     (path: string, external?: boolean) => {
@@ -101,18 +87,93 @@ export default function CustomHeaderMobileAccountSection({
       router.push(path as any);
       setMobileMenuVisible(false);
     },
-    [router]
+    [router],
   );
 
-  const closeMenuSafely = useCallback(() => {
-    const isUnitTest =
-      typeof process !== 'undefined' &&
-      (process as any).env &&
-      (process as any).env.NODE_ENV === 'test';
-    const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
-    if (!isUnitTest && sinceOpen < 250) return;
+  const handleMyTravels = useCallback(() => {
+    handleUserAction('/metravel');
+  }, [handleUserAction]);
+
+  const handleLogout = useCallback(async () => {
+    await logout();
     setMobileMenuVisible(false);
-  }, []);
+    router.push('/');
+  }, [logout, router]);
+
+  return {
+    closeMenu,
+    closeMenuSafely,
+    handleLogout,
+    handleMyTravels,
+    handleNavPress,
+    handleUserAction,
+    mobileMenuVisible,
+    openMobileMenu,
+  };
+};
+
+type CustomHeaderMobileAccountSectionProps = {
+  activePath: string;
+  styles: any;
+};
+
+export default function CustomHeaderMobileAccountSection({
+  activePath,
+  styles,
+}: CustomHeaderMobileAccountSectionProps) {
+  const colors = useThemedColors();
+  const { isAuthenticated, username, logout, userAvatar, profileRefreshToken } = useAuth();
+  const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken });
+  const { favorites } = useFavoritesSafe();
+  const {
+    closeMenu,
+    closeMenuSafely,
+    handleLogout,
+    handleMyTravels,
+    handleNavPress,
+    handleUserAction,
+    mobileMenuVisible,
+    openMobileMenu,
+  } = useCustomHeaderMobileMenuController({ logout });
+  const { count: unreadCount } = useDeferredUnreadCount(
+    isAuthenticated && mobileMenuVisible,
+    mobileMenuVisible
+  );
+
+  const menuProps = useMemo(
+    () => ({
+      visible: mobileMenuVisible,
+      onRequestClose: closeMenu,
+      onOverlayPress: closeMenuSafely,
+      onNavPress: handleNavPress,
+      onUserAction: handleUserAction,
+      onMyTravels: handleMyTravels,
+      onLogout: handleLogout,
+      colors: colors as any,
+      styles,
+      activePath,
+      isAuthenticated,
+      username,
+      favoritesCount: favorites.length,
+      unreadCount,
+    }),
+    [
+      activePath,
+      closeMenu,
+      closeMenuSafely,
+      colors,
+      favorites.length,
+      handleLogout,
+      handleMyTravels,
+      handleNavPress,
+      handleUserAction,
+      isAuthenticated,
+      mobileMenuVisible,
+      styles,
+      unreadCount,
+      username,
+    ]
+  );
 
   return (
     <>
@@ -154,7 +215,7 @@ export default function CustomHeaderMobileAccountSection({
       </Pressable>
 
       {mobileMenuVisible && (
-        isTestEnv ? (
+        isHeaderMobileMenuTestEnv ? (
           <>
             <Pressable
               testID="mobile-menu-overlay"
@@ -166,40 +227,14 @@ export default function CustomHeaderMobileAccountSection({
             </Pressable>
 
             <CustomHeaderMobileMenuComp
-              visible={mobileMenuVisible}
-              onRequestClose={() => setMobileMenuVisible(false)}
-              onOverlayPress={closeMenuSafely}
-              onNavPress={handleNavPress}
-              onUserAction={handleUserAction}
-              onMyTravels={handleMyTravels}
-              onLogout={handleLogout}
-              colors={colors as any}
-              styles={styles}
-              activePath={activePath}
-              isAuthenticated={isAuthenticated}
-              username={username}
-              favoritesCount={favorites.length}
-              unreadCount={unreadCount}
+              {...menuProps}
               themeToggleNode={null}
             />
           </>
         ) : (
           <Suspense fallback={null}>
             <CustomHeaderMobileMenuComp
-              visible={mobileMenuVisible}
-              onRequestClose={() => setMobileMenuVisible(false)}
-              onOverlayPress={closeMenuSafely}
-              onNavPress={handleNavPress}
-              onUserAction={handleUserAction}
-              onMyTravels={handleMyTravels}
-              onLogout={handleLogout}
-              colors={colors as any}
-              styles={styles}
-              activePath={activePath}
-              isAuthenticated={isAuthenticated}
-              username={username}
-              favoritesCount={favorites.length}
-              unreadCount={unreadCount}
+              {...menuProps}
               themeToggleNode={
                 <Suspense fallback={null}>
                   <ThemeToggleLazy compact layout="vertical" showLabels />

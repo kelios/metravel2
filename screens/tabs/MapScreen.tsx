@@ -23,6 +23,8 @@ import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
 import { MapShowListButton } from '@/components/MapPage/MapShowListButton';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
+import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { createMapStructuredData } from '@/utils/discoverySeo';
 
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
@@ -75,6 +77,32 @@ export default function MapScreen() {
     const [geoBannerDismissed, setGeoBannerDismissed] = useState(false);
     const dismissGeoBanner = useCallback(() => setGeoBannerDismissed(true), []);
     const showGeoBanner = Boolean(geoError && !geoBannerDismissed);
+    const mapStructuredData = useMemo(
+        () =>
+            createMapStructuredData({
+                canonical,
+                title: MAP_SEO_TITLE,
+                description: MAP_SEO_DESCRIPTION,
+                entries: travelsData.map((item: any) => ({
+                    name: item?.address || 'Маршрут на карте',
+                    url: item?.urlTravel,
+                    lat: item?.lat ?? String(item?.coord || '').split(',')[0],
+                    lng: item?.lng ?? String(item?.coord || '').split(',')[1],
+                    categoryName: item?.categoryName,
+                })),
+            }),
+        [canonical, travelsData]
+    );
+    const mapSeoTags = useMemo(
+        () => (
+            <script
+                key="map-structured-data"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(mapStructuredData) }}
+            />
+        ),
+        [mapStructuredData]
+    );
 
     // Resize handle for desktop panel (web only)
     const handleResizeMouseDown = useCallback((e: any) => {
@@ -302,6 +330,8 @@ export default function MapScreen() {
                         title={MAP_SEO_TITLE}
                         description={MAP_SEO_DESCRIPTION}
                         canonical={canonical}
+                        image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                        additionalTags={mapSeoTags}
                     />
                 )}
                 <Suspense fallback={mapPanelPlaceholder}>
@@ -365,6 +395,7 @@ export default function MapScreen() {
 
                 <Pressable
                     testID="map-panel-tab-travels"
+                    {...(Platform.OS === 'web' ? ({ 'data-testid': 'map-panel-tab-travels' } as any) : null)}
                     style={({ pressed }) => [
                         styles.tab,
                         rightPanelTab === 'travels' && styles.tabActive,
@@ -445,6 +476,8 @@ export default function MapScreen() {
                         title={MAP_SEO_TITLE}
                         description={MAP_SEO_DESCRIPTION}
                         canonical={canonical}
+                        image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                        additionalTags={mapSeoTags}
                     />
                 )}
                 <ErrorDisplay
@@ -467,6 +500,8 @@ export default function MapScreen() {
                         title={MAP_SEO_TITLE}
                         description={MAP_SEO_DESCRIPTION}
                         canonical={canonical}
+                        image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                        additionalTags={mapSeoTags}
                     />
                 )}
 
@@ -557,7 +592,11 @@ export default function MapScreen() {
                             </View>
                         )
                     ) : (
-                        <View testID="map-travels-tab" style={{ flex: 1 }}>
+                        <View
+                            testID="map-travels-tab"
+                            {...(Platform.OS === 'web' ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
+                            style={{ flex: 1 }}
+                        >
                             <Suspense fallback={null}>
                                 <LazyTravelListPanel
                                     travelsData={travelsData}

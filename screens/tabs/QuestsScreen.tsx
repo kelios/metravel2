@@ -10,7 +10,7 @@ import * as Location from 'expo-location';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { buildCanonicalUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -20,6 +20,7 @@ import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
 import QuestsContentPanel from './QuestsContentPanel';
 import QuestsSidebar from './QuestsSidebar';
 import type { City, NearbyCity, QuestMeta } from './questsShared';
+import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 
 const COUNTRY_NAMES: Record<string, string> = {
     BY: 'Беларусь',
@@ -1106,12 +1107,36 @@ export default function QuestsScreen() {
         if (selectedCityName) return `Офлайн-квесты в городе ${selectedCityName}. Прогулки по точкам, задания и маршруты.`;
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
     }, [selectedCityId, selectedCityName]);
+    const questsStructuredData = createQuestCatalogStructuredData({
+        canonical: buildCanonicalUrl('/quests'),
+        title: titleText,
+        description: descText,
+        quests,
+    });
+    const questsSeoTags = useMemo(
+        () => (
+            <script
+                key="quests-structured-data"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(questsStructuredData) }}
+            />
+        ),
+        [questsStructuredData]
+    );
 
     // ── Render (Two-column layout) ──
     return (
         <View style={s.root as ViewStyle}>
             {isFocused && (
-                <InstantSEO headKey="quests-index" title={titleText} description={descText} canonical={buildCanonicalUrl('/quests')} ogType="website" />
+                <InstantSEO
+                    headKey="quests-index"
+                    title={titleText}
+                    description={descText}
+                    canonical={buildCanonicalUrl('/quests')}
+                    ogType="website"
+                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                    additionalTags={questsSeoTags}
+                />
             )}
 
             {/* Hidden h1 for SEO */}

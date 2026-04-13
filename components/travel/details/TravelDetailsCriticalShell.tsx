@@ -130,6 +130,7 @@ export default function TravelDetailsCriticalShell({
   return (
     <View
       testID="travel-details-page"
+      {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-page' } as any) : null)}
       id="travel-main-content"
       role="main"
       aria-label={mainAriaLabel}
@@ -147,6 +148,7 @@ export default function TravelDetailsCriticalShell({
 
           <ScrollView
             testID="travel-details-scroll"
+            {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-scroll' } as any) : null)}
             ref={scrollRef as any}
             contentContainerStyle={[styles.scrollContent]}
             keyboardShouldPersistTaps="handled"
@@ -168,6 +170,7 @@ export default function TravelDetailsCriticalShell({
                       <View style={desktopSidebarContainerStyle}>
                         <Animated.View
                           testID="travel-details-side-menu"
+                          {...(Platform.OS === 'web' ? ({ 'data-testid': 'travel-details-side-menu' } as any) : null)}
                           style={desktopSidebarAnimatedStyle}
                         >
                           <CompactSideBarTravel

@@ -58,6 +58,9 @@ const getCanonicalHref = async (page: any): Promise<string | null> => {
   });
 };
 
+const mapTravelsTabSelector = '[data-testid="map-travels-tab"], [testID="map-travels-tab"]';
+const mapTravelCardSelector = '[data-testid="map-travel-card"], [testID="map-travel-card"]';
+
 const maybeRecoverFromMapErrorScreen = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
   const hasError = await errorTitle.isVisible().catch(() => false);
@@ -369,7 +372,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     }
     await travelsTab.click({ timeout: 60_000 });
 
-    const cards = page.locator('[data-testid="map-travel-card"]');
+    const cards = page.locator(mapTravelCardSelector);
     const cardCount = await cards.count();
     if (cardCount === 0) return;
 
@@ -410,7 +413,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Prefer clicking by label text (more stable for RN-web), fallback to raw inputs.
     const candidateLabel = page
       .getByTestId('filters-panel')
-      .locator('label')
+      .locator('label, button')
       .filter({ hasText: /.+/ })
       .first();
     const candidateInput = page
@@ -827,10 +830,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Retry click — first click may fire before React handlers are wired.
     for (let attempt = 0; attempt < 3; attempt++) {
       await tab.click({ force: attempt > 0, timeout: 60_000 }).catch(() => null);
-      if (await page.getByTestId('map-travels-tab').isVisible().catch(() => false)) break;
+      if (await page.locator(mapTravelsTabSelector).isVisible().catch(() => false)) break;
       await page.waitForLoadState('domcontentloaded').catch(() => null);
     }
-    await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(mapTravelsTabSelector)).toBeVisible({ timeout: 30_000 });
   });
 
   test('desktop: clicking a travel card opens popup and focuses map', async ({ page }) => {
@@ -856,9 +859,9 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     }
     if (!tab) return;
     await tab.click({ force: true, timeout: 60_000 });
-    await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 60_000 });
+    await expect(page.locator(mapTravelsTabSelector)).toBeVisible({ timeout: 60_000 });
 
-    const cards = page.locator('[data-testid="map-travel-card"]');
+    const cards = page.locator(mapTravelCardSelector);
     const cardCount = await cards.count();
     if (cardCount === 0) return;
 

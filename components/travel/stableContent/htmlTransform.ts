@@ -248,6 +248,30 @@ const encodeEntities = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
+const injectAutoHeadingAnchors = (html: string) => {
+  if (!html) return html
+
+  const orderedHashIds = Array.from(
+    html.matchAll(/<a\b[^>]*href=(["'])#([^"'#?]+)\1[^>]*>/gi),
+    (match) => String(match[2] || '').trim()
+  ).filter(Boolean)
+  const uniqueOrderedHashIds = orderedHashIds.filter((id, index) => orderedHashIds.indexOf(id) === index)
+
+  return html.replace(/<h([1-3])([^>]*)>([\s\S]*?)<\/h\1>/gi, (full, level, rawAttrs, inner) => {
+    const attrs = String(rawAttrs || '')
+    if (/\bid\s*=\s*"[^"]+"/i.test(attrs)) return full
+
+    const innerText = decodeEntities(String(inner || '').replace(/<[^>]+>/g, '').trim())
+    const match = innerText.match(/^(\d{1,3})[.)]\s+/)
+    if (!match) return full
+
+    const orderedId = uniqueOrderedHashIds[Number(match[1]) - 1]
+    const id = orderedId || `part${match[1]}`
+    const nextAttrs = attrs ? `${attrs} id="${id}"` : ` id="${id}"`
+    return `<h${level}${nextAttrs}>${inner}</h${level}>`
+  })
+}
+
 const sliceText = (text: string, limit: number) => {
   const chars = Array.from(text)
   if (chars.length <= limit) {
@@ -284,6 +308,16 @@ const truncateInstagramCaptions = (html: string) => {
   })
 }
 
+const replaceStandaloneInstagramLinks = (html: string) =>
+  html.replace(
+    /<p([^>]*)>\s*<a\b[^>]*href=(["'])(https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel)\/[A-Za-z0-9_-]+\/?)\2[^>]*>\s*\3\s*<\/a>\s*<\/p>/gi,
+    (_match, attrs = '', _quote = '', url = '') => {
+      const cleanUrl = String(url).replace(/\/+$/, '')
+      const embedUrl = `${cleanUrl}/embed/captioned/`
+      return `<p${attrs}><iframe class="ql-video" frameborder="0" allowfullscreen="true" src="${embedUrl}" height="640"></iframe></p>`
+    }
+  )
+
 const decorateRichImageFrames = (html: string) => {
   if (!html) return html
 
@@ -309,10 +343,12 @@ const decorateRichImageFrames = (html: string) => {
 export const prepareStableContentHtml = (html: string) => {
   const normalizedEmbeds = normalizeArticleEditorHtmlForInput(html)
   const safe = sanitizeRichText(normalizedEmbeds)
-  const normalized = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
+  const normalized = replaceStandaloneInstagramLinks(
+    replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)))
+  )
   const demoted = normalized
     .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
     .replace(/<\s*\/\s*h1\s*>/gi, '</h2>')
   const truncated = truncateInstagramCaptions(demoted)
-  return decorateRichImageFrames(applySmartImageLayout(truncated))
+  return injectAutoHeadingAnchors(decorateRichImageFrames(applySmartImageLayout(truncated)))
 }

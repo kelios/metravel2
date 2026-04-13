@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useEffect, useInsertionEffect } from 'react'
+import { Dispatch, SetStateAction, useEffect, useInsertionEffect, useLayoutEffect } from 'react'
 import { Platform } from 'react-native'
 
 import { buildWeservProxyUrl, extractFirstImgSrc } from '@/components/travel/stableContent/htmlTransform'
@@ -87,7 +87,7 @@ export function useStableContentWebEffects({
     }
   }, [prepared])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (Platform.OS !== 'web') return
     const onClick = (e: any) => {
       const target = e.target as HTMLElement | null
@@ -185,28 +185,30 @@ export function useStableContentWebEffects({
     }
   }, [lightboxImage])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (Platform.OS !== 'web') return
     if (typeof window === 'undefined') return
     const hash = window.location.hash
     if (!hash) return
+
     let cancelled = false
-    let tries = 0
-    const maxTries = 20
-    const intervalMs = 150
+    let attempts = 0
+    let timeoutId: number | null = null
+    const maxAttempts = 6
+
     const tick = () => {
       if (cancelled) return
-      tries += 1
+      attempts += 1
       const done = scrollToHashTarget(hash)
-      if (done || tries >= maxTries) {
-        cancelled = true
-      }
+      if (done || attempts >= maxAttempts) return
+      timeoutId = window.setTimeout(tick, 50)
     }
-    const id = window.setInterval(tick, intervalMs)
-    window.setTimeout(tick, 0)
+
+    tick()
+
     return () => {
       cancelled = true
-      clearInterval(id)
+      if (timeoutId != null) clearTimeout(timeoutId)
     }
   }, [prepared, scrollToHashTarget])
 

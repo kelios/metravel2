@@ -12,12 +12,13 @@ const QuestWizardLazy = React.lazy<React.ComponentType<any>>(() =>
 );
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { buildCanonicalUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
 import { useAuth } from '@/context/AuthContext';
 
 import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { createQuestDetailStructuredData } from '@/utils/discoverySeo';
 
 export default function QuestByIdScreen() {
     const { questId, city } = useLocalSearchParams<{ questId: string; city: string }>();
@@ -82,6 +83,39 @@ export default function QuestByIdScreen() {
         () => buildCanonicalUrl(`/quests/${city}/${questId}`),
         [city, questId]
     );
+    const seoImage = useMemo(() => {
+        const coverUrl = String(bundle?.coverUrl || '').trim();
+        if (!coverUrl) return buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
+        return /^https?:\/\//i.test(coverUrl)
+            ? coverUrl.replace(/^http:\/\//i, 'https://')
+            : buildOgImageUrl(coverUrl);
+    }, [bundle?.coverUrl]);
+    const questStructuredData = useMemo(() => {
+        if (!bundle || !questId) return null;
+        return createQuestDetailStructuredData({
+            canonical,
+            title,
+            description,
+            questId: String(questId),
+            cityId: city ? String(city) : undefined,
+            cityName: bundle.city?.name,
+            countryCode: bundle.city?.countryCode,
+            coverUrl: bundle.coverUrl,
+            stepsCount: Array.isArray(bundle.steps) ? bundle.steps.length : undefined,
+            lat: bundle.city?.lat,
+            lng: bundle.city?.lng,
+        });
+    }, [bundle, canonical, city, description, questId, title]);
+    const questSeoTags = useMemo(() => {
+        if (!questStructuredData) return null;
+        return (
+            <script
+                key="quest-structured-data"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(questStructuredData) }}
+            />
+        );
+    }, [questStructuredData]);
 
     useEffect(() => {
         if (!isFocused) return undefined;
@@ -226,7 +260,28 @@ export default function QuestByIdScreen() {
     return (
         <View style={styles.page}>
             {isFocused && (
-                <InstantSEO headKey={headKey} title={title} description={description} canonical={canonical} ogType={ogType} />
+                <InstantSEO
+                    headKey={headKey}
+                    title={title}
+                    description={description}
+                    canonical={canonical}
+                    ogType={ogType}
+                    image={seoImage}
+                    additionalTags={questSeoTags}
+                />
+            )}
+            {Platform.OS === 'web' && (
+                <h1 style={{
+                    position: 'absolute' as const,
+                    width: 1,
+                    height: 1,
+                    padding: 0,
+                    margin: -1,
+                    overflow: 'hidden' as const,
+                    clip: 'rect(0,0,0,0)',
+                    whiteSpace: 'nowrap',
+                    borderWidth: 0,
+                } as any}>{title}</h1>
             )}
 
             <Suspense fallback={<View style={{ padding: 16 }}><ActivityIndicator color={colors.primary} /></View>}>

@@ -15,7 +15,8 @@ import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { buildCanonicalUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
+import { createMapStructuredData } from '@/utils/discoverySeo';
 
 const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
@@ -72,6 +73,35 @@ export default function QuestsMapScreen() {
     const handleBack = () => {
         router.replace('/quests'); // всегда уходим на страницу квестов
     };
+    const canonical = buildCanonicalUrl('/quests/map');
+    const title = 'Карта квестов и городских маршрутов | Metravel';
+    const description = 'Карта квестов Metravel: находите городские маршруты, точки старта и приключения по городам и паркам.';
+    const structuredData = useMemo(
+        () =>
+            createMapStructuredData({
+                canonical,
+                title,
+                description,
+                entries: travel.data.map((item) => ({
+                    name: item.address,
+                    url: item.urlTravel,
+                    lat: item.coord.split(',')[0],
+                    lng: item.coord.split(',')[1],
+                    categoryName: item.categoryName,
+                })),
+            }),
+        [canonical, description, title, travel.data]
+    );
+    const seoTags = useMemo(
+        () => (
+            <script
+                key="quests-map-structured-data"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+            />
+        ),
+        [structuredData]
+    );
 
     if (!isWeb) {
         return (
@@ -111,11 +141,25 @@ export default function QuestsMapScreen() {
             {isFocused && (
                 <InstantSEO
                     headKey="quests-map"
-                    title="Карта квестов | Metravel"
-                    description="Карта всех квестов Metravel"
-                    canonical={buildCanonicalUrl('/quests/map')}
-                    robots="noindex, nofollow"
+                    title={title}
+                    description={description}
+                    canonical={canonical}
+                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                    additionalTags={seoTags}
                 />
+            )}
+            {Platform.OS === 'web' && (
+                <h1 style={{
+                    position: 'absolute' as const,
+                    width: 1,
+                    height: 1,
+                    padding: 0,
+                    margin: -1,
+                    overflow: 'hidden' as const,
+                    clip: 'rect(0,0,0,0)',
+                    whiteSpace: 'nowrap',
+                    borderWidth: 0,
+                } as any}>{title}</h1>
             )}
             <Suspense fallback={
                 <View style={styles.fallback}>
