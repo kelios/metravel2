@@ -473,7 +473,7 @@ const ensureOnStep2 = async (page: Page) => {
     .poll(
       async () =>
         await page.evaluate(() => {
-          const link = document.querySelector('link[data-metravel-leaflet-css="cdn"]') as HTMLLinkElement | null;
+          const link = document.querySelector('link[data-metravel-leaflet-css]') as HTMLLinkElement | null;
           return link?.href ?? '';
         }),
       { timeout: 30_000 }

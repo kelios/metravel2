@@ -13,9 +13,9 @@ test.describe('Leaflet CSS', () => {
     const leafletContainer = page.locator('.leaflet-container').first();
     await expect(leafletContainer).toBeVisible({ timeout: 15_000 });
 
-    // Ensure Leaflet CSS is actually loaded (CDN link injected in app layout).
+    // Ensure Leaflet CSS is actually loaded (self-hosted or preloaded link injected in app layout).
     const cssHref = await page.evaluate(() => {
-      const link = document.querySelector('link[data-metravel-leaflet-css="cdn"]') as HTMLLinkElement | null;
+      const link = document.querySelector('link[data-metravel-leaflet-css]') as HTMLLinkElement | null;
       return link?.href ?? null;
     });
     expect(cssHref).toContain('leaflet');
