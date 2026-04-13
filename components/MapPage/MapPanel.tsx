@@ -9,8 +9,14 @@ import type { ComponentType } from 'react';
 
 type LatLng = { latitude: number; longitude: number };
 
+// Start downloading the Map.web chunk as soon as this module evaluates
+// (before React renders & Suspense triggers), so it overlaps with Leaflet preload.
+const mapWebImport = Platform.OS === 'web'
+  ? import('@/components/MapPage/Map.web')
+  : null;
+
 const LazyWebMap = React.lazy(() =>
-  import('@/components/MapPage/Map.web').then((m) => ({ default: (m.default ?? m) as ComponentType<any> }))
+  (mapWebImport ?? import('@/components/MapPage/Map.web')).then((m) => ({ default: (m.default ?? m) as ComponentType<any> }))
 );
 
 interface MapPanelProps {

@@ -348,9 +348,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
 
     const loadModules = async (attempt: number): Promise<void> => {
       try {
-        await ensureLeafletCss();
-        if (cancelled) return;
-
+        // ensureLeafletCss is already triggered in the earlier useEffect;
+        // avoid awaiting it here to not serialise CSS polling with JS loading.
         const { L: LeafletResolved, RL: ReactLeafletResolved } = await loadLeafletRuntime();
         if (cancelled) return;
 

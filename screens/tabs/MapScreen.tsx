@@ -29,6 +29,13 @@ import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
 import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { createMapStructuredData } from '@/utils/discoverySeo';
 
+// Preload Leaflet runtime in parallel with lazy chunk downloads.
+// By the time Map.web.tsx's useLeafletLoader calls import('leaflet'),
+// the module will already be in the cache → eliminates serial waterfall.
+if (Platform.OS === 'web') {
+    import('@/utils/loadLeafletRuntime').then((m) => m.loadLeafletRuntime()).catch(() => {})
+}
+
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
 const LazyMapMobileLayout = lazy(() =>
     import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout }))
