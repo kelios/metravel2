@@ -47,8 +47,7 @@ describe('map layout header offset', () => {
   it('does not add header offset on web (desktop layout handled by DOM flow)', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-    const headerOffset = 88;
-    const styles = getStyles(false, 0, headerOffset, 1280, themedColors);
+    const styles = getStyles(false, 0, themedColors);
 
     expect(styles.container.paddingTop ?? 0).toBe(0);
     expect(styles.rightPanel.top).toBe(0);
@@ -60,24 +59,18 @@ describe('map layout header offset', () => {
     expect(styles.rightPanel.width).toBe(`min(${METRICS.baseUnit * 48}px, 34vw)`);
     expect(styles.rightPanel.maxWidth).toBe(METRICS.baseUnit * 48 + 40);
     // gap between map and panel on desktop
-    expect(styles.content.columnGap).toBe(METRICS.spacing.m);
+    expect(styles.mapContainer.columnGap).toBe(METRICS.spacing.m);
   });
 
   it('does not add header offset on web for mobile layout', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-    const headerOffset = 88;
     const insetTop = 12;
-    const styles = getStyles(true, insetTop, headerOffset, 360, themedColors);
+    const styles = getStyles(true, insetTop, themedColors);
 
     // For mobile web: header offset handled by DOM, only inset applies
     // Math.max(10, insetTop + 2) = Math.max(10, 14) = 14
     expect(styles.tabsContainer.paddingTop).toBe(Math.max(10, insetTop + 2));
     expect(styles.container.paddingTop ?? 0).toBe(0);
-
-    // Mobile overlay / panel transitions
-    expect(styles.rightPanelMobileClosed.transform?.[0].translateY).toBe('100%');
-    expect(styles.rightPanelMobileClosed.opacity).toBe(0);
-    expect(styles.rightPanelMobileOpen.opacity).toBe(1);
   });
 });

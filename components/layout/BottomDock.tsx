@@ -18,6 +18,11 @@ import { globalFocusStyles } from "@/styles/globalFocus";
 import { useResponsive } from "@/hooks/useResponsive";
 import { useAndroidBackHandler } from "@/hooks/useAndroidBackHandler";
 import { hapticSelection } from "@/utils/haptics";
+import {
+  BOTTOM_DOCK_ITEM_DEFS,
+  BOTTOM_DOCK_MORE_MENU_SECTIONS,
+  normalizeBottomDockActivePath,
+} from "./bottomDockModel";
 
 let GorhomBottomSheet: any = null;
 let GorhomBottomSheetView: any = null;
@@ -47,6 +52,69 @@ type DockItem = {
 };
 
 const MOBILE_DOCK_HEIGHT_WEB = 56;
+
+const DockButton = memo(function DockButton({
+  label,
+  accessibilityLabel,
+  href,
+  children,
+  testID,
+  showLabel = true,
+  onPress,
+  isActive = false,
+  styles,
+}: {
+  label: string;
+  accessibilityLabel: string;
+  href: Href;
+  children: React.ReactNode;
+  testID?: string;
+  showLabel?: boolean;
+  onPress?: () => void;
+  isActive?: boolean;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const router = useRouter();
+
+  return (
+    <Pressable
+      onPress={() => {
+        hapticSelection();
+        if (onPress) {
+          onPress();
+          return;
+        }
+        router.push(href as any);
+      }}
+      accessibilityRole="tab"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected: isActive }}
+      hitSlop={6}
+      testID={testID}
+      android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
+      style={({ pressed }) => [
+        styles.item,
+        isActive && styles.itemActive,
+        pressed && styles.pressed,
+        globalFocusStyles.focusable,
+      ]}
+    >
+      <View style={styles.itemInner}>
+        <View style={styles.iconBox}>{children}</View>
+        {showLabel ? (
+          <Text
+            style={[styles.itemText, isActive && styles.itemTextActive]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {label}
+          </Text>
+        ) : null}
+        {isActive ? <View style={styles.itemActiveMarker} /> : null}
+      </View>
+    </Pressable>
+  );
+});
 
 function BottomDock({ onDockHeight }: BottomDockProps) {
   const { isPhone, isLargePhone, isTablet } = useResponsive();
@@ -81,21 +149,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     [colors, safeBottomPadding, isCompactMobileWidth]
   );
 
-  const activePath = useMemo(() => {
-    // Normalize: Expo Router may include group prefixes like /(tabs)/
-    const normalized = pathname.replace(/^\/\(tabs\)/, '') || '/';
-    if (normalized === '/' || normalized === '/index') return '/search';
-    if (normalized.startsWith('/travels/')) return '';
-    if (normalized.startsWith('/travel/')) return '';
-    if (normalized.startsWith('/search')) return '/search';
-    if (normalized.startsWith('/travelsby')) return '/travelsby';
-    if (normalized.startsWith('/export')) return '/export';
-    if (normalized.startsWith('/map')) return '/map';
-    if (normalized.startsWith('/profile')) return '/profile';
-    if (normalized.startsWith('/quests')) return '/quests';
-    if (normalized.startsWith('/roulette')) return '/search';
-    return normalized;
-  }, [pathname]);
+  const activePath = useMemo(() => normalizeBottomDockActivePath(pathname), [pathname]);
 
   useEffect(() => {
     if (!showMore) {
@@ -119,69 +173,6 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     }
     swipeStartY.current = null;
   };
-
-  const DockButton = memo(function DockButton({
-    label,
-    accessibilityLabel,
-    href,
-    children,
-    testID,
-    showLabel = true,
-    onPress,
-    isActive = false,
-  }: {
-    label: string;
-    accessibilityLabel: string;
-    href: Href;
-    children: React.ReactNode;
-    testID?: string;
-    showLabel?: boolean;
-    onPress?: () => void;
-    isActive?: boolean;
-  }) {
-    const router = useRouter();
-
-    return (
-      <Pressable
-        onPress={() => {
-          // AND-13: haptic feedback on tab selection
-          hapticSelection();
-          if (onPress) {
-            onPress();
-            return;
-          }
-          router.push(href as any);
-        }}
-        accessibilityRole="tab"
-        accessibilityLabel={accessibilityLabel}
-        accessibilityState={{ selected: isActive }}
-        hitSlop={6}
-        testID={testID}
-        // AND-27: Material Design ripple effect on Android
-        android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
-        style={({ pressed }) => [
-          styles.item,
-          isActive && styles.itemActive,
-          pressed && styles.pressed,
-          globalFocusStyles.focusable,
-        ]}
-      >
-        <View style={styles.itemInner}>
-          <View style={styles.iconBox}>{children}</View>
-          {showLabel ? (
-            <Text
-              style={[styles.itemText, isActive && styles.itemTextActive]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {label}
-            </Text>
-          ) : null}
-        </View>
-      </Pressable>
-    );
-  });
-
 
   const lastDockH = useRef(0);
   const handleDockLayout = (e: LayoutChangeEvent) => {
@@ -217,21 +208,9 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
     }
   }, [showMore]);
 
-  const dockItemDefs = useMemo(
-    () => [
-      { key: "home", label: "Идеи", accessibilityLabel: "Идеи поездок", route: "/search" as any, iconName: "compass" as const },
-      { key: "search", label: "Бел.", accessibilityLabel: "Беларусь", route: "/travelsby" as any, iconName: "map" as const },
-      { key: "map", label: "Карта", accessibilityLabel: "Карта", route: "/map" as any, iconName: "map-pin" as const },
-      { key: "quests", label: "Квесты", accessibilityLabel: "Квесты", route: "/quests" as any, iconName: "flag" as const },
-      { key: "favorites", label: "Я", accessibilityLabel: "Профиль", route: "/profile" as any, iconName: "user" as const },
-      { key: "more", label: "Ещё", accessibilityLabel: "Ещё", route: "/more" as any, iconName: "more-horizontal" as const, isMore: true },
-    ],
-    []
-  );
-
   const items: DockItem[] = useMemo(
     () =>
-      dockItemDefs.map((def) => {
+      BOTTOM_DOCK_ITEM_DEFS.map((def) => {
         const isActive = activePath === String(def.route);
         const iconColor = isActive ? colors.primary : colors.textMuted;
         return {
@@ -243,7 +222,34 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           isMore: def.isMore,
         };
       }),
-    [dockItemDefs, activePath, colors.primary, colors.textMuted]
+    [activePath, colors.primary, colors.textMuted]
+  );
+
+  const renderMoreMenuItem = useCallbackReact(
+    (item: (typeof BOTTOM_DOCK_MORE_MENU_SECTIONS)[number]["items"][number], closeMenu: () => void) => (
+      <Pressable
+        key={item.key}
+        onPress={() => {
+          closeMenu();
+          router.push(item.route as any);
+        }}
+        style={[styles.moreItem, globalFocusStyles.focusable]}
+        android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+        accessibilityRole="link"
+        accessibilityLabel={item.accessibilityLabel}
+      >
+        <Feather
+          name={item.iconName}
+          size={18}
+          color={item.muted ? colors.textMuted : colors.primary}
+          style={styles.moreItemIcon}
+        />
+        <Text style={[styles.moreItemText, item.muted && styles.moreItemTextMuted]}>
+          {item.label}
+        </Text>
+      </Pressable>
+    ),
+    [colors.primary, colors.textMuted, router, styles.moreItem, styles.moreItemIcon, styles.moreItemText, styles.moreItemTextMuted]
   );
 
   if (!isMobile) return null;
@@ -283,6 +289,7 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                       setShowMore(true);
                     } : undefined}
                     isActive={isActive}
+                    styles={styles}
                   >
                     {item.icon}
                   </DockButton>
@@ -316,7 +323,10 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           >
             <View style={styles.sheetHandle} accessible={false} importantForAccessibility="no" />
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Ещё</Text>
+              <View style={styles.sheetHeaderCopy}>
+                <Text style={styles.sheetEyebrow}>Быстрые действия</Text>
+                <Text style={styles.sheetTitle}>Ещё</Text>
+              </View>
               <Pressable
                 onPress={() => setShowMore(false)}
                 style={[styles.sheetCloseBtn, globalFocusStyles.focusable]}
@@ -327,35 +337,12 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
               </Pressable>
             </View>
             <View testID="footer-more-list" style={styles.moreList}>
-              <Pressable onPress={() => { setShowMore(false); router.push("/roulette" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Случайная поездка">
-                <Feather name="shuffle" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                <Text style={styles.moreItemText}>Случайная поездка</Text>
-              </Pressable>
-              <Pressable onPress={() => { setShowMore(false); router.push("/travel/new" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Создать маршрут">
-                <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                <Text style={styles.moreItemText}>Создать маршрут</Text>
-              </Pressable>
-              <Pressable onPress={() => { setShowMore(false); router.push("/export" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Книга путешествий">
-                <Feather name="book-open" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                <Text style={styles.moreItemText}>Книга путешествий</Text>
-              </Pressable>
-              <Pressable onPress={() => { setShowMore(false); router.push("/profile" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Профиль">
-                <Feather name="user" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                <Text style={styles.moreItemText}>Профиль</Text>
-              </Pressable>
-              <View style={styles.moreDivider} />
-              <Pressable onPress={() => { setShowMore(false); router.push("/privacy" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Политика конфиденциальности">
-                <Feather name="shield" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
-                <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Политика конфиденциальности</Text>
-              </Pressable>
-              <Pressable onPress={() => { setShowMore(false); router.push("/cookies" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Настройки cookies">
-                <Feather name="settings" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
-                <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Настройки cookies</Text>
-              </Pressable>
-              <Pressable onPress={() => { setShowMore(false); router.push("/about" as any); }} style={[styles.moreItem, globalFocusStyles.focusable]} accessibilityRole="link" accessibilityLabel="Связаться с нами">
-                <Feather name="mail" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
-                <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Связаться с нами</Text>
-              </Pressable>
+              {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
+                <React.Fragment key={section.key}>
+                  {section.items.map((item) => renderMoreMenuItem(item, () => setShowMore(false)))}
+                  {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
+                </React.Fragment>
+              ))}
             </View>
           </View>
         </>
@@ -378,30 +365,25 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
           {GorhomBottomSheetView && (
             <GorhomBottomSheetView style={{ paddingHorizontal: 16, paddingBottom: safeBottomPadding + 16 }}>
               <View style={styles.sheetHeader}>
-                <Text style={styles.sheetTitle}>Ещё</Text>
+                <View style={styles.sheetHeaderCopy}>
+                  <Text style={styles.sheetEyebrow}>Быстрые действия</Text>
+                  <Text style={styles.sheetTitle}>Ещё</Text>
+                </View>
               </View>
               <View style={styles.moreList}>
-                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/roulette" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Случайная поездка">
-                  <Feather name="shuffle" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                  <Text style={styles.moreItemText}>Случайная поездка</Text>
-                </Pressable>
-                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/travel/new" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Создать маршрут">
-                  <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                  <Text style={styles.moreItemText}>Создать маршрут</Text>
-                </Pressable>
-                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/export" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Книга путешествий">
-                  <Feather name="book-open" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                  <Text style={styles.moreItemText}>Книга путешествий</Text>
-                </Pressable>
-                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/profile" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Профиль">
-                  <Feather name="user" size={18} color={colors.primary} style={styles.moreItemIcon} />
-                  <Text style={styles.moreItemText}>Профиль</Text>
-                </Pressable>
-                <View style={styles.moreDivider} />
-                <Pressable onPress={() => { nativeSheetRef.current?.close(); router.push("/about" as any); }} style={styles.moreItem} android_ripple={{ color: 'rgba(0,0,0,0.08)' }} accessibilityRole="link" accessibilityLabel="Связаться с нами">
-                  <Feather name="mail" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
-                  <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Связаться с нами</Text>
-                </Pressable>
+                {BOTTOM_DOCK_MORE_MENU_SECTIONS.map((section, sectionIndex) => (
+                  <React.Fragment key={section.key}>
+                    {section.items
+                      .filter((item) => Platform.OS === 'web' || item.route !== '/privacy')
+                      .filter((item) => Platform.OS === 'web' || item.route !== '/cookies')
+                      .map((item) =>
+                        renderMoreMenuItem(item, () => {
+                          nativeSheetRef.current?.close();
+                        })
+                      )}
+                    {sectionIndex < BOTTOM_DOCK_MORE_MENU_SECTIONS.length - 1 ? <View style={styles.moreDivider} /> : null}
+                  </React.Fragment>
+                ))}
               </View>
             </GorhomBottomSheetView>
           )}
@@ -468,7 +450,7 @@ const createStyles = (
   },
   itemActive: {
     backgroundColor: colors.primarySoft,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   itemSlot: {
     flex: 1,
@@ -480,7 +462,7 @@ const createStyles = (
     justifyContent: "center",
     width: "100%",
     minWidth: 0,
-    gap: 0,
+    gap: 2,
   },
   iconBox: {
     width: 24,
@@ -500,6 +482,13 @@ const createStyles = (
   itemTextActive: {
     color: colors.primaryText,
     fontWeight: "600" as const,
+  },
+  itemActiveMarker: {
+    width: 4,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    marginTop: 2,
   },
   itemTextOnly: {
     marginTop: 0,
@@ -548,6 +537,16 @@ const createStyles = (
     marginBottom: 8,
     paddingHorizontal: 4,
   } as any,
+  sheetHeaderCopy: {
+    gap: 2,
+  },
+  sheetEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
   sheetTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -578,6 +577,9 @@ const createStyles = (
   moreItemText: {
     fontSize: 15,
     color: colors.text,
+  },
+  moreItemTextMuted: {
+    color: colors.textMuted,
   },
   moreDivider: {
     height: 1,

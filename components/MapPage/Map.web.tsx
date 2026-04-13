@@ -242,27 +242,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     hintCenter: hintCenterForMarkers,
   });
 
-  // OSM tile preconnect for better performance
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!leafletReady) return;
-    if (typeof document === 'undefined') return;
-
-    try {
-      const ensurePreconnect = (origin: string) => {
-        if (document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) return;
-        const link = document.createElement('link');
-        link.rel = 'preconnect';
-        link.href = origin;
-        link.crossOrigin = 'anonymous';
-        document.head.appendChild(link);
-      };
-
-      ensurePreconnect('https://tile.openstreetmap.org');
-    } catch {
-      // noop
-    }
-  }, [leafletReady]);
+  // OSM tile preconnect is handled in app/+html.tsx (injected as <link> before JS loads).
+  // No runtime preconnect needed here.
 
   const handleMarkerZoom = useCallback((_point: Point, coords: { lat: number; lng: number }) => {
     if (!mapRef.current) return;

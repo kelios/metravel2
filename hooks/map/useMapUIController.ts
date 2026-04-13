@@ -4,15 +4,12 @@
  */
 
 import { useMemo } from 'react';
-import { Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useMapPanelState, useMapResponsive } from './useMapPanelState';
 import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
-
-const HEADER_HEIGHT_WEB = 88;
 
 type MapPanelStateResult = ReturnType<typeof useMapPanelState>;
 type ThemedColors = ReturnType<typeof useThemedColors>;
@@ -178,10 +175,9 @@ export function useMapUIController(): UseMapUIControllerResult {
   const canonical = buildCanonicalUrl(pathname || '/map');
 
   // Styles
-  const headerOffset = Platform.OS === 'web' ? HEADER_HEIGHT_WEB : 0;
   const styles = useMemo(
-    () => getStyles(isMobile, insets.top, headerOffset, width, themedColors),
-    [isMobile, insets.top, headerOffset, width, themedColors]
+    () => getStyles(isMobile, insets.top, themedColors),
+    [isMobile, insets.top, themedColors]
   );
 
   return useMemo(() => ({

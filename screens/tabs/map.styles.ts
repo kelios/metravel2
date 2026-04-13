@@ -13,8 +13,6 @@ const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
 export const getStyles = (
   isMobile: boolean,
   insetTop: number,
-  _headerOffset: number, // Префикс _ для неиспользуемого параметра
-  _windowWidth: number = METRICS.breakpoints.tablet,
   themedColors: ThemedColors,
 ) => {
   const shadowMedium = themedColors.shadows.medium;
@@ -37,7 +35,6 @@ export const getStyles = (
       ...(Platform.OS === 'web'
         ? ({
             display: 'flex',
-            // Desktop: панель слева, карта справа.
             flexDirection: isMobile ? 'column' : 'row',
             columnGap: isMobile ? 0 : PANEL_GAP,
             paddingLeft: 0,
@@ -52,27 +49,11 @@ export const getStyles = (
           } as any)
         : null),
     },
-      content: {
-        flex: 1,
-        position: 'relative',
-        backgroundColor: themedColors.background,
-        // ✅ КРИТИЧНО: Создаем новый stacking context для изоляции карты от хедера
-        ...(Platform.OS === 'web'
-          ? ({
-              flexDirection: isMobile ? 'column' : 'row',
-              columnGap: isMobile ? 0 : PANEL_GAP,
-              paddingHorizontal: isMobile ? 0 : METRICS.spacing.l,
-              isolation: 'isolate',
-            } as any)
-          : null),
-      },
       mapArea: {
         flex: 1,
         minHeight: isMobile ? 260 : 500,
         position: 'relative',
-        // ✅ КРИТИЧНО: Очень низкий zIndex, чтобы гарантировать, что карта под хедером
         zIndex: 0,
-        // Дополнительная изоляция для Leaflet
         ...(Platform.OS === 'web'
           ? ({
               isolation: 'isolate',
@@ -82,40 +63,6 @@ export const getStyles = (
               minWidth: 0,
             } as any)
           : null),
-      },
-      togglePanelButton: {
-        position: 'absolute',
-        right: 16,
-        ...(isMobile
-          ? ({
-              // On mobile we control the panel via HeaderContextBar + bottom sheet.
-              // This legacy floating toggle button overlaps the sheet.
-              display: 'none',
-              pointerEvents: 'none',
-            } as any)
-          : null),
-        ...(isMobile
-          ? ({
-              bottom: Platform.OS === 'web' ? 16 + WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 16,
-            } as any)
-          : ({
-              top: 16,
-            } as any)),
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: themedColors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...(Platform.OS === 'web'
-          ? ({
-              // @ts-ignore: web-only style
-              boxShadow: themedColors.boxShadows.medium,
-            } as any)
-          : Platform.OS === 'ios'
-          ? shadowMedium
-          : ({ elevation: shadowMedium.elevation } as any)),
-        zIndex: 1001,
       },
       rightPanel: {
         position: isMobile ? 'absolute' : 'relative',
@@ -157,27 +104,8 @@ export const getStyles = (
             } as any)
           : null),
       },
-      rightPanelMobileOpen: {
-        transform: [{ translateY: 0 }],
-        opacity: 1,
-        pointerEvents: 'auto',
-      },
-      rightPanelMobileClosed: {
-        transform: [{ translateY: '100%' }],
-        opacity: 0,
-        pointerEvents: 'none',
-      },
-      rightPanelDesktopClosed: {
-        width: 0,
-        minWidth: 0,
-        maxWidth: 0,
-        opacity: 0,
-        pointerEvents: 'none',
-        transform: [{ translateX: -16 }],
-      },
       overlay: {
         position: 'absolute',
-        // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset, так как хедер уже в потоке
         top: 0,
         left: 0,
         right: 0,
@@ -189,25 +117,6 @@ export const getStyles = (
               transition: `opacity ${TRANSITION_MS}ms ease`,
             } as any)
           : null),
-      },
-      overlayHidden: {
-        opacity: 0,
-        pointerEvents: 'none',
-      },
-      overlayVisible: {
-        opacity: 1,
-        pointerEvents: 'auto',
-      },
-      dragHandle: {
-        position: 'absolute',
-        top: 8,
-        left: '50%',
-        marginLeft: -18,
-        width: 36,
-        height: 4,
-        backgroundColor: themedColors.borderLight,
-        borderRadius: 2,
-        opacity: 0.8,
       },
       tabsContainer: {
         flexDirection: 'row',
@@ -253,9 +162,6 @@ export const getStyles = (
           ? ({ boxShadow: `0 1px 6px ${themedColors.primary}30` } as any)
           : null),
       },
-      tabPressed: {
-        opacity: 0.78,
-      },
       tabIconBubble: {
         width: 28,
         height: 28,
@@ -297,11 +203,6 @@ export const getStyles = (
           transition: 'background-color 0.15s ease',
         } as any) : null),
       },
-      resetButtonText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: themedColors.textMuted,
-      },
       closePanelButton: {
         width: 36,
         height: 36,
@@ -315,59 +216,6 @@ export const getStyles = (
           cursor: 'pointer',
           transition: 'background-color 0.15s ease',
         } as any) : null),
-      },
-      travelsListContainer: {
-        flex: 1,
-        padding: 12,
-      },
-      loader: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-      },
-      loaderText: {
-        marginTop: 8,
-        color: themedColors.textMuted,
-        fontSize: 14,
-      },
-      updatingIndicator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: themedColors.primarySoft,
-        borderRadius: 8,
-        marginBottom: 8,
-      },
-      updatingText: {
-        marginLeft: 8,
-        color: themedColors.text,
-        fontSize: 12,
-        fontWeight: '600',
-      },
-      mapPlaceholder: {
-        flex: 1,
-        minHeight: 260,
-        borderRadius: 20,
-        backgroundColor: themedColors.surface,
-        marginLeft: Platform.OS === 'web' ? 16 : 0,
-        marginRight: Platform.OS === 'web' ? 16 : 0,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: themedColors.border,
-      },
-      mapPlaceholderText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: themedColors.textMuted,
-      },
-      errorContainer: {
-        flex: 1,
-        padding: 16,
-        justifyContent: 'center',
       },
       fab: {
         position: 'absolute',
