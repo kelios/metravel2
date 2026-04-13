@@ -6,7 +6,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from "@/hooks/useTheme";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { globalFocusStyles } from "@/styles/globalFocus";
-import { openExternalUrl } from '@/utils/externalLinks';
+import { openExternalUrlInNewTab } from "@/utils/externalLinks";
 
 type FooterDesktopProps = {
   testID?: string;
@@ -19,15 +19,14 @@ type LinkItem = {
   externalUrl?: string;
   icon?: React.ReactNode;
 };
-
-
-const openURL = (url: string) => openExternalUrl(url, {
-  onError: (error) => {
-    if (__DEV__) {
-      console.warn('[FooterDesktop] Не удалось открыть URL:', error);
-    }
-  },
-});
+const openURL = (url: string) =>
+  openExternalUrlInNewTab(url, {
+    onError: (error) => {
+      if (__DEV__) {
+        console.warn('[FooterDesktop] Не удалось открыть URL:', error);
+      }
+    },
+  });
 
 function FooterDesktop({ testID }: FooterDesktopProps) {
   const colors = useThemedColors();

@@ -19,13 +19,18 @@ import EmptyState from '@/components/ui/EmptyState'
 import { TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
+import {
+  areRightColumnPropsEqual,
+  buildTravelRows,
+  getRightColumnColumns,
+  getRightColumnHeaderMinHeight,
+  getRightColumnWebRowBaseStyle,
+  RECOMMENDATIONS_TOTAL_HEIGHT,
+  STABLE_PLACEHOLDER_HEIGHT,
+  TOP_SCROLL_PADDING,
+} from '@/components/listTravel/rightColumnModel'
 
-const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
-const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
 const isWeb = Platform.OS === 'web';
-const TOP_SCROLL_PADDING = 8;
-const WEB_ROW_INTRINSIC_SIZE_MOBILE = 'auto 340px';
-const WEB_ROW_INTRINSIC_SIZE_DESKTOP = 'auto 420px';
 
 // Lazy load RecommendationsTabs with proper error boundary
 const RecommendationsTabs = lazy(async () => {
@@ -70,7 +75,13 @@ interface RightColumnProps {
   isSearchPending?: boolean
   isError: boolean
   showEmptyState: boolean
-  getEmptyStateMessage: any
+  getEmptyStateMessage: {
+    icon: string
+    title: string
+    description: string
+    variant: 'search' | 'error' | 'default' | 'empty' | 'inspire'
+    suggestions?: string[]
+  } | null
   travels: Travel[]
   gridColumns: number
   isMobile: boolean
@@ -91,7 +102,7 @@ interface RightColumnProps {
   isExport?: boolean
 }
 
-const RightColumn: React.FC<RightColumnProps> = memo(
+const RightColumn: React.FC<RightColumnProps> = (
   ({
      search,
      setSearch,
@@ -180,7 +191,12 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       })
     }, [scheduleAfterLayout, scrollToRecommendations])
 
-    const webWidth = Platform.OS === 'web' ? Dimensions.get('window').width : 0
+    const webWidth = useMemo(
+      () => (Platform.OS === 'web' ? Dimensions.get('window').width : 0),
+      // Dimensions stay stable between re-renders; update on layout change via isMobile prop
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [isMobile],
+    )
     const isWebMobile = Platform.OS === 'web' && (isMobile || webWidth <= 420)
     const showRecommendations = isRecommendationsVisible
 
@@ -228,14 +244,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       return resetPadding
     }, [cardsContainerStyle, isWebMobile, cardSpacing])
 
-    const rows = useMemo(() => {
-      const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1)
-      const result: Travel[][] = []
-      for (let i = 0; i < travels.length; i += cols) {
-        result.push(travels.slice(i, i + cols))
-      }
-      return result
-    }, [travels, gridColumns, isMobile])
+    const rows = useMemo(() => buildTravelRows(travels, gridColumns, isMobile), [travels, gridColumns, isMobile])
 
     const rowSeparatorStyle = useMemo(() => ({ height: Platform.OS === 'web' ? cardSpacing + 4 : cardSpacing }), [cardSpacing])
     const RowSeparator = useCallback(() => {
@@ -291,7 +300,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
     const renderRow = useCallback((item: { item: Travel[]; index: number }) => {
         const { item: rowItems, index: rowIndex } = item;
-        const cols = Math.max(1, (isMobile ? 1 : gridColumns) || 1);
+        const cols = getRightColumnColumns(gridColumns, isMobile);
         const missingSlots = Math.max(0, cols - rowItems.length);
         const calcWidth =
           cols > 1
@@ -303,29 +312,17 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             style={[
               cardsGridStyle,
               (Platform.OS === 'web'
-                ? ({
-                    flexWrap: 'wrap',
-                    width: '100%',
-                    maxWidth: '100%',
-                    minWidth: 0,
-                    columnGap: cardSpacing,
-                    rowGap: cardSpacing,
-                    alignItems: 'stretch',
-                  } as any)
+                ? (getRightColumnWebRowBaseStyle({
+                    cardSpacing,
+                    isExport,
+                    isMobile,
+                  }) as any)
                 : ({
                     flexWrap: 'nowrap',
                     width: '100%',
                     maxWidth: '100%',
                     minWidth: 0,
                   } as any)),
-              Platform.OS === 'web' && !isExport
-                ? ({
-                    contentVisibility: 'auto',
-                    containIntrinsicSize: isMobile
-                      ? WEB_ROW_INTRINSIC_SIZE_MOBILE
-                      : WEB_ROW_INTRINSIC_SIZE_DESKTOP,
-                  } as any)
-                : null,
             ]}
           >
             {rowItems.map((travel, itemIndex) => (
@@ -568,9 +565,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         <View
           style={[
             searchHeaderStyle,
-            Platform.OS === 'web'
-              ? ({ minHeight: isMobile ? 56 : 76 } as any)
-              : ({ minHeight: 52 } as any),
+            ({ minHeight: getRightColumnHeaderMinHeight(isMobile) } as any),
           ]}
         >
           <StickySearchBar
@@ -655,24 +650,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         </View>
       </View>
     )
-  },
+  }
 )
 
-export default memo(RightColumn, (prev, next) => {
-  return (
-    prev.search === next.search &&
-    prev.total === next.total &&
-    prev.travels.length === next.travels.length &&
-    prev.topContent === next.topContent &&
-    prev.renderItem === next.renderItem &&
-    prev.gridColumns === next.gridColumns &&
-    prev.isMobile === next.isMobile &&
-    prev.showInitialLoading === next.showInitialLoading &&
-    prev.isSearchPending === next.isSearchPending &&
-    prev.isError === next.isError &&
-    prev.isExport === next.isExport &&
-    prev.showNextPageLoading === next.showNextPageLoading &&
-    prev.activeFiltersCount === next.activeFiltersCount &&
-    prev.isRecommendationsVisible === next.isRecommendationsVisible
-  )
-})
+export default memo(RightColumn, areRightColumnPropsEqual)

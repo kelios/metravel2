@@ -19,19 +19,21 @@ const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
 const MOBILE_WEB_SIDE_GAP = 16;
 
 const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
-  width: '44px',
-  height: '44px',
-  borderRadius: '50%',
-  backgroundColor: colors.surface,
-  border: `1px solid ${colors.border}`,
-  boxShadow: 'none',
+  width: '46px',
+  height: '46px',
+  borderRadius: '18px',
+  backgroundColor: 'rgba(255,255,255,0.9)',
+  border: `1px solid ${colors.surface}`,
+  boxShadow: '0 12px 24px rgba(58,58,58,0.10), 0 2px 8px rgba(58,58,58,0.05)',
+  backdropFilter: 'blur(16px) saturate(1.12)',
+  WebkitBackdropFilter: 'blur(16px) saturate(1.12)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   padding: 0,
-  transition: 'background-color 0.15s ease, border-color 0.15s ease',
-  color: colors.text,
+  transition: 'background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+  color: colors.primaryText,
 });
 
 const MapControlButton: React.FC<{
@@ -45,14 +47,18 @@ const MapControlButton: React.FC<{
   const style = useMemo(() => getButtonStyle(colors), [colors]);
 
   const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
-    e.currentTarget.style.borderColor = colors.borderStrong;
-  }, [colors.backgroundSecondary, colors.borderStrong]);
+    e.currentTarget.style.backgroundColor = colors.surface;
+    e.currentTarget.style.borderColor = colors.surface;
+    e.currentTarget.style.transform = 'translateY(-1px)';
+    e.currentTarget.style.boxShadow = '0 16px 30px rgba(58,58,58,0.12), 0 3px 10px rgba(58,58,58,0.06)';
+  }, [colors.surface]);
 
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = colors.surface;
-    e.currentTarget.style.borderColor = colors.border;
-  }, [colors.border, colors.surface]);
+    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.9)';
+    e.currentTarget.style.borderColor = colors.surface;
+    e.currentTarget.style.transform = 'translateY(0)';
+    e.currentTarget.style.boxShadow = '0 12px 24px rgba(58,58,58,0.10), 0 2px 8px rgba(58,58,58,0.05)';
+  }, [colors.surface]);
 
   return (
     <button
@@ -99,7 +105,7 @@ const MapControls: React.FC<MapControlsProps> = ({
     zIndex: 40,
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '8px',
+    gap: '10px',
   }), [bottomOffset, shouldAlignLeft]);
 
   if (Platform.OS !== 'web') return null;

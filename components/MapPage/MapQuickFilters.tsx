@@ -117,11 +117,15 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
                   pressed && styles.chipPressed,
                 ]}
               >
-                {isSelected ? (
-                  <Feather name="x" size={14} color={colors.textOnPrimary} />
-                ) : iconName ? (
-                  <Feather name={iconName} size={14} color={colors.text} />
-                ) : null}
+                <View style={[styles.iconBadge, isSelected && styles.iconBadgeActive]}>
+                  {isSelected ? (
+                    <Feather name="x" size={13} color={colors.textOnPrimary} />
+                  ) : iconName ? (
+                    <Feather name={iconName} size={13} color={colors.primaryText} />
+                  ) : (
+                    <Feather name="circle" size={10} color={colors.primary} />
+                  )}
+                </View>
                 <Text
                   style={[styles.chipText, isSelected && styles.chipTextActive]}
                   numberOfLines={1}
@@ -144,7 +148,9 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
               pressed && styles.chipPressed,
             ]}
           >
-            <Feather name="sliders" size={14} color={colors.text} />
+            <View style={styles.actionIconBadge}>
+              <Feather name="sliders" size={13} color={colors.primaryText} />
+            </View>
             <Text style={styles.chipText} numberOfLines={1}>
               {actionChipLabel}
             </Text>
@@ -221,28 +227,28 @@ const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       gap: options.isVeryNarrow ? 6 : 8,
-      paddingHorizontal: options.isVeryNarrow ? 12 : options.isNarrow ? 14 : 16,
-      paddingVertical: options.isVeryNarrow ? 8 : options.isNarrow ? 9 : 10,
+      paddingHorizontal: options.isVeryNarrow ? 10 : options.isNarrow ? 12 : 14,
+      paddingVertical: options.isVeryNarrow ? 7 : options.isNarrow ? 8 : 9,
       borderRadius: options.isVeryNarrow ? 20 : 24,
-      backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
+      backgroundColor: 'rgba(255,255,255,0.88)',
+      borderWidth: 1,
+      borderColor: colors.surface,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 4px 16px rgba(15,23,42,0.07), 0 1px 4px rgba(15,23,42,0.04)',
+            backdropFilter: 'blur(18px) saturate(1.15)',
+            WebkitBackdropFilter: 'blur(18px) saturate(1.15)',
+            boxShadow: '0 10px 24px rgba(58,58,58,0.08), 0 2px 8px rgba(58,58,58,0.05)',
             cursor: 'pointer',
-            transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
+            transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease, background-color 0.18s ease',
           } as any)
         : colors.shadows.light),
     },
     chipActive: {
-      backgroundColor: colors.brand,
-      borderColor: colors.brand,
+      backgroundColor: colors.surface,
+      borderColor: 'rgba(255,255,255,0.95)',
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 6px 20px rgba(255, 146, 43, 0.22), 0 1px 6px rgba(255, 146, 43, 0.14)',
+            boxShadow: '0 14px 30px rgba(122,157,143,0.18), 0 2px 10px rgba(58,58,58,0.06)',
             transform: 'translateY(-1px)',
           } as any)
         : null),
@@ -257,12 +263,31 @@ const getStyles = (
     },
     actionChip: {
       borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
+      borderColor: colors.surface,
+      backgroundColor: 'rgba(255,255,255,0.92)',
     },
     actionChipActive: {
-      borderColor: colors.primary,
+      borderColor: colors.surface,
       backgroundColor: colors.surface,
+    },
+    iconBadge: {
+      width: options.isVeryNarrow ? 22 : 24,
+      height: options.isVeryNarrow ? 22 : 24,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
+    },
+    iconBadgeActive: {
+      backgroundColor: colors.brand,
+    },
+    actionIconBadge: {
+      width: options.isVeryNarrow ? 22 : 24,
+      height: options.isVeryNarrow ? 22 : 24,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
     },
     actionBadge: {
       minWidth: 20,
@@ -271,21 +296,21 @@ const getStyles = (
       paddingHorizontal: 6,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.primarySoft,
     },
     actionBadgeText: {
       fontSize: 11,
       fontWeight: '800',
-      color: colors.textMuted,
+      color: colors.primaryText,
     },
     chipText: {
       fontSize: options.isVeryNarrow ? 12 : 13,
-      fontWeight: '600',
+      fontWeight: '700',
       color: colors.text,
       letterSpacing: 0.1,
       maxWidth: options.isVeryNarrow ? 104 : options.isNarrow ? 132 : 168,
     },
     chipTextActive: {
-      color: colors.textOnPrimary,
+      color: colors.text,
     },
   });

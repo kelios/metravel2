@@ -1,4 +1,3 @@
-// ✅ УЛУЧШЕНИЕ: ListTravel.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
@@ -13,7 +12,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -55,7 +54,6 @@ function ListTravelBase({
     onToggleWeeklyHighlights,
     isWeeklyHighlightsVisible: externalWeeklyHighlightsVisible,
 }: ListTravelProps = {}) {
-    // ✅ ДИЗАЙН: Используем динамические цвета темы
     const colors = useThemedColors();
     const styles = useMemo(() => createListTravelBaseStyles(colors), [colors]);
     const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
@@ -69,7 +67,7 @@ function ListTravelBase({
       isPortrait,
     } = useResponsive();
 
-    // ✅ АРХИТЕКТУРА: Использование кастомного хука для видимости
+    // Синхронизация видимости секций (персонализация, подборка недели)
     useListTravelVisibility({
         externalPersonalizationVisible,
         externalWeeklyHighlightsVisible,
@@ -102,8 +100,7 @@ function ListTravelBase({
         ? effectiveResponsiveWidth >= BREAKPOINTS.DESKTOP
         : isDesktopSize;
 
-    // ✅ ОПТИМИЗАЦИЯ: Стабилизируем width чтобы избежать ре-рендеров при скролле
-    // (мобильная адресная строка может менять viewport height/width)
+    // Стабилизируем width: мобильная адресная строка может менять viewport
     const stableWidthRef = useRef(effectiveResponsiveWidth);
     const width = useMemo(() => {
       // Обновляем только при значительном изменении (>50px)
@@ -186,7 +183,6 @@ function ListTravelBase({
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
-    // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
     const isMobileDevice = resolvedIsMobileDevice;
     // Cards layout rule: on mobile widths we always render a single column.
@@ -225,12 +221,10 @@ function ListTravelBase({
       return styleArray
     }, [gapSize, styles.cardsGrid]);
 
-    // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
     // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
     const effectiveWidth = isDesktop ? width - 320 : width; // 320px ~ ширина sidebar (только когда sidebar реально видим)
 
     const contentPadding = useMemo(() => {
-      // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
       if (effectiveWidth < BREAKPOINTS.XS) return 12;  // XS: компактные устройства
       if (effectiveWidth < BREAKPOINTS.SM) return 8; // SM: чуть уже карточки на очень маленьких телефонах
       if (effectiveWidth < BREAKPOINTS.MOBILE) return 10; // Mobile: стандартные телефоны — синхронизировано
@@ -238,7 +232,7 @@ function ListTravelBase({
       if (effectiveWidth < BREAKPOINTS.DESKTOP) return 12; // Desktop
       if (effectiveWidth < BREAKPOINTS.DESKTOP_LARGE) return 16; // Large Desktop
       return 20; // XXL
-    }, [effectiveWidth]); // ✅ ОПТИМИЗАЦИЯ: Только эффективная ширина в зависимостях
+    }, [effectiveWidth]);
 
     const gridColumns = useMemo(() => {
       if (isCardsSingleColumn) {
@@ -281,7 +275,6 @@ function ListTravelBase({
     );
 
     useEffect(() => {
-        // ✅ CLS fix: on web we already initialize synchronously from sessionStorage
         // to avoid a post-paint setState that shifts the list.
         if (Platform.OS === 'web') {
             return;
@@ -314,7 +307,6 @@ function ListTravelBase({
         };
     }, []);
 
-    // ✅ ИСПРАВЛЕНИЕ: Сохраняем состояние видимости рекомендаций при изменении и запускаем ленивую загрузку блока
     const handleRecommendationsVisibilityChange = useCallback((visible: boolean) => {
         if (!recommendationsVisibilityInitialized) {
             return;
@@ -378,7 +370,6 @@ function ListTravelBase({
         staleTime: 10 * 60 * 1000,
     });
 
-    // ✅ ОПТИМИЗАЦИЯ: Упрощенная трансформация данных - убраны тяжелые операции
     const options = useMemo((): FilterOptions | undefined => {
        if (!rawOptions) return undefined;
 
@@ -393,7 +384,7 @@ function ListTravelBase({
            over_nights_stay: normalizeNamedOptions(rawOptions.over_nights_stay),
            sortings: rawOptions.sortings || [],
        };
-    }, [rawOptions]); // ✅ ОПТИМИЗАЦИЯ: Только rawOptions в зависимостях
+    }, [rawOptions]);
 
     const {
         filter,
@@ -444,12 +435,10 @@ function ListTravelBase({
       [facetsData?.facets]
     );
 
-    const baseQueryEnabled = useMemo(
+    const isQueryEnabled = useMemo(
       () => (isMeTravel || isExport ? !!userId : true),
       [isMeTravel, isExport, userId]
     );
-
-    const isQueryEnabled = baseQueryEnabled;
 
     // Если для страницы требуется конкретный пользователь ("Мои путешествия" или экспорт),
     // то до загрузки userId блокируем основной запрос.
@@ -458,18 +447,13 @@ function ListTravelBase({
     const {
         data: travels,
         total,
-        hasMore: _hasMore,
-        isLoading: _isLoading,
-        isFetching: _isFetching,
+        isFetching,
         isError,
-        status: _status,
         isInitialLoading,
         isNextPageLoading,
         isEmpty,
         refetch,
         handleEndReached,
-        handleRefresh: _handleRefresh,
-        isRefreshing: _isRefreshing,
     } = useListTravelData({
         queryParams,
         search: debSearch,
@@ -488,7 +472,6 @@ function ListTravelBase({
           setDelete(null);
           deleteInFlightRef.current = null;
           await queryClient.invalidateQueries({ queryKey: ["travels"] });
-          // ✅ УЛУЧШЕНИЕ: Показываем успешное сообщение
           if (Platform.OS === 'web') {
             // Можно добавить Toast здесь, если нужно
           }
@@ -513,8 +496,6 @@ function ListTravelBase({
           }
 
           deleteInFlightRef.current = null;
-          // ✅ BUG-002: Обработка ошибок при удалении
-          // ✅ UX-001: Улучшенные сообщения об ошибках
           let errorMessage = 'Не удалось удалить путешествие.';
           let errorDetails = 'Попробуйте позже.';
           
@@ -686,14 +667,13 @@ function ListTravelBase({
       !showNextPageLoading &&
       normalizedSearchValue.length > 0 &&
       normalizedSearchValue === normalizedDebouncedSearchValue &&
-      _isFetching;
+      isFetching;
     const isSearchPending = !isUserIdLoading && (isSearchInputPending || isSearchFetchPending);
     const showEmptyState = !isUserIdLoading && !isSearchPending && isEmpty;
 
-
     const handleListEndReached = useCallback(() => {
         if (onMomentumRef.current) return;
-        if (!hasAnyItems) return; // ✅ FIX: Без элементов не запускаем пагинацию, чтобы не пропускать первую страницу фильтра
+        if (!hasAnyItems) return;
 
         const now = Date.now();
         // Простая защита от слишком частых вызовов onEndReached на web/мобильных
@@ -709,7 +689,6 @@ function ListTravelBase({
         if (Platform.OS !== 'web') return;
         if (!flatListRef.current) return;
 
-        // ✅ A2.2: Упрощенное восстановление скролла без двойного requestAnimationFrame
         const restoreScroll = () => {
                 try {
                     const stored = window.sessionStorage.getItem('travel-list-scroll');
@@ -732,15 +711,12 @@ function ListTravelBase({
         return () => clearTimeout(timeoutId);
     }, []);
 
-    // ✅ ОПТИМИЗАЦИЯ: Подсчитываем количество активных фильтров с мемоизацией
     // Оптимизируем расчет путем использования стабильных ссылок на filter
     const activeFiltersCount = useMemo(() => {
       let count = 0;
 
-      // ✅ ОПТИМИЗАЦИЯ: Предварительно определяем ключи фильтров
       const filterKeys = ['categories', 'transports', 'categoryTravelAddress', 'companions', 'complexity', 'month', 'over_nights_stay'] as const;
 
-      // ✅ ОПТИМИЗАЦИЯ: Используем for...of вместо forEach для лучшей производительности
       for (const key of filterKeys) {
         const value = filter[key];
         if (Array.isArray(value) && value.length > 0) {
@@ -748,18 +724,15 @@ function ListTravelBase({
         }
       }
 
-      // ✅ ОПТИМИЗАЦИЯ: Проверяем остальные поля отдельно
       if (filter.year) count += 1;
       if (filter.sort) count += 1;
       if (filter.moderation !== undefined) count += 1;
       if (debSearch && debSearch.trim().length > 0) count += 1;
 
       return count;
-    }, [filter, debSearch]); // ✅ ОПТИМИЗАЦИЯ: Зависимости стабильны
+    }, [filter, debSearch]);
 
-    // ✅ ОПТИМИЗАЦИЯ: Генерируем красивое сообщение для пустого состояния
     const getEmptyStateMessage = useMemo(() => {
-      // ✅ ОПТИМИЗАЦИЯ: Быстрый возврат если не нужно показывать
       if (!showEmptyState) return null;
 
       const activeFilters: string[] = [];
@@ -815,7 +788,7 @@ function ListTravelBase({
       }
 
       // Формируем красивое описание
-      let description = '';
+      let description: string;
       if (activeFilters.length === 1) {
         description = `По фильтру ${activeFilters[0]} ничего не найдено.`;
       } else if (activeFilters.length === 2) {
@@ -839,9 +812,8 @@ function ListTravelBase({
         variant: 'search' as const,
         suggestions,
       };
-    }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch]); // ✅ ОПТИМИЗАЦИЯ: Более точные зависимости
+    }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch]);
 
-    // ✅ АРХИТЕКТУРА: Централизованная конфигурация групп фильтров для переиспользования в десктоп и мобильной версии
     const filterGroups = useMemo(
       () => buildTravelFilterGroups({
         options,

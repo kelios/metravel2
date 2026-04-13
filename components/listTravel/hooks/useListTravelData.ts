@@ -35,56 +35,50 @@ export interface UseListTravelDataReturn {
 }
 
 const countLoadedItems = (pages: Array<{ data?: Travel[] }>): number => {
-  if (!Array.isArray(pages)) {
-    return 0;
-  }
+  if (!Array.isArray(pages)) return 0;
   return pages.reduce((sum, page) => {
-    if (Array.isArray(page?.data)) {
-      return sum + page.data.length;
-    }
-    if (Array.isArray((page as any)?.items)) {
-      return sum + (page as any).items.length;
-    }
+    if (Array.isArray(page?.data)) return sum + page.data.length;
+    if (Array.isArray((page as any)?.items)) return sum + (page as any).items.length;
     return sum;
   }, 0);
 };
 
 const getPageItemsLength = (page: unknown): number => {
-  if (!page || typeof page !== 'object') {
-    return 0;
-  }
+  if (!page || typeof page !== 'object') return 0;
   const source = page as { data?: unknown; items?: unknown };
-  if (Array.isArray(source.data)) {
-    return source.data.length;
-  }
-  if (Array.isArray(source.items)) {
-    return source.items.length;
-  }
+  if (Array.isArray(source.data)) return source.data.length;
+  if (Array.isArray(source.items)) return source.items.length;
   return 0;
 };
 
 const resolveStableTotal = (pages: unknown[]): number => {
-  if (!Array.isArray(pages)) {
-    return 0;
-  }
-
+  if (!Array.isArray(pages)) return 0;
   for (let index = pages.length - 1; index >= 0; index -= 1) {
     const page = pages[index];
     const rawTotal = page && typeof page === 'object' ? (page as { total?: unknown }).total : undefined;
     const total = typeof rawTotal === 'number' ? rawTotal : Number(rawTotal);
-    if (Number.isFinite(total) && total > 0) {
-      return total;
-    }
+    if (Number.isFinite(total) && total > 0) return total;
   }
-
   return 0;
 };
 
-export function useListTravelData({
-  queryParams,
-  search,
-  isQueryEnabled,
-}: UseListTravelDataProps): UseListTravelDataReturn {
+type FetchFn = (
+  page: number,
+  perPage: number,
+  search: string,
+  params: Record<string, any>,
+  options: { signal?: AbortSignal },
+) => Promise<any>;
+
+interface BaseTravelDataConfig {
+  queryKeyPrefix: string;
+  fetchFn: FetchFn;
+}
+
+function useBaseTravelData(
+  { queryParams, search, isQueryEnabled }: UseListTravelDataProps,
+  { queryKeyPrefix, fetchFn }: BaseTravelDataConfig,
+): UseListTravelDataReturn {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -100,14 +94,14 @@ export function useListTravelData({
 
   const queryKey = useMemo(
     () => [
-      'travels',
+      queryKeyPrefix,
       {
         perPage: PER_PAGE,
         search: search.trim(),
         params: queryParamsStringified,
       },
     ],
-    [search, queryParamsStringified],
+    [queryKeyPrefix, search, queryParamsStringified],
   );
 
   const queryParamsForFetch = useMemo(
@@ -127,23 +121,15 @@ export function useListTravelData({
   } = useInfiniteQuery({
     queryKey,
     queryFn: ({ pageParam = 0, signal }) =>
-      fetchTravels(pageParam, PER_PAGE, search.trim(), queryParamsForFetch, { signal }),
+      fetchFn(pageParam, PER_PAGE, search.trim(), queryParamsForFetch, { signal }),
     enabled: isQueryEnabled,
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const total = resolveStableTotal(allPages as unknown[]);
-      if (!total) {
-        return undefined;
-      }
+      if (!total) return undefined;
       const loaded = countLoadedItems(allPages as any);
-      if (loaded >= total) {
-        return undefined;
-      }
-
-      if (getPageItemsLength(lastPage) === 0) {
-        return undefined;
-      }
-
+      if (loaded >= total) return undefined;
+      if (getPageItemsLength(lastPage) === 0) return undefined;
       return allPages.length;
     },
     staleTime: STALE_TIME.TRAVELS,
@@ -153,16 +139,12 @@ export function useListTravelData({
   });
 
   const normalizedPages = useMemo(() => {
-    if (!data?.pages?.length) {
-      return [];
-    }
+    if (!data?.pages?.length) return [];
     return data.pages.map((page) => normalizeApiResponse(page));
   }, [data]);
 
   const combinedTravels = useMemo(() => {
-    if (!normalizedPages.length) {
-      return [];
-    }
+    if (!normalizedPages.length) return [];
     const flattened = normalizedPages.flatMap((page) => page.items);
     return deduplicateTravels(flattened);
   }, [normalizedPages]);
@@ -213,135 +195,16 @@ export function useListTravelData({
   };
 }
 
-export function useRandomTravelData({
-  queryParams,
-  search,
-  isQueryEnabled,
-}: UseListTravelDataProps): UseListTravelDataReturn {
-  const queryClient = useQueryClient();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const queryParamsStringified = useMemo(() => {
-    const sorted = Object.keys(queryParams)
-      .sort()
-      .reduce<Record<string, any>>((acc, key) => {
-        acc[key] = queryParams[key];
-        return acc;
-      }, {});
-    return JSON.stringify(sorted);
-  }, [queryParams]);
-
-  const queryKey = useMemo(
-    () => [
-      'random-travels',
-      {
-        perPage: PER_PAGE,
-        search: search.trim(),
-        params: queryParamsStringified,
-      },
-    ],
-    [search, queryParamsStringified],
-  );
-
-  const queryParamsForFetch = useMemo(
-    () => safeJsonParseString(queryParamsStringified, {}),
-    [queryParamsStringified],
-  );
-
-  const {
-    data,
-    status,
-    isFetching,
-    isLoading,
-    refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey,
-    queryFn: ({ pageParam = 0, signal }) =>
-      fetchRandomTravels(pageParam, PER_PAGE, search.trim(), queryParamsForFetch, { signal }),
-    enabled: isQueryEnabled,
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) => {
-      const total = resolveStableTotal(allPages as unknown[]);
-      if (!total) {
-        return undefined;
-      }
-      const loaded = countLoadedItems(allPages as any);
-      if (loaded >= total) {
-        return undefined;
-      }
-
-      if (getPageItemsLength(lastPage) === 0) {
-        return undefined;
-      }
-
-      return allPages.length;
-    },
-    staleTime: STALE_TIME.TRAVELS,
-    gcTime: GC_TIME.TRAVELS,
-    refetchOnMount: QUERY_CONFIG.REFETCH_ON_MOUNT,
-    refetchOnWindowFocus: QUERY_CONFIG.REFETCH_ON_WINDOW_FOCUS,
+export function useListTravelData(props: UseListTravelDataProps): UseListTravelDataReturn {
+  return useBaseTravelData(props, {
+    queryKeyPrefix: 'travels',
+    fetchFn: fetchTravels,
   });
+}
 
-  const normalizedPages = useMemo(() => {
-    if (!data?.pages?.length) {
-      return [];
-    }
-    return data.pages.map((page) => normalizeApiResponse(page));
-  }, [data]);
-
-  const combinedTravels = useMemo(() => {
-    if (!normalizedPages.length) {
-      return [];
-    }
-    const flattened = normalizedPages.flatMap((page) => page.items);
-    return deduplicateTravels(flattened);
-  }, [normalizedPages]);
-
-  const total = normalizedPages.length > 0 ? normalizedPages[0].total : 0;
-  const hasAnyItems = combinedTravels.length > 0;
-  const hasMore = Boolean(hasNextPage);
-
-  const isInitialLoading = isLoading && !hasAnyItems;
-  const isNextPageLoading = isFetchingNextPage;
-  const isEmpty =
-    isQueryEnabled &&
-    status === 'success' &&
-    !isFetching &&
-    !isLoading &&
-    !isFetchingNextPage &&
-    !hasAnyItems;
-
-  const handleEndReached = useCallback(() => {
-    if (!hasMore) return;
-    if (isFetchingNextPage) return;
-    if (isFetching && !hasAnyItems) return;
-    fetchNextPage();
-  }, [hasMore, isFetchingNextPage, fetchNextPage, isFetching, hasAnyItems]);
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey });
-    await refetch();
-    setIsRefreshing(false);
-  }, [queryClient, queryKey, refetch]);
-
-  return {
-    data: combinedTravels,
-    total,
-    hasMore,
-    isLoading,
-    isFetching,
-    isError: status === 'error',
-    status,
-    isInitialLoading,
-    isNextPageLoading,
-    isEmpty,
-    refetch,
-    handleEndReached,
-    handleRefresh,
-    isRefreshing,
-  };
+export function useRandomTravelData(props: UseListTravelDataProps): UseListTravelDataReturn {
+  return useBaseTravelData(props, {
+    queryKeyPrefix: 'random-travels',
+    fetchFn: fetchRandomTravels,
+  });
 }
