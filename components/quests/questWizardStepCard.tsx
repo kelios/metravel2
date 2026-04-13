@@ -199,7 +199,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         <View style={styles.headerContent}>
           <Text style={styles.stepTitle}>{step.title}</Text>
           <Pressable onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} accessibilityRole="button" accessibilityLabel={`Открыть в картах: ${step.location}`}>
-            <Text style={styles.location}>{step.location}</Text>
+            <Text style={styles.location} numberOfLines={2}>{step.location}</Text>
           </Pressable>
         </View>
         {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
@@ -274,7 +274,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
               <View style={[styles.answerMapPane, styles.answerPane]}>
                 <View style={styles.answerContainer}>
                   <Text style={styles.answerLabel}>Ваш ответ:</Text>
-                  <Text style={styles.answerValue}>{savedAnswer}</Text>
+                  <Text style={styles.answerValue} numberOfLines={3}>{savedAnswer}</Text>
                 </View>
               </View>
             )}

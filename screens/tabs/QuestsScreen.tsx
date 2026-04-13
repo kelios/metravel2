@@ -77,7 +77,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
             backgroundColor: colors.background,
             flexDirection: isMobileW ? 'column' : 'row',
             ...Platform.select({
-                web: { minHeight: '100vh' } as any,
+                web: isMobileW ? {} : { minHeight: '100vh' } as any,
             }),
         },
 
@@ -1111,7 +1111,7 @@ export default function QuestsScreen() {
         canonical: buildCanonicalUrl('/quests'),
         title: titleText,
         description: descText,
-        quests,
+        quests: ALL_QUESTS,
     });
     const questsSeoTags = useMemo(
         () => (

@@ -21,6 +21,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
     },
     rootMobile: {
       flexDirection: 'column',
+      ...(Platform.OS === 'web' ? ({ minHeight: 0 } as any) : null),
     },
     content: {
       flex: 1,
@@ -198,6 +199,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
     rightColumnMobile: {
       width: '100%',
       paddingTop: 0,
+      ...(Platform.OS === 'web' ? ({ minHeight: 0, height: 'auto' } as any) : null),
     },
     searchHeader: {
       position: 'relative',
@@ -227,7 +229,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
     },
     cardsContainerMobile: {
       paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
-      minHeight: 720,
+      ...(Platform.OS === 'web' ? ({ minHeight: 0 } as any) : null),
     },
     cardsGrid: {
       width: '100%',

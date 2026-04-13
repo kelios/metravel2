@@ -7,11 +7,12 @@ import React, {
 } from 'react';
 import {
     View, StyleSheet,
-    ScrollView, Platform,
+    ScrollView, Platform, Pressable, Text,
     KeyboardAvoidingView, SafeAreaView, Keyboard
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import Feather from '@expo/vector-icons/Feather';
 import { generatePrintableQuest } from './QuestPrintable';
 import { useQuestFinaleMedia } from './useQuestFinaleMedia';
 import { QuestCompactSidebar, QuestHeaderPanel } from './questWizardShell';
@@ -83,14 +84,13 @@ const QUEST_DESIGN = {
     bodySize: 15,
 };
 
-const useQuestWizardTheme = () => {
+const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     const colors = useThemedColors();
-    const styles = useMemo(() => createStyles(colors), [colors]);
+    const styles = useMemo(() => createStyles(colors, isMobile, screenW), [colors, isMobile, screenW]);
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
 export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, coverUrl, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry }: QuestWizardProps) {
-    const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
     const wizardModel = useQuestWizardResponsiveModel();
@@ -99,6 +99,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         compactNav, compactDesktopLayout,
         useWideInlineLayout, useWideExcursionsSidebar,
     } = wizardModel;
+
+    const { colors, styles } = useQuestWizardTheme(isMobile, screenW);
 
     const {
         currentIndex,
@@ -283,22 +285,84 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
                 {/* Финал — доступен всегда; видео — когда всё пройдено */}
                 {showFinaleOnly && (
-                    <QuestFinalePanel
-                        colors={colors}
-                        styles={styles}
-                        finale={finale}
-                        allCompleted={allCompleted}
-                        completedCount={completedSteps.length}
-                        stepsCount={steps.length}
-                        frameW={frameW}
-                        youtubeEmbedUri={youtubeEmbedUri}
-                        videoOk={videoOk}
-                        videoUri={videoUri}
-                        posterUri={posterUri}
-                        handleVideoError={handleVideoError}
-                        handleVideoRetry={handleVideoRetry}
-                        setVideoOk={setVideoOk}
-                    />
+                    <>
+                        <QuestFinalePanel
+                            colors={colors}
+                            styles={styles}
+                            finale={finale}
+                            allCompleted={allCompleted}
+                            completedCount={completedSteps.length}
+                            stepsCount={steps.length}
+                            frameW={frameW}
+                            youtubeEmbedUri={youtubeEmbedUri}
+                            videoOk={videoOk}
+                            videoUri={videoUri}
+                            posterUri={posterUri}
+                            handleVideoError={handleVideoError}
+                            handleVideoRetry={handleVideoRetry}
+                            setVideoOk={setVideoOk}
+                        />
+                        {Platform.OS === 'web' && (
+                            <View style={styles.printSection}>
+                                <Text style={styles.printHint}>
+                                    Печатная версия квеста: маршрут, задания и место для ответов.
+                                </Text>
+                                <Pressable
+                                    style={styles.printButton}
+                                    onPress={handlePrintDownload}
+                                    hitSlop={6}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Скачать печатную версию квеста"
+                                >
+                                    <Feather name="download" size={16} color={colors.textOnPrimary} />
+                                    <Text style={styles.printButtonText}>Скачать печатную версию</Text>
+                                </Pressable>
+                            </View>
+                        )}
+                    </>
+                )}
+
+                {/* Мобильная навигация prev/next — всегда видна на мобильных */}
+                {isMobile && (
+                    <View style={styles.mobileStepNav}>
+                        <Pressable
+                            onPress={() => {
+                                if (showFinaleOnly) { setShowFinaleOnly(false); }
+                                else if (currentIndex > 0) goToStep(currentIndex - 1);
+                            }}
+                            disabled={!showFinaleOnly && currentIndex === 0}
+                            style={[styles.mobileNavBtn, (!showFinaleOnly && currentIndex === 0) && styles.mobileNavBtnDisabled]}
+                            hitSlop={10}
+                            accessibilityRole="button"
+                            accessibilityLabel="Предыдущий шаг"
+                        >
+                            <Feather name="chevron-left" size={18} color={(!showFinaleOnly && currentIndex === 0) ? colors.textMuted : colors.text} />
+                            <Text style={[styles.mobileNavBtnText, (!showFinaleOnly && currentIndex === 0) && { color: colors.textMuted }]}>Назад</Text>
+                        </Pressable>
+
+                        <Text style={styles.mobileNavLabel} numberOfLines={1}>
+                            {showFinaleOnly ? 'Финал' : currentIndex === 0 ? 'Старт' : `Шаг ${currentIndex} из ${steps.length}`}
+                        </Text>
+
+                        <Pressable
+                            onPress={() => {
+                                if (!showFinaleOnly) {
+                                    if (currentIndex < unlockedIndex) goToStep(currentIndex + 1);
+                                    else if (allCompleted) setShowFinaleOnly(true);
+                                }
+                            }}
+                            disabled={showFinaleOnly || (currentIndex >= unlockedIndex && !allCompleted)}
+                            style={[styles.mobileNavBtn, (showFinaleOnly || (currentIndex >= unlockedIndex && !allCompleted)) && styles.mobileNavBtnDisabled]}
+                            hitSlop={10}
+                            accessibilityRole="button"
+                            accessibilityLabel={allCompleted && currentIndex >= unlockedIndex && !showFinaleOnly ? 'К финалу' : 'Следующий шаг'}
+                        >
+                            <Text style={[styles.mobileNavBtnText, (showFinaleOnly || (currentIndex >= unlockedIndex && !allCompleted)) && { color: colors.textMuted }]}>
+                                {allCompleted && currentIndex >= unlockedIndex && !showFinaleOnly ? 'Финал' : 'Вперёд'}
+                            </Text>
+                            <Feather name="chevron-right" size={18} color={(showFinaleOnly || (currentIndex >= unlockedIndex && !allCompleted)) ? colors.textMuted : colors.text} />
+                        </Pressable>
+                    </View>
                 )}
             </View>
 
@@ -397,7 +461,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 }
 
 // ===================== СТИЛИ =====================
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile = false, screenW = 400) => StyleSheet.create({
     container: { 
         flex: 1, 
         backgroundColor: colors.background,
@@ -405,9 +469,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     header: {
         backgroundColor: colors.surface,
-        paddingHorizontal: SPACING.lg,
-        paddingTop: SPACING.lg,
-        paddingBottom: SPACING.md,
+        paddingHorizontal: isMobile ? SPACING.md : SPACING.lg,
+        paddingTop: isMobile ? SPACING.md : SPACING.lg,
+        paddingBottom: isMobile ? SPACING.sm : SPACING.md,
         borderBottomWidth: 0,
         ...Platform.select({ 
             web: { 
@@ -423,12 +487,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: SPACING.lg,
-        gap: SPACING.md,
+        marginBottom: isMobile ? SPACING.sm : SPACING.lg,
+        gap: isMobile ? SPACING.sm : SPACING.md,
     },
     headerRowMobile: {
-        alignItems: 'flex-start',
-        marginBottom: SPACING.md,
+        alignItems: 'center',
+        marginBottom: SPACING.sm,
     },
     headerIdentity: {
         flex: 1,
@@ -459,8 +523,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         lineHeight: 34,
     },
     titleMobile: {
-        fontSize: 22,
-        lineHeight: 28,
+        fontSize: 19,
+        lineHeight: 24,
     },
     resetButton: {
         paddingHorizontal: SPACING.md,
@@ -478,7 +542,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     resetText: { color: colors.textMuted, fontWeight: '600', fontSize: 13 },
     toggleText: { color: colors.primaryDark, fontWeight: '600', fontSize: 14 },
 
-    progressContainer: { marginBottom: SPACING.md },
+    progressContainer: { marginBottom: isMobile ? SPACING.xs : SPACING.md },
     progressBar: {
         height: 4,
         backgroundColor: colors.backgroundTertiary,
@@ -497,17 +561,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             default: { backgroundColor: colors.brand },
         }),
     },
-    progressText: { 
-        fontSize: 13, 
-        color: colors.textMuted, 
-        textAlign: 'right', 
+    progressText: {
+        fontSize: 13,
+        color: colors.textMuted,
+        textAlign: 'right',
         fontWeight: '600',
         letterSpacing: -0.2,
     },
+    progressCompact: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: colors.textMuted,
+        letterSpacing: -0.1,
+        marginTop: 1,
+    },
 
-    stepsNavigation: { 
-        flexDirection: 'row', 
-        marginTop: SPACING.md,
+    stepsNavigation: {
+        flexDirection: 'row',
+        marginTop: isMobile ? SPACING.sm : SPACING.md,
         marginBottom: SPACING.xs,
         ...Platform.select({
             web: {
@@ -590,10 +661,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
 
     stepDotMini: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        marginRight: 6,
+        width: isMobile ? 28 : 36,
+        height: isMobile ? 28 : 36,
+        borderRadius: isMobile ? 14 : 18,
+        marginRight: isMobile ? 4 : 6,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.backgroundSecondary,
@@ -627,12 +698,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
     },
     stepDotMiniLocked: { opacity: 0.35 },
-    stepDotMiniText: { fontSize: 12, fontWeight: '700', color: colors.brandText },
+    stepDotMiniText: { fontSize: isMobile ? 10 : 12, fontWeight: '700', color: colors.brandText },
 
-    navActiveTitle: { 
-        marginTop: 8, 
-        fontSize: 14, 
-        fontWeight: '700', 
+    navActiveTitle: {
+        marginTop: 6,
+        marginBottom: isMobile ? SPACING.xs : 0,
+        fontSize: 13,
+        fontWeight: '700',
         color: colors.text,
         letterSpacing: -0.3,
     },
@@ -737,7 +809,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginBottom: SPACING.sm,
     },
 
-    content: { flex: 1, padding: SPACING.lg },
+    content: { flex: 1, padding: isMobile ? SPACING.md : SPACING.lg },
     compactMainContent: {
         paddingTop: SPACING.md,
     },
@@ -749,9 +821,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     card: {
         backgroundColor: colors.surface,
-        borderRadius: 20,
-        padding: SPACING.xl,
-        marginBottom: SPACING.lg,
+        borderRadius: isMobile ? 16 : 20,
+        padding: isMobile ? SPACING.lg : SPACING.xl,
+        marginBottom: SPACING.md,
         borderWidth: 0,
         ...Platform.select({
             web: { 
@@ -768,16 +840,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
         backfaceVisibility: 'hidden',
     },
-    cardHeader: { 
-        flexDirection: 'row', 
-        alignItems: 'flex-start', 
-        marginBottom: SPACING.lg, 
-        gap: SPACING.md,
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        marginBottom: isMobile ? SPACING.md : SPACING.lg,
+        gap: isMobile ? SPACING.sm : SPACING.md,
     },
     stepNumber: {
-        width: 44, 
-        height: 44, 
-        borderRadius: 14,
+        width: isMobile ? 38 : 44,
+        height: isMobile ? 38 : 44,
+        borderRadius: isMobile ? 11 : 14,
         alignItems: 'center', 
         justifyContent: 'center',
         flexShrink: 0,
@@ -796,15 +868,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
             default: { backgroundColor: colors.successSoft },
         }),
     },
-    stepNumberText: { fontSize: 17, fontWeight: '800', color: colors.brandText },
+    stepNumberText: { fontSize: isMobile ? 14 : 17, fontWeight: '800', color: colors.brandText },
     headerContent: { flex: 1 },
-    stepTitle: { 
-        fontSize: 20, 
-        fontWeight: '800', 
-        color: colors.text, 
-        marginBottom: 4, 
-        letterSpacing: -0.4, 
-        lineHeight: 26,
+    stepTitle: {
+        fontSize: isMobile ? 17 : 20,
+        fontWeight: '800',
+        color: colors.text,
+        marginBottom: 4,
+        letterSpacing: -0.4,
+        lineHeight: isMobile ? 23 : 26,
     },
     location: {
         fontSize: 14, 
@@ -818,9 +890,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
     },
     completedBadge: {
-        borderRadius: 12,
-        width: 36, 
-        height: 36,
+        borderRadius: 10,
+        width: isMobile ? 32 : 36,
+        height: isMobile ? 32 : 36,
         alignItems: 'center', 
         justifyContent: 'center',
         flexShrink: 0,
@@ -833,7 +905,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     completedText: { color: colors.success, fontWeight: '800', fontSize: 16 },
 
-    section: { marginBottom: SPACING.lg },
+    section: { marginBottom: isMobile ? SPACING.md : SPACING.lg },
     sectionTitle: { 
         fontSize: QUEST_DESIGN.sectionTitleSize, 
         fontWeight: '700', 
@@ -842,19 +914,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         textTransform: 'uppercase', 
         letterSpacing: 1.2,
     },
-    storyText: { 
-        fontSize: QUEST_DESIGN.bodySize, 
-        lineHeight: 24, 
+    storyText: {
+        fontSize: isMobile ? 14 : QUEST_DESIGN.bodySize,
+        lineHeight: isMobile ? 22 : 24,
         color: colors.text,
         letterSpacing: -0.1,
     },
 
-    taskText: { 
-        fontSize: 17, 
-        fontWeight: '700', 
-        color: colors.text, 
-        marginBottom: SPACING.lg, 
-        lineHeight: 25, 
+    taskText: {
+        fontSize: isMobile ? 15 : 17,
+        fontWeight: '700',
+        color: colors.text,
+        marginBottom: isMobile ? SPACING.md : SPACING.lg,
+        lineHeight: isMobile ? 22 : 25,
         letterSpacing: -0.3,
     },
     input: {
@@ -919,7 +991,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     buttonText: { color: colors.textOnPrimary, fontWeight: '700', textAlign: 'center', fontSize: 16 },
 
-    inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: SPACING.md },
+    inputRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: isMobile ? SPACING.sm : SPACING.md },
     checkButton: {
         width: 52, 
         height: 52,
@@ -941,7 +1013,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     inlineActions: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 12, marginTop: 10, marginBottom: 4,
+        flexWrap: 'wrap', gap: 12, marginTop: 8, marginBottom: 4,
     },
     linkText: {
         color: colors.textMuted, fontSize: 13, fontWeight: '500',
@@ -953,7 +1025,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     hintPrompt: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: SPACING.xs },
     hintContainer: {
         backgroundColor: colors.successSoft,
-        padding: SPACING.md,
+        paddingHorizontal: SPACING.md,
+        paddingVertical: isMobile ? SPACING.sm : SPACING.md,
         borderRadius: 12,
         marginTop: SPACING.sm,
         borderWidth: 1,
@@ -966,10 +1039,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     answerMapSplitWithAnswer: {
         ...Platform.select({
-            web: {
+            web: !isMobile ? {
                 flexDirection: 'row',
                 alignItems: 'stretch',
-            } as any,
+            } : {} as any,
         }),
     },
     answerMapPane: {
@@ -978,8 +1051,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     answerPane: {
         ...Platform.select({
             web: {
-                width: 260,
-                flexShrink: 0,
+                width: isMobile ? undefined : 260,
+                flexShrink: isMobile ? undefined : 0,
             } as any,
         }),
     },
@@ -1001,7 +1074,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
     },
     navButton: {
-        backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 10,
+        backgroundColor: colors.primary, paddingHorizontal: isMobile ? 12 : 16, paddingVertical: 10,
         borderRadius: 999, minHeight: 40, justifyContent: 'center', alignItems: 'center',
         ...Platform.select({ web: { cursor: 'pointer', transition: 'opacity 0.15s ease' } as any }),
     },
@@ -1043,7 +1116,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     photoHint: { fontSize: 12, color: colors.textMuted, marginBottom: SPACING.xs },
 
-    imagePreview: { borderRadius: 12, overflow: 'hidden', position: 'relative', width: '100%', maxWidth: 480 },
+    imagePreview: { borderRadius: 12, overflow: 'hidden', position: 'relative', width: '100%', maxWidth: isMobile ? screenW - 64 : 480 },
     previewImage: { width: '100%', aspectRatio: 4 / 3, resizeMode: 'contain' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.overlay, padding: 8, alignItems: 'center' },
     overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '600' },
@@ -1052,6 +1125,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         padding: SPACING.lg,
         borderRadius: 16,
         alignItems: 'center',
+        alignSelf: 'stretch',
         minHeight: 56,
         justifyContent: 'center',
         ...Platform.select({ 
@@ -1069,6 +1143,53 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 18, 
         fontWeight: '800', 
         letterSpacing: -0.3,
+    },
+
+    headerActionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING.xs,
+    },
+
+    mobileStepNav: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        paddingHorizontal: SPACING.sm,
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        marginBottom: SPACING.md,
+        ...Platform.select({
+            web: { boxShadow: '0 2px 8px rgba(0,0,0,0.05)' } as any,
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
+            android: { elevation: 2 },
+        }),
+    },
+    mobileNavBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        minWidth: 88,
+        ...Platform.select({ web: { cursor: 'pointer' } as any }),
+    },
+    mobileNavBtnDisabled: {
+        opacity: 0.3,
+    },
+    mobileNavBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    mobileNavLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.textMuted,
+        flex: 1,
+        textAlign: 'center',
     },
 
     printSection: {
@@ -1099,10 +1220,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         justifyContent: 'center',
         gap: 8,
         backgroundColor: colors.brand,
-        paddingHorizontal: 22,
+        paddingHorizontal: isMobile ? 16 : 22,
         paddingVertical: 11,
         borderRadius: 999,
         minHeight: 44,
+        alignSelf: 'stretch',
         ...Platform.select({
             web: {
                 cursor: 'pointer',
@@ -1115,9 +1237,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     fullMapSection: {
         backgroundColor: colors.surface,
-        borderRadius: 20, 
-        padding: SPACING.md, 
-        marginBottom: SPACING.lg,
+        borderRadius: isMobile ? 14 : 20,
+        padding: SPACING.md,
+        marginBottom: isMobile ? SPACING.sm : SPACING.lg,
         borderWidth: 0,
         overflow: 'hidden',
         ...Platform.select({
@@ -1204,10 +1326,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     completionScreen: {
         backgroundColor: colors.surface,
-        borderRadius: 24, 
-        padding: SPACING.xl,
-        alignItems: 'center', 
-        marginTop: SPACING.lg,
+        borderRadius: isMobile ? 16 : 24,
+        padding: isMobile ? SPACING.lg : SPACING.xl,
+        alignItems: 'center',
+        marginTop: isMobile ? SPACING.xs : SPACING.lg,
         borderWidth: 0,
         ...Platform.select({ 
             web: { 
@@ -1216,21 +1338,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
     },
     completionTitle: {
-        fontSize: 28, 
-        fontWeight: '800', 
+        fontSize: isMobile ? 22 : 28,
+        fontWeight: '800',
         color: colors.success,
-        marginBottom: SPACING.md, 
-        textAlign: 'center', 
+        marginBottom: isMobile ? SPACING.sm : SPACING.md,
+        textAlign: 'center',
         letterSpacing: -0.6,
     },
     completionText: {
-        paddingTop: 4, 
-        fontSize: 17, 
+        paddingTop: 4,
+        fontSize: isMobile ? 15 : 17,
         color: colors.text,
-        textAlign: 'center', 
-        lineHeight: 26, 
-        marginBottom: SPACING.xl,
-        maxWidth: 480,
+        textAlign: 'center',
+        lineHeight: isMobile ? 23 : 26,
+        marginBottom: isMobile ? SPACING.lg : SPACING.xl,
+        maxWidth: isMobile ? screenW - 64 : 480,
     },
 
     videoFrame: {

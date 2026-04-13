@@ -212,7 +212,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           : null),
         ...(isWebMobile
           ? ({
-              minHeight: STABLE_PLACEHOLDER_HEIGHT,
+              minHeight: 0,
             } as any)
           : null),
       }
@@ -246,7 +246,8 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       paddingHorizontal: 0,
       paddingTop: 8,
       paddingBottom: isMobile ? 32 + 8 : 28,
-    }), [isMobile])
+      ...(isWebMobile ? { minHeight: STABLE_PLACEHOLDER_HEIGHT } : null),
+    }), [isMobile, isWebMobile])
 
     const nativeContentContainerStyle = useMemo(() => ({
       paddingHorizontal: contentPadding,

@@ -66,20 +66,24 @@ function QuestProgressSummary({
   progress,
   completedCount,
   stepsCount,
+  isMobile,
 }: {
   styles: any
   progress: number
   completedCount: number
   stepsCount: number
+  isMobile?: boolean
 }) {
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
-      <Text style={styles.progressText}>
-        {completedCount} / {stepsCount} завершено
-      </Text>
+      {!isMobile && (
+        <Text style={styles.progressText}>
+          {completedCount} / {stepsCount} завершено
+        </Text>
+      )}
     </View>
   )
 }
@@ -127,7 +131,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
               />
             </View>
           ) : null}
-          <Text style={styles.compactSidebarTitle}>{title}</Text>
+          <Text style={styles.compactSidebarTitle} numberOfLines={2}>{title}</Text>
         </View>
         <View style={styles.compactSidebarActions}>
           <Pressable
@@ -233,28 +237,46 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     <View style={styles.header}>
       <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
         <View style={styles.headerIdentity}>
-          {coverUri ? (
-            <View style={[styles.headerCover, isMobile && styles.headerCoverMobile]}>
+          {coverUri && !isMobile ? (
+            <View style={styles.headerCover}>
               <ImageCardMedia
                 src={coverUri}
                 alt={`Обложка квеста ${title}`}
-                height={isMobile ? 72 : 88}
-                width={isMobile ? 72 : 128}
+                height={88}
+                width={128}
                 fit="contain"
                 blurBackground
                 allowCriticalWebBlur
                 borderRadius={18}
-                style={[styles.headerCover, isMobile && styles.headerCoverMobile]}
+                style={styles.headerCover}
                 priority="high"
                 loading="eager"
               />
             </View>
           ) : null}
-          <Text style={[styles.title, isMobile && styles.titleMobile]}>{title}</Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.title, isMobile && styles.titleMobile]} numberOfLines={1}>{title}</Text>
+            {isMobile && (
+              <Text style={styles.progressCompact}>{completedCount} / {stepsCount}</Text>
+            )}
+          </View>
         </View>
-        <Pressable onPress={onReset} style={styles.resetButton} hitSlop={6}>
-          <Text style={styles.resetText}>Сбросить</Text>
-        </Pressable>
+        <View style={styles.headerActionRow}>
+          {isMobile && Platform.OS === 'web' && (
+            <Pressable
+              onPress={onPrintDownload}
+              style={styles.compactIconButton}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Скачать печатную версию квеста"
+            >
+              <Feather name="download" size={16} color={colors.textMuted} />
+            </Pressable>
+          )}
+          <Pressable onPress={onReset} style={styles.resetButton} hitSlop={6}>
+            <Text style={styles.resetText}>Сбросить</Text>
+          </Pressable>
+        </View>
       </View>
 
       <QuestProgressSummary
@@ -262,6 +284,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         progress={progress}
         completedCount={completedCount}
         stepsCount={stepsCount}
+        isMobile={isMobile}
       />
 
       {wideDesktop ? (
@@ -300,7 +323,7 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.stepsNavigation}
-          contentContainerStyle={{ paddingRight: 8, paddingLeft: 2 }}
+          contentContainerStyle={{ paddingRight: 8, paddingLeft: isMobile ? 6 : 2 }}
         >
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
@@ -362,31 +385,14 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         </ScrollView>
       )}
 
-      {compactNav ? (
+      {!isMobile && (compactNav ? (
         <Text style={styles.navActiveTitle} numberOfLines={1}>
           {showFinaleOnly ? 'Финал' : currentIndex === 0 ? 'Старт' : allSteps[currentIndex]?.title}
         </Text>
       ) : (
         <Text style={styles.navHint}>Нажмите на шаг (или «Финал»), чтобы перейти</Text>
-      )}
+      ))}
 
-      {Platform.OS === 'web' && (
-        <View style={styles.printSection}>
-          <Text style={styles.printHint}>
-            Печатная версия квеста: маршрут, задания и место для ответов.
-          </Text>
-          <Pressable
-            style={styles.printButton}
-            onPress={onPrintDownload}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel="Скачать печатную версию квеста"
-          >
-            <Feather name="download" size={16} color={colors.textOnPrimary} />
-            <Text style={styles.printButtonText}>Скачать печатную версию</Text>
-          </Pressable>
-        </View>
-      )}
     </View>
   )
 }
