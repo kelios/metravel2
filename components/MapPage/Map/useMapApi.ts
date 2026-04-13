@@ -41,7 +41,7 @@ export function useMapApi({
   const pendingOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOverlayAttemptsRef = useRef(0);
 
-  const canExportRoute = useMemo(() => routePoints.length >= 2, [routePoints.length]);
+  const canExportRoute = useMemo(() => (routePoints?.length ?? 0) >= 2, [routePoints?.length]);
 
   const centerOnUserLocation = useCallback(() => {
     if (!map || !userLocation) return;
@@ -53,7 +53,7 @@ export function useMapApi({
   }, [map, userLocation]);
 
   const handleDownloadGpx = useCallback(() => {
-    if (routePoints.length < 2) return;
+    if (!routePoints || routePoints.length < 2) return;
     const result = buildGpx({
       track: routePoints,
       name: `Route ${new Date().toISOString().split('T')[0]}`,
@@ -62,7 +62,7 @@ export function useMapApi({
   }, [routePoints]);
 
   const handleDownloadKml = useCallback(() => {
-    if (routePoints.length < 2) return;
+    if (!routePoints || routePoints.length < 2) return;
     const result = buildKml({
       track: routePoints,
       name: `Route ${new Date().toISOString().split('T')[0]}`,

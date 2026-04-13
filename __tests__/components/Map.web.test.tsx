@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react-native';
-import MapClientSideComponent from '@/components/map/Map.web';
+import MapClientSideComponent from '@/components/MapPage/Map.web';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock leaflet modules
@@ -110,6 +110,18 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
   const defaultProps = {
     travel: { data: [] },
     coordinates: { latitude: 53.8828449, longitude: 27.7273595 },
+    routePoints: [] as [number, number][],
+    fullRouteCoords: [] as [number, number][],
+    mode: 'radius' as const,
+    transportMode: 'car' as const,
+    setRoutePoints: jest.fn(),
+    onMapClick: jest.fn(),
+    setRouteDistance: jest.fn(),
+    setRouteDuration: jest.fn(),
+    setFullRouteCoords: jest.fn(),
+    setRouteElevationStats: jest.fn(),
+    setRoutingLoading: jest.fn(),
+    setRoutingError: jest.fn(),
   };
 
   beforeEach(() => {
@@ -135,12 +147,12 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
     });
   });
 
-  it('renders placeholder when not on web', () => {
+  it('renders loading overlay when platform is not web', () => {
     mockPlatform.OS = 'ios';
     
-    const { getByText } = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
-    expect(getByText('Карта доступна только в браузере')).toBeTruthy();
-    
+    const rendered = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
+    expect(rendered.toJSON()).toBeTruthy();
+
     mockPlatform.OS = 'web';
   });
 

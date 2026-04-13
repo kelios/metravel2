@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Platform, type DimensionValue } from 'react-native';
+import { View, StyleSheet, Platform, useWindowDimensions, type DimensionValue } from 'react-native';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
+import { METRICS } from '@/constants/layout';
 
 const MARKER_POSITIONS: { top: DimensionValue; left: DimensionValue }[] = [
   { top: '25%', left: '30%' },
@@ -15,7 +15,8 @@ const MARKER_POSITIONS: { top: DimensionValue; left: DimensionValue }[] = [
 
 export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
   const colors = useThemedColors();
-  const { isMobile } = useResponsive();
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {

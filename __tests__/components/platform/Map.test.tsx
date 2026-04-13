@@ -147,8 +147,8 @@ describe('Map Component - Platform Specific', () => {
     });
 
     it('should have web-specific Map component', () => {
-      // Web версия использует Leaflet
-      expect(() => require('../../../components/map/Map.web')).not.toThrow();
+      // Web версия использует Leaflet (active implementation is in MapPage)
+      expect(() => require('../../../components/MapPage/Map.web')).not.toThrow();
     });
   });
 
@@ -181,7 +181,7 @@ describe('Map Component - Platform Specific', () => {
     });
 
     it('should export Map component for Web', () => {
-      const MapWeb = require('../../../components/map/Map.web');
+      const MapWeb = require('../../../components/MapPage/Map.web');
       expect(MapWeb.default).toBeDefined();
     });
   });

@@ -21,6 +21,7 @@ import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar';
 import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
 import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
 import { MapShowListButton } from '@/components/MapPage/MapShowListButton';
+import MapPanelHeader from '@/components/MapPage/MapPanelHeader';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
 import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
@@ -77,6 +78,8 @@ export default function MapScreen() {
     const [geoBannerDismissed, setGeoBannerDismissed] = useState(false);
     const dismissGeoBanner = useCallback(() => setGeoBannerDismissed(true), []);
     const showGeoBanner = Boolean(geoError && !geoBannerDismissed);
+
+    // --- SEO (single block, rendered once) ---
     const mapStructuredData = useMemo(
         () =>
             createMapStructuredData({
@@ -93,16 +96,31 @@ export default function MapScreen() {
             }),
         [canonical, travelsData]
     );
-    const mapSeoTags = useMemo(
-        () => (
+
+    const mapSeoTags = useMemo(() => {
+        if (Platform.OS !== 'web') return undefined;
+        return (
             <script
                 key="map-structured-data"
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(mapStructuredData) }}
             />
-        ),
-        [mapStructuredData]
-    );
+        );
+    }, [mapStructuredData]);
+
+    const seoBlock = useMemo(() => {
+        if (Platform.OS !== 'web' || !isFocused) return null;
+        return (
+            <InstantSEO
+                headKey={mapError ? 'map-error' : 'map'}
+                title={MAP_SEO_TITLE}
+                description={MAP_SEO_DESCRIPTION}
+                canonical={canonical}
+                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
+                additionalTags={mapSeoTags}
+            />
+        );
+    }, [isFocused, mapError, canonical, mapSeoTags]);
 
     // Resize handle for desktop panel (web only)
     const handleResizeMouseDown = useCallback((e: any) => {
@@ -111,7 +129,6 @@ export default function MapScreen() {
         const startX = e.clientX;
         const startW = desktopPanelWidth;
         const onMove = (ev: MouseEvent) => {
-            // Panel is on the left, dragging right = wider
             const delta = ev.clientX - startX;
             onResizePanelWidth(startW + delta);
         };
@@ -160,7 +177,6 @@ export default function MapScreen() {
     const quickFilterCategories = useMemo(() => {
         const cats = filtersPanelProps?.contextValue?.filters?.categories ?? [];
         if (!cats.length || !travelsData.length) return cats;
-        // Sort by popularity: count how many travel items belong to each category
         const countMap = new Map<string, number>();
         for (const t of travelsData) {
             const names = (t.categoryName || '').split(',').map((s: string) => s.trim()).filter(Boolean);
@@ -168,6 +184,7 @@ export default function MapScreen() {
         }
         return [...cats].sort((a, b) => (countMap.get(b.name) || 0) - (countMap.get(a.name) || 0));
     }, [filtersPanelProps?.contextValue?.filters?.categories, travelsData]);
+
     const quickFilterSelected: string[] = useMemo(
         () => filtersPanelProps?.contextValue?.filterValue?.categories ?? [],
         [filtersPanelProps?.contextValue?.filterValue?.categories],
@@ -245,6 +262,11 @@ export default function MapScreen() {
         const next = Math.min(current * 2, 500);
         onChange('radius', String(next));
     }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.radius]);
+
+    const resetFiltersForPanel = useMemo(() => {
+        const reset = filtersPanelProps?.contextValue?.resetFilters;
+        return typeof reset === 'function' ? reset : undefined;
+    }, [filtersPanelProps?.contextValue?.resetFilters]);
 
     const mapComponent = useMemo(
         () => (
@@ -324,16 +346,7 @@ export default function MapScreen() {
     if (useMobileLayout) {
         return (
             <View style={styles.container}>
-                {isFocused && Platform.OS === 'web' && (
-                    <InstantSEO
-                        headKey="map"
-                        title={MAP_SEO_TITLE}
-                        description={MAP_SEO_DESCRIPTION}
-                        canonical={canonical}
-                        image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-                        additionalTags={mapSeoTags}
-                    />
-                )}
+                {seoBlock}
                 <Suspense fallback={mapPanelPlaceholder}>
                     <LazyMapMobileLayout
                         mapComponent={mapComponent}
@@ -359,127 +372,13 @@ export default function MapScreen() {
         );
     }
 
-    // Panel content header
-    const panelHeader = (
-        <View style={styles.tabsContainer}>
-            {/* Drag handle для мобильных */}
-            {isMobile && (
-                <View style={styles.dragHandle} />
-            )}
-            <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label="Панель карты">
-                <Pressable
-                    testID="map-panel-tab-filters"
-                    style={({ pressed }) => [
-                        styles.tab,
-                        rightPanelTab === 'filters' && styles.tabActive,
-                        pressed && styles.tabPressed,
-                    ]}
-                    onPress={selectFiltersTab}
-                    hitSlop={8}
-                    android_ripple={{ color: themedColors.overlayLight }}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: rightPanelTab === 'filters' }}
-                    accessibilityLabel="Фильтры"
-                >
-                    <Feather
-                        name="sliders"
-                        size={15}
-                        color={rightPanelTab === 'filters' ? themedColors.textInverse : themedColors.textMuted}
-                    />
-                    {!isMobile && (
-                        <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
-                            Фильтры
-                        </Text>
-                    )}
-                </Pressable>
-
-                <Pressable
-                    testID="map-panel-tab-travels"
-                    {...(Platform.OS === 'web' ? ({ 'data-testid': 'map-panel-tab-travels' } as any) : null)}
-                    style={({ pressed }) => [
-                        styles.tab,
-                        rightPanelTab === 'travels' && styles.tabActive,
-                        pressed && styles.tabPressed,
-                    ]}
-                    onPress={selectTravelsTab}
-                    hitSlop={8}
-                    android_ripple={{ color: themedColors.overlayLight }}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: rightPanelTab === 'travels' }}
-                    accessibilityLabel={`Список (${travelsData.length} мест)`}
-                >
-                    <Feather
-                        name="list"
-                        size={15}
-                        color={rightPanelTab === 'travels' ? themedColors.textInverse : themedColors.textMuted}
-                    />
-                    {!isMobile && (
-                        <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
-                            Список
-                        </Text>
-                    )}
-                    {travelsData.length > 0 && (
-                        <View style={[
-                            styles.badge,
-                            rightPanelTab === 'travels' && styles.badgeActive,
-                        ]}>
-                            <Text style={[
-                                styles.badgeText,
-                                rightPanelTab === 'travels' && styles.badgeTextActive,
-                            ]}>
-                                {travelsData.length > 999 ? '999+' : travelsData.length}
-                            </Text>
-                        </View>
-                    )}
-                </Pressable>
-            </View>
-
-            {Platform.OS === 'web' && !isMobile ? (
-                <Pressable
-                    testID="map-reset-filters-button"
-                    style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.7 }]}
-                    onPress={() => {
-                        selectFiltersTab();
-                        const reset = filtersPanelProps?.contextValue?.resetFilters;
-                        if (typeof reset === 'function') reset();
-                    }}
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel="Сбросить фильтры"
-                >
-                    <Feather name="rotate-cw" size={13} color={themedColors.textMuted} />
-                </Pressable>
-            ) : (
-                <Pressable
-                    testID="map-close-panel-button"
-                    style={({ pressed }) => [styles.closePanelButton, pressed && { opacity: 0.7 }]}
-                    onPress={closeRightPanel}
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel="Закрыть панель"
-                >
-                    <Feather name="x" size={16} color={themedColors.textMuted} />
-                </Pressable>
-            )}
-        </View>
-    );
-
     // Error state
     if (mapError) {
         const friendly = getUserFriendlyNetworkError(mapErrorDetails || mapError);
         const friendlyMessage = (friendly as any)?.message ?? String(friendly || '');
         return (
             <View style={styles.container}>
-                {isFocused && Platform.OS === 'web' && (
-                    <InstantSEO
-                        headKey="map-error"
-                        title={MAP_SEO_TITLE}
-                        description={MAP_SEO_DESCRIPTION}
-                        canonical={canonical}
-                        image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-                        additionalTags={mapSeoTags}
-                    />
-                )}
+                {seoBlock}
                 <ErrorDisplay
                     title="Не удалось загрузить карту"
                     message={friendlyMessage || 'Проверьте соединение и попробуйте ещё раз'}
@@ -494,17 +393,7 @@ export default function MapScreen() {
 
     return (
         <View style={styles.container}>
-            {isFocused && Platform.OS === 'web' && (
-                    <InstantSEO
-                        headKey="map"
-                        title={MAP_SEO_TITLE}
-                        description={MAP_SEO_DESCRIPTION}
-                        canonical={canonical}
-                        image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-                        additionalTags={mapSeoTags}
-                    />
-                )}
-
+            {seoBlock}
 
             <View style={styles.mapContainer}>
                 {/* Desktop collapsed strip */}
@@ -572,7 +461,17 @@ export default function MapScreen() {
                         <Feather name="chevron-left" size={16} color={themedColors.textMuted} />
                     </Pressable>
                 )}
-                {panelHeader}
+                <MapPanelHeader
+                    isMobile={isMobile}
+                    rightPanelTab={rightPanelTab}
+                    travelsCount={travelsData.length}
+                    themedColors={themedColors}
+                    styles={styles}
+                    selectFiltersTab={selectFiltersTab}
+                    selectTravelsTab={selectTravelsTab}
+                    closeRightPanel={closeRightPanel}
+                    resetFilters={resetFiltersForPanel}
+                />
                 {!isMobile && activeFilterItems.length > 0 && (
                     <ActiveFiltersBar
                         filters={activeFilterItems}

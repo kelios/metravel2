@@ -6,7 +6,6 @@ import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
-import { useResponsive } from '@/hooks/useResponsive'
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo'
 
 const WEB_SR_ONLY_STYLE = {
@@ -28,10 +27,10 @@ export default function MapScreen() {
   const pathname = usePathname()
   const isFocused = useIsFocused()
   const [hydrated, setHydrated] = useState(Platform.OS !== 'web')
-  const { isHydrated: isResponsiveHydrated = true } = useResponsive()
-  const canMountContent = hydrated && isResponsiveHydrated
   const title = MAP_SEO_TITLE
   const description = MAP_SEO_DESCRIPTION
+  const canonical = buildCanonicalUrl(pathname || '/map')
+  const ogImage = buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -39,20 +38,26 @@ export default function MapScreen() {
     setHydrated(true)
   }, [])
 
-  if (!canMountContent) {
+  const seoBlock = Platform.OS === 'web' && isFocused ? (
+    <InstantSEO
+      headKey="map"
+      title={title}
+      description={description}
+      canonical={canonical}
+      image={ogImage}
+      ogType="website"
+    />
+  ) : null
+
+  const srH1 = Platform.OS === 'web' ? (
+    <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1>
+  ) : null
+
+  if (!hydrated) {
     return (
       <>
-        {Platform.OS === 'web' && isFocused && (
-          <InstantSEO
-            headKey="map"
-            title={title}
-            description={description}
-            canonical={buildCanonicalUrl(pathname || '/map')}
-            image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-            ogType="website"
-          />
-        )}
-        {Platform.OS === 'web' && <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1>}
+        {seoBlock}
+        {srH1}
         <MapPageSkeleton />
       </>
     )
@@ -60,17 +65,8 @@ export default function MapScreen() {
 
   return (
     <>
-      {Platform.OS === 'web' && isFocused && (
-        <InstantSEO
-          headKey="map"
-          title={title}
-          description={description}
-          canonical={buildCanonicalUrl(pathname || '/map')}
-          image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
-          ogType="website"
-        />
-      )}
-      {Platform.OS === 'web' && <h1 style={WEB_SR_ONLY_STYLE as any}>{title}</h1>}
+      {seoBlock}
+      {srH1}
       <Suspense fallback={<MapPageSkeleton />}>
         <MapScreenImpl />
       </Suspense>

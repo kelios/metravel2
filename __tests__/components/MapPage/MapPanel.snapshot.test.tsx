@@ -2,10 +2,6 @@ import React from 'react'
 import { render } from '@testing-library/react-native'
 import MapPanel from '@/components/MapPage/MapPanel'
 
-// Упрощаем зависимости, чтобы получить стабильный снапшот
-jest.mock('@/hooks/useLazyMap', () => ({
-  useLazyMap: () => ({ shouldLoad: false, setElementRef: jest.fn() }),
-}))
 
 // Небольшой помощник для "плоского" снапшота без стилей
 const simplify = (node: any): any => {

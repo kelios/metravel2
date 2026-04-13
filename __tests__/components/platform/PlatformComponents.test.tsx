@@ -126,7 +126,7 @@ describe('Platform-Specific Components', () => {
     it('all platforms should have Map component', () => {
       expect(() => require('../../../components/map/Map.ios')).not.toThrow();
       expect(() => require('../../../components/map/Map.android')).not.toThrow();
-      expect(() => require('../../../components/map/Map.web')).not.toThrow();
+      expect(() => require('../../../components/MapPage/Map.web')).not.toThrow();
     });
 
     it('all platforms should have ArticleEditor', () => {

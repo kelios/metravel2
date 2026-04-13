@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react'
-import { Platform } from 'react-native'
 
-import { useMapLazyLoad } from '@/hooks/useMapLazyLoad'
 import { useRouteFilePreviews } from '@/hooks/useRouteFilePreviews'
 import { useKeyPointLabels } from '@/hooks/useKeyPointLabels'
-import { isWebAutomation } from '@/utils/isWebAutomation'
 import type { Travel } from '@/types/types'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 
@@ -27,13 +24,9 @@ export function useTravelDetailsMapSectionContentModel({
   shouldForceRenderMap,
   travel,
 }: UseTravelDetailsMapSectionContentModelArgs) {
-  const { shouldRender, elementRef, isLoading } = useMapLazyLoad({
-    enabled: true,
-    hasData: true,
-    canRenderHeavy,
-    rootMargin: isWebAutomation ? '800px 0px 800px 0px' : '400px 0px 400px 0px',
-    threshold: isWebAutomation ? 0 : 0.1,
-  })
+  // All sections load immediately — no lazy loading delays
+  const shouldRender = canRenderHeavy
+  const isLoading = false
 
   const {
     routePreviewItems,
@@ -67,11 +60,8 @@ export function useTravelDetailsMapSectionContentModel({
   const setMapSectionRef = useCallback(
     (node: any) => {
       ;(anchors.map as any).current = node
-      if (Platform.OS === 'web') {
-        elementRef(node)
-      }
     },
-    [anchors.map, elementRef]
+    [anchors.map]
   )
 
   return {
