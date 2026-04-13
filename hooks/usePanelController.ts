@@ -1,56 +1,52 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { Animated, Easing, useWindowDimensions } from 'react-native';
+import { useState, useCallback, useMemo } from 'react';
+import { useWindowDimensions } from 'react-native';
+import {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 
 const PANEL_ANIMATION_DURATION = 250;
 
 /**
- * Хук для управления боковой панелью с анимацией.
+ * Хук для управления боковой панелью с анимацией (Reanimated 4, UI-thread).
  * @param isMobile - флаг мобильного устройства (для разных стилей анимации)
  */
 export function usePanelController(isMobile: boolean = false) {
-    const { width: windowWidth, height: _windowHeight } = useWindowDimensions();
+    const { width: windowWidth } = useWindowDimensions();
     const [isPanelVisible, setPanelVisible] = useState(!isMobile);
-    const panelAnimation = useRef(new Animated.Value(isMobile ? 0 : 1)).current;
-
-    const shouldUseNativeDriver = false;
+    const progress = useSharedValue(isMobile ? 0 : 1);
 
     const openPanel = useCallback(() => {
         setPanelVisible(true);
-        Animated.timing(panelAnimation, {
-            toValue: 1,
+        progress.value = withTiming(1, {
             duration: PANEL_ANIMATION_DURATION,
             easing: Easing.out(Easing.exp),
-            useNativeDriver: shouldUseNativeDriver,
-        }).start();
-    }, [panelAnimation, shouldUseNativeDriver]);
+        });
+    }, [progress]);
 
     const closePanel = useCallback(() => {
-        Animated.timing(panelAnimation, {
-            toValue: 0,
+        progress.value = withTiming(0, {
             duration: PANEL_ANIMATION_DURATION,
             easing: Easing.in(Easing.exp),
-            useNativeDriver: shouldUseNativeDriver,
-        }).start(() => setPanelVisible(false));
-    }, [panelAnimation, shouldUseNativeDriver]);
+        });
+        // Hide panel after animation completes
+        setTimeout(() => setPanelVisible(false), PANEL_ANIMATION_DURATION);
+    }, [progress]);
 
-    const panelStyle = useMemo(() => ({
+    const closedTranslateX = isMobile ? windowWidth : 16;
+
+    const panelStyle = useAnimatedStyle(() => ({
         transform: [
-            {
-                translateX: panelAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [isMobile ? windowWidth : 16, 0],
-                }),
-            },
+            { translateX: progress.value * (0 - closedTranslateX) + closedTranslateX },
         ],
-        opacity: panelAnimation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 1],
-        }),
-    }), [panelAnimation, isMobile, windowWidth]);
+        opacity: progress.value,
+    }));
 
-    const overlayStyle = useMemo(() => ({
-        opacity: panelAnimation,
-    }), [panelAnimation]);
+    const overlayStyle = useAnimatedStyle(() => ({
+        opacity: progress.value,
+    }));
 
     return useMemo(() => ({
         isPanelVisible,

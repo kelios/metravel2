@@ -9,6 +9,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
 import HomeFinalCTA from './HomeFinalCTA';
+import HomeFavoritesHistorySection from './HomeFavoritesHistorySection';
 import FadeInSection from '@/components/ui/FadeInSection';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 import { hapticImpact } from '@/utils/haptics';
@@ -326,6 +327,12 @@ function Home() {
             fetchFn={fetchTravelsOfMonth}
           />
         </PageSection>
+      </FadeInSection>
+
+      <FadeInSection delay={0}>
+        <View style={{ marginTop: isMobile ? 24 : 40 }}>
+          <HomeFavoritesHistorySection />
+        </View>
       </FadeInSection>
 
       <FadeInSection delay={0}>

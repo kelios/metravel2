@@ -21,6 +21,19 @@ type TravelLikeItem = {
   city?: string | null;
 };
 
+type ShelfSection = {
+  badge?: { icon: 'clock' | 'favorite' };
+  countLabel: string;
+  countValue: number;
+  ctaPath: '/favorites' | '/history';
+  eyebrow: string;
+  items: TravelLikeItem[];
+  listTestID: string;
+  subtitle: string;
+  title: string;
+  titleTestID: string;
+};
+
 function shouldHandleHorizontalWheelForElement(e: any, el: any) {
   if (Platform.OS !== 'web') return;
   if (!el || typeof (el as any).scrollLeft !== 'number') return;
@@ -49,15 +62,21 @@ function handleHorizontalWheelForElement(e: any, el: any, prevent: boolean) {
 }
 
 function SectionHeader({
+  eyebrow,
   title,
-  count,
+  subtitle,
+  countLabel,
+  countValue,
   onSeeAll,
   testID,
   styles,
   colors,
 }: {
+  eyebrow: string;
   title: string;
-  count: number;
+  subtitle: string;
+  countLabel: string;
+  countValue: number;
   onSeeAll: () => void;
   testID: string;
   styles: ReturnType<typeof createStyles>;
@@ -66,8 +85,18 @@ function SectionHeader({
   return (
     <View style={styles.sectionHeaderRow} testID={testID}>
       <View style={styles.headerTitleBlock}>
+        <View style={styles.headerEyebrow}>
+          <Feather name="bookmark" size={12} color={colors.primaryText} />
+          <Text style={styles.headerEyebrowText}>{eyebrow}</Text>
+        </View>
         <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionSubtitle}>{count} шт.</Text>
+        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+        <View style={styles.headerMetaRow}>
+          <View style={styles.headerStatPill}>
+            <Text style={styles.headerStatValue}>{countValue}</Text>
+            <Text style={styles.headerStatLabel}>{countLabel}</Text>
+          </View>
+        </View>
       </View>
 
       <Button
@@ -274,12 +303,41 @@ function HomeFavoritesHistorySection() {
       );
   }, [viewHistory]);
 
+  const sections = useMemo<ShelfSection[]>(
+    () => [
+      {
+        eyebrow: 'Сохранено',
+        title: 'Избранное',
+        subtitle: 'Маршруты, к которым вы хотите вернуться позже.',
+        countLabel: 'в списке',
+        countValue: favoritesData.length,
+        ctaPath: '/favorites',
+        items: favoritesData,
+        listTestID: 'home-favorites-list',
+        titleTestID: 'home-favorites-header',
+      },
+      {
+        eyebrow: 'Недавнее',
+        title: 'История',
+        subtitle: 'Последние маршруты, которые вы уже открывали.',
+        countLabel: 'просмотрено',
+        countValue: historyData.length,
+        ctaPath: '/history',
+        items: historyData,
+        listTestID: 'home-history-list',
+        titleTestID: 'home-history-header',
+        badge: { icon: 'clock' },
+      },
+    ].filter((section) => section.items.length > 0),
+    [favoritesData, historyData],
+  );
+
   if (!isAuthenticated) {
     return null;
   }
 
   // If both are empty we don't show the block (keeps home clean)
-  if (favoritesData.length === 0 && historyData.length === 0) {
+  if (sections.length === 0) {
     return null;
   }
 
@@ -291,46 +349,29 @@ function HomeFavoritesHistorySection() {
     <View style={styles.band} testID="home-favorites-history">
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.container}>
-          {favoritesData.length > 0 && (
+          {sections.map((section) => (
             <View style={styles.section}>
               <SectionHeader
-                title="Избранное"
-                count={favoritesData.length}
-                onSeeAll={() => router.push('/favorites' as any)}
-                testID="home-favorites-header"
+                eyebrow={section.eyebrow}
+                title={section.title}
+                subtitle={section.subtitle}
+                countLabel={section.countLabel}
+                countValue={section.countValue}
+                onSeeAll={() => router.push(section.ctaPath as any)}
+                testID={section.titleTestID}
                 styles={styles}
                 colors={colors}
               />
               <HorizontalCards
-                data={favoritesData}
+                data={section.items}
+                badge={section.badge}
                 onPressItem={openUrl}
-                testID="home-favorites-list"
+                testID={section.listTestID}
                 colors={colors}
                 styles={styles}
               />
             </View>
-          )}
-
-          {historyData.length > 0 && (
-            <View style={styles.section}>
-              <SectionHeader
-                title="История"
-                count={historyData.length}
-                onSeeAll={() => router.push('/history' as any)}
-                testID="home-history-header"
-                styles={styles}
-                colors={colors}
-              />
-              <HorizontalCards
-                data={historyData}
-                badge={{ icon: 'clock' }}
-                onPressItem={openUrl}
-                testID="home-history-list"
-                colors={colors}
-                styles={styles}
-              />
-            </View>
-          )}
+          ))}
         </View>
       </ResponsiveContainer>
     </View>
@@ -346,21 +387,41 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, tokens: typeof
       alignSelf: 'stretch',
     },
     container: {
-      gap: 48,
+      gap: 44,
       width: '100%',
     },
     section: {
-      gap: 16,
+      gap: 18,
     },
     sectionHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
+      flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+      alignItems: Platform.OS === 'web' ? 'flex-end' : 'stretch',
       justifyContent: 'space-between',
       gap: 12,
     },
     headerTitleBlock: {
       flex: 1,
       minWidth: 0,
+      gap: 8,
+    },
+    headerEyebrow: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: tokens.radii.pill,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+    },
+    headerEyebrowText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.primaryText,
+      letterSpacing: 0.7,
+      textTransform: 'uppercase',
     },
     sectionTitle: {
       fontSize: 26,
@@ -370,9 +431,40 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, tokens: typeof
       letterSpacing: -0.5,
     },
     sectionSubtitle: {
-      marginTop: 4,
       fontSize: 15,
       fontWeight: '500',
+      color: colors.textMuted,
+      lineHeight: 22,
+    },
+    headerMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    headerStatPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: tokens.radii.pill,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          boxShadow: tokens.shadows.medium,
+        },
+      }),
+    },
+    headerStatValue: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    headerStatLabel: {
+      fontSize: 12,
+      fontWeight: '600',
       color: colors.textMuted,
     },
     seeAllButton: {

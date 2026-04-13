@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, View, useWindowDimensions } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
-import { useResponsive } from '@/hooks/useResponsive';
 import { usePanelController } from '@/hooks/usePanelController';
+import { METRICS } from '@/constants/layout';
 
 const PANEL_COLLAPSED_KEY = 'metravel_map_panel_collapsed';
 const PANEL_WIDTH_KEY = 'metravel_map_panel_width';
@@ -264,7 +264,8 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
  * Хук для определения responsive параметров карты.
  */
 export function useMapResponsive() {
-  const { isMobile, width } = useResponsive();
+  const { width } = useWindowDimensions();
+  const isMobile = width < METRICS.breakpoints.tablet;
 
   return useMemo(() => ({
     isMobile,

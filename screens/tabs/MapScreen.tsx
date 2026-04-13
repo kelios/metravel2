@@ -6,8 +6,8 @@ import {
     ActivityIndicator,
     Platform,
     Pressable,
-    Animated,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -494,7 +494,7 @@ export default function MapScreen() {
                             {...(Platform.OS === 'web' ? ({ 'data-testid': 'map-travels-tab' } as any) : null)}
                             style={{ flex: 1 }}
                         >
-                            <Suspense fallback={null}>
+                            <Suspense fallback={<ActivityIndicator style={{ paddingVertical: 32 }} color={themedColors.primary} />}>
                                 <LazyTravelListPanel
                                     travelsData={travelsData}
                                     buildRouteTo={buildRouteTo}
@@ -533,7 +533,7 @@ export default function MapScreen() {
                 </Pressable>
             )}
 
-            {(loading || !mapReady) && (
+            {!mapReady && (
                 <View style={[styles.loadingOverlay, { pointerEvents: 'none' }]} testID="map-loading-overlay">
                     <ActivityIndicator color={themedColors.primary} accessibilityLabel="Загрузка карты" />
                 </View>

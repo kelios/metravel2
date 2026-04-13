@@ -211,6 +211,9 @@ describe('MapScreen (map tab)', () => {
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
     mockResponsiveState = { isPhone: false, isLargePhone: false, isMobile: false, width: 1024 }
+    // Reset useWindowDimensions to desktop viewport (used by useMapResponsive)
+    const RN = require('react-native');
+    (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 768 });
     useMapPanelStore.setState({ openNonce: 0 })
     mockFetchTravelsForMap.mockReset();
     mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
@@ -221,10 +224,11 @@ describe('MapScreen (map tab)', () => {
   })
 
   it('renders map placeholder and filters panel', async () => {
-    const { getByTestId } = renderWithClient()
+    const { queryByTestId, getByTestId } = renderWithClient()
 
-    // На старте показываем визуальный лоадер карты (overlay)
-    expect(getByTestId('map-loading-overlay')).toBeTruthy()
+    // On web mapReady=true from the start, so overlay should NOT be present.
+    // Data loading is indicated by MapLoadingBar (thin progress bar), not by the full overlay.
+    expect(queryByTestId('map-loading-overlay')).toBeNull()
 
     act(() => {
       useMapPanelStore.getState().requestOpen()
@@ -301,6 +305,9 @@ describe('MapScreen (map tab)', () => {
 
   it('does not render floating list pill on mobile web', async () => {
     mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 };
+    // Override useWindowDimensions mock to simulate mobile viewport (used by useMapResponsive)
+    const RN = require('react-native');
+    (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 });
 
     const { queryByLabelText } = renderWithClient();
 
