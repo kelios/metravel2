@@ -80,7 +80,7 @@ interface UseLeafletLoaderResult {
 const runtimeProcess = typeof process !== 'undefined' ? (process as ProcessLike) : undefined;
 const isTestEnv = runtimeProcess?.env?.NODE_ENV === 'test';
 
-const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+const LEAFLET_CSS_HREF = '/vendor/leaflet.css';
 
 const leafletCssSeemsApplied = () => {
   if (typeof document === 'undefined' || typeof window === 'undefined') return false;
@@ -214,7 +214,7 @@ const ensureLeafletCss = async (): Promise<void> => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = LEAFLET_CSS_HREF;
-    link.setAttribute('data-metravel-leaflet-css', 'cdn');
+    link.setAttribute('data-metravel-leaflet-css', 'self-hosted');
 
     let settled = false;
     const settleResolve = () => {

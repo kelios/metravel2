@@ -17,6 +17,7 @@ import { useMapScreenController } from '@/hooks/useMapScreenController';
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import MapOnboarding from '@/components/MapPage/MapOnboarding';
+import MapPanel from '@/components/MapPage/MapPanel';
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar';
 import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
 import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
@@ -27,7 +28,6 @@ import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
 import { buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { createMapStructuredData } from '@/utils/discoverySeo';
 
-const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
 const LazyMapMobileLayout = lazy(() =>
     import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout }))
@@ -35,7 +35,6 @@ const LazyMapMobileLayout = lazy(() =>
 
 
 export default function MapScreen() {
-    const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
     const {
         canonical,
         isFocused,
@@ -144,10 +143,6 @@ export default function MapScreen() {
         document.addEventListener('mouseup', onUp);
     }, [isMobile, desktopPanelWidth, onResizePanelWidth]);
 
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        setHydrated(true);
-    }, []);
 
     const openNonce = useMapPanelStore((s) => s.openNonce);
     const requestedOpenTab = useMapPanelStore((s) => s.requestedTab);
@@ -288,9 +283,7 @@ export default function MapScreen() {
                     />
                 )}
                 {mapReady ? (
-                    <Suspense fallback={mapPanelPlaceholder}>
-                        <LazyMapPanel {...mapPanelProps} />
-                    </Suspense>
+                    <MapPanel {...mapPanelProps} />
                 ) : (
                     mapPanelPlaceholder
                 )}
@@ -339,9 +332,6 @@ export default function MapScreen() {
     // Use mobile layout on small screens (including web), desktop keeps side panel
     const useMobileLayout = isMobile;
 
-    if (!hydrated && Platform.OS === 'web') {
-        return <MapPageSkeleton />;
-    }
 
     if (useMobileLayout) {
         return (

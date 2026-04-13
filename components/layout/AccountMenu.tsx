@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import ThemeToggle from '@/components/layout/ThemeToggle';
+import AccountMenuSection from './AccountMenuSection';
 import UserAvatar from './UserAvatar';
 import {
   createAnchorStyles,
@@ -25,6 +26,37 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 type AccountMenuProps = {
   initialOpenKey?: number
 }
+
+type MenuLinkItem = {
+  key: string
+  title: string
+  path?: string
+  icon: string
+  onPress?: () => void
+  strong?: boolean
+  iconColor?: string
+  leadingNode?: React.ReactNode
+}
+
+const renderMenuItem = (
+  item: MenuLinkItem,
+  menuStyles: ReturnType<typeof createMenuStyles>,
+  defaultIconColor: string,
+  onNavigate?: (path: string) => void,
+) => (
+  <Menu.Item
+    key={item.key}
+    onPress={item.onPress ?? (item.path && onNavigate ? () => onNavigate(item.path!) : undefined)}
+    title={item.title}
+    leadingIcon={({ size }) =>
+      item.leadingNode ?? (
+        <Feather name={item.icon as any} size={size} color={item.iconColor ?? defaultIconColor} />
+      )
+    }
+    style={menuStyles.menuItem}
+    titleStyle={item.strong ? menuStyles.menuItemTitleStrong : menuStyles.menuItemTitle}
+  />
+)
 
 function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
@@ -130,6 +162,134 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     []
   );
 
+  const guestItems = useMemo<MenuLinkItem[]>(
+    () => [
+      {
+        key: 'login',
+        title: 'Войти',
+        icon: 'log-in',
+        onPress: () => handleNavigate(buildLoginHref({ intent: 'menu' })),
+      },
+      {
+        key: 'registration',
+        title: 'Зарегистрироваться',
+        icon: 'user-plus',
+        path: '/registration',
+      },
+    ],
+    [handleNavigate]
+  )
+
+  const travelItems = useMemo<MenuLinkItem[]>(
+    () => [
+      {
+        key: 'travel-new',
+        title: 'Добавить путешествие',
+        icon: 'plus-circle',
+        path: '/travel/new',
+      },
+      {
+        key: 'my-travels',
+        title: 'Мои путешествия',
+        icon: 'map',
+        path: '/metravel',
+      },
+      {
+        key: 'user-points',
+        title: 'Мои точки',
+        icon: 'map-pin',
+        path: '/userpoints',
+      },
+    ],
+    []
+  )
+
+  const accountItems = useMemo<MenuLinkItem[]>(
+    () => [
+      {
+        key: 'messages',
+        title: unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения',
+        icon: 'mail',
+        path: '/messages',
+        strong: unreadCount > 0,
+        leadingNode: (
+          <View style={{ position: 'relative' }}>
+            <Feather
+              name="mail"
+              size={20}
+              color={unreadCount > 0 ? colors.primary : localStyles.iconMuted.color}
+            />
+            {unreadCount > 0 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -4,
+                  right: -6,
+                  backgroundColor: colors.primary,
+                  borderRadius: 8,
+                  minWidth: 16,
+                  height: 16,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text style={{ color: colors.textOnPrimary, fontSize: 10, fontWeight: '700' }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        ),
+      },
+      {
+        key: 'subscriptions',
+        title: 'Подписки',
+        icon: 'users',
+        path: '/subscriptions',
+      },
+      {
+        key: 'export',
+        title: 'Экспорт в PDF',
+        icon: 'file-text',
+        path: '/export',
+      },
+      {
+        key: 'public-profile',
+        title: 'Публичный профиль',
+        icon: 'users',
+        onPress: handleOpenPublicProfile,
+      },
+      {
+        key: 'logout',
+        title: 'Выход',
+        icon: 'log-out',
+        onPress: handleLogout,
+      },
+    ],
+    [colors.primary, colors.textOnPrimary, handleLogout, handleOpenPublicProfile, localStyles.iconMuted.color, unreadCount]
+  )
+
+  const documentItems = useMemo<MenuLinkItem[]>(
+    () => [
+      {
+        key: 'privacy',
+        title: 'Политика конфиденциальности',
+        icon: 'shield',
+        path: '/privacy',
+      },
+      {
+        key: 'cookies',
+        title: 'Настройки cookies',
+        icon: 'settings',
+        path: '/cookies',
+      },
+    ],
+    []
+  )
+
+  const navigateTo = useCallback((path: string) => handleNavigate(path), [handleNavigate])
+
   return (
     <View style={localStyles.ctaWrapper}>
       {/* NAV-12: Отдельная CTA кнопка «Войти» для гостей — видна сразу, без открытия меню */}
@@ -201,34 +361,16 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     >
       {!isAuthenticated ? (
         <>
-          <Menu.Item
-            onPress={() => handleNavigate(buildLoginHref({ intent: 'menu' }))}
-            title="Войти"
-            leadingIcon={({ size }) => <Feather name="log-in" size={size} color={localStyles.iconMuted.color} />}
-            style={menuStyles.menuItem}
-            titleStyle={menuStyles.menuItemTitle}
-          />
-          <Menu.Item
-            onPress={() => handleNavigate('/registration')}
-            title="Зарегистрироваться"
-            leadingIcon={({ size }) => <Feather name="user-plus" size={size} color={localStyles.iconMuted.color} />}
-            style={menuStyles.menuItem}
-            titleStyle={menuStyles.menuItemTitle}
-          />
+          {guestItems.map((item) =>
+            renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
+          )}
 
           <View style={menuStyles.sectionDivider} />
           <Text style={menuStyles.sectionTitle}>Навигация</Text>
 
-          {navLinks.map((item) => (
-            <Menu.Item
-              key={item.key}
-              onPress={() => handleNavigate(item.path)}
-              title={item.title}
-              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={localStyles.iconMuted.color} />}
-              style={menuStyles.menuItem}
-              titleStyle={menuStyles.menuItemTitle}
-            />
-          ))}
+          {navLinks.map((item) =>
+            renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
+          )}
 
           <View style={menuStyles.sectionDivider} />
           <Text style={menuStyles.sectionTitle}>Тема оформления</Text>
@@ -240,204 +382,85 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
           <View style={menuStyles.sectionDivider} />
           <Text style={menuStyles.sectionTitle}>Документы</Text>
 
-          <Menu.Item
-            onPress={() => handleNavigate('/privacy')}
-            title="Политика конфиденциальности"
-            leadingIcon={({ size }) => <Feather name="shield" size={size} color={localStyles.iconMuted.color} />}
-            style={menuStyles.menuItem}
-            titleStyle={menuStyles.menuItemTitle}
-          />
-          <Menu.Item
-            onPress={() => handleNavigate('/cookies')}
-            title="Настройки cookies"
-            leadingIcon={({ size }) => <Feather name="settings" size={size} color={localStyles.iconMuted.color} />}
-            style={menuStyles.menuItem}
-            titleStyle={menuStyles.menuItemTitle}
-          />
+          {documentItems.map((item) =>
+            renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
+          )}
         </>
       ) : (
         <>
-          <Menu.Item
-            onPress={() => handleNavigate('/profile')}
-            title={`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
-            leadingIcon={({ size }) => <Feather name="user" size={size} color={localStyles.iconPrimary.color} />}
-            style={menuStyles.menuItem}
-            titleStyle={menuStyles.menuItemTitleStrong}
-          />
-
-          <View style={menuStyles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('travels')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Путешествия" accessibilityState={{ expanded: expandedSections.travels }}>
-            <Text style={menuStyles.sectionHeaderText}>Путешествия</Text>
-            <Feather 
-              name={expandedSections.travels ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
-              color={colors.textMuted} 
-            />
-          </Pressable>
-
-          {expandedSections.travels && (
-            <>
-              <Menu.Item
-                onPress={() => handleNavigate('/travel/new')}
-                title="Добавить путешествие"
-                leadingIcon={({ size }) => <Feather name="plus-circle" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/metravel')}
-                title="Мои путешествия"
-                leadingIcon={({ size }) => <Feather name="map" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/userpoints')}
-                title="Мои точки"
-                leadingIcon={({ size }) => <Feather name="map-pin" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-            </>
+          {renderMenuItem(
+            {
+              key: 'profile',
+              title: `Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`,
+              icon: 'user',
+              path: '/profile',
+              strong: true,
+              iconColor: localStyles.iconPrimary.color,
+            },
+            menuStyles,
+            localStyles.iconMuted.color,
+            navigateTo
           )}
 
-          <View style={menuStyles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('account')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Аккаунт" accessibilityState={{ expanded: expandedSections.account }}>
-            <Text style={menuStyles.sectionHeaderText}>Аккаунт</Text>
-            <Feather 
-              name={expandedSections.account ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
-              color={colors.textMuted} 
-            />
-          </Pressable>
+          <AccountMenuSection
+            title="Путешествия"
+            expanded={expandedSections.travels}
+            onToggle={() => toggleSection('travels')}
+            colors={colors}
+            styles={menuStyles}
+          >
+            {travelItems.map((item) =>
+              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
+            )}
+          </AccountMenuSection>
 
-          {expandedSections.account && (
-            <>
-              <Menu.Item
-                onPress={() => handleNavigate('/messages')}
-                title={unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения'}
-                leadingIcon={({ size }) => (
-                  <View style={{ position: 'relative' }}>
-                    <Feather name="mail" size={size} color={unreadCount > 0 ? colors.primary : localStyles.iconMuted.color} />
-                    {unreadCount > 0 && (
-                      <View style={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -6,
-                        backgroundColor: colors.primary,
-                        borderRadius: 8,
-                        minWidth: 16,
-                        height: 16,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingHorizontal: 4,
-                      }}>
-                        <Text style={{ color: colors.textOnPrimary, fontSize: 10, fontWeight: '700' }}>
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-                style={menuStyles.menuItem}
-                titleStyle={unreadCount > 0 ? menuStyles.menuItemTitleStrong : menuStyles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/subscriptions')}
-                title="Подписки"
-                leadingIcon={({ size }) => <Feather name="users" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/export')}
-                title="Экспорт в PDF"
-                leadingIcon={({ size }) => <Feather name="file-text" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={handleOpenPublicProfile}
-                title="Публичный профиль"
-                leadingIcon={({ size }) => <Feather name="users" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={handleLogout}
-                title="Выход"
-                leadingIcon={({ size }) => <Feather name="log-out" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-            </>
-          )}
+          <AccountMenuSection
+            title="Аккаунт"
+            expanded={expandedSections.account}
+            onToggle={() => toggleSection('account')}
+            colors={colors}
+            styles={menuStyles}
+          >
+            {accountItems.map((item) =>
+              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
+            )}
+          </AccountMenuSection>
 
-          <View style={menuStyles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('navigation')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Навигация" accessibilityState={{ expanded: expandedSections.navigation }}>
-            <Text style={menuStyles.sectionHeaderText}>Навигация</Text>
-            <Feather 
-              name={expandedSections.navigation ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
-              color={colors.textMuted} 
-            />
-          </Pressable>
+          <AccountMenuSection
+            title="Навигация"
+            expanded={expandedSections.navigation}
+            onToggle={() => toggleSection('navigation')}
+            colors={colors}
+            styles={menuStyles}
+          >
+            {navLinks.map((item) =>
+              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
+            )}
+          </AccountMenuSection>
 
-          {expandedSections.navigation && (navLinks ?? []).map((item) => (
-            <Menu.Item
-              key={item.key}
-              onPress={() => handleNavigate(item.path)}
-              title={item.title}
-              leadingIcon={({ size }) => <Feather name={item.icon as any} size={size} color={localStyles.iconMuted.color} />}
-              style={menuStyles.menuItem}
-              titleStyle={menuStyles.menuItemTitle}
-            />
-          ))}
-
-          <View style={menuStyles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('theme')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Тема оформления" accessibilityState={{ expanded: expandedSections.theme }}>
-            <Text style={menuStyles.sectionHeaderText}>Тема оформления</Text>
-            <Feather 
-              name={expandedSections.theme ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
-              color={colors.textMuted} 
-            />
-          </Pressable>
-
-          {expandedSections.theme && (
+          <AccountMenuSection
+            title="Тема оформления"
+            expanded={expandedSections.theme}
+            onToggle={() => toggleSection('theme')}
+            colors={colors}
+            styles={menuStyles}
+          >
             <View style={menuStyles.themeSection}>
               <ThemeToggle compact />
             </View>
-          )}
+          </AccountMenuSection>
 
-          <View style={menuStyles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('documents')} style={menuStyles.sectionHeader} accessibilityRole="button" accessibilityLabel="Документы" accessibilityState={{ expanded: expandedSections.documents }}>
-            <Text style={menuStyles.sectionHeaderText}>Документы</Text>
-            <Feather 
-              name={expandedSections.documents ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
-              color={colors.textMuted} 
-            />
-          </Pressable>
-
-          {expandedSections.documents && (
-            <>
-              <Menu.Item
-                onPress={() => handleNavigate('/privacy')}
-                title="Политика конфиденциальности"
-                leadingIcon={({ size }) => <Feather name="shield" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/cookies')}
-                title="Настройки cookies"
-                leadingIcon={({ size }) => <Feather name="settings" size={size} color={localStyles.iconMuted.color} />}
-                style={menuStyles.menuItem}
-                titleStyle={menuStyles.menuItemTitle}
-              />
-            </>
-          )}
+          <AccountMenuSection
+            title="Документы"
+            expanded={expandedSections.documents}
+            onToggle={() => toggleSection('documents')}
+            colors={colors}
+            styles={menuStyles}
+          >
+            {documentItems.map((item) =>
+              renderMenuItem(item, menuStyles, localStyles.iconMuted.color, navigateTo)
+            )}
+          </AccountMenuSection>
         </>
       )}
     </Menu>

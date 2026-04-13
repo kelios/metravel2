@@ -88,17 +88,14 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
 
   if (inline) {
     return (
-      <View style={styles.mapArea}>
-        <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
-      </View>
+      <View style={styles.mapArea} />
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Map area */}
+      {/* Map area — static background, no shimmer animation to avoid inflating LCP */}
       <View style={styles.mapArea}>
-        <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
 
         {/* Quick filter chips skeleton */}
         <View style={[styles.chipsRow, { pointerEvents: 'none' }]}>

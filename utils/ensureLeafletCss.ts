@@ -8,8 +8,8 @@ export function ensureLeafletCss(): boolean {
     const link = document.createElement('link')
     link.id = id
     link.rel = 'stylesheet'
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-    link.setAttribute('data-metravel-leaflet-css', 'cdn')
+    link.href = '/vendor/leaflet.css'
+    link.setAttribute('data-metravel-leaflet-css', 'self-hosted')
     document.head.appendChild(link)
 
     // Inject MarkerCluster CSS
@@ -34,7 +34,7 @@ function ensureMarkerClusterCss(): void {
   const link = document.createElement('link')
   link.id = id
   link.rel = 'stylesheet'
-  link.href = 'https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css'
+  link.href = '/vendor/MarkerCluster.css'
   document.head.appendChild(link)
 
   // Custom cluster styles instead of the default blue/green/yellow circles

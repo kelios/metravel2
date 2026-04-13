@@ -75,7 +75,7 @@ async function ensureLeaflet(): Promise<any> {
       }
 
       await new Promise<void>((resolve, reject) => {
-        const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+        const cssHref = '/vendor/leaflet.css'
         if (!document.querySelector(`link[href="${cssHref}"]`)) {
           const link = document.createElement('link')
           link.rel = 'stylesheet'

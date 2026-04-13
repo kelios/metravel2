@@ -1,16 +1,14 @@
-import Feather from '@expo/vector-icons/Feather'
-import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { Suspense, useCallback, useMemo, useState } from 'react'
+import { Platform, View } from 'react-native'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAvatarUri } from '@/hooks/useAvatarUri'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
-import UserAvatar from './UserAvatar'
+import CustomHeaderDesktopAccountShell from './CustomHeaderDesktopAccountShell'
+import { AccountMenuLazy } from './customHeaderDesktopLazy'
 import { createAnchorStyles, createAvatarStyles, createCtaLoginStyles } from './headerStyles'
-
-const AccountMenuLazy = lazy(() => import('./AccountMenu'))
 
 type CustomHeaderDesktopAccountSectionProps = {
   styles: any
@@ -29,17 +27,6 @@ export default function CustomHeaderDesktopAccountSection({
   const anchorStyles = useMemo(() => createAnchorStyles(colors), [colors])
   const avatarStyles = useMemo(() => createAvatarStyles(colors), [colors])
   const ctaStyles = useMemo(() => createCtaLoginStyles(colors), [colors])
-  const shellStyles = useMemo(
-    () =>
-      StyleSheet.create({
-        wrapper: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-        },
-      }),
-    []
-  )
 
   const preloadMenu = useCallback(() => {
     setMenuRequested(true)
@@ -63,36 +50,20 @@ export default function CustomHeaderDesktopAccountSection({
 
   // Shell fallback for Suspense — prevents flash of empty space during lazy load
   const shellFallback = (
-    <View style={shellStyles.wrapper}>
-      {!isAuthenticated && (
-        <Pressable
-          onPress={handleLoginPress}
-          accessibilityRole="link"
-          accessibilityLabel="Войти в аккаунт"
-          style={ctaStyles.ctaLoginButton}
-          testID="header-login-cta-fallback"
-        >
-          <View style={ctaStyles.ctaLoginIconSlot}>
-            <Feather name="log-in" size={14} color={colors.textOnPrimary} />
-          </View>
-          <Text style={ctaStyles.ctaLoginText}>Войти</Text>
-        </Pressable>
-      )}
-      <View style={anchorStyles.anchor}>
-        <UserAvatar
-          uri={isAuthenticated ? avatarUri : null}
-          size="md"
-          onError={() => setAvatarLoadError(true)}
-        />
-        <Text style={avatarStyles.anchorText} numberOfLines={1}>
-          {displayName}
-        </Text>
-        <View style={avatarStyles.chevronSlot}>
-          <Feather name="chevron-down" size={18} color={colors.textMuted} />
-        </View>
-      </View>
-    </View>
-  );
+    <CustomHeaderDesktopAccountShell
+      anchorStyles={anchorStyles}
+      avatarStyles={avatarStyles}
+      colors={colors}
+      ctaStyles={ctaStyles}
+      displayName={displayName}
+      isAuthenticated={isAuthenticated}
+      onAvatarError={() => setAvatarLoadError(true)}
+      onLoginPress={handleLoginPress}
+      onPreloadMenu={preloadMenu}
+      testIdSuffix="fallback"
+      userAvatarUri={avatarUri}
+    />
+  )
 
   if (menuRequested) {
     return (
@@ -106,56 +77,19 @@ export default function CustomHeaderDesktopAccountSection({
 
   return (
     <View style={styles.rightSection}>
-      <View style={shellStyles.wrapper}>
-        {!isAuthenticated && (
-          <Pressable
-            onPress={handleLoginPress}
-            accessibilityRole="link"
-            accessibilityLabel="Войти в аккаунт"
-            style={({ pressed }) => [
-              ctaStyles.ctaLoginButton,
-              pressed && ctaStyles.ctaLoginButtonHover,
-            ]}
-            testID="header-login-cta"
-          >
-            <View style={ctaStyles.ctaLoginIconSlot}>
-              <Feather name="log-in" size={14} color={colors.textOnPrimary} />
-            </View>
-            <Text style={ctaStyles.ctaLoginText}>Войти</Text>
-          </Pressable>
-        )}
-
-        <Pressable
-          onPress={requestMenuOpen}
-          onHoverIn={Platform.OS === 'web' ? preloadMenu : undefined}
-          onFocus={preloadMenu}
-          accessibilityRole="button"
-          accessibilityLabel={`Открыть меню аккаунта ${displayName}`}
-          accessibilityHint="Открыть меню аккаунта"
-          style={({ pressed }) => [anchorStyles.anchor, pressed && anchorStyles.anchorHover]}
-          testID="account-menu-anchor"
-          {...(Platform.OS === 'web'
-            ? ({
-                'aria-haspopup': 'menu',
-                'aria-expanded': false,
-              } as any)
-            : {})}
-        >
-          <UserAvatar
-            uri={isAuthenticated ? avatarUri : null}
-            size="md"
-            onError={() => setAvatarLoadError(true)}
-          />
-
-          <Text style={avatarStyles.anchorText} numberOfLines={1}>
-            {displayName}
-          </Text>
-
-          <View style={avatarStyles.chevronSlot}>
-            <Feather name="chevron-down" size={18} color={colors.textMuted} />
-          </View>
-        </Pressable>
-      </View>
+      <CustomHeaderDesktopAccountShell
+        anchorStyles={anchorStyles}
+        avatarStyles={avatarStyles}
+        colors={colors}
+        ctaStyles={ctaStyles}
+        displayName={displayName}
+        isAuthenticated={isAuthenticated}
+        onAnchorPress={requestMenuOpen}
+        onAvatarError={() => setAvatarLoadError(true)}
+        onLoginPress={handleLoginPress}
+        onPreloadMenu={preloadMenu}
+        userAvatarUri={avatarUri}
+      />
     </View>
   )
 }

@@ -257,9 +257,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
           Only injected for home page; the inline script checks pathname. */}
       <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/'&&p!=='/index')return;var u='https://metravel.by/travel-image/544/conversions/26d572d144174803a61fe96f2d7aa142.webp?w=500&q=75&fit=contain';if(document.querySelector('link[rel="preload"][href="'+u+'"]'))return;var l=document.createElement('link');l.rel='preload';l.as='image';l.href=u;try{l.fetchPriority='high'}catch(_){}document.head.appendChild(l)}catch(_){}})();` }} />
 
-      {/* Leaflet CSS preload for map page — eliminates CDN CSS waterfall.
+      {/* Leaflet CSS preload for map page — self-hosted, no CDN roundtrip.
           Only injected on /map route; loads CSS in parallel with JS chunks. */}
-      <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/map')return;var href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';if(document.querySelector('link[href="'+href+'"]'))return;var l=document.createElement('link');l.rel='preload';l.as='style';l.href=href;document.head.appendChild(l);var pc=document.createElement('link');pc.rel='preconnect';pc.href='https://unpkg.com';document.head.appendChild(pc);var tc=document.createElement('link');tc.rel='preconnect';tc.href='https://a.basemaps.cartocdn.com';tc.crossOrigin='anonymous';document.head.appendChild(tc)}catch(_){}})();` }} />
+      <script dangerouslySetInnerHTML={{ __html: `(function(){try{var p=window.location&&window.location.pathname;if(p!=='/map')return;var href='/vendor/leaflet.css';if(document.querySelector('link[href="'+href+'"]'))return;var l=document.createElement('link');l.rel='preload';l.as='style';l.href=href;document.head.appendChild(l);var l2=document.createElement('link');l2.rel='preload';l2.as='style';l2.href='/vendor/MarkerCluster.css';document.head.appendChild(l2);var tc=document.createElement('link');tc.rel='preconnect';tc.href='https://tile.openstreetmap.org';tc.crossOrigin='anonymous';document.head.appendChild(tc)}catch(_){}})();` }} />
 
       {/* Font preloads removed: Roboto is loaded via expo-font on native only.
           On web the app uses system-ui / Inter from CSS; preloading unused .ttf files

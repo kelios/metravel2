@@ -1,12 +1,12 @@
 import React from 'react';
-import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
+import { handleHeaderNavPress } from './customHeaderNavModel';
 
 type CustomHeaderNavSectionProps = {
   activePath: string;
@@ -19,18 +19,6 @@ export default function CustomHeaderNavSection({
 }: CustomHeaderNavSectionProps) {
   const router = useRouter();
   const colors = useThemedColors();
-
-  const handleNavPress = (path: string, external?: boolean) => {
-    if (external) {
-      if (Platform.OS === 'web') {
-        openExternalUrlInNewTab(path);
-      } else {
-        openExternalUrl(path);
-      }
-      return;
-    }
-    router.push(path as any);
-  };
 
   return (
     <ScrollView
@@ -45,7 +33,7 @@ export default function CustomHeaderNavSection({
         return (
           <Pressable
             key={item.path}
-            onPress={() => handleNavPress(item.path, item.external)}
+            onPress={() => handleHeaderNavPress(router, item.path, item.external)}
             style={({ hovered, pressed }) => [
               styles.navItem,
               (hovered || pressed) && !isActive && styles.navItemHover,

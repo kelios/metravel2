@@ -25,6 +25,50 @@ type Props = {
   themeToggleNode?: React.ReactNode
 }
 
+type MenuActionItem = {
+  key: string
+  label: string
+  icon: string
+  onPress: () => void
+  accessibilityLabel?: string
+  active?: boolean
+  iconColor?: string
+  labelStyle?: any
+  iconSlotStyle?: any
+  trailingNode?: React.ReactNode
+}
+
+const renderMenuItem = (
+  item: MenuActionItem,
+  styles: any,
+  colors: ThemedColors,
+) => (
+  <Pressable
+    key={item.key}
+    onPress={item.onPress}
+    style={({ hovered, pressed }) => [
+      styles.modalNavItem,
+      (hovered || pressed) && styles.modalNavItemHover,
+      item.active && styles.modalNavItemActive,
+    ]}
+    accessibilityRole="button"
+    accessibilityLabel={item.accessibilityLabel ?? item.label}
+    accessibilityState={item.active ? { selected: true } : undefined}
+  >
+    <View style={[styles.iconSlot20, item.iconSlotStyle]}>
+      <Feather
+        name={item.icon as any}
+        size={20}
+        color={item.iconColor ?? (item.active ? colors.primary : colors.textMuted)}
+      />
+      {item.trailingNode}
+    </View>
+    <Text style={[styles.modalNavLabel, item.active && styles.modalNavLabelActive, item.labelStyle]}>
+      {item.label}
+    </Text>
+  </Pressable>
+)
+
 export default function CustomHeaderMobileMenu({
   visible,
   onRequestClose,
@@ -45,6 +89,88 @@ export default function CustomHeaderMobileMenu({
   // A11Y-05: focus trap для web — при открытии меню фокус остаётся внутри панели
   const panelRef = useRef<any>(null);
   useFocusTrap(panelRef as any, { enabled: visible && Platform.OS === 'web' });
+
+  const accountItems: MenuActionItem[] = !isAuthenticated
+    ? [
+        {
+          key: 'login',
+          label: 'Войти',
+          icon: 'log-in',
+          onPress: () => onUserAction(buildLoginHref({ intent: 'menu' }) as any),
+        },
+        {
+          key: 'registration',
+          label: 'Зарегистрироваться',
+          icon: 'user-plus',
+          onPress: () => onUserAction('/registration'),
+        },
+      ]
+    : [
+        {
+          key: 'profile',
+          label: `Личный кабинет${favoritesCount > 0 ? ` (${favoritesCount})` : ''}`,
+          icon: 'user',
+          onPress: () => onUserAction('/profile'),
+          accessibilityLabel: username ? `Личный кабинет ${username}` : 'Личный кабинет',
+        },
+        {
+          key: 'new-travel',
+          label: 'Добавить путешествие',
+          icon: 'plus-circle',
+          onPress: () => onUserAction('/travel/new'),
+        },
+        {
+          key: 'my-travels',
+          label: 'Мои путешествия',
+          icon: 'map',
+          onPress: onMyTravels ? onMyTravels : () => onUserAction('/metravel'),
+        },
+        {
+          key: 'user-points',
+          label: 'Мои точки',
+          icon: 'map-pin',
+          onPress: () => onUserAction('/userpoints'),
+        },
+        {
+          key: 'messages',
+          label: unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения',
+          icon: 'mail',
+          onPress: () => onUserAction('/messages'),
+          accessibilityLabel:
+            unreadCount > 0 ? `Сообщения, ${unreadCount} непрочитанных` : 'Сообщения',
+          iconColor: unreadCount > 0 ? colors.primary : colors.textMuted,
+          labelStyle: unreadCount > 0 ? { fontWeight: '600', color: colors.text } : undefined,
+          iconSlotStyle: { position: 'relative' },
+          trailingNode: <UnreadBadge count={unreadCount} />,
+        },
+        {
+          key: 'export',
+          label: 'Экспорт в PDF',
+          icon: 'file-text',
+          onPress: () => onUserAction('/export'),
+        },
+        {
+          key: 'logout',
+          label: 'Выход',
+          icon: 'log-out',
+          onPress: onLogout,
+        },
+      ]
+
+  const navigationItems: MenuActionItem[] = (PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => ({
+    key: item.path,
+    label: item.label,
+    icon: item.icon,
+    onPress: () => onNavPress(item.path, item.external),
+    active: !item.external && activePath === item.path,
+  }))
+
+  const documentItems: MenuActionItem[] = (DOCUMENT_NAV_ITEMS ?? []).map((item) => ({
+    key: item.path,
+    label: item.label,
+    icon: item.icon,
+    onPress: () => onUserAction(item.path),
+  }))
 
   return (
     <Modal
@@ -86,154 +212,11 @@ export default function CustomHeaderMobileMenu({
 
           <ScrollView style={styles.modalNavContainer} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalSectionTitle}>Аккаунт</Text>
-	            {!isAuthenticated ? (
-	              <>
-                <Pressable
-                  onPress={() => onUserAction(buildLoginHref({ intent: 'menu' }) as any)}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel="Войти"
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="log-in" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>Войти</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => onUserAction('/registration')}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel="Зарегистрироваться"
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="user-plus" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>Зарегистрироваться</Text>
-                </Pressable>
-              </>
-	            ) : (
-	              <>
-	                <Pressable
-	                  onPress={() => onUserAction('/profile')}
-	                  style={styles.modalNavItem}
-	                  accessibilityRole="button"
-	                  accessibilityLabel={username ? `Личный кабинет ${username}` : 'Личный кабинет'}
-	                >
-	                  <View style={styles.iconSlot20}>
-	                    <Feather name="user" size={20} color={colors.textMuted} />
-	                  </View>
-	                  <Text style={styles.modalNavLabel}>
-	                    {`Личный кабинет${favoritesCount > 0 ? ` (${favoritesCount})` : ''}`}
-	                  </Text>
-	                </Pressable>
-
-	                <Pressable
-	                  onPress={() => onUserAction('/travel/new')}
-	                  style={styles.modalNavItem}
-	                  accessibilityRole="button"
-	                  accessibilityLabel="Добавить путешествие"
-	                >
-	                  <View style={styles.iconSlot20}>
-	                    <Feather name="plus-circle" size={20} color={colors.textMuted} />
-	                  </View>
-	                  <Text style={styles.modalNavLabel}>Добавить путешествие</Text>
-	                </Pressable>
-
-	                <Pressable
-	                  onPress={onMyTravels ? onMyTravels : () => onUserAction('/metravel')}
-	                  style={styles.modalNavItem}
-	                  accessibilityRole="button"
-	                  accessibilityLabel="Мои путешествия"
-	                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="map" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>Мои путешествия</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => onUserAction('/userpoints')}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel="Мои точки"
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="map-pin" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>Мои точки</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => onUserAction('/messages')}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel={unreadCount > 0 ? `Сообщения, ${unreadCount} непрочитанных` : 'Сообщения'}
-                >
-                  <View style={[styles.iconSlot20, { position: 'relative' }]}>
-                    <Feather name="mail" size={20} color={unreadCount > 0 ? colors.primary : colors.textMuted} />
-                    <UnreadBadge count={unreadCount} />
-                  </View>
-                  <Text style={[styles.modalNavLabel, unreadCount > 0 && { fontWeight: '600', color: colors.text }]}>
-                    {unreadCount > 0 ? `Сообщения (${unreadCount})` : 'Сообщения'}
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => onUserAction('/export')}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel="Экспорт в PDF"
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="file-text" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>Экспорт в PDF</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={onLogout}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel="Выход"
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="log-out" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>Выход</Text>
-                </Pressable>
-              </>
-            )}
+            {accountItems.map((item) => renderMenuItem(item, styles, colors))}
 
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>Навигация</Text>
-            {(PRIMARY_HEADER_NAV_ITEMS ?? []).map((item) => {
-              const isActive = !item.external && activePath === item.path
-              return (
-                <Pressable
-                  key={item.path}
-                  onPress={() => onNavPress(item.path, item.external)}
-                  style={({ hovered, pressed }) => [
-                    styles.modalNavItem,
-                    (hovered || pressed) && styles.modalNavItemHover,
-                    isActive && styles.modalNavItemActive,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.label}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather
-                      name={item.icon as any}
-                      size={20}
-                      color={isActive ? colors.primary : colors.textMuted}
-                    />
-                  </View>
-                  <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>
-                    {item.label}
-                  </Text>
-                </Pressable>
-              )
-            })}
+            {navigationItems.map((item) => renderMenuItem(item, styles, colors))}
 
             {themeToggleNode ? (
               <>
@@ -245,20 +228,7 @@ export default function CustomHeaderMobileMenu({
 
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>Документы</Text>
-            {(DOCUMENT_NAV_ITEMS ?? []).map((item) => (
-              <Pressable
-                key={item.path}
-                onPress={() => onUserAction(item.path)}
-                style={styles.modalNavItem}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-              >
-                <View style={styles.iconSlot20}>
-                  <Feather name={item.icon as any} size={20} color={colors.textMuted} />
-                </View>
-                <Text style={styles.modalNavLabel}>{item.label}</Text>
-              </Pressable>
-            ))}
+            {documentItems.map((item) => renderMenuItem(item, styles, colors))}
           </ScrollView>
         </View>
       </View>

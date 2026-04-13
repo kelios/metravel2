@@ -70,6 +70,303 @@ type HomeHeroBookLayoutProps = {
   onMarkSlideLoaded: (slideIndex: number) => void
 }
 
+function HeroWeekEyebrow({
+  colors,
+  styles,
+  iconColor,
+}: {
+  colors: ThemedColors
+  styles: any
+  iconColor?: string
+}) {
+  return (
+    <View style={styles.slideEyebrow}>
+      <Feather name="map-pin" size={11} color={iconColor ?? colors.textOnDark} />
+      <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+    </View>
+  )
+}
+
+function InlineBookmarkRail({
+  colors,
+  moodCards,
+  onQuickFilterPress,
+  styles,
+}: {
+  colors: ThemedColors
+  moodCards: readonly MoodCard[]
+  onQuickFilterPress: (
+    label: string,
+    filters?: QuickFilterParams,
+    route?: string,
+  ) => void
+  styles: any
+}) {
+  return (
+    <View testID="home-hero-bookmark-rail" style={styles.bookmarkRail}>
+      {moodCards.map((card) => (
+        <Pressable
+          key={`inline-${card.title}`}
+          onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
+          style={({ pressed, hovered }) => [
+            styles.bookmarkChip,
+            (pressed || hovered) && styles.bookmarkChipHover,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`${card.title}. Идея поездки`}
+        >
+          <Feather name={card.icon as any} size={16} color={colors.textMuted} />
+          <Text style={styles.moodChipTitle}>{card.title}</Text>
+        </Pressable>
+      ))}
+    </View>
+  )
+}
+
+function TabletFeatureGrid({
+  colors,
+  heroHighlights,
+  styles,
+}: {
+  colors: ThemedColors
+  heroHighlights: readonly HeroHighlight[]
+  styles: any
+}) {
+  return (
+    <View style={styles.tabletFeatureGrid}>
+      {heroHighlights.map((item) => (
+        <Pressable
+          key={item.title}
+          style={({ hovered }) => [
+            styles.tabletFeatureCard,
+            hovered && styles.tabletFeatureCardHover,
+          ]}
+        >
+          <View style={styles.tabletFeatureIconWrap}>
+            <Feather name={item.icon as any} size={16} color={colors.textOnPrimary} />
+          </View>
+          <View style={styles.tabletFeatureTextWrap}>
+            <Text style={styles.tabletFeatureTitle}>{item.title}</Text>
+            <Text style={styles.tabletFeatureSubtitle}>{item.subtitle}</Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
+  )
+}
+
+function TabletFeaturedRoute({
+  bookImage,
+  colors,
+  onOpenArticle,
+  styles,
+  width,
+}: {
+  bookImage: BookImage
+  colors: ThemedColors
+  onOpenArticle: (href?: string | null) => void
+  styles: any
+  width: number
+}) {
+  return (
+    <Pressable
+      onPress={() => onOpenArticle(bookImage.href)}
+      style={styles.tabletHeroRight}
+      accessibilityRole="link"
+      accessibilityLabel={`Открыть маршрут: ${bookImage.title}`}
+    >
+      <ImageCardMedia
+        source={bookImage.source}
+        width={width * 0.45}
+        height={340}
+        borderRadius={0}
+        fit="contain"
+        blurBackground
+        allowCriticalWebBlur
+        quality={75}
+        alt={bookImage.alt}
+        loading="eager"
+        priority="high"
+        style={styles.tabletFeaturedImage}
+      />
+      <View style={styles.tabletFeaturedOverlay}>
+        <HeroWeekEyebrow colors={colors} styles={styles} />
+        <Text style={styles.tabletFeaturedTitle}>{bookImage.title}</Text>
+        <Text style={styles.tabletFeaturedSubtitle}>{bookImage.subtitle}</Text>
+      </View>
+    </Pressable>
+  )
+}
+
+function HeroSlider({
+  bookImages,
+  currentSlide,
+  disableHeroSliderBlur,
+  isWeb,
+  loadedSlides,
+  onMarkSlideLoaded,
+  onNextSlide,
+  onOpenArticle,
+  onPrevSlide,
+  renderedSlideIndices,
+  showSideSlider,
+  sliderHeight,
+  sliderIconColor,
+  sliderMediaWidth,
+  styles,
+  topWaveAnimatedStyle,
+  bottomWaveAnimatedStyle,
+  visibleSlide,
+}: {
+  bookImages: readonly BookImage[]
+  currentSlide: BookImage
+  disableHeroSliderBlur: boolean
+  isWeb: boolean
+  loadedSlides: Set<number>
+  onMarkSlideLoaded: (slideIndex: number) => void
+  onNextSlide: () => void
+  onOpenArticle: (href?: string | null) => void
+  onPrevSlide: () => void
+  renderedSlideIndices: number[]
+  showSideSlider: boolean
+  sliderHeight: number
+  sliderIconColor: string
+  sliderMediaWidth: number
+  styles: any
+  topWaveAnimatedStyle: any
+  bottomWaveAnimatedStyle: any
+  visibleSlide: number
+}) {
+  return (
+    <View style={styles.sliderSection}>
+      {isWeb && <View style={styles.sliderPageGoldLine} />}
+      {isWeb && <View style={styles.heroPageCurlRight} />}
+      <Text style={styles.sliderPageNumber}>2</Text>
+      <View testID="home-hero-slider-frame" style={styles.sliderFrame}>
+        <Pressable
+          onPress={() => onOpenArticle(currentSlide.href)}
+          testID="home-hero-slider-container"
+          style={styles.sliderContainer}
+          {...((isWeb ? { dataSet: { bookSlider: 'true' } } : {}) as any)}
+          accessibilityRole="link"
+          accessibilityLabel={`Маршрут недели: ${currentSlide.title}. ${currentSlide.subtitle}`}
+          accessibilityHint="Открыть маршрут"
+        >
+          {renderedSlideIndices.map((slideIndex) => {
+            const slide = bookImages[slideIndex]
+            const isCurrentVisibleSlide = slideIndex === visibleSlide
+            const isSlideLoaded = loadedSlides.has(slideIndex)
+
+            return (
+              <View
+                key={`hero-slide-${slideIndex}`}
+                style={[
+                  styles.slideWrapper,
+                  isWeb
+                    ? ({
+                        opacity: isCurrentVisibleSlide ? 1 : 0,
+                        zIndex: isCurrentVisibleSlide ? 2 : 1,
+                      } as any)
+                    : null,
+                ]}
+                pointerEvents="none"
+              >
+                <ImageCardMedia
+                  source={slide.source}
+                  recyclingKey={`home-hero-slide-${slideIndex}`}
+                  width={sliderMediaWidth}
+                  height={sliderHeight}
+                  borderRadius={0}
+                  fit="contain"
+                  blurBackground={!disableHeroSliderBlur}
+                  allowCriticalWebBlur={!disableHeroSliderBlur}
+                  quality={75}
+                  alt={slide.alt}
+                  loading={
+                    slideIndex === 0 ? 'eager' : isSlideLoaded ? 'eager' : 'lazy'
+                  }
+                  priority={slideIndex === 0 ? 'high' : 'normal'}
+                  showImmediately={isSlideLoaded}
+                  style={styles.slideImage}
+                  onLoad={() => onMarkSlideLoaded(slideIndex)}
+                />
+                <View style={styles.slideOverlay}>
+                  <HeroWeekEyebrow
+                    colors={{ ...({} as ThemedColors), textOnDark: sliderIconColor }}
+                    styles={styles}
+                    iconColor={sliderIconColor}
+                  />
+                  <View style={styles.slideCaption}>
+                    <Text style={styles.slideTitle}>{slide.title}</Text>
+                    <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
+                  </View>
+                </View>
+              </View>
+            )
+          })}
+          {isWeb && (
+            <>
+              <View style={styles.sliderPaperInset} />
+              <View style={styles.sliderPaperFrame} />
+            </>
+          )}
+          {isWeb && (
+            <>
+              <View style={styles.sliderTopBlur} />
+              <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurLeft]} />
+              <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurRight]} />
+              {showSideSlider ? (
+                <>
+                  <Animated.View
+                    testID="home-hero-slider-wave-top"
+                    style={[
+                      styles.sliderPageWave,
+                      styles.sliderPageWaveTop,
+                      topWaveAnimatedStyle,
+                    ]}
+                  />
+                  <Animated.View
+                    testID="home-hero-slider-wave-bottom"
+                    style={[
+                      styles.sliderPageWave,
+                      styles.sliderPageWaveBottom,
+                      bottomWaveAnimatedStyle,
+                    ]}
+                  />
+                </>
+              ) : null}
+            </>
+          )}
+          <View style={styles.sliderNav}>
+            <Pressable
+              onPress={onPrevSlide}
+              style={({ hovered }) => [
+                styles.sliderNavBtn,
+                hovered && styles.sliderNavBtnHover,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Предыдущий слайд"
+            >
+              <Feather name="chevron-left" size={14} color={sliderIconColor} />
+            </Pressable>
+            <Pressable
+              onPress={onNextSlide}
+              style={({ hovered }) => [
+                styles.sliderNavBtn,
+                hovered && styles.sliderNavBtnHover,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Следующий слайд"
+            >
+              <Feather name="chevron-right" size={14} color={sliderIconColor} />
+            </Pressable>
+          </View>
+        </Pressable>
+      </View>
+    </View>
+  )
+}
+
 export default function HomeHeroBookLayout({
   colors,
   styles,
@@ -125,7 +422,7 @@ export default function HomeHeroBookLayout({
               style={styles.leftPageFrame}
             >
               <View>
-                {showSideSlider && !isNarrowLayout && (
+            {showSideSlider && !isNarrowLayout && (
                   <View style={styles.chapterHeader}>
                     <Text style={styles.chapterLabel}>Глава 01</Text>
                     <View style={styles.chapterDivider} />
@@ -141,64 +438,22 @@ export default function HomeHeroBookLayout({
                 <Text style={styles.subtitle}>{heroSubtitle}</Text>
               </View>
 
-              {useInlineBookmarkRail && (
-                <View
-                  testID="home-hero-bookmark-rail"
-                  style={styles.bookmarkRail}
-                >
-                  {moodCards.map((card) => (
-                    <Pressable
-                      key={`inline-${card.title}`}
-                      onPress={() =>
-                        onQuickFilterPress(card.title, card.filters, card.route)
-                      }
-                      style={({ pressed, hovered }) => [
-                        styles.bookmarkChip,
-                        (pressed || hovered) && styles.bookmarkChipHover,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${card.title}. Идея поездки`}
-                    >
-                      <Feather
-                        name={card.icon as any}
-                        size={16}
-                        color={colors.textMuted}
-                      />
-                      <Text style={styles.moodChipTitle}>{card.title}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+              {useInlineBookmarkRail ? (
+                <InlineBookmarkRail
+                  colors={colors}
+                  moodCards={moodCards}
+                  onQuickFilterPress={onQuickFilterPress}
+                  styles={styles}
+                />
+              ) : null}
 
-              {isTabletLayout && (
-                <View style={styles.tabletFeatureGrid}>
-                  {heroHighlights.map((item) => (
-                    <Pressable
-                      key={item.title}
-                      style={({ hovered }) => [
-                        styles.tabletFeatureCard,
-                        hovered && styles.tabletFeatureCardHover,
-                      ]}
-                    >
-                      <View style={styles.tabletFeatureIconWrap}>
-                        <Feather
-                          name={item.icon as any}
-                          size={16}
-                          color={colors.textOnPrimary}
-                        />
-                      </View>
-                      <View style={styles.tabletFeatureTextWrap}>
-                        <Text style={styles.tabletFeatureTitle}>
-                          {item.title}
-                        </Text>
-                        <Text style={styles.tabletFeatureSubtitle}>
-                          {item.subtitle}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
+              {isTabletLayout ? (
+                <TabletFeatureGrid
+                  colors={colors}
+                  heroHighlights={heroHighlights}
+                  styles={styles}
+                />
+              ) : null}
 
               <View
                 testID="home-hero-cta-row"
@@ -229,208 +484,38 @@ export default function HomeHeroBookLayout({
             )}
           </View>
 
-          {isTabletLayout && (
-            <Pressable
-              onPress={() => onOpenArticle(bookImages[0].href)}
-              style={styles.tabletHeroRight}
-              accessibilityRole="link"
-              accessibilityLabel={`Открыть маршрут: ${bookImages[0].title}`}
-            >
-              <ImageCardMedia
-                source={bookImages[0].source}
-                width={width * 0.45}
-                height={340}
-                borderRadius={0}
-                fit="contain"
-                blurBackground
-                allowCriticalWebBlur
-                quality={75}
-                alt={bookImages[0].alt}
-                loading="eager"
-                priority="high"
-                style={styles.tabletFeaturedImage}
-              />
-              <View style={styles.tabletFeaturedOverlay}>
-                <View style={styles.slideEyebrow}>
-                  <Feather
-                    name="map-pin"
-                    size={11}
-                    color={colors.textOnDark}
-                  />
-                  <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
-                </View>
-                <Text style={styles.tabletFeaturedTitle}>
-                  {bookImages[0].title}
-                </Text>
-                <Text style={styles.tabletFeaturedSubtitle}>
-                  {bookImages[0].subtitle}
-                </Text>
-              </View>
-            </Pressable>
-          )}
+          {isTabletLayout ? (
+            <TabletFeaturedRoute
+              bookImage={bookImages[0]}
+              colors={colors}
+              onOpenArticle={onOpenArticle}
+              styles={styles}
+              width={width}
+            />
+          ) : null}
 
-          {showSideSlider && (
-            <View style={styles.sliderSection}>
-              {isWeb && <View style={styles.sliderPageGoldLine} />}
-              {isWeb && <View style={styles.heroPageCurlRight} />}
-              <Text style={styles.sliderPageNumber}>2</Text>
-              <View
-                testID="home-hero-slider-frame"
-                style={styles.sliderFrame}
-              >
-                <Pressable
-                  onPress={() => onOpenArticle(currentSlide.href)}
-                  testID="home-hero-slider-container"
-                  style={styles.sliderContainer}
-                  {...((isWeb
-                    ? { dataSet: { bookSlider: 'true' } }
-                    : {}) as any)}
-                  accessibilityRole="link"
-                  accessibilityLabel={`Маршрут недели: ${currentSlide.title}. ${currentSlide.subtitle}`}
-                  accessibilityHint="Открыть маршрут"
-                >
-                  {renderedSlideIndices.map((slideIndex) => {
-                    const slide = bookImages[slideIndex]
-                    const isCurrentVisibleSlide = slideIndex === visibleSlide
-                    const isSlideLoaded = loadedSlides.has(slideIndex)
-
-                    return (
-                      <View
-                        key={`hero-slide-${slideIndex}`}
-                        style={[
-                          styles.slideWrapper,
-                          isWeb
-                            ? ({
-                                opacity: isCurrentVisibleSlide ? 1 : 0,
-                                zIndex: isCurrentVisibleSlide ? 2 : 1,
-                              } as any)
-                            : null,
-                        ]}
-                        pointerEvents="none"
-                      >
-                        <ImageCardMedia
-                          source={slide.source}
-                          recyclingKey={`home-hero-slide-${slideIndex}`}
-                          width={sliderMediaWidth}
-                          height={sliderHeight}
-                          borderRadius={0}
-                          fit="contain"
-                          blurBackground={!disableHeroSliderBlur}
-                          allowCriticalWebBlur={!disableHeroSliderBlur}
-                          quality={75}
-                          alt={slide.alt}
-                          loading={
-                            slideIndex === 0
-                              ? 'eager'
-                              : isSlideLoaded
-                                ? 'eager'
-                                : 'lazy'
-                          }
-                          priority={slideIndex === 0 ? 'high' : 'normal'}
-                          showImmediately={isSlideLoaded}
-                          style={styles.slideImage}
-                          onLoad={() => onMarkSlideLoaded(slideIndex)}
-                        />
-                        <View style={styles.slideOverlay}>
-                          <View style={styles.slideEyebrow}>
-                            <Feather
-                              name="map-pin"
-                              size={11}
-                              color={sliderIconColor}
-                            />
-                            <Text style={styles.slideEyebrowText}>
-                              Маршрут недели
-                            </Text>
-                          </View>
-                          <View style={styles.slideCaption}>
-                            <Text style={styles.slideTitle}>{slide.title}</Text>
-                            <Text style={styles.slideSubtitle}>
-                              {slide.subtitle}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    )
-                  })}
-                  {isWeb && (
-                    <>
-                      <View style={styles.sliderPaperInset} />
-                      <View style={styles.sliderPaperFrame} />
-                    </>
-                  )}
-                  {isWeb && (
-                    <>
-                      <View style={styles.sliderTopBlur} />
-                      <View
-                        style={[
-                          styles.sliderEdgeBlur,
-                          styles.sliderEdgeBlurLeft,
-                        ]}
-                      />
-                      <View
-                        style={[
-                          styles.sliderEdgeBlur,
-                          styles.sliderEdgeBlurRight,
-                        ]}
-                      />
-                      {showSideSlider && (
-                        <>
-                          <Animated.View
-                            testID="home-hero-slider-wave-top"
-                            style={[
-                              styles.sliderPageWave,
-                              styles.sliderPageWaveTop,
-                              topWaveAnimatedStyle,
-                            ]}
-                          />
-                          <Animated.View
-                            testID="home-hero-slider-wave-bottom"
-                            style={[
-                              styles.sliderPageWave,
-                              styles.sliderPageWaveBottom,
-                              bottomWaveAnimatedStyle,
-                            ]}
-                          />
-                        </>
-                      )}
-                    </>
-                  )}
-                  <View style={styles.sliderNav}>
-                    <Pressable
-                      onPress={onPrevSlide}
-                      style={({ hovered }) => [
-                        styles.sliderNavBtn,
-                        hovered && styles.sliderNavBtnHover,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Предыдущий слайд"
-                    >
-                      <Feather
-                        name="chevron-left"
-                        size={14}
-                        color={sliderIconColor}
-                      />
-                    </Pressable>
-                    <Pressable
-                      onPress={onNextSlide}
-                      style={({ hovered }) => [
-                        styles.sliderNavBtn,
-                        hovered && styles.sliderNavBtnHover,
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Следующий слайд"
-                    >
-                      <Feather
-                        name="chevron-right"
-                        size={14}
-                        color={sliderIconColor}
-                      />
-                    </Pressable>
-                  </View>
-                </Pressable>
-              </View>
-            </View>
-          )}
+          {showSideSlider ? (
+            <HeroSlider
+              bookImages={bookImages}
+              currentSlide={currentSlide}
+              disableHeroSliderBlur={disableHeroSliderBlur}
+              isWeb={isWeb}
+              loadedSlides={loadedSlides}
+              onMarkSlideLoaded={onMarkSlideLoaded}
+              onNextSlide={onNextSlide}
+              onOpenArticle={onOpenArticle}
+              onPrevSlide={onPrevSlide}
+              renderedSlideIndices={renderedSlideIndices}
+              showSideSlider={showSideSlider}
+              sliderHeight={sliderHeight}
+              sliderIconColor={sliderIconColor}
+              sliderMediaWidth={sliderMediaWidth}
+              styles={styles}
+              topWaveAnimatedStyle={topWaveAnimatedStyle}
+              bottomWaveAnimatedStyle={bottomWaveAnimatedStyle}
+              visibleSlide={visibleSlide}
+            />
+          ) : null}
         </View>
       </View>
     </View>

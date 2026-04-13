@@ -26,6 +26,130 @@ type HomeHeroPopularSectionProps = {
   onOpenArticle: (href?: string | null) => void
 }
 
+type PopularCardProps = {
+  image: BookImage
+  styles: any
+  width: number
+  height: number
+  onOpenArticle: (href?: string | null) => void
+  useGridLayout?: boolean
+}
+
+const webHorizontalScrollStyle =
+  Platform.OS === 'web'
+    ? ({
+        touchAction: 'pan-x pan-y',
+        WebkitOverflowScrolling: 'touch',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        overscrollBehaviorX: 'contain',
+      } as const)
+    : undefined
+
+function FeaturedRouteCard({
+  colors,
+  featuredCardHeight,
+  featuredCardWidth,
+  image,
+  onOpenArticle,
+  styles,
+}: {
+  colors: ThemedColors
+  featuredCardHeight: number
+  featuredCardWidth?: number
+  image: BookImage
+  onOpenArticle: (href?: string | null) => void
+  styles: any
+}) {
+  return (
+    <Pressable
+      onPress={() => onOpenArticle(image.href)}
+      style={({ pressed, hovered }) => [
+        styles.featuredCard,
+        (pressed || hovered) && styles.featuredCardHover,
+      ]}
+      accessibilityRole="link"
+      accessibilityLabel={`Открыть маршрут: ${image.title}`}
+    >
+      <ImageCardMedia
+        source={image.source}
+        width={featuredCardWidth}
+        height={featuredCardHeight}
+        borderRadius={0}
+        fit="contain"
+        blurBackground
+        allowCriticalWebBlur
+        quality={72}
+        alt={image.alt}
+        loading="eager"
+        style={styles.featuredCardImage}
+      />
+      <View style={styles.featuredCardOverlay}>
+        <View style={styles.slideEyebrow}>
+          <Feather name="map-pin" size={11} color={colors.textOnDark} />
+          <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
+        </View>
+        <Text style={styles.featuredCardTitle} numberOfLines={1}>
+          {image.title}
+        </Text>
+        <Text style={styles.featuredCardSubtitle} numberOfLines={1}>
+          {image.subtitle}
+        </Text>
+      </View>
+    </Pressable>
+  )
+}
+
+function PopularRouteCard({
+  image,
+  styles,
+  width,
+  height,
+  onOpenArticle,
+  useGridLayout = false,
+}: PopularCardProps) {
+  return (
+    <Pressable
+      key={image.title}
+      onPress={() => onOpenArticle(image.href)}
+      style={({ pressed, hovered }) => [
+        styles.imageCard,
+        useGridLayout && styles.imageCardGrid,
+        useGridLayout && { width },
+        (pressed || hovered) && styles.imageCardHover,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={image.title}
+    >
+      <ImageCardMedia
+        source={image.source}
+        width={width}
+        height={height}
+        borderRadius={0}
+        fit="cover"
+        blurBackground
+        allowCriticalWebBlur
+        quality={85}
+        alt={image.alt}
+        loading="lazy"
+        style={
+          useGridLayout
+            ? [styles.imageCardImage, { width, height }]
+            : styles.imageCardImage
+        }
+      />
+      <View style={styles.imageCardContent}>
+        <Text style={styles.imageCardTitle} numberOfLines={useGridLayout ? 2 : 1}>
+          {image.title}
+        </Text>
+        <Text style={styles.imageCardSubtitle} numberOfLines={useGridLayout ? 2 : 1}>
+          {image.subtitle}
+        </Text>
+      </View>
+    </Pressable>
+  )
+}
+
 export default function HomeHeroPopularSection({
   colors,
   styles,
@@ -39,136 +163,51 @@ export default function HomeHeroPopularSection({
   onOpenArticle,
 }: HomeHeroPopularSectionProps) {
   const popularItems = useMobileGrid ? bookImages.slice(0, 4) : bookImages
+  const featuredImage = bookImages[0]
 
   return (
     <View style={styles.popularSection}>
-      <Pressable
-        onPress={() => onOpenArticle(bookImages[0].href)}
-        style={({ pressed, hovered }) => [
-          styles.featuredCard,
-          (pressed || hovered) && styles.featuredCardHover,
-        ]}
-        accessibilityRole="link"
-        accessibilityLabel={`Открыть маршрут: ${bookImages[0].title}`}
-      >
-        <ImageCardMedia
-          source={bookImages[0].source}
-          width={featuredCardWidth}
-          height={featuredCardHeight}
-          borderRadius={0}
-          fit="contain"
-          blurBackground
-          allowCriticalWebBlur
-          quality={72}
-          alt={bookImages[0].alt}
-          loading="eager"
-          style={styles.featuredCardImage}
-        />
-        <View style={styles.featuredCardOverlay}>
-          <View style={styles.slideEyebrow}>
-            <Feather name="map-pin" size={11} color={colors.textOnDark} />
-            <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
-          </View>
-          <Text style={styles.featuredCardTitle} numberOfLines={1}>
-            {bookImages[0].title}
-          </Text>
-          <Text style={styles.featuredCardSubtitle} numberOfLines={1}>
-            {bookImages[0].subtitle}
-          </Text>
-        </View>
-      </Pressable>
+      <FeaturedRouteCard
+        colors={colors}
+        featuredCardHeight={featuredCardHeight}
+        featuredCardWidth={featuredCardWidth}
+        image={featuredImage}
+        onOpenArticle={onOpenArticle}
+        styles={styles}
+      />
       <Text style={styles.popularTitle}>Популярные маршруты</Text>
       {useMobileGrid ? (
         <View style={styles.popularGrid}>
           {popularItems.map((image) => (
-            <Pressable
+            <PopularRouteCard
               key={image.title}
-              onPress={() => onOpenArticle(image.href)}
-              style={({ pressed, hovered }) => [
-                styles.imageCard,
-                styles.imageCardGrid,
-                { width: popularCardWidth },
-                (pressed || hovered) && styles.imageCardHover,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={image.title}
-            >
-              <ImageCardMedia
-                source={image.source}
-                width={popularCardWidth}
-                height={popularCardHeight}
-                borderRadius={0}
-                fit="cover"
-                blurBackground
-                allowCriticalWebBlur
-                quality={85}
-                alt={image.alt}
-                loading="lazy"
-                style={[styles.imageCardImage, { width: popularCardWidth, height: popularCardHeight }]}
-              />
-              <View style={styles.imageCardContent}>
-                <Text style={styles.imageCardTitle} numberOfLines={2}>
-                  {image.title}
-                </Text>
-                <Text style={styles.imageCardSubtitle} numberOfLines={2}>
-                  {image.subtitle}
-                </Text>
-              </View>
-            </Pressable>
+              image={image}
+              styles={styles}
+              width={popularCardWidth}
+              height={popularCardHeight}
+              onOpenArticle={onOpenArticle}
+              useGridLayout
+            />
           ))}
         </View>
       ) : (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={
-            isWeb
-              ? ({
-                  touchAction: 'pan-x pan-y',
-                  WebkitOverflowScrolling: 'touch',
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  overscrollBehaviorX: 'contain',
-                } as any)
-              : undefined
-          }
+          style={isWeb ? webHorizontalScrollStyle : undefined}
           contentContainerStyle={styles.popularScrollContent}
           directionalLockEnabled={Platform.OS === 'ios'}
           nestedScrollEnabled={Platform.OS === 'android'}
         >
           {popularItems.map((image) => (
-            <Pressable
+            <PopularRouteCard
               key={image.title}
-              onPress={() => onOpenArticle(image.href)}
-              style={({ pressed, hovered }) => [
-                styles.imageCard,
-                (pressed || hovered) && styles.imageCardHover,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={image.title}
-            >
-              <ImageCardMedia
-                source={image.source}
-                width={popularCardWidth}
-                height={popularCardHeight}
-                borderRadius={0}
-                fit="cover"
-                blurBackground
-                allowCriticalWebBlur
-                quality={85}
-                alt={image.alt}
-                loading="lazy"
-                style={styles.imageCardImage}
-              />
-              <View style={styles.imageCardContent}>
-                <Text style={styles.imageCardTitle} numberOfLines={1}>
-                  {image.title}
-                </Text>
-                <Text style={styles.imageCardSubtitle} numberOfLines={1}>
-                  {image.subtitle}
-                </Text>
-              </View>
-            </Pressable>
+              image={image}
+              styles={styles}
+              width={popularCardWidth}
+              height={popularCardHeight}
+              onOpenArticle={onOpenArticle}
+            />
           ))}
         </ScrollView>
       )}

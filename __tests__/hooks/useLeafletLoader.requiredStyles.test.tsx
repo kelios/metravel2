@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 
-const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+const LEAFLET_CSS_HREF = '/vendor/leaflet.css';
 const ORIGINAL_PLATFORM_OS = Platform.OS;
 
 describe('useLeafletLoader required styles', () => {
