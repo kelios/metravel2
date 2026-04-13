@@ -329,6 +329,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     const showModeToggle =
       (filtersMode === 'radius' || filtersMode === 'route') &&
       typeof setFiltersMode === 'function';
+    const showTopFilterActions = uiTab === 'filters' && filtersMode === 'radius' && !stackSheetToolbar;
+    const showSheetCloseButton = !stackSheetToolbar;
 
     const body =
       contentTab === 'filters' ? (
@@ -428,7 +430,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           </View>
 
           <View style={[styles.sheetToolbarActions, stackSheetToolbar && styles.sheetToolbarActionsStacked]}>
-            {uiTab === 'filters' && filtersMode === 'radius' && (
+            {showTopFilterActions && (
               <>
                 {typeof filtersContextProps?.resetFilters === 'function' && (
                   <Pressable
@@ -468,23 +470,24 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                 </Pressable>
               </>
             )}
-                <Pressable
-                  testID="map-panel-open"
-                  onPress={handleToggleListPanel}
-                  accessibilityRole="button"
-                  accessibilityLabel="Вернуться к карте"
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    styles.sheetBackToMapButton,
-                    compactSheetActions && styles.sheetBackToMapButtonCompact,
-                    pressed && { opacity: 0.72 },
-                  ]}
-                >
-                  <Feather name="map" size={15} color={colors.textMuted} />
-                  {!compactSheetActions && (
-                    <RNText style={styles.sheetBackToMapText}>Карта</RNText>
-                  )}
-                </Pressable>
+            <Pressable
+              testID="map-panel-open"
+              onPress={handleToggleListPanel}
+              accessibilityRole="button"
+              accessibilityLabel="Вернуться к карте"
+              hitSlop={6}
+              style={({ pressed }) => [
+                styles.sheetBackToMapButton,
+                compactSheetActions && styles.sheetBackToMapButtonCompact,
+                pressed && { opacity: 0.72 },
+              ]}
+            >
+              <Feather name="map" size={15} color={colors.textMuted} />
+              {!compactSheetActions && (
+                <RNText style={styles.sheetBackToMapText}>Карта</RNText>
+              )}
+            </Pressable>
+            {showSheetCloseButton && (
                 <Pressable
                   testID="map-panel-close"
                   onPress={() => bottomSheetRef.current?.snapToCollapsed()}
@@ -499,6 +502,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             >
               <Feather name="x" size={16} color={colors.textMuted} />
             </Pressable>
+            )}
           </View>
         </View>
 

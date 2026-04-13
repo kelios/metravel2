@@ -271,6 +271,26 @@ const MapPageComponent: React.FC<Props> = (props) => {
     }
   }, [bottomSheetState, mapZoom, requestBottomSheetCollapse]);
 
+  const handleZoomIn = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+    try {
+      map.zoomIn?.()
+    } catch {
+      // noop
+    }
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    const map = mapRef.current
+    if (!map) return
+    try {
+      map.zoomOut?.()
+    } catch {
+      // noop
+    }
+  }, [])
+
   useEffect(() => {
     if (!errors?.routing) return;
     // Avoid spamming the console for expected/temporary states (rate-limit, aborts).
@@ -508,6 +528,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
       <MapControlsReactive
         userLocation={userLocationLatLng}
         onCenterUserLocation={centerOnUserLocation}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
         alignLeft={true}
       />
     </View>

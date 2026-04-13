@@ -289,7 +289,7 @@ export default function MapScreen() {
                         onOpenFilters={handleOpenFiltersPanel}
                     />
                 )}
-                {Platform.OS === 'web' && !isMobile && travelsData.length > 0 && rightPanelTab !== 'travels' && (
+                {Platform.OS === 'web' && !isMobile && isDesktopCollapsed && travelsData.length > 0 && rightPanelTab !== 'travels' && (
                     <MapShowListButton
                         count={travelsData.length}
                         onPress={handleShowList}
@@ -328,6 +328,7 @@ export default function MapScreen() {
             quickFilterSelected,
             quickFilterToggle,
             rightPanelTab,
+            isDesktopCollapsed,
             handleShowList,
             travelsData.length,
             handleOpenFiltersPanel,

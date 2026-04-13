@@ -28,7 +28,7 @@ const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
 type PageSectionProps = {
   children: React.ReactNode
   marginTop: number
-  maxWidth?: number | string
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'full' | number
   padding?: boolean
 }
 

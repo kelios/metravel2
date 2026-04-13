@@ -43,6 +43,7 @@ type PointListCardRendererProps = {
     textOnPrimary: string;
   };
   isMobile: boolean;
+  isWebGrid?: boolean;
   item: PointLike;
   itemModel: ItemModel;
   numColumns: number;

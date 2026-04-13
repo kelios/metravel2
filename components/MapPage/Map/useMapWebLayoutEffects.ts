@@ -259,6 +259,65 @@ export function useMapWebLayoutEffects({
   }, [mapRef])
 
   useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof document === 'undefined') return
+    if (!mapRef.current) return
+
+    const map = mapRef.current
+    const element = document.getElementById(mapContainerId)
+    if (!element) return
+
+    let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const hasZeroSizedMap = () => {
+      try {
+        const size = typeof map.getSize === 'function' ? map.getSize() : null
+        if (!size || !Number.isFinite(size.x) || !Number.isFinite(size.y) || size.x <= 0 || size.y <= 0) {
+          return true
+        }
+      } catch {
+        return true
+      }
+
+      const tilePane = element.querySelector('.leaflet-tile-pane') as HTMLElement | null
+      const markerPane = element.querySelector('.leaflet-marker-pane') as HTMLElement | null
+      const tileRect = tilePane?.getBoundingClientRect?.()
+      const markerRect = markerPane?.getBoundingClientRect?.()
+
+      const tileZero = tileRect ? tileRect.width <= 0 || tileRect.height <= 0 : false
+      const markerZero = markerRect ? markerRect.width <= 0 || markerRect.height <= 0 : false
+
+      return tileZero || markerZero
+    }
+
+    const attemptInvalidate = (attempt: number) => {
+      if (cancelled) return
+
+      try {
+        map.invalidateSize?.({ animate: false, pan: false } as any)
+      } catch {
+        // noop
+      }
+
+      if (!hasZeroSizedMap()) return
+      if (attempt >= 14) return
+
+      timeoutId = setTimeout(() => {
+        requestAnimationFrame(() => attemptInvalidate(attempt + 1))
+      }, attempt < 4 ? 90 : 180)
+    }
+
+    if (hasZeroSizedMap()) {
+      requestAnimationFrame(() => attemptInvalidate(0))
+    }
+
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [mapContainerId, mapInstance, mapRef])
+
+  useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!canRenderMap) return
     setShowInitialLoader(false)

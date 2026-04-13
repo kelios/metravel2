@@ -49,10 +49,18 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   const isNarrow = width > 0 && width <= PHONE_COMPACT_LAYOUT_MAX_WIDTH;
   const isVeryNarrow = width > 0 && width <= PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH;
   const styles = useMemo(() => getStyles(colors, { isNarrow, isVeryNarrow }), [colors, isNarrow, isVeryNarrow]);
+  const safeCategories = useMemo(
+    () =>
+      categories.filter((category) => {
+        const name = typeof category?.name === 'string' ? category.name.trim() : '';
+        return Boolean(name);
+      }),
+    [categories]
+  );
   const selectedCount = selectedCategories.length;
   const shouldReserveActionChipSpace =
     typeof onOpenFilters === 'function' &&
-    (selectedCount > 0 || categories.length > (isVeryNarrow ? 2 : isNarrow ? 2 : maxVisible));
+    (selectedCount > 0 || safeCategories.length > (isVeryNarrow ? 2 : isNarrow ? 2 : maxVisible));
   const effectiveMaxVisible = isVeryNarrow
     ? Math.min(maxVisible, 2)
     : isNarrow
@@ -60,10 +68,10 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
       : maxVisible;
 
   const visible = useMemo(
-    () => categories.slice(0, effectiveMaxVisible),
-    [categories, effectiveMaxVisible],
+    () => safeCategories.slice(0, effectiveMaxVisible),
+    [safeCategories, effectiveMaxVisible],
   );
-  const hiddenCount = Math.max(categories.length - visible.length, 0);
+  const hiddenCount = Math.max(safeCategories.length - visible.length, 0);
   const shouldShowActionChip =
     typeof onOpenFilters === 'function' && (hiddenCount > 0 || selectedCount > 0);
   const actionChipLabel = isNarrow ? 'Все' : 'Все фильтры';
@@ -177,6 +185,7 @@ const getStyles = (
     scrollWrapper: {
       position: 'relative',
       flexShrink: 0,
+      maxWidth: '100%',
     },
     fadeHint: {
       position: 'absolute',
@@ -203,7 +212,7 @@ const getStyles = (
     },
     scrollContent: {
       gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
-      paddingRight: options.isNarrow ? 4 : 10,
+      paddingRight: options.isNarrow ? 18 : 28,
       ...(Platform.OS === 'web'
         ? ({ minWidth: 'max-content', touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' } as any)
         : null),
@@ -274,6 +283,7 @@ const getStyles = (
       fontWeight: '600',
       color: colors.text,
       letterSpacing: 0.1,
+      maxWidth: options.isVeryNarrow ? 104 : options.isNarrow ? 132 : 168,
     },
     chipTextActive: {
       color: colors.textOnPrimary,

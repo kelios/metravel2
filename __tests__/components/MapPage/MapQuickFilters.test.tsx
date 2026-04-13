@@ -92,4 +92,24 @@ describe('MapQuickFilters', () => {
     expect(queryByText('Костёл')).toBeNull();
     expect(getByLabelText(/Открыть все фильтры, скрыто ещё \d+/)).toBeTruthy();
   });
+
+  it('skips categories with empty names so blank chips are not rendered', () => {
+    const { getByText, queryByText } = render(
+      <MapQuickFilters
+        categories={[
+          { id: 1, name: 'Парковка' },
+          { id: 2, name: '   ' },
+          { id: 3, name: 'Пещера' },
+        ]}
+        selectedCategories={[]}
+        onToggleCategory={jest.fn()}
+        maxVisible={5}
+        onOpenFilters={jest.fn()}
+      />
+    );
+
+    expect(getByText('Парковка')).toBeTruthy();
+    expect(getByText('Пещера')).toBeTruthy();
+    expect(queryByText('   ')).toBeNull();
+  });
 });

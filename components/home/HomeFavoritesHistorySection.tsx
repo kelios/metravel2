@@ -303,8 +303,8 @@ function HomeFavoritesHistorySection() {
       );
   }, [viewHistory]);
 
-  const sections = useMemo<ShelfSection[]>(
-    () => [
+  const sections = useMemo(
+    (): ShelfSection[] => ([
       {
         eyebrow: 'Сохранено',
         title: 'Избранное',
@@ -328,7 +328,7 @@ function HomeFavoritesHistorySection() {
         titleTestID: 'home-history-header',
         badge: { icon: 'clock' },
       },
-    ].filter((section) => section.items.length > 0),
+    ] satisfies ShelfSection[]).filter((section) => section.items.length > 0),
     [favoritesData, historyData],
   );
 
@@ -350,7 +350,7 @@ function HomeFavoritesHistorySection() {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.container}>
           {sections.map((section) => (
-            <View style={styles.section}>
+            <View key={section.ctaPath} style={styles.section}>
               <SectionHeader
                 eyebrow={section.eyebrow}
                 title={section.title}

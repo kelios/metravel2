@@ -53,7 +53,7 @@ function StepCard({
   onPress: () => void
   showBackgroundNumber: boolean
   step: (typeof STEPS)[number]
-  styles: ReturnType<typeof StyleSheet.create>
+  styles: Record<string, any>
 }) {
   return (
     <Pressable

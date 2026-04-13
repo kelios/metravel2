@@ -56,8 +56,8 @@ describe('map layout header offset', () => {
     expect(styles.tabsContainer.paddingTop).toBe(7);
 
     // right panel uses tokenized widths (min string on web)
-    expect(styles.rightPanel.width).toBe(`min(${METRICS.baseUnit * 48}px, 34vw)`);
-    expect(styles.rightPanel.maxWidth).toBe(METRICS.baseUnit * 48 + 40);
+    expect(styles.rightPanel.width).toBe(`min(${METRICS.baseUnit * 45}px, 34vw)`);
+    expect(styles.rightPanel.maxWidth).toBe(METRICS.baseUnit * 45 + 40);
     // gap between map and panel on desktop
     expect(styles.mapContainer.columnGap).toBe(METRICS.spacing.m);
   });

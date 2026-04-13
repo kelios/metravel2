@@ -9,6 +9,7 @@ import type { Point } from './types'
 import { strToLatLng } from './utils'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { getClusterZoomFitBoundsOptions } from './clusterFitBounds'
+import { useThemedColors } from '@/hooks/useTheme'
 
 interface PopupContentProps {
   point: Point
@@ -43,6 +44,21 @@ interface MarkerClusterGroupProps {
 }
 
 const TOOLTIP_MAX_LEN = 30
+const getClusterMetrics = (count: number) => {
+  if (count >= 20) {
+    return { size: 60, innerSize: 46, coreSize: 36, fontSize: 18, eyebrowSize: 14 }
+  }
+  if (count >= 10) {
+    return { size: 54, innerSize: 42, coreSize: 32, fontSize: 16, eyebrowSize: 13 }
+  }
+  return { size: 48, innerSize: 38, coreSize: 28, fontSize: 15, eyebrowSize: 12 }
+}
+
+const sanitizeCssValue = (value: string | undefined, fallback = '') => {
+  if (!value) return fallback
+  const sanitized = String(value).replace(/[^\w\s#(),.%:-]/g, '').slice(0, 128)
+  return sanitized || fallback
+}
 
 const scheduleRootUnmount = (root: { unmount: () => void } | null | undefined) => {
   if (!root) return
@@ -81,6 +97,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
   hintCenter,
 }) => {
   const map = useMap()
+  const colors = useThemedColors()
   const clusterGroupRef = useRef<any>(null)
   const markerMapRef = useRef<Map<string, any>>(new Map())
   const renderRootMapRef = useRef<Map<string, any>>(new Map())
@@ -104,6 +121,111 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       .filter((item): item is NonNullable<typeof item> => item !== null)
   }, [points, hintCenter])
 
+  const clusterIconFactory = useMemo(() => {
+    if (!L?.divIcon || typeof document === 'undefined') return null
+
+    const root = getComputedStyle(document.documentElement)
+    const clusterOuter = sanitizeCssValue(
+      root.getPropertyValue('--color-primary')?.trim(),
+      colors.primary
+    )
+    const clusterSurface = sanitizeCssValue(
+      root.getPropertyValue('--color-surface')?.trim(),
+      colors.surface
+    )
+    const clusterCountBg = sanitizeCssValue(
+      root.getPropertyValue('--color-primaryLight')?.trim(),
+      colors.primaryLight ?? colors.surface
+    )
+    const clusterText = sanitizeCssValue(
+      root.getPropertyValue('--color-primaryText')?.trim(),
+      colors.primaryText ?? colors.text
+    )
+    const clusterBorder = sanitizeCssValue(
+      root.getPropertyValue('--color-surface')?.trim(),
+      colors.surface
+    )
+    const clusterSoftRing = sanitizeCssValue(
+      root.getPropertyValue('--color-primarySoft')?.trim(),
+      colors.primarySoft ?? 'rgba(122,157,143,0.18)'
+    )
+    const clusterEyebrow = sanitizeCssValue(
+      root.getPropertyValue('--color-brand')?.trim(),
+      colors.brand ?? colors.warning
+    )
+    const clusterShadow = sanitizeCssValue(
+      root.getPropertyValue('--shadow-modal')?.trim(),
+      colors.boxShadows.modal ?? '0 8px 24px rgba(0,0,0,0.18)'
+    )
+
+    return (cluster: any) => {
+      const count = Number(cluster?.getChildCount?.() ?? 0)
+      const safeCount = Number.isFinite(count) && count > 0 ? Math.floor(count) : 1
+      const label = safeCount > 999 ? '999+' : String(safeCount)
+      const metrics = getClusterMetrics(safeCount)
+      const anchor = metrics.size / 2
+
+      return L.divIcon({
+        className: 'metravel-cluster-icon',
+        html: `
+          <div style="
+            width:${metrics.size}px;
+            height:${metrics.size}px;
+            border-radius:999px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:radial-gradient(circle at 30% 30%, ${clusterSoftRing} 0%, rgba(255,255,255,0) 58%), ${clusterOuter};
+            border:2px solid ${clusterBorder};
+            box-shadow:${clusterShadow};
+            position:relative;
+          ">
+            <div style="
+              width:${metrics.innerSize}px;
+              height:${metrics.innerSize}px;
+              border-radius:999px;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              background:${clusterSurface};
+              border:1px solid rgba(255,255,255,0.55);
+              box-shadow:inset 0 1px 0 rgba(255,255,255,0.22);
+            ">
+              <div style="
+                width:${metrics.coreSize}px;
+                height:${metrics.coreSize}px;
+                border-radius:999px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                background:${clusterCountBg};
+                color:${clusterText};
+                font-size:${metrics.fontSize}px;
+                line-height:1;
+                font-weight:800;
+                font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                letter-spacing:0.02em;
+              ">${label}</div>
+            </div>
+            <div style="
+              position:absolute;
+              top:4px;
+              right:4px;
+              width:${metrics.eyebrowSize}px;
+              height:${metrics.eyebrowSize}px;
+              border-radius:999px;
+              background:${clusterEyebrow};
+              border:2px solid ${clusterSurface};
+              box-shadow:0 2px 8px rgba(0,0,0,0.12);
+            "></div>
+          </div>
+        `,
+        iconSize: [metrics.size, metrics.size],
+        iconAnchor: [anchor, anchor],
+      })
+    }
+  }, [L, colors.boxShadows.modal, colors.brand, colors.primary, colors.primaryLight, colors.primarySoft, colors.primaryText, colors.surface, colors.text, colors.warning])
+
   // Create cluster group once
   useEffect(() => {
     if (!L || !map) return
@@ -121,6 +243,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
     const group = L.markerClusterGroup({
       chunkedLoading: true,
       maxClusterRadius: 60,
+      iconCreateFunction: clusterIconFactory ?? undefined,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       // Handle cluster click explicitly so viewport math stays stable on web.
@@ -183,7 +306,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       currentRenderRootMap.clear()
       currentMarkerMap.clear()
     }
-  }, [L, map])
+  }, [L, map, clusterIconFactory])
 
   // Sync markers with cluster group
   useEffect(() => {

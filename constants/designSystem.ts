@@ -325,6 +325,7 @@ export function getThemedColors(isDark: boolean) {
     textSecondary: themedColor('textMuted', MODERN_MATTE_PALETTE.textSecondary, MODERN_MATTE_PALETTE_DARK.textSecondary, isDark),
     textTertiary: themedColor('textSubtle', MODERN_MATTE_PALETTE.textTertiary, MODERN_MATTE_PALETTE_DARK.textTertiary, isDark),
     textMuted: themedColor('textMuted', MODERN_MATTE_PALETTE.textMuted, MODERN_MATTE_PALETTE_DARK.textMuted, isDark),
+    textSubtle: themedColor('textSubtle', MODERN_MATTE_PALETTE.textTertiary, MODERN_MATTE_PALETTE_DARK.textTertiary, isDark),
     textInverse: themedColor('textInverse', MODERN_MATTE_PALETTE.textInverse, MODERN_MATTE_PALETTE_DARK.textInverse, isDark),
     textOnPrimary: themedColor('textOnPrimary', MODERN_MATTE_PALETTE.textOnPrimary, MODERN_MATTE_PALETTE_DARK.textOnPrimary, isDark),
     textOnDark: themedColor('textOnDark', MODERN_MATTE_PALETTE.textOnDark, MODERN_MATTE_PALETTE_DARK.textOnDark, isDark),

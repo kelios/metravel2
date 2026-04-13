@@ -4,8 +4,8 @@ import { LAYOUT, METRICS } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
-const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 48; // 384px
-const PANEL_WIDTH_TABLET = METRICS.baseUnit * 42; // 336px
+const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 45; // 360px
+const PANEL_WIDTH_TABLET = METRICS.baseUnit * 40; // 320px
 const PANEL_GAP = METRICS.spacing.m; // 16px
 const TRANSITION_MS = 200;
 const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
@@ -85,7 +85,7 @@ export const getStyles = (
               borderTopLeftRadius: isMobile ? 20 : 24,
               borderTopRightRadius: isMobile ? 20 : 24,
               borderBottomLeftRadius: isMobile ? 0 : 24,
-              overflow: 'hidden',
+              overflow: isMobile ? 'hidden' : 'visible',
               borderRightWidth: 0,
             } as any)
           : Platform.OS === 'ios'
@@ -304,10 +304,10 @@ export const getStyles = (
       collapseToggleInPanel: {
         position: 'absolute',
         top: 12,
-        right: -14,
-        width: 28,
-        height: 28,
-        borderRadius: 8,
+        right: -16,
+        width: 32,
+        height: 32,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: themedColors.surface,

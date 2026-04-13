@@ -1,5 +1,5 @@
 import React from 'react'
-import { Image as ExpoImage } from 'expo-image'
+import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import Feather from '@expo/vector-icons/Feather'
 import {
   Platform,
@@ -102,11 +102,10 @@ function InstagramGalleryItem({
       testID="instagram-preview-image"
       {...dragProps}
     >
-      <ExpoImage
+      <ImageCardMedia
         source={{ uri: imageUrl }}
         style={styles.instagramGalleryImage}
-        contentFit="cover"
-        transition={150}
+        fit="cover"
       />
       <View style={styles.instagramGalleryDragHandle}>
         <Feather name="move" size={iconSize} color={colors.textSecondary} />
@@ -280,11 +279,10 @@ export default function InstagramPublishPanel({
                 onDragEnd,
               } as any)}
             >
-              <ExpoImage
+              <ImageCardMedia
                 source={{ uri: imageUrl }}
                 style={styles.instagramGalleryImage}
-                contentFit="cover"
-                transition={150}
+                fit="cover"
               />
               <View style={styles.instagramGalleryDragHandle}>
                 <Feather name="move" size={18} color={colors.textSecondary} />

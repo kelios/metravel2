@@ -30,7 +30,7 @@ function FAQItemCard({
   isOpen: boolean;
   item: FaqItem;
   onToggle: () => void;
-  styles: ReturnType<typeof StyleSheet.create>;
+  styles: Record<string, any>;
 }) {
   return (
     <View style={[styles.item, isOpen && styles.itemOpen]}>
