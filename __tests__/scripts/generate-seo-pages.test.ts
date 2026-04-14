@@ -587,6 +587,8 @@ describe('travel SSR SEO helpers', () => {
 
     expect(result).toMatch(/<h1[^>]*data-ssg-travel-h1="true"[^>]*>Тропа ведьм<\/h1>/)
     expect((result.match(/<h1\b/gi) || []).length).toBe(1)
+    expect(result).toContain('position:absolute')
+    expect(result).toContain('clip-path:inset(50%)')
   })
 
   it('buildTravelSeoDescription expands too-short content with contextual fallback', () => {

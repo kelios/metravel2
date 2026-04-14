@@ -768,17 +768,21 @@ function injectHiddenH1(baseHtml, headingText) {
   const text = String(headingText || '').trim();
   if (!text) return baseHtml;
 
-  // Visible H1 baked into the static HTML so that Lighthouse anchors the
-  // Largest Contentful Paint to the first paint (~FCP) instead of to the
-  // react-native-web H1 that only appears after JS hydration (~20s on mobile).
-  // It is injected INSIDE #root so React's createRoot removes it on mount
-  // (no duplicate heading for users). Size is tuned to be at least as large
-  // as the final RN Web H1 — once cleared, the post-hydration H1 cannot become
-  // a "larger" candidate, so LCP stays locked to the early SSG paint.
+  // SSR H1 stays in raw HTML for crawlers and no-JS consumers, but it must not
+  // participate in the RN Web flex layout inside #root. Keep it out of flow so
+  // travel pages cannot be squeezed into a narrow right-side column in prod.
   const headingStyle = [
-    'display:block',
-    'margin:16px',
+    'position:absolute',
+    'width:1px',
+    'height:1px',
     'padding:0',
+    'margin:-1px',
+    'overflow:hidden',
+    'clip:rect(0,0,0,0)',
+    'clip-path:inset(50%)',
+    'white-space:nowrap',
+    'border:0',
+    'pointer-events:none',
     'font:700 28px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif',
     'color:#1a1a1a',
     'letter-spacing:-0.01em',
