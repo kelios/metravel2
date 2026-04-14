@@ -84,9 +84,9 @@ async function main() {
     process.exit(2);
   }
 
-  // Keep CI worker count conservative to avoid web export server OOM/connection-refused flakes
-  // in long parallel runs. Local runs can still override with E2E_WORKERS.
-  const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 4);
+  // Keep worker count conservative to avoid long-run Playwright artifact/trace flakes
+  // under local parallel load. Local runs can still opt back up with E2E_WORKERS.
+  const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 2);
   const requestedPort = getNumberEnv('E2E_WEB_PORT', 8085);
   const autoSelectPort = String(process.env.E2E_AUTO_SELECT_PORT || '1') !== '0';
   const selectedPort = autoSelectPort
