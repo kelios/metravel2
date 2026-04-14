@@ -54,6 +54,7 @@ export function QuestDesktopMapPanel({
   toggleMap,
   openCurrentStepInMap,
   copyCurrentStepCoords,
+  activeStepIndex,
 }: SharedProps & {
   currentStep: PointLike
   steps: PointLike[]
@@ -67,6 +68,7 @@ export function QuestDesktopMapPanel({
   toggleMap: () => void
   openCurrentStepInMap: (app: MapApp) => void
   copyCurrentStepCoords: () => void
+  activeStepIndex?: number
 }) {
   return (
     <View
@@ -134,6 +136,7 @@ export function QuestDesktopMapPanel({
           steps={steps}
           height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
           title="Карта квеста"
+          activeStepIndex={activeStepIndex}
         />
       </Suspense>
     </View>

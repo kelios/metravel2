@@ -34,15 +34,24 @@ function numberIcon(L: any, n: number | string, colors: ThemedColors, active = f
     const stroke = active ? colors.primaryDark : colors.warningDark;
     const textColor = active ? colors.textOnPrimary : colors.text;
     const shadow = colors.boxShadows.light ?? '0 2px 6px rgba(0,0,0,.25)';
+    const size = active ? 36 : 28;
+    const fontSize = active ? 14 : 12;
+    const ring = active
+        ? `<div style="position:absolute;inset:-6px;border-radius:9999px;border:2px solid ${colors.primary};opacity:0.4;animation:qpulse 1.8s ease-in-out infinite"></div>`
+        : '';
     const html = `
-    <div style="
-      width:28px;height:28px;border-radius:9999px;
-      background:${bg};border:2px solid ${stroke};
-      color:${textColor};display:flex;align-items:center;justify-content:center;
-      font-weight:800;font-size:12px;line-height:1;box-shadow:${shadow};
-      padding:0 4px
-    ">${String(n)}</div>`;
-    return L.divIcon({ className: 'qmark', html, iconSize: [28, 28], iconAnchor: [14, 14] });
+    <div style="position:relative;width:${size}px;height:${size}px">
+      ${ring}
+      <div style="
+        width:${size}px;height:${size}px;border-radius:9999px;
+        background:${bg};border:2px solid ${stroke};
+        color:${textColor};display:flex;align-items:center;justify-content:center;
+        font-weight:800;font-size:${fontSize}px;line-height:1;box-shadow:${shadow};
+        padding:0 4px;position:relative;z-index:1
+      ">${String(n)}</div>
+    </div>`;
+    const half = size / 2;
+    return L.divIcon({ className: 'qmark', html, iconSize: [size, size], iconAnchor: [half, half] });
 }
 
 function buildGPX(pts: StepPoint[]) {
@@ -125,10 +134,12 @@ function QuestFullMap({
                                          steps,
                                          height = 520,
                                          title = 'Карта квеста',
+                                         activeStepIndex,
                                      }: {
     steps: StepPoint[];
     height?: number;
     title?: string;
+    activeStepIndex?: number;
 }) {
     const [mods, setMods] = useState<Mods | null>(null);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
@@ -143,6 +154,16 @@ function QuestFullMap({
             .map(p => [p.lat, p.lng] as [number, number]);
         return coords.length ? coords : undefined;
     }, [steps]);
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!document.getElementById('qpulse-style')) {
+            const style = document.createElement('style');
+            style.id = 'qpulse-style';
+            style.textContent = '@keyframes qpulse{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.3);opacity:.15}}';
+            document.head.appendChild(style);
+        }
+    }, []);
+
     useEffect(() => {
         if (Platform.OS !== 'web') return;
 
@@ -354,6 +375,29 @@ function QuestFullMap({
         return null;
     };
 
+    // Автоцентрирование на активный шаг при смене
+    const PanToActive: React.FC<{ index?: number }> = ({ index }) => {
+        const map = useMap();
+        const prevIndex = useRef(index);
+
+        useEffect(() => {
+            if (index == null || !map || index === prevIndex.current) {
+                prevIndex.current = index;
+                return;
+            }
+            prevIndex.current = index;
+
+            const pt = points[index];
+            if (!pt || !Number.isFinite(pt.lat) || !Number.isFinite(pt.lng)) return;
+
+            try {
+                map.panTo([pt.lat, pt.lng], { animate: true, duration: 0.4 });
+            } catch { /* map not ready */ }
+        }, [index, map]);
+
+        return null;
+    };
+
     return (
         <View style={[styles.wrap, { height }]}>
             {/* Mobile-friendly toolbar */}
@@ -436,6 +480,7 @@ function QuestFullMap({
                     doubleClickZoom={false}
                 >
                     <FitBounds />
+                    <PanToActive index={activeStepIndex} />
                     <TileLayer
                         attribution="&copy; OpenStreetMap"
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -453,7 +498,12 @@ function QuestFullMap({
                             <Marker
                                 key={`${gp.lat}-${gp.lng}-${idx}`}
                                 position={[gp.lat, gp.lng]}
-                                icon={numberIcon(L, gp.indexes.join(','), colors, gp.indexes.includes(1))}
+                                icon={numberIcon(
+                                    L,
+                                    gp.indexes.join(','),
+                                    colors,
+                                    activeStepIndex != null && gp.indexes.includes(activeStepIndex + 1),
+                                )}
                             >
                                 <Popup>
                                     <View style={{ minWidth: 180 }}>

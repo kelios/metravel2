@@ -51,8 +51,8 @@ export function QuestStepPill({
         compact && styles.compactStepPill,
         styles.stepPillUnlocked,
         narrow && styles.stepPillNarrow,
+        done && !active && styles.stepPillDone,
         active && styles.stepPillActive,
-        done && styles.stepPillDone,
         !unlocked && styles.stepPillLocked,
       ]}
       hitSlop={6}
@@ -97,8 +97,8 @@ export function QuestStepDot({
       style={[
         styles.stepDotMini,
         unlocked && styles.stepDotMiniUnlocked,
+        done && !active && styles.stepDotMiniDone,
         active && styles.stepDotMiniActive,
-        done && styles.stepDotMiniDone,
         !unlocked && styles.stepDotMiniLocked,
         smallOverride,
       ]}

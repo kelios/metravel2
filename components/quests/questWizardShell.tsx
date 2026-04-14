@@ -1,8 +1,6 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-
-import ImageCardMedia from '@/components/ui/ImageCardMedia'
 
 import {
   QuestFinaleDot,
@@ -39,7 +37,6 @@ type NavigationSharedProps = {
 
 type QuestCompactSidebarProps = NavigationSharedProps & {
   title: string
-  coverUri?: string
   progress: number
   completedCount: number
   stepsCount: number
@@ -50,7 +47,6 @@ type QuestCompactSidebarProps = NavigationSharedProps & {
 
 type QuestHeaderPanelProps = NavigationSharedProps & {
   title: string
-  coverUri?: string
   progress: number
   completedCount: number
   stepsCount: number
@@ -61,29 +57,63 @@ type QuestHeaderPanelProps = NavigationSharedProps & {
   onPrintDownload: () => void
 }
 
+function ActiveScrollNav({
+  currentIndex,
+  showFinaleOnly,
+  screenW,
+  style,
+  contentContainerStyle,
+  children,
+}: {
+  currentIndex: number
+  showFinaleOnly: boolean
+  screenW: number
+  style?: any
+  contentContainerStyle?: any
+  children: React.ReactNode
+}) {
+  const scrollRef = useRef<ScrollView>(null)
+  const activeIdx = showFinaleOnly ? -1 : currentIndex
+
+  useEffect(() => {
+    if (!scrollRef.current) return
+    const pillW = screenW < 600 ? 35 : 130
+    const offset = Math.max(0, activeIdx * pillW - screenW / 2 + pillW / 2)
+    scrollRef.current.scrollTo({ x: offset, animated: true })
+  }, [activeIdx, screenW])
+
+  return (
+    <ScrollView
+      ref={scrollRef}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={style}
+      contentContainerStyle={contentContainerStyle}
+    >
+      {children}
+    </ScrollView>
+  )
+}
+
 function QuestProgressSummary({
   styles,
   progress,
   completedCount,
   stepsCount,
-  isMobile,
 }: {
   styles: any
   progress: number
   completedCount: number
   stepsCount: number
-  isMobile?: boolean
 }) {
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
-      {!isMobile && (
-        <Text style={styles.progressText}>
-          {completedCount} / {stepsCount} завершено
-        </Text>
-      )}
+      <Text style={styles.progressText}>
+        {completedCount} / {stepsCount}
+      </Text>
     </View>
   )
 }
@@ -93,7 +123,6 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     colors,
     styles,
     title,
-    coverUri,
     progress,
     completedCount,
     stepsCount,
@@ -113,26 +142,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
   return (
     <View style={styles.compactSidebar}>
       <View style={styles.compactSidebarHeader}>
-        <View style={styles.compactSidebarIdentity}>
-          {coverUri ? (
-            <View style={styles.compactSidebarCover}>
-              <ImageCardMedia
-                src={coverUri}
-                alt={`Обложка квеста ${title}`}
-                height={88}
-                width={88}
-                fit="contain"
-                blurBackground
-                allowCriticalWebBlur
-                borderRadius={18}
-                style={styles.compactSidebarCover}
-                priority="high"
-                loading="eager"
-              />
-            </View>
-          ) : null}
-          <Text style={styles.compactSidebarTitle} numberOfLines={2}>{title}</Text>
-        </View>
+        <Text style={styles.compactSidebarTitle} numberOfLines={2}>{title}</Text>
         <View style={styles.compactSidebarActions}>
           <Pressable
             onPress={onPrintDownload}
@@ -143,7 +153,14 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
           >
             <Feather name="download" size={16} color={colors.textMuted} />
           </Pressable>
-          <Pressable onPress={onReset} style={styles.resetButton} hitSlop={6}>
+          <Pressable
+            onPress={onReset}
+            style={styles.resetButton}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Сбросить прогресс"
+          >
+            <Feather name="rotate-ccw" size={13} color={colors.textMuted} />
             <Text style={styles.resetText}>Сбросить</Text>
           </Pressable>
         </View>
@@ -212,7 +229,6 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     colors,
     styles,
     title,
-    coverUri,
     progress,
     completedCount,
     stepsCount,
@@ -237,32 +253,10 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     <View style={styles.header}>
       <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
         <View style={styles.headerIdentity}>
-          {coverUri && !isMobile ? (
-            <View style={styles.headerCover}>
-              <ImageCardMedia
-                src={coverUri}
-                alt={`Обложка квеста ${title}`}
-                height={88}
-                width={128}
-                fit="contain"
-                blurBackground
-                allowCriticalWebBlur
-                borderRadius={18}
-                style={styles.headerCover}
-                priority="high"
-                loading="eager"
-              />
-            </View>
-          ) : null}
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[styles.title, isMobile && styles.titleMobile]} numberOfLines={1}>{title}</Text>
-            {isMobile && (
-              <Text style={styles.progressCompact}>{completedCount} / {stepsCount}</Text>
-            )}
-          </View>
+          <Text style={[styles.title, isMobile && styles.titleMobile]} numberOfLines={1}>{title}</Text>
         </View>
         <View style={styles.headerActionRow}>
-          {isMobile && Platform.OS === 'web' && (
+          {Platform.OS === 'web' && (
             <Pressable
               onPress={onPrintDownload}
               style={styles.compactIconButton}
@@ -273,7 +267,14 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
               <Feather name="download" size={16} color={colors.textMuted} />
             </Pressable>
           )}
-          <Pressable onPress={onReset} style={styles.resetButton} hitSlop={6}>
+          <Pressable
+            onPress={onReset}
+            style={styles.resetButton}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel="Сбросить прогресс"
+          >
+            <Feather name="rotate-ccw" size={13} color={colors.textMuted} />
             <Text style={styles.resetText}>Сбросить</Text>
           </Pressable>
         </View>
@@ -284,7 +285,6 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
         progress={progress}
         completedCount={completedCount}
         stepsCount={stepsCount}
-        isMobile={isMobile}
       />
 
       {wideDesktop ? (
@@ -319,11 +319,12 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
           />
         </View>
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
+        <ActiveScrollNav
+          currentIndex={currentIndex}
+          showFinaleOnly={showFinaleOnly}
           style={styles.stepsNavigation}
           contentContainerStyle={{ paddingRight: 8, paddingLeft: isMobile ? 6 : 2 }}
+          screenW={screenW}
         >
           {allSteps.map((step, index) => {
             const isActive = index === currentIndex && !showFinaleOnly
@@ -382,16 +383,14 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
               onPress={onShowFinale}
             />
           )}
-        </ScrollView>
+        </ActiveScrollNav>
       )}
 
-      {!isMobile && (compactNav ? (
+      {!isMobile && compactNav && (
         <Text style={styles.navActiveTitle} numberOfLines={1}>
           {showFinaleOnly ? 'Финал' : currentIndex === 0 ? 'Старт' : allSteps[currentIndex]?.title}
         </Text>
-      ) : (
-        <Text style={styles.navHint}>Нажмите на шаг (или «Финал»), чтобы перейти</Text>
-      ))}
+      )}
 
     </View>
   )
