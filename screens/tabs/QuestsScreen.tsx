@@ -19,6 +19,7 @@ import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
 import QuestsContentPanel from './QuestsContentPanel';
 import QuestsSidebar from './QuestsSidebar';
 import type { City, NearbyCity, QuestMeta } from './questsShared';
+import { resolveInitialQuestCitySelection } from './questLocationSelection';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 
 const COUNTRY_NAMES: Record<string, string> = {
@@ -762,6 +763,7 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
 
 export default function QuestsScreen() {
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+    const [selectedCityHydrated, setSelectedCityHydrated] = useState(false);
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -802,7 +804,11 @@ export default function QuestsScreen() {
             try {
                 const saved = await AsyncStorage.getItem(STORAGE_SELECTED_CITY);
                 setSelectedCityId(saved || null);
-            } catch { setSelectedCityId(null); }
+            } catch {
+                setSelectedCityId(null);
+            } finally {
+                setSelectedCityHydrated(true);
+            }
         })();
     }, []);
 
@@ -830,12 +836,7 @@ export default function QuestsScreen() {
     // Auto-detect nearest city by geolocation on first load (if no saved city)
     const [geoAutoDetectDone, setGeoAutoDetectDone] = useState(false);
     useEffect(() => {
-        if (!dataLoaded || !CITIES.length || geoAutoDetectDone) return;
-        if (selectedCityId) {
-            // User has a saved city, skip auto-detect
-            setGeoAutoDetectDone(true);
-            return;
-        }
+        if (!dataLoaded || !selectedCityHydrated || !CITIES.length || geoAutoDetectDone) return;
         
         let cancelled = false;
         (async () => {
@@ -844,10 +845,17 @@ export default function QuestsScreen() {
                 // Check if we already have permission (don't prompt on first load)
                 const { status } = await Location.getForegroundPermissionsAsync();
                 if (status !== 'granted' || cancelled) {
-                    // No permission, fall back to first city
                     if (!cancelled) {
+                        const nextCityId = resolveInitialQuestCitySelection({
+                            cities: CITIES,
+                            selectedCityId,
+                            userLoc: null,
+                            nearbyId: NEARBY_ID,
+                        });
                         setGeoAutoDetectDone(true);
-                        void handleSelectCity(CITIES[0]?.id ?? '');
+                        if (nextCityId && nextCityId !== selectedCityId) {
+                            void handleSelectCity(nextCityId);
+                        }
                     }
                     return;
                 }
@@ -860,33 +868,38 @@ export default function QuestsScreen() {
                 
                 const userLat = pos.coords.latitude;
                 const userLng = pos.coords.longitude;
-                
-                // Find nearest city
-                let nearestCity = CITIES[0];
-                let minDist = Infinity;
-                for (const city of CITIES) {
-                    if (!city.lat || !city.lng) continue;
-                    const dist = haversineKm(userLat, userLng, city.lat, city.lng);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        nearestCity = city;
+
+                if (!cancelled) {
+                    const detectedUserLoc = { lat: userLat, lng: userLng };
+                    const nextCityId = resolveInitialQuestCitySelection({
+                        cities: CITIES,
+                        selectedCityId,
+                        userLoc: detectedUserLoc,
+                        nearbyId: NEARBY_ID,
+                    });
+                    setUserLoc(detectedUserLoc);
+                    setGeoAutoDetectDone(true);
+                    if (nextCityId && nextCityId !== selectedCityId) {
+                        void handleSelectCity(nextCityId);
                     }
                 }
-                
-                if (!cancelled && nearestCity) {
-                    setGeoAutoDetectDone(true);
-                    void handleSelectCity(nearestCity.id);
-                }
             } catch {
-                // Fallback to first city on error
                 if (!cancelled) {
+                    const nextCityId = resolveInitialQuestCitySelection({
+                        cities: CITIES,
+                        selectedCityId,
+                        userLoc: null,
+                        nearbyId: NEARBY_ID,
+                    });
                     setGeoAutoDetectDone(true);
-                    void handleSelectCity(CITIES[0]?.id ?? '');
+                    if (nextCityId && nextCityId !== selectedCityId) {
+                        void handleSelectCity(nextCityId);
+                    }
                 }
             }
         })();
         return () => { cancelled = true; };
-    }, [CITIES, dataLoaded, geoAutoDetectDone, handleSelectCity, selectedCityId]);
+    }, [CITIES, dataLoaded, geoAutoDetectDone, handleSelectCity, selectedCityHydrated, selectedCityId]);
 
     // Auto-select first city if current is invalid
     useEffect(() => {

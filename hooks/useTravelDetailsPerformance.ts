@@ -80,6 +80,10 @@ export function useTravelDetailsPerformance({
   isLoading,
 }: UseTravelDetailsPerformanceArgs): UseTravelDetailsPerformanceReturn {
   const travelId = travel?.id
+  const hasHeroMedia = useMemo(() => {
+    if (!travel) return false
+    return Array.isArray(travel.gallery) && travel.gallery.length > 0
+  }, [travel])
   const [lcpLoaded, setLcpLoaded] = useState(false)
   const [sliderReady, setSliderReady] = useState(Platform.OS !== 'web')
   const [deferAllowed, setDeferAllowed] = useState(false)
@@ -134,6 +138,11 @@ export function useTravelDetailsPerformance({
       setPostLcpRuntimeReady(false)
       return
     }
+    if (!hasHeroMedia) {
+      setHeroEnhancersReady(true)
+      setPostLcpRuntimeReady(true)
+      return
+    }
     if (!lcpLoaded) {
       setHeroEnhancersReady(false)
       setPostLcpRuntimeReady(false)
@@ -167,7 +176,7 @@ export function useTravelDetailsPerformance({
       cleanupHeroIdle?.()
       cleanupRuntimeIdle?.()
     }
-  }, [isLoading, lcpLoaded, travelId])
+  }, [hasHeroMedia, isLoading, lcpLoaded, travelId])
 
   useEffect(() => {
     if (Platform.OS === 'web') {

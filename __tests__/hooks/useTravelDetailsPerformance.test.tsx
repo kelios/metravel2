@@ -50,6 +50,11 @@ const initPerformanceMonitoring = jest.requireMock('@/utils/performance')
 
 describe('useTravelDetailsPerformance', () => {
   const originalOS = Platform.OS
+  const heroTravel = {
+    id: 1,
+    name: 'Demo travel',
+    gallery: [{ id: 'hero-1', url: 'https://example.com/hero.jpg' }],
+  } as any
 
   beforeEach(() => {
     Platform.OS = 'web'
@@ -105,7 +110,7 @@ describe('useTravelDetailsPerformance', () => {
   it('preloads slider runtime automatically after LCP', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
-        travel: { id: 1, name: 'Demo travel' } as any,
+        travel: heroTravel,
         isMobile: false,
         isLoading: false,
       })
@@ -129,7 +134,7 @@ describe('useTravelDetailsPerformance', () => {
   it('keeps post-LCP runtime blocked until LCP is ready', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
-        travel: { id: 1, name: 'Demo travel' } as any,
+        travel: heroTravel,
         isMobile: false,
         isLoading: false,
       })
@@ -140,10 +145,25 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.postLcpRuntimeReady).toBe(false)
   })
 
+  it('unblocks the main runtime immediately when the travel has no hero gallery', () => {
+    const { result } = renderHook(() =>
+      useTravelDetailsPerformance({
+        travel: { id: 503, name: 'No gallery travel', gallery: [] } as any,
+        isMobile: false,
+        isLoading: false,
+      })
+    )
+
+    expect(result.current.deferAllowed).toBe(true)
+    expect(result.current.heroEnhancersReady).toBe(true)
+    expect(result.current.postLcpRuntimeReady).toBe(true)
+    expect(result.current.lcpLoaded).toBe(false)
+  })
+
   it('reveals hero enhancers and post-LCP runtime automatically after the idle window', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
-        travel: { id: 1, name: 'Demo travel' } as any,
+        travel: heroTravel,
         isMobile: false,
         isLoading: false,
       })
@@ -179,7 +199,7 @@ describe('useTravelDetailsPerformance', () => {
   it('reveals hero enhancers before post-LCP runtime in the idle-first sequence', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({
-        travel: { id: 1, name: 'Demo travel' } as any,
+        travel: heroTravel,
         isMobile: false,
         isLoading: false,
       })
