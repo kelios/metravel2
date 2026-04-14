@@ -145,6 +145,8 @@ async function waitForMessagesPage(page: Page) {
 // ===========================================================================
 
 test.describe('Messages @smoke', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test('unauthenticated user sees login prompt on /messages', async ({ page }) => {
     await page.context().clearCookies();
     await page.addInitScript(() => {
@@ -238,6 +240,8 @@ test.describe('Messages @smoke', () => {
 // ===========================================================================
 
 test.describe('Messages — Thread List', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
@@ -319,6 +323,8 @@ test.describe('Messages — Thread List', () => {
 // ===========================================================================
 
 test.describe('Messages — Chat View', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
@@ -457,6 +463,8 @@ test.describe('Messages — Chat View', () => {
 // ===========================================================================
 
 test.describe('Messages — Deep Links', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
@@ -519,6 +527,8 @@ test.describe('Messages — Deep Links', () => {
 // ===========================================================================
 
 test.describe('Messages — New Conversation', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
@@ -641,6 +651,8 @@ test.describe('Messages — New Conversation', () => {
 // ===========================================================================
 
 test.describe('Messages — Desktop Layout', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
@@ -714,6 +726,8 @@ test.describe('Messages — Desktop Layout', () => {
 // ===========================================================================
 
 test.describe('Messages — Mobile Layout', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
@@ -808,6 +822,8 @@ test.describe('Messages — Mobile Layout', () => {
 // ===========================================================================
 
 test.describe('Messages — Accessibility', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);

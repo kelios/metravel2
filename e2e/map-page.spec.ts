@@ -167,6 +167,8 @@ const gotoMapWithRecovery = async (page: any) => {
 };
 
 test.describe('@smoke Map Page (/map) - smoke e2e', () => {
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page }) => {
     installNoConsoleErrorsGuard(page);
     await installTileMock(page);
@@ -341,7 +343,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
 
     // Markers may load async after API returns.
-    const marker = page.locator('.leaflet-marker-icon').first();
+    const marker = page.locator('.metravel-pin-marker').first();
     const markerVisible = await marker.isVisible({ timeout: 60_000 }).catch(() => false);
     if (!markerVisible) return;
 

@@ -411,6 +411,13 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         } catch {
           // noop
         }
+        if (e?.target?.openPopup) {
+          try {
+            e.target.openPopup()
+          } catch {
+            // noop
+          }
+        }
         onMarkerClick?.(point, coords)
       })
 

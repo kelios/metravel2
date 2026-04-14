@@ -207,6 +207,10 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   align-items: center;
   justify-content: center;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: stretch;
   position: relative;
   border-radius: 14px;
   overflow: hidden;
@@ -331,6 +335,10 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   align-items: center;
   justify-content: center;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: stretch;
   position: relative;
   border-radius: 14px;
   overflow: hidden;
@@ -423,6 +431,10 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   align-items: center;
   justify-content: center;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: stretch;
   position: relative;
   border-radius: 14px;
   overflow: hidden;
@@ -492,6 +504,10 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   align-items: center;
   justify-content: center;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: stretch;
   position: relative;
   border-radius: 14px;
   overflow: hidden;
@@ -519,6 +535,9 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   flex: 1;
   min-width: 0;
   min-height: 160px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   position: relative;
   border-radius: 14px;
   overflow: hidden;
@@ -650,6 +669,10 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   align-items: center;
   justify-content: center;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  justify-self: stretch;
   position: relative;
   border-radius: 14px;
   overflow: hidden;
@@ -997,8 +1020,68 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
     min-height: 180px;
     max-height: 240px;
   }
-  .${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
-  .${WEB_RICH_TEXT_CLASS} .instagram-media {
+.${WEB_RICH_TEXT_CLASS} .instagram-wrapper,
+.${WEB_RICH_TEXT_CLASS} .instagram-media {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+}
+
+@media (max-width: 420px) {
+  .${WEB_RICH_TEXT_CLASS} .img-row-2,
+  .${WEB_RICH_TEXT_CLASS} .img-row-2-mixed,
+  .${WEB_RICH_TEXT_CLASS} .img-stack-landscape,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-balanced,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-portraits,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-mixed,
+  .${WEB_RICH_TEXT_CLASS} .img-grid,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-balanced,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-quilt,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-grid,
+  .${WEB_RICH_TEXT_CLASS} .img-column-portraits,
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-quartet,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-portrait {
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .img-grid-mixed-stack {
+    flex-direction: column;
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-grid > p,
+  .${WEB_RICH_TEXT_CLASS} .img-column-portraits > p,
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych > p,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-quartet > p {
+    grid-column: auto !important;
+    grid-row: auto !important;
+    width: 100% !important;
+    transform: none !important;
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .img-row-2 p,
+  .${WEB_RICH_TEXT_CLASS} .img-grid p,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-quilt > p,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-grid > p,
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid > p {
+    aspect-ratio: auto;
+    min-height: 0;
+  }
+
+  .${WEB_RICH_TEXT_CLASS} .img-row-2 img,
+  .${WEB_RICH_TEXT_CLASS} .img-grid img,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-quilt img,
+  .${WEB_RICH_TEXT_CLASS} .img-pair-grid img,
+  .${WEB_RICH_TEXT_CLASS} .img-column-portraits img,
+  .${WEB_RICH_TEXT_CLASS} .img-editorial-grid img,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-triptych img,
+  .${WEB_RICH_TEXT_CLASS} .img-portrait-quartet img,
+  .${WEB_RICH_TEXT_CLASS} .img-grid-portrait img {
     width: 100% !important;
     max-width: 100% !important;
   }
