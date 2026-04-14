@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react'
-import { Animated, Platform } from 'react-native'
+import { Animated } from 'react-native'
 
-import { DEFAULT_OG_IMAGE_PATH, buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
-import {
-  buildTravelSeoTitle,
-  createTravelStructuredData,
-  getTravelSeoDescription,
-} from '@/utils/travelSeo'
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
+import {
+  getTravelDetailsChromeReadyState,
+  getTravelDetailsHeadKey,
+  getTravelDetailsScrollViewStyle,
+  getTravelDetailsSeoViewModel,
+  getTravelDetailsWrapperStyle,
+} from '@/components/travel/details/hooks/travelDetailsContainerViewModel'
 
 type UseTravelDetailsContainerViewModelArgs = {
   closeMenu: () => void
@@ -49,52 +50,20 @@ export function useTravelDetailsContainerViewModel({
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel])
 
   const headKey = useMemo(
-    () => `travel-${slug ?? travel?.id ?? 'unknown'}`,
+    () => getTravelDetailsHeadKey(slug, travel?.id),
     [slug, travel?.id]
   )
 
   const seo = useMemo(() => {
-    const title = travel?.name
-      ? buildTravelSeoTitle(travel.name)
-      : slug
-        ? buildTravelSeoTitle(slug.replace(/-/g, ' '))
-        : 'Путешествие | Metravel'
-    const desc = getTravelSeoDescription(travel?.description)
-    const canonical =
-      typeof travel?.slug === 'string' && travel.slug
-        ? buildCanonicalUrl(`/travels/${travel.slug}`)
-        : typeof travel?.id === 'number'
-          ? buildCanonicalUrl(`/travels/${travel.id}`)
-          : slug
-            ? buildCanonicalUrl(`/travels/${slug}`)
-            : undefined
-    const rawFirst = travel?.gallery?.[0] || travel?.travel_image_thumb_url
-    const firstUrl = rawFirst
-      ? typeof rawFirst === 'string'
-        ? rawFirst
-        : rawFirst.url
-      : undefined
-    const absImage = firstUrl
-      ? firstUrl.startsWith('http')
-        ? firstUrl.replace(/^http:\/\//, 'https://')
-        : buildOgImageUrl(firstUrl)
-      : buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)
-    const structuredData = createTravelStructuredData(travel)
-
-    return {
-      readyTitle: title,
-      readyDesc: desc,
-      canonicalUrl: canonical,
-      readyImage: absImage,
-      jsonLd: structuredData,
-    }
+    return getTravelDetailsSeoViewModel(travel, slug)
   }, [travel, slug])
 
-  const forceDeferMount = !!forceOpenKey
-  const criticalChromeReady =
-    Platform.OS !== 'web' || lcpLoaded || forceDeferMount || isWebAutomation
-  const deferredChromeReady =
-    postLcpRuntimeReady || forceDeferMount || isWebAutomation
+  const { criticalChromeReady, deferredChromeReady } = getTravelDetailsChromeReadyState({
+    forceOpenKey,
+    isWebAutomation,
+    lcpLoaded,
+    postLcpRuntimeReady,
+  })
 
   const scrollToWithMenuClose = useCallback(
     (key: string) => {
@@ -134,20 +103,13 @@ export function useTravelDetailsContainerViewModel({
   )
 
   const wrapperStyle = useMemo(
-    () => [
-      styles.wrapper,
-      { backgroundColor: themedBackground },
-      Platform.OS === 'web' &&
-        ({
-          backgroundImage: `linear-gradient(180deg, ${themedBackground} 0%, ${themedBackgroundSecondary} 100%)`,
-        } as any),
-    ],
-    [styles.wrapper, themedBackground, themedBackgroundSecondary]
+    () => getTravelDetailsWrapperStyle({ styles, themedBackground, themedBackgroundSecondary }),
+    [styles, themedBackground, themedBackgroundSecondary]
   )
 
   const scrollViewStyle = useMemo(
-    () => [styles.scrollView, isMobile && { width: '100%' as any }],
-    [styles.scrollView, isMobile]
+    () => getTravelDetailsScrollViewStyle(styles, isMobile),
+    [styles, isMobile]
   )
 
   return {

@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform } from 'react-native'
-import * as Location from 'expo-location'
 
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { isValidCoordinate } from '@/utils/coordinateValidator'
 
 import type { Coordinates } from './types'
+
+let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null
+
+async function loadExpoLocation() {
+  if (!expoLocationModulePromise) {
+    expoLocationModulePromise = import('expo-location')
+  }
+  return expoLocationModulePromise
+}
 
 type UseMapUserLocationArgs = {
   L: any
@@ -66,6 +74,7 @@ export function useMapUserLocation({
       geoRequestedRef.current = true
       ;(async () => {
         try {
+          const Location = await loadExpoLocation()
           const { status } = await Location.requestForegroundPermissionsAsync()
           if (status !== 'granted' || cancelled) {
             console.warn('[Map] Location permission not granted')

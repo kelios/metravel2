@@ -4,6 +4,51 @@ import { InteractionManager, Platform } from 'react-native'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
+const TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS = {
+  author: {
+    fallbackDelay: 500,
+    priority: 'high' as const,
+    rootMargin: '200px',
+    threshold: 0.1,
+    traceKey: 'deferred:author:visible',
+  },
+  comments: {
+    fallbackDelay: 950,
+    priority: 'low' as const,
+    rootMargin: '200px',
+    threshold: 0.1,
+    traceKey: 'deferred:comments:visible',
+  },
+  footer: {
+    fallbackDelay: 1000,
+    priority: 'low' as const,
+    rootMargin: '200px',
+    threshold: 0.1,
+    traceKey: 'deferred:footer:visible',
+  },
+  map: {
+    fallbackDelay: 800,
+    priority: 'low' as const,
+    rootMargin: '200px',
+    threshold: 0.1,
+    traceKey: 'deferred:map:visible',
+  },
+  rating: {
+    fallbackDelay: 600,
+    priority: 'high' as const,
+    rootMargin: '200px',
+    threshold: 0.1,
+    traceKey: 'deferred:rating:visible',
+  },
+  sidebar: {
+    fallbackDelay: 900,
+    priority: 'low' as const,
+    rootMargin: '200px',
+    threshold: 0.1,
+    traceKey: 'deferred:sidebar:visible',
+  },
+} as const
+
 type UseTravelDeferredSectionsModelArgs = {
   travelId?: number
 }
@@ -12,55 +57,38 @@ export function useTravelDeferredSectionsModel({
   travelId,
 }: UseTravelDeferredSectionsModelArgs) {
   const [canRenderHeavy, setCanRenderHeavy] = useState(Platform.OS === 'web')
-  const isWebAutomation =
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    Boolean((navigator as unknown as Record<string, unknown>).webdriver)
-
   const tdTrace = useTdTrace()
+  const useDeferredProgressiveSection = (config: (typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS)[keyof typeof TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS]) => {
+    const section = useProgressiveLoad({
+      ...config,
+      enabled: canRenderHeavy,
+    })
 
-  const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 800,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 900,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 950,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 1000,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useProgressiveLoad({
-    priority: 'high',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 500,
-    enabled: canRenderHeavy,
-  })
-  const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useProgressiveLoad({
-    priority: 'high',
-    rootMargin: '200px',
-    threshold: 0.1,
-    fallbackDelay: 600,
-    enabled: canRenderHeavy,
-  })
+    useEffect(() => {
+      if (section.shouldLoad) tdTrace(config.traceKey)
+    }, [config.traceKey, section.shouldLoad])
+
+    return section
+  }
+
+  const { shouldLoad: shouldLoadMap, setElementRef: setMapRef } = useDeferredProgressiveSection(
+    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.map,
+  )
+  const { shouldLoad: shouldLoadSidebar, setElementRef: setSidebarRef } = useDeferredProgressiveSection(
+    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.sidebar,
+  )
+  const { shouldLoad: shouldLoadComments, setElementRef: setCommentsRef } = useDeferredProgressiveSection(
+    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.comments,
+  )
+  const { shouldLoad: shouldLoadFooter, setElementRef: setFooterRef } = useDeferredProgressiveSection(
+    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.footer,
+  )
+  const { shouldLoad: shouldLoadAuthorSection, setElementRef: setAuthorSectionRef } = useDeferredProgressiveSection(
+    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.author,
+  )
+  const { shouldLoad: shouldLoadRating, setElementRef: setRatingRef } = useDeferredProgressiveSection(
+    TRAVEL_DEFERRED_SECTION_LOAD_CONFIGS.rating,
+  )
 
   useEffect(() => {
     tdTrace('deferred:mount', { travelId })
@@ -77,25 +105,8 @@ export function useTravelDeferredSectionsModel({
     if (canRenderHeavy) tdTrace('deferred:heavy:enabled')
   }, [canRenderHeavy, tdTrace])
 
-  useEffect(() => {
-    if (shouldLoadMap) tdTrace('deferred:map:visible')
-  }, [shouldLoadMap, tdTrace])
-
-  useEffect(() => {
-    if (shouldLoadSidebar) tdTrace('deferred:sidebar:visible')
-  }, [shouldLoadSidebar, tdTrace])
-
-  useEffect(() => {
-    if (shouldLoadComments) tdTrace('deferred:comments:visible')
-  }, [shouldLoadComments, tdTrace])
-
-  useEffect(() => {
-    if (shouldLoadFooter) tdTrace('deferred:footer:visible')
-  }, [shouldLoadFooter, tdTrace])
-
   return {
     canRenderHeavy,
-    isWebAutomation,
     setAuthorSectionRef,
     setCommentsRef,
     setFooterRef,

@@ -1,4 +1,5 @@
-import { appendPlainTextToHtml, plainTextToHtml, sanitizeHtml, stripBase64Images } from '@/utils/htmlUtils'
+import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize'
+import { appendPlainTextToHtml, plainTextToHtml, stripBase64Images } from '@/utils/htmlUtils'
 
 describe('stripBase64Images', () => {
   it('removes img tags with base64 data-URI src', () => {
@@ -58,18 +59,18 @@ describe('htmlUtils plain text helpers', () => {
 describe('htmlUtils sanitizeHtml', () => {
   it('removes script tags and unsafe attributes', () => {
     const html = '<p onclick="alert(1)">Safe</p><img src="https://example.com/a.jpg" onerror="alert(1)" />'
-    expect(sanitizeHtml(html)).toBe('<p>Safe</p><img src="https://example.com/a.jpg" />')
+    expect(sanitizeArticleEditorHtml(html)).toBe('<p>Safe</p><img src="https://example.com/a.jpg" />')
   })
 
   it('keeps supported video iframe embeds with the ql-video class', () => {
     const html = '<iframe class="ql-video extra" src="https://www.youtube.com/embed/abc" allowfullscreen="true"></iframe>'
-    expect(sanitizeHtml(html)).toBe(
+    expect(sanitizeArticleEditorHtml(html)).toBe(
       '<iframe class="ql-video" src="https://www.youtube.com/embed/abc" allowfullscreen="true"></iframe>',
     )
   })
 
   it('drops iframe embeds from unsupported hosts', () => {
     const html = '<p>Before</p><iframe class="ql-video" src="https://evil.example/embed/x"></iframe><p>After</p>'
-    expect(sanitizeHtml(html)).toBe('<p>Before</p><p>After</p>')
+    expect(sanitizeArticleEditorHtml(html)).toBe('<p>Before</p><p>After</p>')
   })
 })

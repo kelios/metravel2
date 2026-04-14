@@ -1,29 +1,43 @@
-import React, { useEffect, Suspense, lazy, useState, memo, useMemo, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Platform, RefreshControl } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/context/AuthContext';
-import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
-import { useResponsive } from '@/hooks/useResponsive';
-import { useThemedColors } from '@/hooks/useTheme';
-import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
-import HomeHero from './HomeHero';
-import HomeFinalCTA from './HomeFinalCTA';
-import HomeFavoritesHistorySection from './HomeFavoritesHistorySection';
-import FadeInSection from '@/components/ui/FadeInSection';
-import { queueAnalyticsEvent } from '@/utils/analytics';
-import { hapticImpact } from '@/utils/haptics';
-import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
-import { HomeInspirationSection } from './HomeInspirationSection';
-import { fetchTravelsRandom, fetchTravelsOfMonth } from '@/api/map';
+import React, {
+  useEffect,
+  Suspense,
+  lazy,
+  useState,
+  memo,
+  useMemo,
+  useCallback,
+} from 'react'
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  RefreshControl,
+} from 'react-native'
+import { useIsFocused } from '@react-navigation/native'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import { useResponsive } from '@/hooks/useResponsive'
+import { useThemedColors } from '@/hooks/useTheme'
+import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
+import HomeHero from './HomeHero'
+import HomeFinalCTA from './HomeFinalCTA'
+import HomeFavoritesHistorySection from './HomeFavoritesHistorySection'
+import FadeInSection from '@/components/ui/FadeInSection'
+import { queueAnalyticsEvent } from '@/utils/analytics'
+import { hapticImpact } from '@/utils/haptics'
+import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries'
+import { HomeInspirationSection } from './HomeInspirationSection'
+import { fetchTravelsRandom, fetchTravelsOfMonth } from '@/api/map'
 
-const isWeb = Platform.OS === 'web';
-const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 420 } as const;
-const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const;
+const isWeb = Platform.OS === 'web'
+const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 420 } as const
+const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const
 
-const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
-const HomeFAQSection = lazy(() => import('./HomeFAQSection'));
-const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
+const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'))
+const HomeFAQSection = lazy(() => import('./HomeFAQSection'))
+const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'))
 
 type PageSectionProps = {
   children: React.ReactNode
@@ -46,24 +60,33 @@ function PageSection({
 }
 
 const SectionSkeleton = memo(({ hydrated }: { hydrated: boolean }) => {
-  const { isSmallPhone, isPhone } = useResponsive();
-  const isMobile = hydrated ? isSmallPhone || isPhone : false;
+  const { isSmallPhone, isPhone } = useResponsive()
+  const isMobile = hydrated ? isSmallPhone || isPhone : false
 
   return (
     <ResponsiveContainer padding>
       <ResponsiveStack direction="vertical" gap={24}>
-        <SkeletonLoader width={isMobile ? 200 : 300} height={isMobile ? 28 : 40} borderRadius={8} />
+        <SkeletonLoader
+          width={isMobile ? 200 : 300}
+          height={isMobile ? 28 : 40}
+          borderRadius={8}
+        />
         <ResponsiveStack direction="responsive" gap={20} wrap>
           {Array.from({ length: 3 }).map((_, i) => (
-            <SkeletonLoader key={i} width={isMobile ? '100%' : '30%'} height={280} borderRadius={12} />
+            <SkeletonLoader
+              key={i}
+              width={isMobile ? '100%' : '30%'}
+              height={280}
+              borderRadius={12}
+            />
           ))}
         </ResponsiveStack>
       </ResponsiveStack>
     </ResponsiveContainer>
-  );
-});
+  )
+})
 
-SectionSkeleton.displayName = 'SectionSkeleton';
+SectionSkeleton.displayName = 'SectionSkeleton'
 
 const HowItWorksFallback = memo(
   ({
@@ -128,10 +151,10 @@ const HowItWorksFallback = memo(
         ))}
       </View>
     </View>
-  )
+  ),
 )
 
-HowItWorksFallback.displayName = 'HowItWorksFallback';
+HowItWorksFallback.displayName = 'HowItWorksFallback'
 
 const FaqFallback = memo(
   ({
@@ -183,43 +206,46 @@ const FaqFallback = memo(
         </View>
       </View>
     </View>
-  )
+  ),
 )
 
-FaqFallback.displayName = 'FaqFallback';
+FaqFallback.displayName = 'FaqFallback'
 
 function Home() {
-  const isFocused = useIsFocused();
-  const { isAuthenticated, userId } = useAuth();
-  const colors = useThemedColors();
-  const queryClient = useQueryClient();
-  const { isSmallPhone, isPhone } = useResponsive();
-  const isMobile = isSmallPhone || isPhone;
+  const isFocused = useIsFocused()
+  const { isAuthenticated, userId } = useAuth()
+  const colors = useThemedColors()
+  const queryClient = useQueryClient()
+  const { isSmallPhone, isPhone } = useResponsive()
+  const isMobile = isSmallPhone || isPhone
 
   // AND-14: Pull-to-Refresh state
-  const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false)
   const onRefresh = useCallback(async () => {
-    hapticImpact('light');
-    setRefreshing(true);
+    hapticImpact('light')
+    setRefreshing(true)
     try {
-      await queryClient.invalidateQueries();
+      await queryClient.invalidateQueries()
     } finally {
-      setRefreshing(false);
+      setRefreshing(false)
     }
-  }, [queryClient]);
+  }, [queryClient])
 
   // HERO-06: Загружаем количество путешествий для авторизованного пользователя
   // Только для авторизованных, чтобы кнопка сразу показывала нужный текст
   const { data: myTravelsData, isLoading: travelsCountLoading } = useQuery({
     queryKey: ['my-travels-count', userId],
-    queryFn: async (): Promise<{ items: Record<string, unknown>[]; total: number }> => {
+    queryFn: async (): Promise<{
+      items: Record<string, unknown>[]
+      total: number
+    }> => {
       // Никогда не возвращаем undefined — TanStack Query требует валидные данные
-      if (!userId) return { items: [], total: 0 };
+      if (!userId) return { items: [], total: 0 }
       try {
-        const payload = await fetchMyTravels({ user_id: userId, perPage: 1 });
-        return unwrapMyTravelsPayload(payload);
+        const payload = await fetchMyTravels({ user_id: userId, perPage: 1 })
+        return unwrapMyTravelsPayload(payload)
       } catch {
-        return { items: [], total: 0 };
+        return { items: [], total: 0 }
       }
     },
     enabled: isAuthenticated && !!userId && isFocused,
@@ -227,32 +253,36 @@ function Home() {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-  });
+  })
 
-  const travelsCount = myTravelsData?.total ?? 0;
+  const travelsCount = myTravelsData?.total ?? 0
 
   useEffect(() => {
-    if (!isFocused) return;
+    if (!isFocused) return
     queueAnalyticsEvent('HomeViewed', {
       authState: isAuthenticated ? 'authenticated' : 'guest',
-    });
-  }, [isFocused, isAuthenticated]);
+    })
+  }, [isFocused, isAuthenticated])
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    contentContainer: {
-      flexGrow: 1,
-      paddingBottom: Platform.select({
-        web: isMobile ? 96 : 120,
-        ios: 96,
-        android: 88,
-        default: 120,
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+        },
+        contentContainer: {
+          flexGrow: 1,
+          paddingBottom: Platform.select({
+            web: isMobile ? 96 : 120,
+            ios: 96,
+            android: 88,
+            default: 120,
+          }),
+        },
       }),
-    },
-  }), [colors, isMobile]);
+    [colors, isMobile],
+  )
 
   const webScrollStyle = isWeb
     ? ({
@@ -260,11 +290,11 @@ function Home() {
         touchAction: 'pan-y',
         overscrollBehaviorY: 'contain',
       } as any)
-    : undefined;
+    : undefined
 
   // Responsive skeleton padding — reduce on mobile to match tighter layout
-  const skeletonPadH = isMobile ? 8 : 24;
-  const skeletonPadVLarge = isMobile ? 36 : 64;
+  const skeletonPadH = isMobile ? 8 : 24
+  const skeletonPadVLarge = isMobile ? 36 : 64
 
   return (
     <ScrollView
@@ -284,7 +314,10 @@ function Home() {
         ) : undefined
       }
     >
-        <HomeHero travelsCount={travelsCount} travelsCountLoading={isAuthenticated && travelsCountLoading} />
+      <HomeHero
+        travelsCount={travelsCount}
+        travelsCountLoading={isAuthenticated && travelsCountLoading}
+      />
 
       <FadeInSection delay={0}>
         <PageSection marginTop={isMobile ? 28 : 48}>
@@ -301,7 +334,12 @@ function Home() {
       </FadeInSection>
 
       <FadeInSection delay={0}>
-        <View style={[HOW_IT_WORKS_PLACEHOLDER_STYLE, { marginTop: isMobile ? 32 : 56 }]}>
+        <View
+          style={[
+            HOW_IT_WORKS_PLACEHOLDER_STYLE,
+            { marginTop: isMobile ? 32 : 56 },
+          ]}
+        >
           <Suspense
             fallback={
               <HowItWorksFallback
@@ -361,9 +399,8 @@ function Home() {
       <View style={{ marginTop: isMobile ? 24 : 40 }}>
         <HomeFinalCTA travelsCount={travelsCount} />
       </View>
-
     </ScrollView>
-  );
+  )
 }
 
-export default memo(Home);
+export default memo(Home)

@@ -28,6 +28,15 @@ import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { createRecommendationsTabsStyles } from './recommendationsTabsStyles';
+import {
+  getRecommendationsCardLayout,
+  getRecommendationsCollectionKey,
+  getRecommendationsEnsureServerDataKey,
+  getRecommendationsTabsConfig,
+  mapRecommendationsCardItem,
+  type CollectionItem,
+  type TabType,
+} from './recommendationsTabsModel';
 
 /* ---------------- Lazy Components ---------------- */
 
@@ -54,10 +63,6 @@ const WeeklyHighlights = lazy(async () => {
   const m: any = await import('@/components/travel/WeeklyHighlights');
   return { default: (m?.default ?? m?.WeeklyHighlights) as WeeklyHighlightsComponent };
 });
-
-/* ---------------- Types ---------------- */
-
-type TabType = 'recommendations' | 'highlights' | 'favorites' | 'history';
 
 interface RecommendationsTabsProps {
   forceVisible?: boolean;
@@ -139,6 +144,57 @@ const RecommendationsPlaceholder = ({
   </View>
 );
 
+const SavedCollectionHeader = ({
+  clearLabel,
+  colors,
+  count,
+  onClear,
+  onSeeAll,
+  seeAllLabel,
+  styles,
+  title,
+}: {
+  clearLabel: string;
+  colors: ReturnType<typeof useThemedColors>;
+  count: number;
+  onClear?: () => void;
+  onSeeAll: () => void;
+  seeAllLabel: string;
+  styles: TabStyles;
+  title: string;
+}) => (
+  <View style={styles.favoritesHeaderRow}>
+    <View style={styles.headerTitleBlock}>
+      <Text style={styles.favoritesHeaderTitle}>{title}</Text>
+      <Text style={styles.headerSubtitle}>{count} шт.</Text>
+    </View>
+
+    <View style={styles.headerActions}>
+      <Pressable
+        style={styles.seeAllButton}
+        onPress={onSeeAll}
+        accessibilityRole="button"
+        accessibilityLabel={seeAllLabel}
+      >
+        <Text style={styles.seeAllButtonText}>Смотреть все</Text>
+        <Feather name="chevron-right" size={16} color={colors.primary} />
+      </Pressable>
+
+      {onClear && count > 0 && (
+        <Pressable
+          style={styles.favoritesClearButton}
+          onPress={onClear}
+          accessibilityRole="button"
+          accessibilityLabel={clearLabel}
+        >
+          <Feather name="trash-2" size={16} color={colors.danger} />
+          <Text style={styles.favoritesClearButtonText}>Очистить</Text>
+        </Pressable>
+      )}
+    </View>
+  </View>
+);
+
 /* ---------------- Main Component ---------------- */
 
 const RecommendationsTabs = memo(
@@ -161,19 +217,8 @@ const RecommendationsTabs = memo(
       if (!isTabsVisible) return;
       if (!isAuthenticated) return;
       if (typeof ensureServerData !== 'function') return;
-
-      if (activeTab === 'favorites') {
-        ensureServerData('favorites');
-        return;
-      }
-      if (activeTab === 'history') {
-        ensureServerData('history');
-        return;
-      }
-      if (activeTab === 'recommendations') {
-        ensureServerData('recommendations');
-        return;
-      }
+      const dataKey = getRecommendationsEnsureServerDataKey(activeTab);
+      if (dataKey) ensureServerData(dataKey);
     }, [activeTab, ensureServerData, isAuthenticated, isTabsVisible]);
 
     const handleClearFavorites = useCallback(async () => {
@@ -233,12 +278,12 @@ const RecommendationsTabs = memo(
 
     // Табы с бейджами
     const tabs = useMemo(
-      () => [
-        { id: 'highlights' as const, label: 'Подборка месяца', icon: 'zap' },
-        { id: 'recommendations' as const, label: 'Рекомендации', icon: 'star' },
-        { id: 'favorites' as const, label: 'Избранное', icon: 'heart', count: isAuthenticated ? favorites.length : 0 },
-        { id: 'history' as const, label: 'История', icon: 'clock', count: isAuthenticated ? viewHistory.length : 0 },
-      ],
+      () =>
+        getRecommendationsTabsConfig({
+          favoritesCount: favorites.length,
+          historyCount: viewHistory.length,
+          isAuthenticated,
+        }),
       [favorites.length, isAuthenticated, viewHistory.length]
     );
 
@@ -267,9 +312,9 @@ const RecommendationsTabs = memo(
 
     const renderCardCollection = useCallback(
       (
-        items: any[],
-        keyFactory: (item: any) => string,
-        cardFactory: (item: any) => React.ReactNode,
+        items: CollectionItem[],
+        keyFactory: (item: CollectionItem) => string,
+        cardFactory: (item: CollectionItem) => React.ReactNode,
       ) => {
         if (isMobile && !isMobileWeb) {
           return (
@@ -308,6 +353,8 @@ const RecommendationsTabs = memo(
         styles.webHorizontalScrollContent,
       ]
     );
+
+    const cardLayout = getRecommendationsCardLayout(isMobile, isMobileWeb);
 
     const toggleCollapse = () => {
       const newCollapsed = !collapsed;
@@ -367,52 +414,26 @@ const RecommendationsTabs = memo(
               <EmptyState message="Избранное пусто" icon="heart" styles={styles} colors={colors} />
             ) : (
               <View>
-                <View style={styles.favoritesHeaderRow}>
-                  <View style={styles.headerTitleBlock}>
-                    <Text style={styles.favoritesHeaderTitle}>Избранное</Text>
-                    <Text style={styles.headerSubtitle}>{favorites.length} шт.</Text>
-                  </View>
-
-                  <View style={styles.headerActions}>
-                    <Pressable
-                      style={styles.seeAllButton}
-                      onPress={() => router.push('/favorites' as any)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Смотреть все избранное"
-                    >
-                      <Text style={styles.seeAllButtonText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={colors.primary} />
-                    </Pressable>
-
-                    {typeof clearFavorites === 'function' && favorites.length > 0 && (
-                      <Pressable
-                        style={styles.favoritesClearButton}
-                        onPress={handleClearFavorites}
-                        accessibilityRole="button"
-                        accessibilityLabel="Очистить избранное"
-                      >
-                        <Feather name="trash-2" size={16} color={colors.danger} />
-                        <Text style={styles.favoritesClearButtonText}>Очистить</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
+                <SavedCollectionHeader
+                  clearLabel="Очистить избранное"
+                  colors={colors}
+                  count={favorites.length}
+                  onClear={typeof clearFavorites === 'function' ? handleClearFavorites : undefined}
+                  onSeeAll={() => router.push('/favorites' as any)}
+                  seeAllLabel="Смотреть все избранное"
+                  styles={styles}
+                  title="Избранное"
+                />
 
                 {renderCardCollection(
                   favorites,
-                  (item: any) => `${item.type || 'item'}-${item.id}`,
-                  (item: any) => (
+                  (item: CollectionItem) => getRecommendationsCollectionKey(item, 'favorites'),
+                  (item: CollectionItem) => (
                     <TabTravelCard
-                      key={`${item.type || 'item'}-${item.id}`}
-                      item={{
-                        id: item.id,
-                        title: item.title,
-                        imageUrl: item.imageUrl,
-                        city: (item as any).city ?? null,
-                        country: item.country ?? (item as any).countryName ?? null,
-                      }}
+                      key={getRecommendationsCollectionKey(item, 'favorites')}
+                      item={mapRecommendationsCardItem(item)}
                       onPress={() => router.push(item.url as any)}
-                      layout={isMobile && !isMobileWeb ? 'grid' : 'horizontal'}
+                      layout={cardLayout}
                     />
                   )
                 )}
@@ -435,57 +456,31 @@ const RecommendationsTabs = memo(
               <EmptyState message="История просмотров пуста" icon="clock" styles={styles} colors={colors} />
             ) : (
               <View>
-                <View style={styles.favoritesHeaderRow}>
-                  <View style={styles.headerTitleBlock}>
-                    <Text style={styles.favoritesHeaderTitle}>История</Text>
-                    <Text style={styles.headerSubtitle}>{viewHistory.length} шт.</Text>
-                  </View>
-
-                  <View style={styles.headerActions}>
-                    <Pressable
-                      style={styles.seeAllButton}
-                      onPress={() => router.push('/history' as any)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Смотреть всю историю просмотров"
-                    >
-                      <Text style={styles.seeAllButtonText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={colors.primary} />
-                    </Pressable>
-
-                    {typeof clearHistory === 'function' && viewHistory.length > 0 && (
-                      <Pressable
-                        style={styles.favoritesClearButton}
-                        onPress={handleClearHistory}
-                        accessibilityRole="button"
-                        accessibilityLabel="Очистить историю просмотров"
-                      >
-                        <Feather name="trash-2" size={16} color={colors.danger} />
-                        <Text style={styles.favoritesClearButtonText}>Очистить</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
+                <SavedCollectionHeader
+                  clearLabel="Очистить историю просмотров"
+                  colors={colors}
+                  count={viewHistory.length}
+                  onClear={typeof clearHistory === 'function' ? handleClearHistory : undefined}
+                  onSeeAll={() => router.push('/history' as any)}
+                  seeAllLabel="Смотреть всю историю просмотров"
+                  styles={styles}
+                  title="История"
+                />
 
                 {renderCardCollection(
                   viewHistory,
-                  (item: any) => `history-${item.id}-${item.viewedAt}`,
-                  (item: any) => (
+                  (item: CollectionItem) => getRecommendationsCollectionKey(item, 'history'),
+                  (item: CollectionItem) => (
                     <TabTravelCard
-                      key={`history-${item.id}-${item.viewedAt}`}
-                      item={{
-                        id: item.id,
-                        title: item.title,
-                        imageUrl: item.imageUrl,
-                        city: (item as any).city ?? null,
-                        country: item.country ?? (item as any).countryName ?? null,
-                      }}
+                      key={getRecommendationsCollectionKey(item, 'history')}
+                      item={mapRecommendationsCardItem(item)}
                       badge={{
                         icon: 'clock',
                         backgroundColor: colors.overlay,
                         iconColor: colors.textOnDark,
                       }}
                       onPress={() => router.push(item.url as any)}
-                      layout={isMobile && !isMobileWeb ? 'grid' : 'horizontal'}
+                      layout={cardLayout}
                     />
                   )
                 )}

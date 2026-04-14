@@ -69,29 +69,30 @@ function InstagramGalleryItem({
   onDrop: (targetIndex: number) => void
   onDragEnd: () => void
 }) {
-  const dragProps = Platform.OS === 'web'
-    ? ({
-        draggable: true,
-        onDragStart: (event: any) => {
-          event?.dataTransfer?.setData?.('text/plain', String(index))
-          if (event?.dataTransfer) {
-            event.dataTransfer.effectAllowed = 'move'
-          }
-          onDragStart(index)
-        },
-        onDragOver: (event: any) => {
-          event?.preventDefault?.()
-          if (event?.dataTransfer) {
-            event.dataTransfer.dropEffect = 'move'
-          }
-        },
-        onDrop: (event: any) => {
-          event?.preventDefault?.()
-          onDrop(index)
-        },
-        onDragEnd,
-      } as any)
-    : {}
+  const dragProps =
+    Platform.OS === 'web'
+      ? ({
+          draggable: true,
+          onDragStart: (event: any) => {
+            event?.dataTransfer?.setData?.('text/plain', String(index))
+            if (event?.dataTransfer) {
+              event.dataTransfer.effectAllowed = 'move'
+            }
+            onDragStart(index)
+          },
+          onDragOver: (event: any) => {
+            event?.preventDefault?.()
+            if (event?.dataTransfer) {
+              event.dataTransfer.dropEffect = 'move'
+            }
+          },
+          onDrop: (event: any) => {
+            event?.preventDefault?.()
+            onDrop(index)
+          },
+          onDragEnd,
+        } as any)
+      : {}
 
   return (
     <View
@@ -129,19 +130,28 @@ function InstagramGalleryItem({
           testID={`instagram-move-left-${index}`}
           accessibilityLabel={`Переместить фото ${index + 1} влево`}
         >
-          <Feather name="chevron-left" size={iconSize + 2} color={colors.textSecondary} />
+          <Feather
+            name="chevron-left"
+            size={iconSize + 2}
+            color={colors.textSecondary}
+          />
         </Pressable>
         <Pressable
           onPress={() => onMoveImage(index, 1)}
           disabled={index === editableInstagramImagesCount - 1 || isLast}
           style={[
             styles.instagramGalleryControlButton,
-            (index === editableInstagramImagesCount - 1 || isLast) && styles.instagramGalleryControlButtonDisabled,
+            (index === editableInstagramImagesCount - 1 || isLast) &&
+              styles.instagramGalleryControlButtonDisabled,
           ]}
           testID={`instagram-move-right-${index}`}
           accessibilityLabel={`Переместить фото ${index + 1} вправо`}
         >
-          <Feather name="chevron-right" size={iconSize + 2} color={colors.textSecondary} />
+          <Feather
+            name="chevron-right"
+            size={iconSize + 2}
+            color={colors.textSecondary}
+          />
         </Pressable>
       </View>
     </View>
@@ -177,7 +187,8 @@ export default function InstagramPublishPanel({
     <View style={[styles.card, styles.instagramCard]}>
       <Text style={styles.cardTitle}>Instagram публикация</Text>
       <Text style={styles.adminHint}>
-        Берутся только первые 10 фото из галереи. Порядок можно поменять вручную.
+        Берутся только первые 10 фото из галереи. Порядок можно поменять
+        вручную.
       </Text>
 
       <View style={styles.instagramControlRow}>
@@ -232,7 +243,8 @@ export default function InstagramPublishPanel({
       </View>
 
       <Text style={styles.instagramHintText}>
-        Перетаскивайте карточки мышью или используйте стрелки для точной перестановки.
+        Перетаскивайте карточки мышью или используйте стрелки для точной
+        перестановки.
       </Text>
 
       {Platform.OS === 'web' ? (
@@ -255,7 +267,7 @@ export default function InstagramPublishPanel({
                 draggedInstagramImageIndex === index
                   ? (styles.instagramGalleryCardDragging as any)
                   : null,
-                { display: 'block' }
+                { display: 'block' },
               )}
               {...({
                 draggable: true,
@@ -306,19 +318,28 @@ export default function InstagramPublishPanel({
                   testID={`instagram-move-left-${index}`}
                   accessibilityLabel={`Переместить фото ${index + 1} влево`}
                 >
-                  <Feather name="chevron-left" size={20} color={colors.textSecondary} />
+                  <Feather
+                    name="chevron-left"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
                 </Pressable>
                 <Pressable
                   onPress={() => onMoveImage(index, 1)}
                   disabled={index === editableInstagramImages.length - 1}
                   style={[
                     styles.instagramGalleryControlButton,
-                    index === editableInstagramImages.length - 1 && styles.instagramGalleryControlButtonDisabled,
+                    index === editableInstagramImages.length - 1 &&
+                      styles.instagramGalleryControlButtonDisabled,
                   ]}
                   testID={`instagram-move-right-${index}`}
                   accessibilityLabel={`Переместить фото ${index + 1} вправо`}
                 >
-                  <Feather name="chevron-right" size={20} color={colors.textSecondary} />
+                  <Feather
+                    name="chevron-right"
+                    size={20}
+                    color={colors.textSecondary}
+                  />
                 </Pressable>
               </View>
             </div>
@@ -386,7 +407,8 @@ export default function InstagramPublishPanel({
             isInstagramCaptionTooLong && styles.instagramHintDanger,
           ]}
         >
-          Текст: {instagramCaptionLength} символов. Итоговый caption с тегами должен быть не длиннее {instagramCaptionMaxLength} символов.
+          Текст: {instagramCaptionLength} символов. Итоговый caption с тегами
+          должен быть не длиннее {instagramCaptionMaxLength} символов.
         </Text>
       </View>
 
@@ -424,7 +446,8 @@ export default function InstagramPublishPanel({
             isInstagramHashtagCountTooHigh && styles.instagramHintDanger,
           ]}
         >
-          Instagram допускает до {instagramHashtagMaxCount} хэштегов. Сейчас распознано {instagramHashtagCount}.
+          Instagram допускает до {instagramHashtagMaxCount} хэштегов. Сейчас
+          распознано {instagramHashtagCount}.
         </Text>
       </View>
 
@@ -440,9 +463,7 @@ export default function InstagramPublishPanel({
             {instagramFinalLength}/{instagramCaptionMaxLength}
           </Text>
         </View>
-        <Text style={styles.instagramPreviewText}>
-          {finalInstagramText}
-        </Text>
+        <Text style={styles.instagramPreviewText}>{finalInstagramText}</Text>
       </View>
 
       <View style={styles.adminButtons}>
@@ -462,7 +483,9 @@ export default function InstagramPublishPanel({
         <Button
           label="Опубликовать в Instagram"
           onPress={onPublish}
-          icon={<Feather name="instagram" size={18} color={colors.textOnPrimary} />}
+          icon={
+            <Feather name="instagram" size={18} color={colors.textOnPrimary} />
+          }
           variant="primary"
           size="md"
           style={styles.adminButton}

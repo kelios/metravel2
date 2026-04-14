@@ -1,4 +1,5 @@
-import { normalizeHtmlForQuill, sanitizeHtml, stripBase64Images } from '@/utils/htmlUtils';
+import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
+import { normalizeHtmlForQuill, stripBase64Images } from '@/utils/htmlUtils';
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { safeGetYoutubeId } from '@/utils/travelMedia';
 import type { ArticleEditorVariant } from './articleEditor.types';
@@ -162,7 +163,7 @@ export function normalizeArticleEditorHtmlForInput(html: string): string {
 }
 
 export function normalizeArticleEditorHtmlForOutput(html: string): string {
-  return sanitizeHtml(normalizeArticleEditorHtmlForInput(html));
+  return sanitizeArticleEditorHtml(normalizeArticleEditorHtmlForInput(html));
 }
 
 export function sanitizeArticleEditorNativeContent(html: string): string {

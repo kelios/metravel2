@@ -5,6 +5,38 @@ import { useKeyPointLabels } from '@/hooks/useKeyPointLabels'
 import type { Travel } from '@/types/types'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 
+type RoutePreviewItem = {
+  preview?: {
+    linePoints?: Array<unknown>
+  }
+}
+
+function getTravelDetailsMapSectionContentFlags(params: {
+  canRenderHeavy: boolean
+  mapOpened: boolean
+  shouldForceRenderMap: boolean
+}) {
+  const shouldRender = params.canRenderHeavy
+
+  return {
+    isLoading: false,
+    shouldRender,
+    shouldRenderMapContent: shouldRender || params.shouldForceRenderMap || params.mapOpened,
+  }
+}
+
+function hasTravelDetailsMapData(params: {
+  hasEmbeddedCoords: boolean
+  hasTravelAddressPoints: boolean
+  routePreviewItems: RoutePreviewItem[]
+}) {
+  return (
+    params.hasEmbeddedCoords ||
+    params.hasTravelAddressPoints ||
+    params.routePreviewItems.some((item) => (item.preview?.linePoints?.length ?? 0) > 0)
+  )
+}
+
 type UseTravelDetailsMapSectionContentModelArgs = {
   anchors: AnchorsMap
   canRenderHeavy: boolean
@@ -24,9 +56,12 @@ export function useTravelDetailsMapSectionContentModel({
   shouldForceRenderMap,
   travel,
 }: UseTravelDetailsMapSectionContentModelArgs) {
-  // All sections load immediately — no lazy loading delays
-  const shouldRender = canRenderHeavy
-  const isLoading = false
+  const { isLoading, shouldRender, shouldRenderMapContent } =
+    getTravelDetailsMapSectionContentFlags({
+      canRenderHeavy,
+      mapOpened,
+      shouldForceRenderMap,
+    })
 
   const {
     routePreviewItems,
@@ -47,13 +82,13 @@ export function useTravelDetailsMapSectionContentModel({
     resetKeyPointLabels()
   }, [travel.id, travel.slug, resetRoutePreviewItems, resetKeyPointLabels])
 
-  const shouldRenderMapContent = shouldRender || shouldForceRenderMap || mapOpened
-
   const hasMapData = useMemo(
     () =>
-      hasEmbeddedCoords ||
-      hasTravelAddressPoints ||
-      routePreviewItems.some((item) => (item.preview?.linePoints.length ?? 0) > 0),
+      hasTravelDetailsMapData({
+        hasEmbeddedCoords,
+        hasTravelAddressPoints,
+        routePreviewItems,
+      }),
     [hasEmbeddedCoords, hasTravelAddressPoints, routePreviewItems]
   )
 

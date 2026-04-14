@@ -3,7 +3,20 @@ import React, { memo, useMemo } from "react";
 import { Platform, View, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
 import type { Travel } from "@/types/types";
- 
+
+/** Extra fields that the API may include on travel cards but are missing from the global Travel type */
+interface TravelCardExtras {
+    userId?: string | number;
+    user_id?: string | number;
+    ownerId?: string | number;
+    owner_id?: string | number;
+    author_name?: string;
+    authorName?: string;
+    owner_name?: string;
+    ownerName?: string;
+}
+
+type TravelCard = Travel & TravelCardExtras;
 
 interface ContainerStyle extends ViewStyle {
     ':hover'?: ViewStyle;
@@ -11,35 +24,35 @@ interface ContainerStyle extends ViewStyle {
 }
 
 const hasSameRenderedTravelSnapshot = (prev: Travel, next: Travel) => {
-    const prevUser = (prev as any)?.user;
-    const nextUser = (next as any)?.user;
+    const p = prev as TravelCard;
+    const n = next as TravelCard;
 
     return (
-        prev.id === next.id &&
-        prev.slug === next.slug &&
-        prev.travel_image_thumb_url === next.travel_image_thumb_url &&
-        prev.name === next.name &&
-        prev.countryName === next.countryName &&
-        prev.userName === next.userName &&
-        prev.countUnicIpView === next.countUnicIpView &&
-        (prev as any)?.url === (next as any)?.url &&
-        (prev as any)?.rating === (next as any)?.rating &&
-        (prev as any)?.rating_count === (next as any)?.rating_count &&
-        (prev as any)?.created_at === (next as any)?.created_at &&
-        (prev as any)?.updated_at === (next as any)?.updated_at &&
-        (prev as any)?.userIds === (next as any)?.userIds &&
-        (prev as any)?.userId === (next as any)?.userId &&
-        (prev as any)?.user_id === (next as any)?.user_id &&
-        (prev as any)?.ownerId === (next as any)?.ownerId &&
-        (prev as any)?.owner_id === (next as any)?.owner_id &&
-        (prev as any)?.author_name === (next as any)?.author_name &&
-        (prev as any)?.authorName === (next as any)?.authorName &&
-        (prev as any)?.owner_name === (next as any)?.owner_name &&
-        (prev as any)?.ownerName === (next as any)?.ownerName &&
-        prevUser?.id === nextUser?.id &&
-        prevUser?.name === nextUser?.name &&
-        prevUser?.first_name === nextUser?.first_name &&
-        prevUser?.last_name === nextUser?.last_name
+        p.id === n.id &&
+        p.slug === n.slug &&
+        p.travel_image_thumb_url === n.travel_image_thumb_url &&
+        p.name === n.name &&
+        p.countryName === n.countryName &&
+        p.userName === n.userName &&
+        p.countUnicIpView === n.countUnicIpView &&
+        p.url === n.url &&
+        p.rating === n.rating &&
+        p.rating_count === n.rating_count &&
+        p.created_at === n.created_at &&
+        p.updated_at === n.updated_at &&
+        p.userIds === n.userIds &&
+        p.userId === n.userId &&
+        p.user_id === n.user_id &&
+        p.ownerId === n.ownerId &&
+        p.owner_id === n.owner_id &&
+        p.author_name === n.author_name &&
+        p.authorName === n.authorName &&
+        p.owner_name === n.owner_name &&
+        p.ownerName === n.ownerName &&
+        p.user?.id === n.user?.id &&
+        p.user?.name === n.user?.name &&
+        p.user?.first_name === n.user?.first_name &&
+        p.user?.last_name === n.user?.last_name
     );
 }
 
@@ -92,18 +105,13 @@ function RenderTravelItem({
         return undefined;
     }, [cardWidth]);
 
-    const containerStyle = useMemo<ContainerStyle>(() => {
-        // Внешний wrapper не должен выглядеть как карточка.
-        // Вся визуальная часть (фон/радиус/тени/высота) живёт внутри UnifiedTravelCard (TravelListItem).
-        return {
-            width: '100%',
-            maxWidth: '100%',
-            flexShrink: 0,
-            // Не обрезаем тени внутренней карточки
-            overflow: Platform.OS === 'android' ? 'visible' : 'visible',
-            ...(Platform.OS === 'web' ? { height: '100%' } : {}),
-        };
-    }, []);
+    const containerStyle = useMemo<ContainerStyle>(() => ({
+        width: '100%',
+        maxWidth: '100%',
+        flexShrink: 0,
+        overflow: 'visible',
+        ...(Platform.OS === 'web' ? { height: '100%' } : {}),
+    }), []);
 
     if (!item) return null;
 
@@ -132,8 +140,8 @@ function RenderTravelItem({
 }
 
 function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
-    // ✅ A3.1: Оптимизированный порядок сравнений - самые частые изменения первыми для early exit
-    
+    // Самые частые изменения первыми для early exit
+
     // 1. Самые частые изменения (при выборе/скролле)
     if (prev.isSelected !== next.isSelected) return false;
     if (prev.index !== next.index) return false;

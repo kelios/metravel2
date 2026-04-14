@@ -22,11 +22,9 @@ import {
   BREAKPOINTS,
   RECOMMENDATIONS_VISIBLE_KEY
 } from './utils/listTravelConstants'
-import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
-import { calculateColumns } from './utils/listTravelHelpers'
 import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
 import { deleteTravel } from '@/api/travelsApi'
 import { fetchTravelFacets } from '@/api/travelListQueries'
@@ -37,23 +35,17 @@ import {
   removeTravelFromInfiniteTravelsCache,
 } from './ListTravelBase.helpers'
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
+import {
+  buildListTravelInitialFilter,
+  getListTravelActiveFiltersCount,
+  getListTravelViewportState,
+  normalizeListTravelParam,
+} from './listTravelBaseModel'
 
 const MemoizedTravelItem = memo(RenderTravelItem);
 const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
 
-interface ListTravelProps {
-    onTogglePersonalization?: () => void;
-    onToggleWeeklyHighlights?: () => void;
-    isPersonalizationVisible?: boolean;
-    isWeeklyHighlightsVisible?: boolean;
-}
-
-function ListTravelBase({
-    onTogglePersonalization,
-    isPersonalizationVisible: externalPersonalizationVisible,
-    onToggleWeeklyHighlights,
-    isWeeklyHighlightsVisible: externalWeeklyHighlightsVisible,
-}: ListTravelProps = {}) {
+function ListTravelBase() {
     const colors = useThemedColors();
     const styles = useMemo(() => createListTravelBaseStyles(colors), [colors]);
     const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
@@ -67,48 +59,26 @@ function ListTravelBase({
       isPortrait,
     } = useResponsive();
 
-    // Синхронизация видимости секций (персонализация, подборка недели)
-    useListTravelVisibility({
-        externalPersonalizationVisible,
-        externalWeeklyHighlightsVisible,
-        onTogglePersonalization,
-        onToggleWeeklyHighlights,
+
+    const viewportState = getListTravelViewportState({
+      isDesktopSize,
+      isLargePhone,
+      isPhone,
+      isPortrait,
+      isTabletSize,
+      isTestEnv,
+      rawWidth,
     });
 
-    const effectiveResponsiveWidth =
-      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
-        ? window.innerWidth
-        : rawWidth;
-    const effectiveResponsiveHeight =
-      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
-        ? window.innerHeight
-        : 0;
-    const resolvedIsPortrait =
-      Platform.OS === 'web' && !isTestEnv && typeof window !== 'undefined'
-        ? effectiveResponsiveHeight > effectiveResponsiveWidth
-        : isPortrait;
-    const resolvedIsMobileDevice =
-      Platform.OS === 'web'
-        ? effectiveResponsiveWidth < BREAKPOINTS.TABLET
-        : isPhone || isLargePhone || (isTabletSize && resolvedIsPortrait);
-    const resolvedIsTablet =
-      Platform.OS === 'web'
-        ? effectiveResponsiveWidth >= BREAKPOINTS.TABLET && effectiveResponsiveWidth < BREAKPOINTS.DESKTOP
-        : isTabletSize;
-    const resolvedIsDesktop =
-      Platform.OS === 'web'
-        ? effectiveResponsiveWidth >= BREAKPOINTS.DESKTOP
-        : isDesktopSize;
-
     // Стабилизируем width: мобильная адресная строка может менять viewport
-    const stableWidthRef = useRef(effectiveResponsiveWidth);
+    const stableWidthRef = useRef(viewportState.width);
     const width = useMemo(() => {
       // Обновляем только при значительном изменении (>50px)
-      if (Math.abs(effectiveResponsiveWidth - stableWidthRef.current) > 50) {
-        stableWidthRef.current = effectiveResponsiveWidth;
+      if (Math.abs(viewportState.width - stableWidthRef.current) > 50) {
+        stableWidthRef.current = viewportState.width;
       }
       return stableWidthRef.current;
-    }, [effectiveResponsiveWidth]);
+    }, [viewportState.width]);
     const route = useRoute();
     const pathname = usePathname();
 
@@ -130,78 +100,24 @@ function ListTravelBase({
     }>();
     const user_id = params.user_id;
 
-    const normalizeParam = (value?: string | string[]) => {
-      if (Array.isArray(value)) return value.filter(Boolean).join(',');
-      return value;
-    };
-
     const normalizedSearchParam = useMemo(
-      () => normalizeParam(params.search) ?? '',
+      () => normalizeListTravelParam(params.search) ?? '',
       [params.search]
     );
 
     const initialFilter = useMemo(() => {
-      const f: Record<string, any> = {};
-      const categories = normalizeParam(params.categories);
-      const companions = normalizeParam(params.companions);
-      const complexity = normalizeParam(params.complexity);
-      const month = normalizeParam(params.month);
-      const sort = normalizeParam(params.sort);
-      const overNightsStay = normalizeParam(params.over_nights_stay ?? params.over__nights__stay);
-      const categoryTravelAddress = normalizeParam(
-        params.categoryTravelAddress
-          ?? params.category_travel_address
-          ?? params.category__travel__address,
-      );
-
-      if (categories) f.categories = categories.split(',').map(Number).filter(Boolean);
-      if (overNightsStay) f.over_nights_stay = overNightsStay.split(',').map(Number).filter(Boolean);
-      if (categoryTravelAddress) {
-        f.categoryTravelAddress = categoryTravelAddress.split(',').map(Number).filter(Boolean);
-      }
-      if (sort) {
-        f.sort = sort;
-      }
-      if (companions) f.companions = companions.split(',').map(Number).filter(Boolean);
-      if (complexity) f.complexity = complexity.split(',').map(Number).filter(Boolean);
-      if (month) f.month = month.split(',').map(Number).filter(Boolean);
-      return Object.keys(f).length > 0 ? f : undefined;
-    }, [
-      params.categories,
-      params.companions,
-      params.complexity,
-      params.month,
-      params.sort,
-      params.over_nights_stay,
-      params.over__nights__stay,
-      params.categoryTravelAddress,
-      params.category_travel_address,
-      params.category__travel__address,
-    ]);
+      return buildListTravelInitialFilter(params);
+    }, [params]);
 
     const isMeTravel = (route as any).name === "metravel" || pathname?.includes('/metravel');
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
 
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
-    const isMobileDevice = resolvedIsMobileDevice;
+    const isMobileDevice = viewportState.isMobileDevice;
     // Cards layout rule: on mobile widths we always render a single column.
-    const isCardsSingleColumn = width < BREAKPOINTS.MOBILE;
-    const isTablet = resolvedIsTablet;
-    const isDesktop = resolvedIsDesktop;
-
-    const gapSize =
-      width < BREAKPOINTS.XS
-        ? 6
-        : width < BREAKPOINTS.SM
-          ? 8
-          : width < BREAKPOINTS.MOBILE
-            ? 10
-            : width < BREAKPOINTS.TABLET
-              ? 12
-              : width < BREAKPOINTS.DESKTOP
-                ? 14
-                : 16;
+    const isCardsSingleColumn = viewportState.isCardsSingleColumn;
+    const gapSize = viewportState.gapSize;
 
     const cardsGridDynamicStyle = useMemo(() => {
       const styleArray: ViewStyle[] = [styles.cardsGrid]
@@ -221,41 +137,8 @@ function ListTravelBase({
       return styleArray
     }, [gapSize, styles.cardsGrid]);
 
-    // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
-    const effectiveWidth = isDesktop ? width - 320 : width; // 320px ~ ширина sidebar (только когда sidebar реально видим)
-
-    const contentPadding = useMemo(() => {
-      if (effectiveWidth < BREAKPOINTS.XS) return 12;  // XS: компактные устройства
-      if (effectiveWidth < BREAKPOINTS.SM) return 8; // SM: чуть уже карточки на очень маленьких телефонах
-      if (effectiveWidth < BREAKPOINTS.MOBILE) return 10; // Mobile: стандартные телефоны — синхронизировано
-      if (effectiveWidth < BREAKPOINTS.TABLET) return 12; // Tablet
-      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 12; // Desktop
-      if (effectiveWidth < BREAKPOINTS.DESKTOP_LARGE) return 16; // Large Desktop
-      return 20; // XXL
-    }, [effectiveWidth]);
-
-    const gridColumns = useMemo(() => {
-      if (isCardsSingleColumn) {
-        return 1;
-      }
-
-      let columns: number;
-
-      if (isMobileDevice) {
-        columns = calculateColumns(width, resolvedIsPortrait ? 'portrait' : 'landscape');
-      } else if (!isTablet || !resolvedIsPortrait) {
-        columns = calculateColumns(effectiveWidth, 'landscape');
-      } else {
-        columns = calculateColumns(effectiveWidth, 'portrait');
-      }
-
-      // Search desktop should stay at 3 columns max so cards match the larger editorial layout.
-      if (!isMobileDevice && effectiveWidth >= BREAKPOINTS.DESKTOP) {
-        return Math.min(columns, 3);
-      }
-
-      return columns;
-    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, resolvedIsPortrait, width]);
+    const contentPadding = viewportState.contentPadding;
+    const gridColumns = viewportState.gridColumns;
 
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
         if (Platform.OS !== 'web') return false;
@@ -712,25 +595,7 @@ function ListTravelBase({
     }, []);
 
     // Оптимизируем расчет путем использования стабильных ссылок на filter
-    const activeFiltersCount = useMemo(() => {
-      let count = 0;
-
-      const filterKeys = ['categories', 'transports', 'categoryTravelAddress', 'companions', 'complexity', 'month', 'over_nights_stay'] as const;
-
-      for (const key of filterKeys) {
-        const value = filter[key];
-        if (Array.isArray(value) && value.length > 0) {
-          count += value.length;
-        }
-      }
-
-      if (filter.year) count += 1;
-      if (filter.sort) count += 1;
-      if (filter.moderation !== undefined) count += 1;
-      if (debSearch && debSearch.trim().length > 0) count += 1;
-
-      return count;
-    }, [filter, debSearch]);
+    const activeFiltersCount = useMemo(() => getListTravelActiveFiltersCount(filter, debSearch), [filter, debSearch]);
 
     const getEmptyStateMessage = useMemo(() => {
       if (!showEmptyState) return null;

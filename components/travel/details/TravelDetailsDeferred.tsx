@@ -15,7 +15,12 @@ import { CommentsSection } from '@/components/travel/CommentsSection'
 
 const PLACEHOLDER_MIN_H_160 = { minHeight: 160 } as const
 const PLACEHOLDER_MIN_H_56 = { minHeight: 56 } as const
-
+const AUTHOR_PLACEHOLDER = (
+  <>
+    <View style={PLACEHOLDER_MIN_H_160} />
+    <View style={PLACEHOLDER_MIN_H_56} />
+  </>
+)
 
 export const TravelDeferredSections: React.FC<{
   travel: Travel
@@ -52,6 +57,11 @@ export const TravelDeferredSections: React.FC<{
   const shouldLoadAuthor = shouldLoadAuthorSection
   const shouldLoadRatingSection = shouldLoadRating
   const shouldAutoloadComments = shouldLoadComments || forceOpenKey === 'comments'
+  const handleCommentsRef = (el: unknown) => {
+    ;(anchors.comments as any).current = el
+    setCommentsRef(el)
+  }
+
   return (
     <>
       <TravelDetailsContentSection
@@ -70,10 +80,7 @@ export const TravelDeferredSections: React.FC<{
           {shouldLoadAuthor ? (
             <TravelDeferredAuthorSection travel={travel} isMobile={isMobile} />
           ) : (
-            <>
-              <View style={PLACEHOLDER_MIN_H_160} />
-              <View style={PLACEHOLDER_MIN_H_56} />
-            </>
+            AUTHOR_PLACEHOLDER
           )}
         </View>
       ) : (
@@ -120,10 +127,7 @@ export const TravelDeferredSections: React.FC<{
       </View>
 
       <View 
-        ref={(el) => {
-          (anchors.comments as any).current = el;
-          setCommentsRef(el)
-        }}
+        ref={handleCommentsRef}
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >

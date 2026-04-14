@@ -26,9 +26,9 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
+import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { 
-    sanitizeHtml, 
     normalizeHtmlForQuill, 
     normalizeAnchorId, 
     escapeHtml 
@@ -544,7 +544,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     if (!isEditorEmpty) return;
 
                     const prevSanitized = lastSanitizedForceSyncRef.current;
-                    const clean = prevSanitized?.raw === next ? prevSanitized.clean : sanitizeHtml(next);
+                    const clean = prevSanitized?.raw === next ? prevSanitized.clean : sanitizeArticleEditorHtml(next);
                     lastSanitizedForceSyncRef.current = { raw: next, clean };
 
                     editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
@@ -637,7 +637,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             const raw = typeof val === 'string' ? val : '';
             if (raw === htmlRef.current) return;
 
-            const cleanForEmit = sanitizeHtml(raw);
+            const cleanForEmit = sanitizeArticleEditorHtml(raw);
 
             if (selection) {
                 pendingSelectionRestoreRef.current = selection;

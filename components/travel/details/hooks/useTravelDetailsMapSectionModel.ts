@@ -9,6 +9,32 @@ import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { useTravelDetailsMapSectionHintsModel } from './useTravelDetailsMapSectionHintsModel'
 
+function getTravelDetailsMapSectionFlags(params: {
+  forceOpenKey: string | null
+  mapOpenTrigger: number
+  width: number
+}) {
+  return {
+    isMobileWeb: Platform.OS === 'web' && params.width <= METRICS.breakpoints.tablet,
+    shouldForceRenderExcursions: params.forceOpenKey === 'excursions',
+    shouldForceRenderMap:
+      params.forceOpenKey === 'map' ||
+      params.forceOpenKey === 'points' ||
+      params.mapOpenTrigger > 0,
+  }
+}
+
+function getTravelDetailsMapSectionResetState() {
+  return {
+    downloadingRouteId: null,
+    highlightedPoint: null,
+    mapOpenTrigger: 0,
+    mapOpened: false,
+    mapResizeTrigger: 0,
+    weatherVisible: false,
+  }
+}
+
 interface UseTravelDetailsMapSectionModelArgs {
   travel: Travel
   forceOpenKey: string | null
@@ -35,18 +61,21 @@ export function useTravelDetailsMapSectionModel({
     placeHints,
     transportHints,
   } = useTravelDetailsMapSectionHintsModel(travel)
-  const isMobileWeb = Platform.OS === 'web' && width <= METRICS.breakpoints.tablet
-
-  const shouldForceRenderMap = forceOpenKey === 'map' || forceOpenKey === 'points' || mapOpenTrigger > 0
-  const shouldForceRenderExcursions = forceOpenKey === 'excursions'
+  const { isMobileWeb, shouldForceRenderExcursions, shouldForceRenderMap } =
+    getTravelDetailsMapSectionFlags({
+      forceOpenKey,
+      mapOpenTrigger,
+      width,
+    })
 
   useEffect(() => {
-    setHighlightedPoint(null)
-    setMapOpenTrigger(0)
-    setMapOpened(false)
-    setMapResizeTrigger(0)
-    setWeatherVisible(false)
-    setDownloadingRouteId(null)
+    const nextState = getTravelDetailsMapSectionResetState()
+    setHighlightedPoint(nextState.highlightedPoint)
+    setMapOpenTrigger(nextState.mapOpenTrigger)
+    setMapOpened(nextState.mapOpened)
+    setMapResizeTrigger(nextState.mapResizeTrigger)
+    setWeatherVisible(nextState.weatherVisible)
+    setDownloadingRouteId(nextState.downloadingRouteId)
   }, [travel.id, travel.slug])
 
   const notifyDownloadUnavailable = useCallback(() => {

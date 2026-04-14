@@ -26,14 +26,6 @@ export interface UseListTravelVisibilityReturn {
   handleToggleWeeklyHighlights: () => void;
 }
 
-/**
- * ✅ АРХИТЕКТУРА: Хук для управления видимостью секций
- * 
- * Логика:
- * - Поддерживает внешнее и внутреннее состояние
- * - Сохраняет состояние в storage
- * - Синхронизирует состояние между компонентами
- */
 export function useListTravelVisibility({
   externalPersonalizationVisible,
   externalWeeklyHighlightsVisible,

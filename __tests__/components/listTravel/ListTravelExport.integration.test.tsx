@@ -42,15 +42,6 @@ jest.mock('@/hooks/useDebouncedValue', () => ({
   useDebouncedValue: (value: any) => value,
 }));
 
-jest.mock('@/components/listTravel/hooks/useListTravelVisibility', () => ({
-  useListTravelVisibility: () => ({
-    isPersonalizationVisible: false,
-    isWeeklyHighlightsVisible: false,
-    isInitialized: true,
-    handleTogglePersonalization: jest.fn(),
-    handleToggleWeeklyHighlights: jest.fn(),
-  }),
-}));
 
 jest.mock('@/components/listTravel/hooks/useListTravelFilters', () => ({
   useListTravelFilters: () => ({

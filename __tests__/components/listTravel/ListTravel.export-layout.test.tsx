@@ -51,9 +51,6 @@ jest.mock('@/hooks/useResponsive', () => ({
   }),
 }));
 
-jest.mock('@/components/listTravel/hooks/useListTravelVisibility', () => ({
-  useListTravelVisibility: () => undefined,
-}));
 
 jest.mock('@/components/listTravel/hooks/useListTravelFilters', () => ({
   useListTravelFilters: () => ({

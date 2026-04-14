@@ -1,64 +1,64 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import { useRouter } from 'expo-router';
-import { FlashList } from '@shopify/flash-list';
+import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react'
+import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native'
+import Feather from '@expo/vector-icons/Feather'
+import { useRouter } from 'expo-router'
+import { FlashList } from '@shopify/flash-list'
 
-import { useAuth } from '@/context/AuthContext';
-import { useFavorites } from '@/context/FavoritesContext';
-import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { ResponsiveContainer } from '@/components/layout';
-import { useTheme, useThemedColors } from '@/hooks/useTheme';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import Button from '@/components/ui/Button';
+import { useAuth } from '@/context/AuthContext'
+import { useFavorites } from '@/context/FavoritesContext'
+import TabTravelCard from '@/components/listTravel/TabTravelCard'
+import { ResponsiveContainer } from '@/components/layout'
+import { useTheme, useThemedColors } from '@/hooks/useTheme'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import Button from '@/components/ui/Button'
 
 type TravelLikeItem = {
-  id: string | number;
-  title?: string | null;
-  imageUrl?: string | null;
-  url: string;
-  country?: string | null;
-  city?: string | null;
-};
+  id: string | number
+  title?: string | null
+  imageUrl?: string | null
+  url: string
+  country?: string | null
+  city?: string | null
+}
 
 type ShelfSection = {
-  badge?: { icon: 'clock' | 'favorite' };
-  countLabel: string;
-  countValue: number;
-  ctaPath: '/favorites' | '/history';
-  eyebrow: string;
-  items: TravelLikeItem[];
-  listTestID: string;
-  subtitle: string;
-  title: string;
-  titleTestID: string;
-};
+  badge?: { icon: 'clock' | 'favorite' }
+  countLabel: string
+  countValue: number
+  ctaPath: '/favorites' | '/history'
+  eyebrow: string
+  items: TravelLikeItem[]
+  listTestID: string
+  subtitle: string
+  title: string
+  titleTestID: string
+}
 
 function shouldHandleHorizontalWheelForElement(e: any, el: any) {
-  if (Platform.OS !== 'web') return;
-  if (!el || typeof (el as any).scrollLeft !== 'number') return;
+  if (Platform.OS !== 'web') return
+  if (!el || typeof (el as any).scrollLeft !== 'number') return
 
-  const deltaY = Number(e?.deltaY ?? 0);
-  const deltaX = Number(e?.deltaX ?? 0);
-  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+  const deltaY = Number(e?.deltaY ?? 0)
+  const deltaX = Number(e?.deltaX ?? 0)
+  if (!deltaY || Math.abs(deltaY) <= Math.abs(deltaX)) return
 
-  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
-  if (maxScrollLeft <= 0) return;
+  const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0)
+  if (maxScrollLeft <= 0) return
 
-  const isAtLeft = (el.scrollLeft ?? 0) <= 0;
-  const isAtRight = (el.scrollLeft ?? 0) >= maxScrollLeft;
-  if ((isAtLeft && deltaY < 0) || (isAtRight && deltaY > 0)) return;
+  const isAtLeft = (el.scrollLeft ?? 0) <= 0
+  const isAtRight = (el.scrollLeft ?? 0) >= maxScrollLeft
+  if ((isAtLeft && deltaY < 0) || (isAtRight && deltaY > 0)) return
 
-  return true;
+  return true
 }
 
 function handleHorizontalWheelForElement(e: any, el: any, prevent: boolean) {
-  if (!shouldHandleHorizontalWheelForElement(e, el)) return;
+  if (!shouldHandleHorizontalWheelForElement(e, el)) return
 
-  const deltaY = Number(e?.deltaY ?? 0);
+  const deltaY = Number(e?.deltaY ?? 0)
 
-  if (prevent && e?.cancelable) e.preventDefault?.();
-  (el as any).scrollLeft += deltaY;
+  if (prevent && e?.cancelable) e.preventDefault?.()
+  ;(el as any).scrollLeft += deltaY
 }
 
 function SectionHeader({
@@ -72,15 +72,15 @@ function SectionHeader({
   styles,
   colors,
 }: {
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  countLabel: string;
-  countValue: number;
-  onSeeAll: () => void;
-  testID: string;
-  styles: ReturnType<typeof createStyles>;
-  colors: ReturnType<typeof useThemedColors>;
+  eyebrow: string
+  title: string
+  subtitle: string
+  countLabel: string
+  countValue: number
+  onSeeAll: () => void
+  testID: string
+  styles: ReturnType<typeof createStyles>
+  colors: ReturnType<typeof useThemedColors>
 }) {
   return (
     <View style={styles.sectionHeaderRow} testID={testID}>
@@ -112,7 +112,7 @@ function SectionHeader({
         pressedStyle={styles.seeAllButtonHover}
       />
     </View>
-  );
+  )
 }
 
 function HorizontalCards({
@@ -123,85 +123,105 @@ function HorizontalCards({
   colors,
   styles,
 }: {
-  data: TravelLikeItem[];
-  badge?: { icon: 'clock' | 'favorite' };
-  onPressItem: (url: string) => void;
-  testID: string;
-  colors: ReturnType<typeof useThemedColors>;
-  styles: ReturnType<typeof createStyles>;
+  data: TravelLikeItem[]
+  badge?: { icon: 'clock' | 'favorite' }
+  onPressItem: (url: string) => void
+  testID: string
+  colors: ReturnType<typeof useThemedColors>
+  styles: ReturnType<typeof createStyles>
 }) {
-  const { isDark } = useTheme();
-  const scrollRef = useRef<any>(null);
-  const historyBadge = useMemo(() =>
-    badge?.icon === 'clock'
-      ? {
-          icon: 'clock' as const,
-          backgroundColor: colors.overlay,
-          iconColor: isDark ? colors.text : colors.textOnDark,
-        }
-      : undefined,
-    [badge?.icon, colors.overlay, colors.text, colors.textOnDark, isDark]);
+  const { isDark } = useTheme()
+  const scrollRef = useRef<any>(null)
+  const historyBadge = useMemo(
+    () =>
+      badge?.icon === 'clock'
+        ? {
+            icon: 'clock' as const,
+            backgroundColor: colors.overlay,
+            iconColor: isDark ? colors.text : colors.textOnDark,
+          }
+        : undefined,
+    [badge?.icon, colors.overlay, colors.text, colors.textOnDark, isDark],
+  )
 
   const resolveScrollElement = useCallback(() => {
-    const target = scrollRef.current as any;
-    return target?._nativeNode || target?._domNode || target;
-  }, []);
+    const target = scrollRef.current as any
+    return target?._nativeNode || target?._domNode || target
+  }, [])
 
-  const renderItem = useCallback(({ item }: { item: TravelLikeItem }) => (
-    <TabTravelCard
-      item={{
-        id: item.id,
-        title: item.title,
-        imageUrl: item.imageUrl,
-        city: item.city ?? null,
-        country: item.country ?? (item as any).countryName ?? null,
-      }}
-      badge={historyBadge}
-      onPress={() => onPressItem(item.url)}
-    />
-  ), [historyBadge, onPressItem]);
+  const renderItem = useCallback(
+    ({ item }: { item: TravelLikeItem }) => (
+      <TabTravelCard
+        item={{
+          id: item.id,
+          title: item.title,
+          imageUrl: item.imageUrl,
+          city: item.city ?? null,
+          country: item.country ?? (item as any).countryName ?? null,
+        }}
+        badge={historyBadge}
+        onPress={() => onPressItem(item.url)}
+      />
+    ),
+    [historyBadge, onPressItem],
+  )
 
-  const keyExtractor = useCallback((item: TravelLikeItem) => `${String(item.id)}-${item.url}`, []);
+  const keyExtractor = useCallback(
+    (item: TravelLikeItem) => `${String(item.id)}-${item.url}`,
+    [],
+  )
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web') return
 
-    const el = resolveScrollElement();
-    if (!el || typeof el.addEventListener !== 'function') return;
+    const el = resolveScrollElement()
+    if (!el || typeof el.addEventListener !== 'function') return
 
-    let usingActive = false;
+    let usingActive = false
 
     const onWheelActive = (e: any) => {
-      handleHorizontalWheelForElement(e, el, true);
-    };
+      handleHorizontalWheelForElement(e, el, true)
+    }
 
     const onWheelPassive = (e: any) => {
-      handleHorizontalWheelForElement(e, el, false);
-      if (!usingActive && e?.cancelable && shouldHandleHorizontalWheelForElement(e, el)) {
-        usingActive = true;
+      handleHorizontalWheelForElement(e, el, false)
+      if (
+        !usingActive &&
+        e?.cancelable &&
+        shouldHandleHorizontalWheelForElement(e, el)
+      ) {
+        usingActive = true
         try {
-          el.removeEventListener('wheel', onWheelPassive as any);
+          el.removeEventListener('wheel', onWheelPassive as any)
         } catch {
           // noop
         }
         try {
-          el.addEventListener('wheel', onWheelActive as any, { passive: false } as any);
+          el.addEventListener(
+            'wheel',
+            onWheelActive as any,
+            { passive: false } as any,
+          )
         } catch {
           // noop
         }
       }
-    };
+    }
 
-    el.addEventListener('wheel', onWheelPassive as any, { passive: true } as any);
+    el.addEventListener(
+      'wheel',
+      onWheelPassive as any,
+      { passive: true } as any,
+    )
     return () => {
       try {
-        el.removeEventListener('wheel', onWheelPassive as any);
-        el.removeEventListener('wheel', onWheelActive as any);
+        el.removeEventListener('wheel', onWheelPassive as any)
+        el.removeEventListener('wheel', onWheelActive as any)
       } catch {
         // noop
       }
-    };
-  }, [resolveScrollElement]);
+    }
+  }, [resolveScrollElement])
 
   if (Platform.OS === 'web') {
     return (
@@ -228,7 +248,7 @@ function HorizontalCards({
           />
         ))}
       </ScrollView>
-    );
+    )
   }
 
   return (
@@ -248,29 +268,33 @@ function HorizontalCards({
       keyboardShouldPersistTaps="handled"
       bounces={Platform.OS === 'ios'}
       decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
-      {...Platform.select({ web: { style: [styles.horizontalList, { touchAction: 'pan-x pan-y' } as any] } })}
+      {...Platform.select({
+        web: {
+          style: [styles.horizontalList, { touchAction: 'pan-x pan-y' } as any],
+        },
+      })}
       drawDistance={800}
     />
-  );
+  )
 }
 
 function HomeFavoritesHistorySection() {
-  const router = useRouter();
-  const { isAuthenticated } = useAuth();
-  const { favorites, viewHistory, ensureServerData } = useFavorites() as any;
-  const colors = useThemedColors();
-  const styles = useMemo(() => createStyles(colors, DESIGN_TOKENS), [colors]);
+  const router = useRouter()
+  const { isAuthenticated } = useAuth()
+  const { favorites, viewHistory, ensureServerData } = useFavorites() as any
+  const colors = useThemedColors()
+  const styles = useMemo(() => createStyles(colors, DESIGN_TOKENS), [colors])
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    if (typeof ensureServerData !== 'function') return;
+    if (!isAuthenticated) return
+    if (typeof ensureServerData !== 'function') return
 
-    ensureServerData('favorites');
-    ensureServerData('history');
-  }, [ensureServerData, isAuthenticated]);
+    ensureServerData('favorites')
+    ensureServerData('history')
+  }, [ensureServerData, isAuthenticated])
 
   const favoritesData = useMemo(() => {
-    const arr = Array.isArray(favorites) ? favorites : [];
+    const arr = Array.isArray(favorites) ? favorites : []
     return arr
       .filter((item: any) => item && item.url)
       .slice(0, 10)
@@ -282,12 +306,12 @@ function HomeFavoritesHistorySection() {
           url: item.url,
           country: item.country ?? null,
           city: item.city ?? null,
-        })
-      );
-  }, [favorites]);
+        }),
+      )
+  }, [favorites])
 
   const historyData = useMemo(() => {
-    const arr = Array.isArray(viewHistory) ? viewHistory : [];
+    const arr = Array.isArray(viewHistory) ? viewHistory : []
     return arr
       .filter((item: any) => item && item.url)
       .slice(0, 10)
@@ -299,51 +323,54 @@ function HomeFavoritesHistorySection() {
           url: item.url,
           country: item.country ?? null,
           city: item.city ?? null,
-        })
-      );
-  }, [viewHistory]);
+        }),
+      )
+  }, [viewHistory])
 
   const sections = useMemo(
-    (): ShelfSection[] => ([
-      {
-        eyebrow: 'Сохранено',
-        title: 'Избранное',
-        subtitle: 'Маршруты, к которым вы хотите вернуться позже.',
-        countLabel: 'в списке',
-        countValue: favoritesData.length,
-        ctaPath: '/favorites',
-        items: favoritesData,
-        listTestID: 'home-favorites-list',
-        titleTestID: 'home-favorites-header',
-      },
-      {
-        eyebrow: 'Недавнее',
-        title: 'История',
-        subtitle: 'Последние маршруты, которые вы уже открывали.',
-        countLabel: 'просмотрено',
-        countValue: historyData.length,
-        ctaPath: '/history',
-        items: historyData,
-        listTestID: 'home-history-list',
-        titleTestID: 'home-history-header',
-        badge: { icon: 'clock' },
-      },
-    ] satisfies ShelfSection[]).filter((section) => section.items.length > 0),
+    (): ShelfSection[] =>
+      (
+        [
+          {
+            eyebrow: 'Сохранено',
+            title: 'Избранное',
+            subtitle: 'Маршруты, к которым вы хотите вернуться позже.',
+            countLabel: 'в списке',
+            countValue: favoritesData.length,
+            ctaPath: '/favorites',
+            items: favoritesData,
+            listTestID: 'home-favorites-list',
+            titleTestID: 'home-favorites-header',
+          },
+          {
+            eyebrow: 'Недавнее',
+            title: 'История',
+            subtitle: 'Последние маршруты, которые вы уже открывали.',
+            countLabel: 'просмотрено',
+            countValue: historyData.length,
+            ctaPath: '/history',
+            items: historyData,
+            listTestID: 'home-history-list',
+            titleTestID: 'home-history-header',
+            badge: { icon: 'clock' },
+          },
+        ] satisfies ShelfSection[]
+      ).filter((section) => section.items.length > 0),
     [favoritesData, historyData],
-  );
+  )
 
   if (!isAuthenticated) {
-    return null;
+    return null
   }
 
   // If both are empty we don't show the block (keeps home clean)
   if (sections.length === 0) {
-    return null;
+    return null
   }
 
   const openUrl = (url: string) => {
-    router.push(url as any);
-  };
+    router.push(url as any)
+  }
 
   return (
     <View style={styles.band} testID="home-favorites-history">
@@ -375,10 +402,13 @@ function HomeFavoritesHistorySection() {
         </View>
       </ResponsiveContainer>
     </View>
-  );
+  )
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, tokens: typeof DESIGN_TOKENS) =>
+const createStyles = (
+  colors: ReturnType<typeof useThemedColors>,
+  tokens: typeof DESIGN_TOKENS,
+) =>
   StyleSheet.create({
     band: {
       paddingVertical: 56,
@@ -521,6 +551,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, tokens: typeof
         default: {},
       }),
     },
-  });
+  })
 
-export default memo(HomeFavoritesHistorySection);
+export default memo(HomeFavoritesHistorySection)

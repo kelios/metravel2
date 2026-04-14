@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 import { logError, logMessage } from '@/utils/logger';
 
@@ -10,6 +9,14 @@ export interface Coordinates {
 
 export const DEFAULT_COORDINATES: Coordinates = { latitude: 53.9006, longitude: 27.559 };
 const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
+let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
+
+async function loadExpoLocation() {
+  if (!expoLocationModulePromise) {
+    expoLocationModulePromise = import('expo-location');
+  }
+  return expoLocationModulePromise;
+}
 
 function isValidCoordinate(lat: number, lng: number): boolean {
   return (
@@ -125,6 +132,7 @@ export function useMapCoordinates() {
         return;
       }
 
+      const Location = await loadExpoLocation();
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (signal?.aborted) return;

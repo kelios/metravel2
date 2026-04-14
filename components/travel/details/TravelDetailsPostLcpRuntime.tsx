@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import type { Travel } from '@/types/types';
@@ -13,6 +12,17 @@ import TravelSectionsSheet from '@/components/travel/TravelSectionsSheet';
 import type { AnchorsMap } from './TravelDetailsTypes';
 import { getTravelDetailsShellStyles } from './TravelDetailsShellStyles';
 import TravelStickyActions from './TravelStickyActions';
+import {
+  getInitialDeferredSectionsComponent,
+  loadDeferredSectionsComponent,
+  type DeferredSectionsComponentType,
+} from './travelDetailsDeferredLoader';
+import {
+  shouldShowTravelReadingProgress,
+  shouldShowTravelScrollToTop,
+  shouldShowTravelSectionsSheet,
+  shouldShowTravelStickyActions,
+} from './travelDetailsPostLcpRuntimeModel';
 
 type TravelDetailsPostLcpRuntimeProps = {
   travel: Travel;
@@ -33,29 +43,6 @@ type TravelDetailsPostLcpRuntimeProps = {
 };
 
 const PLACEHOLDER_STYLE = { flex: 1 } as const;
-const isTestEnv =
-  typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
-
-type DeferredSectionsComponentType = React.ComponentType<{
-  travel: Travel;
-  isMobile: boolean;
-  forceOpenKey: string | null;
-  anchors: AnchorsMap;
-  scrollY: any;
-  viewportHeight: number;
-  scrollToMapSection: () => void;
-}>;
-
-let deferredSectionsLoader: Promise<DeferredSectionsComponentType> | null = null;
-
-const loadDeferredSections = async (): Promise<DeferredSectionsComponentType> => {
-  if (!deferredSectionsLoader) {
-    deferredSectionsLoader = import('@/components/travel/details/TravelDetailsDeferred').then(
-      (m) => m.TravelDeferredSections,
-    );
-  }
-  return deferredSectionsLoader;
-};
 
 export default function TravelDetailsPostLcpRuntime({
   travel,
@@ -77,18 +64,14 @@ export default function TravelDetailsPostLcpRuntime({
   const themedColors = useThemedColors();
   const styles = useMemo(() => getTravelDetailsShellStyles(themedColors), [themedColors]);
   const [DeferredSectionsComponent, setDeferredSectionsComponent] =
-    useState<DeferredSectionsComponentType | null>(() => {
-      if (!isTestEnv) return null;
-      const mod = require('@/components/travel/details/TravelDetailsDeferred');
-      return mod.TravelDeferredSections as DeferredSectionsComponentType;
-    });
+    useState<DeferredSectionsComponentType | null>(() => getInitialDeferredSectionsComponent());
 
   useEffect(() => {
     if (DeferredSectionsComponent) return;
 
     let cancelled = false;
 
-    void loadDeferredSections()
+    void loadDeferredSectionsComponent()
       .then((component) => {
         if (!cancelled) setDeferredSectionsComponent(() => component);
       })
@@ -117,9 +100,22 @@ export default function TravelDetailsPostLcpRuntime({
     )
   );
 
+  const showReadingProgress = shouldShowTravelReadingProgress({
+    contentHeight,
+    criticalChromeReady,
+    viewportHeight,
+  });
+  const showSectionsSheet = shouldShowTravelSectionsSheet({
+    criticalChromeReady,
+    screenWidth,
+    sectionLinks,
+  });
+  const showScrollToTop = shouldShowTravelScrollToTop(criticalChromeReady);
+  const showStickyActions = shouldShowTravelStickyActions(isMobile);
+
   return (
     <>
-      {contentHeight > viewportHeight && criticalChromeReady && (
+      {showReadingProgress && (
         <ReadingProgressBar
           scrollY={scrollY}
           contentHeight={contentHeight}
@@ -127,7 +123,7 @@ export default function TravelDetailsPostLcpRuntime({
         />
       )}
 
-      {screenWidth < METRICS.breakpoints.largeTablet && sectionLinks.length > 0 && criticalChromeReady && (
+      {showSectionsSheet && (
         <View style={styles.sectionTabsContainer}>
           <TravelSectionsSheet
             links={sectionLinks}
@@ -140,11 +136,11 @@ export default function TravelDetailsPostLcpRuntime({
 
       {deferredSectionsContent}
 
-      {criticalChromeReady && (
+      {showScrollToTop && (
         <ScrollToTopButton scrollViewRef={scrollViewRef} scrollY={scrollY} threshold={300} />
       )}
 
-      {isMobile && (
+      {showStickyActions && (
         <TravelStickyActions
           travel={travel}
           scrollY={scrollY}

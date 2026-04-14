@@ -48,12 +48,6 @@ export interface SocialProofBadge {
   bgColor: string;
 }
 
-export interface VisibilityState {
-  isPersonalizationVisible: boolean;
-  isWeeklyHighlightsVisible: boolean;
-  isInitialized: boolean;
-}
-
 export interface ListTravelState {
   filter: FilterState;
   search: string;
@@ -87,12 +81,6 @@ export interface TravelQueryConfig {
   keepPreviousData: boolean;
 }
 
-export interface ListTravelProps {
-  onTogglePersonalization?: () => void;
-  onToggleWeeklyHighlights?: () => void;
-  isPersonalizationVisible?: boolean;
-  isWeeklyHighlightsVisible?: boolean;
-}
 
 export interface ListTravelRouteParams {
   user_id?: string;

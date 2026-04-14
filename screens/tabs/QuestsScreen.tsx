@@ -6,7 +6,6 @@ import {
     ViewStyle,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -38,6 +37,14 @@ const STORAGE_SELECTED_CITY = 'quests_selected_city';
 const STORAGE_NEARBY_RADIUS = 'quests_nearby_radius_km';
 const DEFAULT_NEARBY_RADIUS_KM = 15;
 const NEARBY_ID = '__nearby__';
+let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null;
+
+async function loadExpoLocation() {
+    if (!expoLocationModulePromise) {
+        expoLocationModulePromise = import('expo-location');
+    }
+    return expoLocationModulePromise;
+}
 
 const { spacing, radii, typography } = DESIGN_TOKENS;
 
@@ -833,6 +840,7 @@ export default function QuestsScreen() {
         let cancelled = false;
         (async () => {
             try {
+                const Location = await loadExpoLocation();
                 // Check if we already have permission (don't prompt on first load)
                 const { status } = await Location.getForegroundPermissionsAsync();
                 if (status !== 'granted' || cancelled) {
@@ -905,6 +913,7 @@ export default function QuestsScreen() {
         (async () => {
             if (selectedCityId !== NEARBY_ID && viewMode !== 'map') return;
             try {
+                const Location = await loadExpoLocation();
                 const { status } = await Location.requestForegroundPermissionsAsync();
                 if (status !== 'granted' || cancelled) return;
                 const pos = await Location.getCurrentPositionAsync({

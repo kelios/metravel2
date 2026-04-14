@@ -128,15 +128,6 @@ jest.mock('@/api/miscOptimized', () => ({
   })),
 }));
 
-jest.mock('@/components/listTravel/hooks/useListTravelVisibility', () => ({
-  useListTravelVisibility: () => ({
-    isPersonalizationVisible: false,
-    isWeeklyHighlightsVisible: false,
-    isInitialized: true,
-    handleTogglePersonalization: jest.fn(),
-    handleToggleWeeklyHighlights: jest.fn(),
-  }),
-}));
 
 const mockUseListTravelFilters = jest.fn();
 const mockUseListTravelData = jest.fn();

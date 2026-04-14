@@ -1,4 +1,3 @@
-// ✅ УЛУЧШЕНИЕ: ModernFilters - декомпозирован на подкомпоненты (SRCH-01)
 // Подкомпоненты вынесены в ./filters/
 import React, { memo, useState, useCallback, useMemo } from 'react';
 import {
@@ -42,6 +41,92 @@ export interface FilterGroup {
 
 export type FilterState = Record<string, string[]> & { year?: string | number; moderation?: number };
 
+function getModernFiltersReserveState(params: {
+  filterGroups: FilterGroup[];
+  isLoading: boolean;
+  isNarrowWeb: boolean;
+}) {
+  const hasOptions = params.filterGroups.some((group) => (group.options || []).length > 0);
+  const shouldReserveSpace = params.isLoading || !hasOptions;
+  const reserveMinHeight =
+    Platform.OS === 'web'
+      ? params.isNarrowWeb
+        ? 720
+        : 760
+      : 640;
+
+  return {
+    hasOptions,
+    reserveMinHeight,
+    shouldReserveSpace,
+  };
+}
+
+function getModernFiltersViewportState() {
+  const isNarrowWeb =
+    Platform.OS === 'web'
+      && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
+
+  return {
+    isNarrowWeb,
+    shouldReserveResultsBadge: Platform.OS !== 'web' || isNarrowWeb,
+    showsStickyFooter: Platform.OS !== 'web' || isNarrowWeb,
+  };
+}
+
+function getModernFiltersActiveCount(selectedFilters: FilterState) {
+  return Object.values(selectedFilters).reduce<number>((sum, filters) => {
+    if (Array.isArray(filters)) {
+      return sum + filters.length;
+    }
+
+    return sum;
+  }, 0);
+}
+
+function splitModernFilterGroups(filterGroups: FilterGroup[]) {
+  return {
+    groupsWithoutSort: filterGroups.filter((group) => group.key !== 'sort'),
+    sortGroup: filterGroups.find((group) => group.key === 'sort'),
+  };
+}
+
+function getModernFiltersResultsText(resultsCount?: number) {
+  if (typeof resultsCount !== 'number') return '';
+  return `Найдено ${resultsCount} ${getTravelLabel(resultsCount)}`;
+}
+
+function getOrderedModernFilterOptions(group: FilterGroup, selectedFilters: FilterState) {
+  const rawSelected = selectedFilters[group.key];
+  const isMultiSelect = group.multiSelect !== false;
+  const selectedArray = isMultiSelect
+    ? Array.isArray(rawSelected)
+      ? rawSelected
+      : []
+    : rawSelected !== undefined && rawSelected !== null && (rawSelected as any) !== ''
+      ? [rawSelected].flat()
+      : [];
+  const selectedSet = new Set(selectedArray.map(String));
+  const selectedNames = group.options
+    .filter((option) => selectedSet.has(String(option.id)))
+    .map((option) => option.name);
+  const orderedOptions = group.options.slice().sort((a, b) => {
+    const aSelected = selectedSet.has(String(a.id));
+    const bSelected = selectedSet.has(String(b.id));
+    if (aSelected === bSelected) return 0;
+    return aSelected ? -1 : 1;
+  });
+
+  return {
+    isMultiSelect,
+    orderedOptions,
+    selectedArray,
+    selectedCount: selectedArray.length,
+    selectedNames,
+    selectedSet,
+  };
+}
+
 interface ModernFiltersProps {
   filterGroups: FilterGroup[];
   selectedFilters: FilterState;
@@ -78,12 +163,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const colors = useThemedColors();
   const styles = useMemo(() => createModernFiltersStyles(colors), [colors]);
 
-  const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
-  const hasOptions = filterGroups.some((group) => (group.options || []).length > 0);
-  const shouldReserveSpace = isLoading || !hasOptions;
-  const reserveMinHeight = Platform.OS === 'web'
-    ? (isNarrowWeb ? 720 : 760)
-    : 640;
+  const { isNarrowWeb, shouldReserveResultsBadge, showsStickyFooter } = getModernFiltersViewportState();
+  const { reserveMinHeight, shouldReserveSpace } = getModernFiltersReserveState({
+    filterGroups,
+    isLoading,
+    isNarrowWeb,
+  });
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
@@ -126,24 +211,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     });
   }, [animatedValues]);
 
-  const activeFiltersCount = useMemo(() => {
-    return Object.values(selectedFilters).reduce<number>((sum, filters) => {
-      if (Array.isArray(filters)) {
-        return sum + filters.length;
-      }
-      return sum;
-    }, 0);
-  }, [selectedFilters]);
-
-  const sortGroup = useMemo(
-    () => filterGroups.find((group) => group.key === 'sort'),
-    [filterGroups],
-  );
-
-  const groupsWithoutSort = useMemo(
-    () => filterGroups.filter((group) => group.key !== 'sort'),
-    [filterGroups],
-  );
+  const activeFiltersCount = useMemo(() => getModernFiltersActiveCount(selectedFilters), [selectedFilters]);
+  const { groupsWithoutSort, sortGroup } = useMemo(() => splitModernFilterGroups(filterGroups), [filterGroups]);
 
   const allGroupKeys = useMemo(() => groupsWithoutSort.map((g) => g.key), [groupsWithoutSort]);
 
@@ -152,12 +221,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     [allGroupKeys, expandedGroups],
   );
 
-  const resultsText = useMemo(() => {
-    if (typeof resultsCount !== 'number') return '';
-    return `Найдено ${resultsCount} ${getTravelLabel(resultsCount)}`;
-  }, [resultsCount]);
-
-  const shouldReserveResultsBadge = Platform.OS !== 'web' || isNarrowWeb;
+  const resultsText = useMemo(() => getModernFiltersResultsText(resultsCount), [resultsCount]);
   const showResultsBadge =
     typeof resultsCount === 'number' && shouldReserveResultsBadge;
 
@@ -181,7 +245,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Feather name="filter" size={20} color={colors.primary} />
-            <Text style={styles.headerTitle}>Фильтры</Text>
+            <View>
+              <Text style={styles.headerTitle}>Фильтры</Text>
+              {!!resultsText && (Platform.OS === 'web' && !isNarrowWeb) && (
+                <Text style={styles.selectedSummaryLabel}>{resultsText}</Text>
+              )}
+            </View>
           </View>
           <View style={styles.headerRight}>
             {activeFiltersCount > 0 && (
@@ -337,26 +406,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       >
         {groupsWithoutSort.map((group, index) => {
           const isExpanded = expandedGroups.has(group.key);
-          const rawSelected = selectedFilters[group.key];
-          const isMultiSelect = group.multiSelect !== false;
-          const selectedArray = isMultiSelect
-            ? (Array.isArray(rawSelected) ? rawSelected : [])
-            : (rawSelected !== undefined && rawSelected !== null && (rawSelected as any) !== ''
-              ? [rawSelected].flat()
-              : []);
-          const selectedSet = new Set(selectedArray.map(String));
-          const selectedCount = selectedArray.length;
-          const selectedNames = group.options
-            .filter((option) => selectedSet.has(String(option.id)))
-            .map((option) => option.name);
-          const orderedOptions = group.options
-            .slice()
-            .sort((a, b) => {
-              const aSelected = selectedSet.has(String(a.id));
-              const bSelected = selectedSet.has(String(b.id));
-              if (aSelected === bSelected) return 0;
-              return aSelected ? -1 : 1;
-            });
+          const {
+            isMultiSelect,
+            orderedOptions,
+            selectedArray,
+            selectedCount,
+            selectedNames,
+            selectedSet,
+          } = getOrderedModernFilterOptions(group, selectedFilters);
 
           return (
             <View
@@ -481,7 +538,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
       </ScrollView>
 
       {/* Apply / Reset Buttons (Mobile: native + web-narrow) — sticky footer вне ScrollView */}
-      {(Platform.OS !== 'web' || isNarrowWeb) && (
+      {showsStickyFooter && (
         <View style={styles.applyButtonContainer}>
           {activeFiltersCount > 0 && (
             <Pressable

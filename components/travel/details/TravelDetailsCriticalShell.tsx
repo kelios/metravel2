@@ -2,11 +2,16 @@ import React, { Suspense, useMemo } from 'react';
 import { Animated, Platform, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/types/types';
 import type { TravelSectionLink } from '@/components/travel/sectionLinks';
+import {
+  getTravelDetailsDesktopContentColumnStyle,
+  getTravelDetailsDesktopLayoutStyle,
+  getTravelDetailsDesktopSidebarContainerStyle,
+  shouldShowTravelDetailsDesktopSidebar,
+  shouldShowTravelDetailsSkeletonOverlay,
+} from '@/components/travel/details/travelDetailsCriticalShellModel';
 
 import type { AnchorsMap } from './TravelDetailsTypes';
 import TravelDetailsSkeletonOverlay from './TravelDetailsSkeletonOverlay';
@@ -75,30 +80,16 @@ export default function TravelDetailsCriticalShell({
   deferredContent,
   mainAriaLabel,
 }: TravelDetailsCriticalShellProps) {
-  const showDesktopSidebar = !isMobile && screenWidth >= METRICS.breakpoints.largeTablet;
-  const showSkeletonOverlay = Platform.OS === 'web' && Boolean(travel);
+  const showDesktopSidebar = shouldShowTravelDetailsDesktopSidebar(isMobile, screenWidth);
+  const showSkeletonOverlay = shouldShowTravelDetailsSkeletonOverlay(travel);
 
   const desktopLayoutStyle = useMemo(
-    () => ({
-      width: '100%' as const,
-      flexDirection: 'row' as const,
-      alignItems: 'flex-start' as const,
-      gap: DESIGN_TOKENS.spacing.lg,
-    }),
+    () => getTravelDetailsDesktopLayoutStyle(),
     []
   );
 
   const desktopSidebarContainerStyle = useMemo(
-    () => ({
-      width: menuWidthNum,
-      flexShrink: 0,
-      position: 'sticky' as const,
-      top: 0,
-      alignSelf: 'flex-start' as const,
-      maxHeight: '100vh',
-      overflowY: 'auto' as const,
-      overflowX: 'hidden' as const,
-    } as any),
+    () => getTravelDetailsDesktopSidebarContainerStyle(menuWidthNum),
     [menuWidthNum]
   );
 
@@ -120,10 +111,7 @@ export default function TravelDetailsCriticalShell({
   );
 
   const desktopContentColumnStyle = useMemo(
-    () => ({
-      flex: 1,
-      minWidth: 0,
-    }),
+    () => getTravelDetailsDesktopContentColumnStyle(),
     []
   );
 

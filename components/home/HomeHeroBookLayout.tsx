@@ -1,10 +1,5 @@
 import React from 'react'
-import {
-  Animated,
-  Pressable,
-  Text,
-  View,
-} from 'react-native'
+import { Animated, Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import Button from '@/components/ui/Button'
@@ -57,7 +52,9 @@ type HomeHeroBookLayoutProps = {
   useStackedCtas: boolean
   topWaveAnimatedStyle: any
   bottomWaveAnimatedStyle: any
-  onBookWrapperLayout?: (e: { nativeEvent: { layout: { width: number } } }) => void
+  onBookWrapperLayout?: (e: {
+    nativeEvent: { layout: { width: number } }
+  }) => void
   onQuickFilterPress: (
     label: string,
     filters?: QuickFilterParams,
@@ -81,7 +78,11 @@ function HeroWeekEyebrow({
 }) {
   return (
     <View style={styles.slideEyebrow}>
-      <Feather name="map-pin" size={11} color={iconColor ?? colors.textOnDark} />
+      <Feather
+        name="map-pin"
+        size={11}
+        color={iconColor ?? colors.textOnDark}
+      />
       <Text style={styles.slideEyebrowText}>Маршрут недели</Text>
     </View>
   )
@@ -107,7 +108,9 @@ function InlineBookmarkRail({
       {moodCards.map((card) => (
         <Pressable
           key={`inline-${card.title}`}
-          onPress={() => onQuickFilterPress(card.title, card.filters, card.route)}
+          onPress={() =>
+            onQuickFilterPress(card.title, card.filters, card.route)
+          }
           style={({ pressed, hovered }) => [
             styles.bookmarkChip,
             (pressed || hovered) && styles.bookmarkChipHover,
@@ -143,7 +146,11 @@ function TabletFeatureGrid({
           ]}
         >
           <View style={styles.tabletFeatureIconWrap}>
-            <Feather name={item.icon as any} size={16} color={colors.textOnPrimary} />
+            <Feather
+              name={item.icon as any}
+              size={16}
+              color={colors.textOnPrimary}
+            />
           </View>
           <View style={styles.tabletFeatureTextWrap}>
             <Text style={styles.tabletFeatureTitle}>{item.title}</Text>
@@ -262,6 +269,7 @@ function HeroSlider({
                 key={`hero-slide-${slideIndex}`}
                 style={[
                   styles.slideWrapper,
+                  { pointerEvents: 'none' },
                   isWeb
                     ? ({
                         opacity: isCurrentVisibleSlide ? 1 : 0,
@@ -269,7 +277,6 @@ function HeroSlider({
                       } as any)
                     : null,
                 ]}
-                pointerEvents="none"
               >
                 <ImageCardMedia
                   source={slide.source}
@@ -283,7 +290,11 @@ function HeroSlider({
                   quality={75}
                   alt={slide.alt}
                   loading={
-                    slideIndex === 0 ? 'eager' : isSlideLoaded ? 'eager' : 'lazy'
+                    slideIndex === 0
+                      ? 'eager'
+                      : isSlideLoaded
+                        ? 'eager'
+                        : 'lazy'
                   }
                   priority={slideIndex === 0 ? 'high' : 'normal'}
                   showImmediately={isSlideLoaded}
@@ -292,7 +303,10 @@ function HeroSlider({
                 />
                 <View style={styles.slideOverlay}>
                   <HeroWeekEyebrow
-                    colors={{ ...({} as ThemedColors), textOnDark: sliderIconColor }}
+                    colors={{
+                      ...({} as ThemedColors),
+                      textOnDark: sliderIconColor,
+                    }}
                     styles={styles}
                     iconColor={sliderIconColor}
                   />
@@ -313,8 +327,12 @@ function HeroSlider({
           {isWeb && (
             <>
               <View style={styles.sliderTopBlur} />
-              <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurLeft]} />
-              <View style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurRight]} />
+              <View
+                style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurLeft]}
+              />
+              <View
+                style={[styles.sliderEdgeBlur, styles.sliderEdgeBlurRight]}
+              />
               {showSideSlider ? (
                 <>
                   <Animated.View
@@ -417,12 +435,9 @@ export default function HomeHeroBookLayout({
             {isWeb && showSideSlider && (
               <View style={styles.heroPageCurlLeft} />
             )}
-            <View
-              testID="home-hero-left-frame"
-              style={styles.leftPageFrame}
-            >
+            <View testID="home-hero-left-frame" style={styles.leftPageFrame}>
               <View>
-            {showSideSlider && !isNarrowLayout && (
+                {showSideSlider && !isNarrowLayout && (
                   <View style={styles.chapterHeader}>
                     <Text style={styles.chapterLabel}>Глава 01</Text>
                     <View style={styles.chapterDivider} />
@@ -455,10 +470,7 @@ export default function HomeHeroBookLayout({
                 />
               ) : null}
 
-              <View
-                testID="home-hero-cta-row"
-                style={styles.buttonsContainer}
-              >
+              <View testID="home-hero-cta-row" style={styles.buttonsContainer}>
                 <Button
                   onPress={onOpenSearch}
                   label="Смотреть маршруты"
