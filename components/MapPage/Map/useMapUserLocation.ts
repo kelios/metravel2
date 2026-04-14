@@ -97,14 +97,10 @@ export function useMapUserLocation({
       })()
     }
 
-    const element = document.getElementById(mapContainerId)
-    if (!element) return
-    const events = ['pointerdown', 'touchstart', 'keydown'] as const
-    events.forEach((eventName) => element.addEventListener(eventName, loadLocation, { once: true, passive: true }))
+    loadLocation()
 
     return () => {
       cancelled = true
-      events.forEach((eventName) => element.removeEventListener(eventName, loadLocation))
     }
   }, [L, mapContainerId, rl])
 

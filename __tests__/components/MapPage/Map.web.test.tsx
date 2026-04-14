@@ -354,24 +354,12 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     )
   }
 
-  // Helper: create map container DOM element and simulate user interaction
-  // to trigger geolocation (gated behind pointerdown/touchstart/keydown).
-  const simulateMapUserInteraction = () => {
-    let el = document.getElementById('test-map-container')
-    if (!el) {
-      el = document.createElement('div')
-      el.id = 'test-map-container'
-      document.body.appendChild(el)
-    }
-    el.dispatchEvent(new Event('pointerdown', { bubbles: true }))
-  }
-
   beforeEach(() => {
     jest.clearAllMocks()
     ;(window as any).L = mockLeaflet
     // Reset marker click handler
     delete (window as any).lastMarkerClickHandler
-    // Ensure map container DOM element exists for geolocation gating
+    // Ensure map container DOM element exists for map initialization
     if (!document.getElementById('test-map-container')) {
       const el = document.createElement('div')
       el.id = 'test-map-container'
@@ -424,9 +412,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     const { queryAllByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})
-
-    // Geolocation is gated behind user interaction — simulate pointerdown
-    await act(async () => { simulateMapUserInteraction() })
 
     await waitFor(() => {
       expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1)
@@ -482,9 +467,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     await act(async () => {})
 
-    // Geolocation is gated behind user interaction — simulate pointerdown
-    await act(async () => { simulateMapUserInteraction() })
-
     await waitFor(() => {
       expect(getByTestId('popup-driving-info')).toBeTruthy()
     })
@@ -502,9 +484,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     const { queryAllByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})
-
-    // Geolocation is gated behind user interaction — simulate pointerdown
-    await act(async () => { simulateMapUserInteraction() })
 
     await waitFor(() => {
       expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1)
@@ -524,9 +503,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     const { queryAllByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})
-
-    // Geolocation is gated behind user interaction — simulate pointerdown
-    await act(async () => { simulateMapUserInteraction() })
 
     await waitFor(() => {
       expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1)
@@ -1028,9 +1004,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
       const { getByLabelText } = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
-
-      // Geolocation is gated behind user interaction — simulate pointerdown
-      await act(async () => { simulateMapUserInteraction() })
 
       // Ждём, пока будет получена геолокация и появится кнопка (aria-label на кнопке)
       const myLocationButton = await waitFor(() => getByLabelText('Вернуться к моему местоположению'))
