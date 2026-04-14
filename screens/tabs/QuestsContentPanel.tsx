@@ -75,7 +75,9 @@ export default function QuestsContentPanel({
             <View style={styles.contentHeader}>
                 <View>
                     <Text style={styles.contentTitle}>
-                        {selectedCityId === nearbyId ? 'Квесты поблизости' : selectedCityName || 'Все квесты'}
+                        {selectedCityId === nearbyId
+                            ? (userLoc ? 'Квесты поблизости' : 'Все квесты')
+                            : selectedCityName || 'Все квесты'}
                     </Text>
                     {dataLoaded && <Text style={styles.contentCount}>{pluralizeQuest(questsAll.length)}</Text>}
                 </View>
@@ -95,6 +97,15 @@ export default function QuestsContentPanel({
             <View style={styles.contentBody}>
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
+                        {dataLoaded && selectedCityId === nearbyId && !userLoc && (
+                            <View style={styles.geoBanner} testID="quests-geo-banner">
+                                <Feather name="map-pin" size={13} color={colors.warning} />
+                                <Text style={styles.geoBannerText}>
+                                    Геолокация отключена. Карта центрирована на Минске и показывает все квесты.
+                                </Text>
+                            </View>
+                        )}
+
                         {!dataLoaded && (
                             <View style={styles.mapLoading}>
                                 <ActivityIndicator color={colors.primary} />
@@ -128,7 +139,9 @@ export default function QuestsContentPanel({
                                         travel={{ data: mapPoints as any }}
                                         coordinates={mapCenter}
                                         mode="radius"
-                                        radius={selectedCityId === nearbyId ? String(Math.max(nearbyRadiusKm, 5)) : '50000'}
+                                        radius={selectedCityId === nearbyId
+                                            ? (userLoc ? String(Math.max(nearbyRadiusKm, 5)) : '50000')
+                                            : '50000'}
                                         routePoints={[]}
                                         transportMode="foot"
                                         onMapClick={() => {}}
@@ -147,16 +160,6 @@ export default function QuestsContentPanel({
                                 icon="map-pin"
                                 title="Рядом ничего не найдено"
                                 description="Попробуйте увеличить радиус поиска"
-                                variant="empty"
-                                iconSize={48}
-                            />
-                        )}
-
-                        {selectedCityId === nearbyId && !userLoc && dataLoaded && (
-                            <EmptyState
-                                icon="navigation"
-                                title="Геолокация отключена"
-                                description="Разрешите доступ к геолокации в настройках браузера"
                                 variant="empty"
                                 iconSize={48}
                             />

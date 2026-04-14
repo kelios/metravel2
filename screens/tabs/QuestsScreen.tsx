@@ -443,6 +443,25 @@ function getStyles(colors: ThemedColors, screenWidth: number, screenHeight?: num
         mapSection: {
             width: '100%',
         },
+        geoBanner: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+            marginBottom: spacing.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.sm,
+            borderRadius: radii.lg,
+            backgroundColor: colors.warningSoft,
+            borderWidth: 1,
+            borderColor: colors.warning,
+        },
+        geoBannerText: {
+            flex: 1,
+            color: colors.warningDark,
+            fontSize: typography.sizes.sm,
+            fontWeight: '600',
+            lineHeight: 20,
+        },
         mapContainer: {
             width: '100%',
             height: Math.min(isMobileW ? 420 : 620, screenHeight ? screenHeight * 0.6 : 620),
@@ -1028,7 +1047,9 @@ export default function QuestsScreen() {
     const questsAll: (QuestMeta & { _distanceKm?: number })[] = useMemo(() => {
         if (!selectedCityId || !dataLoaded) return [];
         if (selectedCityId === NEARBY_ID) {
-            if (!userLoc) return [];
+            if (!userLoc) {
+                return ALL_QUESTS.map((q) => ({ ...q }));
+            }
             return ALL_QUESTS
                 .map((q) => ({ ...q, _distanceKm: haversineKm(userLoc.lat, userLoc.lng, q.lat, q.lng) }))
                 .filter((q) => (q._distanceKm ?? Infinity) <= nearbyRadiusKm)
@@ -1116,6 +1137,9 @@ export default function QuestsScreen() {
     const titleText = useMemo(() => {
         if (!selectedCityId) return 'Квесты | MeTravel';
         if (selectedCityId === NEARBY_ID) {
+            if (!userLoc) {
+                return 'Квесты: все города | MeTravel';
+            }
             const suffix = userLoc
                 ? nearbyCount > 0 ? ` — ${nearbyCount} поблизости • радиус ${nearbyRadiusKm} км` : ' — рядом ничего не найдено'
                 : ' — геолокация отключена';
@@ -1125,10 +1149,15 @@ export default function QuestsScreen() {
     }, [selectedCityId, selectedCityName, nearbyCount, nearbyRadiusKm, userLoc]);
 
     const descText = useMemo(() => {
-        if (selectedCityId === NEARBY_ID) return 'Офлайн-квесты рядом с вами. Выбирайте радиус и исследуйте парки и улицы поблизости.';
+        if (selectedCityId === NEARBY_ID) {
+            if (!userLoc) {
+                return 'Каталог офлайн-квестов во всех доступных городах. Разрешите геолокацию, чтобы увидеть приключения рядом с вами.';
+            }
+            return 'Офлайн-квесты рядом с вами. Выбирайте радиус и исследуйте парки и улицы поблизости.';
+        }
         if (selectedCityName) return `Офлайн-квесты в городе ${selectedCityName}. Прогулки по точкам, задания и маршруты.`;
         return 'Исследуйте города и парки с офлайн-квестами — приключения на карте рядом с вами.';
-    }, [selectedCityId, selectedCityName]);
+    }, [selectedCityId, selectedCityName, userLoc]);
     const questsStructuredData = createQuestCatalogStructuredData({
         canonical: buildCanonicalUrl('/quests'),
         title: titleText,
