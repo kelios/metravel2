@@ -129,6 +129,7 @@ function readProcessCommand(pid) {
 
 function killStaleLocalWebServers(port) {
   const listeningPids = listListeningPids(port);
+  const stalePids = [];
   for (const pid of listeningPids) {
     if (pid === process.pid) continue;
     const command = readProcessCommand(pid);
@@ -144,9 +145,50 @@ function killStaleLocalWebServers(port) {
 
     try {
       process.kill(pid, 'SIGTERM');
+      stalePids.push(pid);
     } catch {
       // ignore
     }
+  }
+  return stalePids;
+}
+
+async function waitForPortRelease(port, stalePids, timeoutMs = 5000) {
+  if (!Array.isArray(stalePids) || stalePids.length === 0) return;
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const remaining = listListeningPids(port).filter((pid) => stalePids.includes(pid));
+    if (remaining.length === 0) return;
+    await sleep(150);
+  }
+
+  const remaining = listListeningPids(port).filter((pid) => stalePids.includes(pid));
+  if (remaining.length === 0) return;
+
+  for (const pid of remaining) {
+    console.warn(
+      `[e2e-webserver] Port ${port} is still occupied after SIGTERM (pid=${pid}). Sending SIGKILL.`
+    );
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // ignore
+    }
+  }
+
+  const killDeadline = Date.now() + 2000;
+  while (Date.now() < killDeadline) {
+    const active = listListeningPids(port).filter((pid) => remaining.includes(pid));
+    if (active.length === 0) return;
+    await sleep(100);
+  }
+
+  const active = listListeningPids(port).filter((pid) => remaining.includes(pid));
+  if (active.length > 0) {
+    throw new Error(
+      `[e2e-webserver] Failed to free port ${port}; lingering server pid(s): ${active.join(', ')}`
+    );
   }
 }
 
@@ -192,7 +234,8 @@ async function main() {
   const e2eApiBase = `http://127.0.0.1:${e2eWebPort}`;
   const forceRebuild = String(process.env.E2E_FORCE_REBUILD || '') === '1';
 
-  killStaleLocalWebServers(e2eWebPort);
+  const staleServerPids = killStaleLocalWebServers(e2eWebPort);
+  await waitForPortRelease(e2eWebPort, staleServerPids);
 
   process.env.EXPO_PUBLIC_E2E = 'true';
   process.env.EXPO_PUBLIC_IS_LOCAL_API = 'false';
