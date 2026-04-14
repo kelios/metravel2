@@ -401,7 +401,7 @@ const createStyles = (
     position: Platform.OS === "web" ? ("fixed" as any) : "relative",
     bottom: 0,
     ...(Platform.OS === "web" ? ({ left: 0, right: 0, width: "100%" } as any) : null),
-    zIndex: 50,
+    zIndex: 890,
   },
   containerOpen: {
     zIndex: 11000,

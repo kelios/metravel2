@@ -192,21 +192,13 @@ export default function RootWebDeferredChrome({
       )}
 
       {showFooter && showFooterChrome && (
-        <View
-          style={
-            isMobile
-              ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any)
-              : undefined
+        <React.Suspense
+          fallback={
+            isMobile ? <View style={{ height: WEB_FOOTER_RESERVE_HEIGHT, width: '100%' }} /> : null
           }
         >
-          <React.Suspense
-            fallback={
-              isMobile ? <View style={{ height: WEB_FOOTER_RESERVE_HEIGHT, width: '100%' }} /> : null
-            }
-          >
-            <FooterLazy onDockHeight={(height) => setDockHeight(height)} />
-          </React.Suspense>
-        </View>
+          <FooterLazy onDockHeight={(height) => setDockHeight(height)} />
+        </React.Suspense>
       )}
     </>
   )

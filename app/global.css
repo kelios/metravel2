@@ -408,6 +408,18 @@ select:focus-visible {
   flex: 0 0 auto !important;
 }
 
+/* Mobile footer dock: guarantee visibility above page content */
+@media (max-width: 1023px) {
+  [data-testid="footer-dock-wrapper"] {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 890 !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
 /* Extra SSR/hydration safety: if RN-web styles aren't attached yet, enforce dock layout by wrapper */
 [data-testid="footer-dock-wrapper"],
 [data-testid="footer-dock-measure"] {

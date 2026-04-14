@@ -58,29 +58,26 @@ export function useMapPopupAutoPan({
         const overflowTop = safeTop - popupRect.top
         const overflowBottom = popupRect.bottom - safeBottom
 
-        if (overflowLeft > 0 && overflowRight > 0) {
+        if (isNarrowMap) {
+          // На узком экране всегда центрируем popup в безопасной области,
+          // чтобы тапнутая точка была полностью видна вместе с карточкой.
           dx = popupCenterX - safeCenterX
-        } else if (overflowLeft > 0) {
-          dx = -overflowLeft
-        } else if (overflowRight > 0) {
-          dx = overflowRight
-        } else if (isNarrowMap) {
-          const centerDeltaX = popupCenterX - safeCenterX
-          if (Math.abs(centerDeltaX) > 18) {
-            dx = centerDeltaX
-          }
-        }
-
-        if (overflowTop > 0 && overflowBottom > 0) {
           dy = popupCenterY - safeCenterY
-        } else if (overflowTop > 0) {
-          dy = -overflowTop
-        } else if (overflowBottom > 0) {
-          dy = overflowBottom
-        } else if (isNarrowMap) {
-          const centerDeltaY = popupCenterY - safeCenterY
-          if (Math.abs(centerDeltaY) > 24) {
-            dy = centerDeltaY
+        } else {
+          if (overflowLeft > 0 && overflowRight > 0) {
+            dx = popupCenterX - safeCenterX
+          } else if (overflowLeft > 0) {
+            dx = -overflowLeft
+          } else if (overflowRight > 0) {
+            dx = overflowRight
+          }
+
+          if (overflowTop > 0 && overflowBottom > 0) {
+            dy = popupCenterY - safeCenterY
+          } else if (overflowTop > 0) {
+            dy = -overflowTop
+          } else if (overflowBottom > 0) {
+            dy = overflowBottom
           }
         }
 
