@@ -81,7 +81,7 @@
     "clean": "npx expo start --clear",
     "reset": "EXPO_RESET_CACHE=true npx expo start --clear",
     "prod:web": "NODE_ENV=production node ./node_modules/expo/bin/cli export -p web",
-    "postinstall": "node scripts/fix-lightningcss.js && node scripts/fix-expo-metro-terminal-reporter.js && (node ./node_modules/patch-package/dist/index.js || true)",
+    "postinstall": "node scripts/fix-lightningcss.js && node scripts/fix-expo-metro-terminal-reporter.js && node scripts/fix-brace-expansion.js && (node ./node_modules/patch-package/dist/index.js || true)",
     "ios:prebuild": "./scripts/ios-prebuild.sh",
     "ios:build": "./scripts/ios-build.sh",
     "ios:submit": "./scripts/ios-submit.sh",
