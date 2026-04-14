@@ -330,7 +330,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       (filtersMode === 'radius' || filtersMode === 'route') &&
       typeof setFiltersMode === 'function';
     const showTopFilterActions = uiTab === 'filters' && filtersMode === 'radius' && !stackSheetToolbar;
-    const showSheetCloseButton = !stackSheetToolbar;
+    // Keep the close affordance available on narrow mobile layouts too:
+    // the compact toolbar stacks vertically, but the panel still needs an explicit close control.
+    const showSheetCloseButton = true;
 
     const body =
       contentTab === 'filters' ? (
