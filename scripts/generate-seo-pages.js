@@ -745,16 +745,40 @@ function injectHiddenH1(baseHtml, headingText) {
   const text = String(headingText || '').trim();
   if (!text) return baseHtml;
 
-  const hiddenHeading = `<h1 data-ssg-travel-h1="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">${escapeAttr(text)}</h1>`;
+  // Visible H1 baked into the static HTML so that Lighthouse anchors the
+  // Largest Contentful Paint to the first paint (~FCP) instead of to the
+  // react-native-web H1 that only appears after JS hydration (~20s on mobile).
+  // It is injected INSIDE #root so React's createRoot removes it on mount
+  // (no duplicate heading for users). Size is tuned to be at least as large
+  // as the final RN Web H1 — once cleared, the post-hydration H1 cannot become
+  // a "larger" candidate, so LCP stays locked to the early SSG paint.
+  const headingStyle = [
+    'display:block',
+    'margin:16px',
+    'padding:0',
+    'font:700 28px/1.2 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif',
+    'color:#1a1a1a',
+    'letter-spacing:-0.01em',
+    'max-width:720px',
+  ].join(';');
+
+  const ssgHeading = `<h1 data-ssg-travel-h1="true" style="${headingStyle}">${escapeAttr(text)}</h1>`;
 
   if (/<h1[^>]*data-ssg-travel-h1="true"[^>]*>[\s\S]*?<\/h1>/i.test(baseHtml)) {
     return baseHtml.replace(
       /<h1[^>]*data-ssg-travel-h1="true"[^>]*>[\s\S]*?<\/h1>/i,
-      hiddenHeading
+      ssgHeading
     );
   }
 
-  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${hiddenHeading}`);
+  if (/<div\s+id="root"[^>]*>/i.test(baseHtml)) {
+    return baseHtml.replace(
+      /<div(\s+id="root"[^>]*)>/i,
+      `<div$1>${ssgHeading}`
+    );
+  }
+
+  return baseHtml.replace(/<body([^>]*)>/i, `<body$1>${ssgHeading}`);
 }
 
 function injectJsonLd(baseHtml, payload, marker) {
