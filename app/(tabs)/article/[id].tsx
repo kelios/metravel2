@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
   Platform,
   ScrollView,
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import ArticleRatingSection from '@/components/article/ArticleRatingSection'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'

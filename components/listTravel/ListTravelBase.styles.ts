@@ -23,20 +23,6 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       flexDirection: 'column',
       ...(Platform.OS === 'web' ? ({ minHeight: 0 } as any) : null),
     },
-    content: {
-      flex: 1,
-      flexDirection: 'row',
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingTop: DESIGN_TOKENS.spacing.lg,
-      paddingBottom: DESIGN_TOKENS.spacing.lg,
-      overflow: 'hidden',
-      width: '100%',
-    },
-    contentMobile: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingTop: 0,
-      paddingBottom: DESIGN_TOKENS.spacing.sm,
-    },
     sidebar: {
       width: 320,
       flexShrink: 0,
@@ -70,117 +56,6 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
             animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           } as any)
         : {}),
-    },
-    listContainer: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-      paddingTop: DESIGN_TOKENS.spacing.lg,
-      paddingBottom: DESIGN_TOKENS.spacing.lg,
-    },
-    listContainerMobile: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingTop: DESIGN_TOKENS.spacing.sm,
-      paddingBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    exportBar: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      padding: DESIGN_TOKENS.spacing.md,
-      marginBottom: DESIGN_TOKENS.spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...Platform.select({
-        web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-        } as any,
-        ios: DESIGN_TOKENS.shadowsNative.medium,
-        android: { elevation: 4 },
-        default: DESIGN_TOKENS.shadowsNative.medium,
-      }),
-    },
-    exportBarMobile: {
-      flexDirection: 'column',
-      gap: DESIGN_TOKENS.spacing.sm,
-      alignItems: 'stretch',
-      padding: DESIGN_TOKENS.spacing.sm,
-    },
-    exportBarMobileWeb: {
-      marginHorizontal: -DESIGN_TOKENS.spacing.xs,
-      marginBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    exportBarInfo: {
-      flex: 1,
-      marginRight: DESIGN_TOKENS.spacing.md,
-    },
-    exportBarInfoTitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      color: colors.text,
-      marginBottom: DESIGN_TOKENS.spacing.xs,
-    },
-    exportBarInfoSubtitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.textMuted,
-      marginBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    exportBarInfoActions: {
-      flexDirection: 'row',
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    linkButton: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.primaryText,
-      textDecorationLine: 'underline',
-    },
-    exportBarButtons: {
-      flexDirection: 'row',
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    exportBarButtonsMobile: {
-      flexDirection: 'column',
-      width: '100%',
-      alignItems: 'stretch',
-    },
-    progressWrapper: {
-      marginTop: DESIGN_TOKENS.spacing.sm,
-    },
-    recommendationsLoader: {
-      marginTop: DESIGN_TOKENS.spacing.lg,
-      padding: DESIGN_TOKENS.spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      alignItems: 'center',
-    },
-    recommendationsSkeleton: {
-      width: '100%',
-    },
-    recommendationsSkeletonHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: DESIGN_TOKENS.spacing.md,
-    },
-    recommendationsSkeletonTitle: {
-      width: 120,
-      height: 20,
-      backgroundColor: colors.borderLight,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-    },
-    recommendationsSkeletonTabs: {
-      flexDirection: 'row',
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    recommendationsSkeletonContent: {
-      flexDirection: 'row',
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    recommendationsSkeletonCard: {
-      flex: 1,
-      height: 80,
-      backgroundColor: colors.borderLight,
-      borderRadius: DESIGN_TOKENS.radii.sm,
     },
     rightColumn: {
       flex: 1,
@@ -237,14 +112,6 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       flexWrap: 'wrap',
       justifyContent: 'flex-start',
       alignItems: 'flex-start',
-    },
-    resultsCount: {
-      marginBottom: DESIGN_TOKENS.spacing.lg,
-    },
-    resultsCountText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      color: colors.text,
     },
     footerLoader: {
       paddingVertical: DESIGN_TOKENS.spacing.lg,

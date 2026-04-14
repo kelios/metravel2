@@ -5,7 +5,6 @@
 
 import type { Travel } from "@/types/types";
 
-// ✅ АРХИТЕКТУРА: Состояние фильтров
 export interface FilterState {
   year?: string;
   sort?: string;
@@ -20,7 +19,6 @@ export interface FilterState {
   over_nights_stay?: number[];
 }
 
-// ✅ АРХИТЕКТУРА: Опции фильтров из API
 export interface FilterOptions {
   countries?: Array<{ country_id?: number; id?: string | number; title_ru?: string; name?: string }>;
   categories?: Array<{ id: string; name: string }>;
@@ -38,28 +36,24 @@ export interface FilterOptions {
   }>;
 }
 
-// ✅ АРХИТЕКТУРА: Категория с количеством
 export interface CategoryWithCount {
   id: string | number;
   name: string;
   count: number;
 }
 
-// ✅ АРХИТЕКТУРА: Badge для социального доказательства
 export interface SocialProofBadge {
   label: string;
   color: string;
   bgColor: string;
 }
 
-// ✅ АРХИТЕКТУРА: Состояние видимости секций
 export interface VisibilityState {
   isPersonalizationVisible: boolean;
   isWeeklyHighlightsVisible: boolean;
   isInitialized: boolean;
 }
 
-// ✅ АРХИТЕКТУРА: Состояние списка путешествий
 export interface ListTravelState {
   filter: FilterState;
   search: string;
@@ -71,7 +65,6 @@ export interface ListTravelState {
   isRefreshing: boolean;
 }
 
-// ✅ АРХИТЕКТУРА: Параметры запроса
 export interface TravelQueryParams {
   page: number;
   perPage: number;
@@ -79,13 +72,11 @@ export interface TravelQueryParams {
   params: Record<string, any>;
 }
 
-// ✅ АРХИТЕКТУРА: Ответ API для путешествий
 export interface TravelsApiResponse {
   data?: Travel[] | { data: Travel[] | Travel; total: number };
   total?: number;
 }
 
-// ✅ АРХИТЕКТУРА: Конфигурация React Query
 export interface TravelQueryConfig {
   queryKey: Array<string | TravelQueryParams>;
   enabled: boolean;
@@ -96,7 +87,6 @@ export interface TravelQueryConfig {
   keepPreviousData: boolean;
 }
 
-// ✅ АРХИТЕКТУРА: Props для ListTravel компонента
 export interface ListTravelProps {
   onTogglePersonalization?: () => void;
   onToggleWeeklyHighlights?: () => void;
@@ -104,12 +94,10 @@ export interface ListTravelProps {
   isWeeklyHighlightsVisible?: boolean;
 }
 
-// ✅ АРХИТЕКТУРА: Route параметры
 export interface ListTravelRouteParams {
   user_id?: string;
 }
 
-// ✅ АРХИТЕКТУРА: Auth флаги
 export interface AuthFlags {
   userId: string | null;
   isSuperuser: boolean;

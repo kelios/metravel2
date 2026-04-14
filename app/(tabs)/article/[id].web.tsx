@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { Article } from '@/types/types'
 import { Card, Title } from '@/ui/paper'
 import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'

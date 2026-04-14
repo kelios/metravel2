@@ -138,7 +138,6 @@ export function useListTravelFilters({
     };
   }, [filter, options?.categories]);
 
-  // ✅ ИСПРАВЛЕНИЕ: Стабилизация queryParams для предотвращения лишних запросов
   const queryParams = useMemo(() => {
     const params = buildTravelQueryParams(filterForQuery, {
       isMeTravel,
@@ -149,10 +148,9 @@ export function useListTravelFilters({
       routeUserId: user_id,
     });
     
-    // ✅ ИСПРАВЛЕНИЕ: Убираем пустые значения для стабильности
     const cleaned: Record<string, any> = {};
     Object.keys(params)
-      .sort() // ✅ ИСПРАВЛЕНИЕ: Сортируем ключи для стабильного сравнения
+      .sort()
       .forEach(key => {
         const value = params[key];
         // Пропускаем пустые значения
@@ -168,12 +166,10 @@ export function useListTravelFilters({
     return cleaned;
   }, [filterForQuery, isMeTravel, isExport, isTravelBy, userId, user_id]);
 
-  // ✅ АРХИТЕКТУРА: Сброс фильтров
   const resetFilters = useCallback(() => {
     setFilter(INITIAL_FILTER);
   }, []);
 
-  // ✅ АРХИТЕКТУРА: Обработчик выбора фильтра
   const onSelect = useCallback((field: string, value: any) => {
     setFilter((prev) => {
       // Если значение пустое, удаляем ключ из фильтра
@@ -186,11 +182,9 @@ export function useListTravelFilters({
     });
   }, []);
 
-  // ✅ АРХИТЕКТУРА: Применение фильтров
   const applyFilter = useCallback((newFilter: FilterState) => {
     const cleaned: FilterState = {};
     Object.entries(newFilter).forEach(([key, value]) => {
-      // ✅ ИСПРАВЛЕНИЕ: Год обрабатываем отдельно - сохраняем как строку, если он не пустой
       if (key === 'year') {
         // Год должен быть строкой и не пустой
         if (value && typeof value === 'string' && value.trim() !== '') {
@@ -211,7 +205,6 @@ export function useListTravelFilters({
     setFilter(cleaned);
   }, []);
 
-  // ✅ АРХИТЕКТУРА: Обработчик переключения категории
   const handleToggleCategory = useCallback((categoryName: string) => {
     const currentCategories = filter.categories || [];
     const newCategories = currentCategories.includes(categoryName)

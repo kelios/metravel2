@@ -5,11 +5,10 @@ import {
   StyleSheet,
   Pressable,
   Platform,
-  SafeAreaView,
   LayoutChangeEvent,
   useWindowDimensions,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePathname, useRouter, type Href } from "expo-router";
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem";

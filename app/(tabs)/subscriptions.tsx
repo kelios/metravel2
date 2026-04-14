@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, SafeAreaView, Pressable, Platform,
+  View, Text, StyleSheet, Pressable, Platform,
   ScrollView, ActivityIndicator, TextInput, type TextStyle, type ViewStyle,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter, type Href } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSubscriptionsData, type SubscriptionTab } from '@/hooks/useSubscriptionsData';
 import AuthorCard from '@/components/subscriptions/AuthorCard';

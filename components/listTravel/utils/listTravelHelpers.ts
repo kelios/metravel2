@@ -8,7 +8,6 @@ import type { FilterOptions, CategoryWithCount } from "./listTravelTypes";
 import { BREAKPOINTS, BADGE_THRESHOLDS, GRID_COLUMNS } from "./listTravelConstants";
 import { getThemedColors, type ThemedColors } from "@/hooks/useTheme";
 
-// ✅ АРХИТЕКТУРА: Нормализация ответа API
 export function normalizeApiResponse(data: any): { items: Travel[]; total: number } {
   if (!data) {
     return { items: [], total: 0 };
@@ -32,10 +31,8 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
           ? (data as any).total
           : (typeof (data as any).count === 'number' ? (data as any).count : items.length);
     }
-    // ✅ ИСПРАВЛЕНИЕ: Если data.data - массив (основной случай)
     else if (Array.isArray(data.data)) {
       items = data.data;
-      // ✅ ИСПРАВЛЕНИЕ: Используем total из ответа, если он есть, иначе длину массива
       total = typeof data.total === 'number' ? data.total : items.length;
     }
     // Если data.data - один объект
@@ -43,7 +40,6 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
       items = [data.data as Travel];
       total = typeof data.total === 'number' ? data.total : 1;
     }
-    // ✅ ИСПРАВЛЕНИЕ: Если есть total, но нет data (пустой результат)
     else if (typeof data.total === 'number') {
       total = data.total;
       items = [];
@@ -55,7 +51,6 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
   return { items: [], total: 0 };
 }
 
-// ✅ АРХИТЕКТУРА: Удаление дубликатов путешествий
 export function deduplicateTravels(travels: Travel[]): Travel[] {
   const seenIds = new Set<string | number>();
   return travels.filter((travel) => {
@@ -68,7 +63,6 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
   });
 }
 
-// ✅ B1.2: Улучшенный расчет количества колонок на основе минимальной ширины карточки
 const MIN_CARD_WIDTH = 240; // Минимальная комфортная ширина карточки
 const GAP = 16; // Отступ между карточками
 
@@ -122,7 +116,6 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
   return Math.max(columns, 1);
 }
 
-// ✅ АРХИТЕКТУРА: Определение badges для социального доказательства
 const resolveIsDark = () => {
   if (typeof document === 'undefined') return false;
   return document.documentElement.getAttribute('data-theme') === 'dark';
@@ -175,7 +168,6 @@ export function calculateBadges(
   return result;
 }
 
-// ✅ АРХИТЕКТУРА: Подсчет категорий с количеством
 export function calculateCategoriesWithCount(
   travels: Travel[],
   allCategories: FilterOptions['categories'] = []
@@ -205,7 +197,6 @@ export function calculateCategoriesWithCount(
     .slice(0, 10);
 }
 
-// ✅ АРХИТЕКТУРА: Определение isEmpty состояния
 export function calculateIsEmpty(
   isQueryEnabled: boolean,
   status: string,
@@ -235,12 +226,10 @@ export function calculateIsEmpty(
   return isQueryEnabled && status === "success";
 }
 
-// ✅ АРХИТЕКТУРА: Определение isMobile
 export function isMobile(width: number): boolean {
   return width < BREAKPOINTS.MOBILE;
 }
 
-// ✅ АРХИТЕКТУРА: Определение isTablet
 export function isTablet(width: number): boolean {
   return width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.TABLET;
 }

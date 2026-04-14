@@ -72,7 +72,6 @@ export function useListTravelVisibility({
     ? externalWeeklyHighlightsVisible 
     : internalWeeklyHighlightsVisible;
 
-  // ✅ АРХИТЕКТУРА: Загружаем сохраненное состояние видимости (только если не передано извне)
   useEffect(() => {
     if (externalPersonalizationVisible !== undefined || externalWeeklyHighlightsVisible !== undefined) {
       setIsInitialized(true);
@@ -89,7 +88,6 @@ export function useListTravelVisibility({
           setInternalPersonalizationVisible(personalizationVisible !== 'false');
           setInternalWeeklyHighlightsVisible(weeklyHighlightsVisible !== 'false');
         } else {
-          // ✅ FIX-004: Используем батчинг для загрузки данных
           const { getStorageBatch } = await import('@/utils/storageBatch');
           const storageData = await getStorageBatch([PERSONALIZATION_VISIBLE_KEY, WEEKLY_HIGHLIGHTS_VISIBLE_KEY]);
           
@@ -106,7 +104,6 @@ export function useListTravelVisibility({
     loadVisibility();
   }, [externalPersonalizationVisible, externalWeeklyHighlightsVisible]);
 
-  // ✅ АРХИТЕКТУРА: Сохраняем состояние видимости
   const saveVisibility = useCallback(async (key: string, visible: boolean) => {
     try {
       if (Platform.OS === 'web') {
@@ -127,7 +124,6 @@ export function useListTravelVisibility({
     }
   }, []);
 
-  // ✅ АРХИТЕКТУРА: Обработчик переключения персонализации
   const handleTogglePersonalization = useCallback(() => {
     if (onTogglePersonalization) {
       onTogglePersonalization();
@@ -138,7 +134,6 @@ export function useListTravelVisibility({
     }
   }, [onTogglePersonalization, internalPersonalizationVisible, saveVisibility]);
 
-  // ✅ АРХИТЕКТУРА: Обработчик переключения подборки недели
   const handleToggleWeeklyHighlights = useCallback(() => {
     if (onToggleWeeklyHighlights) {
       onToggleWeeklyHighlights();

@@ -8,9 +8,10 @@ import React, {
 import {
     View, StyleSheet,
     ScrollView, Platform, Pressable, Text,
-    KeyboardAvoidingView, SafeAreaView, Keyboard
+    KeyboardAvoidingView, Keyboard
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Feather from '@expo/vector-icons/Feather';
 import { generatePrintableQuest } from './QuestPrintable';

@@ -15,11 +15,11 @@ import {
     TextInput,
     Alert,
     Modal,
-    SafeAreaView,
     Platform,
     ActivityIndicator,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

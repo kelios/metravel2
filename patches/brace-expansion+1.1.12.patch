@@ -1,0 +1,14 @@
+diff --git a/node_modules/brace-expansion/index.js b/node_modules/brace-expansion/index.js
+--- a/node_modules/brace-expansion/index.js
++++ b/node_modules/brace-expansion/index.js
+@@ -150,6 +150,9 @@ function expand(str, isTop) {
+     var width = Math.max(n[0].length, n[1].length)
+     var incr = n.length == 3
+       ? Math.abs(numeric(n[2]))
+       : 1;
++    if (incr === 0) {
++      incr = 1;
++    }
+     var test = lte;
+     var reverse = y < x;
+     if (reverse) {

@@ -1,4 +1,4 @@
-import {ActivityIndicator, SafeAreaView, StyleSheet, View, Platform, ScrollView, RefreshControl} from 'react-native'
+import {ActivityIndicator, StyleSheet, View, Platform, ScrollView, RefreshControl} from 'react-native'
 import ArticleListItem from '@/components/article/ArticleListItem'
 import {useEffect, useMemo, useState} from 'react'
 import {Articles} from '@/types/types'
@@ -17,6 +17,7 @@ import { useIsFocused } from '@react-navigation/native'
 import { webTouchScrollStyle } from '@/utils'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function TabOneScreen() {
   const initialPage = 0

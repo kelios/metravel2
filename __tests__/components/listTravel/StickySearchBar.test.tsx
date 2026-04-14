@@ -290,4 +290,26 @@ describe('StickySearchBar Component', () => {
     expect(screen.getByTestId('search-pending-status')).toBeTruthy();
     expect(screen.queryByTestId('results-count-text')).toBeNull();
   });
+
+  it('renders quick filters and triggers onQuickFilterPress', () => {
+    const mockOnQuickFilterPress = jest.fn();
+
+    renderWithProviders(
+      <StickySearchBar
+        search=""
+        onSearchChange={mockOnSearchChange}
+        hasActiveFilters={false}
+        quickFilters={[
+          { id: 'popular', label: 'Популярное', active: false },
+          { id: 'weekend', label: 'На выходные', active: true },
+        ]}
+        onQuickFilterPress={mockOnQuickFilterPress}
+      />
+    );
+
+    fireEvent.press(screen.getByTestId('quick-filter-popular'));
+
+    expect(screen.getByTestId('quick-filter-weekend').props.accessibilityState?.selected).toBe(true);
+    expect(mockOnQuickFilterPress).toHaveBeenCalledWith('popular');
+  });
 });

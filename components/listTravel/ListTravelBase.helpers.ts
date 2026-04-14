@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 
 export const normalizeNamedOptions = (items: unknown): Array<{ id: string; name: string }> => {
   if (!Array.isArray(items)) return []
@@ -54,7 +54,7 @@ export const normalizeCountryOptions = (items: unknown): Array<{ country_id?: nu
 }
 
 export const removeTravelFromInfiniteTravelsCache = (
-  queryClient: Pick<ReturnType<typeof useQueryClient>, 'setQueriesData'>,
+  queryClient: Pick<QueryClient, 'setQueriesData'>,
   travelId: number
 ) => {
   queryClient.setQueriesData({ queryKey: ['travels'] }, (oldData: any) => {

@@ -1,0 +1,39 @@
+diff --git a/node_modules/glob/node_modules/brace-expansion/dist/commonjs/index.js b/node_modules/glob/node_modules/brace-expansion/dist/commonjs/index.js
+--- a/node_modules/glob/node_modules/brace-expansion/dist/commonjs/index.js
++++ b/node_modules/glob/node_modules/brace-expansion/dist/commonjs/index.js
+@@ -144,6 +144,9 @@ function expand_(str, max, isTop) {
+             const y = numeric(n[1]);
+             const width = Math.max(n[0].length, n[1].length);
+             let incr = n.length === 3 && n[2] !== undefined ? Math.abs(numeric(n[2])) : 1;
++            if (incr === 0) {
++                incr = 1;
++            }
+             let test = lte;
+             const reverse = y < x;
+             if (reverse) {
+diff --git a/node_modules/@expo/fingerprint/node_modules/brace-expansion/dist/commonjs/index.js b/node_modules/@expo/fingerprint/node_modules/brace-expansion/dist/commonjs/index.js
+--- a/node_modules/@expo/fingerprint/node_modules/brace-expansion/dist/commonjs/index.js
++++ b/node_modules/@expo/fingerprint/node_modules/brace-expansion/dist/commonjs/index.js
+@@ -144,6 +144,9 @@ function expand_(str, max, isTop) {
+             const y = numeric(n[1]);
+             const width = Math.max(n[0].length, n[1].length);
+             let incr = n.length === 3 && n[2] !== undefined ? Math.abs(numeric(n[2])) : 1;
++            if (incr === 0) {
++                incr = 1;
++            }
+             let test = lte;
+             const reverse = y < x;
+             if (reverse) {
+diff --git a/node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion/dist/commonjs/index.js b/node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion/dist/commonjs/index.js
+--- a/node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion/dist/commonjs/index.js
++++ b/node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion/dist/commonjs/index.js
+@@ -144,6 +144,9 @@ function expand_(str, max, isTop) {
+             const y = numeric(n[1]);
+             const width = Math.max(n[0].length, n[1].length);
+             let incr = n.length === 3 && n[2] !== undefined ? Math.abs(numeric(n[2])) : 1;
++            if (incr === 0) {
++                incr = 1;
++            }
+             let test = lte;
+             const reverse = y < x;
+             if (reverse) {

@@ -1,7 +1,7 @@
 // StickySearchBar.tsx
 // ✅ НОВЫЙ КОМПОНЕНТ: Sticky поисковая строка с быстрыми действиями
 
-import { useState, useRef, useEffect, memo, useMemo } from 'react';
+import { useState, useRef, useEffect, memo, useMemo, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   View,
@@ -13,17 +13,17 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
-
-interface QuickFilterChip {
-  id: string;
-  label: string;
-  active?: boolean;
-}
+import Chip from '@/components/ui/Chip';
+import {
+  getStickySearchShortcutLabel,
+  getStickySearchUiState,
+  getStickySearchViewportState,
+  type QuickFilterChip,
+} from '@/components/mainPage/stickySearchBarModel';
 
 interface StickySearchBarProps {
   search: string;
@@ -202,33 +202,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     }),
   },
   quickChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
     flexShrink: 0,
-    ...Platform.select({
-      web: { cursor: 'pointer', transition: 'all 0.18s ease' } as any,
-    }),
-  },
-  quickChipActive: {
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.primaryAlpha30,
-  },
-  quickChipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textMuted,
-    lineHeight: 16,
-  },
-  quickChipTextActive: {
-    color: colors.primaryText,
-    fontWeight: '600',
+    minHeight: 36,
   },
   actions: {
     flexDirection: 'row',
@@ -440,27 +415,32 @@ function StickySearchBar({
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width } = useResponsive();
   const isJestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
-  const effectiveWidth =
-    Platform.OS === 'web' && !isJestEnv && typeof window !== 'undefined'
-      ? window.innerWidth
-      : width;
-  const isMobile =
-    Platform.OS === 'web'
-      ? effectiveWidth < METRICS.breakpoints.tablet
-      : isPhone || isLargePhone;
+  const { isMac, isMobile } = getStickySearchViewportState({
+    isJestEnv,
+    isLargePhone,
+    isPhone,
+    width,
+  });
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
   const searchIconSize = isMobile ? 16 : 18;
   const actionIconSize = isMobile ? 18 : 20;
   const filterIconSize = isMobile ? 14 : 16;
-  const isMac = Platform.OS === 'web' && typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-  const shortcutLabel = isMac ? '⌘K' : 'Ctrl+K';
-  const showPendingState = !!isSearchPending;
-
-  const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile && !showPendingState;
-  const shouldReserveDesktopResultsSlot = Platform.OS === 'web' && !isMobile;
-  const shouldReserveDesktopClearAllSlot = Platform.OS === 'web' && !isMobile && !!onClearAll;
-  const showClearAll = !!onClearAll && (hasActiveFilters || search.length > 0) && !isMobile;
+  const shortcutLabel = getStickySearchShortcutLabel(isMac);
+  const {
+    shouldReserveDesktopClearAllSlot,
+    shouldReserveDesktopResultsSlot,
+    showClearAll,
+    showPendingState,
+    showResultsCount,
+  } = getStickySearchUiState({
+    hasActiveFilters,
+    isMobile,
+    isSearchPending,
+    onClearAll,
+    resultsCount,
+    search,
+  });
 
   // Keyboard shortcut для фокуса (Ctrl+K / Cmd+K)
   useEffect(() => {
@@ -481,6 +461,58 @@ function StickySearchBar({
   // const isMobileWeb = Platform.OS === 'web' && webWidth > 0 && webWidth <= 1024;
 
   const styles = useStyles(colors);
+  const clearSearch = () => onSearchChange('');
+  const renderActionButton = ({
+    accessibilityHint,
+    accessibilityLabel,
+    active,
+    badgeCount,
+    iconColor,
+    iconName,
+    iconSize,
+    onPress,
+    selected,
+    testID,
+    trailingAccent,
+  }: {
+    accessibilityHint?: string;
+    accessibilityLabel: string;
+    active?: boolean;
+    badgeCount?: number;
+    iconColor: string;
+    iconName: ComponentProps<typeof Feather>['name'];
+    iconSize: number;
+    onPress: () => void;
+    selected?: boolean;
+    testID: string;
+    trailingAccent?: ReactNode;
+  }) => (
+    <Pressable
+      testID={testID}
+      onPress={onPress}
+      style={({ hovered }: any) => [
+        styles.actionButton,
+        isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
+        isMobile ? styles.actionButtonMobile : null,
+        active && styles.actionButtonActive,
+        !active && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
+        globalFocusStyles.focusable,
+      ]}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={selected === undefined ? undefined : { selected }}
+    >
+      <View style={styles.actionIconSlot}>
+        <Feather name={iconName} size={iconSize} color={iconColor} />
+      </View>
+      {badgeCount != null && badgeCount > 0 ? (
+        <View style={styles.badge} testID="filters-badge">
+          <Text style={styles.badgeCount}>{badgeCount > 99 ? '99+' : badgeCount}</Text>
+        </View>
+      ) : null}
+      {trailingAccent}
+    </Pressable>
+  );
 
   return (
     <View
@@ -530,7 +562,7 @@ function StickySearchBar({
           />
           {search.length > 0 && (
             <Pressable
-              onPress={() => onSearchChange('')}
+              onPress={clearSearch}
               accessibilityLabel="Очистить поиск"
               style={[styles.clearButton, { pointerEvents: 'box-only' }, globalFocusStyles.focusable]}
             >
@@ -580,60 +612,32 @@ function StickySearchBar({
 
           {/* Рекомендации */}
           {onToggleRecommendations && (
-            <Pressable
-              testID="toggle-recommendations-button"
-              onPress={onToggleRecommendations}
-              style={({ hovered }: any) => [
-                styles.actionButton,
-                isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
-                isMobile ? styles.actionButtonMobile : null,
-                isRecommendationsVisible && styles.actionButtonActive,
-                !isRecommendationsVisible && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
-                globalFocusStyles.focusable,
-              ]}
-              accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
-              accessibilityState={{ selected: !!isRecommendationsVisible }}
-            >
-              <View style={styles.actionIconSlot}>
-                <Feather
-                  name="zap"
-                  size={actionIconSize}
-                  color={isRecommendationsVisible ? colors.primary : colors.textMuted}
-                />
-              </View>
-              {isRecommendationsVisible && <View style={styles.recommendationAccent} />}
-            </Pressable>
+            renderActionButton({
+              accessibilityLabel: isRecommendationsVisible ? 'Скрыть рекомендации' : 'Показать рекомендации',
+              active: !!isRecommendationsVisible,
+              iconColor: isRecommendationsVisible ? colors.primary : colors.textMuted,
+              iconName: 'zap',
+              iconSize: actionIconSize,
+              onPress: onToggleRecommendations,
+              selected: !!isRecommendationsVisible,
+              testID: 'toggle-recommendations-button',
+              trailingAccent: isRecommendationsVisible ? <View style={styles.recommendationAccent} /> : null,
+            })
           )}
 
           {/* Кнопка фильтров: показываем только на мобильных, на вебе фильтры всегда в левой панели */}
           {onFiltersPress && isMobile && (
-            <Pressable
-              testID="filters-button"
-              onPress={onFiltersPress}
-              style={({ hovered }: any) => [
-                styles.actionButton,
-                isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
-                isMobile ? styles.actionButtonMobile : null,
-                hasActiveFilters && styles.actionButtonActive,
-                !hasActiveFilters && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
-                globalFocusStyles.focusable,
-              ]}
-              accessibilityLabel="Открыть фильтры"
-              accessibilityHint={hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined}
-            >
-              <View style={styles.actionIconSlot}>
-                <Feather
-                  name="filter"
-                  size={filterIconSize}
-                  color={hasActiveFilters ? colors.primary : colors.textMuted}
-                />
-              </View>
-              {hasActiveFilters && activeFiltersCount != null && activeFiltersCount > 0 && (
-                <View style={styles.badge} testID="filters-badge">
-                  <Text style={styles.badgeCount}>{activeFiltersCount > 99 ? '99+' : activeFiltersCount}</Text>
-                </View>
-              )}
-            </Pressable>
+            renderActionButton({
+              accessibilityHint: hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined,
+              accessibilityLabel: 'Открыть фильтры',
+              active: hasActiveFilters,
+              badgeCount: hasActiveFilters ? activeFiltersCount : undefined,
+              iconColor: hasActiveFilters ? colors.primary : colors.textMuted,
+              iconName: 'filter',
+              iconSize: filterIconSize,
+              onPress: onFiltersPress,
+              testID: 'filters-button',
+            })
           )}
 
           {/* Сбросить все (если есть активные фильтры или поиск) */}
@@ -663,23 +667,15 @@ function StickySearchBar({
       {quickFilters && quickFilters.length > 0 && (
         <View style={styles.quickFiltersRow} accessibilityRole="toolbar" accessibilityLabel="Быстрые фильтры">
           {quickFilters.map((chip) => (
-            <Pressable
+            <Chip
               key={chip.id}
+              testID={`quick-filter-${chip.id}`}
+              label={chip.label}
+              selected={!!chip.active}
               onPress={() => onQuickFilterPress?.(chip.id)}
-              style={[styles.quickChip, chip.active && styles.quickChipActive, globalFocusStyles.focusable]}
-              accessibilityRole="button"
-              accessibilityLabel={chip.label}
-              accessibilityState={{ selected: !!chip.active }}
-            >
-              {chip.active && (
-                <View style={styles.inlineIconSlot}>
-                  <Feather name="check" size={11} color={colors.primaryText} />
-                </View>
-              )}
-              <Text style={[styles.quickChipText, chip.active && styles.quickChipTextActive]}>
-                {chip.label}
-              </Text>
-            </Pressable>
+              icon={chip.active ? <Feather name="check" size={11} color={colors.primaryText} /> : undefined}
+              style={styles.quickChip}
+            />
           ))}
         </View>
       )}
