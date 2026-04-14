@@ -217,6 +217,29 @@ function upgradeThumbToDetailUrl(input) {
   return value.replace(/-thumb_200(?=\.[a-z0-9]+(?:$|[?#]))/i, '-detail_hd');
 }
 
+// Post-deploy SEO check measures the attribute-encoded length of the
+// description (raw content="..."), not the plain-text length. Characters
+// <, >, &, " expand to HTML entities (e.g. ">" → "&gt;") and inflate the
+// attribute by 3 chars each. Clamp the plain text so the encoded form
+// stays within the SEO-friendly range (80–160 chars).
+function clampDescriptionForAttr(plain, maxEncoded = 160) {
+  const text = String(plain || '').trim();
+  if (!text) return '';
+  if (escapeAttr(text).length <= maxEncoded) return text;
+
+  let lo = 0;
+  let hi = text.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (escapeAttr(text.slice(0, mid)).length <= maxEncoded) {
+      lo = mid;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return text.slice(0, lo).trimEnd();
+}
+
 function buildTravelSeoDescription(travel, detailDescription) {
   const primary = stripHtml(detailDescription || travel?.description || '', 160);
   const travelName = String(travel?.name || '').trim();
@@ -227,14 +250,14 @@ function buildTravelSeoDescription(travel, detailDescription) {
       ? `${fallbackParts.join(' — ')}. Маршрут, советы и впечатления путешественников в MeTravel.`
       : FALLBACK_DESC;
 
-  if (primary.length >= 80) return primary;
+  if (primary.length >= 80) return clampDescriptionForAttr(primary, 160);
 
   if (primary) {
     const combined = `${primary.replace(/[.!?\s]+$/g, '')}. ${contextual}`.replace(/\s+/g, ' ').trim();
-    return combined.slice(0, 160);
+    return clampDescriptionForAttr(combined, 160);
   }
 
-  return contextual.slice(0, 160);
+  return clampDescriptionForAttr(contextual, 160);
 }
 
 function pickTravelSeoImage(travel, detail) {
@@ -1255,7 +1278,7 @@ async function main() {
       const name = article.name || '';
       const title = buildSeoTitle(name || 'Статья о путешествии');
       const rawDesc = article.description || '';
-      const description = stripHtml(rawDesc, 160) || FALLBACK_DESC;
+      const description = clampDescriptionForAttr(stripHtml(rawDesc, 160), 160) || FALLBACK_DESC;
       const canonical = `${SITE_URL}/article/${id}`;
 
       let image = OG_IMAGE;
@@ -1323,6 +1346,7 @@ if (typeof module !== 'undefined' && module.exports) {
     injectMeta,
     escapeAttr,
     stripHtml,
+    clampDescriptionForAttr,
     toAbsoluteUrl,
     isBareMediaEndpointUrl,
     upgradeThumbToDetailUrl,
