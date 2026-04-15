@@ -97,21 +97,24 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
 
   const width = effectiveResponsiveWidth
   const isCardsSingleColumn = width < BREAKPOINTS.MOBILE
-  const gapSize =
-    width < BREAKPOINTS.XS
-      ? 6
-      : width < BREAKPOINTS.SM
-        ? 8
-        : width < BREAKPOINTS.MOBILE
-          ? 10
-          : width < BREAKPOINTS.TABLET
-            ? 12
-            : width < BREAKPOINTS.DESKTOP
-              ? 14
-              : 16
 
   // Sidebar (320px) is visible for all non-mobile (>=1024px), not only desktop (>=1440px)
   const effectiveWidth = !isMobileDevice ? width - 320 : width
+
+  // Gap is based on effectiveWidth (content area) so it stays proportional
+  // when sidebar appears/disappears at the 1024px threshold
+  const gapSize =
+    effectiveWidth < BREAKPOINTS.XS
+      ? 6
+      : effectiveWidth < BREAKPOINTS.SM
+        ? 8
+        : effectiveWidth < BREAKPOINTS.MOBILE
+          ? 10
+          : effectiveWidth < BREAKPOINTS.TABLET
+            ? 12
+            : effectiveWidth < BREAKPOINTS.DESKTOP
+              ? 14
+              : 16
   const contentPadding =
     effectiveWidth < BREAKPOINTS.XS
       ? 8

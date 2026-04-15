@@ -20,7 +20,8 @@ import { useResponsive } from '@/hooks/useResponsive'
 import type { Travel } from '@/types/types'
 import {
   BREAKPOINTS,
-  RECOMMENDATIONS_VISIBLE_KEY
+  RECOMMENDATIONS_VISIBLE_KEY,
+  SEARCH_DEBOUNCE,
 } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
@@ -250,7 +251,10 @@ function ListTravelBase() {
 
     /* Top-bar state */
     const [search, setSearch] = useState<string>(normalizedSearchParam);
-    const debSearch = useDebouncedValue(search, 400);
+    const debSearch = useDebouncedValue(
+      search,
+      isMobileDevice ? SEARCH_DEBOUNCE.MOBILE : SEARCH_DEBOUNCE.DESKTOP,
+    );
 
     useEffect(() => {
       setSearch((prev) => (prev === normalizedSearchParam ? prev : normalizedSearchParam));
