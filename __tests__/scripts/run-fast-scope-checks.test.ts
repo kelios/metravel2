@@ -71,23 +71,25 @@ describe('run-fast-scope-checks', () => {
     ])
   })
 
-  it('normalizes windows paths before matching ignore patterns', () => {
-    expect(normalizeForMatching('coverage\\reports\\index.js')).toBe('coverage/reports/index.js')
-    expect(matchesIgnorePattern('coverage\\reports\\index.js', 'coverage/')).toBe(true)
-  })
+  describe('ignore pattern matching', () => {
+    it('normalizes windows paths before matching ignore patterns', () => {
+      expect(normalizeForMatching('coverage\\reports\\index.js')).toBe('coverage/reports/index.js')
+      expect(matchesIgnorePattern('coverage\\reports\\index.js', 'coverage/')).toBe(true)
+    })
 
-  it('supports current minimatch module exports when compiling ignore matchers', () => {
-    const matcher = createIgnorePatternMatcher('**/playwright-report/**')
+    it('supports current minimatch module exports when compiling ignore matchers', () => {
+      const matcher = createIgnorePatternMatcher('**/playwright-report/**')
 
-    expect(matcher).not.toBeNull()
-    expect(matchesIgnorePattern('e2e/playwright-report/output.json', matcher)).toBe(true)
-    expect(MINIMATCH_OPTIONS).toEqual({ dot: true })
-  })
+      expect(matcher).not.toBeNull()
+      expect(matchesIgnorePattern('e2e/playwright-report/output.json', matcher)).toBe(true)
+      expect(MINIMATCH_OPTIONS).toEqual({ dot: true })
+    })
 
-  it('ignores exact-file and directory-based eslint patterns', () => {
-    expect(isIgnoredLintTarget('app/+html.tsx')).toBe(true)
-    expect(isIgnoredLintTarget('tmp/cache/artifact.js')).toBe(true)
-    expect(isIgnoredLintTarget('scripts/run-fast-scope-checks.js')).toBe(false)
+    it('ignores exact-file and directory-based eslint patterns', () => {
+      expect(isIgnoredLintTarget('app/+html.tsx')).toBe(true)
+      expect(isIgnoredLintTarget('tmp/cache/artifact.js')).toBe(true)
+      expect(isIgnoredLintTarget('scripts/run-fast-scope-checks.js')).toBe(false)
+    })
   })
 
   it('builds fast check plan from changed files', () => {
