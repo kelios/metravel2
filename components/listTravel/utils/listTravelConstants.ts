@@ -41,7 +41,6 @@ export const TRAVEL_CARD_IMAGE_HEIGHT = 220;
 export const TRAVEL_CARD_WEB_MOBILE_HEIGHT = 360;
 export const TRAVEL_CARD_WEB_HEIGHT = 400;
 
-export const TRAVEL_CARD_MIN_WIDTH = 300;
 export const TRAVEL_CARD_MAX_WIDTH = 340;
 
 export const STALE_TIME = {
@@ -62,19 +61,12 @@ export const QUERY_CONFIG = {
   KEEP_PREVIOUS_DATA: false,
 } as const;
 
-export const BADGE_THRESHOLDS = {
-  POPULAR_VIEWS: 1000, // "Популярное" - более 1000 просмотров
-  NEW_DAYS: 7, // "Новое" - создано за последние 7 дней
-  TREND_VIEWS: 500, // "Тренд" - более 500 просмотров
-  TREND_DAYS: 30, // "Тренд" - обновлено за последние 30 дней
-} as const;
 
 export const SEARCH_DEBOUNCE = {
   MOBILE: 250, // Mobile: 250ms
   DESKTOP: 300, // Desktop: 300ms
 } as const;
 
-export const MAX_VISIBLE_CATEGORIES = 8;
 
 export const FLATLIST_CONFIG = {
   INITIAL_NUM_TO_RENDER: 6, // Уменьшено для более быстрого первого рендера
