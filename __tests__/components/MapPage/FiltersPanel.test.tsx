@@ -167,9 +167,9 @@ describe('FiltersPanel', () => {
       expect(getByText('Категории')).toBeTruthy();
   });
 
-  it('shows a mobile radius footer with result summary and list CTA', () => {
+  it('keeps the mobile radius mode footer hidden and shows the compact header summary instead', () => {
     const onOpenList = jest.fn();
-    const { getByTestId, getByText } = renderWithTheme(
+    const { getByTestId, getByText, queryByTestId, queryByText } = renderWithTheme(
       <FiltersPanel />,
       {
         ...defaultProps,
@@ -180,11 +180,11 @@ describe('FiltersPanel', () => {
       }
     );
 
-    expect(getByTestId('filters-mobile-summary-text').props.children).toContain('3');
-    expect(getByText('Показать 3')).toBeTruthy();
-
-    fireEvent.press(getByTestId('filters-mobile-results-button'));
-    expect(onOpenList).toHaveBeenCalledTimes(1);
+    expect(getByTestId('filters-panel-header')).toBeTruthy();
+    expect(getByText('3 места · 60 км')).toBeTruthy();
+    expect(queryByTestId('filters-panel-footer')).toBeNull();
+    expect(queryByText('Показать 3')).toBeNull();
+    expect(onOpenList).not.toHaveBeenCalled();
   });
 
   it('shows an inline radius selection summary after choosing search and categories', () => {

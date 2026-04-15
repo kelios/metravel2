@@ -63,11 +63,6 @@ export default function RootWebDeferredChrome({
   }, [isTravelPerformanceRoute])
 
   useEffect(() => {
-    setShowRuntimeEffects(true)
-    setShowFooterChrome(true)
-  }, [isTravelPerformanceRoute])
-
-  useEffect(() => {
     let consentTimer: ReturnType<typeof setTimeout> | null = null
     let rafId: number | null = null
     let consentCheckRevealed = false

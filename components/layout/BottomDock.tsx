@@ -473,8 +473,10 @@ const createStyles = (
     color: colors.textMuted,
     width: "100%",
     maxWidth: "100%",
-    fontSize: isCompactMobileWidth ? 8 : 9,
-    lineHeight: isCompactMobileWidth ? 10 : 11,
+    // 10/11px is the readable floor for the dock labels; numberOfLines=1 +
+    // ellipsize below keep them on a single line on very narrow phones.
+    fontSize: isCompactMobileWidth ? 10 : 11,
+    lineHeight: isCompactMobileWidth ? 12 : 13,
     marginTop: 1,
     textAlign: "center",
   },

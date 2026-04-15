@@ -73,7 +73,7 @@ describe('useMapPopupAutoPan', () => {
     )
   })
 
-  it('pans popup down when it overlaps the mobile header and chips area', () => {
+  it('re-centers popup into the mobile safe area when it overlaps the header and chips area', () => {
     const panBy = jest.fn()
     const on = jest.fn()
     const off = jest.fn()
@@ -124,7 +124,7 @@ describe('useMapPopupAutoPan', () => {
       },
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -20], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -179], { animate: true, duration: 0.35 })
     expect(on).toHaveBeenCalledWith('popupclose', expect.any(Function))
   })
 
@@ -193,6 +193,6 @@ describe('useMapPopupAutoPan', () => {
       resizeObserverInstances[0]?.trigger()
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -22], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -181], { animate: true, duration: 0.35 })
   })
 })
