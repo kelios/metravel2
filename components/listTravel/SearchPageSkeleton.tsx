@@ -15,6 +15,7 @@ import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoad
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import { BREAKPOINTS } from './utils/listTravelConstants';
 
 /** Filter section navigation items for web sidebar */
 const FILTER_SECTIONS = [
@@ -269,7 +270,12 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
   onSectionPress,
 }) => {
   const colors = useThemedColors();
-  const { isMobile, isTablet } = useResponsive();
+  const { width: responsiveWidth } = useResponsive();
+  // Use the same breakpoints as listTravelBaseModel to avoid layout shift
+  const viewportWidth =
+    Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : responsiveWidth;
+  const isMobile = viewportWidth < BREAKPOINTS.TABLET; // 1024 — matches isMobileDevice
+  const isTablet = viewportWidth >= BREAKPOINTS.TABLET && viewportWidth < BREAKPOINTS.DESKTOP;
 
   const cardCount = useMemo(() => {
     if (isMobile) return 4;

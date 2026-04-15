@@ -110,18 +110,19 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
               ? 14
               : 16
 
-  const effectiveWidth = isDesktop ? width - 320 : width
+  // Sidebar (320px) is visible for all non-mobile (>=1024px), not only desktop (>=1440px)
+  const effectiveWidth = !isMobileDevice ? width - 320 : width
   const contentPadding =
     effectiveWidth < BREAKPOINTS.XS
-      ? 12
+      ? 8
       : effectiveWidth < BREAKPOINTS.SM
-        ? 8
+        ? 10
         : effectiveWidth < BREAKPOINTS.MOBILE
-          ? 10
+          ? 12
           : effectiveWidth < BREAKPOINTS.TABLET
             ? 12
             : effectiveWidth < BREAKPOINTS.DESKTOP
-              ? 12
+              ? 14
               : effectiveWidth < BREAKPOINTS.DESKTOP_LARGE
                 ? 16
                 : 20
@@ -137,7 +138,10 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
     gridColumns = calculateColumns(effectiveWidth, 'portrait')
   }
 
-  if (!isMobileDevice && effectiveWidth >= BREAKPOINTS.DESKTOP) {
+  // On large desktop (>=1920px content area) allow 4 columns for compact layout
+  if (!isMobileDevice && effectiveWidth >= BREAKPOINTS.DESKTOP_LARGE) {
+    gridColumns = Math.min(gridColumns, 4)
+  } else if (!isMobileDevice && effectiveWidth >= BREAKPOINTS.DESKTOP) {
     gridColumns = Math.min(gridColumns, 3)
   }
 

@@ -127,9 +127,14 @@ describe('listTravelHelpers', () => {
 
 
   describe('calculateColumns', () => {
-    it('forces 1 column below mobile breakpoint', () => {
+    it('forces 1 column below SM breakpoint (480px)', () => {
       expect(calculateColumns(320)).toBe(1)
-      expect(calculateColumns(767)).toBe(1)
+      expect(calculateColumns(479)).toBe(1)
+    })
+
+    it('allows multiple columns between SM and MOBILE breakpoints (content area with sidebar)', () => {
+      // At 700px (typical effectiveWidth at 1024px with 320px sidebar), 2 cards fit
+      expect(calculateColumns(700)).toBeGreaterThanOrEqual(2)
     })
 
     it('limits to max 2 columns on portrait tablet widths', () => {

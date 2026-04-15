@@ -491,12 +491,14 @@ function ListTravelBase() {
 
     // Search cards should read closer to square on desktop, so we give the media more vertical room.
     // Keep mobile/tablet geometry tighter to avoid overgrowing the feed.
+    // Use effectiveWidth (content area after sidebar) for correct sizing.
+    const effectiveWidth = viewportState.effectiveWidth;
     const searchCardImageHeight = useMemo(() => {
-      if (width < BREAKPOINTS.MOBILE) return 220;
-      if (width < BREAKPOINTS.TABLET) return 240;
-      if (width < BREAKPOINTS.DESKTOP) return 260;
-      return 300;
-    }, [width]);
+      if (effectiveWidth < BREAKPOINTS.MOBILE) return 220;
+      if (effectiveWidth < BREAKPOINTS.TABLET) return 240;
+      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 260;
+      return 280;
+    }, [effectiveWidth]);
 
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (

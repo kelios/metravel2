@@ -20,7 +20,7 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
       ...Platform.select({
         web: {
           boxShadow: '0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)',
-          width: 280,
+          width: '100%',
           position: 'sticky' as any,
           top: spacing.md,
           maxHeight: 'calc(100vh - 24px)' as any,

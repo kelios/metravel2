@@ -77,8 +77,9 @@ function getContainerPadding(width: number): number {
 }
 
 export function calculateColumns(width: number, orientation: 'portrait' | 'landscape' = 'landscape'): number {
-  // Для очень маленьких экранов всегда 1 колонка
-  if (width < BREAKPOINTS.MOBILE) {
+  // Single column only for very narrow content areas
+  // (full-viewport mobile check is handled by isCardsSingleColumn before this function is called)
+  if (width < BREAKPOINTS.SM) {
     return 1;
   }
   
@@ -106,8 +107,8 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
     columns = Math.min(columns, maxColumns);
   }
 
-  // Учитываем ориентацию для планшетов
-  if (orientation === 'portrait' && width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.DESKTOP) {
+  // Учитываем ориентацию для планшетов (effective content area width)
+  if (orientation === 'portrait' && width >= BREAKPOINTS.SM && width < BREAKPOINTS.DESKTOP) {
     columns = Math.min(columns, 2);
   }
   

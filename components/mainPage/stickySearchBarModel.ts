@@ -23,9 +23,11 @@ export function getStickySearchViewportState(params: {
       Platform.OS === 'web' &&
       typeof navigator !== 'undefined' &&
       /Mac|iPhone|iPad/.test(navigator.platform),
+    // Must match isMobileDevice threshold in listTravelBaseModel (BREAKPOINTS.TABLET = 1024).
+    // At 768–1023px sidebar is hidden, so the filter button must be visible.
     isMobile:
       Platform.OS === 'web'
-        ? effectiveWidth < METRICS.breakpoints.tablet
+        ? effectiveWidth < METRICS.breakpoints.largeTablet
         : params.isPhone || params.isLargePhone,
   };
 }

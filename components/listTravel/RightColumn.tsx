@@ -246,7 +246,7 @@ const RightColumn: React.FC<RightColumnProps> = (
 
     const rows = useMemo(() => buildTravelRows(travels, gridColumns, isMobile), [travels, gridColumns, isMobile])
 
-    const rowSeparatorStyle = useMemo(() => ({ height: Platform.OS === 'web' ? cardSpacing + 4 : cardSpacing }), [cardSpacing])
+    const rowSeparatorStyle = useMemo(() => ({ height: cardSpacing }), [cardSpacing])
     const RowSeparator = useCallback(() => {
       return <View style={rowSeparatorStyle} />
     }, [rowSeparatorStyle])
