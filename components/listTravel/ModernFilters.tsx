@@ -63,9 +63,11 @@ function getModernFiltersReserveState(params: {
 }
 
 function getModernFiltersViewportState() {
+  // Must match isMobileDevice threshold in listTravelBaseModel (BREAKPOINTS.TABLET = 1024).
+  // At 768–1023px the sidebar is a fullscreen overlay, so it needs the sticky footer.
   const isNarrowWeb =
     Platform.OS === 'web'
-      && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
+      && Dimensions.get('window').width < METRICS.breakpoints.largeTablet;
 
   return {
     isNarrowWeb,

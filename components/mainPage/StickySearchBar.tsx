@@ -457,8 +457,6 @@ function StickySearchBar({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Mobile web specific styles (оставлено для будущего использования)
-  // const isMobileWeb = Platform.OS === 'web' && webWidth > 0 && webWidth <= 1024;
 
   const styles = useStyles(colors);
   const clearSearch = () => onSearchChange('');

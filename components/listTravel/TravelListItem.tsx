@@ -497,7 +497,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
           <Feather
             name="trending-up"
             size={Platform.select({ default: 9, web: 10 })}
-            color={Platform.OS === 'web' ? 'rgb(180, 83, 9)' : colors.accent}
+            color={colors.warningDark}
           />
         </View>
       )}
@@ -506,7 +506,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
           <Feather
             name="star"
             size={Platform.select({ default: 9, web: 10 })}
-            color={Platform.OS === 'web' ? 'rgb(22, 163, 74)' : colors.success}
+            color={colors.success}
           />
         </View>
       )}
@@ -660,7 +660,18 @@ function areEqual(prev: Props, next: Props) {
         prev.isSingle !== next.isSingle ||
         prev.selectable !== next.selectable ||
         prev.isSelected !== next.isSelected ||
-        prev.visualVariant !== next.visualVariant
+        prev.visualVariant !== next.visualVariant ||
+        prev.hideAuthor !== next.hideAuthor
+    ) {
+        return false;
+    }
+
+    // Resize-зависимые пропсы: при изменении viewport карточка должна перерисоваться
+    if (
+        prev.isMobile !== next.isMobile ||
+        prev.cardWidth !== next.cardWidth ||
+        prev.imageHeight !== next.imageHeight ||
+        prev.viewportWidth !== next.viewportWidth
     ) {
         return false;
     }
