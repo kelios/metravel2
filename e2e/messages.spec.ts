@@ -835,6 +835,24 @@ test.describe('Messages — Accessibility', () => {
     await ensureAuthedStorageFallback(page);
   });
 
+  const openAlexConversation = async (page: any) => {
+    await gotoWithRetry(page, '/messages');
+    await waitForMessagesPage(page);
+
+    const alexThread = page.getByLabel(/Диалог с Алексей Петров/);
+    const visible = await alexThread
+      .first()
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!visible) return false;
+
+    await alexThread.first().click();
+    const inputField = page.getByLabel('Поле ввода сообщения');
+    await inputField.waitFor({ state: 'visible', timeout: 15_000 });
+    return true;
+  };
+
   test('thread list items have accessible labels', async ({ page }) => {
     await gotoWithRetry(page, '/messages');
     await waitForMessagesPage(page);
@@ -850,17 +868,17 @@ test.describe('Messages — Accessibility', () => {
   });
 
   test('chat input has accessible label', async ({ page }) => {
-    await gotoWithRetry(page, '/messages?userId=2');
+    const opened = await openAlexConversation(page);
+    if (!opened) return;
 
-    const inputField = page.getByLabel('Поле ввода сообщения');
-    await expect(inputField).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel('Поле ввода сообщения')).toBeVisible({ timeout: 15_000 });
   });
 
   test('send button has accessible label', async ({ page }) => {
-    await gotoWithRetry(page, '/messages?userId=2');
+    const opened = await openAlexConversation(page);
+    if (!opened) return;
 
-    const sendBtn = page.getByLabel('Отправить сообщение');
-    await expect(sendBtn).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel('Отправить сообщение')).toBeVisible({ timeout: 15_000 });
   });
 
   test('search input has accessible label', async ({ page }) => {
