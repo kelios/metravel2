@@ -54,7 +54,7 @@ const matchGlob = (() => {
 
   throw new TypeError('minimatch export does not expose a matcher function')
 })()
-const MinimatchMatcher = typeof minimatchModule?.Minimatch === 'function'
+const MinimatchConstructor = typeof minimatchModule?.Minimatch === 'function'
   ? minimatchModule.Minimatch
   : null
 
@@ -64,8 +64,8 @@ const createIgnorePatternMatcher = (pattern) => {
   const normalizedPattern = normalizeForMatching(pattern)
   if (!normalizedPattern) return null
 
-  const globMatcher = MinimatchMatcher
-    ? new MinimatchMatcher(normalizedPattern, MINIMATCH_OPTIONS)
+  const globMatcher = MinimatchConstructor
+    ? new MinimatchConstructor(normalizedPattern, MINIMATCH_OPTIONS)
     : null
   const prefix = normalizedPattern.endsWith('/') ? normalizedPattern : ''
 
@@ -75,7 +75,11 @@ const createIgnorePatternMatcher = (pattern) => {
       return false
     }
 
-    if (globMatcher ? globMatcher.match(normalizedFilePath) : matchGlob(normalizedFilePath, normalizedPattern, MINIMATCH_OPTIONS)) {
+    const isGlobMatch = globMatcher
+      ? globMatcher.match(normalizedFilePath)
+      : matchGlob(normalizedFilePath, normalizedPattern, MINIMATCH_OPTIONS)
+
+    if (isGlobMatch) {
       return true
     }
 
