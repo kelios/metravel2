@@ -54,7 +54,7 @@ const matchGlob = (() => {
 
   throw new TypeError('minimatch export does not expose a matcher function')
 })()
-const MatcherConstructor = typeof minimatchModule?.Minimatch === 'function'
+const MaybeMatcherConstructor = typeof minimatchModule?.Minimatch === 'function'
   ? minimatchModule.Minimatch
   : null
 
@@ -64,8 +64,8 @@ const createIgnorePatternMatcher = (pattern) => {
   const normalizedPattern = normalizeForMatching(pattern)
   if (!normalizedPattern) return null
 
-  const globMatcher = MatcherConstructor
-    ? new MatcherConstructor(normalizedPattern, MINIMATCH_OPTIONS)
+  const globMatcher = MaybeMatcherConstructor
+    ? new MaybeMatcherConstructor(normalizedPattern, MINIMATCH_OPTIONS)
     : null
   const prefix = normalizedPattern.endsWith('/') ? normalizedPattern : ''
 
@@ -87,9 +87,9 @@ const createIgnorePatternMatcher = (pattern) => {
   }
 }
 
-const IGNORE_PATTERN_MATCHERS = ESLINT_IGNORE_PATTERNS
+const IGNORE_PATTERN_MATCHERS = Object.freeze(ESLINT_IGNORE_PATTERNS
   .map((pattern) => createIgnorePatternMatcher(pattern))
-  .filter(Boolean)
+  .filter(Boolean))
 
 const matchesIgnorePattern = (filePath, patternOrMatcher) => {
   if (typeof patternOrMatcher === 'function') {
