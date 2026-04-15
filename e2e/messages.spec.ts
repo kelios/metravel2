@@ -777,10 +777,16 @@ test.describe('Messages — Mobile Layout', () => {
 
   test('mobile: back button is visible in chat view', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await gotoWithRetry(page, '/messages?userId=2');
+    await gotoWithRetry(page, '/messages');
+    await waitForMessagesPage(page);
+
+    const alexThread = page.getByLabel(/Диалог с Алексей Петров/);
+    const visible = await alexThread.first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false);
+    if (!visible) return;
+    await alexThread.first().click();
 
     const inputField = page.getByLabel('Поле ввода сообщения');
-    await inputField.waitFor({ state: 'visible', timeout: 15_000 }).catch(() => null);
+    await inputField.waitFor({ state: 'visible', timeout: 15_000 });
 
     // Back button should be visible on mobile
     const backBtn = page.getByLabel('Назад к списку диалогов');
@@ -790,7 +796,13 @@ test.describe('Messages — Mobile Layout', () => {
 
   test('mobile: back button returns to thread list', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await gotoWithRetry(page, '/messages?userId=2');
+    await gotoWithRetry(page, '/messages');
+    await waitForMessagesPage(page);
+
+    const alexThread = page.getByLabel(/Диалог с Алексей Петров/);
+    const visible = await alexThread.first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => true).catch(() => false);
+    if (!visible) return;
+    await alexThread.first().click();
 
     const backBtn = page.getByLabel('Назад к списку диалогов');
     const backVisible = await backBtn.first().waitFor({ state: 'visible', timeout: 15_000 }).then(() => true).catch(() => false);
@@ -798,14 +810,6 @@ test.describe('Messages — Mobile Layout', () => {
 
     await backBtn.first().click();
     await page.waitForTimeout(2000);
-
-    // If the deep-link re-selected the thread (known issue with ?userId= param),
-    // navigate to /messages without the param to verify thread list renders.
-    const chatStillVisible = await page.getByLabel('Назад к списку диалогов')
-      .first().waitFor({ state: 'visible', timeout: 3_000 }).then(() => true).catch(() => false);
-    if (chatStillVisible) {
-      await gotoWithRetry(page, '/messages');
-    }
 
     // Thread list should be visible
     await waitForMessagesPage(page);

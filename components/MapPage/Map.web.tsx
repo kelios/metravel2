@@ -245,7 +245,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // OSM tile preconnect is handled in app/+html.tsx (injected as <link> before JS loads).
   // No runtime preconnect needed here.
 
-  const handleMarkerZoom = useCallback((_point: Point, coords: { lat: number; lng: number }) => {
+  const handleMarkerZoom = useCallback((point: Point, coords: { lat: number; lng: number }) => {
     if (!mapRef.current) return;
     if (!isValidCoordinate(coords.lat, coords.lng)) return;
     const map = mapRef.current;
@@ -260,6 +260,37 @@ const MapPageComponent: React.FC<Props> = (props) => {
       requestBottomSheetCollapse();
     }
     if (focusPlan.shouldSkipZoom) return;
+
+    const markerKey = String(point?.coord ?? '').trim();
+    const marker =
+      markerByCoordRef.current.get(markerKey) ??
+      markerByCoordRef.current.get(CoordinateConverter.toString(coords));
+
+    let reopened = false;
+    let reopenTimer: ReturnType<typeof setTimeout> | null = null;
+    const reopenPopup = () => {
+      if (reopened) return;
+      reopened = true;
+      if (reopenTimer) {
+        clearTimeout(reopenTimer);
+        reopenTimer = null;
+      }
+      try {
+        marker?.openPopup?.();
+      } catch {
+        // noop
+      }
+    };
+
+    if (marker && typeof map.once === 'function') {
+      try {
+        map.once('moveend', reopenPopup);
+      } catch {
+        // noop
+      }
+      reopenTimer = setTimeout(reopenPopup, 500);
+    }
+
     try {
       if (typeof map.flyTo === 'function') {
         map.flyTo([coords.lat, coords.lng], focusPlan.targetZoom, { animate: true, duration: 0.35 } as any);

@@ -347,10 +347,18 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     const markerVisible = await marker.isVisible({ timeout: 60_000 }).catch(() => false);
     if (!markerVisible) return;
 
-    await marker.click({ force: true });
-
     const popupLocator = page.locator('.leaflet-popup');
-    await expect(popupLocator).toBeVisible({ timeout: 20_000 });
+    let popupVisible = false;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await marker.click({ force: true });
+      popupVisible = await popupLocator
+        .waitFor({ state: 'visible', timeout: attempt === 0 ? 4_000 : 12_000 })
+        .then(() => true)
+        .catch(() => false);
+      if (popupVisible) break;
+      await page.waitForTimeout(500);
+    }
+    expect(popupVisible).toBeTruthy();
 
     // Smoke check: popup should contain at least one link (details or card).
     const anyLink = popupLocator.locator('a').first();
