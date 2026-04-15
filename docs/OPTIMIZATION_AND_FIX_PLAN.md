@@ -120,7 +120,7 @@ Reason:
 - Internal tooling messages should match the repo.
 
 Known cleanup:
-- `npm run check-deps` references `TESTING_CHECKLIST.md`, which is not present in this repo.
+- `npm run check-deps` stale doc references fixed: the script now points to existing canonical docs in `docs/`.
 
 ## Execution log
 
@@ -196,6 +196,9 @@ Known cleanup:
   - removed `ESLint` runtime API usage from `scripts/run-fast-scope-checks.js` to avoid flat-config dynamic-import failures under Jest
   - aligned `__tests__/scripts/run-fast-scope-checks.test.ts` with the script's synchronous contract
   - cleared the remaining full-suite failures in `__tests__/scripts/run-fast-scope-checks.test.ts` and `__tests__/components/home/HomeHero.test.tsx`
+- Fixed tooling/docs mismatch in dependency checks:
+  - updated `scripts/check-dependencies.js` to reference existing canonical docs (`docs/TESTING.md`, `docs/RULES.md`, `docs/RELEASE.md`, `docs/README.md`, `docs/DEVELOPMENT.md`) instead of missing files
+  - validated with `npm run check-deps`
 
 ## Validation after implementation
 

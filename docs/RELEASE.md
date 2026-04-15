@@ -14,6 +14,7 @@ npm run release:check
 It runs:
 
 - `npm run lint`
+- `npm run typecheck`
 - `./verify-security-fixes.sh`
 - `npm run audit:high`
 - `npm run test:run`

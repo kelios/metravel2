@@ -60,14 +60,14 @@ function checkDependencies() {
     console.log('✅ Все обязательные зависимости установлены!');
     console.log('\n📋 Следующие шаги:');
     console.log('   1. Очистите кеш: npx expo start --clear');
-    console.log('   2. Протестируйте приложение (см. TESTING_CHECKLIST.md)');
-    console.log('   3. Разверните в production');
+    console.log('   2. Прогоните релевантные проверки (см. docs/TESTING.md и docs/RULES.md)');
+    console.log('   3. Сверьтесь с локальным workflow и релизным процессом (см. docs/DEVELOPMENT.md и docs/RELEASE.md)');
     return 0;
   } else {
     console.log('⚠️  Некоторые зависимости отсутствуют');
     console.log('\n📋 Для установки всех зависимостей выполните:');
     console.log('   npx expo install expo-secure-store @react-native-community/netinfo');
-    console.log('\n📖 Подробнее см. INSTALLATION_GUIDE.md');
+    console.log('\n📖 Подробнее см. docs/README.md и docs/DEVELOPMENT.md');
     return 1;
   }
 }
@@ -75,4 +75,3 @@ function checkDependencies() {
 // Запуск проверки
 const exitCode = checkDependencies();
 process.exit(exitCode);
-

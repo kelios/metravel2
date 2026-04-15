@@ -13,6 +13,16 @@ import type { ParsedRoutePreview } from '@/types/travelRoutes'
 import { useThemedColors } from '@/hooks/useTheme'
 import { calculateRouteDistanceKm } from '@/utils/routeFileParser'
 import { createRouteElevationProfileStyles } from './RouteElevationProfile.styles'
+import {
+  CHART_HEIGHT,
+  CHART_PADDING,
+  formatProfileKm,
+  formatProfileMeters,
+  getLocalPointerX,
+  getPeakRoutePoint,
+  parseProfileCoord,
+  resolveNearestHintName,
+} from './RouteElevationProfile.utils'
 
 type Props = {
   title?: string
@@ -28,27 +38,6 @@ type Props = {
     peakName?: string | null
     finishName?: string | null
   }
-}
-
-const CHART_HEIGHT = 120
-const CHART_PADDING = 8
-
-const round = (value: number): number => Math.round(value * 10) / 10
-const formatKm = (value: number): string => `${round(value)} км`
-const formatMeters = (value: number): string => `${Math.round(value)} м`
-const getLocalPointerX = (event: any): number | null => {
-  const locationX = event?.nativeEvent?.locationX
-  if (typeof locationX === 'number' && Number.isFinite(locationX)) {
-    return locationX
-  }
-
-  const clientX = event?.clientX
-  const bounds = event?.currentTarget?.getBoundingClientRect?.()
-  if (typeof clientX === 'number' && bounds) {
-    return clientX - bounds.left
-  }
-
-  return null
 }
 
 export default function RouteElevationProfile({
@@ -138,30 +127,6 @@ export default function RouteElevationProfile({
   }, [preview])
 
   const locationLabels = useMemo(() => {
-    const parseCoord = (coord: string): { lat: number; lng: number } | null => {
-      const [latStr, lngStr] = String(coord ?? '')
-        .replace(/;/g, ',')
-        .split(',')
-      const lat = Number(latStr)
-      const lng = Number(lngStr)
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-      return { lat, lng }
-    }
-    const haversineMeters = (
-      a: { lat: number; lng: number },
-      b: { lat: number; lng: number },
-    ): number => {
-      const toRad = (v: number) => (v * Math.PI) / 180
-      const R = 6371000
-      const dLat = toRad(b.lat - a.lat)
-      const dLng = toRad(b.lng - a.lng)
-      const s1 = Math.sin(dLat / 2)
-      const s2 = Math.sin(dLng / 2)
-      const h =
-        s1 * s1 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * s2 * s2
-      return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)))
-    }
-
     const linePoints = Array.isArray(preview?.linePoints)
       ? preview.linePoints
       : []
@@ -172,48 +137,17 @@ export default function RouteElevationProfile({
         finishName: null as string | null,
       }
     }
-    const startCoord = parseCoord(linePoints[0]?.coord ?? '')
-    const finishCoord = parseCoord(
+    const startCoord = parseProfileCoord(linePoints[0]?.coord ?? '')
+    const finishCoord = parseProfileCoord(
       linePoints[linePoints.length - 1]?.coord ?? '',
     )
-
-    let peakPoint = linePoints[0] ?? null
-    for (const p of linePoints) {
-      if (
-        Number.isFinite(p?.elevation as number) &&
-        (!Number.isFinite(peakPoint?.elevation as number) ||
-          Number(p.elevation) > Number(peakPoint?.elevation))
-      ) {
-        peakPoint = p
-      }
-    }
-    const peakCoord = parseCoord(String(peakPoint?.coord ?? ''))
-    const hints = (Array.isArray(placeHints) ? placeHints : [])
-      .map((p) => ({
-        name: String(p.name ?? '').trim(),
-        coord: parseCoord(String(p.coord ?? '')),
-      }))
-      .filter((p): p is { name: string; coord: { lat: number; lng: number } } =>
-        Boolean(p.name && p.coord),
-      )
-
-    const resolveName = (
-      target: { lat: number; lng: number } | null,
-    ): string | null => {
-      if (!target || hints.length === 0) return null
-      let best: { name: string; dist: number } | null = null
-      for (const h of hints) {
-        const dist = haversineMeters(target, h.coord)
-        if (!best || dist < best.dist) best = { name: h.name, dist }
-      }
-      if (!best) return null
-      return best.dist <= 30000 ? best.name : null
-    }
+    const peakPoint = getPeakRoutePoint(linePoints)
+    const peakCoord = parseProfileCoord(String(peakPoint?.coord ?? ''))
 
     const fallback = {
-      startName: resolveName(startCoord),
-      peakName: resolveName(peakCoord),
-      finishName: resolveName(finishCoord),
+      startName: resolveNearestHintName(startCoord, placeHints),
+      peakName: resolveNearestHintName(peakCoord, placeHints),
+      finishName: resolveNearestHintName(finishCoord, placeHints),
     }
 
     return {
@@ -318,7 +252,7 @@ export default function RouteElevationProfile({
         y,
         x1: CHART_PADDING,
         x2: CHART_PADDING + chartWidth,
-        label: formatMeters(elevation),
+        label: formatProfileMeters(elevation),
       }
     })
   }, [isCompactLayout, metrics, width])
@@ -326,7 +260,7 @@ export default function RouteElevationProfile({
   const tooltipText = useMemo(() => {
     if (!activePoint) return null
     return {
-      title: `${formatMeters(activePoint.sample.elevationM)} • ${formatKm(activePoint.sample.distanceKm)}`,
+      title: `${formatProfileMeters(activePoint.sample.elevationM)} • ${formatProfileKm(activePoint.sample.distanceKm)}`,
       subtitle:
         activePoint.sample.distanceKm <= 0.05
           ? 'Старт маршрута'
@@ -341,7 +275,7 @@ export default function RouteElevationProfile({
       return [
         {
           label: 'Дистанция',
-          value: formatKm(metrics.totalDistanceKm),
+          value: formatProfileKm(metrics.totalDistanceKm),
           icon: 'move',
           accent: true,
         },
@@ -351,37 +285,37 @@ export default function RouteElevationProfile({
     const cards = [
       {
         label: 'Дистанция',
-        value: formatKm(metrics.totalDistanceKm),
+        value: formatProfileKm(metrics.totalDistanceKm),
         icon: 'move',
         accent: true,
       },
       {
         label: 'Набор',
-        value: `+${formatMeters(metrics.ascent)}`,
+        value: `+${formatProfileMeters(metrics.ascent)}`,
         icon: 'trending-up',
         accent: true,
       },
       {
         label: 'Сброс',
-        value: `-${formatMeters(metrics.descent)}`,
+        value: `-${formatProfileMeters(metrics.descent)}`,
         icon: 'trending-down',
         accent: false,
       },
       {
         label: 'Мин высота',
-        value: formatMeters(metrics.minElevation ?? 0),
+        value: formatProfileMeters(metrics.minElevation ?? 0),
         icon: 'corner-down-left',
         accent: false,
       },
       {
         label: 'Макс высота',
-        value: formatMeters(metrics.maxElevation ?? 0),
+        value: formatProfileMeters(metrics.maxElevation ?? 0),
         icon: 'corner-up-right',
         accent: false,
       },
       {
         label: 'Перепад',
-        value: formatMeters(metrics.elevationRange),
+        value: formatProfileMeters(metrics.elevationRange),
         icon: 'activity',
         accent: false,
       },
@@ -391,12 +325,12 @@ export default function RouteElevationProfile({
 
   const profileSummary = useMemo(() => {
     if (!metrics.hasElevation) {
-      return `Маршрут ${formatKm(metrics.totalDistanceKm)} без данных о высотах`
+      return `Маршрут ${formatProfileKm(metrics.totalDistanceKm)} без данных о высотах`
     }
     const summaryParts = [
-      formatKm(metrics.totalDistanceKm),
+      formatProfileKm(metrics.totalDistanceKm),
       `+${Math.round(metrics.ascent)} м набора`,
-      `пик ${formatMeters(metrics.maxElevation ?? 0)}`,
+      `пик ${formatProfileMeters(metrics.maxElevation ?? 0)}`,
     ]
     if (Number.isFinite(metrics.avgClimbMPerKm as number)) {
       summaryParts.push(`${Math.round(metrics.avgClimbMPerKm as number)} м/км`)
@@ -414,7 +348,7 @@ export default function RouteElevationProfile({
     ) => {
       const parts = [name || fallback]
       if (!isCompactLayout && Number.isFinite(distanceKm as number)) {
-        parts.push(formatKm(distanceKm as number))
+        parts.push(formatProfileKm(distanceKm as number))
       }
       return parts.join(' • ')
     }
@@ -425,7 +359,7 @@ export default function RouteElevationProfile({
         label: 'Старт',
         icon: 'play',
         value: metrics.startSample
-          ? formatMeters(metrics.startSample.elevationM)
+          ? formatProfileMeters(metrics.startSample.elevationM)
           : '—',
         caption: buildCaption(
           locationLabels.startName ?? '',
@@ -437,7 +371,7 @@ export default function RouteElevationProfile({
         label: 'Высшая точка',
         icon: 'triangle',
         value: metrics.peakSample
-          ? formatMeters(metrics.peakSample.elevationM)
+          ? formatProfileMeters(metrics.peakSample.elevationM)
           : '—',
         caption: buildCaption(
           locationLabels.peakName ?? '',
@@ -450,7 +384,7 @@ export default function RouteElevationProfile({
         label: 'Финиш',
         icon: 'flag',
         value: metrics.finishSample
-          ? formatMeters(metrics.finishSample.elevationM)
+          ? formatProfileMeters(metrics.finishSample.elevationM)
           : '—',
         caption: buildCaption(
           locationLabels.finishName ?? '',
@@ -559,7 +493,7 @@ export default function RouteElevationProfile({
                 <Text style={styles.chartMetaLabel}>Мин</Text>
               ) : null}
               <Text style={styles.chartMetaValue}>
-                {formatMeters(metrics.minElevation ?? 0)}
+                {formatProfileMeters(metrics.minElevation ?? 0)}
               </Text>
             </View>
             <View
@@ -573,7 +507,7 @@ export default function RouteElevationProfile({
                 <Text style={styles.chartMetaLabel}>Пик</Text>
               ) : null}
               <Text style={styles.chartMetaValue}>
-                {formatMeters(metrics.maxElevation ?? 0)}
+                {formatProfileMeters(metrics.maxElevation ?? 0)}
               </Text>
             </View>
           </View>
@@ -735,7 +669,7 @@ export default function RouteElevationProfile({
           <View style={styles.axisLabels}>
             <Text style={styles.axisText}>0 км</Text>
             <Text style={styles.axisText}>
-              {formatKm(metrics.totalDistanceKm)}
+              {formatProfileKm(metrics.totalDistanceKm)}
             </Text>
           </View>
           {pointCards.length > 0 || transportHints.length > 0 ? (

@@ -4,6 +4,7 @@
   ```bash
   npm run release:check
   ```
+  Включает `lint`, `typecheck`, security-аудит, тесты, e2e и production web build.
 - [ ] **Policy guards (external links)**
   ```bash
   npm run guard:external-links
