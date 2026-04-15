@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
-const minimatch = require('minimatch')
+const minimatchModule = require('minimatch')
 const { resolveChangedFilesInput, runSelectiveChecks } = require('./run-local-selective-checks')
 
 const parseArgs = (argv) => {
@@ -38,31 +38,66 @@ const parseArgs = (argv) => {
 
 const LINTABLE_FILE_PATTERN = /\.(js|jsx|ts|tsx|mjs|cjs)$/
 const ESLINT_CACHE_LOCATION = 'node_modules/.cache/eslint/check-fast/.eslintcache'
+const MINIMATCH_OPTIONS = Object.freeze({ dot: true })
 const eslintConfig = require(path.resolve(process.cwd(), 'eslint.config.js'))
 const ESLINT_IGNORE_PATTERNS = Array.isArray(eslintConfig?.[0]?.ignores)
   ? eslintConfig[0].ignores
   : []
+const matchGlob = (() => {
+  if (typeof minimatchModule === 'function') {
+    return minimatchModule
+  }
+
+  if (typeof minimatchModule?.minimatch === 'function') {
+    return minimatchModule.minimatch
+  }
+
+  throw new TypeError('minimatch export does not expose a matcher function')
+})()
+const MinimatchMatcher = typeof minimatchModule?.Minimatch === 'function'
+  ? minimatchModule.Minimatch
+  : null
 
 const normalizeForMatching = (filePath) => String(filePath || '').replace(/\\/g, '/')
 
-const matchesIgnorePattern = (filePath, pattern) => {
-  const normalizedFilePath = normalizeForMatching(filePath)
+const createIgnorePatternMatcher = (pattern) => {
   const normalizedPattern = normalizeForMatching(pattern)
+  if (!normalizedPattern) return null
 
-  if (!normalizedPattern) return false
-  if (minimatch(normalizedFilePath, normalizedPattern, { dot: true })) {
-    return true
+  const globMatcher = MinimatchMatcher
+    ? new MinimatchMatcher(normalizedPattern, MINIMATCH_OPTIONS)
+    : null
+  const prefix = normalizedPattern.endsWith('/') ? normalizedPattern : ''
+
+  return (filePath) => {
+    const normalizedFilePath = normalizeForMatching(filePath)
+    if (!normalizedFilePath) {
+      return false
+    }
+
+    if (globMatcher ? globMatcher.match(normalizedFilePath) : matchGlob(normalizedFilePath, normalizedPattern, MINIMATCH_OPTIONS)) {
+      return true
+    }
+
+    return prefix ? normalizedFilePath.startsWith(prefix) : false
+  }
+}
+
+const IGNORE_PATTERN_MATCHERS = ESLINT_IGNORE_PATTERNS
+  .map((pattern) => createIgnorePatternMatcher(pattern))
+  .filter(Boolean)
+
+const matchesIgnorePattern = (filePath, patternOrMatcher) => {
+  if (typeof patternOrMatcher === 'function') {
+    return patternOrMatcher(filePath)
   }
 
-  if (normalizedPattern.endsWith('/')) {
-    return normalizedFilePath.startsWith(normalizedPattern)
-  }
-
-  return false
+  const matcher = createIgnorePatternMatcher(patternOrMatcher)
+  return matcher ? matcher(filePath) : false
 }
 
 const isIgnoredLintTarget = (filePath) => {
-  return ESLINT_IGNORE_PATTERNS.some((pattern) => matchesIgnorePattern(filePath, pattern))
+  return IGNORE_PATTERN_MATCHERS.some((matcher) => matchesIgnorePattern(filePath, matcher))
 }
 
 const getLintTargets = (changedFiles) => {
@@ -195,7 +230,12 @@ if (require.main === module) {
 module.exports = {
   LINTABLE_FILE_PATTERN,
   ESLINT_IGNORE_PATTERNS,
+  IGNORE_PATTERN_MATCHERS,
+  MINIMATCH_OPTIONS,
   parseArgs,
+  normalizeForMatching,
+  matchesIgnorePattern,
+  createIgnorePatternMatcher,
   getLintTargets,
   buildEslintArgs,
   ESLINT_CACHE_LOCATION,
