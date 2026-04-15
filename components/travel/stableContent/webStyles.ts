@@ -17,6 +17,10 @@ export const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>)
   max-width: 680px;
   margin: 0 auto;
   padding: 0 ${DESIGN_TOKENS.spacing.md}px 48px;
+  /* Long unbroken tokens (URLs, hashtags, tracking IDs) from user-authored
+     HTML would otherwise push a horizontal scrollbar on narrow phones. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .${WEB_RICH_TEXT_CLASS}.${WEB_RICH_TEXT_FULL_WIDTH_CLASS} {

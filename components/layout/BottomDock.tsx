@@ -88,7 +88,7 @@ const DockButton = memo(function DockButton({
       accessibilityRole="tab"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: isActive }}
-      hitSlop={6}
+      hitSlop={10}
       testID={testID}
       android_ripple={{ color: 'rgba(0,0,0,0.12)', borderless: false }}
       style={({ pressed }) => [
@@ -425,6 +425,11 @@ const createStyles = (
         maxHeight: 64,
         backdropFilter: "blur(14px)",
         boxShadow: DESIGN_TOKENS.shadows.medium,
+        // Prevent iOS long-press from selecting label text when the user
+        // accidentally holds a dock tab instead of tapping it.
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        WebkitTouchCallout: "none",
       } as any,
     }),
   },

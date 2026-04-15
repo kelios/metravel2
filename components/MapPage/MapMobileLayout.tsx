@@ -813,8 +813,10 @@ const getStyles = (
     },
     sheetToolbarSummary: {
       marginTop: options.isNarrow ? 3 : 6,
-      fontSize: options.isNarrow ? 10 : 11,
-      lineHeight: options.isNarrow ? 13 : 15,
+      // 11px is the readable floor for the results summary; 10px on narrow
+      // trims descenders and is hard to parse next to 44px touch targets.
+      fontSize: 11,
+      lineHeight: options.isNarrow ? 14 : 15,
       fontWeight: '600' as const,
       color: colors.textMuted,
     },
