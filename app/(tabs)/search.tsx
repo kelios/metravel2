@@ -41,6 +41,7 @@ function SearchScreen() {
   // Fading the mounted list from opacity 0 to 1 creates a second visual frame
   // that looks like image re-rendering on the search grid.
   const [contentReady, setContentReady] = useState(false)
+  const handleContentReady = useCallback(() => setContentReady(true), [])
 
   // Handle sidebar section navigation (scroll to filter section when clicked in skeleton)
   const handleSectionPress = useCallback((sectionKey: string) => {
@@ -137,7 +138,7 @@ function SearchScreen() {
             {/* Content layer - renders behind skeleton, fades in when ready */}
             <View style={[styles.contentLayer, !contentReady && styles.contentLayerHidden]}>
               <Suspense fallback={<SearchPageSkeleton showSidebarNavigation={false} />}>
-                <ListTravelWithReadyCallback onReady={() => setContentReady(true)} />
+                <ListTravelWithReadyCallback onReady={handleContentReady} />
               </Suspense>
             </View>
           </View>

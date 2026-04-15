@@ -1,4 +1,4 @@
-/**
+ /**
  * SearchPageSkeleton - YouTube-style instant skeleton for search page
  * 
  * Key features:
@@ -216,8 +216,7 @@ SearchHeaderSkeleton.displayName = 'SearchHeaderSkeleton';
 
 /** Cards grid skeleton */
 const CardsGridSkeleton = memo<{ 
-  colors: ReturnType<typeof useThemedColors>; 
-  count: number; 
+  count: number;
   columns: number;
   isMobile: boolean;
 }>(({ count, columns, isMobile }) => {
@@ -316,8 +315,7 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
             contentContainerStyle={{ paddingBottom: 40 }}
           >
             <CardsGridSkeleton 
-              colors={colors} 
-              count={cardCount} 
+              count={cardCount}
               columns={columns}
               isMobile={false}
             />
@@ -337,8 +335,7 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
         contentContainerStyle={{ paddingBottom: 80 }}
       >
         <CardsGridSkeleton 
-          colors={colors} 
-          count={cardCount} 
+          count={cardCount}
           columns={1}
           isMobile={true}
         />
@@ -349,60 +346,3 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
 
 SearchPageSkeleton.displayName = 'SearchPageSkeleton';
 
-/** Compact mobile skeleton for filter sheet overlay */
-export const SearchPageMobileSkeleton = memo(() => {
-  const colors = useThemedColors();
-
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      padding: DESIGN_TOKENS.spacing.md,
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    searchBar: {
-      marginBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    filterButton: {
-      marginTop: DESIGN_TOKENS.spacing.sm,
-    },
-    content: {
-      padding: DESIGN_TOKENS.spacing.md,
-    },
-    resultsHeader: {
-      marginBottom: DESIGN_TOKENS.spacing.md,
-    },
-  }), [colors]);
-
-  return (
-    <View style={styles.container} testID="search-mobile-skeleton">
-      <View style={styles.header}>
-        <View style={styles.searchBar}>
-          <SkeletonLoader width="100%" height={48} borderRadius={DESIGN_TOKENS.radii.lg} />
-        </View>
-        <View style={styles.filterButton}>
-          <SkeletonLoader width="100%" height={44} borderRadius={DESIGN_TOKENS.radii.md} />
-        </View>
-      </View>
-
-      <ScrollView 
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.resultsHeader}>
-          <SkeletonLoader width={120} height={20} borderRadius={4} />
-        </View>
-
-        {Array.from({ length: 5 }).map((_, index) => (
-          <TravelCardSkeleton key={`mobile-card-skeleton-${index}`} />
-        ))}
-      </ScrollView>
-    </View>
-  );
-});
-
-SearchPageMobileSkeleton.displayName = 'SearchPageMobileSkeleton';

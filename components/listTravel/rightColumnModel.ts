@@ -44,6 +44,7 @@ type RightColumnComparableProps = {
   isSearchPending?: boolean
   renderItem: unknown
   search: string
+  showEmptyState: boolean
   showInitialLoading: boolean
   showNextPageLoading: boolean
   topContent?: unknown
@@ -58,7 +59,7 @@ export function areRightColumnPropsEqual(
   return (
     prev.search === next.search &&
     prev.total === next.total &&
-    prev.travels.length === next.travels.length &&
+    prev.travels === next.travels &&
     prev.topContent === next.topContent &&
     prev.renderItem === next.renderItem &&
     prev.gridColumns === next.gridColumns &&
@@ -67,6 +68,7 @@ export function areRightColumnPropsEqual(
     prev.isSearchPending === next.isSearchPending &&
     prev.isError === next.isError &&
     prev.isExport === next.isExport &&
+    prev.showEmptyState === next.showEmptyState &&
     prev.showNextPageLoading === next.showNextPageLoading &&
     prev.activeFiltersCount === next.activeFiltersCount &&
     prev.isRecommendationsVisible === next.isRecommendationsVisible

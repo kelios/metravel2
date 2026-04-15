@@ -1,13 +1,7 @@
 import {
   normalizeApiResponse,
   deduplicateTravels,
-  calculateCategoriesWithCount,
-  calculateIsEmpty,
-  calculateBadges,
-  getContainerPadding,
   calculateColumns,
-  isMobile,
-  isTablet,
 } from '@/components/listTravel/utils/listTravelHelpers'
 import type { Travel } from '@/types/types'
 
@@ -131,145 +125,6 @@ describe('listTravelHelpers', () => {
     })
   })
 
-  describe('calculateCategoriesWithCount', () => {
-    const categories = [
-      { id: 'cat-1', name: 'Beach' },
-      { id: 'cat-2', name: 'Mountain' },
-      { id: 'cat-3', name: 'City' },
-      { id: 'cat-4', name: 'Forest' },
-    ]
-
-    const travelWithCategories = (categoryName: string) => {
-      const travel = createTravel()
-      ;(travel as any).categoryName = categoryName
-      return travel
-    }
-
-    it('returns sorted categories with counts limited to top 10', () => {
-      const travels = [
-        travelWithCategories('Beach, Mountain'),
-        travelWithCategories('Beach, City'),
-        travelWithCategories('Beach'),
-        travelWithCategories('Forest'),
-      ]
-
-      const result = calculateCategoriesWithCount(travels, categories)
-      expect(result).toEqual([
-        { id: 'cat-1', name: 'Beach', count: 3 },
-        { id: 'cat-2', name: 'Mountain', count: 1 },
-        { id: 'cat-3', name: 'City', count: 1 },
-        { id: 'cat-4', name: 'Forest', count: 1 },
-      ])
-    })
-
-    it('returns empty list when travels or categories missing', () => {
-      expect(calculateCategoriesWithCount([], categories)).toEqual([])
-      expect(calculateCategoriesWithCount([travelWithCategories('Beach')], undefined)).toEqual([])
-    })
-  })
-
-  describe('calculateIsEmpty', () => {
-    const baseParams = {
-      isQueryEnabled: true,
-      status: 'success',
-      isFetching: false,
-      isLoading: false,
-      hasAnyItems: false,
-      data: null,
-    }
-
-    it('returns false while fetching or loading', () => {
-      expect(
-        calculateIsEmpty(true, 'success', true, false, false, null)
-      ).toBe(false)
-      expect(
-        calculateIsEmpty(true, 'success', false, true, false, null)
-      ).toBe(false)
-    })
-
-    it('returns false when items already present', () => {
-      expect(
-        calculateIsEmpty(true, 'success', false, false, true, null)
-      ).toBe(false)
-    })
-
-    it('returns false when backend data contains items', () => {
-      expect(
-        calculateIsEmpty(true, 'success', false, false, false, [createTravel()])
-      ).toBe(false)
-      expect(
-        calculateIsEmpty(true, 'success', false, false, false, { data: [{ id: '1' }] })
-      ).toBe(false)
-      expect(
-        calculateIsEmpty(true, 'success', false, false, false, { total: 1 })
-      ).toBe(false)
-    })
-
-    it('returns true only when query finished successfully with no data anywhere', () => {
-      expect(
-        calculateIsEmpty(
-          baseParams.isQueryEnabled,
-          baseParams.status,
-          baseParams.isFetching,
-          baseParams.isLoading,
-          baseParams.hasAnyItems,
-          baseParams.data
-        )
-      ).toBe(true)
-    })
-  })
-
-  describe('calculateBadges', () => {
-    afterEach(() => {
-      jest.restoreAllMocks()
-    })
-
-    it('returns Popular when views exceed threshold', () => {
-      const travel = createTravel({ countUnicIpView: '5000' })
-      const badges = calculateBadges(travel)
-      expect(badges.find(b => b.label === 'Популярное')).toBeTruthy()
-    })
-
-    it('returns New when created within threshold days', () => {
-      const now = new Date('2025-01-10T00:00:00Z').getTime()
-      jest.spyOn(Date, 'now').mockReturnValue(now)
-
-      const travel = createTravel({ created_at: '2025-01-07T00:00:00Z', countUnicIpView: '0' })
-      const badges = calculateBadges(travel)
-      expect(badges.map(b => b.label)).toContain('Новое')
-    })
-
-    it('returns Trend when updated recently and views exceed threshold, but does not add Trend when New is present', () => {
-      const now = new Date('2025-01-10T00:00:00Z').getTime()
-      jest.spyOn(Date, 'now').mockReturnValue(now)
-
-      const newTravel = createTravel({
-        countUnicIpView: '2000',
-        created_at: '2025-01-08T00:00:00Z',
-        updated_at: '2025-01-09T00:00:00Z',
-      })
-      const newBadges = calculateBadges(newTravel)
-      expect(newBadges.map(b => b.label)).toContain('Новое')
-      expect(newBadges.map(b => b.label)).not.toContain('Тренд')
-
-      const trendingTravel = createTravel({
-        countUnicIpView: '2000',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2025-01-09T00:00:00Z',
-      })
-      const trendingBadges = calculateBadges(trendingTravel)
-      expect(trendingBadges.map(b => b.label)).toContain('Тренд')
-    })
-  })
-
-  describe('getContainerPadding', () => {
-    it('returns non-decreasing padding as width increases', () => {
-      const values = [320, 480, 767, 768, 1024, 1440, 1920].map(w => getContainerPadding(w))
-      for (let i = 1; i < values.length; i += 1) {
-        expect(values[i]).toBeGreaterThanOrEqual(values[i - 1])
-      }
-    })
-  })
 
   describe('calculateColumns', () => {
     it('forces 1 column below mobile breakpoint', () => {
@@ -291,16 +146,4 @@ describe('listTravelHelpers', () => {
     })
   })
 
-  describe('isMobile / isTablet', () => {
-    it('classifies widths correctly around breakpoints', () => {
-      expect(isMobile(320)).toBe(true)
-      expect(isTablet(320)).toBe(false)
-
-      expect(isMobile(800)).toBe(false)
-      expect(isTablet(800)).toBe(true)
-
-      expect(isMobile(1200)).toBe(false)
-      expect(isTablet(1200)).toBe(false)
-    })
-  })
 })

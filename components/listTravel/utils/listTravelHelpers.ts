@@ -4,9 +4,7 @@
  */
 
 import type { Travel } from "@/types/types";
-import type { FilterOptions, CategoryWithCount } from "./listTravelTypes";
-import { BREAKPOINTS, BADGE_THRESHOLDS, GRID_COLUMNS } from "./listTravelConstants";
-import { getThemedColors, type ThemedColors } from "@/hooks/useTheme";
+import { BREAKPOINTS, GRID_COLUMNS } from "./listTravelConstants";
 
 export function normalizeApiResponse(data: any): { items: Travel[]; total: number } {
   if (!data) {
@@ -63,11 +61,12 @@ export function deduplicateTravels(travels: Travel[]): Travel[] {
   });
 }
 
+
 const MIN_CARD_WIDTH = 240; // Минимальная комфортная ширина карточки
 const GAP = 16; // Отступ между карточками
 
 // Функция для расчета padding контейнера
-export function getContainerPadding(width: number): number {
+function getContainerPadding(width: number): number {
   if (width < BREAKPOINTS.XS) return 8;
   if (width < BREAKPOINTS.SM) return 12;
   if (width < BREAKPOINTS.MOBILE) return 16;
@@ -116,120 +115,3 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
   return Math.max(columns, 1);
 }
 
-const resolveIsDark = () => {
-  if (typeof document === 'undefined') return false;
-  return document.documentElement.getAttribute('data-theme') === 'dark';
-};
-
-export function calculateBadges(
-  travel: Travel,
-  colors: ThemedColors = getThemedColors(resolveIsDark())
-): Array<{ label: string; color: string; bgColor: string }> {
-  const result: Array<{ label: string; color: string; bgColor: string }> = [];
-  const views = Number(travel.countUnicIpView) || 0;
-  const updatedAt = (travel as any).updated_at;
-  const createdAt = (travel as any).created_at || updatedAt;
-  
-  // "Популярное" - более 1000 просмотров
-  if (views > BADGE_THRESHOLDS.POPULAR_VIEWS) {
-    result.push({
-      label: 'Популярное',
-      color: colors.textOnPrimary,
-      bgColor: colors.warning,
-    });
-  }
-  
-  // "Новое" - создано за последние 7 дней
-  if (createdAt) {
-    const createdDate = new Date(createdAt);
-    const daysSinceCreated = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSinceCreated <= BADGE_THRESHOLDS.NEW_DAYS) {
-      result.push({
-        label: 'Новое',
-        color: colors.textOnPrimary,
-        bgColor: colors.success,
-      });
-    }
-  }
-  
-  // "Тренд" - растущая популярность
-  if (updatedAt && views > BADGE_THRESHOLDS.TREND_VIEWS) {
-    const updatedDate = new Date(updatedAt);
-    const daysSinceUpdated = (Date.now() - updatedDate.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysSinceUpdated <= BADGE_THRESHOLDS.TREND_DAYS && !result.find(b => b.label === 'Новое')) {
-      result.push({
-        label: 'Тренд',
-        color: colors.textOnPrimary,
-        bgColor: colors.info,
-      });
-    }
-  }
-  
-  return result;
-}
-
-export function calculateCategoriesWithCount(
-  travels: Travel[],
-  allCategories: FilterOptions['categories'] = []
-): CategoryWithCount[] {
-  if (!allCategories || travels.length === 0) {
-    return [];
-  }
-  
-  const categoryCounts: Record<string, number> = {};
-  travels.forEach((travel) => {
-    if ((travel as any).categoryName) {
-      const cats = (travel as any).categoryName.split(',').map((c: string) => c.trim()).filter(Boolean);
-      cats.forEach((cat: string) => {
-        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-      });
-    }
-  });
-
-  return allCategories
-    .filter((cat) => cat && cat.name && categoryCounts[cat.name])
-    .map((cat) => ({
-      id: cat.id || cat.name,
-      name: cat.name,
-      count: categoryCounts[cat.name] || 0,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-}
-
-export function calculateIsEmpty(
-  isQueryEnabled: boolean,
-  status: string,
-  isFetching: boolean,
-  isLoading: boolean,
-  hasAnyItems: boolean,
-  data: any
-): boolean {
-  // Не показываем пустое состояние во время загрузки
-  if (isFetching || isLoading) return false;
-  
-  // Не показываем пустое состояние если данные есть
-  if (hasAnyItems) return false;
-  
-  // Проверяем данные от бэкенда
-  if (data) {
-    if (Array.isArray(data)) {
-      if (data.length > 0) return false;
-    } else if (data && typeof data === 'object') {
-      if (Array.isArray(data.data) && data.data.length > 0) return false;
-      if (typeof data.total === 'number' && data.total > 0) return false;
-      if (data.data && typeof data.data === 'object') return false;
-    }
-  }
-  
-  // Показываем пустое состояние только если запрос завершен и данных нет
-  return isQueryEnabled && status === "success";
-}
-
-export function isMobile(width: number): boolean {
-  return width < BREAKPOINTS.MOBILE;
-}
-
-export function isTablet(width: number): boolean {
-  return width >= BREAKPOINTS.MOBILE && width < BREAKPOINTS.TABLET;
-}

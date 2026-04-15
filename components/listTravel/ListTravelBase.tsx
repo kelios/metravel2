@@ -98,16 +98,52 @@ function ListTravelBase() {
       sort?: string | string[];
       search?: string | string[];
     }>();
+
+    // Extract individual param values for stable useMemo dependencies
+    // (params object is a new reference every render from useLocalSearchParams)
     const user_id = params.user_id;
+    const pSearch = params.search;
+    const pCategories = params.categories;
+    const pOverNightsStay = params.over_nights_stay;
+    const pOverNightsStayAlt = params.over__nights__stay;
+    const pCategoryTravelAddress = params.categoryTravelAddress;
+    const pCategoryTravelAddressSnake = params.category_travel_address;
+    const pCategoryTravelAddressAlt = params.category__travel__address;
+    const pCompanions = params.companions;
+    const pComplexity = params.complexity;
+    const pMonth = params.month;
+    const pSort = params.sort;
 
     const normalizedSearchParam = useMemo(
-      () => normalizeListTravelParam(params.search) ?? '',
-      [params.search]
+      () => normalizeListTravelParam(pSearch) ?? '',
+      [pSearch]
     );
 
     const initialFilter = useMemo(() => {
-      return buildListTravelInitialFilter(params);
-    }, [params]);
+      return buildListTravelInitialFilter({
+        categories: pCategories,
+        over_nights_stay: pOverNightsStay,
+        over__nights__stay: pOverNightsStayAlt,
+        categoryTravelAddress: pCategoryTravelAddress,
+        category_travel_address: pCategoryTravelAddressSnake,
+        category__travel__address: pCategoryTravelAddressAlt,
+        companions: pCompanions,
+        complexity: pComplexity,
+        month: pMonth,
+        sort: pSort,
+      });
+    }, [
+      pCategories,
+      pOverNightsStay,
+      pOverNightsStayAlt,
+      pCategoryTravelAddress,
+      pCategoryTravelAddressSnake,
+      pCategoryTravelAddressAlt,
+      pCompanions,
+      pComplexity,
+      pMonth,
+      pSort,
+    ]);
 
     const isMeTravel = (route as any).name === "metravel" || pathname?.includes('/metravel');
     const isTravelBy = (route as any).name === "travelsby";
@@ -149,10 +185,6 @@ function ListTravelBase() {
             return false;
         }
     });
-    const [recommendationsReady, setRecommendationsReady] = useState(() => {
-        if (Platform.OS !== 'web') return true;
-        return isRecommendationsVisible;
-    });
     const [recommendationsVisibilityInitialized, setRecommendationsVisibilityInitialized] = useState(
         Platform.OS === 'web'
     );
@@ -171,9 +203,6 @@ function ListTravelBase() {
                 if (!isMounted) return;
                 const visible = stored === 'true';
                 setIsRecommendationsVisible(visible);
-                if (visible) {
-                    setRecommendationsReady(true);
-                }
             } catch (error) {
                 console.error('Error loading recommendations visibility:', error);
             } finally {
@@ -197,11 +226,6 @@ function ListTravelBase() {
 
         setIsRecommendationsVisible(visible);
 
-        // При первом включении рекомендаций инициируем загрузку тяжёлого блока
-        if (visible && !recommendationsReady) {
-            setRecommendationsReady(true);
-        }
-        
         // Сохраняем в storage
         const saveVisibility = async () => {
             try {
@@ -217,7 +241,7 @@ function ListTravelBase() {
         };
         
         saveVisibility();
-    }, [recommendationsReady, recommendationsVisibilityInitialized]);
+    }, [recommendationsVisibilityInitialized]);
 
     const queryClient = useQueryClient();
 
@@ -232,7 +256,6 @@ function ListTravelBase() {
       setSearch((prev) => (prev === normalizedSearchParam ? prev : normalizedSearchParam));
     }, [normalizedSearchParam]);
 
-    const onMomentumRef = useRef(false);
     const lastEndReachedAtRef = useRef<number>(0);
     const deleteInFlightRef = useRef<number | null>(null);
 
@@ -555,7 +578,6 @@ function ListTravelBase() {
     const showEmptyState = !isUserIdLoading && !isSearchPending && isEmpty;
 
     const handleListEndReached = useCallback(() => {
-        if (onMomentumRef.current) return;
         if (!hasAnyItems) return;
 
         const now = Date.now();
