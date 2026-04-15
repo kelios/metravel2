@@ -755,8 +755,10 @@ const getStyles = (
       ...(Platform.OS === 'web' ? ({ boxShadow: 'none', cursor: 'pointer' } as any) : null),
     },
     sheetShowResultsButtonCompact: {
-      height: 36,
-      paddingHorizontal: 8,
+      // 44px min meets Apple HIG / Material touch-target recommendation.
+      height: 44,
+      minWidth: 44,
+      paddingHorizontal: 10,
     },
     sheetBackToMapButton: {
       flexDirection: 'row' as const,
@@ -779,10 +781,10 @@ const getStyles = (
         : null),
     },
     sheetBackToMapButtonCompact: {
-      width: 36,
-      height: 36,
+      width: 44,
+      height: 44,
       paddingHorizontal: 0,
-      borderRadius: 10,
+      borderRadius: 12,
     },
     sheetBackToMapText: {
       fontSize: 12,
@@ -790,9 +792,9 @@ const getStyles = (
       color: colors.textMuted,
     },
     sheetIconButtonCompact: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
+      width: 44,
+      height: 44,
+      borderRadius: 12,
     },
     sheetResultsBadge: {
       fontSize: options.compactSheetActions ? 10 : 11,

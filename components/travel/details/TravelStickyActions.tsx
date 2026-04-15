@@ -203,7 +203,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       left: 0,
       right: 0,
       zIndex: 999,
-      paddingBottom: Platform.select({ ios: 34, default: 10 }),
+      paddingBottom: Platform.select({
+        web: 'calc(var(--mt-dock-h, 0px) + 10px)' as any,
+        ios: 34,
+        default: 10,
+      }),
       paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     },
     bar: {

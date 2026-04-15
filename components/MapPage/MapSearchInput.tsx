@@ -53,6 +53,7 @@ const MapSearchInput: React.FC<MapSearchInputProps> = ({
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
+          inputMode="search"
           accessibilityLabel="Поиск мест на карте"
           accessibilityHint="Введите название места для поиска"
         />
@@ -108,7 +109,9 @@ const getStyles = (colors: ThemedColors) =>
     },
     input: {
       flex: 1,
-      fontSize: 13,
+      // Native keeps the compact 13px; on web we need 16px to avoid iOS
+      // Safari's auto-zoom on input focus, which breaks the map viewport.
+      fontSize: Platform.OS === 'web' ? 16 : 13,
       color: colors.text,
       paddingVertical: 6,
       ...(Platform.OS === 'web'

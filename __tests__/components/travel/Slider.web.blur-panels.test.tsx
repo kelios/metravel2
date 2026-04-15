@@ -262,7 +262,7 @@ describe('Slider (web) blur background', () => {
     expect(secondImage.props.recyclingKey).toContain('img-2.jpg')
   })
 
-  it('disables slide blur surround on iPhone Safari to avoid covering the sharp frame', async () => {
+  it('keeps slide blur surround enabled on iPhone Safari mobile web', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -288,8 +288,8 @@ describe('Slider (web) blur background', () => {
     })
 
     const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
-    expect(firstImage.props.blurBackground).toBe(false)
-    expect(firstImage.props.allowCriticalWebBlur).toBe(false)
+    expect(firstImage.props.blurBackground).toBe(true)
+    expect(firstImage.props.allowCriticalWebBlur).toBe(true)
   })
 
   it('keeps only the in-track previous frame after navigating without duplicating overlay media', async () => {

@@ -420,6 +420,20 @@ select:focus-visible {
   }
 }
 
+/*
+ * Bottom dock height reservation.
+ * Use var(--mt-dock-h) in padding-bottom of any scroll container or
+ * bottom-anchored UI on mobile web so it never hides behind the dock.
+ */
+:root {
+  --mt-dock-h: 0px;
+}
+@media (max-width: 1023px) {
+  :root {
+    --mt-dock-h: calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Extra SSR/hydration safety: if RN-web styles aren't attached yet, enforce dock layout by wrapper */
 [data-testid="footer-dock-wrapper"],
 [data-testid="footer-dock-measure"] {

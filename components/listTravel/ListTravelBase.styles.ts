@@ -104,7 +104,15 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
     },
     cardsContainerMobile: {
       paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
-      ...(Platform.OS === 'web' ? ({ minHeight: 0 } as any) : null),
+      ...(Platform.OS === 'web'
+        ? ({
+            minHeight: 0,
+            // On web the dock is fixed and already reserved via --mt-dock-h
+            // (includes safe-area-inset-bottom). Use it so the last card
+            // isn't hidden under the dock on notched devices.
+            paddingBottom: `calc(var(--mt-dock-h, 0px) + ${DESIGN_TOKENS.spacing.xl}px)` as any,
+          } as any)
+        : null),
     },
     cardsGrid: {
       width: '100%',

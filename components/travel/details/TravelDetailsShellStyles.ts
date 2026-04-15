@@ -70,8 +70,10 @@ export const getTravelDetailsShellStyles = (colors: ThemedColors) =>
     },
     scrollContent: {
       paddingBottom: Platform.select({
+        // Web: reserve space for the bottom dock + sticky action bar so the
+        // last rows of content stay visible above the fixed chrome on mobile.
+        web: `calc(var(--mt-dock-h, 0px) + 72px)` as any,
         default: DESIGN_TOKENS.spacing.xxl,
-        web: DESIGN_TOKENS.spacing.xl,
       }),
     },
     contentOuter: {
