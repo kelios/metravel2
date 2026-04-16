@@ -16,6 +16,8 @@ interface MessageBubbleProps {
 function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const [showActions, setShowActions] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const formattedTime = useMemo(() => {
         if (!message.created_at) return '';
@@ -36,8 +38,6 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
             return '';
         }
     }, [message.created_at]);
-
-    const [showActions, setShowActions] = useState(false);
 
     const copyText = useCallback(async () => {
         try {
@@ -68,8 +68,31 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
 
     const handleDeletePress = useCallback(() => {
         setShowActions(false);
+        if (!onDelete) return;
+
+        if (Platform.OS === 'web') {
+            setShowDeleteConfirm(true);
+            return;
+        }
+
+        Alert.alert(
+            'Удалить сообщение',
+            'Вы уверены, что хотите удалить это сообщение?',
+            [
+                { text: 'Отмена', style: 'cancel' },
+                { text: 'Удалить', style: 'destructive', onPress: onDelete },
+            ],
+        );
+    }, [onDelete]);
+
+    const handleConfirmDelete = useCallback(() => {
+        setShowDeleteConfirm(false);
         onDelete?.();
     }, [onDelete]);
+
+    const handleCancelDelete = useCallback(() => {
+        setShowDeleteConfirm(false);
+    }, []);
 
     if (isSystem) {
         return (
@@ -127,6 +150,40 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
             >
                 {bubbleContent}
             </Pressable>
+            {onDelete && !showDeleteConfirm && (
+                <View style={styles.inlineActionRow}>
+                    <Pressable
+                        onPress={handleDeletePress}
+                        style={[styles.inlineActionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Удалить сообщение"
+                    >
+                        <Feather name="trash-2" size={14} color={colors.textSecondary} />
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Удалить</Text>
+                    </Pressable>
+                </View>
+            )}
+            {showDeleteConfirm && (
+                <View style={styles.actionsRow}>
+                    <Pressable
+                        onPress={handleConfirmDelete}
+                        style={[styles.actionButton, { backgroundColor: DESIGN_TOKENS.colors.error, borderColor: DESIGN_TOKENS.colors.error }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Подтвердить удаление сообщения"
+                    >
+                        <Feather name="trash-2" size={14} color={colors.textInverse} />
+                        <Text style={[styles.deleteActionText, { color: colors.textInverse }]}>Удалить</Text>
+                    </Pressable>
+                    <Pressable
+                        onPress={handleCancelDelete}
+                        style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Отмена удаления сообщения"
+                    >
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Отмена</Text>
+                    </Pressable>
+                </View>
+            )}
             {showActions && (
                 <View style={styles.actionsRow}>
                     <Pressable
@@ -216,7 +273,21 @@ const createStyles = (_colors: ThemedColors) =>
             marginTop: 4,
             alignSelf: 'flex-end',
         },
+        inlineActionRow: {
+            flexDirection: 'row',
+            marginTop: 4,
+            alignSelf: 'flex-end',
+        },
         actionButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            borderRadius: DESIGN_TOKENS.radii.sm,
+            borderWidth: 1,
+        },
+        inlineActionButton: {
             flexDirection: 'row',
             alignItems: 'center',
             gap: 4,
