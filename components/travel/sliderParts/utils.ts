@@ -100,7 +100,7 @@ export const buildUriWeb = (
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
   const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit;
   const effectiveDevicePixelRatio =
-    typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+    typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 3) : 1;
 
   if (containerWidth) {
     const isMobileWidth = containerWidth <= SLIDER_MAX_WIDTH.mobile;
@@ -114,11 +114,11 @@ export const buildUriWeb = (
     const targetWidth = isFirst ? maxWidth : Math.min(containerWidth, maxWidth);
     const quality = isFirst
       ? isMobileWidth
-        ? 50
-        : 45
+        ? 70
+        : 68
       : isMobileWidth
-        ? 58
-        : 65;
+        ? 78
+        : 78;
     const format = isFirst ? undefined : PREFERRED_FORMAT;
     return (
       optimizeImageUrl(versionedUrl, {

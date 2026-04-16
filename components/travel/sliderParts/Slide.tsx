@@ -293,6 +293,7 @@ const Slide = memo(function Slide({
             width={containerW}
             height={slideHeightPx}
             fit={mainFit}
+            quality={82}
             blurBackground={effectiveBlurBackground}
             blurRadius={12}
             priority={mainPriority as any}

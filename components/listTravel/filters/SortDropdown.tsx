@@ -21,7 +21,6 @@ const SortDropdown = memo(({
   colors,
 }: SortDropdownProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
 
   const selectedOption = useMemo(() => {
     const selectedId = String(selectedFilters.sort ?? '');
@@ -38,20 +37,14 @@ const SortDropdown = memo(({
       {/* Dropdown trigger */}
       <Pressable
         onPress={() => setIsExpanded(!isExpanded)}
-        style={[
+        style={({ hovered }) => [
           styles.sortDropdownTrigger,
           isExpanded && styles.sortDropdownTriggerActive,
-          Platform.OS === 'web' && isHovered && !isExpanded && styles.sortDropdownTriggerHover,
+          Platform.OS === 'web' && hovered && !isExpanded && styles.sortDropdownTriggerHover,
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Сортировка: ${selectedOption?.name || 'Новые'}`}
         accessibilityState={{ expanded: isExpanded }}
-        {...(Platform.OS === 'web'
-          ? {
-              onMouseEnter: () => setIsHovered(true),
-              onMouseLeave: () => setIsHovered(false),
-            } as any
-          : {})}
       >
         <View style={styles.sortDropdownTriggerLeft}>
           <View style={styles.sortDropdownIcon}>
@@ -101,4 +94,3 @@ const SortDropdown = memo(({
 SortDropdown.displayName = 'SortDropdown';
 
 export default SortDropdown;
-
