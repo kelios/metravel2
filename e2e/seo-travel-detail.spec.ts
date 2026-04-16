@@ -143,14 +143,14 @@ test.describe('SEO: travel detail page meta tags', () => {
     expect(count).toBe(1);
   });
 
-  test('no duplicate og:image tags', () => {
-    const count = (html.match(/<meta[^>]*property="og:image"/gi) || []).length;
+  test('no duplicate og:image tags', async ({ page }) => {
+    const count = await page.locator('meta[property="og:image"]').count();
     expect(count).toBe(1);
   });
 
   // --- lang attribute ---
-  test('html has lang="ru"', () => {
-    expect(html).toMatch(/<html[^>]*lang="ru"/i);
+  test('html has lang="ru"', async ({ page }) => {
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   });
 
   // --- No robots restriction (travel pages should be indexable) ---

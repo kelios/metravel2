@@ -22,11 +22,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
+import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
-import { 
-    normalizeAnchorId,
-    escapeHtml,
-} from '@/utils/htmlUtils';
 import Button from '@/components/ui/Button';
 import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
@@ -51,6 +48,13 @@ import {
     scheduleFullscreenRefresh,
     syncInitialQuillContent,
 } from './articleEditorLifecycleHelpers';
+import {
+    buildArticleEditorToolbarActions,
+    cancelLinkEditorModal,
+    confirmAnchorEditorModal,
+    confirmLinkEditorModal,
+    openAnchorEditorModal,
+} from './articleEditorUiHelpers';
 import {
     applyLinkToEditorSelection,
     buildHtmlModeToggleHandler,
@@ -888,9 +892,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [rememberSelectionFromEditor]);
 
     const openAnchorModal = useCallback(() => {
-        rememberSelectionFromEditor();
-        setAnchorValue('');
-        setAnchorModalVisible(true);
+        openAnchorEditorModal({
+            rememberSelectionFromEditor,
+            setAnchorValue,
+            setAnchorModalVisible,
+        });
     }, [rememberSelectionFromEditor]);
 
     useEffect(() => {
@@ -1055,6 +1061,30 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         } as any;
     }, [fireChange, openImagePicker, variant]);
 
+    const toolbarActions = useMemo(() => {
+        return buildArticleEditorToolbarActions({
+            quillRef,
+            toggleHtmlMode,
+            showHtml,
+            fullscreen,
+            toggleFullscreen,
+            clearFormattingPreservingEmbeds,
+            openImagePicker,
+            isWeb,
+            openPreview,
+            openAnchorModal,
+        });
+    }, [
+        clearFormattingPreservingEmbeds,
+        fullscreen,
+        openAnchorModal,
+        openImagePicker,
+        openPreview,
+        showHtml,
+        toggleFullscreen,
+        toggleHtmlMode,
+    ]);
+
     if (!QuillEditor) return <Loader />;
 
     const editorArea = showHtml ? (
@@ -1118,50 +1148,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 isWeb={isWeb}
                 label={label}
                 onManualSave={onManualSave ? () => { void handleManualSave(); } : null}
-                actions={[
-                    {
-                        name: 'rotate-ccw',
-                        onPress: () => quillRef.current?.getEditor().history.undo(),
-                        label: 'Отменить последнее действие',
-                    },
-                    {
-                        name: 'rotate-cw',
-                        onPress: () => quillRef.current?.getEditor().history.redo(),
-                        label: 'Повторить действие',
-                    },
-                    {
-                        name: 'code',
-                        onPress: toggleHtmlMode,
-                        label: showHtml ? 'Скрыть HTML-код' : 'Показать HTML-код',
-                    },
-                    {
-                        name: fullscreen ? 'minimize' : 'maximize',
-                        onPress: toggleFullscreen,
-                        label: fullscreen ? 'Выйти из полноэкранного режима' : 'Перейти в полноэкранный режим',
-                    },
-                    {
-                        name: 'delete',
-                        onPress: clearFormattingPreservingEmbeds,
-                        label: 'Очистить форматирование',
-                    },
-                    {
-                        name: 'image',
-                        onPress: openImagePicker,
-                        label: 'Вставить изображение',
-                    },
-                    ...(isWeb
-                        ? [{
-                            name: 'external-link' as const,
-                            onPress: openPreview,
-                            label: 'Открыть превью',
-                        }]
-                        : []),
-                    {
-                        name: 'bookmark',
-                        onPress: openAnchorModal,
-                        label: 'Вставить якорь',
-                    },
-                ]}
+                actions={toolbarActions}
             />
             <View
                 ref={editorViewportRef}
@@ -1225,50 +1212,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 onShow={focusAnchorInput}
                 onCancel={() => setAnchorModalVisible(false)}
                 onConfirm={() => {
-                    setAnchorModalVisible(false);
-                    if (tmpStoredRange.current) {
-                        const editor = quillRef.current?.getEditor?.();
-                        if (editor && typeof editor.setSelection === 'function') {
-                            try {
-                                editor.setSelection(tmpStoredRange.current as any, 'silent');
-                            } catch {
-                                // noop
-                            }
-                        }
-                    }
-                    if (showHtml) {
-                        const id = normalizeAnchorId(anchorValue);
-                        if (!id) {
-                            Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
-                            return;
-                        }
-
-                        const current = String(html ?? '');
-                        const sel = htmlSelectionRef.current;
-                        const start = Math.max(0, Math.min(sel.start ?? 0, current.length));
-                        const end = Math.max(0, Math.min(sel.end ?? 0, current.length));
-                        const from = Math.min(start, end);
-                        const to = Math.max(start, end);
-
-                        if (to > from) {
-                            const selected = current.slice(from, to);
-                            const wrapped = `<span id="${id}">${escapeHtml(selected)}</span>`;
-                            const next = `${current.slice(0, from)}${wrapped}${current.slice(to)}`;
-                            const caret = from + wrapped.length;
-                            htmlSelectionRef.current = { start: caret, end: caret };
-                            setHtmlForcedSelection({ start: caret, end: caret });
-                            fireChange(next);
-                        } else {
-                            const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
-                            const next = `${current.slice(0, from)}${htmlSnippet}${current.slice(from)}`;
-                            const caret = from + htmlSnippet.length;
-                            htmlSelectionRef.current = { start: caret, end: caret };
-                            setHtmlForcedSelection({ start: caret, end: caret });
-                            fireChange(next);
-                        }
-                        return;
-                    }
-                    insertAnchor(anchorValue);
+                    confirmAnchorEditorModal({
+                        setAnchorModalVisible,
+                        tmpStoredRange,
+                        getEditor: () => quillRef.current?.getEditor?.(),
+                        showHtml,
+                        anchorValue,
+                        html,
+                        htmlSelectionRef,
+                        setHtmlForcedSelection: (selection) => setHtmlForcedSelection(selection),
+                        fireChange,
+                        insertAnchor,
+                    });
                 }}
             />
 
@@ -1281,13 +1236,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 onChangeText={setLinkValue}
                 onShow={focusLinkInput}
                 onCancel={() => {
-                    setLinkModalVisible(false);
-                    tmpStoredRange.current = null;
-                    tmpStoredLinkQuill.current = null;
+                    cancelLinkEditorModal({
+                        setLinkModalVisible,
+                        tmpStoredRange,
+                        tmpStoredLinkQuill,
+                    });
                 }}
                 onConfirm={() => {
-                    setLinkModalVisible(false);
-                    applyLinkToSelection(linkValue);
+                    confirmLinkEditorModal({
+                        setLinkModalVisible,
+                        linkValue,
+                        applyLinkToSelection,
+                    });
                 }}
             />
         </>
