@@ -1,12 +1,12 @@
 import React, {
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
     Suspense,
     forwardRef,
-    useMemo,
+    useCallback,
+    useEffect,
     useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
 } from 'react';
 import {
     View,
@@ -18,7 +18,6 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -26,20 +25,34 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { 
-    normalizeHtmlForQuill, 
-    normalizeAnchorId, 
-    escapeHtml 
+    normalizeAnchorId,
+    escapeHtml,
 } from '@/utils/htmlUtils';
-import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import Button from '@/components/ui/Button';
 import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
     ARTICLE_EDITOR_DEFAULT_AUTOSAVE_DELAY,
-    buildInstagramEmbedHtmlFromUrl,
-    buildYoutubeEmbedHtmlFromUrl,
-    extractArticleEditorUploadUrl,
     getQuillModulesForVariant,
 } from './articleEditorConfig';
+import {
+    handleSurfaceFileDrop as handleEditorSurfaceFileDrop,
+    hasSurfaceDraggedFiles,
+    insertImageIntoEditor,
+    openWebImagePicker,
+    pasteHtmlIntoEditor,
+    readImageDimensions,
+    resolvePastePayload,
+    uploadImageAndInsert,
+} from './articleEditorMediaHelpers';
+import {
+    applyLinkToEditorSelection,
+    buildHtmlModeToggleHandler,
+    clearFormattingPreservingEmbeds as clearQuillFormattingPreservingEmbeds,
+    ensureQuillContent as ensureEditorQuillContent,
+    handleQuillHtmlChange,
+    insertAnchorIntoEditor,
+    rememberSelectionFromEditor as rememberEditorSelection,
+} from './articleEditorQuillHelpers';
 import type { ArticleEditorProps } from './articleEditor.types';
 import { getArticleEditorWebStyles } from './ArticleEditor.web.styles';
 import {
@@ -539,19 +552,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         [debouncedParentChange]
     );
 
-    const resolveEditorSelection = useCallback((editor: any) => {
-        if (!editor) return { index: 0, length: 0 };
-        try {
-            const direct = typeof editor.getSelection === 'function' ? editor.getSelection(true) : null;
-            if (direct && typeof direct.index === 'number') return direct;
-        } catch {
-            // noop
-        }
-
-        if (lastSelectionRef.current) return lastSelectionRef.current;
-        return { index: editor.getLength?.() ?? 0, length: 0 };
-    }, []);
-
     const focusQuill = useCallback(() => {
         if (!isWeb) return;
         if (showHtml) return;
@@ -582,69 +582,21 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         return typeof htmlRef.current === 'string' ? htmlRef.current : '';
     }, [showHtml]);
 
-    const readImageDimensions = useCallback(async (file: File) => {
-        if (!isWeb || !win || typeof Image === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
-            return null;
-        }
-
-        return await new Promise<{ width: number; height: number } | null>((resolve) => {
-            let objectUrl = '';
-            try {
-                objectUrl = URL.createObjectURL(file);
-            } catch {
-                resolve(null);
-                return;
-            }
-
-            const image = new Image();
-            const finalize = (value: { width: number; height: number } | null) => {
-                try {
-                    if (objectUrl) URL.revokeObjectURL(objectUrl);
-                } catch {
-                    // noop
-                }
-                resolve(value);
-            };
-
-            image.onload = () => {
-                const width = Number((image as any).naturalWidth || image.width || 0);
-                const height = Number((image as any).naturalHeight || image.height || 0);
-                if (width > 0 && height > 0) {
-                    finalize({ width, height });
-                    return;
-                }
-                finalize(null);
-            };
-
-            image.onerror = () => finalize(null);
-            image.src = objectUrl;
+    const readEditorImageDimensions = useCallback((file: File) => {
+        return readImageDimensions({
+            file,
+            isWeb,
+            hasWindow: !!win,
         });
     }, []);
 
     const insertImage = useCallback((url: string, dimensions?: { width: number; height: number } | null) => {
-        if (!quillRef.current) return;
-        const editor = quillRef.current.getEditor();
-        const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
-        const width = Number(dimensions?.width ?? 0);
-        const height = Number(dimensions?.height ?? 0);
-        if (
-            width > 0 &&
-            height > 0 &&
-            editor.clipboard?.dangerouslyPasteHTML
-        ) {
-            if (range.length > 0 && typeof editor.deleteText === 'function') {
-                editor.deleteText(range.index, range.length, 'user');
-            }
-            const safeUrl = String(url)
-                .replace(/&/g, '&amp;')
-                .replace(/"/g, '&quot;');
-            const htmlSnippet = `<img src="${safeUrl}" width="${width}" height="${height}" style="display:block;width:100%;max-width:100%;height:auto;max-height:55vh;object-fit:contain;object-position:center;margin:6px 0 26px;" />`;
-            editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
-        } else {
-            editor.insertEmbed(range.index, 'image', url, 'user');
-        }
-        editor.setSelection(range.index + 1, 0, 'silent');
-        fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 });
+        insertImageIntoEditor({
+            editor: quillRef.current?.getEditor?.(),
+            url,
+            dimensions,
+            fireChange,
+        });
     }, [fireChange]);
 
     const openPreview = useCallback(async () => {
@@ -663,113 +615,38 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [idTravel]);
 
     const uploadAndInsert = useCallback(async (file: File) => {
-        if (!isAuthenticated) {
-            if (__DEV__) {
-                console.info('[ArticleEditor] upload blocked: not authenticated');
-            }
-            Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения');
-            return;
-        }
-
-        if (__DEV__) {
-            console.info('[ArticleEditor] upload start', {
-                name: file?.name,
-                type: file?.type,
-                size: file?.size,
-                idTravel,
-            });
-        }
-
-        const selectionSnapshot = (() => {
-            try {
-                const editor = quillRef.current?.getEditor?.();
-                if (!editor) return null;
-                const sel =
-                    typeof editor.getSelection === 'function'
-                        ? (() => {
-                              try {
-                                  return editor.getSelection(true);
-                              } catch {
-                                  return editor.getSelection();
-                              }
-                          })()
-                        : null;
-                if (sel && typeof sel.index === 'number') return sel;
-            } catch {
-                // noop
-            }
-            return null;
-        })();
-
-        try {
-            setIsImageUploading(true);
-            const form = new FormData();
-            form.append('file', file);
-            form.append('collection', 'description');
-            if (idTravel) form.append('id', String(idTravel));
-            const [res, imageDimensions] = await Promise.all([
-                uploadImage(form),
-                readImageDimensions(file),
-            ]);
-            if (__DEV__) {
-                console.info('[ArticleEditor] upload response', res);
-            }
-            const uploadedUrlRaw = extractArticleEditorUploadUrl(res);
-            const imageUrl = uploadedUrlRaw ? normalizeMediaUrl(uploadedUrlRaw) : null;
-            if (!imageUrl) {
-                if (__DEV__) {
-                    console.warn('[ArticleEditor] Upload response missing url:', res);
-                }
-                throw new Error('no url in response');
-            }
-            if (selectionSnapshot && quillRef.current?.getEditor) {
-                try {
-                    const editor = quillRef.current.getEditor();
-                    editor.setSelection(selectionSnapshot, 'silent');
-                } catch {
-                    // noop
-                }
-            }
-            insertImage(imageUrl, imageDimensions);
-        } catch (err) {
-            if (__DEV__) {
-                console.error('[ArticleEditor] Image upload failed:', err);
-            }
-            Alert.alert('Ошибка', 'Не удалось загрузить изображение');
-        } finally {
-            setIsImageUploading(false);
-        }
-    }, [idTravel, insertImage, isAuthenticated, readImageDimensions]);
+        await uploadImageAndInsert({
+            file,
+            idTravel,
+            isAuthenticated,
+            setIsImageUploading,
+            getEditor: () => quillRef.current?.getEditor?.(),
+            insertImage,
+            readDimensions: readEditorImageDimensions,
+        });
+    }, [idTravel, insertImage, isAuthenticated, readEditorImageDimensions]);
 
     const openImagePicker = useCallback(() => {
-        if (!win) return;
-        const input = win.document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = () => {
-            const file = input.files?.[0];
-            if (file) void uploadAndInsert(file);
-        };
-        input.click();
+        openWebImagePicker({
+            hasWindow: !!win,
+            createInput: () => win!.document.createElement('input'),
+            onFile: (file) => {
+                void uploadAndInsert(file);
+            },
+        });
     }, [uploadAndInsert]);
 
-    const hasSurfaceDraggedFiles = useCallback((event: any) => {
-        const types = event?.dataTransfer?.types;
-        if (!types) return false;
-        if (typeof types.includes === 'function') return types.includes('Files');
-        return Array.from(types).includes('Files');
-    }, []);
-
     const handleSurfaceFileDrop = useCallback((file: File | null | undefined) => {
-        if (!file) return false;
-        if (typeof file.type !== 'string' || !file.type.startsWith('image/')) return false;
-        if (shouldLoadQuill && quillRef.current?.getEditor?.()) {
-            void uploadAndInsert(file);
-            return true;
-        }
-        pendingDroppedImageRef.current = file;
-        requestQuillLoad();
-        return true;
+        return handleEditorSurfaceFileDrop({
+            file,
+            shouldLoadQuill,
+            hasEditor: !!quillRef.current?.getEditor?.(),
+            uploadAndInsert,
+            storePendingFile: (nextFile) => {
+                pendingDroppedImageRef.current = nextFile;
+            },
+            requestQuillLoad,
+        });
     }, [requestQuillLoad, shouldLoadQuill, uploadAndInsert]);
 
     useEffect(() => {
@@ -840,19 +717,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 void uploadAndInsert(file);
             };
             const onPaste = (e: ClipboardEvent) => {
-                const fileFromFiles = Array.from(e.clipboardData?.files ?? [])[0];
-                const fileFromItems = Array.from(e.clipboardData?.items ?? [])
-                    .map(item => {
-                        if (!item || typeof item.kind !== 'string' || item.kind !== 'file') return null;
-                        if (typeof item.type !== 'string' || !item.type.startsWith('image/')) return null;
-                        try {
-                            return item.getAsFile?.() ?? null;
-                        } catch {
-                            return null;
-                        }
-                    })
-                    .find((candidate): candidate is File => !!candidate);
-                const file = fileFromFiles ?? fileFromItems;
+                const { fileFromFiles, fileFromItems, file, pastedHtml, knownEmbedHtml, cleanedHtml } = resolvePastePayload(e.clipboardData);
                 if (__DEV__) {
                     console.info('[ArticleEditor] paste event', {
                         filesCount: e.clipboardData?.files?.length ?? 0,
@@ -873,11 +738,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     return;
                 }
 
-                const pastedHtml = e.clipboardData?.getData('text/html') ?? '';
-                const pastedText = e.clipboardData?.getData('text/plain') ?? '';
-                const instagramEmbedHtml = buildInstagramEmbedHtmlFromUrl(pastedText);
-                const youtubeEmbedHtml = buildYoutubeEmbedHtmlFromUrl(pastedText);
-                const knownEmbedHtml = instagramEmbedHtml ?? youtubeEmbedHtml;
                 if (knownEmbedHtml) {
                     e.preventDefault();
                     try {
@@ -885,30 +745,23 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     } catch (err) {
                         void err;
                     }
-                    const ed = quillRef.current?.getEditor?.();
-                    if (ed && typeof ed.clipboard?.dangerouslyPasteHTML === 'function') {
-                        const range = ed.getSelection() || { index: ed.getLength(), length: 0 };
-                        if (range.length > 0) ed.deleteText(range.index, range.length, 'silent');
-                        ed.clipboard.dangerouslyPasteHTML(range.index, knownEmbedHtml, 'user');
-                    }
+                    pasteHtmlIntoEditor({
+                        editor: quillRef.current?.getEditor?.(),
+                        html: knownEmbedHtml,
+                    });
                     return;
                 }
-                if (pastedHtml && /src\s*=\s*["']data:/i.test(pastedHtml)) {
-                    const cleaned = pastedHtml.replace(/<img\s[^>]*src\s*=\s*["']data:[^"']+["'][^>]*\/?>/gi, '');
-                    if (cleaned !== pastedHtml) {
+                if (pastedHtml && cleanedHtml !== pastedHtml) {
                         e.preventDefault();
                         try {
                             (e as any).stopImmediatePropagation?.();
                         } catch (err) {
                             void err;
                         }
-                        const ed = quillRef.current?.getEditor?.();
-                        if (ed && typeof ed.clipboard?.dangerouslyPasteHTML === 'function') {
-                            const range = ed.getSelection() || { index: ed.getLength(), length: 0 };
-                            if (range.length > 0) ed.deleteText(range.index, range.length, 'silent');
-                            ed.clipboard.dangerouslyPasteHTML(range.index, cleaned, 'user');
-                        }
-                    }
+                        pasteHtmlIntoEditor({
+                            editor: quillRef.current?.getEditor?.(),
+                            html: cleanedHtml,
+                        });
                 }
             };
 
@@ -943,7 +796,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             if (t) clearTimeout(t);
             if (cleanup) cleanup();
         };
-    }, [fireChange, resolveEditorSelection, showHtml, shouldLoadQuill, uploadAndInsert, quillMountKey]);
+    }, [fireChange, showHtml, shouldLoadQuill, uploadAndInsert, quillMountKey]);
 
     useEffect(() => {
         if (!isWeb || !win || !fullscreen) return;
@@ -1000,7 +853,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             doc.removeEventListener('dragover', onDocumentDragOver, true);
             doc.removeEventListener('drop', onDocumentDrop, true);
         };
-    }, [fullscreen, handleSurfaceFileDrop, hasSurfaceDraggedFiles, quillMountKey]);
+    }, [fullscreen, handleSurfaceFileDrop, quillMountKey]);
 
     const handleManualSave = useCallback(async () => {
         if (!onManualSave || isManualSaving || isImageUploading) return;
@@ -1014,213 +867,58 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [getCurrentHtml, isImageUploading, isManualSaving, onManualSave]);
 
     const insertAnchor = useCallback((idRaw: string) => {
-        if (!quillRef.current) return;
-        const editor = quillRef.current.getEditor();
-        const id = normalizeAnchorId(idRaw);
-        if (!id) {
-            Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
-            return;
-        }
-
-        try {
-            if (typeof editor.focus === 'function') editor.focus();
-        } catch {
-            // noop
-        }
-
-        const range = tmpStoredRange.current || resolveEditorSelection(editor);
-        try {
-            if (range.length > 0) {
-                const selectedText = editor.getText(range.index, range.length);
-                const htmlSnippet = `<span id="${id}">${escapeHtml(selectedText)}</span>`;
-                editor.deleteText(range.index, range.length, 'user');
-                editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
-                editor.setSelection(range.index + selectedText.length, 0, 'silent');
-            } else {
-                const tokenText = `[#${id}]`;
-                const htmlSnippet = `<span id="${id}">${tokenText}</span>`;
-                editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
-                editor.setSelection(range.index + tokenText.length, 0, 'silent');
-            }
-            tmpStoredRange.current = null;
-            const nextIndex =
-                range.length > 0 ? range.index + range.length : range.index + `[#${id}]`.length;
-            fireChange(editor.root.innerHTML, { index: nextIndex, length: 0 });
-        } catch (e) {
-            try {
-                const fallbackText = `[#${id}] `;
-                editor.insertText(range.index, fallbackText, 'user');
+        insertAnchorIntoEditor({
+            getEditor: () => quillRef.current?.getEditor?.(),
+            idRaw,
+            storedRange: tmpStoredRange.current,
+            onClearStoredRange: () => {
                 tmpStoredRange.current = null;
-                fireChange(editor.root.innerHTML, { index: range.index + fallbackText.length, length: 0 });
-            } catch (inner) {
-                if (__DEV__) {
-                    console.warn('Failed to insert anchor into editor', { e, inner });
-                }
-            }
-        }
-    }, [fireChange, resolveEditorSelection]);
+            },
+            lastSelection: lastSelectionRef.current,
+            fireChange,
+        });
+    }, [fireChange]);
 
     const applyLinkToSelection = useCallback((urlRaw: string) => {
-        const editor = tmpStoredLinkQuill.current || quillRef.current?.getEditor?.();
-        const url = String(urlRaw ?? '').trim();
-
-        if (!editor) return;
-
-        try {
-            if (typeof editor.focus === 'function') editor.focus();
-        } catch {
-            // noop
-        }
-
-        const range = tmpStoredRange.current || resolveEditorSelection(editor);
-        const safeRange = range ?? { index: 0, length: 0 };
-
-        try {
-            editor.setSelection(safeRange, 'silent');
-        } catch {
-            // noop
-        }
-
-        try {
-            if (url) {
-                if (safeRange.length > 0) {
-                    if (typeof editor.formatText === 'function') {
-                        editor.formatText(safeRange.index, safeRange.length, 'link', url, 'user');
-                    } else {
-                        editor.format('link', url, 'user');
-                    }
-                } else if (typeof editor.insertText === 'function') {
-                    editor.insertText(safeRange.index, url, { link: url }, 'user');
-                    editor.setSelection(safeRange.index + url.length, 0, 'silent');
-                } else {
-                    editor.format('link', url, 'user');
-                }
-            } else if (safeRange.length > 0 && typeof editor.formatText === 'function') {
-                editor.formatText(safeRange.index, safeRange.length, 'link', false, 'user');
-            } else {
-                editor.format('link', false, 'user');
-            }
-
-            tmpStoredRange.current = null;
-            tmpStoredLinkQuill.current = null;
-            const nextIndex = url
-                ? (safeRange.length > 0 ? safeRange.index + safeRange.length : safeRange.index + url.length)
-                : safeRange.index + safeRange.length;
-            fireChange(editor.root.innerHTML, { index: nextIndex, length: 0 });
-        } catch {
-            // noop
-        }
-    }, [fireChange, resolveEditorSelection]);
+        applyLinkToEditorSelection({
+            editor: tmpStoredLinkQuill.current || quillRef.current?.getEditor?.(),
+            urlRaw,
+            storedRange: tmpStoredRange.current,
+            lastSelection: lastSelectionRef.current,
+            onClearStoredState: () => {
+                tmpStoredRange.current = null;
+                tmpStoredLinkQuill.current = null;
+            },
+            fireChange,
+        });
+    }, [fireChange]);
 
     const clearFormattingPreservingEmbeds = useCallback(() => {
-        const editor = quillRef.current?.getEditor?.();
-        if (!editor) return;
-
-        const selection = editor.getSelection?.() || { index: 0, length: editor.getLength?.() ?? 0 };
-        const inlineFormats = ['bold', 'italic', 'underline', 'strike', 'link', 'color', 'background', 'font', 'size', 'script'];
-        const lineFormats = ['header', 'list', 'align', 'blockquote', 'indent', 'direction', 'code-block'];
-
-        if (!selection.length || selection.length <= 0) {
-            const formats = editor.getFormat?.(selection) ?? {};
-            Object.keys(formats).forEach((formatName) => {
-                try {
-                    editor.format?.(formatName, false, 'user');
-                } catch {
-                    // noop
-                }
-            });
-            fireChange(editor.root.innerHTML);
-            return;
-        }
-
-        const contents = editor.getContents?.(selection.index, selection.length);
-        const ops = Array.isArray(contents?.ops) ? contents.ops : null;
-
-        if (!ops) {
-            editor.removeFormat?.(selection.index, selection.length, 'user');
-            fireChange(editor.root.innerHTML);
-            return;
-        }
-
-        let offset = selection.index;
-        ops.forEach((op: any) => {
-            const insert = op?.insert;
-            if (typeof insert === 'string') {
-                const textLength = insert.length;
-                if (textLength > 0) {
-                    inlineFormats.forEach((formatName) => {
-                        try {
-                            editor.formatText?.(offset, textLength, formatName, false, 'user');
-                        } catch {
-                            // noop
-                        }
-                    });
-                    lineFormats.forEach((formatName) => {
-                        try {
-                            editor.formatLine?.(offset, textLength, formatName, false, 'user');
-                        } catch {
-                            // noop
-                        }
-                    });
-                }
-                offset += textLength;
-                return;
-            }
-
-            // Preserve embeds such as images while advancing the logical Quill index.
-            offset += 1;
+        clearQuillFormattingPreservingEmbeds({
+            editor: quillRef.current?.getEditor?.(),
+            fireChange,
         });
-
-        fireChange(editor.root.innerHTML);
     }, [fireChange]);
 
     const rememberSelectionFromEditor = useCallback(() => {
-        try {
-            const editor = quillRef.current?.getEditor();
-            if (editor && typeof editor.focus === 'function') editor.focus();
-            const selection =
-                (editor && typeof editor.getSelection === 'function'
-                    ? (() => {
-                          try {
-                              return editor.getSelection(true);
-                          } catch {
-                              return editor.getSelection();
-                          }
-                      })()
-                    : null) ?? null;
-            tmpStoredRange.current = selection;
-            return selection;
-        } catch {
-            tmpStoredRange.current = null;
-            return null;
-        }
+        return rememberEditorSelection(
+            () => quillRef.current?.getEditor?.(),
+            (selection) => {
+                tmpStoredRange.current = selection;
+            }
+        );
     }, []);
 
     const toggleHtmlMode = useCallback(() => {
-        rememberSelectionFromEditor();
-
-        if (!showHtml) {
-            try {
-                const editor = quillRef.current?.getEditor?.();
-                const currentFromQuill = String(editor?.root?.innerHTML ?? '');
-                if (currentFromQuill) {
-                    fireChange(currentFromQuill, undefined, false);
-                }
-            } catch {
-                // noop
-            }
-        }
-
-        if (showHtml) {
-            const currentRaw = typeof html === 'string' ? html : '';
-            const normalized = normalizeHtmlForQuill(currentRaw);
-            if (normalized !== currentRaw) {
-                fireChange(normalized);
-            }
-            if (normalized.trim().length > 0) requestQuillLoad();
-        }
-
-        setShowHtml(v => !v);
+        buildHtmlModeToggleHandler({
+            rememberSelection: rememberSelectionFromEditor,
+            showHtml,
+            getEditorHtml: () => String(quillRef.current?.getEditor?.()?.root?.innerHTML ?? ''),
+            html,
+            fireChange,
+            requestQuillLoad,
+            setShowHtml,
+        });
     }, [fireChange, html, rememberSelectionFromEditor, requestQuillLoad, showHtml]);
 
     const toggleFullscreen = useCallback(() => {
@@ -1250,51 +948,21 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [fullscreen, showHtml]);
 
     const ensureQuillContent = useCallback(() => {
-        const editor = quillRef.current?.getEditor?.();
-        if (!editor) return;
-
-        // Force Quill to recalc layout after container changes.
-        editor.update?.('silent');
-        editor.scroll?.update?.('silent');
-
-        const nextHtml = typeof html === 'string' ? html : '';
-        if (nextHtml.trim().length === 0) return;
-
-        const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
-        const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
-        if (!isEditorEmpty) return;
-
-        // Quill sometimes mounts inside a Modal and renders blank even though value prop is non-empty.
-        try {
-            editor.clipboard?.dangerouslyPasteHTML?.(0, nextHtml, 'silent');
-            editor.setSelection?.(0, 0, 'silent');
-        } catch {
-            // noop
-        }
-
-        // If it still looks empty after paste, remount once as a last resort.
-        try {
-            const textAfter = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
-            const stillEmpty = textAfter.replace(/\s+/g, '').length === 0;
-            if (stillEmpty) setQuillMountKey(v => v + 1);
-        } catch {
-            setQuillMountKey(v => v + 1);
-        }
+        ensureEditorQuillContent({
+            editor: quillRef.current?.getEditor?.(),
+            html,
+            remountQuill: () => setQuillMountKey(v => v + 1),
+        });
     }, [html]);
 
     const handleQuillChange = useCallback(
         (val: string, _delta: unknown, source: unknown) => {
-            const next = typeof val === 'string' ? val : '';
-            const local = typeof htmlRef.current === 'string' ? htmlRef.current : '';
-
-            // Quill may emit non-user changes (source !== 'user') during mount/toggle.
-            // Some of those can be empty strings; do not let them wipe a non-empty local state.
-            if (source !== 'user' && next.trim().length === 0 && local.trim().length > 0) return;
-
-            // For normal user typing Quill already maintains selection.
-            // Restoring a cached selection here can override Quill's internal caret position
-            // (often observed as jumping to the beginning on the first character).
-            fireChange(next, undefined, source === 'user');
+            handleQuillHtmlChange({
+                val,
+                source,
+                currentHtml: htmlRef.current,
+                fireChange,
+            });
         },
         [fireChange]
     );
