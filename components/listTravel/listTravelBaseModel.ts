@@ -22,6 +22,7 @@ type ViewportState = {
   isMobileDevice: boolean
   isTablet: boolean
   resolvedIsPortrait: boolean
+  sidebarWidth: number
   width: number
 }
 
@@ -98,8 +99,15 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
   const width = effectiveResponsiveWidth
   const isCardsSingleColumn = width < BREAKPOINTS.MOBILE
 
-  // Sidebar (320px) is visible for all non-mobile (>=1024px), not only desktop (>=1440px)
-  const effectiveWidth = !isMobileDevice ? width - 320 : width
+  // Sidebar narrower on tablet range (1024–1280px) to give cards more room
+  const sidebarWidth = isMobileDevice
+    ? 0
+    : width < 1280
+      ? 280
+      : 320
+
+  // Sidebar is visible for all non-mobile (>=1024px), not only desktop (>=1440px)
+  const effectiveWidth = !isMobileDevice ? width - sidebarWidth : width
 
   // Gap is based on effectiveWidth (content area) so it stays proportional
   // when sidebar appears/disappears at the 1024px threshold
@@ -158,6 +166,7 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
     isMobileDevice,
     isTablet,
     resolvedIsPortrait,
+    sidebarWidth,
     width,
   }
 }

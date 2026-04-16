@@ -3,7 +3,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
 import { useThemedColors } from '@/hooks/useTheme'
 
-export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedColors>) =>
+export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedColors>, sidebarWidth = 320) =>
   StyleSheet.create({
     root: {
       flex: 1,
@@ -24,7 +24,7 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       ...(Platform.OS === 'web' ? ({ minHeight: 0 } as any) : null),
     },
     sidebar: {
-      width: 320,
+      width: sidebarWidth,
       flexShrink: 0,
       borderRightWidth: 1,
       borderRightColor: colors.border,
