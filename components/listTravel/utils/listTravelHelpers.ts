@@ -99,7 +99,7 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
     maxColumns = GRID_COLUMNS.DESKTOP;
   } else if (width >= BREAKPOINTS.TABLET_LANDSCAPE) {
     maxColumns = GRID_COLUMNS.TABLET_LANDSCAPE;
-  } else if (width >= BREAKPOINTS.TABLET) {
+  } else if (width >= BREAKPOINTS.MOBILE) {
     maxColumns = GRID_COLUMNS.TABLET;
   }
 
@@ -115,4 +115,3 @@ export function calculateColumns(width: number, orientation: 'portrait' | 'lands
   // Минимум 1 колонка
   return Math.max(columns, 1);
 }
-

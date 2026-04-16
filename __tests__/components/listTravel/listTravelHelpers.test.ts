@@ -143,6 +143,12 @@ describe('listTravelHelpers', () => {
       expect(columns).toBeGreaterThanOrEqual(1)
     })
 
+    it('limits to max 2 columns across web tablet widths before sidebar layout kicks in', () => {
+      expect(calculateColumns(768, 'landscape')).toBeLessThanOrEqual(2)
+      expect(calculateColumns(900, 'landscape')).toBeLessThanOrEqual(2)
+      expect(calculateColumns(1023, 'landscape')).toBeLessThanOrEqual(2)
+    })
+
     it('returns at least as many columns in landscape as in portrait for same width (tablet range)', () => {
       const width = 900
       const portrait = calculateColumns(width, 'portrait')

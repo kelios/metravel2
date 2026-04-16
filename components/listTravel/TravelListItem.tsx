@@ -91,7 +91,7 @@ function TravelListItem({
     } = travel;
 
     const title = useMemo(() => {
-        const v = name.trim();
+        const v = name?.trim() ?? '';
         return v || 'Без названия';
     }, [name]);
 
@@ -104,7 +104,7 @@ function TravelListItem({
     const viewsFormatted = useMemo(() => formatViewCount(views), [views]);
 
     const travelKey = useMemo(() => {
-        if (slug.trim()) return slug.trim();
+        if (slug?.trim()) return slug.trim();
         return String(id);
     }, [id, slug]);
 
@@ -145,8 +145,7 @@ function TravelListItem({
     }, [travel_image_thumb_url]);
 
     const countries = useMemo(() => {
-        const raw = countryName;
-        return raw.split(",").map((c) => c.trim()).filter(Boolean);
+        return (countryName ?? '').split(",").map((c) => c.trim()).filter(Boolean);
     }, [countryName]);
 
     // ✅ Width-based адаптивные значения для карточки: используем фактическую ширину, если она есть
@@ -669,14 +668,12 @@ function areEqual(prev: Props, next: Props) {
     }
 
     // Resize-зависимые пропсы: при изменении viewport карточка должна перерисоваться
-    if (
-        prev.isMobile !== next.isMobile ||
-        prev.cardWidth !== next.cardWidth ||
-        prev.imageHeight !== next.imageHeight ||
-        prev.viewportWidth !== next.viewportWidth
-    ) return false;
-
-    return true;
+    return (
+        prev.isMobile === next.isMobile &&
+        prev.cardWidth === next.cardWidth &&
+        prev.imageHeight === next.imageHeight &&
+        prev.viewportWidth === next.viewportWidth
+    );
 }
 
 export default memo(TravelListItem, areEqual);
