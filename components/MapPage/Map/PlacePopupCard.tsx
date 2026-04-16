@@ -17,6 +17,7 @@ type Props = {
   drivingDurationSeconds?: number | null;
   isDrivingLoading?: boolean;
   onOpenArticle?: () => void;
+  articleHref?: string | null;
   onCopyCoord?: () => void;
   onShareTelegram?: () => void;
   onOpenGoogleMaps?: () => void;
@@ -293,6 +294,7 @@ const PlacePopupCard: React.FC<Props> = ({
   drivingDurationSeconds,
   isDrivingLoading = false,
   onOpenArticle,
+  articleHref,
   onCopyCoord,
   onShareTelegram,
   onOpenGoogleMaps,
@@ -317,6 +319,24 @@ const PlacePopupCard: React.FC<Props> = ({
   }, []);
   const hasCoord = !!coord;
   const hasArticle = typeof onOpenArticle === 'function';
+  const normalizedArticleHref = useMemo(() => {
+    const rawHref = String(articleHref ?? '').trim();
+    if (!rawHref) return null;
+    if (rawHref.startsWith('/travel/') || rawHref.startsWith('/travels/')) return rawHref;
+
+    if (/^https?:\/\//i.test(rawHref)) {
+      try {
+        const parsed = new URL(rawHref);
+        if (parsed.pathname.startsWith('/travel/') || parsed.pathname.startsWith('/travels/')) {
+          return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }, [articleHref]);
   const hasDrivingInfo =
     typeof drivingDistanceMeters === 'number' &&
     Number.isFinite(drivingDistanceMeters) &&
@@ -428,6 +448,23 @@ const PlacePopupCard: React.FC<Props> = ({
         </Text>
       )}
 
+      {normalizedArticleHref && Platform.OS === 'web' && (
+        <View
+          style={styles.inlineLinkRow}
+          {...({
+            'data-card-action': 'true',
+          } as any)}
+        >
+          <a
+            href={normalizedArticleHref}
+            style={styles.inlineLink as any}
+            aria-label="Открыть страницу точки"
+          >
+            Открыть страницу
+          </a>
+        </View>
+      )}
+
       <View style={styles.metaRow}>
         {!!categoryLabel && (
           <View style={styles.metaBadge}>
@@ -460,6 +497,7 @@ const PlacePopupCard: React.FC<Props> = ({
     drivingText,
     hasDrivingInfo,
     isDrivingLoading,
+    normalizedArticleHref,
     styles,
     title,
     useCompactLayout,
@@ -815,6 +853,20 @@ const getStyles = (
             WebkitLineClamp: splitLayout ? 2 : 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
+          } as any)
+        : null),
+    },
+    inlineLinkRow: {
+      alignItems: 'flex-start',
+    },
+    inlineLink: {
+      color: colors.primary,
+      fontSize: compactLayout ? fs.small : fs.small + 1,
+      fontWeight: '600',
+      textDecorationLine: 'none',
+      ...(Platform.OS === 'web'
+        ? ({
+            cursor: 'pointer',
           } as any)
         : null),
     },

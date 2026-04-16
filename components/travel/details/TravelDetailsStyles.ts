@@ -3,93 +3,32 @@ import { useMemo } from 'react'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import {
+  COMPACT_SPACING,
+  COMPACT_TYPOGRAPHY,
+  HEADER_OFFSET_DESKTOP,
+  HEADER_OFFSET_MOBILE,
+  createTravelDetailsDecisionSummaryStyles,
+  createTravelDetailsHeroStyles,
+  createTravelDetailsMobileInsightStyles,
+  createTravelDetailsStatusStyles,
+} from './TravelDetailsStyleFragments'
 
-export const HEADER_OFFSET_DESKTOP = 72
-export const HEADER_OFFSET_MOBILE = 56
-
-/* P1-7: Увеличенные отступы — возвращаем воздух после чрезмерного сжатия */
-export const COMPACT_SPACING = {
-  hero: {
-    mobile: 14, // было 20, оптимизация для мобильных
-    desktop: 28,
-  },
-  section: {
-    mobile: 12, // было 18, оптимизация для мобильных
-    desktop: 24,
-  },
-  card: {
-    mobile: 10, // было 14, оптимизация для мобильных
-    desktop: 16,
-  },
-  margin: {
-    section: 14, // было 18, оптимизация для мобильных
-    card: 8, // было 10, оптимизация для мобильных
-  },
-} as const
-
-export const COMPACT_TYPOGRAPHY = {
-  title: {
-    mobile: 22, // было 20, оригинал 24
-    desktop: 24, // было 22, оригинал 26-28
-  },
-  subtitle: {
-    mobile: 17, // было 16, оригинал 18-20
-    desktop: 19, // было 18, оригинал 20-22
-  },
-  body: {
-    mobile: 14, // без изменений
-    desktop: 15, // было 14, оригинал 16
-  },
-  caption: {
-    mobile: 12, // без изменений
-    desktop: 13, // без изменений
-  },
-} as const
-
-/* ✅ УЛУЧШЕНИЕ: Fluid typography для плавного масштабирования */
-export const FLUID_TYPOGRAPHY = {
-  // Для Web используем CSS clamp(), для Native - responsive values
-  hero: {
-    // clamp(24px, 1.5rem + 1.5vw, 32px)
-    minSize: 24,
-    maxSize: 32,
-  },
-  h1: {
-    // clamp(22px, 1.375rem + 0.5vw, 24px)
-    minSize: 22,
-    maxSize: 24,
-  },
-  h2: {
-    // clamp(18px, 1.125rem + 0.5vw, 20px)
-    minSize: 18,
-    maxSize: 20,
-  },
-  body: {
-    // clamp(14px, 0.875rem + 0.25vw, 16px)
-    minSize: 14,
-    maxSize: 16,
-  },
-} as const
-
-/* -------------------- helpers -------------------- */
-const _getShadowStyle = (
-  colors: ThemedColors,
-  shadowType: 'light' | 'medium' = 'light',
-) => {
-  if (Platform.OS === 'web') {
-    return {
-      boxShadow:
-        shadowType === 'light'
-          ? colors.boxShadows.light
-          : colors.boxShadows.card,
-    }
-  }
-  return shadowType === 'light' ? colors.shadows.light : colors.shadows.medium
-}
+export {
+  COMPACT_SPACING,
+  COMPACT_TYPOGRAPHY,
+  FLUID_TYPOGRAPHY,
+  HEADER_OFFSET_DESKTOP,
+  HEADER_OFFSET_MOBILE,
+} from './TravelDetailsStyleFragments'
 
 /* -------------------- styles -------------------- */
 export const getTravelDetailsStyles = (colors: ThemedColors) =>
   StyleSheet.create({
+    ...createTravelDetailsDecisionSummaryStyles(colors),
+    ...createTravelDetailsHeroStyles(colors),
+    ...createTravelDetailsMobileInsightStyles(colors),
+    ...createTravelDetailsStatusStyles(colors),
     // ✅ РЕДИЗАЙН: Светлый современный фон
     wrapper: {
       flex: 1,
@@ -245,107 +184,6 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       fontSize: COMPACT_TYPOGRAPHY.body.mobile, // было md (16)
       color: colors.textMuted,
       lineHeight: Platform.select({ default: 22, web: 21 }), // уменьшено
-    },
-
-    decisionSummaryBox: {
-      marginBottom: DESIGN_TOKENS.spacing.xl,
-      padding: Platform.select({
-        default: DESIGN_TOKENS.spacing.lg,
-        web: DESIGN_TOKENS.spacing.xl,
-      }),
-      borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
-      ...(Platform.OS === 'web'
-        ? ({
-            transition: 'border-color 0.2s ease',
-          } as any)
-        : {}),
-    },
-    decisionSummaryTitle: {
-      fontSize: Platform.select({ default: 20, web: 22 }),
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      color: colors.text,
-      marginBottom: DESIGN_TOKENS.spacing.sm,
-    },
-    decisionSummaryList: {
-      gap: DESIGN_TOKENS.spacing.md,
-    },
-    decisionSummaryBulletRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: DESIGN_TOKENS.spacing.sm,
-    },
-    decisionSummaryBulletIcon: {
-      width: 20,
-      marginTop: DESIGN_TOKENS.spacing.xxs,
-      opacity: 0.75,
-    },
-    decisionSummaryBulletText: {
-      flex: 1,
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      lineHeight: Platform.select({ default: 28, web: 26 }),
-      color: colors.text,
-      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
-    },
-    decisionSummarySubBulletRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: DESIGN_TOKENS.spacing.sm,
-      paddingLeft: DESIGN_TOKENS.spacing.sm + DESIGN_TOKENS.spacing.xs,
-    },
-    decisionSummarySubBulletIcon: {
-      width: 20,
-      marginTop: DESIGN_TOKENS.spacing.xs,
-      opacity: 0.6,
-    },
-    decisionSummarySubBulletText: {
-      flex: 1,
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      lineHeight: Platform.select({ default: 24, web: 22 }),
-      color: colors.text,
-      opacity: 0.9,
-      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
-    },
-    decisionSummaryBadge: {
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: DESIGN_TOKENS.spacing.xs,
-      borderRadius: 999,
-      borderWidth: 1,
-    },
-    decisionSummaryBadgeInfo: {
-      backgroundColor: colors.backgroundSecondary,
-      borderColor: colors.border,
-    },
-    decisionSummaryBadgePositive: {
-      backgroundColor: colors.successSoft,
-      borderColor: colors.successLight,
-    },
-    decisionSummaryBadgeNegative: {
-      backgroundColor: colors.dangerSoft,
-      borderColor: colors.dangerLight,
-    },
-    decisionSummaryBadgeText: {
-      fontSize: 14,
-      fontWeight: '800' as any,
-      letterSpacing: 0.2,
-    },
-    decisionSummaryBadgeTextInfo: {
-      color: colors.text,
-    },
-    decisionSummaryBadgeTextPositive: {
-      color: colors.successDark,
-    },
-    decisionSummaryBadgeTextNegative: {
-      color: colors.dangerDark,
-    },
-    decisionSummaryText: {
-      flex: 1,
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      lineHeight: Platform.select({ default: 24, web: 22 }),
-      color: colors.text,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
     },
 
     backToTopWrapper: {

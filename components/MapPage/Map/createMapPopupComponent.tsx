@@ -99,6 +99,12 @@ export const createMapPopupComponent = ({
       void openExternalUrlInNewTab(url);
     }, [point.articleUrl, point.urlTravel]);
 
+    const articleHref = useMemo(() => {
+      const rawUrl = String(point.articleUrl || point.urlTravel || '').trim();
+      if (!rawUrl) return null;
+      return rawUrl;
+    }, [point.articleUrl, point.urlTravel]);
+
     const handleCopyCoord = useCallback(async () => {
       if (!coord) return;
       try {
@@ -274,6 +280,7 @@ export const createMapPopupComponent = ({
           title={popupTitle.title}
           subtitle={popupTitle.subtitle}
           imageUrl={point.imageUrl || point.travelImageThumbUrl}
+          articleHref={articleHref}
           categoryLabel={categoryLabel}
           coord={coord}
           drivingDistanceMeters={drivingDistanceMeters}
