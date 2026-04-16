@@ -80,6 +80,15 @@ describe('ChatView', () => {
         expect(queryByLabelText('Назад к списку диалогов')).toBeNull();
     });
 
+    it('calls onDeleteThread when delete thread button pressed', () => {
+        const onDeleteThread = jest.fn();
+        const { getByLabelText } = render(
+            <ChatView {...defaultProps} onDeleteThread={onDeleteThread} />
+        );
+        fireEvent.press(getByLabelText('Удалить диалог'));
+        expect(onDeleteThread).toHaveBeenCalled();
+    });
+
     it('shows loading indicator when loading with no messages', () => {
         const { queryByText } = render(
             <ChatView {...defaultProps} messages={[]} loading={true} />

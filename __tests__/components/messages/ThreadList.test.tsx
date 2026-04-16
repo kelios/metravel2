@@ -107,4 +107,12 @@ describe('ThreadList', () => {
         const { getByLabelText } = render(<ThreadList {...defaultProps} />);
         expect(getByLabelText('Диалог с Иван Петров')).toBeTruthy();
     });
+
+    it('shows explicit delete button for a thread', () => {
+        const { getByLabelText } = render(
+            <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
+        );
+
+        expect(getByLabelText('Удалить диалог с Иван Петров')).toBeTruthy();
+    });
 });

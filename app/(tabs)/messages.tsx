@@ -374,6 +374,7 @@ export default function MessagesScreen() {
             hasMore={hasMore}
             hideBackButton={isDesktop}
             onDeleteMessage={handleDeleteMessage}
+            onDeleteThread={selectedThread.id >= 0 ? () => handleDeleteThread(selectedThread.id) : undefined}
         />
     ) : null;
 

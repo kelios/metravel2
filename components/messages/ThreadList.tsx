@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image, 
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import IconButton from '@/components/ui/IconButton';
 import type { MessageThread } from '@/api/messages';
 
 interface ThreadListProps {
@@ -63,6 +64,27 @@ function ThreadList({
         (threadId: number) => {
             setConfirmDeleteId(null);
             onDeleteThread?.(threadId);
+        },
+        [onDeleteThread],
+    );
+
+    const handleDeletePress = useCallback(
+        (threadId: number) => {
+            if (!onDeleteThread) return;
+
+            if (Platform.OS === 'web') {
+                setConfirmDeleteId((prev) => (prev === threadId ? null : threadId));
+                return;
+            }
+
+            Alert.alert(
+                'Удалить диалог',
+                'Вы уверены, что хотите удалить этот диалог?',
+                [
+                    { text: 'Отмена', style: 'cancel' },
+                    { text: 'Удалить', style: 'destructive', onPress: () => onDeleteThread(threadId) },
+                ],
+            );
         },
         [onDeleteThread],
     );
@@ -177,8 +199,19 @@ function ThreadList({
                             </View>
                         </View>
                     </View>
-                    <Feather name="chevron-right" size={18} color={hasUnread ? colors.primary : colors.textMuted} />
-                </Pressable>
+                    <View style={styles.threadActions}>
+                        {onDeleteThread && (
+                            <IconButton
+                                icon={<Feather name="trash-2" size={14} color={colors.textSecondary} />}
+                                label={`Удалить диалог с ${name}`}
+                                size="sm"
+                                onPress={() => handleDeletePress(item.id)}
+                                showTooltip={Platform.OS === 'web'}
+                            />
+                        )}
+                        <Feather name="chevron-right" size={18} color={hasUnread ? colors.primary : colors.textMuted} />
+                    </View>
+                    </Pressable>
                 {confirmDeleteId === item.id && (
                     <View style={styles.deleteConfirmRow}>
                         <Pressable
@@ -203,7 +236,7 @@ function ThreadList({
                 </View>
             );
         },
-        [colors, styles, getOtherParticipantName, getOtherParticipantAvatar, formatDate, onSelectThread, selectedThreadId, handleLongPressThread, confirmDeleteId, handleConfirmDelete]
+        [colors, styles, getOtherParticipantName, getOtherParticipantAvatar, formatDate, onSelectThread, selectedThreadId, handleLongPressThread, confirmDeleteId, handleConfirmDelete, onDeleteThread, handleDeletePress]
     );
 
     const listHeader = useMemo(() => {
@@ -349,6 +382,11 @@ const createStyles = (colors: ThemedColors) =>
         threadInfo: {
             flex: 1,
             marginRight: DESIGN_TOKENS.spacing.xs,
+        },
+        threadActions: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: DESIGN_TOKENS.spacing.xs,
         },
         threadNameRow: {
             flexDirection: 'row',

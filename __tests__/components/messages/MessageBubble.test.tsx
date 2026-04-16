@@ -72,6 +72,14 @@ describe('MessageBubble', () => {
         expect(queryByLabelText('Копировать текст')).toBeNull();
     });
 
+    it('renders explicit delete button for own message when onDelete is passed', () => {
+        const { getByLabelText } = render(
+            <MessageBubble message={baseMessage} isOwn={true} onDelete={jest.fn()} />
+        );
+
+        expect(getByLabelText('Удалить сообщение')).toBeTruthy();
+    });
+
     it('long press with onDelete shows Alert with Копировать and Удалить (native)', () => {
         const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
         const onDelete = jest.fn();

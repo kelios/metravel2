@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MessageBubble from '@/components/messages/MessageBubble';
+import IconButton from '@/components/ui/IconButton';
 import type { Message } from '@/api/messages';
 
 type ChatListItem =
@@ -66,6 +67,7 @@ interface ChatViewProps {
     hasMore?: boolean;
     hideBackButton?: boolean;
     onDeleteMessage?: (messageId: number) => void;
+    onDeleteThread?: () => void;
 }
 
 function ChatView({
@@ -82,6 +84,7 @@ function ChatView({
     hasMore,
     hideBackButton,
     onDeleteMessage,
+    onDeleteThread,
 }: ChatViewProps) {
     const colors = useThemedColors();
     const router = useRouter();
@@ -214,6 +217,15 @@ function ChatView({
                         {otherUserName}
                     </Text>
                 </Pressable>
+                {onDeleteThread && (
+                    <IconButton
+                        icon={<Feather name="trash-2" size={16} color={colors.textSecondary} />}
+                        label="Удалить диалог"
+                        size="sm"
+                        onPress={onDeleteThread}
+                        showTooltip={Platform.OS === 'web'}
+                    />
+                )}
             </View>
 
             {/* Messages */}
