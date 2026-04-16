@@ -247,6 +247,18 @@ export const sendMessage = async (
     }
 };
 
+export const deleteThread = async (threadId: number | string): Promise<null> => {
+    try {
+        return await messagingFetch<null>(`/message-threads/${threadId}/`, {
+            method: 'DELETE',
+        });
+    } catch (e: unknown) {
+        const status = getMessagingErrorStatus(e);
+        if (status === 401 || status === 404) return null;
+        throw e;
+    }
+};
+
 export const deleteMessage = async (id: number | string): Promise<null> => {
     try {
         return await messagingFetch<null>(`/messages/${id}/`, {

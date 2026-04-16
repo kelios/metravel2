@@ -6,7 +6,7 @@ import { useIsFocused } from '@react-navigation/native';
 
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
-import { useThreads, useThreadMessages, useSendMessage, useDeleteMessage, useAvailableUsers, useMarkThreadRead } from '@/hooks/useMessages';
+import { useThreads, useThreadMessages, useSendMessage, useDeleteMessage, useDeleteThread, useAvailableUsers, useMarkThreadRead } from '@/hooks/useMessages';
 import { fetchThreadByUser, getMessagingUserDisplayName, getMessagingUserId } from '@/api/messages';
 import type { MessageThread } from '@/api/messages';
 import ThreadList from '@/components/messages/ThreadList';
@@ -49,6 +49,7 @@ export default function MessagesScreen() {
     );
     const { send, sending } = useSendMessage();
     const { remove: removeMessage } = useDeleteMessage();
+    const { remove: removeThread } = useDeleteThread();
     const { mark: markRead } = useMarkThreadRead();
     const { users } = useAvailableUsers(canFetch);
 
@@ -274,6 +275,19 @@ export default function MessagesScreen() {
         [removeMessage, optimisticRemove]
     );
 
+    const handleDeleteThread = useCallback(
+        async (threadId: number) => {
+            const ok = await removeThread(threadId);
+            if (ok) {
+                if (selectedThread?.id === threadId) {
+                    setSelectedThread(null);
+                }
+                refreshThreads();
+            }
+        },
+        [removeThread, selectedThread, refreshThreads]
+    );
+
     // Пользователь не авторизован
     if (authReady && !isAuthenticated) {
         return (
@@ -337,6 +351,7 @@ export default function MessagesScreen() {
                     onSelectThread={handleSelectThread}
                     onRefresh={refreshThreads}
                     onNewConversation={handleNewConversation}
+                    onDeleteThread={handleDeleteThread}
                     selectedThreadId={selectedThread?.id}
                     showSearch
                 />

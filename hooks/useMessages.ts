@@ -6,6 +6,7 @@ import {
     fetchAvailableUsers,
     sendMessage,
     deleteMessage,
+    deleteThread,
     markThreadRead,
     fetchUnreadCount,
     type MessageThread,
@@ -232,6 +233,27 @@ export function useDeleteMessage() {
             return true;
         } catch (e: unknown) {
             devError('useDeleteMessage error:', e);
+            return false;
+        } finally {
+            setDeleting(false);
+        }
+    }, []);
+
+    return { remove, deleting };
+}
+
+// ---- useDeleteThread ----
+
+export function useDeleteThread() {
+    const [deleting, setDeleting] = useState(false);
+
+    const remove = useCallback(async (threadId: number | string) => {
+        setDeleting(true);
+        try {
+            await deleteThread(threadId);
+            return true;
+        } catch (e: unknown) {
+            devError('useDeleteThread error:', e);
             return false;
         } finally {
             setDeleting(false);

@@ -65,12 +65,14 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
       'image/png',
       'image/webp',
       'image/gif',
+      'image/heic',
+      'image/heif',
     ])
-    const supportedWebExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+    const supportedWebExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif']
     const hasSupportedExtension = supportedWebExtensions.some((ext) => normalizedName.endsWith(ext))
 
     if (Platform.OS === 'web' && normalizedType && !supportedWebTypes.has(normalizedType) && !hasSupportedExtension) {
-      return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP или GIF.'
+      return 'Этот формат пока не загружается в веб-галерею. Используйте JPG, PNG, WEBP, GIF или HEIC.'
     }
 
     return null

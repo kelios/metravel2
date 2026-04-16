@@ -84,13 +84,21 @@ const areWebProvidersSettled = (w: any) => {
     return gaReady && metrikaSettled;
 };
 
+let isFlushing = false;
+
 const flushQueuedWebAnalyticsEvents = async (w: any) => {
+    if (isFlushing) return;
     const queue = Array.isArray(w?.[WEB_ANALYTICS_QUEUE_KEY]) ? [...w[WEB_ANALYTICS_QUEUE_KEY]] : [];
     if (!queue.length) return;
     w[WEB_ANALYTICS_QUEUE_KEY] = [];
 
-    for (const item of queue) {
-        await sendAnalyticsEvent(item.eventName, item.eventParams);
+    isFlushing = true;
+    try {
+        for (const item of queue) {
+            await sendAnalyticsEvent(item.eventName, item.eventParams);
+        }
+    } finally {
+        isFlushing = false;
     }
 };
 

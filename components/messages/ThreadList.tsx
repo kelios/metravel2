@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image, TextInput, Platform, Alert } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -15,6 +15,7 @@ interface ThreadListProps {
     onSelectThread: (thread: MessageThread) => void;
     onRefresh: () => void;
     onNewConversation?: () => void;
+    onDeleteThread?: (threadId: number) => void;
     selectedThreadId?: number | null;
     showSearch?: boolean;
 }
@@ -29,6 +30,7 @@ function ThreadList({
     onSelectThread,
     onRefresh,
     onNewConversation,
+    onDeleteThread,
     selectedThreadId,
     showSearch,
 }: ThreadListProps) {
@@ -36,6 +38,34 @@ function ThreadList({
     const styles = useMemo(() => createStyles(colors), [colors]);
     const currentUserIdNum = currentUserId ? Number(currentUserId) : null;
     const [search, setSearch] = useState('');
+    const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+    const handleLongPressThread = useCallback(
+        (thread: MessageThread) => {
+            if (!onDeleteThread) return;
+            if (Platform.OS === 'web') {
+                setConfirmDeleteId((prev) => (prev === thread.id ? null : thread.id));
+            } else {
+                Alert.alert(
+                    'Удалить диалог',
+                    'Вы уверены, что хотите удалить этот диалог?',
+                    [
+                        { text: 'Отмена', style: 'cancel' },
+                        { text: 'Удалить', style: 'destructive', onPress: () => onDeleteThread(thread.id) },
+                    ],
+                );
+            }
+        },
+        [onDeleteThread],
+    );
+
+    const handleConfirmDelete = useCallback(
+        (threadId: number) => {
+            setConfirmDeleteId(null);
+            onDeleteThread?.(threadId);
+        },
+        [onDeleteThread],
+    );
 
     const getOtherParticipantId = useCallback(
         (thread: MessageThread): number | null => {
@@ -102,17 +132,20 @@ function ThreadList({
             const unreadCount = item.unread_count ?? 0;
             const hasUnread = unreadCount > 0;
             return (
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.threadItem,
-                        { backgroundColor: isSelected ? colors.primarySoft : colors.surface, borderColor: isSelected ? colors.primary : colors.borderLight },
-                        hasUnread && !isSelected && { borderColor: colors.primary, borderWidth: 1.5 },
-                        pressed && { opacity: 0.85 },
-                    ]}
-                    onPress={() => onSelectThread(item)}
-                    accessibilityRole="button"
-                    accessibilityLabel={hasUnread ? `Диалог с ${name}, ${unreadCount} непрочитанных` : `Диалог с ${name}`}
-                >
+                <View>
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.threadItem,
+                            { backgroundColor: isSelected ? colors.primarySoft : colors.surface, borderColor: isSelected ? colors.primary : colors.borderLight },
+                            hasUnread && !isSelected && { borderColor: colors.primary, borderWidth: 1.5 },
+                            pressed && { opacity: 0.85 },
+                        ]}
+                        onPress={() => onSelectThread(item)}
+                        onLongPress={() => handleLongPressThread(item)}
+                        delayLongPress={500}
+                        accessibilityRole="button"
+                        accessibilityLabel={hasUnread ? `Диалог с ${name}, ${unreadCount} непрочитанных` : `Диалог с ${name}`}
+                    >
                     <View style={[styles.avatar, { backgroundColor: hasUnread ? colors.primary : colors.primarySoft }]}>
                         {avatarUrl ? (
                             <Image
@@ -146,9 +179,31 @@ function ThreadList({
                     </View>
                     <Feather name="chevron-right" size={18} color={hasUnread ? colors.primary : colors.textMuted} />
                 </Pressable>
+                {confirmDeleteId === item.id && (
+                    <View style={styles.deleteConfirmRow}>
+                        <Pressable
+                            onPress={() => handleConfirmDelete(item.id)}
+                            style={[styles.deleteConfirmButton, { backgroundColor: DESIGN_TOKENS.colors.error }]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Подтвердить удаление диалога"
+                        >
+                            <Feather name="trash-2" size={14} color={colors.textInverse} />
+                            <Text style={[styles.deleteConfirmText, { color: colors.textInverse }]}>Удалить диалог</Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => setConfirmDeleteId(null)}
+                            style={[styles.deleteConfirmButton, { backgroundColor: colors.backgroundSecondary, borderWidth: 1, borderColor: colors.borderLight }]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Отмена"
+                        >
+                            <Text style={[styles.deleteConfirmText, { color: colors.text }]}>Отмена</Text>
+                        </Pressable>
+                    </View>
+                )}
+                </View>
             );
         },
-        [colors, styles, getOtherParticipantName, getOtherParticipantAvatar, formatDate, onSelectThread, selectedThreadId]
+        [colors, styles, getOtherParticipantName, getOtherParticipantAvatar, formatDate, onSelectThread, selectedThreadId, handleLongPressThread, confirmDeleteId, handleConfirmDelete]
     );
 
     const listHeader = useMemo(() => {
@@ -412,6 +467,25 @@ const createStyles = (colors: ThemedColors) =>
             fontSize: DESIGN_TOKENS.typography.sizes.sm,
             paddingVertical: DESIGN_TOKENS.spacing.xs,
             ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+        },
+        deleteConfirmRow: {
+            flexDirection: 'row',
+            gap: DESIGN_TOKENS.spacing.xs,
+            marginHorizontal: DESIGN_TOKENS.spacing.md,
+            marginBottom: DESIGN_TOKENS.spacing.xs,
+            paddingTop: DESIGN_TOKENS.spacing.xs,
+        },
+        deleteConfirmButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            borderRadius: DESIGN_TOKENS.radii.sm,
+        },
+        deleteConfirmText: {
+            fontSize: DESIGN_TOKENS.typography.sizes.xs,
+            fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
         },
     });
 
