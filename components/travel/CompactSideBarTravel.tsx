@@ -26,8 +26,8 @@ import SubscribeButton from '@/components/ui/SubscribeButton';
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { buildTravelRouteDownloadPath } from '@/api/travelRoutes';
-import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb';
+import { buildTravelRouteDownloadPath, downloadTravelRouteFileBlob } from '@/api/travelRoutes';
+import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { useTravelRouteFiles } from '@/hooks/useTravelRouteFiles';
 import { useAuthStore } from '@/stores/authStore';
@@ -342,27 +342,29 @@ function CompactSideBarTravel({
         return;
       }
 
-      const rawUrl =
-        String(supportedRouteFile.download_url ?? '').trim() ||
-        buildTravelRouteDownloadPath(travelId, supportedRouteFile.id);
+      const filename =
+        supportedRouteFile.original_name ||
+        `route-${supportedRouteFile.id}.${String(supportedRouteFile.ext || 'gpx').replace(/^\./, '')}`;
 
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const started = downloadUrlOnWeb(rawUrl, {
-          allowRelative: true,
-          baseUrl: window.location.origin,
+        const response = await downloadTravelRouteFileBlob(travelId, supportedRouteFile.id);
+        const blob = new Blob([response.text], {
+          type: response.contentType || 'application/octet-stream',
         });
+        const started = downloadBlobOnWeb(blob, response.filename || filename);
         if (!started) {
           notifyUnavailable('Скачать маршрут');
         }
         return;
       }
 
+      const rawUrl =
+        String(supportedRouteFile.download_url ?? '').trim() ||
+        buildTravelRouteDownloadPath(travelId, supportedRouteFile.id);
+
       await openExternalUrlInNewTab(rawUrl, {
         allowRelative: true,
-        baseUrl:
-          Platform.OS === 'web' && typeof window !== 'undefined'
-            ? window.location.origin
-            : (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
+        baseUrl: (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
       });
     } catch {
       notifyUnavailable('Скачать маршрут');

@@ -4,8 +4,8 @@ import { Alert, Platform } from 'react-native'
 import { METRICS } from '@/constants/layout'
 import type { TravelRouteFile } from '@/types/travelRoutes'
 import type { Travel } from '@/types/types'
-import { buildTravelRouteDownloadPath } from '@/api/travelRoutes'
-import { downloadUrlOnWeb } from '@/utils/downloadUrlOnWeb'
+import { buildTravelRouteDownloadPath, downloadTravelRouteFileBlob } from '@/api/travelRoutes'
+import { downloadBlobOnWeb } from '@/utils/downloadUrlOnWeb'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { useTravelDetailsMapSectionHintsModel } from './useTravelDetailsMapSectionHintsModel'
 
@@ -99,27 +99,28 @@ export function useTravelDetailsMapSectionModel({
 
     setDownloadingRouteId(file.id)
     try {
-      const rawUrl =
-        String(file.download_url ?? '').trim() ||
-        buildTravelRouteDownloadPath(travel.id, file.id)
+      const ext = String(file.ext ?? '').replace(/^\./, '') || 'gpx'
+      const filename = file.original_name || `route-${file.id}.${ext}`
 
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const started = downloadUrlOnWeb(rawUrl, {
-          allowRelative: true,
-          baseUrl: window.location.origin,
+        const response = await downloadTravelRouteFileBlob(travel.id, file.id)
+        const blob = new Blob([response.text], {
+          type: response.contentType || 'application/octet-stream',
         })
+        const started = downloadBlobOnWeb(blob, response.filename || filename)
         if (!started) {
           notifyDownloadUnavailable()
         }
         return
       }
 
+      const rawUrl =
+        String(file.download_url ?? '').trim() ||
+        buildTravelRouteDownloadPath(travel.id, file.id)
+
       await openExternalUrlInNewTab(rawUrl, {
         allowRelative: true,
-        baseUrl:
-          Platform.OS === 'web' && typeof window !== 'undefined'
-            ? window.location.origin
-            : (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
+        baseUrl: (process.env.EXPO_PUBLIC_API_URL as string) || undefined,
       })
     } catch {
       notifyDownloadUnavailable()

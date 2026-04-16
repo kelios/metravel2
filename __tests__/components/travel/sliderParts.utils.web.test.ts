@@ -13,6 +13,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
     process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'
+    ;(window as any).devicePixelRatio = 1
   })
 
   afterEach(() => {
@@ -50,8 +51,8 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
       true,
     )
 
-    expect(src).toContain('w=400')
-    expect(src).toContain('q=35')
+    expect(src).toContain('w=720')
+    expect(src).toContain('q=50')
     expect(src).toContain('fit=contain')
     expect(src).not.toContain('f=')
   })
@@ -70,5 +71,25 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
 
     expect(src).toContain('w=1180')
     expect(src).toContain('q=65')
+  })
+
+  it('requests DPR-aware mobile slide variants on retina devices', () => {
+    ;(window as any).devicePixelRatio = 3
+
+    const src = buildUriWeb(
+      {
+        id: 'hero-3',
+        url: 'https://metravel.by/gallery/123/hero-3.jpg',
+      } as any,
+      390,
+      undefined,
+      'contain',
+      false,
+    )
+
+    expect(src).toContain('w=390')
+    expect(src).toContain('q=58')
+    expect(src).toContain('dpr=2')
+    expect(src).toContain('fit=contain')
   })
 })

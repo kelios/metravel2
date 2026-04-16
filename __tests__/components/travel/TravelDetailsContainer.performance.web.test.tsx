@@ -20,6 +20,7 @@ describe('TravelDetailsContainer performance (web)', () => {
   beforeEach(() => {
     document.head.innerHTML = ''
     ;(window as any).innerWidth = 1200
+    ;(window as any).devicePixelRatio = 1
   })
 
   it('OptimizedLCPHero renders an eager high-priority LCP image', () => {
@@ -79,6 +80,35 @@ describe('TravelDetailsContainer performance (web)', () => {
     }
 
     expect(container.querySelector('[data-hero-backdrop="true"]')).toBeTruthy()
+  })
+
+  it('requests a higher-resolution mobile hero source on high-DPR web devices', () => {
+    ;(window as any).innerWidth = 390
+    ;(window as any).devicePixelRatio = 3
+
+    const { container } = render(
+      <__testables.OptimizedLCPHero
+        img={{
+          url: 'https://metravel.by/gallery/540/gallery/79641dcc63dc476bb89dd66a9faa8527.JPG',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        }}
+        alt='Hero image'
+        isMobile
+        height={520}
+        containerWidth={390}
+      />,
+    )
+
+    const lcpImg = container.querySelector('img[data-lcp]') as HTMLImageElement | null
+    expect(lcpImg).toBeTruthy()
+    expect(lcpImg?.getAttribute('src')).toContain('w=720')
+    expect(lcpImg?.getAttribute('src')).toContain('dpr=2')
+    expect(lcpImg?.getAttribute('srcset')).toContain('w=640')
+    expect(lcpImg?.getAttribute('srcset')).toContain('w=720')
+    expect(lcpImg?.getAttribute('srcset')).toContain('dpr=2')
   })
 
   // useLCPPreload was removed — preloading is handled by the inline script in +html.tsx

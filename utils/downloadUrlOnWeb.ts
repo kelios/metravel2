@@ -30,3 +30,23 @@ export function downloadUrlOnWeb(rawUrl: string, options: DownloadUrlOnWebOption
     document.body.removeChild(anchor)
   }
 }
+
+export function downloadBlobOnWeb(blob: Blob, filename: string): boolean {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return false
+
+  const blobUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = blobUrl
+  anchor.rel = 'noopener'
+  anchor.download = filename
+  anchor.style.display = 'none'
+
+  document.body.appendChild(anchor)
+  try {
+    anchor.click()
+    return true
+  } finally {
+    document.body.removeChild(anchor)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000)
+  }
+}

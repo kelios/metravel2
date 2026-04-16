@@ -105,11 +105,13 @@ function OptimizedLCPHeroInner({
     img.id,
   );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
-  const lcpMaxWidth = isMobile ? 400 : 720;
-  const lcpWidths = isMobile ? [320, 400] : [480, 720];
+  const effectiveDevicePixelRatio =
+    typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
+  const lcpMaxWidth = isMobile ? 720 : 720;
+  const lcpWidths = isMobile ? [320, 480, 640, 720] : [480, 720];
   const targetWidth =
     typeof window !== 'undefined'
-      ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
+      ? Math.min(Math.round((window.innerWidth || lcpMaxWidth) * effectiveDevicePixelRatio), lcpMaxWidth)
       : lcpMaxWidth;
 
   const responsive = buildResponsiveImageProps(baseSrc, {
@@ -118,7 +120,7 @@ function OptimizedLCPHeroInner({
     quality: isMobile ? 35 : 45,
     format: 'auto',
     fit: 'contain',
-    dpr: isMobile ? 1 : 1.5,
+    dpr: isMobile ? effectiveDevicePixelRatio : 1.5,
     sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px',
   });
 

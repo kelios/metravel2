@@ -90,6 +90,7 @@ export function optimizeImageUrl(
       if (options.quality != null) proxyParams.set('q', String(Math.min(100, Math.max(1, options.quality))));
       if (options.format && options.format !== 'auto') proxyParams.set('f', options.format);
       if (options.fit) proxyParams.set('fit', options.fit);
+      if (options.dpr != null) proxyParams.set('dpr', String(Math.min(3, Math.max(1, options.dpr))));
       if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
 
       const paramStr = proxyParams.toString();
@@ -136,6 +137,7 @@ export function optimizeImageUrl(
     proxyParams.set('q', String(quality));
     if (format !== 'auto') proxyParams.set('f', format);
     proxyParams.set('fit', fit);
+    if (options.dpr != null) proxyParams.set('dpr', String(Math.min(3, Math.max(1, options.dpr))));
     if (options.blur && options.blur > 0) proxyParams.set('blur', String(Math.round(options.blur)));
 
     const imagePath = parsedUrl.pathname + parsedUrl.search;

@@ -378,6 +378,8 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
 
     const onMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
+      // Skip mouse drag on touch devices — let native scroll-snap handle it
+      if ((e as any).sourceCapabilities?.firesTouchEvents) return;
       isDraggingRef.current = true;
       dragStartXRef.current = e.pageX;
       dragScrollLeftRef.current = node.scrollLeft;
@@ -438,17 +440,34 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
       setActiveIndex(target);
     };
 
+    // Safari doesn't support 'scrollend' — use a scroll-idle fallback
+    let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
+    const supportsScrollEnd = 'onscrollend' in window;
+
+    const onScrollForEnd = () => {
+      if (supportsScrollEnd) return;
+      if (scrollEndTimer) clearTimeout(scrollEndTimer);
+      scrollEndTimer = setTimeout(onScrollEnd, 120);
+    };
+
     node.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
     node.addEventListener('mouseleave', onMouseLeave);
-    node.addEventListener('scrollend', onScrollEnd);
+    if (supportsScrollEnd) {
+      node.addEventListener('scrollend', onScrollEnd);
+    }
+    node.addEventListener('scroll', onScrollForEnd, { passive: true });
     return () => {
       node.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       node.removeEventListener('mouseleave', onMouseLeave);
-      node.removeEventListener('scrollend', onScrollEnd);
+      if (supportsScrollEnd) {
+        node.removeEventListener('scrollend', onScrollEnd);
+      }
+      node.removeEventListener('scroll', onScrollForEnd);
+      if (scrollEndTimer) clearTimeout(scrollEndTimer);
     };
   }, [images.length, setActiveIndex, getScrollNode, containerWRef, indexRef]);
 
@@ -543,7 +562,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={100}
-            style={[styles.scrollView, styles.scrollSnap]}
+            style={[styles.scrollView, isMobile ? styles.scrollSnapMobile : styles.scrollSnapDesktop]}
             contentContainerStyle={[styles.scrollContent, { height: containerH }]}
             onScrollBeginDrag={() => {
               enablePrefetch();

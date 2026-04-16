@@ -8,7 +8,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react-nativ
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
-const mockDownloadUrlOnWeb: jest.Mock = jest.fn(() => true);
+const mockDownloadBlobOnWeb: jest.Mock = jest.fn(() => true);
+const mockDownloadTravelRouteFileBlob: jest.Mock = jest.fn(() =>
+  Promise.resolve({ text: '<gpx></gpx>', contentType: 'application/gpx+xml', filename: 'route.gpx' })
+);
 const mockOpenExternalUrlInNewTab: jest.Mock = jest.fn(() => Promise.resolve(true));
 const mockUseTravelRouteFiles: jest.Mock = jest.fn(() => ({
   data: [] as any[],
@@ -54,8 +57,16 @@ jest.mock('@/utils/externalLinks', () => ({
 
 jest.mock('@/utils/downloadUrlOnWeb', () => ({
   __esModule: true,
-  downloadUrlOnWeb: (url: unknown, options?: unknown) =>
-    mockDownloadUrlOnWeb(url, options),
+  downloadBlobOnWeb: (blob: unknown, filename: unknown) =>
+    mockDownloadBlobOnWeb(blob, filename),
+}));
+
+jest.mock('@/api/travelRoutes', () => ({
+  __esModule: true,
+  buildTravelRouteDownloadPath: (travelId: unknown, routeId: unknown) =>
+    `/api/travels/${travelId}/routes/${routeId}/download/`,
+  downloadTravelRouteFileBlob: (travelId: unknown, routeId: unknown) =>
+    mockDownloadTravelRouteFileBlob(travelId, routeId),
 }));
 
 jest.mock('@/components/home/WeatherWidget', () => ({
@@ -150,7 +161,7 @@ describe('CompactSideBarTravel - Web', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDownloadUrlOnWeb.mockReturnValue(true);
+    mockDownloadBlobOnWeb.mockReturnValue(true);
     mockAuthState.isSuperuser = false;
     mockAuthState.userId = null;
     mockUseTravelRouteFiles.mockReturnValue({
@@ -315,13 +326,12 @@ describe('CompactSideBarTravel - Web', () => {
       fireEvent.press(downloadButton);
 
       await waitFor(() => {
-        expect(mockDownloadUrlOnWeb).toHaveBeenCalledWith(
-          '/api/travels/test-123/routes/77/download/',
-          expect.objectContaining({
-            allowRelative: true,
-          })
+        expect(mockDownloadTravelRouteFileBlob).toHaveBeenCalledWith(
+          'test-123',
+          77
         );
       });
+      expect(mockDownloadBlobOnWeb).toHaveBeenCalled();
       expect(mockOpenExternalUrlInNewTab).not.toHaveBeenCalled();
       expect(defaultProps.onNavigate).not.toHaveBeenCalledWith('download-route');
     });
