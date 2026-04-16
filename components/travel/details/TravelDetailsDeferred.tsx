@@ -7,7 +7,6 @@ import { useTravelDeferredSectionsModel } from './hooks/useTravelDeferredSection
 import TravelDeferredAuthorSection from './TravelDeferredAuthorSection'
 import TravelDeferredRatingSection from './TravelDeferredRatingSection'
 
-import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
 import { TravelDetailsSidebarSection } from './sections/TravelDetailsSidebarSection'
 import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
 import { TravelDetailsMapSection } from './sections/TravelDetailsMapSection'
@@ -15,12 +14,25 @@ import { CommentsSection } from '@/components/travel/CommentsSection'
 
 const PLACEHOLDER_MIN_H_160 = { minHeight: 160 } as const
 const PLACEHOLDER_MIN_H_56 = { minHeight: 56 } as const
+const PLACEHOLDER_MIN_H_240 = { minHeight: 240 } as const
+const PLACEHOLDER_MIN_H_320 = { minHeight: 320 } as const
 const AUTHOR_PLACEHOLDER = (
   <>
     <View style={PLACEHOLDER_MIN_H_160} />
     <View style={PLACEHOLDER_MIN_H_56} />
   </>
 )
+
+const MAP_FORCE_OPEN_KEYS = new Set(['map', 'points', 'excursions'])
+const SIDEBAR_FORCE_OPEN_KEYS = new Set(['near', 'popular'])
+
+function shouldForceLoadMapSection(forceOpenKey: string | null) {
+  return !!forceOpenKey && MAP_FORCE_OPEN_KEYS.has(forceOpenKey)
+}
+
+function shouldForceLoadSidebarSection(forceOpenKey: string | null) {
+  return !!forceOpenKey && SIDEBAR_FORCE_OPEN_KEYS.has(forceOpenKey)
+}
 
 export const TravelDeferredSections: React.FC<{
   travel: Travel
@@ -49,14 +61,20 @@ export const TravelDeferredSections: React.FC<{
     setSidebarRef,
     shouldLoadAuthorSection,
     shouldLoadComments,
+    shouldLoadFooter,
+    shouldLoadMap,
     shouldLoadRating,
+    shouldLoadSidebar,
   } = useTravelDeferredSectionsModel({
     travelId: travel?.id,
   })
 
   const shouldLoadAuthor = shouldLoadAuthorSection
   const shouldLoadRatingSection = shouldLoadRating
-  const shouldAutoloadComments = shouldLoadComments || forceOpenKey === 'comments'
+  const shouldLoadMapSection = shouldLoadMap || shouldForceLoadMapSection(forceOpenKey)
+  const shouldLoadSidebarSection = shouldLoadSidebar || shouldForceLoadSidebarSection(forceOpenKey)
+  const shouldLoadCommentsSection = shouldLoadComments || forceOpenKey === 'comments'
+  const shouldLoadFooterSection = shouldLoadFooter
   const handleCommentsRef = (el: unknown) => {
     ;(anchors.comments as any).current = el
     setCommentsRef(el)
@@ -64,13 +82,6 @@ export const TravelDeferredSections: React.FC<{
 
   return (
     <>
-      <TravelDetailsContentSection
-        travel={travel}
-        isMobile={isMobile}
-        anchors={anchors}
-        forceOpenKey={forceOpenKey}
-      />
-
       {/* Author details: on mobile — full card + share; on desktop — null (sidebar has author). */}
       {isMobile ? (
         <View
@@ -103,27 +114,35 @@ export const TravelDeferredSections: React.FC<{
         ref={setMapRef}
         collapsable={false}
       >
-        <TravelDetailsMapSection
-          travel={travel}
-          anchors={anchors}
-          canRenderHeavy={canRenderHeavy}
-          scrollToMapSection={scrollToMapSection}
-          forceOpenKey={forceOpenKey}
-        />
+        {shouldLoadMapSection ? (
+          <TravelDetailsMapSection
+            travel={travel}
+            anchors={anchors}
+            canRenderHeavy={canRenderHeavy}
+            scrollToMapSection={scrollToMapSection}
+            forceOpenKey={forceOpenKey}
+          />
+        ) : (
+          <View style={PLACEHOLDER_MIN_H_320} />
+        )}
       </View>
 
       <View
         ref={setSidebarRef}
         collapsable={false}
       >
-        <TravelDetailsSidebarSection
-          travel={travel}
-          anchors={anchors}
-          scrollY={scrollY}
-          viewportHeight={viewportHeight}
-          canRenderHeavy={canRenderHeavy}
-          forceOpenKey={forceOpenKey}
-        />
+        {shouldLoadSidebarSection ? (
+          <TravelDetailsSidebarSection
+            travel={travel}
+            anchors={anchors}
+            scrollY={scrollY}
+            viewportHeight={viewportHeight}
+            canRenderHeavy={canRenderHeavy}
+            forceOpenKey={forceOpenKey}
+          />
+        ) : (
+          <View style={PLACEHOLDER_MIN_H_240} />
+        )}
       </View>
 
       <View 
@@ -131,13 +150,15 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
-        {travel?.id && (
+        {shouldLoadCommentsSection && travel?.id ? (
           <CommentsSection
             travelId={travel.id}
             lazyLoad
-            autoload={shouldAutoloadComments}
+            autoload={shouldLoadCommentsSection}
             canLoadComments
           />
+        ) : (
+          <View style={PLACEHOLDER_MIN_H_240} />
         )}
       </View>
 
@@ -145,7 +166,11 @@ export const TravelDeferredSections: React.FC<{
         ref={setFooterRef}
         collapsable={false}
       >
-        <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
+        {shouldLoadFooterSection ? (
+          <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
+        ) : (
+          <View style={PLACEHOLDER_MIN_H_240} />
+        )}
       </View>
     </>
   )

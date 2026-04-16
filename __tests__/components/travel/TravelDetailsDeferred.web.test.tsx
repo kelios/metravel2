@@ -208,73 +208,10 @@ describe('TravelDeferredSections (web author defer)', () => {
       await Promise.resolve()
     })
 
-    // All sections now load immediately — no intersection observer gating
     expect(mockMapSectionSpy).toHaveBeenCalled()
     expect(mockSidebarSectionSpy).toHaveBeenCalled()
     expect(mockCommentsSectionSpy).toHaveBeenCalled()
     expect(mockFooterSectionSpy).toHaveBeenCalled()
-  })
-
-  it('renders recommendations immediately when opened via section navigation', async () => {
-    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred')
-
-    const travel: any = {
-      id: 3,
-      name: 'Deferred insights travel',
-      description: '<p>Test description</p>',
-      gallery: [],
-      youtube_link: null,
-      recommendation: '<p>Open this section now</p>',
-      plus: '',
-      minus: '',
-      rating: 0,
-      rating_count: 0,
-      user_rating: null,
-    }
-
-    const anchors: any = {
-      description: { current: null },
-      video: { current: null },
-      comments: { current: null },
-      map: { current: null },
-      gallery: { current: null },
-      recommendation: { current: null },
-      plus: { current: null },
-      minus: { current: null },
-      points: { current: null },
-      near: { current: null },
-      popular: { current: null },
-      excursions: { current: null },
-    }
-
-    await act(async () => {
-      renderer.create(
-        <Suspense fallback={null}>
-          <TravelDeferredSections
-            travel={travel}
-            isMobile={false}
-            forceOpenKey="recommendation"
-            anchors={anchors}
-            scrollY={new Animated.Value(0)}
-            viewportHeight={900}
-            scrollToMapSection={() => {}}
-          />
-        </Suspense>,
-      )
-      await Promise.resolve()
-    })
-
-    expect(mockTravelDescriptionSpy.mock.calls).toEqual(
-      expect.arrayContaining([
-        [
-          expect.objectContaining({
-            title: 'Рекомендации',
-            htmlContent: '<p>Open this section now</p>',
-          }),
-          undefined,
-        ],
-      ]),
-    )
   })
 
   it('renders sidebar and comments immediately when opened via section navigation', async () => {

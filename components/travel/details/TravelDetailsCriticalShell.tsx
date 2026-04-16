@@ -39,6 +39,7 @@ type TravelDetailsCriticalShellProps = {
   sectionLinks: TravelSectionLink[];
   onQuickJump: (key: string) => void;
   deferHeroExtras: boolean;
+  forceOpenKey: string | null;
   activeSection: string | null;
   closeMenu: () => void;
   onNavigate: (key: string) => void;
@@ -71,6 +72,7 @@ export default function TravelDetailsCriticalShell({
   sectionLinks,
   onQuickJump,
   deferHeroExtras,
+  forceOpenKey,
   activeSection,
   closeMenu,
   onNavigate,
@@ -183,6 +185,7 @@ export default function TravelDetailsCriticalShell({
                           sectionLinks={sectionLinks}
                           onQuickJump={onQuickJump}
                           deferHeroExtras={deferHeroExtras}
+                          forceOpenKey={forceOpenKey}
                           deferredContent={deferredContent}
                         />
                       </View>
@@ -197,6 +200,7 @@ export default function TravelDetailsCriticalShell({
                       sectionLinks={sectionLinks}
                       onQuickJump={onQuickJump}
                       deferHeroExtras={deferHeroExtras}
+                      forceOpenKey={forceOpenKey}
                       deferredContent={deferredContent}
                     />
                   )

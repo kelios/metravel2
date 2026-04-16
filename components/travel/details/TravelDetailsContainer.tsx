@@ -261,6 +261,7 @@ export default function TravelDetailsContainer() {
         sectionLinks={sectionLinks}
         onQuickJump={scrollToWithMenuClose}
         deferHeroExtras={!heroEnhancersReady}
+        forceOpenKey={forceOpenKey}
         activeSection={activeSection}
         closeMenu={closeMenu}
         onNavigate={scrollToWithMenuClose}
