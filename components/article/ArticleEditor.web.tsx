@@ -11,18 +11,15 @@ import React, {
 import {
     View,
     Text,
-    StyleSheet,
     TextInput,
     Alert,
     Modal,
     Platform,
     ActivityIndicator,
 } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -34,7 +31,6 @@ import {
     escapeHtml 
 } from '@/utils/htmlUtils';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
-import UiIconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
 import {
     ARTICLE_EDITOR_CHANGE_DEBOUNCE_MS,
@@ -45,6 +41,12 @@ import {
     getQuillModulesForVariant,
 } from './articleEditorConfig';
 import type { ArticleEditorProps } from './articleEditor.types';
+import { getArticleEditorWebStyles } from './ArticleEditor.web.styles';
+import {
+    ArticleEditorAnchorModal,
+    ArticleEditorLinkModal,
+    ArticleEditorToolbar,
+} from './ArticleEditorWebChrome';
 
 const isWeb = Platform.OS === 'web';
 const win = isWeb && typeof window !== 'undefined' ? window : undefined;
@@ -241,131 +243,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [requestQuillLoad, shouldLoadQuill]);
 
     // Динамические стили на основе темы
-    const dynamicStyles = useMemo(() => StyleSheet.create({
-        wrap: {
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderRadius: DESIGN_TOKENS.radii.md,
-            marginVertical: DESIGN_TOKENS.spacing.sm,
-            backgroundColor: colors.surface,
-            width: '100%',
-            maxWidth: '100%',
-            overflow: 'hidden',
-        },
-        bar: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: isCompactViewport ? 'flex-start' : 'center',
-            flexWrap: 'wrap',
-            paddingHorizontal: isCompactViewport ? DESIGN_TOKENS.spacing.sm : DESIGN_TOKENS.spacing.md,
-            paddingVertical: DESIGN_TOKENS.spacing.sm,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-            backgroundColor: colors.surfaceElevated,
-            position: isWeb ? 'sticky' : 'relative',
-            top: isWeb ? 0 : undefined,
-            zIndex: isWeb ? 20 : undefined,
-            overflow: isWeb ? ('visible' as any) : undefined,
-        },
-        label: {
-            fontSize: DESIGN_TOKENS.typography.sizes.md,
-            fontWeight: '600' as const,
-            color: colors.text,
-            width: isCompactViewport ? '100%' : undefined,
-            marginBottom: isCompactViewport ? DESIGN_TOKENS.spacing.xs : 0,
-            paddingRight: DESIGN_TOKENS.spacing.sm,
-        },
-        row: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: isCompactViewport ? 'flex-start' : 'flex-end',
-            flexWrap: 'wrap',
-            flexShrink: 1,
-            width: isCompactViewport ? '100%' : undefined,
-            overflow: isWeb ? ('visible' as any) : undefined,
-        },
-        btn: {
-            marginLeft: isCompactViewport ? 0 : DESIGN_TOKENS.spacing.sm,
-            marginTop: isCompactViewport ? DESIGN_TOKENS.spacing.xs : 0,
-        },
-        editorArea: {
-            flex: 1,
-            minHeight: 0,
-            ...(isWeb ? ({ overflow: 'visible' } as any) : null),
-        },
-        editor: {
-            minHeight: 200,
-            flex: 1,
-            ...(isWeb ? ({ width: '100%', minWidth: 0 } as any) : null),
-        },
-        html: {
-            minHeight: isCompactViewport ? 240 : 200,
-            flex: 1,
-            padding: DESIGN_TOKENS.spacing.md,
-            fontSize: DESIGN_TOKENS.typography.sizes.sm,
-            color: colors.text,
-            backgroundColor: colors.surface,
-        },
-        loadBox: {
-            padding: DESIGN_TOKENS.spacing.lg,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: DESIGN_TOKENS.spacing.sm,
-        },
-        loadTxt: { color: colors.textSecondary },
-        loadHint: {
-            color: colors.textSecondary,
-            textAlign: 'center',
-            maxWidth: 360,
-        },
-        fullWrap: {
-            flex: 1,
-            height: '100%',
-            width: '100%',
-            ...(isWeb
-                ? ({
-                    minHeight: '100dvh',
-                    minWidth: '100vw',
-                    position: 'fixed',
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    left: 0,
-                    zIndex: 1000,
-                } as any)
-                : null),
-            backgroundColor: colors.background,
-        },
-        fullInner: {
-            flex: 1,
-            width: '100%',
-            maxWidth: '100%',
-            paddingHorizontal: 0,
-            paddingBottom: 0,
-        },
-        modalBackdrop: {
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.35)',
-            justifyContent: 'center',
-            padding: isCompactViewport ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
-        },
-        modalCard: {
-            width: '100%',
-            maxWidth: 520,
-            alignSelf: 'center',
-            backgroundColor: colors.surface,
-            borderRadius: DESIGN_TOKENS.radii.md,
-            borderWidth: 1,
-            borderColor: colors.border,
-            padding: isCompactViewport ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
-        },
-        modalActions: {
-            flexDirection: isSmallViewport ? 'column-reverse' : 'row',
-            justifyContent: 'flex-end',
-            alignItems: isSmallViewport ? 'stretch' : 'center',
-            gap: DESIGN_TOKENS.spacing.sm,
-        },
-    }), [colors, isCompactViewport, isSmallViewport]);
+    const dynamicStyles = useMemo(
+        () => getArticleEditorWebStyles(colors, { isCompactViewport, isSmallViewport }),
+        [colors, isCompactViewport, isSmallViewport]
+    );
 
     useEffect(() => {
         if (!isWeb) return;
@@ -1121,22 +1002,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, [fullscreen, handleSurfaceFileDrop, hasSurfaceDraggedFiles, quillMountKey]);
 
-    const IconButton = function IconButtonWrapper({
-        name,
-        onPress,
-        label,
-    }: { name: keyof typeof Feather.glyphMap; onPress: () => void; label: string }) {
-        return (
-            <UiIconButton
-                icon={<Feather name={name} size={20} color={colors.textSecondary} />}
-                onPress={onPress}
-                label={label}
-                size={isCompactViewport ? 'sm' : 'md'}
-                style={dynamicStyles.btn}
-            />
-        );
-    };
-
     const handleManualSave = useCallback(async () => {
         if (!onManualSave || isManualSaving || isImageUploading) return;
         setIsManualSaving(true);
@@ -1309,150 +1174,65 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         fireChange(editor.root.innerHTML);
     }, [fireChange]);
 
-    const Toolbar = () => (
-        <View style={dynamicStyles.bar}>
-            <Text style={dynamicStyles.label}>{label}</Text>
-            <View style={dynamicStyles.row}>
-                <IconButton
-                    name="rotate-ccw"
-                    onPress={() => quillRef.current?.getEditor().history.undo()}
-                    label="Отменить последнее действие"
-                />
-                <IconButton
-                    name="rotate-cw"
-                    onPress={() => quillRef.current?.getEditor().history.redo()}
-                    label="Повторить действие"
-                />
-                {onManualSave && (
-                    <UiIconButton
-                        icon={isManualSaving || isImageUploading
-                            ? <ActivityIndicator size="small" color={colors.textSecondary} />
-                            : <Feather name="save" size={20} color={colors.textSecondary} />}
-                        onPress={() => {
-                            void handleManualSave();
-                        }}
-                        label={isImageUploading ? 'Загрузка изображения…' : isManualSaving ? 'Сохранение…' : 'Сохранить путешествие'}
-                        size={isCompactViewport ? 'sm' : 'md'}
-                        style={dynamicStyles.btn}
-                        disabled={isManualSaving || isImageUploading}
-                    />
-                )}
-                <IconButton
-                    name="code"
-                    onPress={() => {
-                        try {
-                            const editor = quillRef.current?.getEditor();
-                            if (editor && typeof editor.focus === 'function') editor.focus();
-                            const selection =
-                                (editor && typeof editor.getSelection === 'function'
-                                    ? (() => {
-                                          try {
-                                              return editor.getSelection(true);
-                                          } catch {
-                                              return editor.getSelection();
-                                          }
-                                      })()
-                                    : null) ?? null;
-                            tmpStoredRange.current = selection;
-                        } catch {
-                            tmpStoredRange.current = null;
-                        }
+    const rememberSelectionFromEditor = useCallback(() => {
+        try {
+            const editor = quillRef.current?.getEditor();
+            if (editor && typeof editor.focus === 'function') editor.focus();
+            const selection =
+                (editor && typeof editor.getSelection === 'function'
+                    ? (() => {
+                          try {
+                              return editor.getSelection(true);
+                          } catch {
+                              return editor.getSelection();
+                          }
+                      })()
+                    : null) ?? null;
+            tmpStoredRange.current = selection;
+            return selection;
+        } catch {
+            tmpStoredRange.current = null;
+            return null;
+        }
+    }, []);
 
-                        if (!showHtml) {
-                            try {
-                                const editor = quillRef.current?.getEditor?.();
-                                const currentFromQuill = String(editor?.root?.innerHTML ?? '');
-                                if (currentFromQuill) {
-                                    fireChange(currentFromQuill, undefined, false);
-                                }
-                            } catch {
-                                // noop
-                            }
-                        }
+    const toggleHtmlMode = useCallback(() => {
+        rememberSelectionFromEditor();
 
-                        if (showHtml) {
-                            const currentRaw = typeof html === 'string' ? html : '';
-                            const normalized = normalizeHtmlForQuill(currentRaw);
-                            if (normalized !== currentRaw) {
-                                fireChange(normalized);
-                            }
-                            if (normalized.trim().length > 0) requestQuillLoad();
-                        }
-                        setShowHtml(v => !v);
-                    }}
-                    label={showHtml ? 'Скрыть HTML-код' : 'Показать HTML-код'}
-                />
-                <IconButton
-                    name={fullscreen ? 'minimize' : 'maximize'}
-                    onPress={() => {
-                        try {
-                            const editor = quillRef.current?.getEditor();
-                            if (editor && typeof editor.focus === 'function') editor.focus();
-                            const selection =
-                                (editor && typeof editor.getSelection === 'function'
-                                    ? (() => {
-                                          try {
-                                              return editor.getSelection(true);
-                                          } catch {
-                                              return editor.getSelection();
-                                          }
-                                      })()
-                                    : null) ?? null;
-                            tmpStoredRange.current = selection;
-                        } catch {
-                            tmpStoredRange.current = null;
-                        }
-                        setFullscreen(v => !v);
-                    }}
-                    label={fullscreen ? 'Выйти из полноэкранного режима' : 'Перейти в полноэкранный режим'}
-                />
-                <IconButton
-                    name="delete"
-                    onPress={clearFormattingPreservingEmbeds}
-                    label="Очистить форматирование"
-                />
-                <IconButton
-                    name="image"
-                    onPress={openImagePicker}
-                    label="Вставить изображение"
-                />
+        if (!showHtml) {
+            try {
+                const editor = quillRef.current?.getEditor?.();
+                const currentFromQuill = String(editor?.root?.innerHTML ?? '');
+                if (currentFromQuill) {
+                    fireChange(currentFromQuill, undefined, false);
+                }
+            } catch {
+                // noop
+            }
+        }
 
-                {isWeb && (
-                    <IconButton
-                        name="external-link"
-                        onPress={openPreview}
-                        label="Открыть превью"
-                    />
-                )}
+        if (showHtml) {
+            const currentRaw = typeof html === 'string' ? html : '';
+            const normalized = normalizeHtmlForQuill(currentRaw);
+            if (normalized !== currentRaw) {
+                fireChange(normalized);
+            }
+            if (normalized.trim().length > 0) requestQuillLoad();
+        }
 
-                <IconButton
-                    name="bookmark"
-                    onPress={() => {
-                        try {
-                            const editor = quillRef.current?.getEditor();
-                            if (editor && typeof editor.focus === 'function') editor.focus();
-                            const selection =
-                                (editor && typeof editor.getSelection === 'function'
-                                    ? (() => {
-                                          try {
-                                              return editor.getSelection(true);
-                                          } catch {
-                                              return editor.getSelection();
-                                          }
-                                      })()
-                                    : null) ?? null;
-                            tmpStoredRange.current = selection;
-                        } catch {
-                            tmpStoredRange.current = null;
-                        }
-                        setAnchorValue('');
-                        setAnchorModalVisible(true);
-                    }}
-                    label="Вставить якорь"
-                />
-            </View>
-        </View>
-    );
+        setShowHtml(v => !v);
+    }, [fireChange, html, rememberSelectionFromEditor, requestQuillLoad, showHtml]);
+
+    const toggleFullscreen = useCallback(() => {
+        rememberSelectionFromEditor();
+        setFullscreen(v => !v);
+    }, [rememberSelectionFromEditor]);
+
+    const openAnchorModal = useCallback(() => {
+        rememberSelectionFromEditor();
+        setAnchorValue('');
+        setAnchorModalVisible(true);
+    }, [rememberSelectionFromEditor]);
 
     useEffect(() => {
         if (fullscreen || showHtml) return;
@@ -1720,7 +1500,60 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const body = (
         <>
-            <Toolbar />
+            <ArticleEditorToolbar
+                colors={colors}
+                dynamicStyles={dynamicStyles}
+                isCompactViewport={isCompactViewport}
+                isImageUploading={isImageUploading}
+                isManualSaving={isManualSaving}
+                isWeb={isWeb}
+                label={label}
+                onManualSave={onManualSave ? () => { void handleManualSave(); } : null}
+                actions={[
+                    {
+                        name: 'rotate-ccw',
+                        onPress: () => quillRef.current?.getEditor().history.undo(),
+                        label: 'Отменить последнее действие',
+                    },
+                    {
+                        name: 'rotate-cw',
+                        onPress: () => quillRef.current?.getEditor().history.redo(),
+                        label: 'Повторить действие',
+                    },
+                    {
+                        name: 'code',
+                        onPress: toggleHtmlMode,
+                        label: showHtml ? 'Скрыть HTML-код' : 'Показать HTML-код',
+                    },
+                    {
+                        name: fullscreen ? 'minimize' : 'maximize',
+                        onPress: toggleFullscreen,
+                        label: fullscreen ? 'Выйти из полноэкранного режима' : 'Перейти в полноэкранный режим',
+                    },
+                    {
+                        name: 'delete',
+                        onPress: clearFormattingPreservingEmbeds,
+                        label: 'Очистить форматирование',
+                    },
+                    {
+                        name: 'image',
+                        onPress: openImagePicker,
+                        label: 'Вставить изображение',
+                    },
+                    ...(isWeb
+                        ? [{
+                            name: 'external-link' as const,
+                            onPress: openPreview,
+                            label: 'Открыть превью',
+                        }]
+                        : []),
+                    {
+                        name: 'bookmark',
+                        onPress: openAnchorModal,
+                        label: 'Вставить якорь',
+                    },
+                ]}
+            />
             <View
                 ref={editorViewportRef}
                 style={dynamicStyles.editorArea}
@@ -1773,161 +1606,81 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             >
                 {editorArea}
             </View>
-            <Modal
+            <ArticleEditorAnchorModal
+                colors={colors}
+                dynamicStyles={dynamicStyles}
                 visible={anchorModalVisible}
-                transparent
-                animationType="fade"
+                value={anchorValue}
+                inputRef={anchorInputRef}
+                onChangeText={setAnchorValue}
                 onShow={focusAnchorInput}
-                onRequestClose={() => setAnchorModalVisible(false)}
-            >
-                <View style={dynamicStyles.modalBackdrop}>
-                    <View style={dynamicStyles.modalCard}>
-                        <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600' as const, marginBottom: DESIGN_TOKENS.spacing.sm }}>
-                            Вставить якорь
-                        </Text>
-                        <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm, marginBottom: DESIGN_TOKENS.spacing.md }}>
-                            Идентификатор (например: day-3)
-                        </Text>
-                        <TextInput
-                            ref={anchorInputRef}
-                            value={anchorValue}
-                            onChangeText={setAnchorValue}
-                            placeholder="day-3"
-                            placeholderTextColor={colors.textSecondary}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            style={{
-                                borderWidth: 1,
-                                borderColor: colors.border,
-                                borderRadius: DESIGN_TOKENS.radii.sm,
-                                paddingHorizontal: DESIGN_TOKENS.spacing.md,
-                                paddingVertical: DESIGN_TOKENS.spacing.sm,
-                                color: colors.text,
-                                backgroundColor: colors.surface,
-                                marginBottom: DESIGN_TOKENS.spacing.md,
-                            }}
-                        />
-                        <View style={dynamicStyles.modalActions}>
-                            <Button
-                                onPress={() => setAnchorModalVisible(false)}
-                                label="Отмена"
-                                variant="ghost"
-                                size="sm"
-                            />
-                            <Button
-                                onPress={() => {
-                                    setAnchorModalVisible(false);
-                                    if (tmpStoredRange.current) {
-                                        const editor = quillRef.current?.getEditor?.();
-                                        if (editor && typeof editor.setSelection === 'function') {
-                                            try {
-                                                editor.setSelection(tmpStoredRange.current as any, 'silent');
-                                            } catch {
-                                                // noop
-                                            }
-                                        }
-                                    }
-                                    if (showHtml) {
-                                        const id = normalizeAnchorId(anchorValue);
-                                        if (!id) {
-                                            Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
-                                            return;
-                                        }
+                onCancel={() => setAnchorModalVisible(false)}
+                onConfirm={() => {
+                    setAnchorModalVisible(false);
+                    if (tmpStoredRange.current) {
+                        const editor = quillRef.current?.getEditor?.();
+                        if (editor && typeof editor.setSelection === 'function') {
+                            try {
+                                editor.setSelection(tmpStoredRange.current as any, 'silent');
+                            } catch {
+                                // noop
+                            }
+                        }
+                    }
+                    if (showHtml) {
+                        const id = normalizeAnchorId(anchorValue);
+                        if (!id) {
+                            Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
+                            return;
+                        }
 
-                                        const current = String(html ?? '');
-                                        const sel = htmlSelectionRef.current;
-                                        const start = Math.max(0, Math.min(sel.start ?? 0, current.length));
-                                        const end = Math.max(0, Math.min(sel.end ?? 0, current.length));
-                                        const from = Math.min(start, end);
-                                        const to = Math.max(start, end);
+                        const current = String(html ?? '');
+                        const sel = htmlSelectionRef.current;
+                        const start = Math.max(0, Math.min(sel.start ?? 0, current.length));
+                        const end = Math.max(0, Math.min(sel.end ?? 0, current.length));
+                        const from = Math.min(start, end);
+                        const to = Math.max(start, end);
 
-                                        if (to > from) {
-                                            const selected = current.slice(from, to);
-                                            const wrapped = `<span id="${id}">${escapeHtml(selected)}</span>`;
-                                            const next = `${current.slice(0, from)}${wrapped}${current.slice(to)}`;
-                                            const caret = from + wrapped.length;
-                                            htmlSelectionRef.current = { start: caret, end: caret };
-                                            setHtmlForcedSelection({ start: caret, end: caret });
-                                            fireChange(next);
-                                        } else {
-                                            const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
-                                            const next = `${current.slice(0, from)}${htmlSnippet}${current.slice(from)}`;
-                                            const caret = from + htmlSnippet.length;
-                                            htmlSelectionRef.current = { start: caret, end: caret };
-                                            setHtmlForcedSelection({ start: caret, end: caret });
-                                            fireChange(next);
-                                        }
-                                        return;
-                                    }
-                                    insertAnchor(anchorValue);
-                                }}
-                                label="Вставить"
-                                variant="primary"
-                                size="sm"
-                            />
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                        if (to > from) {
+                            const selected = current.slice(from, to);
+                            const wrapped = `<span id="${id}">${escapeHtml(selected)}</span>`;
+                            const next = `${current.slice(0, from)}${wrapped}${current.slice(to)}`;
+                            const caret = from + wrapped.length;
+                            htmlSelectionRef.current = { start: caret, end: caret };
+                            setHtmlForcedSelection({ start: caret, end: caret });
+                            fireChange(next);
+                        } else {
+                            const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
+                            const next = `${current.slice(0, from)}${htmlSnippet}${current.slice(from)}`;
+                            const caret = from + htmlSnippet.length;
+                            htmlSelectionRef.current = { start: caret, end: caret };
+                            setHtmlForcedSelection({ start: caret, end: caret });
+                            fireChange(next);
+                        }
+                        return;
+                    }
+                    insertAnchor(anchorValue);
+                }}
+            />
 
-            <Modal
+            <ArticleEditorLinkModal
+                colors={colors}
+                dynamicStyles={dynamicStyles}
                 visible={linkModalVisible}
-                transparent
-                animationType="fade"
+                value={linkValue}
+                inputRef={linkInputRef}
+                onChangeText={setLinkValue}
                 onShow={focusLinkInput}
-                onRequestClose={() => setLinkModalVisible(false)}
-            >
-                <View style={dynamicStyles.modalBackdrop}>
-                    <View style={dynamicStyles.modalCard}>
-                        <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600' as const, marginBottom: DESIGN_TOKENS.spacing.sm }}>
-                            Ссылка
-                        </Text>
-                        <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm, marginBottom: DESIGN_TOKENS.spacing.md }}>
-                            URL (например: https://example.com)
-                        </Text>
-                        <TextInput
-                            ref={linkInputRef}
-                            value={linkValue}
-                            onChangeText={setLinkValue}
-                            placeholder="https://..."
-                            placeholderTextColor={colors.textSecondary}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            style={{
-                                borderWidth: 1,
-                                borderColor: colors.border,
-                                borderRadius: DESIGN_TOKENS.radii.sm,
-                                paddingHorizontal: DESIGN_TOKENS.spacing.md,
-                                paddingVertical: DESIGN_TOKENS.spacing.sm,
-                                color: colors.text,
-                                backgroundColor: colors.surface,
-                                marginBottom: DESIGN_TOKENS.spacing.md,
-                            }}
-                        />
-                        <View style={dynamicStyles.modalActions}>
-                            <Button
-                                onPress={() => {
-                                    setLinkModalVisible(false);
-                                    tmpStoredRange.current = null;
-                                    tmpStoredLinkQuill.current = null;
-                                }}
-                                label="Отмена"
-                                variant="ghost"
-                                size="sm"
-                            />
-                            <Button
-                                onPress={() => {
-                                    setLinkModalVisible(false);
-                                    applyLinkToSelection(linkValue);
-                                }}
-                                label="Сохранить"
-                                variant="primary"
-                                size="sm"
-                            />
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                onCancel={() => {
+                    setLinkModalVisible(false);
+                    tmpStoredRange.current = null;
+                    tmpStoredLinkQuill.current = null;
+                }}
+                onConfirm={() => {
+                    setLinkModalVisible(false);
+                    applyLinkToSelection(linkValue);
+                }}
+            />
         </>
     );
 
