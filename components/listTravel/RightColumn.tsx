@@ -221,7 +221,7 @@ const RightColumn: React.FC<RightColumnProps> = (
         flex: 1,
         minHeight: 0,
         paddingHorizontal: 0,
-        paddingTop: Platform.OS === 'web' ? cardSpacing + 8 : 12,
+        paddingTop: Platform.OS === 'web' ? 0 : 12,
         ...(Platform.OS === 'web'
           ? ({
               // Important: make ScrollView the only scroll container on web, otherwise onScroll won't fire
@@ -248,7 +248,7 @@ const RightColumn: React.FC<RightColumnProps> = (
       }
 
       return resetPadding
-    }, [cardsContainerStyle, isWebMobile, cardSpacing])
+    }, [cardsContainerStyle, isWebMobile])
 
     const rows = useMemo(() => buildTravelRows(travels, gridColumns, isMobile), [travels, gridColumns, isMobile])
 
@@ -259,7 +259,7 @@ const RightColumn: React.FC<RightColumnProps> = (
 
     const webContentContainerStyle = useMemo(() => ({
       paddingHorizontal: isWebMobile ? 0 : contentPadding,
-      paddingTop: 8,
+      paddingTop: 0,
       paddingBottom: isMobile ? 32 + 8 : 28,
       ...(isWebMobile ? { minHeight: STABLE_PLACEHOLDER_HEIGHT } : null),
     }), [isMobile, isWebMobile, contentPadding])

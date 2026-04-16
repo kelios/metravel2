@@ -79,15 +79,15 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
     searchHeader: {
       position: 'relative',
       zIndex: 10,
-      backgroundColor: colors.surface,
-      paddingBottom: DESIGN_TOKENS.spacing.xs,
+      backgroundColor: 'transparent',
+      paddingBottom: 0,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
+          boxShadow: 'none',
         } as any,
-        ios: DESIGN_TOKENS.shadowsNative.light,
-        android: { elevation: 3 },
-        default: DESIGN_TOKENS.shadowsNative.light,
+        ios: {},
+        android: { elevation: 0 },
+        default: {},
       }),
     },
     cardsContainer: {

@@ -429,11 +429,6 @@ export const createModernFiltersStyles = (colors: ReturnType<typeof useThemedCol
     scrollContent: {
       flexGrow: 1,
       paddingBottom: spacing.lg,
-      ...Platform.select({
-        web: {
-          paddingBottom: spacing.lg + mobileWebBottomReserve,
-        } as any,
-      }),
     },
     filterGroup: {
       marginBottom: spacing.sm,
