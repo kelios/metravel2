@@ -2,7 +2,7 @@
 // C2.2: Unified popup component used by both map stacks
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
-import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl } from '@/components/MapPage/Map/mapLinks';
+import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl, buildWazeUrl, buildYandexNaviUrl } from '@/components/MapPage/Map/mapLinks';
 import { useAuth } from '@/context/AuthContext';
 import { showToast } from '@/utils/toast';
 import { userPointsApi } from '@/api/userPoints';
@@ -213,6 +213,20 @@ const MapPopup: React.FC<MapPopupConfig> = ({
     void openExternalUrlInNewTab(url);
   }, [coord]);
 
+  const handleOpenWaze = useCallback(() => {
+    if (!coord) return;
+    const url = buildWazeUrl(coord);
+    if (!url) return;
+    void openExternalUrlInNewTab(url);
+  }, [coord]);
+
+  const handleOpenYandexNavi = useCallback(() => {
+    if (!coord) return;
+    const url = buildYandexNaviUrl(coord);
+    if (!url) return;
+    void openExternalUrlInNewTab(url);
+  }, [coord]);
+
   const handleShareTelegram = useCallback(() => {
     if (!coord) return;
     const telegramUrl = buildTelegramShareUrl(coord);
@@ -310,9 +324,13 @@ const MapPopup: React.FC<MapPopupConfig> = ({
       onShareTelegram={handleShareTelegram}
       onOpenGoogleMaps={handleOpenGoogleMaps}
       onOpenOrganicMaps={handleOpenOrganicMaps}
+      onOpenWaze={handleOpenWaze}
+      onOpenYandexNavi={handleOpenYandexNavi}
       onAddPoint={handleAddPoint}
       addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
       isAdding={isAdding}
+      fullscreenOnMobile
+      onClose={handleClose}
     />
   );
 };

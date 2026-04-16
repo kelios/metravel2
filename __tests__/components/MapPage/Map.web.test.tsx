@@ -544,7 +544,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     await act(async () => {})
 
-    fireEvent.press(getAllByLabelText('Открыть статью')[0])
+    fireEvent.press(getAllByLabelText('Открыть статью о точке')[0])
     expect(openSpy).toHaveBeenCalledWith('https://example.com/article', '_blank', 'noopener')
 
     ;(process.env as any).NODE_ENV = prevNodeEnv

@@ -24,6 +24,18 @@ export const buildOrganicMapsUrl = (coord: string) => {
   return `https://omaps.app/${parsed.lat},${parsed.lon}`;
 };
 
+export const buildWazeUrl = (coord: string) => {
+  const parsed = parseCoordString(coord);
+  if (!parsed) return '';
+  return `https://waze.com/ul?ll=${parsed.lat},${parsed.lon}&navigate=yes`;
+};
+
+export const buildYandexNaviUrl = (coord: string) => {
+  const parsed = parseCoordString(coord);
+  if (!parsed) return '';
+  return `https://yandex.ru/navi/?whatshere[point]=${parsed.lon},${parsed.lat}&whatshere[zoom]=16`;
+};
+
 export const buildTelegramShareUrl = (coord: string) => {
   const mapUrl = buildGoogleMapsUrl(coord);
   if (!mapUrl) return '';

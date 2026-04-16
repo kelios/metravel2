@@ -22,6 +22,8 @@ type Props = {
   onShareTelegram?: () => void;
   onOpenGoogleMaps?: () => void;
   onOpenOrganicMaps?: () => void;
+  onOpenWaze?: () => void;
+  onOpenYandexNavi?: () => void;
   onAddPoint?: () => void;
   onBuildRoute?: () => void;
   addDisabled?: boolean;
@@ -233,30 +235,30 @@ const FullscreenPopupOverlay: React.FC<{
         position: 'fixed',
         inset: 0,
         zIndex: 10000,
-        backgroundColor: 'rgba(248, 246, 241, 0.96)',
+        backgroundColor: colors.background ?? 'rgba(248, 246, 241, 0.97)',
         paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
-        paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
+        paddingRight: 'max(8px, env(safe-area-inset-right, 0px))',
         paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
-        paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
+        paddingLeft: 'max(8px, env(safe-area-inset-left, 0px))',
         boxSizing: 'border-box',
         overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
+      {/* Top bar with close button */}
       <div
         style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: 560,
-          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          padding: '4px 4px 8px 4px',
+          flexShrink: 0,
         }}
       >
         <button
           onClick={onClose}
-          aria-label="Закрыть карточку точки"
+          aria-label="Закрыть"
           style={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
             width: 40,
             height: 40,
             borderRadius: 20,
@@ -267,12 +269,24 @@ const FullscreenPopupOverlay: React.FC<{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 2,
-            boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
           }}
         >
           <Feather name="x" size={18} color={colors.text} />
         </button>
+      </div>
+      {/* Card content */}
+      <div
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: 480,
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+        }}
+      >
         {children}
       </div>
     </div>
@@ -379,11 +393,13 @@ const PlacePopupCard: React.FC<Props> = ({
   onShareTelegram,
   onOpenGoogleMaps,
   onOpenOrganicMaps,
+  onOpenWaze,
+  onOpenYandexNavi,
   onAddPoint,
   onBuildRoute,
   addDisabled = false,
   isAdding = false,
-  addLabel = 'Мои точки',
+  addLabel = 'Сохранить',
   width = 332,
   imageHeight: _imageHeight = 56,
   compactLayout = false,
@@ -446,17 +462,17 @@ const PlacePopupCard: React.FC<Props> = ({
 
     if (hasArticle) {
       return {
-        label: 'Открыть точку',
-        icon: 'book-open' as const,
+        label: 'Подробнее',
+        icon: 'arrow-right' as const,
         onPress: onOpenArticle!,
         tooltip: POPUP_TOOLTIPS.openArticle,
-        accessibilityLabel: 'Открыть статью',
+        accessibilityLabel: 'Открыть статью о точке',
       };
     }
 
     if (hasCoord && onOpenGoogleMaps) {
       return {
-        label: 'Открыть в Google Maps',
+        label: 'Google Maps',
         icon: 'map' as const,
         onPress: onOpenGoogleMaps,
         tooltip: POPUP_TOOLTIPS.openGoogleMaps,
@@ -470,20 +486,25 @@ const PlacePopupCard: React.FC<Props> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const bp = getBreakpoint(viewportWidth);
   const isNarrow = bp === 'narrow';
-  const compactLabel = isNarrow ? 'В мои точки' : addLabel;
+  const compactLabel = isNarrow ? 'Сохранить' : addLabel;
   const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
-  const useCompactLayout = compactLayout || viewportWidth <= 420;
   const useFullscreenMobileOverlay = Platform.OS === 'web' && fullscreenOnMobile && viewportWidth <= 560;
+  const useCompactLayout = compactLayout || (viewportWidth <= 420 && !useFullscreenMobileOverlay);
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
-  const popupWidthCap = useCompactLayout
-    ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
-    : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
-  const imageHeightCap = useCompactLayout
+  const popupWidthCap = useFullscreenMobileOverlay
+    ? Math.min(480, safeViewportWidth)
+    : useCompactLayout
+      ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
+      : POPUP_MAX_WIDTH_BY_BREAKPOINT[bp];
+  const imageHeightCap = useFullscreenMobileOverlay
+    ? 220
+    : useCompactLayout
     ? COMPACT_IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp]
     : IMAGE_MAX_HEIGHT_BY_BREAKPOINT[bp];
   const maxPopupWidth = Math.min(width, popupWidthCap, safeViewportWidth);
   const useSplitLayout =
     Boolean(imageUrl) &&
+    !useFullscreenMobileOverlay &&
     !useCompactLayout &&
     viewportWidth >= SPLIT_LAYOUT_MIN_VIEWPORT &&
     maxPopupWidth >= SPLIT_LAYOUT_MIN_POPUP_WIDTH;
@@ -531,7 +552,7 @@ const PlacePopupCard: React.FC<Props> = ({
         </Text>
       )}
 
-      {normalizedArticleHref && Platform.OS === 'web' && (
+      {normalizedArticleHref && Platform.OS === 'web' && primaryAction?.onPress !== onOpenArticle && (
         <View
           style={styles.inlineLinkRow}
           {...({
@@ -581,10 +602,20 @@ const PlacePopupCard: React.FC<Props> = ({
     hasDrivingInfo,
     isDrivingLoading,
     normalizedArticleHref,
+    onOpenArticle,
+    primaryAction,
     styles,
     title,
     useCompactLayout,
   ]);
+
+  const showLabeled = useFullscreenMobileOverlay;
+
+  const labeledActionStyle = useMemo(
+    () =>
+      ({ pressed }: { pressed: boolean }) => [styles.labeledActionBtn, pressed && styles.actionBtnPressed],
+    [styles],
+  );
 
   const footerSlot = useMemo(() => (
     <View style={styles.footerStack}>
@@ -618,37 +649,87 @@ const PlacePopupCard: React.FC<Props> = ({
           </CardActionPressable>
         )}
 
+        {onAddPoint && showLabeled && (
+          <CardActionPressable
+            accessibilityLabel={compactLabel}
+            onPress={() => void onAddPoint()}
+            disabled={addDisabled || isAdding}
+            title={compactLabel}
+            style={({ pressed }) => [
+              styles.saveFullBtn,
+              (addDisabled || isAdding) && styles.addBtnDisabled,
+              pressed && styles.addBtnPressed,
+            ]}
+          >
+            {isAdding ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <Feather name="bookmark" size={15} color={colors.primary} />
+                <Text style={styles.saveFullBtnText}>{compactLabel}</Text>
+              </>
+            )}
+          </CardActionPressable>
+        )}
+
         <View style={styles.secondaryActionsRow}>
           {hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps && (
             <CardActionPressable
-              accessibilityLabel="Открыть в Google Maps"
+              accessibilityLabel="Google Maps"
               onPress={onOpenGoogleMaps}
               title={POPUP_TOOLTIPS.openGoogleMaps}
-              style={actionBtnStyle}
+              style={showLabeled ? labeledActionStyle : actionBtnStyle}
             >
               <Feather name="map" size={14} color={colors.textMuted} />
+              {showLabeled && <Text style={styles.labeledActionText}>Google</Text>}
             </CardActionPressable>
           )}
 
           {hasCoord && onOpenOrganicMaps && (
             <CardActionPressable
-              accessibilityLabel="Открыть в Organic Maps"
+              accessibilityLabel="Organic Maps"
               onPress={onOpenOrganicMaps}
               title={POPUP_TOOLTIPS.openOrganicMaps}
-              style={actionBtnStyle}
+              style={showLabeled ? labeledActionStyle : actionBtnStyle}
             >
               <Feather name="compass" size={14} color={colors.textMuted} />
+              {showLabeled && <Text style={styles.labeledActionText}>Organic</Text>}
+            </CardActionPressable>
+          )}
+
+          {hasCoord && onOpenWaze && (
+            <CardActionPressable
+              accessibilityLabel="Waze"
+              onPress={onOpenWaze}
+              title={POPUP_TOOLTIPS.openWaze}
+              style={showLabeled ? labeledActionStyle : actionBtnStyle}
+            >
+              <Feather name="navigation" size={14} color={colors.textMuted} />
+              {showLabeled && <Text style={styles.labeledActionText}>Waze</Text>}
+            </CardActionPressable>
+          )}
+
+          {hasCoord && onOpenYandexNavi && (
+            <CardActionPressable
+              accessibilityLabel="Яндекс Навигатор"
+              onPress={onOpenYandexNavi}
+              title={POPUP_TOOLTIPS.openYandexNavi}
+              style={showLabeled ? labeledActionStyle : actionBtnStyle}
+            >
+              <Feather name="map-pin" size={14} color={colors.textMuted} />
+              {showLabeled && <Text style={styles.labeledActionText}>Яндекс</Text>}
             </CardActionPressable>
           )}
 
           {hasCoord && onShareTelegram && (
             <CardActionPressable
-              accessibilityLabel="Поделиться в Telegram"
+              accessibilityLabel="Поделиться"
               onPress={onShareTelegram}
               title={POPUP_TOOLTIPS.shareTelegram}
-              style={actionBtnStyle}
+              style={showLabeled ? labeledActionStyle : actionBtnStyle}
             >
               <Feather name="send" size={14} color={colors.textMuted} />
+              {showLabeled && <Text style={styles.labeledActionText}>Telegram</Text>}
             </CardActionPressable>
           )}
 
@@ -657,29 +738,30 @@ const PlacePopupCard: React.FC<Props> = ({
               accessibilityLabel="Открыть статью"
               onPress={onOpenArticle}
               title={POPUP_TOOLTIPS.openArticle}
-              style={actionBtnStyle}
+              style={showLabeled ? labeledActionStyle : actionBtnStyle}
             >
               <Feather name="book-open" size={14} color={colors.textMuted} />
+              {showLabeled && <Text style={styles.labeledActionText}>Статья</Text>}
             </CardActionPressable>
           )}
 
           {onBuildRoute && primaryAction?.onPress !== onBuildRoute && (
             <CardActionPressable
-              accessibilityLabel="Маршрут сюда"
+              accessibilityLabel="Маршрут"
               onPress={onBuildRoute}
               title={POPUP_TOOLTIPS.buildRoute}
               testID="popup-build-route"
-              style={({ pressed }) => [
-                styles.iconBtn,
-                styles.routeBtn,
-                pressed && styles.actionBtnPressed,
-              ]}
+              style={showLabeled
+                ? ({ pressed }) => [styles.labeledActionBtn, styles.routeBtn, pressed && styles.actionBtnPressed]
+                : ({ pressed }) => [styles.iconBtn, styles.routeBtn, pressed && styles.actionBtnPressed]
+              }
             >
               <Feather name="corner-up-right" size={14} color={colors.primary} />
+              {showLabeled && <Text style={[styles.labeledActionText, { color: colors.primary }]}>Маршрут</Text>}
             </CardActionPressable>
           )}
 
-          {onAddPoint && (
+          {onAddPoint && !showLabeled && (
             <CardActionPressable
               accessibilityLabel={compactLabel}
               onPress={() => void onAddPoint()}
@@ -703,6 +785,8 @@ const PlacePopupCard: React.FC<Props> = ({
     </View>
   ), [
     actionBtnStyle,
+    labeledActionStyle,
+    showLabeled,
     addDisabled,
     colors.primary,
     colors.textMuted,
@@ -717,6 +801,8 @@ const PlacePopupCard: React.FC<Props> = ({
     onOpenArticle,
     onOpenGoogleMaps,
     onOpenOrganicMaps,
+    onOpenWaze,
+    onOpenYandexNavi,
     onShareTelegram,
     primaryAction,
     styles,
@@ -1090,6 +1176,44 @@ const getStyles = (
       fontSize: compactLayout ? fs.small - 1 : bp === 'narrow' ? 13 : fs.small,
       fontWeight: '500',
       color: colors.text,
+    },
+    labeledActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      height: 38,
+      paddingHorizontal: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'background-color 0.15s ease' } as any) : null),
+    },
+    labeledActionText: {
+      fontSize: fs.small,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+    saveFullBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      width: '100%',
+      minHeight: 40,
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderWidth: 1,
+      borderColor: colors.primarySoft ?? colors.borderLight ?? colors.border,
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'opacity 0.15s ease' } as any) : null),
+    },
+    saveFullBtnText: {
+      fontSize: fs.small + 1,
+      fontWeight: '600',
+      color: colors.primary,
     },
   });
 };
