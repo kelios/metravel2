@@ -527,12 +527,13 @@ function ListTravelBase() {
 
       const columns = Math.max(gridColumns, 1);
       const totalGap = gapSize * Math.max(columns - 1, 0);
-      const resolvedWidth = (effectiveWidth - totalGap) / columns;
+      const paddedWidth = effectiveWidth - contentPadding * 2;
+      const resolvedWidth = (paddedWidth - totalGap) / columns;
 
       return Number.isFinite(resolvedWidth) && resolvedWidth > 0
         ? Math.round(resolvedWidth)
         : undefined;
-    }, [effectiveWidth, gapSize, gridColumns]);
+    }, [effectiveWidth, gapSize, gridColumns, contentPadding]);
 
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
@@ -592,7 +593,7 @@ function ListTravelBase() {
     const searchHeaderStyle = useMemo(
       () => isMobileDevice
         ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
-        : [styles.searchHeader, { paddingHorizontal: 0 }],
+        : [styles.searchHeader, { paddingHorizontal: contentPadding }],
       [isMobileDevice, contentPadding, styles.searchHeader]
     );
 

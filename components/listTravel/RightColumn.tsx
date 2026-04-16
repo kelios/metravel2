@@ -258,11 +258,11 @@ const RightColumn: React.FC<RightColumnProps> = (
     }, [rowSeparatorStyle])
 
     const webContentContainerStyle = useMemo(() => ({
-      paddingHorizontal: 0,
+      paddingHorizontal: isWebMobile ? 0 : contentPadding,
       paddingTop: 8,
       paddingBottom: isMobile ? 32 + 8 : 28,
       ...(isWebMobile ? { minHeight: STABLE_PLACEHOLDER_HEIGHT } : null),
-    }), [isMobile, isWebMobile])
+    }), [isMobile, isWebMobile, contentPadding])
 
     const nativeContentContainerStyle = useMemo(() => ({
       paddingHorizontal: contentPadding,
@@ -276,7 +276,7 @@ const RightColumn: React.FC<RightColumnProps> = (
         height: RECOMMENDATIONS_TOTAL_HEIGHT,
         marginBottom: 24,
         overflow: 'hidden' as const,
-        paddingHorizontal: isWeb ? 0 : contentPadding,
+        paddingHorizontal: contentPadding,
       }),
       [contentPadding]
     )
@@ -466,7 +466,7 @@ const RightColumn: React.FC<RightColumnProps> = (
         flexDirection: 'row' as const,
         flexWrap: 'wrap' as const,
         gap: cardSpacing,
-        paddingHorizontal: isWeb ? 0 : contentPadding,
+        paddingHorizontal: contentPadding,
         paddingTop: 8,
         paddingBottom: 24,
       }),
