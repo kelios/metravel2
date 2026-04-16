@@ -379,6 +379,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       themeContextValue,
       userLocation: null,
       compactLayout: compact,
+      fullscreenOnMobile: true,
       invalidateUserPoints: () => {
         void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
       },

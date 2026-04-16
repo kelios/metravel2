@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PlacePopupCard from './PlacePopupCard';
 import type { Point } from './types';
-import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl } from './mapLinks';
+import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl, buildWazeUrl, buildYandexNaviUrl } from './mapLinks';
 import { showToast } from '@/utils/toast';
 import { userPointsApi } from '@/api/userPoints';
 import { PointStatus } from '@/types/userPoints';
@@ -137,6 +137,20 @@ export const createMapPopupComponent = ({
       const telegramUrl = buildTelegramShareUrl(coord);
       if (!telegramUrl) return;
       void openExternalUrlInNewTab(telegramUrl);
+    }, [coord]);
+
+    const handleOpenWaze = useCallback(() => {
+      if (!coord) return;
+      const url = buildWazeUrl(coord);
+      if (!url) return;
+      void openExternalUrlInNewTab(url);
+    }, [coord]);
+
+    const handleOpenYandexNavi = useCallback(() => {
+      if (!coord) return;
+      const url = buildYandexNaviUrl(coord);
+      if (!url) return;
+      void openExternalUrlInNewTab(url);
     }, [coord]);
 
     const normalizedCoord = useMemo(() => {
@@ -293,6 +307,8 @@ export const createMapPopupComponent = ({
           onShareTelegram={handleShareTelegram}
           onOpenGoogleMaps={handleOpenGoogleMaps}
           onOpenOrganicMaps={handleOpenOrganicMaps}
+          onOpenWaze={handleOpenWaze}
+          onOpenYandexNavi={handleOpenYandexNavi}
           onAddPoint={handleAddPoint}
           addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
           isAdding={isAdding}
