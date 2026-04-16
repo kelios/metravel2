@@ -26,6 +26,12 @@ export function useTravelDetailsHeadSync({
 
     if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined
 
+    const enforceHtmlLang = () => {
+      if (document.documentElement.getAttribute('lang') !== 'ru') {
+        document.documentElement.setAttribute('lang', 'ru')
+      }
+    }
+
     const patchMeta = (sel: string, attr: string, val: string) => {
       const all = document.querySelectorAll(sel)
       for (let i = 1; i < all.length; i += 1) all[i].remove()
@@ -38,6 +44,8 @@ export function useTravelDetailsHeadSync({
         document.head.appendChild(el)
       }
       if (el.getAttribute(attr) !== val) el.setAttribute(attr, val)
+      const deduped = document.querySelectorAll(sel)
+      for (let i = 1; i < deduped.length; i += 1) deduped[i].remove()
     }
 
     const patchCanonical = (href: string) => {
@@ -54,7 +62,12 @@ export function useTravelDetailsHeadSync({
       if (el.getAttribute('href') !== href) el.setAttribute('href', href)
     }
 
+    let isApplying = false
+
     const applyAll = () => {
+      if (isApplying) return
+      isApplying = true
+      enforceHtmlLang()
       document.title = readyTitle
       patchMeta('meta[property="og:title"]', 'content', readyTitle)
       patchMeta('meta[name="twitter:title"]', 'content', readyTitle)
@@ -70,11 +83,13 @@ export function useTravelDetailsHeadSync({
       if (canonicalUrl) {
         patchCanonical(canonicalUrl)
       }
+      isApplying = false
     }
 
     const t1 = setTimeout(applyAll, 50)
     const t2 = setTimeout(applyAll, 300)
     const t3 = setTimeout(applyAll, 800)
+    applyAll()
 
     const titleEl = document.querySelector('title')
     let titleObs: MutationObserver | null = null

@@ -22,7 +22,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useDebounce } from '@/hooks/useDebounce';
-import { sanitizeArticleEditorHtml } from '@/utils/articleEditorSanitize';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { 
     normalizeAnchorId,
@@ -44,6 +43,14 @@ import {
     resolvePastePayload,
     uploadImageAndInsert,
 } from './articleEditorMediaHelpers';
+import {
+    createForceSyncController,
+    requestArticleEditorQuillLoad,
+    restorePendingSelection,
+    scheduleEmptyEditorPreload,
+    scheduleFullscreenRefresh,
+    syncInitialQuillContent,
+} from './articleEditorLifecycleHelpers';
 import {
     applyLinkToEditorSelection,
     buildHtmlModeToggleHandler,
@@ -222,37 +229,24 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     );
 
     const requestQuillLoad = useCallback(() => {
-        if (loadQuillEditorModule) {
-            void loadQuillEditorModule().catch(() => null);
-        }
-        if (shouldLoadQuill) return;
-        setShouldLoadQuill(true);
+        requestArticleEditorQuillLoad({
+            loadModule: loadQuillEditorModule,
+            shouldLoadQuill,
+            setShouldLoadQuill,
+        });
     }, [shouldLoadQuill]);
 
     useEffect(() => {
-        if (isTestEnv) return;
-        if (!isWeb || !win) return;
-        if (shouldLoadQuill) return;
-
-        let timeoutId: ReturnType<typeof setTimeout> | null = null;
-        let idleId: number | null = null;
-
-        const trigger = () => {
-            requestQuillLoad();
-        };
-
-        if (typeof win.requestIdleCallback === 'function') {
-            idleId = win.requestIdleCallback(trigger, { timeout: EMPTY_EDITOR_PRELOAD_DELAY_MS });
-        } else {
-            timeoutId = setTimeout(trigger, EMPTY_EDITOR_PRELOAD_DELAY_MS);
-        }
-
-        return () => {
-            if (timeoutId) clearTimeout(timeoutId);
-            if (idleId != null && typeof win.cancelIdleCallback === 'function') {
-                win.cancelIdleCallback(idleId);
-            }
-        };
+        if (!win) return;
+        return scheduleEmptyEditorPreload({
+            isTestEnv,
+            isWeb,
+            hasWindow: !!win,
+            shouldLoadQuill,
+            requestQuillLoad,
+            preloadDelayMs: EMPTY_EDITOR_PRELOAD_DELAY_MS,
+            windowObject: win,
+        }) ?? undefined;
     }, [requestQuillLoad, shouldLoadQuill]);
 
     // Динамические стили на основе темы
@@ -370,49 +364,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
         const MAX_ATTEMPTS = 20;
         const ATTEMPT_DELAY_MS = 50;
-
-        const clearPending = () => {
-            if (pendingForceSyncTimeoutRef.current) {
-                clearTimeout(pendingForceSyncTimeoutRef.current);
-                pendingForceSyncTimeoutRef.current = null;
-            }
-            if (pendingForceSyncIdleRef.current != null && typeof (win as any)?.cancelIdleCallback === 'function') {
-                try {
-                    (win as any).cancelIdleCallback(pendingForceSyncIdleRef.current);
-                } catch {
-                    // noop
-                }
-                pendingForceSyncIdleRef.current = null;
-            }
-            if (pendingForceSyncRafRef.current != null && typeof (win as any)?.cancelAnimationFrame === 'function') {
-                try {
-                    (win as any).cancelAnimationFrame(pendingForceSyncRafRef.current);
-                } catch {
-                    // noop
-                }
-                pendingForceSyncRafRef.current = null;
-            }
-        };
-
-        const scheduleForceSyncWork = (fn: () => void) => {
-            if (!isWeb || !win) {
-                fn();
-                return;
-            }
-
-            if (typeof (win as any).requestIdleCallback === 'function') {
-                pendingForceSyncIdleRef.current = (win as any).requestIdleCallback(() => {
-                    pendingForceSyncIdleRef.current = null;
-                    fn();
-                }, { timeout: 1000 });
-                return;
-            }
-
-            pendingForceSyncRafRef.current = win.requestAnimationFrame(() => {
-                pendingForceSyncRafRef.current = null;
-                fn();
-            });
-        };
+        const { clearPending, scheduleForceSyncWork } = createForceSyncController({
+            isWeb,
+            windowObject: win,
+            refs: {
+                pendingTimeoutRef: pendingForceSyncTimeoutRef,
+                pendingIdleRef: pendingForceSyncIdleRef,
+                pendingRafRef: pendingForceSyncRafRef,
+                attemptRef: forceSyncAttemptRef,
+                lastForceSyncedContentRef,
+                lastSanitizedForceSyncRef,
+            },
+        });
 
         const attempt = () => {
             clearPending();
@@ -430,20 +393,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
             scheduleForceSyncWork(() => {
                 try {
-                    const editor = quillRef.current?.getEditor?.();
-                    if (!editor) return;
-
-                    const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
-                    const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
-                    if (!isEditorEmpty) return;
-
-                    const prevSanitized = lastSanitizedForceSyncRef.current;
-                    const clean = prevSanitized?.raw === next ? prevSanitized.clean : sanitizeArticleEditorHtml(next);
-                    lastSanitizedForceSyncRef.current = { raw: next, clean };
-
-                    editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
-                    editor.setSelection?.(0, 0, 'silent');
-                    lastForceSyncedContentRef.current = next;
+                    syncInitialQuillContent({
+                        next,
+                        quillRef,
+                        refs: {
+                            pendingTimeoutRef: pendingForceSyncTimeoutRef,
+                            pendingIdleRef: pendingForceSyncIdleRef,
+                            pendingRafRef: pendingForceSyncRafRef,
+                            attemptRef: forceSyncAttemptRef,
+                            lastForceSyncedContentRef,
+                            lastSanitizedForceSyncRef,
+                        },
+                    });
                 } catch (_e) {
                     // noop
                 }
@@ -993,18 +954,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         if (!isWeb || !win) return;
         if (showHtml) return;
         if (!shouldLoadQuill) return;
-        if (!pendingSelectionRestoreRef.current) return;
-
-        const selection = pendingSelectionRestoreRef.current;
-        pendingSelectionRestoreRef.current = null;
-
-        try {
-            const editor = quillRef.current?.getEditor?.();
-            if (!editor || !selection) return;
-            editor.setSelection?.(selection, 'silent');
-        } catch {
-            // noop
-        }
+        restorePendingSelection({
+            getEditor: () => quillRef.current?.getEditor?.(),
+            pendingSelectionRestoreRef,
+        });
     }, [html, shouldLoadQuill, showHtml]);
 
     useEffect(() => {
@@ -1016,22 +969,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         lastFullscreenRef.current = fullscreen;
         if (prev === null || prev === fullscreen) return;
 
-        let raf = 0;
-        raf = (win as any)?.requestAnimationFrame?.(() => {
-            try {
-                ensureQuillContent();
-            } catch {
-                // noop
-            }
-        }) ?? 0;
-
-        return () => {
-            try {
-                (win as any)?.cancelAnimationFrame?.(raf);
-            } catch {
-                // noop
-            }
-        };
+        return scheduleFullscreenRefresh({
+            windowObject: win,
+            ensureQuillContent,
+        });
     }, [fullscreen, showHtml, shouldLoadQuill, ensureQuillContent]);
 
     const Loader = ({ canActivate = false }: { canActivate?: boolean }) => (
