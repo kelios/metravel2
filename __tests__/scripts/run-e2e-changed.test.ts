@@ -14,7 +14,8 @@ const {
 
 describe('run-e2e-changed', () => {
   it('parses supported args', () => {
-    expect(parseArgs(['--changed-files-file', 'changed_files.txt', '--dry-run', '--json'])).toEqual({
+    expect(parseArgs(['--base-ref', 'origin/main', '--changed-files-file', 'changed_files.txt', '--dry-run', '--json'])).toEqual({
+      baseRef: 'origin/main',
       changedFilesFile: 'changed_files.txt',
       dryRun: true,
       output: 'json',
@@ -67,7 +68,7 @@ describe('run-e2e-changed', () => {
   })
 
   it('keeps category definitions aligned with e2e routing', () => {
-    expect(E2E_CATEGORY_DEFINITIONS.map((category) => category.name)).toEqual([
+    expect(E2E_CATEGORY_DEFINITIONS.map((category: { name: string }) => category.name)).toEqual([
       'travel',
       'search',
       'map',
@@ -115,5 +116,31 @@ describe('run-e2e-changed', () => {
     expect(payload.reason).toBe('match')
     expect(payload.matchedCategories).toEqual(['messages'])
     expect(payload.specs).toEqual(['e2e/messages.spec.ts'])
+  })
+
+  it('reads changed files from explicit file input in dry-run json mode', () => {
+    const { makeTempDir, writeTextFile } = require('./cli-test-utils')
+    const fs = require('fs')
+    const path = require('path')
+
+    const dir = makeTempDir('run-e2e-changed-')
+    const changedFilesFile = path.join(dir, 'changed.txt')
+    writeTextFile(changedFilesFile, 'components/messages/ChatView.tsx\n')
+
+    const result = runNodeCli([
+      'scripts/run-e2e-changed.js',
+      '--changed-files-file', changedFilesFile,
+      '--dry-run',
+      '--json',
+    ])
+
+    expect(result.status).toBe(0)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.source).toBe('file')
+    expect(payload.reason).toBe('match')
+    expect(payload.matchedCategories).toEqual(['messages'])
+    expect(payload.specs).toEqual(['e2e/messages.spec.ts'])
+
+    fs.rmSync(dir, { recursive: true, force: true })
   })
 })

@@ -1,5 +1,10 @@
 #!/bin/sh
 set -eu
 
-echo "githook(pre-push): npm run check:preflight"
-npm run check:preflight
+if upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null); then
+  echo "githook(pre-push): npm run check:preflight -- --base-ref $upstream"
+  npm run check:preflight -- --base-ref "$upstream"
+else
+  echo "githook(pre-push): npm run check:preflight"
+  npm run check:preflight
+fi

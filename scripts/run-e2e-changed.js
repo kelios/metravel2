@@ -1,5 +1,6 @@
 const { spawnSync } = require('child_process')
 const { readChangedFilesWithMeta } = require('./changed-files-utils')
+const { resolveChangedFilesInput } = require('./run-local-selective-checks')
 
 const E2E_CATEGORY_DEFINITIONS = [
   {
@@ -84,6 +85,7 @@ const ALL_E2E_SPECS = [...new Set(E2E_CATEGORY_DEFINITIONS.flatMap((category) =>
 
 const parseArgs = (argv) => {
   const out = {
+    baseRef: '',
     changedFilesFile: '',
     dryRun: false,
     output: 'text',
@@ -91,6 +93,11 @@ const parseArgs = (argv) => {
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i]
+    if (token === '--base-ref' && argv[i + 1]) {
+      out.baseRef = String(argv[i + 1]).trim()
+      i += 1
+      continue
+    }
     if (token === '--changed-files-file' && argv[i + 1]) {
       out.changedFilesFile = String(argv[i + 1]).trim()
       i += 1
@@ -102,7 +109,6 @@ const parseArgs = (argv) => {
     }
     if (token === '--json') {
       out.output = 'json'
-      continue
     }
   }
 
@@ -165,6 +171,18 @@ const runE2EChanged = (specs) => {
   return result.status ?? 1
 }
 
+const resolveE2EChangedFilesInput = ({ baseRef = '', changedFilesFile = '' } = {}) => {
+  const directInput = readChangedFilesWithMeta({ changedFilesFile })
+  if (directInput.available) {
+    return {
+      files: directInput.files,
+      source: directInput.source,
+    }
+  }
+
+  return resolveChangedFilesInput({ baseRef })
+}
+
 const main = () => {
   const args = parseArgs(process.argv.slice(2))
   if (args.output === 'json' && !args.dryRun) {
@@ -172,14 +190,14 @@ const main = () => {
     process.exit(2)
   }
 
-  const changedFilesMeta = readChangedFilesWithMeta({ changedFilesFile: args.changedFilesFile })
-  const changedFiles = changedFilesMeta.files
-  const forceAll = !changedFilesMeta.available
+  const input = resolveE2EChangedFilesInput(args)
+  const changedFiles = input.files
+  const forceAll = input.source === 'none'
   const matchedCategories = getMatchedCategories(changedFiles, { forceAll })
   const specs = getSpecsForChangedFiles(changedFiles, { forceAll })
   const reason = forceAll ? 'missing-input' : (specs.length > 0 ? 'match' : 'no-match')
   const payload = buildDecisionPayload({
-    source: changedFilesMeta.source,
+    source: input.source,
     changedFiles,
     matchedCategories,
     specs,
@@ -220,6 +238,7 @@ module.exports = {
   E2E_CATEGORY_DEFINITIONS,
   ALL_E2E_SPECS,
   parseArgs,
+  resolveE2EChangedFilesInput,
   getMatchedCategories,
   getSpecsForChangedFiles,
   buildDecisionPayload,

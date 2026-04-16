@@ -37,6 +37,8 @@ Behavior:
 - local selective checks now include targeted app Jest suites for travel/map/account/messages changes in addition to schema/validator selective runners;
 - `check:e2e:changed` selects a stable subset of Playwright smoke specs by changed area (travel/search/map/account/messages) and is intended for pre-push / preflight validation;
 - `check:preflight` extends `check:fast` with changed-file complexity validation and selective Playwright smoke coverage, so larger local changes hit both code-level and browser-level gates before push;
+- `check:preflight` resolves changed files once and reuses the same scope for fast checks, complexity guard, and selective e2e;
+- the repository `pre-push` hook invokes `check:preflight` against the current upstream diff (`HEAD` vs upstream), so committed changes are still validated even when the working tree itself is clean;
 - without args, the command scans staged, unstaged, and untracked files from the current git working tree;
 - `--base-ref <ref>` compares `HEAD` against `git merge-base HEAD <ref>`;
 - `--changed-files-file <path>` reuses an explicit newline-separated file list;

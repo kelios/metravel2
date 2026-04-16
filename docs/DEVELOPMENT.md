@@ -49,7 +49,9 @@ npm run android
 - `npm run check:e2e:changed:dry` — показывает, какие e2e spec'и будут запущены.
 - `npm run check:changed` — локально прогоняет selective schema/validator checks по текущим изменённым файлам в git working tree.
 - `npm run check:changed:dry` — показывает, какие selective checks сработают, без запуска самих тестов.
+- `npm run check:preflight` — единый selective preflight-runner: один раз определяет changed files и с тем же scope запускает `check:fast`, `guard:file-complexity:changed` и `check:e2e:changed`.
 - `npm run hooks:install` — включает репозиторные git hooks (`pre-commit` -> `check:fast`, `pre-push` -> `check:preflight`) через `core.hooksPath=githooks`.
+- `githooks/pre-push` передаёт в `check:preflight` текущий upstream branch как `--base-ref`, поэтому push проверяет именно diff коммитов, которые отправляются, а не пустой working tree после commit.
 - `npm run governance:verify` — runs external-link guards and governance test suite.
 - `npm run guard:external-links` — runs both external-link guards.
 - Canonical governance command reference: `docs/TESTING.md#governance-commands`.
