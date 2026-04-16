@@ -141,6 +141,19 @@ export const buildTravelFilterGroups = ({
       icon: 'tag',
     },
     {
+      key: 'categoryTravelAddress',
+      title: 'Что посмотреть',
+      options: (options?.categoryTravelAddress || [])
+        .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'categoryTravelAddress', 'categoryTravelAddress', item.id))
+        .map((item) => ({
+          id: String(item.id),
+          name: item.name,
+          count: getFacetCount(facetCounts, 'categoryTravelAddress', item.id),
+        })),
+      multiSelect: true,
+      icon: 'map-pin',
+    },
+    {
       key: 'transports',
       title: 'Транспорт',
       options: (options?.transports || [])
@@ -152,19 +165,6 @@ export const buildTravelFilterGroups = ({
         })),
       multiSelect: true,
       icon: 'truck',
-    },
-    {
-      key: 'categoryTravelAddress',
-      title: 'Объекты',
-      options: (options?.categoryTravelAddress || [])
-        .filter((item) => shouldIncludeFacetOption(facetCounts, selectedFilters, 'categoryTravelAddress', 'categoryTravelAddress', item.id))
-        .map((item) => ({
-          id: String(item.id),
-          name: item.name,
-          count: getFacetCount(facetCounts, 'categoryTravelAddress', item.id),
-        })),
-      multiSelect: true,
-      icon: 'map-pin',
     },
     {
       key: 'companions',

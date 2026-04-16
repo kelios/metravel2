@@ -657,7 +657,7 @@ function ListTravelBase() {
           .map((obj: any) => obj.name)
           .slice(0, 2);
         if (objectNames.length > 0) {
-          activeFilters.push(`объекты "${objectNames.join('", "')}"${objectNames.length < filter.categoryTravelAddress.length ? ' и другие' : ''}`);
+          activeFilters.push(`что посмотреть "${objectNames.join('", "')}"${objectNames.length < filter.categoryTravelAddress.length ? ' и другие' : ''}`);
         }
       }
 

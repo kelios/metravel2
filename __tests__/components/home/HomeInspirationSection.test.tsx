@@ -64,7 +64,7 @@ describe('HomeInspirationSections', () => {
       expect(getByText('Тип маршрута')).toBeTruthy();
       expect(getByText('Ночлег')).toBeTruthy();
       expect(getByText('Сезон')).toBeTruthy();
-      expect(getByText('Объекты')).toBeTruthy();
+      expect(getByText('Что посмотреть')).toBeTruthy();
       expect(getByText('Расстояние на карте')).toBeTruthy();
     });
 

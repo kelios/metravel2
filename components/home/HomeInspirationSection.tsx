@@ -114,7 +114,7 @@ const FILTER_GROUPS = [
     ],
   },
   {
-    title: 'Объекты',
+    title: 'Что посмотреть',
     icon: 'map',
     chips: [
       {

@@ -21,8 +21,8 @@ import { BREAKPOINTS } from './utils/listTravelConstants';
 const FILTER_SECTIONS = [
   { key: 'sort', title: 'Сортировка', icon: 'sliders' },
   { key: 'categories', title: 'Категории', icon: 'grid' },
+  { key: 'categoryTravelAddress', title: 'Что посмотреть', icon: 'map-pin' },
   { key: 'transports', title: 'Транспорт', icon: 'truck' },
-  { key: 'categoryTravelAddress', title: 'Объекты', icon: 'map-pin' },
   { key: 'companions', title: 'Спутники', icon: 'users' },
   { key: 'complexity', title: 'Сложность', icon: 'activity' },
   { key: 'month', title: 'Месяц', icon: 'calendar' },
