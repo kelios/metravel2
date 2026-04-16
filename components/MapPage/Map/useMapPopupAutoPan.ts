@@ -6,6 +6,44 @@ type UseMapPopupAutoPanArgs = {
   popupBottomOffset: number
 }
 
+type PopupSafeArea = {
+  horizontalPadding: number
+  topPadding: number
+  bottomPadding: number
+}
+
+const getPopupSafeArea = ({
+  mapWidth,
+  mapHeight,
+  popupBottomOffset,
+}: {
+  mapWidth: number
+  mapHeight: number
+  popupBottomOffset: number
+}): PopupSafeArea => {
+  const isNarrowMap = mapWidth <= 640
+  const isVeryNarrowMap = mapWidth <= 420
+  const horizontalPadding = isVeryNarrowMap ? 12 : isNarrowMap ? 16 : 24
+  const verticalPadding = isVeryNarrowMap ? 22 : isNarrowMap ? 18 : 24
+
+  if (!isNarrowMap) {
+    return {
+      horizontalPadding,
+      topPadding: verticalPadding,
+      bottomPadding: verticalPadding,
+    }
+  }
+
+  return {
+    horizontalPadding,
+    topPadding: isVeryNarrowMap ? 152 : 144,
+    bottomPadding: Math.min(
+      Math.max(isVeryNarrowMap ? 72 : 80, popupBottomOffset + (isVeryNarrowMap ? 12 : 16)),
+      Math.max(isVeryNarrowMap ? 72 : 80, Math.round(mapHeight * (isVeryNarrowMap ? 0.18 : 0.2)))
+    ),
+  }
+}
+
 export function useMapPopupAutoPan({
   mapRef,
   mapPaneWidth,
@@ -22,6 +60,11 @@ export function useMapPopupAutoPan({
       try {
         const mapRect = mapEl.getBoundingClientRect()
         const popupRectAbs = popupEl.getBoundingClientRect()
+        const safeArea = getPopupSafeArea({
+          mapWidth: mapRect.width,
+          mapHeight: mapRect.height,
+          popupBottomOffset,
+        })
         const popupRect = {
           left: popupRectAbs.left - mapRect.left,
           top: popupRectAbs.top - mapRect.top,
@@ -32,29 +75,19 @@ export function useMapPopupAutoPan({
         }
 
         const isNarrowMap = mapRect.width <= 640
-        const isVeryNarrowMap = mapRect.width <= 420
-        const horizontalPadding = isVeryNarrowMap ? 12 : isNarrowMap ? 16 : 24
-        const verticalPadding = isVeryNarrowMap ? 22 : isNarrowMap ? 18 : 24
-        const topSafePadding = isVeryNarrowMap ? 110 : isNarrowMap ? 92 : verticalPadding
-        const bottomSafePadding = isNarrowMap
-          ? Math.min(
-              Math.max(124, popupBottomOffset + 28),
-              Math.max(124, Math.round(mapRect.height * 0.42))
-            )
-          : verticalPadding
         let dx = 0
         let dy = 0
 
         const popupCenterX = popupRect.left + popupRect.width / 2
         const popupCenterY = popupRect.top + popupRect.height / 2
-        const safeLeft = horizontalPadding
-        const safeRight = mapRect.width - horizontalPadding
-        const safeTop = topSafePadding
-        const safeBottom = mapRect.height - bottomSafePadding
+        const safeLeft = safeArea.horizontalPadding
+        const safeRight = mapRect.width - safeArea.horizontalPadding
+        const safeTop = safeArea.topPadding
+        const safeBottom = mapRect.height - safeArea.bottomPadding
         const safeCenterX = (safeLeft + safeRight) / 2
         const safeCenterY = (safeTop + safeBottom) / 2
-        const overflowLeft = horizontalPadding - popupRect.left
-        const overflowRight = popupRect.right - (mapRect.width - horizontalPadding)
+        const overflowLeft = safeArea.horizontalPadding - popupRect.left
+        const overflowRight = popupRect.right - (mapRect.width - safeArea.horizontalPadding)
         const overflowTop = safeTop - popupRect.top
         const overflowBottom = popupRect.bottom - safeBottom
 
@@ -81,8 +114,8 @@ export function useMapPopupAutoPan({
           }
         }
 
-        if (Math.abs(dx) < 6) dx = 0
-        if (Math.abs(dy) < 6) dy = 0
+        if (Math.abs(dx) < 8) dx = 0
+        if (Math.abs(dy) < 8) dy = 0
         if (!dx && !dy) return
 
         map?.panBy?.([dx, dy], { animate: true, duration: 0.35 } as any)
@@ -104,14 +137,23 @@ export function useMapPopupAutoPan({
     scheduleRun()
 
     let resizeObserver: ResizeObserver | null = null
+    let recenterTimer: ReturnType<typeof setTimeout> | null = null
+    const handleMoveEnd = () => {
+      scheduleRun()
+    }
     const cleanup = () => {
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = 0
       }
+      if (recenterTimer) {
+        clearTimeout(recenterTimer)
+        recenterTimer = null
+      }
       resizeObserver?.disconnect()
       resizeObserver = null
       map?.off?.('popupclose', cleanup)
+      map?.off?.('moveend', handleMoveEnd)
     }
 
     if (typeof ResizeObserver !== 'undefined') {
@@ -125,6 +167,11 @@ export function useMapPopupAutoPan({
       }
     }
 
+    recenterTimer = setTimeout(() => {
+      scheduleRun()
+    }, 220)
+
+    map?.on?.('moveend', handleMoveEnd)
     map?.on?.('popupclose', cleanup)
   }, [mapRef, popupBottomOffset])
 
@@ -132,6 +179,13 @@ export function useMapPopupAutoPan({
     const effectiveWidth = mapPaneWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024)
     const isNarrowViewport = effectiveWidth <= 768
     const isVeryNarrow = effectiveWidth <= 480
+    const useFullscreenMobilePopup = effectiveWidth <= 560
+    const effectiveHeight = typeof window !== 'undefined' ? window.innerHeight : 844
+    const safeArea = getPopupSafeArea({
+      mapWidth: effectiveWidth,
+      mapHeight: effectiveHeight,
+      popupBottomOffset,
+    })
     const maxWidth = isVeryNarrow
       ? Math.min(284, Math.max(240, effectiveWidth - 28))
       : isNarrowViewport
@@ -142,24 +196,17 @@ export function useMapPopupAutoPan({
       : isNarrowViewport
         ? Math.min(260, Math.max(228, maxWidth - 44))
         : Math.min(308, Math.max(256, maxWidth - 72))
-    const topPadding = isVeryNarrow
-      ? 110
-      : isNarrowViewport
-        ? 92
-        : 140
-    const bottomPadding = isNarrowViewport
-      ? Math.min(
-          Math.max(124, popupBottomOffset + 28),
-          Math.max(124, Math.round((typeof window !== 'undefined' ? window.innerHeight : 844) * 0.36))
-        )
-      : 140
+    const topPadding = isNarrowViewport ? safeArea.topPadding : 140
+    const bottomPadding = isNarrowViewport ? safeArea.bottomPadding : 140
 
     return {
       autoPan: true,
       keepInView: true,
       maxWidth,
       minWidth,
-      className: 'metravel-place-popup',
+      className: useFullscreenMobilePopup
+        ? 'metravel-place-popup metravel-place-popup--fullscreen-mobile'
+        : 'metravel-place-popup',
       autoPanPaddingTopLeft: isNarrowViewport ? [12, topPadding] : [24, 140],
       autoPanPaddingBottomRight: isNarrowViewport ? [12, bottomPadding] : [24, 140],
       eventHandlers: {

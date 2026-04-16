@@ -13,6 +13,7 @@ import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/
 interface CreatePopupComponentArgs {
   userLocation?: { lat: number; lng: number } | null;
   compactLayout?: boolean;
+  fullscreenOnMobile?: boolean;
   invalidateUserPoints?: () => void;
   colors: ThemedColors;
   themeContextValue: ThemeContextType;
@@ -70,6 +71,7 @@ const buildPopupTitleParts = (point: Point): { title: string; subtitle?: string 
 export const createMapPopupComponent = ({
   userLocation,
   compactLayout = false,
+  fullscreenOnMobile = false,
   invalidateUserPoints,
   colors,
   themeContextValue,
@@ -295,6 +297,8 @@ export const createMapPopupComponent = ({
           addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
           isAdding={isAdding}
           compactLayout={compactLayout}
+          fullscreenOnMobile={fullscreenOnMobile}
+          onClose={handlePress}
         />
       </ThemeContext.Provider>
     );

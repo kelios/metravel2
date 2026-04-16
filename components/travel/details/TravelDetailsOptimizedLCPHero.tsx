@@ -198,7 +198,14 @@ function OptimizedLCPHeroInner({
 
       if (typeof el.decode === 'function') {
         try {
-          await el.decode();
+          // iOS Safari can hang on decode() indefinitely for certain images
+          // (progressive JPEGs, memory pressure). Race with a timeout so we
+          // don't block the LCP→slider transition forever.
+          const DECODE_TIMEOUT_MS = 2000;
+          await Promise.race([
+            el.decode(),
+            new Promise<void>((resolve) => setTimeout(resolve, DECODE_TIMEOUT_MS)),
+          ]);
         } catch {
           // Browsers may reject decode() for already-decoded/cached images.
         }

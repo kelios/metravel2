@@ -30,6 +30,8 @@ type Props = {
   width?: number;
   imageHeight?: number;
   compactLayout?: boolean;
+  fullscreenOnMobile?: boolean;
+  onClose?: () => void;
   colors: ThemedColors;
 };
 
@@ -205,6 +207,84 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
   );
 };
 
+const FullscreenPopupOverlay: React.FC<{
+  visible: boolean;
+  onClose: () => void;
+  colors: ThemedColors;
+  children: React.ReactNode;
+}> = ({ visible, onClose, colors, children }) => {
+  const portalCreate = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    try {
+      return (require('react-dom') as any)?.createPortal ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  if (Platform.OS !== 'web' || !visible) return null;
+
+  const overlay = (
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10000,
+        backgroundColor: 'rgba(248, 246, 241, 0.96)',
+        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
+        paddingRight: 'max(12px, env(safe-area-inset-right, 0px))',
+        paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
+        paddingLeft: 'max(12px, env(safe-area-inset-left, 0px))',
+        boxSizing: 'border-box',
+        overflowY: 'auto',
+      }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: 560,
+          margin: '0 auto',
+        }}
+      >
+        <button
+          onClick={onClose}
+          aria-label="Закрыть карточку точки"
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            border: `1px solid ${colors.borderLight ?? colors.backgroundSecondary}`,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2,
+            boxShadow: '0 8px 20px rgba(0,0,0,0.08)',
+          }}
+        >
+          <Feather name="x" size={18} color={colors.text} />
+        </button>
+        {children}
+      </div>
+    </div>
+  );
+
+  if (typeof document !== 'undefined' && portalCreate) {
+    return portalCreate(overlay, document.body);
+  }
+
+  return overlay;
+};
+
 const fullscreenStyles = StyleSheet.create({
   container: {
     flex: 1,
@@ -307,6 +387,8 @@ const PlacePopupCard: React.FC<Props> = ({
   width = 332,
   imageHeight: _imageHeight = 56,
   compactLayout = false,
+  fullscreenOnMobile = false,
+  onClose,
   colors,
 }) => {
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
@@ -391,6 +473,7 @@ const PlacePopupCard: React.FC<Props> = ({
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
   const viewportGutter = bp === 'narrow' ? 24 : bp === 'compact' ? 32 : 48;
   const useCompactLayout = compactLayout || viewportWidth <= 420;
+  const useFullscreenMobileOverlay = Platform.OS === 'web' && fullscreenOnMobile && viewportWidth <= 560;
   const safeViewportWidth = Math.max(220, viewportWidth - viewportGutter);
   const popupWidthCap = useCompactLayout
     ? COMPACT_POPUP_MAX_WIDTH_BY_BREAKPOINT[bp]
@@ -641,7 +724,7 @@ const PlacePopupCard: React.FC<Props> = ({
     colors.textOnPrimary,
   ]);
 
-  return (
+  const cardBody = (
     <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
       <View style={styles.popupCard}>
         <View style={[styles.topSection, useSplitLayout && styles.topSectionSplit]}>
@@ -680,6 +763,21 @@ const PlacePopupCard: React.FC<Props> = ({
           {footerSlot}
         </View>
       </View>
+    </View>
+  );
+
+  return (
+    <>
+      {useFullscreenMobileOverlay ? (
+        <>
+          <View style={{ width: 1, height: 1, opacity: 0 }} />
+          <FullscreenPopupOverlay visible onClose={onClose ?? (() => {})} colors={colors}>
+            {cardBody}
+          </FullscreenPopupOverlay>
+        </>
+      ) : (
+        cardBody
+      )}
 
       {imageUrl && (
         <FullscreenImageViewer
@@ -690,7 +788,7 @@ const PlacePopupCard: React.FC<Props> = ({
           colors={colors}
         />
       )}
-    </View>
+    </>
   );
 };
 

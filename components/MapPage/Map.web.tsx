@@ -424,19 +424,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     });
   }, [circleCenter, coordinates, mode, radius, safeCenter]);
 
-  // Popup component
-  const PopupComponent = useMemo(() => {
-    if (!rl) return null;
-    return createMapPopupComponent({
-      colors,
-      themeContextValue,
-      userLocation: userLocationLatLng,
-      invalidateUserPoints: () => {
-        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
-      },
-    });
-  }, [colors, queryClient, rl, themeContextValue, userLocationLatLng]);
-
   const fitBoundsPadding = useMemo(() => {
     // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.
     // Radius mode: the panel is outside the map container, so large right padding over-zooms out.
@@ -470,11 +457,31 @@ const MapPageComponent: React.FC<Props> = (props) => {
     canRenderMap,
     setShowInitialLoader,
   });
+  const useCompactPopupLayout = useMemo(() => {
+    if (mapPaneWidth > 0) return mapPaneWidth <= 560;
+    if (typeof window !== 'undefined') return window.innerWidth <= 560;
+    return false;
+  }, [mapPaneWidth]);
   const { popupAutoPanPadding } = useMapPopupAutoPan({
     mapRef,
     mapPaneWidth,
     popupBottomOffset,
   });
+
+  // Popup component
+  const PopupComponent = useMemo(() => {
+    if (!rl) return null;
+    return createMapPopupComponent({
+      colors,
+      themeContextValue,
+      compactLayout: useCompactPopupLayout,
+      fullscreenOnMobile: useCompactPopupLayout,
+      userLocation: userLocationLatLng,
+      invalidateUserPoints: () => {
+        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+      },
+    });
+  }, [colors, queryClient, rl, themeContextValue, useCompactPopupLayout, userLocationLatLng]);
 
   const shouldShowLoadingOverlay = Platform.OS === 'web'
     ? !!leafletError || !canRenderMap

@@ -161,14 +161,19 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
         hasMoved: false,
       };
 
-      viewportNode.style.cursor = event.pointerType === 'mouse' ? 'grabbing' : '';
-      viewportNode.style.userSelect = 'none';
       applyOffsetTracked(baseOffset, false);
 
-      try {
-        viewportNode.setPointerCapture(event.pointerId);
-      } catch {
-        // noop
+      // For mouse, capture immediately; for touch, defer capture until
+      // horizontal axis is confirmed — iOS Safari cancels native scroll
+      // if pointer is captured before the gesture direction is known.
+      if (event.pointerType === 'mouse') {
+        viewportNode.style.cursor = 'grabbing';
+        viewportNode.style.userSelect = 'none';
+        try {
+          viewportNode.setPointerCapture(event.pointerId);
+        } catch {
+          // noop
+        }
       }
     };
 
@@ -187,6 +192,16 @@ export function useSliderPointerDrag(options: UseSliderPointerDragOptions): void
           return;
         }
         if (drag.axis == null) return;
+
+        // Axis just resolved to 'x' for a touch gesture — now safe to capture
+        if (drag.pointerType !== 'mouse' && drag.pointerId != null) {
+          viewportNode.style.userSelect = 'none';
+          try {
+            viewportNode.setPointerCapture(drag.pointerId);
+          } catch {
+            // noop
+          }
+        }
       }
 
       if (drag.axis !== 'x') return;

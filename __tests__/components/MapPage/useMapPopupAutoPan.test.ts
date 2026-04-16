@@ -67,16 +67,21 @@ describe('useMapPopupAutoPan', () => {
 
     expect(result.current.popupAutoPanPadding).toEqual(
       expect.objectContaining({
-        autoPanPaddingTopLeft: [12, 110],
-        autoPanPaddingBottomRight: [12, 124],
+        autoPanPaddingTopLeft: [12, 152],
+        autoPanPaddingBottomRight: [12, 72],
       })
     )
   })
 
   it('re-centers popup into the mobile safe area when it overlaps the header and chips area', () => {
     const panBy = jest.fn()
-    const on = jest.fn()
-    const off = jest.fn()
+    const listeners = new Map<string, (...args: any[]) => void>()
+    const on = jest.fn((event: string, callback: (...args: any[]) => void) => {
+      listeners.set(event, callback)
+    })
+    const off = jest.fn((event: string) => {
+      listeners.delete(event)
+    })
 
     const mapEl = {
       getBoundingClientRect: () => ({
@@ -124,8 +129,14 @@ describe('useMapPopupAutoPan', () => {
       },
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -179], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: true, duration: 0.35 })
     expect(on).toHaveBeenCalledWith('popupclose', expect.any(Function))
+    expect(on).toHaveBeenCalledWith('moveend', expect.any(Function))
+
+    panBy.mockClear()
+    listeners.get('moveend')?.()
+
+    expect(panBy).toHaveBeenCalledWith([0, -226], { animate: true, duration: 0.35 })
   })
 
   it('keeps observing popup size changes after the first second so late image growth can re-pan', () => {
@@ -181,7 +192,9 @@ describe('useMapPopupAutoPan', () => {
     })
 
     expect(resizeObserverInstances).toHaveLength(1)
-    expect(panBy).not.toHaveBeenCalled()
+    expect(panBy).toHaveBeenCalledWith([0, -47], { animate: true, duration: 0.35 })
+
+    panBy.mockClear()
 
     act(() => {
       jest.advanceTimersByTime(1500)
@@ -193,6 +206,6 @@ describe('useMapPopupAutoPan', () => {
       resizeObserverInstances[0]?.trigger()
     })
 
-    expect(panBy).toHaveBeenCalledWith([0, -181], { animate: true, duration: 0.35 })
+    expect(panBy).toHaveBeenCalledWith([0, -228], { animate: true, duration: 0.35 })
   })
 })
