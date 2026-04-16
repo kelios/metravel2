@@ -75,7 +75,7 @@ function TravelListItem({
         if (!isWeb || !isMobile || !isFirst || typeof navigator === 'undefined') return false;
         return isIOSSafariUserAgent(
             String(navigator.userAgent || ''),
-            typeof navigator.maxTouchPoints === 'number' ? navigator.maxTouchPoints : 0,
+            navigator.maxTouchPoints,
         );
     }, [isFirst, isMobile, isWeb]);
     const tagIconColor = colors.textSecondary;
@@ -91,7 +91,7 @@ function TravelListItem({
     } = travel;
 
     const title = useMemo(() => {
-        const v = typeof name === 'string' ? name.trim() : '';
+        const v = name.trim();
         return v || 'Без названия';
     }, [name]);
 
@@ -104,15 +104,14 @@ function TravelListItem({
     const viewsFormatted = useMemo(() => formatViewCount(views), [views]);
 
     const travelKey = useMemo(() => {
-        if (typeof slug === 'string' && slug.trim()) return slug.trim();
-        if (typeof id === 'number' || typeof id === 'string') return String(id);
-        return '';
+        if (slug.trim()) return slug.trim();
+        return String(id);
     }, [id, slug]);
 
     const travelUrl = useMemo(() => {
         return resolveTravelUrl({
             id: Number(id) || 0,
-            slug: typeof slug === 'string' ? slug : undefined,
+            slug,
             url: typeof (travel as any)?.url === 'string' ? (travel as any).url : undefined,
         } as any);
     }, [id, slug, travel]);
@@ -125,7 +124,7 @@ function TravelListItem({
       isNavigable,
     } = useTravelListItemNavigation({
       id,
-      slug: typeof slug === 'string' ? slug : undefined,
+      slug,
       travelUrl,
       isMetravel: _isMetravel,
       selectable,
@@ -146,7 +145,7 @@ function TravelListItem({
     }, [travel_image_thumb_url]);
 
     const countries = useMemo(() => {
-        const raw = typeof countryName === 'string' ? countryName : String(countryName ?? '');
+        const raw = countryName;
         return raw.split(",").map((c) => c.trim()).filter(Boolean);
     }, [countryName]);
 
@@ -163,6 +162,11 @@ function TravelListItem({
         ),
         [effectiveWidth, isMobile]
     );
+
+    const allowCriticalWebBlur = useMemo(() => {
+        if (Platform.OS !== 'web') return false;
+        return !isFirst;
+    }, [isFirst]);
 
     // ✅ БИЗНЕС: Определение badges для социального доказательства
     const popularityFlags = useMemo(() => {
@@ -514,7 +518,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
   </View>
 ) : null;
 
-const unifiedCard = (
+const card = (
   <UnifiedTravelCard
     title={title}
     imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
@@ -554,17 +558,15 @@ const unifiedCard = (
     mediaProps={{
       placeholderBlurhash: PLACEHOLDER_BLURHASH,
       blurBackground: true,
-      allowCriticalWebBlur: Platform.OS === 'web',
+      allowCriticalWebBlur,
       revealOnLoadOnly: isMobileSafariFirstCard,
       recyclingKey: travelKey,
       priority: Platform.OS === 'web' ? (isFirst ? 'high' : 'low') : 'normal',
       loading: Platform.OS === 'web' ? (isFirst ? 'eager' : 'lazy') : 'lazy',
-      prefetch: Platform.OS === 'web' ? !!isFirst : false,
+      prefetch: Platform.OS === 'web' ? isFirst : false,
     }}
   />
 );
-
-const card = unifiedCard;
 
 return (
   <View
@@ -672,9 +674,7 @@ function areEqual(prev: Props, next: Props) {
         prev.cardWidth !== next.cardWidth ||
         prev.imageHeight !== next.imageHeight ||
         prev.viewportWidth !== next.viewportWidth
-    ) {
-        return false;
-    }
+    ) return false;
 
     return true;
 }

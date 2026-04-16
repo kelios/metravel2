@@ -206,21 +206,21 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
           <Text style={styles.lightStepNumber}>2</Text>
-          <Text style={styles.lightStepTitle}>Категории + радиус</Text>
+          <Text style={styles.lightStepTitle}>Что посмотреть + радиус</Text>
           <Text style={selectedCategoriesCount > 0 ? styles.lightStepBadge : styles.lightStepHint}>
-            {selectedCategoriesCount > 0 ? `${selectedCategoriesCount} кат.` : 'Все категории'}
+            {selectedCategoriesCount > 0 ? `${selectedCategoriesCount} выбрано` : 'Все типы'}
           </Text>
         </View>
         {categoriesWithCount.length > 0 && (
           <CollapsibleSection
-            title="Категории"
+            title="Что посмотреть"
             badge={selectedCategoriesCount || undefined}
             defaultOpen={false}
-            icon="grid"
+            icon="map-pin"
             tone="flat"
           >
             {!isMobile ? (
-              <Text style={styles.sectionHint}>Уточните поиск по категориям мест</Text>
+              <Text style={styles.sectionHint}>Уточните поиск по типу мест</Text>
             ) : null}
             <MultiSelectField
               items={categoriesWithCount}

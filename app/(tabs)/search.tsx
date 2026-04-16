@@ -1,14 +1,4 @@
-/**
- * SearchScreen - Optimized for instant perceived performance
- * 
- * Pattern: YouTube-style skeleton → content transition
- * - Skeleton renders instantly on first paint (no delays)
- * - Data loads in background while skeleton is visible
- * - Web sidebar navigation sections remain accessible during loading
- * - Smooth fade transition when content is ready
- * - No empty screens or heavy first render
- */
-import { Suspense, lazy, memo, useCallback, useMemo, useState, useEffect, useRef } from 'react'
+import { memo, useMemo } from 'react'
 import { StyleSheet, View, Platform } from 'react-native'
 import { usePathname, useRouter } from 'expo-router'
 import { useIsFocused } from '@react-navigation/native'
@@ -21,10 +11,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useAuth } from '@/context/AuthContext'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
-import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton'
-
-/** Lazy load main content - data fetching starts immediately inside ListTravelBase */
-const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'))
+import ListTravel from '@/components/listTravel/ListTravelBase'
 
 /** SEO metadata */
 const SEO_TITLE = 'Поиск маршрутов и идей путешествий по Беларуси | Metravel'
@@ -36,20 +23,6 @@ function SearchScreen() {
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const { isAuthenticated } = useAuth()
-
-  // The skeleton already fully covers the content layer.
-  // Fading the mounted list from opacity 0 to 1 creates a second visual frame
-  // that looks like image re-rendering on the search grid.
-  const [contentReady, setContentReady] = useState(false)
-  const handleContentReady = useCallback(() => setContentReady(true), [])
-
-  // Handle sidebar section navigation (scroll to filter section when clicked in skeleton)
-  const handleSectionPress = useCallback((sectionKey: string) => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const element = document.querySelector(`[data-filter-section="${sectionKey}"]`)
-      element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [])
 
   const styles = useMemo(
     () =>
@@ -78,20 +51,6 @@ function SearchScreen() {
           },
           default: { display: 'none' as const },
         }) as any,
-        contentWrapper: {
-          flex: 1,
-          position: 'relative' as const,
-        },
-        skeletonLayer: {
-          ...StyleSheet.absoluteFillObject,
-          zIndex: 1,
-        },
-        contentLayer: {
-          flex: 1,
-        },
-        contentLayerHidden: {
-          display: 'none' as const,
-        },
       }),
     [colors],
   )
@@ -121,27 +80,7 @@ function SearchScreen() {
             </View>
           }
         >
-          <View style={styles.contentWrapper}>
-            {/* Skeleton layer - visible instantly, fades out when content ready */}
-            {!contentReady && (
-              <View 
-                style={styles.skeletonLayer}
-                testID="search-skeleton-layer"
-              >
-                <SearchPageSkeleton 
-                  showSidebarNavigation={Platform.OS === 'web'}
-                  onSectionPress={handleSectionPress}
-                />
-              </View>
-            )}
-
-            {/* Content layer - renders behind skeleton, fades in when ready */}
-            <View style={[styles.contentLayer, !contentReady && styles.contentLayerHidden]}>
-              <Suspense fallback={<SearchPageSkeleton showSidebarNavigation={false} />}>
-                <ListTravelWithReadyCallback onReady={handleContentReady} />
-              </Suspense>
-            </View>
-          </View>
+          <ListTravel />
         </ErrorBoundary>
 
         {isAuthenticated && Platform.OS !== 'web' && (
@@ -157,21 +96,5 @@ function SearchScreen() {
   )
 }
 
-/** Wrapper that signals when ListTravel has mounted and is ready */
-const ListTravelWithReadyCallback = memo<{ onReady: () => void }>(({ onReady }) => {
-  const hasSignaled = useRef(false)
-  
-  useEffect(() => {
-    if (!hasSignaled.current) {
-      hasSignaled.current = true
-      // Signal ready on next frame to ensure render is complete
-      requestAnimationFrame(() => onReady())
-    }
-  }, [onReady])
-
-  return <ListTravel />
-})
-
-ListTravelWithReadyCallback.displayName = 'ListTravelWithReadyCallback'
 
 export default memo(SearchScreen)

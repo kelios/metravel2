@@ -5,7 +5,6 @@ import {
   View,
   ViewStyle,
 } from 'react-native'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useLocalSearchParams, usePathname } from 'expo-router'
 import { useRoute } from '@react-navigation/native'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -27,7 +26,6 @@ import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
 import { buildFacetCounts, buildTravelFilterGroups } from './utils/filterGroups'
-import { deleteTravel } from '@/api/travelsApi'
 import { fetchTravelFacets } from '@/api/travelListQueries'
 import type { FilterOptions } from './utils/listTravelTypes'
 import {
@@ -46,11 +44,31 @@ import {
 const MemoizedTravelItem = memo(RenderTravelItem);
 const ListTravelExportControlsLazy = lazy(() => import('./ListTravelExportControls'));
 
+let nativeAsyncStorageModulePromise: Promise<typeof import('@react-native-async-storage/async-storage')> | null = null;
+
+const getNativeAsyncStorageModule = async () => {
+  if (!nativeAsyncStorageModulePromise) {
+    nativeAsyncStorageModulePromise = import('@react-native-async-storage/async-storage');
+  }
+
+  return nativeAsyncStorageModulePromise;
+};
+
+const loadNativeRecommendationsVisibility = async (): Promise<boolean> => {
+  const storageModule = await getNativeAsyncStorageModule();
+  const stored = await storageModule.default.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+  return stored === 'true';
+};
+
+const saveNativeRecommendationsVisibility = async (visible: boolean) => {
+  const storageModule = await getNativeAsyncStorageModule();
+  await storageModule.default.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
+};
+
 function ListTravelBase() {
     const colors = useThemedColors();
     const styles = useMemo(() => createListTravelBaseStyles(colors), [colors]);
     const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
-
     const {
       width: rawWidth,
       isPhone,
@@ -200,10 +218,9 @@ function ListTravelBase() {
 
         const loadRecommendationsVisibility = async () => {
             try {
-                const stored = await AsyncStorage.getItem(RECOMMENDATIONS_VISIBLE_KEY);
+                const stored = await loadNativeRecommendationsVisibility();
                 if (!isMounted) return;
-                const visible = stored === 'true';
-                setIsRecommendationsVisible(visible);
+                setIsRecommendationsVisible(stored);
             } catch (error) {
                 console.error('Error loading recommendations visibility:', error);
             } finally {
@@ -234,7 +251,7 @@ function ListTravelBase() {
                     // На web явно сохраняем "true" / "false", чтобы различать включенный и выключенный блок.
                     sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
                 } else {
-                    await AsyncStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, visible ? 'true' : 'false');
+                    await saveNativeRecommendationsVisibility(visible);
                 }
             } catch (error) {
                 console.error('Error saving recommendations visibility:', error);
@@ -336,7 +353,7 @@ function ListTravelBase() {
     } = useQuery({
       queryKey: ['travel-facets', debSearch, queryParams],
       queryFn: ({ signal } = {} as any) => fetchTravelFacets(debSearch, queryParams, { signal }),
-      enabled: shouldFetchFilterOptions,
+      enabled: shouldFetchFilterOptions && !!options,
       staleTime: 30 * 1000,
     });
 
@@ -377,6 +394,7 @@ function ListTravelBase() {
         if (deleteInFlightRef.current === targetId) return;
         deleteInFlightRef.current = targetId;
         try {
+          const { deleteTravel } = await import('@/api/travelsApi');
           await deleteTravel(String(targetId));
           removeTravelFromInfiniteTravelsCache(queryClient, targetId);
           setDelete(null);
@@ -504,6 +522,18 @@ function ListTravelBase() {
       return 280;
     }, [effectiveWidth]);
 
+    const searchCardWidth = useMemo(() => {
+      if (Platform.OS !== 'web') return undefined;
+
+      const columns = Math.max(gridColumns, 1);
+      const totalGap = gapSize * Math.max(columns - 1, 0);
+      const resolvedWidth = (effectiveWidth - totalGap) / columns;
+
+      return Number.isFinite(resolvedWidth) && resolvedWidth > 0
+        ? Math.round(resolvedWidth)
+        : undefined;
+    }, [effectiveWidth, gapSize, gridColumns]);
+
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
         <MemoizedTravelItem
@@ -518,6 +548,7 @@ function ListTravelBase() {
           selectable={isExport}
           isSelected={isSelected(travel.id)}
           onToggle={() => toggleSelect(travel)}
+          cardWidth={searchCardWidth}
           imageHeight={searchCardImageHeight}
           viewportWidth={width}
         />
@@ -529,6 +560,7 @@ function ListTravelBase() {
         isMeTravel,
         isMobileDevice,
         isSuper,
+        searchCardWidth,
         searchCardImageHeight,
         toggleSelect,
         userId,

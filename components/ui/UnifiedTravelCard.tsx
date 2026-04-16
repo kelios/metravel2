@@ -159,8 +159,8 @@ function UnifiedTravelCard({
       optimizeImageUrl(imageUrl, {
         width: targetWidth,
         height: targetHeight,
-        quality: isFeatured ? 60 : 52,
-        format: 'webp',
+        quality: isFeatured ? 60 : 44,
+        format: 'auto',
         fit: mediaFit === 'contain' ? 'contain' : 'cover',
       }) ?? imageUrl
     );
@@ -444,7 +444,7 @@ function UnifiedTravelCard({
     };
   }, [defaultWebProps, enableWebHoverEffects, isWeb, onPress, onLongPress, handleLongPress, webPressableProps]);
 
-  const showHeroTitle = heroTitleOverlay && typeof title === 'string' && title.trim().length > 0;
+  const showHeroTitle = heroTitleOverlay && title.trim().length > 0;
   const normalizedMetaText = typeof metaText === 'string' ? metaText.trim() : '';
   const displayMetaText = normalizedMetaText || 'Локация уточняется';
 

@@ -1,4 +1,4 @@
-import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   ActivityIndicator,
   Platform,
@@ -16,7 +16,7 @@ import { FlashList } from '@shopify/flash-list'
 
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/ui/EmptyState'
-import { TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
+import { SkeletonLoader, TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import {
@@ -60,6 +60,12 @@ const RecommendationsPlaceholder = () => (
     <ActivityIndicator size="small" />
   </View>
 )
+
+const FallbackTravelCardSkeleton = () => (
+  <SkeletonLoader width="100%" height={320} borderRadius={16} />
+)
+
+const TravelCardSkeletonComponent = TravelCardSkeleton ?? FallbackTravelCardSkeleton
 
 interface RightColumnProps {
   search: string
@@ -265,10 +271,6 @@ const RightColumn: React.FC<RightColumnProps> = (
     }), [contentPadding])
 
     const paddingHorizontalStyle = useMemo(() => ({ paddingHorizontal: contentPadding }), [contentPadding])
-    const skeletonPaddingStyle = useMemo(
-      () => ({ paddingHorizontal: isWeb ? 0 : contentPadding, paddingTop: 8 }),
-      [contentPadding]
-    )
     const recommendationsSkeletonStyle = useMemo(
       () => ({
         height: RECOMMENDATIONS_TOTAL_HEIGHT,
@@ -442,31 +444,43 @@ const RightColumn: React.FC<RightColumnProps> = (
       )
     }, [showRecommendations, handleRecommendationsLayout, isMobile]);
 
-    const [showDelayedSkeleton, setShowDelayedSkeleton] = useState(false)
-
     const handleRecommendationsToggle = useCallback(() => {
       const nextVisible = !showRecommendations
       pendingRecommendationsScrollRef.current = nextVisible
       handleRecommendationsVisibilityChange(nextVisible)
     }, [handleRecommendationsVisibilityChange, showRecommendations])
 
-    const skeletonDelayMs = Platform.OS === 'web' ? 200 : 250
-
-    const shouldShowSkeleton =
-      showInitialLoading && travels.length === 0 && showDelayedSkeleton
-
-    useEffect(() => {
-      if (!showInitialLoading || travels.length !== 0) {
-        setShowDelayedSkeleton(false)
-        return
-      }
-
-      const t = setTimeout(() => setShowDelayedSkeleton(true), skeletonDelayMs)
-      return () => {
-        clearTimeout(t)
-        setShowDelayedSkeleton(false)
-      }
-    }, [showInitialLoading, travels.length, skeletonDelayMs])
+    const shouldShowSkeleton = showInitialLoading && travels.length === 0
+    const initialSkeletonCount = useMemo(() => {
+      if (isMobile) return 4
+      return Math.max(gridColumns * 2, 6)
+    }, [gridColumns, isMobile])
+    const skeletonCardWidth = useMemo(() => {
+      if (Platform.OS !== 'web') return '100%'
+      const columns = Math.max(gridColumns, 1)
+      if (isMobile || columns === 1) return '100%'
+      return `calc((100% - ${(columns - 1) * cardSpacing}px) / ${columns})`
+    }, [cardSpacing, gridColumns, isMobile])
+    const skeletonGridStyle = useMemo(
+      () => ({
+        flexDirection: 'row' as const,
+        flexWrap: 'wrap' as const,
+        gap: cardSpacing,
+        paddingHorizontal: isWeb ? 0 : contentPadding,
+        paddingTop: 8,
+        paddingBottom: 24,
+      }),
+      [cardSpacing, contentPadding]
+    )
+    const skeletonCardWrapperStyle = useMemo<StyleProp<ViewStyle>>(
+      () => ({
+        width: skeletonCardWidth as any,
+        ...(Platform.OS === 'web'
+          ? ({ flexGrow: 0, flexShrink: 0, flexBasis: skeletonCardWidth as any } as const)
+          : null),
+      }),
+      [skeletonCardWidth]
+    )
 
     // Always render the search bar, even on mobile
 
@@ -597,11 +611,13 @@ const RightColumn: React.FC<RightColumnProps> = (
             </View>
           )}
 
-          {/* Initial Loading - Only show skeleton when actually loading initial data */}
-          {shouldShowSkeleton && isWebMobile && (
-            <View style={skeletonPaddingStyle}>
-              {Array.from({ length: 4 }).map((_, idx) => (
-                <TravelCardSkeleton key={`travel-skeleton-${idx}`} />
+          {/* Initial Loading - local shell for all layouts */}
+          {shouldShowSkeleton && (
+            <View style={skeletonGridStyle}>
+              {Array.from({ length: initialSkeletonCount }).map((_, idx) => (
+                <View key={`travel-skeleton-${idx}`} style={skeletonCardWrapperStyle as any}>
+                  <TravelCardSkeletonComponent />
+                </View>
               ))}
             </View>
           )}
