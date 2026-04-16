@@ -67,7 +67,6 @@ const saveNativeRecommendationsVisibility = async (visible: boolean) => {
 
 function ListTravelBase() {
     const colors = useThemedColors();
-    const styles = useMemo(() => createListTravelBaseStyles(colors), [colors]);
     const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
     const {
       width: rawWidth,
@@ -170,6 +169,8 @@ function ListTravelBase() {
 
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
     const isMobileDevice = viewportState.isMobileDevice;
+    const sidebarWidth = viewportState.sidebarWidth;
+    const styles = useMemo(() => createListTravelBaseStyles(colors, sidebarWidth), [colors, sidebarWidth]);
     // Cards layout rule: on mobile widths we always render a single column.
     const isCardsSingleColumn = viewportState.isCardsSingleColumn;
     const gapSize = viewportState.gapSize;
@@ -518,8 +519,8 @@ function ListTravelBase() {
     const searchCardImageHeight = useMemo(() => {
       if (effectiveWidth < BREAKPOINTS.MOBILE) return 220;
       if (effectiveWidth < BREAKPOINTS.TABLET) return 240;
-      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 260;
-      return 280;
+      if (effectiveWidth < BREAKPOINTS.DESKTOP) return 270;
+      return 300;
     }, [effectiveWidth]);
 
     const searchCardWidth = useMemo(() => {
@@ -592,7 +593,7 @@ function ListTravelBase() {
 
     const searchHeaderStyle = useMemo(
       () => isMobileDevice
-        ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
+        ? [styles.searchHeader, { paddingHorizontal: contentPadding }]
         : [styles.searchHeader, { paddingHorizontal: contentPadding }],
       [isMobileDevice, contentPadding, styles.searchHeader]
     );

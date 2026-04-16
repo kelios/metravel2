@@ -545,7 +545,7 @@ const card = (
     rightTopSlot={selectable ? null : rightTopSlot}
     containerOverlaySlot={selectableOverlay}
     contentSlot={contentSlotWithoutTitle}
-    webHoverScale={false}
+    webHoverScale={!isMobile && Platform.OS === 'web'}
     webAsView={isWeb}
     webPressableProps={
       isWeb

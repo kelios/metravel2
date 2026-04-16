@@ -80,12 +80,13 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       position: 'relative',
       zIndex: 10,
       backgroundColor: colors.surface,
+      paddingBottom: DESIGN_TOKENS.spacing.xs,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
         } as any,
         ios: DESIGN_TOKENS.shadowsNative.light,
-        android: { elevation: 2 },
+        android: { elevation: 3 },
         default: DESIGN_TOKENS.shadowsNative.light,
       }),
     },
