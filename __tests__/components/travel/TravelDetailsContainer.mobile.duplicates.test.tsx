@@ -70,17 +70,6 @@ jest.mock('@/hooks/useScrollNavigation', () => ({
   }),
 }));
 
-jest.mock('@/hooks/useMenuState', () => ({
-  useMenuState: () => ({
-    isMenuOpen: false,
-    menuWidth: 280,
-    animatedX: { interpolate: () => 0 },
-    openMenu: jest.fn(),
-    closeMenu: jest.fn(),
-    toggleMenu: jest.fn(),
-  }),
-}));
-
 jest.mock('@/hooks/useProgressiveLoading', () => ({
   useProgressiveLoad: () => ({ shouldLoad: true, setElementRef: jest.fn() }),
   ProgressiveWrapper: ({ children }: any) => children,

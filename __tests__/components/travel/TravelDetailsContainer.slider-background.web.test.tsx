@@ -57,21 +57,6 @@ jest.mock('@/utils/toast', () => ({
   showToast: jest.fn(),
 }))
 
-jest.mock('@/hooks/useMenuState', () => ({
-  useMenuState: () => ({
-    menuOpen: false,
-    isMenuOpen: false,
-    toggleMenu: jest.fn(),
-    openMenu: jest.fn(),
-    closeMenu: jest.fn(),
-    animatedX: { interpolate: jest.fn(), setValue: jest.fn() },
-    animateMenu: jest.fn(),
-    menuWidth: 320,
-    menuWidthNum: 320,
-    openMenuOnDesktop: jest.fn(),
-  }),
-}))
-
 jest.mock('@/hooks/useTravelHeroState', () => ({
   useTravelHeroState: jest.fn(),
 }))
