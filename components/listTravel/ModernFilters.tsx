@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+import { BREAKPOINTS } from './utils/listTravelConstants';
 
 // Подкомпоненты из filters/
 import {
@@ -63,11 +63,11 @@ function getModernFiltersReserveState(params: {
 }
 
 function getModernFiltersViewportState() {
-  // Must match isMobileDevice threshold in listTravelBaseModel (BREAKPOINTS.TABLET = 1024).
-  // At 768–1023px the sidebar is a fullscreen overlay, so it needs the sticky footer.
+  // Must match usesOverlaySidebar threshold in listTravelBaseModel (BREAKPOINTS.DESKTOP = 1440).
+  // On compact web widths the sidebar is a fullscreen overlay, so it needs the sticky footer.
   const isNarrowWeb =
     Platform.OS === 'web'
-      && Dimensions.get('window').width < METRICS.breakpoints.largeTablet;
+      && Dimensions.get('window').width < BREAKPOINTS.DESKTOP;
 
   return {
     isNarrowWeb,

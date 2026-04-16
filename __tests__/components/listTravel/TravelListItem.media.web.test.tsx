@@ -113,6 +113,14 @@ describe('TravelListItem media props on web', () => {
     expect(props.insetMedia).toBe(false);
   });
 
+  it('does not pass a fixed width to the web card when grid slot already controls layout', () => {
+    renderItem({ cardWidth: 320, viewportWidth: 1280 });
+
+    const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
+    expect(props).toBeTruthy();
+    expect(props.width).toBeUndefined();
+  });
+
   it('keeps the first mobile web card hidden until onLoad only on iPhone Safari', () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:

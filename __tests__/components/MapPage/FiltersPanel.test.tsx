@@ -150,7 +150,7 @@ describe('FiltersPanel', () => {
         expect(defaultProps.onFilterChange).toHaveBeenCalled();
     });
 
-  it('shows categories section when data is available', () => {
+  it('shows the sightseeing and radius section when data is available', () => {
       const propsWithData = {
         ...defaultProps,
         filterValue: {
@@ -164,7 +164,8 @@ describe('FiltersPanel', () => {
         ],
       };
       const { getByText } = renderWithTheme(<FiltersPanel />, propsWithData);
-      expect(getByText('Категории')).toBeTruthy();
+      expect(getByText('Что посмотреть + радиус')).toBeTruthy();
+      expect(getByText('Что посмотреть')).toBeTruthy();
   });
 
   it('keeps the mobile radius mode footer hidden and shows the compact header summary instead', () => {

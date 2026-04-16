@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
 
+test.use({ viewport: { width: 1600, height: 1200 } });
+
 test.describe('Filters', () => {
   test('year filter can be set', async ({ page }) => {
     await page.goto('/travelsby', { waitUntil: 'domcontentloaded' });

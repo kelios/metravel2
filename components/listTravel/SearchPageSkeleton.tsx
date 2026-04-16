@@ -274,8 +274,9 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
   // Use the same breakpoints as listTravelBaseModel to avoid layout shift
   const viewportWidth =
     Platform.OS === 'web' && typeof window !== 'undefined' ? window.innerWidth : responsiveWidth;
-  const isMobile = viewportWidth < BREAKPOINTS.TABLET; // 1024 — matches isMobileDevice
+  const isMobile = viewportWidth < BREAKPOINTS.TABLET;
   const isTablet = viewportWidth >= BREAKPOINTS.TABLET && viewportWidth < BREAKPOINTS.DESKTOP;
+  const usesOverlaySidebar = viewportWidth < BREAKPOINTS.DESKTOP;
 
   const cardCount = useMemo(() => {
     if (isMobile) return 4;
@@ -293,7 +294,7 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
     container: {
       flex: 1,
       backgroundColor: colors.background,
-      flexDirection: isMobile ? 'column' : 'row',
+      flexDirection: usesOverlaySidebar ? 'column' : 'row',
     },
     mainContent: {
       flex: 1,
@@ -302,10 +303,10 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
     scrollArea: {
       flex: 1,
     },
-  }), [colors, isMobile]);
+  }), [colors, usesOverlaySidebar]);
 
-  // Desktop/Tablet layout with sidebar
-  if (!isMobile) {
+  // Wide desktop layout with docked sidebar
+  if (!usesOverlaySidebar) {
     return (
       <View style={styles.container} testID="search-skeleton">
         <SidebarSkeleton 
@@ -331,10 +332,10 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
     );
   }
 
-  // Mobile layout
+  // Compact layout without docked sidebar
   return (
     <View style={styles.container} testID="search-skeleton-mobile">
-      <SearchHeaderSkeleton colors={colors} isMobile={true} />
+      <SearchHeaderSkeleton colors={colors} isMobile={isMobile} />
       <ScrollView 
         style={styles.scrollArea}
         showsVerticalScrollIndicator={false}
@@ -342,8 +343,8 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
       >
         <CardsGridSkeleton 
           count={cardCount}
-          columns={1}
-          isMobile={true}
+          columns={isMobile ? 1 : columns}
+          isMobile={isMobile}
         />
       </ScrollView>
     </View>
@@ -351,4 +352,3 @@ export const SearchPageSkeleton = memo<SearchPageSkeletonProps>(({
 });
 
 SearchPageSkeleton.displayName = 'SearchPageSkeleton';
-

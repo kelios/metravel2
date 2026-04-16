@@ -23,6 +23,7 @@ type ViewportState = {
   isTablet: boolean
   resolvedIsPortrait: boolean
   sidebarWidth: number
+  usesOverlaySidebar: boolean
   width: number
 }
 
@@ -87,6 +88,10 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
     Platform.OS === 'web'
       ? effectiveResponsiveWidth < BREAKPOINTS.TABLET
       : params.isPhone || params.isLargePhone || (params.isTabletSize && resolvedIsPortrait)
+  const usesOverlaySidebar =
+    Platform.OS === 'web'
+      ? effectiveResponsiveWidth < BREAKPOINTS.DESKTOP
+      : isMobileDevice
   const isTablet =
     Platform.OS === 'web'
       ? effectiveResponsiveWidth >= BREAKPOINTS.TABLET && effectiveResponsiveWidth < BREAKPOINTS.DESKTOP
@@ -100,14 +105,14 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
   const isCardsSingleColumn = width < BREAKPOINTS.MOBILE
 
   // Sidebar narrower on tablet range (1024–1280px) to give cards more room
-  const sidebarWidth = isMobileDevice
+  const sidebarWidth = usesOverlaySidebar
     ? 0
     : width < 1280
       ? 280
       : 320
 
-  // Sidebar is visible for all non-mobile (>=1024px), not only desktop (>=1440px)
-  const effectiveWidth = !isMobileDevice ? width - sidebarWidth : width
+  // Compact web widths use overlay filters; the docked sidebar appears from desktop widths.
+  const effectiveWidth = !usesOverlaySidebar ? width - sidebarWidth : width
 
   // Gap is based on effectiveWidth (content area) so it stays proportional
   // when sidebar appears/disappears at the 1024px threshold
@@ -141,7 +146,7 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
   let gridColumns: number
   if (isCardsSingleColumn) {
     gridColumns = 1
-  } else if (isMobileDevice) {
+  } else if (usesOverlaySidebar) {
     gridColumns = calculateColumns(width, resolvedIsPortrait ? 'portrait' : 'landscape')
   } else if (!isTablet || !resolvedIsPortrait) {
     gridColumns = calculateColumns(effectiveWidth, 'landscape')
@@ -150,9 +155,9 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
   }
 
   // On large desktop (>=1920px content area) allow 4 columns for compact layout
-  if (!isMobileDevice && effectiveWidth >= BREAKPOINTS.DESKTOP_LARGE) {
+  if (!usesOverlaySidebar && effectiveWidth >= BREAKPOINTS.DESKTOP_LARGE) {
     gridColumns = Math.min(gridColumns, 4)
-  } else if (!isMobileDevice && effectiveWidth >= BREAKPOINTS.DESKTOP) {
+  } else if (!usesOverlaySidebar && effectiveWidth >= BREAKPOINTS.DESKTOP) {
     gridColumns = Math.min(gridColumns, 3)
   }
 
@@ -167,6 +172,7 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
     isTablet,
     resolvedIsPortrait,
     sidebarWidth,
+    usesOverlaySidebar,
     width,
   }
 }

@@ -14,7 +14,7 @@ jest.mock('@/hooks/useDebouncedValue', () => ({
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () =>
     (global as any).__mockResponsive ?? {
-      width: 1200,
+      width: 1440,
       height: 800,
       isSmallPhone: false,
       isPhone: false,
@@ -248,7 +248,7 @@ describe('ListTravel Integration Tests', () => {
     });
 
     (global as any).__mockResponsive = {
-      width: 1200,
+      width: 1440,
       height: 800,
       isSmallPhone: false,
       isPhone: false,

@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { METRICS } from '@/constants/layout';
+import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 
 export interface QuickFilterChip {
   id: string;
@@ -23,11 +23,11 @@ export function getStickySearchViewportState(params: {
       Platform.OS === 'web' &&
       typeof navigator !== 'undefined' &&
       /Mac|iPhone|iPad/.test(navigator.platform),
-    // Must match isMobileDevice threshold in listTravelBaseModel (BREAKPOINTS.TABLET = 1024).
-    // At 768–1023px sidebar is hidden, so the filter button must be visible.
+    // Must match usesOverlaySidebar threshold in listTravelBaseModel (BREAKPOINTS.DESKTOP = 1440).
+    // On compact web widths the sidebar is hidden, so the filter button must be visible.
     isMobile:
       Platform.OS === 'web'
-        ? effectiveWidth < METRICS.breakpoints.largeTablet
+        ? effectiveWidth < BREAKPOINTS.DESKTOP
         : params.isPhone || params.isLargePhone,
   };
 }

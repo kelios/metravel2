@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
 
+test.use({ viewport: { width: 1600, height: 1200 } });
+
 test.describe('@smoke Home quick filters', () => {
   test('палатка navigates to search and applies ночлег filter', async ({ page }) => {
     await preacceptCookies(page);

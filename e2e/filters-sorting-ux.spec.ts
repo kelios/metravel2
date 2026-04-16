@@ -82,6 +82,20 @@ async function ensureInteractiveFiltersReady(page: any) {
   }
 }
 
+async function ensureFiltersPanelVisible(page: any) {
+  const filtersTitle = page.getByText('Фильтры', { exact: true }).first();
+  if (await filtersTitle.isVisible().catch(() => false)) {
+    return;
+  }
+
+  const openFiltersButton = page.getByLabel('Открыть фильтры').first();
+  if (await openFiltersButton.isVisible().catch(() => false)) {
+    await openFiltersButton.click();
+  }
+
+  await expect(filtersTitle).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
+}
+
 async function hasEmptyResultsShell(page: any) {
   const resultsText = page.getByText(/0\s+путешествий/i).first();
   const resetLabel = page.getByLabel('Сбросить все фильтры и поиск').first();
@@ -181,9 +195,7 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await gotoWithRetry(page, getTravelsListPath());
 
     await ensureInteractiveFiltersReady(page);
-
-    // Wait for filters to be visible
-    await expect(page.getByText('Фильтры')).toBeVisible({ timeout: FILTER_TIMEOUT_MS });
+    await ensureFiltersPanelVisible(page);
   });
 
   test('sort dropdown shows current selection and expands on click', async ({ page }) => {
@@ -425,16 +437,31 @@ test.describe('@smoke Filters and Sorting UX', () => {
     await filterOption.click();
     await page.waitForTimeout(DEBOUNCE_MS);
     
-    // Click global clear button (in header or mobile clear all)
-    const clearAllButton = page
-      .locator(
-        '[aria-label^="Очистить все фильтры"], [data-testid="clear-all-button"], [testID="clear-all-button"], [aria-label="Сбросить все фильтры и поиск"]'
-      )
-      .first();
-    if (await clearAllButton.count()) {
-      await expect(clearAllButton).toBeVisible({ timeout: 5000 });
-      await clearAllButton.click();
-    } else {
+    // Prefer the primary visible "clear all" control instead of the first matching
+    // overlay header button, which can be partially covered by adjacent chrome.
+    const clearAllCandidates = [
+      page.getByRole('button', { name: /^Очистить все фильтры$/ }).first(),
+      page.locator('[data-testid="clear-all-button"], [testID="clear-all-button"]').first(),
+      page.getByRole('button', { name: /^Сбросить все фильтры и поиск$/ }).first(),
+      page.locator('[aria-label^="Очистить все фильтры"]').last(),
+    ];
+
+    let clickedClearAll = false;
+    for (const candidate of clearAllCandidates) {
+      if (!(await candidate.count())) {
+        continue;
+      }
+
+      if (!(await candidate.isVisible())) {
+        continue;
+      }
+
+      await candidate.click();
+      clickedClearAll = true;
+      break;
+    }
+
+    if (!clickedClearAll) {
       const resetButton = page.getByText(/^Сбросить$/).first();
       await expect(resetButton).toBeVisible({ timeout: 5000 });
       await resetButton.click();

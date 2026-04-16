@@ -119,12 +119,10 @@ describe('run-e2e-changed', () => {
   })
 
   it('reads changed files from explicit file input in dry-run json mode', () => {
-    const { makeTempDir, writeTextFile } = require('./cli-test-utils')
-    const fs = require('fs')
-    const path = require('path')
+    const { makeTempDir, removeDir, writeTextFile } = require('./cli-test-utils')
 
     const dir = makeTempDir('run-e2e-changed-')
-    const changedFilesFile = path.join(dir, 'changed.txt')
+    const changedFilesFile = `${dir}/changed.txt`
     writeTextFile(changedFilesFile, 'components/messages/ChatView.tsx\n')
 
     const result = runNodeCli([
@@ -141,6 +139,6 @@ describe('run-e2e-changed', () => {
     expect(payload.matchedCategories).toEqual(['messages'])
     expect(payload.specs).toEqual(['e2e/messages.spec.ts'])
 
-    fs.rmSync(dir, { recursive: true, force: true })
+    removeDir(dir)
   })
 })

@@ -44,6 +44,7 @@ type RightColumnComparableProps = {
   isMobile: boolean
   isRecommendationsVisible: boolean
   isSearchPending?: boolean
+  onFiltersPress?: unknown
   renderItem: unknown
   search: string
   showEmptyState: boolean
@@ -72,6 +73,7 @@ export function areRightColumnPropsEqual(
     prev.isSearchPending === next.isSearchPending &&
     prev.isError === next.isError &&
     prev.isExport === next.isExport &&
+    prev.onFiltersPress === next.onFiltersPress &&
     prev.showEmptyState === next.showEmptyState &&
     prev.showNextPageLoading === next.showNextPageLoading &&
     prev.activeFiltersCount === next.activeFiltersCount &&

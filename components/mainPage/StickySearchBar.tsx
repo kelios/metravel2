@@ -52,10 +52,10 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderRadius: radii.lg,
-    paddingHorizontal: Platform.select({ default: spacing.xs, web: spacing.sm }),
-    paddingVertical: Platform.select({ default: spacing.xs, web: spacing.xs }),
+    paddingHorizontal: Platform.select({ default: spacing.xs, web: spacing.xs }),
+    paddingVertical: Platform.select({ default: spacing.xxs, web: spacing.xxs }),
     gap: Platform.select({ default: spacing.xs, web: spacing.xs }),
-    minHeight: Platform.select({ default: 48, web: 52 }),
+    minHeight: Platform.select({ default: 46, web: 48 }),
     ...Platform.select({
       web: {
         backdropFilter: 'blur(20px) saturate(180%)',
@@ -68,7 +68,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   containerMobile: {
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xxs,
-    minHeight: 44,
+    minHeight: 42,
     borderRadius: radii.md,
   },
   containerFlush: {
@@ -130,10 +130,10 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderRadius: 0,
     borderWidth: 0,
     borderColor: 'transparent',
-    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.md }),
-    paddingVertical: Platform.select({ default: spacing.xs, web: spacing.xs }),
+    paddingHorizontal: Platform.select({ default: spacing.sm, web: spacing.sm }),
+    paddingVertical: Platform.select({ default: spacing.xxs, web: spacing.xxs }),
     gap: spacing.xs,
-    height: Platform.select({ default: 40, web: 44 }),
+    height: Platform.select({ default: 38, web: 40 }),
     ...Platform.select({
       web: {
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -144,7 +144,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     flex: 1,
     minWidth: 0,
     marginBottom: 0,
-    height: 40,
+    height: 38,
     paddingHorizontal: spacing.xs,
     paddingVertical: spacing.xxs,
     gap: 6,
@@ -213,16 +213,11 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   actionsDesktop: {
     flexShrink: 0,
     flexWrap: 'nowrap',
-    padding: 4,
-    borderRadius: radii.full,
-    backgroundColor: colors.surfaceMuted,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      } as any,
-    }),
+    padding: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   resultsInline: {
     paddingHorizontal: spacing.sm,
@@ -252,8 +247,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     justifyContent: 'flex-start',
   },
   actionButton: {
-    width: Platform.select({ default: 46, web: 52 }),
-    height: Platform.select({ default: 46, web: 52 }),
+    width: Platform.select({ default: 42, web: 46 }),
+    height: Platform.select({ default: 42, web: 46 }),
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radii.pill,
@@ -273,13 +268,13 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderColor: colors.borderStrong,
   },
   actionButtonMobile: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 10,
   },
   actionButtonMobileWeb: {
-    width: 46,
-    height: 46,
+    width: 42,
+    height: 42,
     borderRadius: 12,
   },
   actionButtonActive: {
@@ -623,7 +618,7 @@ function StickySearchBar({
             })
           )}
 
-          {/* Кнопка фильтров: показываем только на мобильных, на вебе фильтры всегда в левой панели */}
+          {/* Кнопка фильтров: показываем на мобильных и compact-web ширинах, где сайдбар работает оверлеем */}
           {onFiltersPress && isMobile && (
             renderActionButton({
               accessibilityHint: hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined,

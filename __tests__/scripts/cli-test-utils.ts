@@ -46,3 +46,7 @@ export const writeTextFile = (filePath: string, content: string) => {
 export const makeTempDir = (prefix: string) => {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 };
+
+export const removeDir = (dirPath: string) => {
+  fs.rmSync(dirPath, { recursive: true, force: true });
+};

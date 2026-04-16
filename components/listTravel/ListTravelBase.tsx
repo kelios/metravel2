@@ -169,6 +169,7 @@ function ListTravelBase() {
 
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
     const isMobileDevice = viewportState.isMobileDevice;
+    const usesOverlaySidebar = viewportState.usesOverlaySidebar;
     const sidebarWidth = viewportState.sidebarWidth;
     const styles = useMemo(() => createListTravelBaseStyles(colors, sidebarWidth), [colors, sidebarWidth]);
     // Cards layout rule: on mobile widths we always render a single column.
@@ -287,8 +288,8 @@ function ListTravelBase() {
     const flatListRef = useRef<any>(null);
 
     const shouldFetchFilterOptions = useMemo(() => {
-      return !isMobileDevice || showFilters;
-    }, [isMobileDevice, showFilters]);
+      return !usesOverlaySidebar || showFilters;
+    }, [usesOverlaySidebar, showFilters]);
 
     /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({
@@ -582,8 +583,8 @@ function ListTravelBase() {
     const handleOpenFilters = useCallback(() => setShowFilters(true), []);
 
     const sidebarContainerStyle = useMemo(
-      () => isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar,
-      [isMobileDevice, styles.sidebar, styles.sidebarMobile]
+      () => usesOverlaySidebar ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar,
+      [usesOverlaySidebar, styles.sidebar, styles.sidebarMobile]
     );
 
     const rightColumnContainerStyle = useMemo(
@@ -753,9 +754,9 @@ function ListTravelBase() {
     );
     
   return (
-    <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
+    <View style={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}>
       <SidebarFilters
-        isMobile={isMobileDevice}
+        isMobile={usesOverlaySidebar}
         filterGroups={filterGroups}
         filter={filter}
         onSelect={onSelect}
@@ -763,9 +764,9 @@ function ListTravelBase() {
         isSuper={isSuper}
         setSearch={setSearch}
         resetFilters={resetFilters}
-        isVisible={!isMobileDevice || showFilters}
+        isVisible={!usesOverlaySidebar || showFilters}
         isLoading={filterOptionsLoading}
-        onClose={isMobileDevice ? handleCloseFilters : undefined}
+        onClose={usesOverlaySidebar ? handleCloseFilters : undefined}
         containerStyle={sidebarContainerStyle}
       />
 
@@ -812,7 +813,7 @@ function ListTravelBase() {
         refetch={refetch}
         onEndReached={handleListEndReached}
         onEndReachedThreshold={0.5}
-        onFiltersPress={isMobileDevice ? handleOpenFilters : undefined}
+        onFiltersPress={usesOverlaySidebar ? handleOpenFilters : undefined}
         containerStyle={rightColumnContainerStyle}
         searchHeaderStyle={searchHeaderStyle}
         cardsContainerStyle={cardsContainerStyle}
