@@ -38,6 +38,8 @@ const FullscreenPopupOverlay: React.FC<{
         flexDirection: 'column',
         overflow: 'hidden',
       }}
+      onClick={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {/* Hero image — 50% of screen */}
       <div
@@ -85,14 +87,19 @@ const FullscreenPopupOverlay: React.FC<{
         {/* Close button over image */}
         <button
           onClick={onClose}
+          onTouchEnd={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onClose()
+          }}
           aria-label="Закрыть"
           style={{
             position: 'absolute',
             top: 'max(12px, env(safe-area-inset-top, 12px))',
             right: 12,
-            width: 40,
-            height: 40,
-            borderRadius: 20,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
             border: 'none',
             backgroundColor: 'rgba(0,0,0,0.4)',
             backdropFilter: 'blur(8px)',
@@ -103,9 +110,10 @@ const FullscreenPopupOverlay: React.FC<{
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 2,
+            touchAction: 'manipulation',
           }}
         >
-          <Feather name="x" size={20} color="#fff" />
+          <Feather name="x" size={22} color="#fff" />
         </button>
 
         {/* Expand image button */}

@@ -644,8 +644,19 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   // Компонент для управления закрытием попапа
   const PopupWithClose: React.FC<{ point: LegacyMapPoint }> = ({ point }) => {
     const map = useMapHook?.();
+    const [forceClosed, setForceClosed] = useState(false);
+
+    // Reset forceClosed when popup re-opens
+    useEffect(() => {
+      if (!map) return;
+      const onOpen = () => setForceClosed(false);
+      map.on('popupopen', onOpen);
+      return () => { map.off('popupopen', onOpen); };
+    }, [map]);
 
     const handleClose = useCallback(() => {
+      // Immediately hide the fullscreen overlay portal, then close Leaflet popup
+      setForceClosed(true);
       map?.closePopup();
     }, [map]);
 
@@ -673,11 +684,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         autoPanPaddingBottomRight={[popupHorizontalPadding, 72] as any}
         closeButton
       >
-        <MapPopup
-          point={point}
-          onClose={handleClose}
-          resolveCategoryInfo={resolveCategoryInfo}
-        />
+        {!forceClosed && (
+          <MapPopup
+            point={point}
+            onClose={handleClose}
+            resolveCategoryInfo={resolveCategoryInfo}
+          />
+        )}
       </PopupC>
     );
   };
