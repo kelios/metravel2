@@ -562,7 +562,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={100}
-            style={[styles.scrollView, isMobile ? styles.scrollSnapMobile : styles.scrollSnapDesktop]}
+            style={[styles.scrollView, styles.scrollSnap]}
             contentContainerStyle={[styles.scrollContent, { height: containerH }]}
             onScrollBeginDrag={() => {
               enablePrefetch();

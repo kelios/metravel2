@@ -45,24 +45,10 @@ build_env() {
   NODE_ENV=production \
   EXPO_ENV="$ENV" \
   EXPO_NO_METRO_LAZY=true \
+  EXPO_PUBLIC_RNW_SLIM=1 \
   EXPO_WEB_BUILD_MINIFY=true \
   EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
-    npx expo export --output-dir "$DIR" -p web -c > "$EXPORT_LOG" 2>&1 &
-
-  local EXPO_PID=$!
-  local EXPORT_MARKER="Exported: $DIR"
-
-  while kill -0 "$EXPO_PID" 2>/dev/null; do
-    if grep -Fq "$EXPORT_MARKER" "$EXPORT_LOG"; then
-      echo "⚠️ Expo export завис после завершения, завершаю процесс..."
-      kill "$EXPO_PID" 2>/dev/null || true
-      break
-    fi
-    sleep 1
-  done
-
-  wait "$EXPO_PID" 2>/dev/null || true
-  cat "$EXPORT_LOG" || true
+    node scripts/build-web-safe.js -p web -c --output-dir "$DIR" 2>&1 | tee "$EXPORT_LOG"
 
   if [[ ! -f "$DIR/index.html" ]]; then
     echo "❌ Сборка не завершилась: не найден $DIR/index.html"
