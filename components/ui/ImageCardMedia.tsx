@@ -312,17 +312,8 @@ function ImageCardMedia({
   const shouldShowWebImageImmediately = useMemo(() => {
     if (Platform.OS !== 'web') return showImmediately;
     if (revealOnLoadOnly) return showImmediately;
-    if (isSafariWeb && allowCriticalWebBlur && !preserveOptimizedWebSrc && priority !== 'high') {
-      // iPhone Safari tends to paint a visibly blurry progressive frame when
-      // contain-mode shared-blur cards reveal the main image before onLoad.
-      // Keep the blurred surround visible, but wait for the sharp image decode.
-      return showImmediately;
-    }
     return showImmediately || resolvedLoading === 'eager' || priority === 'high';
   }, [
-    allowCriticalWebBlur,
-    isSafariWeb,
-    preserveOptimizedWebSrc,
     priority,
     revealOnLoadOnly,
     resolvedLoading,
