@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -14,6 +14,8 @@ const FullscreenPopupOverlay: React.FC<{
   footerSlot: React.ReactNode;
   onOpenFullscreenImage?: () => void;
 }> = ({ visible, onClose, colors, imageUrl, imageAlt, topInfoSlot, footerSlot, onOpenFullscreenImage }) => {
+  const [localHidden, setLocalHidden] = useState(false);
+
   const portalCreate = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     try {
@@ -23,7 +25,30 @@ const FullscreenPopupOverlay: React.FC<{
     }
   }, []);
 
-  if (Platform.OS !== 'web' || !visible) return null;
+  // Reset local hidden state when parent re-shows the overlay
+  // (e.g. a new popup opens)
+  const effectiveVisible = visible && !localHidden;
+
+  const handleClose = useCallback(() => {
+    // Immediately hide the portal, then notify parent (which calls map.closePopup)
+    setLocalHidden(true);
+    // Use microtask to let React flush the hide before Leaflet tears down DOM
+    Promise.resolve().then(() => {
+      onClose();
+    });
+  }, [onClose]);
+
+  // Reset localHidden when `visible` transitions from false to true
+  // We track this via a simple ref-like pattern using useState
+  const [prevVisible, setPrevVisible] = useState(visible);
+  if (visible && !prevVisible) {
+    setLocalHidden(false);
+  }
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
+  }
+
+  if (Platform.OS !== 'web' || !effectiveVisible) return null;
 
   const hasImage = !!imageUrl;
 
@@ -86,11 +111,11 @@ const FullscreenPopupOverlay: React.FC<{
 
         {/* Close button over image */}
         <button
-          onClick={onClose}
+          onClick={handleClose}
           onTouchEnd={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            onClose()
+            handleClose()
           }}
           aria-label="Закрыть"
           style={{
