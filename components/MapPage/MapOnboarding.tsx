@@ -116,6 +116,19 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
   const [visible, setVisible] = useState(false);
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
   const rafRef = useRef(0);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const persistCompleted = useCallback(() => {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+      } else {
+        void AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
 
   // Register restart callback
   useEffect(() => {
@@ -125,19 +138,65 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
 
   // Check storage on mount
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
       try {
         if (Platform.OS === 'web') {
-          if (!localStorage.getItem(ONBOARDING_STORAGE_KEY)) {
-            setTimeout(() => setVisible(true), 800);
+          if (!localStorage.getItem(ONBOARDING_STORAGE_KEY) && !cancelled) {
+            openTimerRef.current = setTimeout(() => {
+              if (!cancelled) {
+                setVisible(true);
+              }
+            }, 800);
           }
         } else {
           const v = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
-          if (!v) setTimeout(() => setVisible(true), 800);
+          if (!v && !cancelled) {
+            openTimerRef.current = setTimeout(() => {
+              if (!cancelled) {
+                setVisible(true);
+              }
+            }, 800);
+          }
         }
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     })();
+
+    return () => {
+      cancelled = true;
+      if (openTimerRef.current) {
+        clearTimeout(openTimerRef.current);
+        openTimerRef.current = null;
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || visible || typeof window === 'undefined') return;
+
+    const dismissBeforeOpen = () => {
+      if (!openTimerRef.current) return;
+      clearTimeout(openTimerRef.current);
+      openTimerRef.current = null;
+      persistCompleted();
+    };
+
+    const options = { passive: true } as const;
+    window.addEventListener('pointerdown', dismissBeforeOpen, options);
+    window.addEventListener('keydown', dismissBeforeOpen);
+    window.addEventListener('wheel', dismissBeforeOpen, options);
+    window.addEventListener('touchstart', dismissBeforeOpen, options);
+
+    return () => {
+      window.removeEventListener('pointerdown', dismissBeforeOpen);
+      window.removeEventListener('keydown', dismissBeforeOpen);
+      window.removeEventListener('wheel', dismissBeforeOpen);
+      window.removeEventListener('touchstart', dismissBeforeOpen);
+    };
+  }, [persistCompleted, visible]);
 
   // Measure target element when step changes
   useEffect(() => {
@@ -152,16 +211,10 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
   }, [visible, currentStep]);
 
   const handleComplete = useCallback(() => {
-    try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
-      } else {
-        void AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
-      }
-    } catch { /* noop */ }
+    persistCompleted();
     setVisible(false);
     onComplete?.();
-  }, [onComplete]);
+  }, [onComplete, persistCompleted]);
 
   const handleNext = useCallback(() => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
