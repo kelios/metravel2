@@ -153,6 +153,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
         <SafeView style={styles.categoriesContainer}>
           <SafeView style={styles.categoriesHeader}>
             <Feather name="tag" size={iconSize} color={iconColor} />
+            <Text style={styles.categoriesLabel}>Категории</Text>
           </SafeView>
           <SafeView style={styles.categoriesWrap}>
             {categories.map((cat, index) => {
@@ -214,32 +215,38 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   factItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     paddingVertical: Platform.select({
-      default: 7,
-      web: 8,
+      default: 8,
+      web: 10,
     }),
     paddingHorizontal: Platform.select({
-      default: 10,
-      web: 12,
+      default: 12,
+      web: 14,
     }),
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: colors.surfaceMuted,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.borderLight,
     minHeight: Platform.select({
-      default: 34,
-      web: 36,
+      default: 38,
+      web: 40,
     }),
+    ...(Platform.OS === 'web'
+      ? ({
+          transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        } as any)
+      : {}),
   },
   factText: {
     fontSize: Platform.select({
       default: 14,
       web: 14,
     }),
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.text,
-    letterSpacing: 0,
+    letterSpacing: -0.1,
   },
   categoriesContainer: {
     flexDirection: 'row',
@@ -251,11 +258,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 5,
     minHeight: Platform.select({
       default: 30,
       web: 32,
     }),
     paddingHorizontal: 2,
+  },
+  categoriesLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+    letterSpacing: 0.1,
   },
   categoriesWrap: {
     flexDirection: 'row',
@@ -264,18 +278,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
   },
   categoryTag: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: Platform.select({
-      default: 11,
-      web: 12,
+      default: 12,
+      web: 14,
     }),
     paddingVertical: Platform.select({
       default: 6,
-      web: 6,
+      web: 7,
     }),
-    borderRadius: 999,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.primaryAlpha30,
     minHeight: Platform.select({
       default: 30,
       web: 32,
@@ -285,14 +299,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease' as any,
+        transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease' as any,
+        ':hover': {
+          transform: 'translateY(-1px)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+          borderColor: colors.primary,
+        } as any,
       },
     }),
   },
   categoryText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.textMuted,
+    color: colors.primaryText,
     letterSpacing: 0.1,
   },
 });

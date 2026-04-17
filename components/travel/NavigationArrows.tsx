@@ -219,7 +219,7 @@ function NavigationArrows({
           </View>
         </Pressable>
       ) : (
-        <View style={styles.navCard} />
+        <View style={[styles.navCard, { opacity: 0, pointerEvents: 'none' } as any]} />
       )}
 
       {/* Следующее путешествие */}
@@ -260,7 +260,7 @@ function NavigationArrows({
           </View>
         </Pressable>
       ) : (
-        <View style={styles.navCard} />
+        <View style={[styles.navCard, { opacity: 0, pointerEvents: 'none' } as any]} />
       )}
     </View>
   );

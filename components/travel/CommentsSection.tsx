@@ -140,7 +140,9 @@ export function CommentsSection({
               </View>
             ) : topLevel.length === 0 ? (
               <View style={styles.emptyState}>
-                <Feather name="message-circle" size={48} color={colors.disabled} />
+                <View style={styles.emptyStateIconWrap}>
+                  <Feather name="message-circle" size={28} color={colors.primary} />
+                </View>
                 <Text style={styles.emptyText}>Пока нет комментариев</Text>
                 <Text style={styles.emptySubtext}>Будьте первым, кто оставит комментарий!</Text>
               </View>

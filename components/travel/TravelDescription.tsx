@@ -81,16 +81,16 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             width: "100%",
             maxWidth: 760,
             paddingHorizontal: Platform.select({
-                web: 32,
+                web: 0,
                 default: 16
             }),
             paddingTop: Platform.select({
-                web: 32,
-                default: 24
+                web: 24,
+                default: 20
             }),
             paddingBottom: Platform.select({
-                web: 48,
-                default: 32
+                web: 40,
+                default: 28
             }),
             backgroundColor: 'transparent',
         },
@@ -152,7 +152,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
 
           {/* Контент */}
           {isEmptyHtml ? (
-            <Text style={styles.placeholder}>Описание скоро появится</Text>
+            <Text style={styles.placeholder}>Автор ещё не добавил описание</Text>
           ) : canParseHtml ? (
             <StableContent html={htmlContent} contentWidth={contentWidth} fullWidth={noBox} />
           ) : (

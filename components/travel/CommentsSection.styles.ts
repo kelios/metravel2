@@ -12,6 +12,11 @@ export const createCommentsSectionStyles = (colors: ThemedColors) =>
       borderRadius: DESIGN_TOKENS.radii.md,
       borderWidth: 1,
       borderColor: colors.borderLight,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          } as any)
+        : {}),
     },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: DESIGN_TOKENS.spacing.xl },
     header: {
@@ -132,14 +137,24 @@ export const createCommentsSectionStyles = (colors: ThemedColors) =>
     emptyState: {
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: DESIGN_TOKENS.spacing.xxl,
+      paddingVertical: DESIGN_TOKENS.spacing.xxxl,
       gap: DESIGN_TOKENS.spacing.sm,
+    },
+    emptyStateIconWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: DESIGN_TOKENS.spacing.xs,
     },
     emptyText: {
       color: colors.text,
       fontSize: DESIGN_TOKENS.typography.sizes.lg,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold,
       textAlign: 'center',
+      letterSpacing: -0.2,
     },
     emptySubtext: {
       color: colors.textMuted,

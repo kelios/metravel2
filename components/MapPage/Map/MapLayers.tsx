@@ -142,6 +142,7 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
       {/* User location marker */}
       {validUserLocation && userLocationIcon && (
         <Marker
+          key={`user-location-${userLocationPaneName ?? 'default-pane'}`}
           position={[validUserLocation.lat, validUserLocation.lng]}
           icon={userLocationIcon}
           pane={Platform.OS === 'web' ? userLocationPaneName : undefined}

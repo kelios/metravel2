@@ -195,10 +195,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        transition: 'border-color 0.2s ease',
+        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
         outlineWidth: 0,
         outlineStyle: 'none',
         outlineColor: 'transparent',
+        ':focus': {
+          borderColor: colors.primary,
+          boxShadow: `0 0 0 2px ${colors.primaryAlpha30 ?? 'rgba(0,0,0,0.08)'}`,
+        },
       } as any,
     }),
   },

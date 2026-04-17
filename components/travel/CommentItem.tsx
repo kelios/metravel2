@@ -232,7 +232,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   avatar: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 18,
     backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',

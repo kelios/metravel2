@@ -96,7 +96,7 @@ const ToggleableMapSection = ({
                     pressed && styles.toggleButtonPressed,
                 ]}
             >
-                <Feather name="map-pin" size={18} color={colors.text} style={{ marginRight: DESIGN_TOKENS.spacing.xs }} />
+                <Feather name="map-pin" size={18} color={colors.text} />
                 <Text style={[styles.toggleText, isMobile && styles.toggleTextMobile]}>
                     {hintText}
                 </Text>
@@ -116,7 +116,9 @@ const ToggleableMapSection = ({
                         isLoading ? (
                             <View style={styles.loadingState}>
                                 {Platform.OS === 'web' ? (
-                                    <View style={styles.loadingSkeleton} />
+                                    <View style={styles.loadingSkeleton}>
+                                        <Feather name="map" size={24} color={colors.textMuted} />
+                                    </View>
                                 ) : (
                                     <ActivityIndicator color={colors.primary} />
                                 )}
@@ -167,7 +169,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     toggleText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '500',
+        fontWeight: '600',
         color: colors.text,
     },
     toggleTextMobile: {
@@ -204,5 +206,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 1,
         backgroundColor: colors.surfaceLight,
         borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

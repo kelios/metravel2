@@ -221,13 +221,13 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
             />
           }
           style={[
-            styles.actionButton,
-            isMobile && styles.actionButtonMobile,
+            isFavorite ? styles.primaryButton : styles.actionButton,
+            isMobile && (isFavorite ? styles.primaryButtonMobile : styles.actionButtonMobile),
             isFavorite && styles.actionButtonActive,
           ]}
           labelStyle={[
-            styles.actionButtonText,
-            isMobile && styles.actionButtonTextMobile,
+            isFavorite ? styles.primaryButtonText : styles.actionButtonText,
+            isMobile && (isFavorite ? styles.primaryButtonTextMobile : styles.actionButtonTextMobile),
             isFavorite && styles.actionButtonTextActive,
           ]}
           accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}

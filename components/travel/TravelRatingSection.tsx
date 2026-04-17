@@ -3,7 +3,7 @@
 // 🎨 УЛУЧШЕНО: Анимация изменения рейтинга, улучшенная визуальная иерархия, success feedback
 
 import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
@@ -146,7 +146,9 @@ function TravelRatingSection({
 
             {ratingCount === 0 && (userRating == null || userRating === 0) ? (
                 <View style={styles.emptyStateBox}>
-                    <Feather name="star" size={32} color={colors.warningAlpha40 ?? colors.borderStrong} />
+                    <View style={styles.emptyStateIconWrap}>
+                      <Feather name="star" size={28} color={colors.warning ?? colors.accent} />
+                    </View>
                     <Text style={styles.emptyStateTitle}>Пока нет оценок</Text>
                     <Text style={styles.emptyStateSubtext}>
                         {canRate ? 'Будьте первым, кто оценит этот маршрут' : 'Войдите, чтобы оценить маршрут'}
@@ -274,9 +276,14 @@ const createStyles = (colors: any) =>
         container: {
             backgroundColor: colors.surface,
             borderRadius: DESIGN_TOKENS.radii.md,
-            padding: 16,
+            padding: Platform.select({ default: 16, web: 20 }),
             borderWidth: 1,
             borderColor: colors.borderLight,
+            ...(Platform.OS === 'web'
+                ? ({
+                    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                  } as any)
+                : {}),
         },
         compactContainer: {
             flexDirection: 'row',
@@ -288,12 +295,16 @@ const createStyles = (colors: any) =>
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: 12,
+            marginBottom: 16,
+            paddingBottom: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.borderLight,
         },
         title: {
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: '600',
             color: colors.text,
+            letterSpacing: -0.2,
         },
         countText: {
             fontSize: 14,
@@ -379,11 +390,20 @@ const createStyles = (colors: any) =>
         },
         emptyStateBox: {
             alignItems: 'center',
-            paddingVertical: 20,
+            paddingVertical: 24,
             paddingHorizontal: 16,
             borderRadius: DESIGN_TOKENS.radii.sm,
             backgroundColor: colors.backgroundSecondary,
             gap: 8,
+        },
+        emptyStateIconWrap: {
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.warningSoft ?? colors.backgroundTertiary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 4,
         },
         emptyStateTitle: {
             fontSize: 16,

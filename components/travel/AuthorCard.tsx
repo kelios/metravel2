@@ -348,17 +348,17 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
           <Pressable
             style={({ pressed }) => [
               styles.viewButtonBottom,
+              styles.viewButtonBottomPrimary,
               pressed && styles.viewButtonPressed,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.surface,
-              }
             ]}
             onPress={handleViewAuthorTravels}
             accessibilityRole="button"
             accessibilityLabel="Все путешествия автора"
           >
-            <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Все путешествия автора</Text>
+            <SafeView style={styles.ctaBottomButtonContent}>
+              <Feather name="map" size={14} color={colors.primary} />
+              <Text style={[styles.viewButtonBottomText, { color: colors.primary, fontWeight: '700' }]}>Все путешествия</Text>
+            </SafeView>
           </Pressable>
           {!isOwnTravel && (
             <Pressable
@@ -395,10 +395,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: DESIGN_TOKENS.radii.md,
     padding: Platform.select({
       default: 20,
-      web: 24,
+      web: 28,
     }),
     borderWidth: 1,
     borderColor: colors.borderLight,
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        } as any)
+      : {}),
   },
   viewButtonInline: {
     marginLeft: 'auto',
@@ -473,18 +478,23 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   avatar: {
     width: Platform.select({
       default: 56,
-      web: 72,
+      web: 76,
     }),
     height: Platform.select({
       default: 56,
-      web: 72,
+      web: 76,
     }),
     borderRadius: Platform.select({
       default: 28,
-      web: 36,
+      web: 38,
     }),
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: colors.borderLight,
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        } as any)
+      : {}),
   },
   avatarMobile: {
     width: 52,
@@ -521,16 +531,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.xs,
   },
   socialChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 0,
-    borderColor: 'transparent',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryAlpha30,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'background-color 0.15s ease' as any,
+        transition: 'all 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.primaryLight,
+          transform: 'translateY(-1px)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+        } as any,
       },
     }),
   },
@@ -544,10 +559,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textMuted,
   },
   authorName: {
-    fontSize: Platform.select({ default: 17, web: 18 }),
-    fontWeight: '600',
+    fontSize: Platform.select({ default: 17, web: 20 }),
+    fontWeight: '700',
     color: colors.text,
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
+    lineHeight: Platform.select({ default: 22, web: 26 }),
   },
   authorNameMobile: {
     fontSize: 17,
@@ -578,7 +594,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     height: 1,
     marginTop: DESIGN_TOKENS.spacing.md,
     marginBottom: DESIGN_TOKENS.spacing.sm,
-    opacity: 0.4,
+    opacity: 0.6,
   },
   viewButton: {
     flexDirection: 'row',
@@ -623,6 +639,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         } as any,
       },
     }),
+  },
+  viewButtonBottomPrimary: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: DESIGN_TOKENS.radii.md,
   },
   viewButtonMobile: {
     paddingVertical: DESIGN_TOKENS.spacing.sm,

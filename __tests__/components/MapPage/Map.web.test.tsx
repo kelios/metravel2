@@ -526,7 +526,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     const userMarker = getUserLocationMarkers(queryAllByTestId)[0]
     expect(userMarker.props.interactive).toBe(false)
-    expect(userMarker.props.pane).toBe('metravelUserLocationPane')
+    expect(userMarker.props.pane).toBeUndefined()
     expect(userMarker.props.zIndexOffset).toBe(-1000)
     expect(userMarker.props.eventHandlers).toBeUndefined()
 

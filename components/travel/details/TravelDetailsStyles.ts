@@ -172,18 +172,21 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
 
     descriptionIntroTitle: {
       fontSize: Platform.select({
-        default: COMPACT_TYPOGRAPHY.subtitle.mobile, // было 22
-        web: COMPACT_TYPOGRAPHY.subtitle.desktop, // было 24
+        default: COMPACT_TYPOGRAPHY.subtitle.mobile,
+        web: COMPACT_TYPOGRAPHY.subtitle.desktop,
       }),
-      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
       color: colors.text,
       marginBottom: DESIGN_TOKENS.spacing.sm,
+      letterSpacing: -0.3,
+      lineHeight: Platform.select({ default: 26, web: 30 }),
     },
 
     descriptionIntroText: {
-      fontSize: COMPACT_TYPOGRAPHY.body.mobile, // было md (16)
+      fontSize: COMPACT_TYPOGRAPHY.body.mobile,
       color: colors.textMuted,
-      lineHeight: Platform.select({ default: 22, web: 21 }), // уменьшено
+      lineHeight: Platform.select({ default: 24, web: 24 }),
+      letterSpacing: -0.1,
     },
 
     backToTopWrapper: {
@@ -254,19 +257,22 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
         default: 16,
         web: 20,
       }),
-      backgroundColor: 'transparent',
+      backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.md,
       justifyContent: 'space-between',
       borderWidth: 1,
       borderColor: colors.borderLight,
-      minHeight: 52,
+      minHeight: 56,
       ...(Platform.OS === 'web'
         ? ({
-            transition: 'background-color 0.15s ease, border-color 0.15s ease',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             ':hover': {
               backgroundColor: colors.backgroundSecondary,
               borderColor: colors.border,
+              boxShadow: '0 3px 10px rgba(0,0,0,0.06)',
+              transform: 'translateY(-1px)',
             } as any,
           } as any)
         : {}),
@@ -386,25 +392,25 @@ export const getTravelDetailsStyles = (colors: ThemedColors) =>
       right: 0,
       bottom: 0,
       zIndex: 2,
-      paddingHorizontal: Platform.select({ default: 16, web: 28 }),
-      paddingBottom: Platform.select({ default: 20, web: 28 }),
+      paddingHorizontal: Platform.select({ default: 16, web: 32 }),
+      paddingBottom: Platform.select({ default: 24, web: 32 }),
       paddingTop: Platform.select({ default: 60, web: 80 }),
       ...(Platform.OS === 'web'
         ? ({
             backgroundImage:
-              'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.35) 35%, rgba(0,0,0,0.1) 65%, transparent 100%)',
+              'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.42) 30%, rgba(0,0,0,0.12) 60%, transparent 100%)',
           } as any)
         : {}),
     },
     heroTitle: {
-      fontSize: Platform.select({ default: 24, web: 30 }),
+      fontSize: Platform.select({ default: 26, web: 34 }),
       fontWeight: '700' as any,
       color: colors.textOnDark,
-      letterSpacing: -0.4,
-      lineHeight: Platform.select({ default: 30, web: 38 }),
+      letterSpacing: -0.5,
+      lineHeight: Platform.select({ default: 32, web: 42 }),
       ...(Platform.OS === 'web'
         ? ({
-            textShadow: '0 2px 12px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4)',
+            textShadow: '0 2px 16px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.3)',
           } as any)
         : {
             textShadowColor: 'rgba(0,0,0,0.7)',

@@ -38,7 +38,7 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       alignItems: 'center',
       minHeight: Platform.select({
         default: 44,
-        web: 36,
+        web: 38,
       }),
       paddingVertical: Platform.select({
         default: 10,
@@ -48,18 +48,23 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
         default: 16,
         web: 16,
       }),
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      borderWidth: 0,
-      backgroundColor: colors.backgroundSecondary,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
       marginRight: DESIGN_TOKENS.spacing.xs,
       marginBottom: DESIGN_TOKENS.spacing.xs,
-      gap: 6,
+      gap: 8,
       ...(Platform.OS === 'web'
         ? ({
-            transition: 'background-color 0.2s ease, color 0.2s ease',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             cursor: 'pointer',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             ':hover': {
-              backgroundColor: colors.backgroundTertiary,
+              backgroundColor: colors.primarySoft,
+              borderColor: colors.primaryAlpha30,
+              transform: 'translateY(-1px)',
+              boxShadow: '0 3px 10px rgba(0,0,0,0.08)',
             } as any,
           } as any)
         : {}),
@@ -70,9 +75,9 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
     quickJumpLabel: {
       fontSize: 13,
       fontWeight: '500' as any,
-      color: colors.textMuted,
-      letterSpacing: 0,
-      lineHeight: 16,
+      color: colors.text,
+      letterSpacing: -0.1,
+      lineHeight: 18,
     },
     authorCardContainer: {
       marginBottom: DESIGN_TOKENS.spacing.md,
@@ -105,18 +110,18 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.surfaceMuted,
       position: 'relative' as any,
       borderWidth: 1,
-      borderColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.12)' : 'transparent',
+      borderColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.08)' : 'transparent',
       ...(Platform.OS === 'web'
         ? ({
             boxShadow:
-              '0 22px 60px rgba(16,24,40,0.18), 0 6px 18px rgba(16,24,40,0.1)',
+              '0 24px 64px rgba(16,24,40,0.14), 0 8px 20px rgba(16,24,40,0.08)',
           } as any)
         : {
             shadowColor: colors.text,
-            shadowOpacity: 0.12,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 3,
+            shadowOpacity: 0.1,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 4,
           }),
     },
     heroOverlay: {
@@ -125,13 +130,13 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       right: 0,
       bottom: 0,
       zIndex: 2,
-      paddingHorizontal: Platform.select({ default: 16, web: 28 }),
-      paddingBottom: Platform.select({ default: 20, web: 28 }),
-      paddingTop: Platform.select({ default: 48, web: 72 }),
+      paddingHorizontal: Platform.select({ default: 16, web: 32 }),
+      paddingBottom: Platform.select({ default: 24, web: 32 }),
+      paddingTop: Platform.select({ default: 56, web: 80 }),
       ...(Platform.OS === 'web'
         ? ({
             backgroundImage:
-              'linear-gradient(to top, rgba(7,12,19,0.82) 0%, rgba(7,12,19,0.34) 42%, transparent 72%)',
+              'linear-gradient(to top, rgba(7,12,19,0.88) 0%, rgba(7,12,19,0.55) 35%, rgba(7,12,19,0.18) 60%, transparent 80%)',
           } as any)
         : {}),
     },
@@ -140,21 +145,21 @@ export const getTravelDetailsHeroStyles = (colors: ThemedColors) =>
       maxWidth: Platform.OS === 'web' ? 760 : '100%',
     },
     heroTitle: {
-      fontSize: Platform.select({ default: 26, web: 32 }),
+      fontSize: Platform.select({ default: 28, web: 36 }),
       fontWeight: '700' as any,
       color: colors.textOnDark,
-      letterSpacing: Platform.select({ default: -0.5, web: -0.7 }),
-      lineHeight: Platform.select({ default: 32, web: 40 }),
+      letterSpacing: Platform.select({ default: -0.5, web: -0.8 }),
+      lineHeight: Platform.select({ default: 34, web: 44 }),
       ...(Platform.OS === 'web'
         ? ({
-            textShadow: '0 2px 16px rgba(0,0,0,0.52)',
+            textShadow: '0 2px 20px rgba(0,0,0,0.6), 0 1px 6px rgba(0,0,0,0.3)',
           } as any)
         : {
             textShadowColor: 'rgba(0,0,0,0.7)',
             textShadowOffset: { width: 0, height: 2 },
             textShadowRadius: 6,
           }),
-      maxWidth: Platform.OS === 'web' ? 720 : '100%',
+      maxWidth: Platform.OS === 'web' ? 760 : '100%',
     },
     heroFavoriteBtn: {
       position: 'absolute' as any,

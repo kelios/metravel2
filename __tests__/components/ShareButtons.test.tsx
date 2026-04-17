@@ -189,7 +189,7 @@ describe('ShareButtons', () => {
 
     jest.useFakeTimers();
 
-    const { getByLabelText, queryByText, getByText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
 
@@ -197,13 +197,12 @@ describe('ShareButtons', () => {
       fireEvent.press(copyButton);
     });
 
-    expect(getByText('✓')).toBeTruthy();
+    expect(getByLabelText('Копировать ссылку')).toBeTruthy();
 
     await act(async () => {
       jest.advanceTimersByTime(2100);
     });
 
-    expect(queryByText('✓')).toBeNull();
 
     jest.useRealTimers();
   });

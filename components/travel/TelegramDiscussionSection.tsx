@@ -93,8 +93,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   subtitle: {
     fontSize: 14,
-    color: colors.textMuted,
-    lineHeight: 20,
+    color: colors.textSecondary,
+    lineHeight: 22,
     marginBottom: 16,
   },
   button: {

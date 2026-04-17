@@ -355,7 +355,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
                   <Feather name={button.icon as any} size={20} color={button.color} />
                   {!isMobile && !isSticky && <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>}
                   {button.key === 'copy' && copied && (
-                    <Text style={styles.copiedText}>✓</Text>
+                    <Feather name="check" size={16} color={colors.success} style={{ marginLeft: 2 }} />
                   )}
                 </Pressable>
               ))}
@@ -558,7 +558,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: 14,
     fontWeight: '700',
     color: colors.success,
-    marginLeft: 4,
+    marginLeft: 2,
   },
   buttonDisabled: {
     opacity: 0.5,
