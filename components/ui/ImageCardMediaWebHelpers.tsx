@@ -254,8 +254,15 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
   const loading = fit === 'contain' ? 'lazy' : 'eager';
   const fetchPriority = fit === 'contain' ? 'low' : 'auto';
 
+  const targetOpacity = visible ? '1' : '0';
+
   return (
     <img
+      ref={(img) => {
+        if (img && img.complete && img.naturalWidth > 0) {
+          img.style.opacity = targetOpacity;
+        }
+      }}
       aria-hidden="true"
       data-blur-backdrop="true"
       src={src}
@@ -292,7 +299,7 @@ export const WebBlurBackdrop = memo(function WebBlurBackdrop({
       fetchPriority={fetchPriority}
       onLoad={(e) => {
         const img = e.currentTarget;
-        img.style.opacity = '1';
+        img.style.opacity = targetOpacity;
       }}
     />
   );

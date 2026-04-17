@@ -391,6 +391,17 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
         }
       })
 
+      marker.on('popupclose', () => {
+        if (rootCreated) {
+          rootCreated = false
+          const root = renderRootMapRef.current.get(key)
+          if (root) {
+            renderRootMapRef.current.delete(key)
+            scheduleRootUnmount(root)
+          }
+        }
+      })
+
       // Tooltip
       if (point.address) {
         const tooltipText = point.address.length > TOOLTIP_MAX_LEN
