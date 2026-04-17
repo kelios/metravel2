@@ -232,7 +232,10 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       tapTolerance={30}
     >
       {typeof Pane === 'function' ? (
-        <Pane name="metravelRoutePane" style={{ zIndex: 590, pointerEvents: 'none' } as any} />
+        <>
+          <Pane name="metravelRoutePane" style={{ zIndex: 590, pointerEvents: 'none' } as any} />
+          <Pane name="metravelUserLocationPane" style={{ zIndex: 550, pointerEvents: 'none' } as any} />
+        </>
       ) : null}
 
       <MapLayers
@@ -245,6 +248,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
         radiusInMeters={radiusInMeters}
         userLocation={userLocationLatLng}
         userLocationIcon={customIcons?.userLocation}
+        userLocationPaneName="metravelUserLocationPane"
         mapInstance={mapInstance}
       />
 

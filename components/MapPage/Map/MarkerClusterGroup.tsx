@@ -8,7 +8,7 @@ import React, { useEffect, useRef, useMemo } from 'react'
 import type { Point } from './types'
 import { strToLatLng } from './utils'
 import { CoordinateConverter } from '@/utils/coordinateConverter'
-import { getClusterZoomFitBoundsOptions } from './clusterFitBounds'
+import { CLUSTER_DISABLE_ZOOM, getClusterZoomFitBoundsOptions } from './clusterFitBounds'
 import { useThemedColors } from '@/hooks/useTheme'
 
 interface PopupContentProps {
@@ -248,7 +248,7 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
       showCoverageOnHover: false,
       // Handle cluster click explicitly so viewport math stays stable on web.
       zoomToBoundsOnClick: false,
-      disableClusteringAtZoom: 16,
+      disableClusteringAtZoom: CLUSTER_DISABLE_ZOOM,
       animate: true,
       animateAddingMarkers: false,
       // Spiderfy config for touch devices

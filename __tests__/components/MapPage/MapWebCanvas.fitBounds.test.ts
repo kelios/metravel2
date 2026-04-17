@@ -15,7 +15,7 @@ describe('getClusterZoomFitBoundsOptions', () => {
       animate: true,
       paddingTopLeft: [16, 104],
       paddingBottomRight: [16, 224],
-      maxZoom: 15,
+      maxZoom: 16,
     });
   });
 
@@ -24,7 +24,7 @@ describe('getClusterZoomFitBoundsOptions', () => {
       animate: true,
       paddingTopLeft: [16, 104],
       paddingBottomRight: [16, 188],
-      maxZoom: 15,
+      maxZoom: 16,
     });
   });
 });

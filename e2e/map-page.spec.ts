@@ -315,7 +315,17 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await waitForMapUi(page, 90_000);
 
     // Wait for clusters to render.
-    const clusterIcon = page.locator('.metravel-cluster-icon').first();
+    const clusterIcons = page.locator('.metravel-cluster-icon');
+    const clusterCount = await clusterIcons.count().catch(() => 0);
+    if (!clusterCount) return;
+
+    const clusterNumbers = await clusterIcons.evaluateAll((nodes) =>
+      nodes.map((node) => Number.parseInt((node.textContent || '').trim(), 10) || 0)
+    );
+    const targetClusterIndex = clusterNumbers.reduce((bestIndex, value, index, values) => {
+      return value > values[bestIndex] ? index : bestIndex;
+    }, 0);
+    const clusterIcon = clusterIcons.nth(targetClusterIndex);
     const hasCluster = await clusterIcon.isVisible({ timeout: 60_000 }).catch(() => false);
     if (!hasCluster) return;
 
@@ -335,6 +345,71 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect
       .poll(async () => await markerIcon.count().catch(() => 0), { timeout: 30_000 })
       .toBeGreaterThan(markerCountBefore);
+  });
+
+  test('mobile: clicking cluster expands markers (zoom-to-area behavior)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await installTileMock(page);
+
+    const mockedPoints = buildMockMapPoints({
+      center: { lat: 53.9006, lng: 27.5590 },
+      count: 24,
+      spreadDegrees: 0.01,
+    });
+
+    await page.route('**/api/travels/search_travels_for_map/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockedPoints),
+      });
+    });
+
+    await page.route('**/api/filterformap/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          countries: [],
+          categories: [],
+          categoryTravelAddress: [],
+          companions: [],
+          complexity: [],
+          month: [],
+          over_nights_stay: [],
+          transports: [],
+          year: '',
+        }),
+      });
+    });
+
+    await page.addInitScript(() => {
+      window.localStorage.setItem('metravel_map_onboarding_completed', 'true');
+    });
+
+    await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    await waitForMapUi(page, 90_000);
+
+    const clusterIcon = page.locator('.metravel-cluster-icon').first();
+    const hasCluster = await clusterIcon.isVisible({ timeout: 60_000 }).catch(() => false);
+    if (!hasCluster) return;
+
+    const markerIcon = page.locator('.metravel-pin-marker');
+    const markerCountBefore = await markerIcon.count().catch(() => 0);
+    const clusterCountBefore = await page.locator('.metravel-cluster-icon').count().catch(() => 0);
+
+    await clusterIcon.click({ force: true });
+
+    await expect
+      .poll(
+        async () => {
+          const markers = await markerIcon.count().catch(() => 0);
+          const clusters = await page.locator('.metravel-cluster-icon').count().catch(() => 0);
+          return markers > markerCountBefore || clusters < clusterCountBefore;
+        },
+        { timeout: 30_000 }
+      )
+      .toBe(true);
   });
 
   test('desktop: renders markers and opens popup on marker click', async ({ page }) => {

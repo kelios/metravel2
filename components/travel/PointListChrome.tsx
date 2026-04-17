@@ -224,7 +224,9 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   addingPointId,
   buildMapUrl,
   buildOsmUrl,
+  buildWazeUrl,
   buildYandexMapsUrl,
+  buildYandexNaviUrl,
   colors,
   getCategoryLabel,
   getImageUrl,
@@ -247,7 +249,9 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
   addingPointId: string | null;
   buildMapUrl: (coordStr: string) => string;
   buildOsmUrl: (coordStr: string) => string;
+  buildWazeUrl?: (coordStr: string) => string;
   buildYandexMapsUrl: (coordStr: string) => string;
+  buildYandexNaviUrl?: (coordStr: string) => string;
   colors: {
     primary: string;
     textMuted: string;
@@ -295,6 +299,8 @@ export const PointListExpandedContent = React.memo(function PointListExpandedCon
               onOpenGoogleMap={() => void openExternal(buildMapUrl(item.coord))}
               onOpenYandexMap={() => void openExternal(buildYandexMapsUrl(item.coord))}
               onOpenOsmMap={() => void openExternal(buildOsmUrl(item.coord))}
+              onOpenWaze={buildWazeUrl ? () => void openExternal(buildWazeUrl(item.coord)) : undefined}
+              onOpenYandexNavi={buildYandexNaviUrl ? () => void openExternal(buildYandexNaviUrl(item.coord)) : undefined}
               onAddPoint={() => {
                 void handleAddPoint(item);
               }}

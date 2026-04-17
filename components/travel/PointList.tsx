@@ -107,6 +107,16 @@ const buildOsmUrl = (coordStr: string) => {
   if (!p) return '';
   const { lat, lon } = p;
   return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lon))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lon))}`;
+};const buildWazeUrl = (coordStr: string) => {
+  const p = parseCoord(coordStr);
+  if (!p) return '';
+  return `https://waze.com/ul?ll=${p.lat},${p.lon}&navigate=yes`;
+};
+
+const buildYandexNaviUrl = (coordStr: string) => {
+  const p = parseCoord(coordStr);
+  if (!p) return '';
+  return `https://yandex.ru/navi/?whatshere[point]=${p.lon},${p.lat}&whatshere[zoom]=16`;
 };
 
 const normalizeCategoryNameToString = (
@@ -206,7 +216,9 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         buildAppleMapsUrl,
         buildMapUrl,
         buildOsmUrl,
+        buildWazeUrl,
         buildYandexMapsUrl,
+        buildYandexNaviUrl,
         getCategoryLabel: normalizeCategoryNameToString,
         getImageUrl: getOptimizedImageUrl,
         item,
@@ -233,6 +245,8 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           onOpenAppleMap={() => void openExternal(buildAppleMapsUrl(item.coord))}
           onOpenYandexMap={() => void openExternal(buildYandexMapsUrl(item.coord))}
           onOpenOsmMap={() => void openExternal(buildOsmUrl(item.coord))}
+          onOpenWaze={() => void openExternal(buildWazeUrl(item.coord))}
+          onOpenYandexNavi={() => void openExternal(buildYandexNaviUrl(item.coord))}
           onPointCardPress={onPointCardPress}
           onShare={onShare}
           responsive={responsive}
@@ -304,7 +318,9 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           addingPointId={addingPointId}
           buildMapUrl={buildMapUrl}
           buildOsmUrl={buildOsmUrl}
+          buildWazeUrl={buildWazeUrl}
           buildYandexMapsUrl={buildYandexMapsUrl}
+          buildYandexNaviUrl={buildYandexNaviUrl}
           colors={colors}
           getCategoryLabel={normalizeCategoryNameToString}
           getImageUrl={getOptimizedImageUrl}

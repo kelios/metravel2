@@ -83,7 +83,6 @@ export const TravelRouteMapBlock: React.FC<{
         styles.sectionContainer,
         styles.contentStable,
         styles.webDeferredSection,
-        Platform.OS === 'web' ? ({ minHeight: 420 } as any) : null,
       ]}
       collapsable={false}
       accessibilityLabel="Карта маршрута"

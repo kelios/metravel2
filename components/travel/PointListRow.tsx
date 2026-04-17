@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 import {
   ActivityIndicator,
@@ -35,7 +35,9 @@ type PointListRowProps = {
   onOpenGoogleMap: () => void;
   onOpenMap: (coordStr: string) => void | Promise<void>;
   onOpenOsmMap: () => void;
+  onOpenWaze?: () => void;
   onOpenYandexMap: () => void;
+  onOpenYandexNavi?: () => void;
   onShare: (coordStr: string) => void | Promise<void>;
   point: PointLike;
   styles: Record<string, any>;
@@ -43,12 +45,14 @@ type PointListRowProps = {
 
 const PointActionChip = React.memo(function PointActionChip({
   chipStyle,
+  icon,
   label,
   onPress,
   textStyle,
   title,
 }: {
   chipStyle: any;
+  icon?: keyof typeof Feather.glyphMap;
   label: string;
   onPress: () => void;
   textStyle: any;
@@ -61,9 +65,14 @@ const PointActionChip = React.memo(function PointActionChip({
       accessibilityLabel={label}
       title={title ?? label}
     >
+      {icon && <Feather name={icon} size={10} color={textStyle?.color ?? '#888'} style={{ marginRight: 3 }} />}
       <Text style={textStyle}>{label}</Text>
     </CardActionPressable>
   );
+});
+
+const SectionLabel = React.memo(function SectionLabel({ label, style }: { label: string; style: any }) {
+  return <Text style={style}>{label}</Text>;
 });
 
 const PointListRow = React.memo(function PointListRow({
@@ -79,7 +88,9 @@ const PointListRow = React.memo(function PointListRow({
   onOpenGoogleMap,
   onOpenMap,
   onOpenOsmMap,
+  onOpenWaze,
   onOpenYandexMap,
+  onOpenYandexNavi,
   onShare,
   point,
   styles,
@@ -87,6 +98,17 @@ const PointListRow = React.memo(function PointListRow({
   const [imageError, setImageError] = useState(false);
   const handleImageError = useCallback(() => setImageError(true), []);
   const openMapFromLink = useCallback(() => onOpenMap(point.coord), [onOpenMap, point.coord]);
+
+  const hasNavigators = Boolean(onOpenWaze || onOpenYandexNavi);
+
+  const sectionLabelStyle = useMemo(() => ({
+    fontSize: 9,
+    fontWeight: '600' as const,
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    marginRight: 2,
+  }), [colors.textMuted]);
 
   return (
     <View style={styles.listRow}>
@@ -148,6 +170,7 @@ const PointListRow = React.memo(function PointListRow({
           <View style={styles.listRowActions}>
             {point.coord ? (
               <>
+                {/* Утилиты: копировать, поделиться */}
                 <CardActionPressable
                   accessibilityLabel="Скопировать координаты"
                   onPress={() => onCopy(point.coord)}
@@ -164,8 +187,11 @@ const PointListRow = React.memo(function PointListRow({
                 >
                   <Feather name="send" size={14} color={colors.textMuted} />
                 </CardActionPressable>
+
+                {/* Карты */}
                 <PointActionChip
                   label="Google"
+                  icon="map"
                   title="Открыть в Google Maps"
                   onPress={onOpenGoogleMap}
                   chipStyle={styles.listRowMapChip}
@@ -173,6 +199,7 @@ const PointListRow = React.memo(function PointListRow({
                 />
                 <PointActionChip
                   label="Яндекс"
+                  icon="map"
                   title="Открыть в Яндекс Картах"
                   onPress={onOpenYandexMap}
                   chipStyle={styles.listRowMapChip}
@@ -180,11 +207,39 @@ const PointListRow = React.memo(function PointListRow({
                 />
                 <PointActionChip
                   label="OSM"
+                  icon="map"
                   title="Открыть в OpenStreetMap"
                   onPress={onOpenOsmMap}
                   chipStyle={styles.listRowMapChip}
                   textStyle={styles.listRowMapChipText}
                 />
+
+                {/* Навигаторы — визуально отделены */}
+                {hasNavigators && (
+                  <>
+                    <SectionLabel label="навигация:" style={sectionLabelStyle} />
+                    {onOpenWaze && (
+                      <PointActionChip
+                        label="Waze"
+                        icon="navigation"
+                        title="Проложить маршрут в Waze"
+                        onPress={onOpenWaze}
+                        chipStyle={styles.listRowNavChip}
+                        textStyle={styles.listRowNavChipText}
+                      />
+                    )}
+                    {onOpenYandexNavi && (
+                      <PointActionChip
+                        label="Навигатор"
+                        icon="navigation"
+                        title="Проложить маршрут в Яндекс Навигаторе"
+                        onPress={onOpenYandexNavi}
+                        chipStyle={styles.listRowNavChip}
+                        textStyle={styles.listRowNavChipText}
+                      />
+                    )}
+                  </>
+                )}
               </>
             ) : null}
 

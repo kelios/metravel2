@@ -655,6 +655,31 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     fontWeight: '600',
     color: colors.textMuted,
   },
+  listRowNavChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: colors.primarySoft,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.primary,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'background-color 0.15s ease, border-color 0.15s ease' as any,
+        ':hover': {
+          backgroundColor: colors.primarySoft,
+          borderColor: colors.primaryDark,
+        } as any,
+      },
+    }),
+  },
+  listRowNavChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.primaryText,
+  },
   listRowAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',

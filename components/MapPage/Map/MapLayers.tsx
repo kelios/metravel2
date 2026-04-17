@@ -50,6 +50,11 @@ interface MapLayersProps {
   userLocationIcon: any;
 
   /**
+   * Dedicated pane for user location marker on web.
+   */
+  userLocationPaneName?: string;
+
+  /**
    * Map instance (for rendering check)
    */
   mapInstance: any;
@@ -79,6 +84,7 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
   radiusInMeters,
   userLocation,
   userLocationIcon,
+  userLocationPaneName,
   mapInstance,
 }) => {
   const colors = useThemedColors();
@@ -138,6 +144,7 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
         <Marker
           position={[validUserLocation.lat, validUserLocation.lng]}
           icon={userLocationIcon}
+          pane={Platform.OS === 'web' ? userLocationPaneName : undefined}
           interactive={Platform.OS !== 'web'}
           zIndexOffset={Platform.OS === 'web' ? -1000 : 0}
           eventHandlers={

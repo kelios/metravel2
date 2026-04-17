@@ -614,6 +614,28 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
             />
 
             {viewMode === 'list' ? (
+              embedded && Platform.OS === 'web' ? (
+                <View style={styles.mobileListContent}>
+                  {displayedTravels.map((item) => (
+                    <View key={`travel-${item.id}`} style={styles.travelItem}>
+                      <TravelTmlRound travel={item} />
+                    </View>
+                  ))}
+                  {visibleCount < travelsNear.length && (
+                    <View style={styles.loadMoreContainer}>
+                      <Button
+                        label="Загрузить ещё"
+                        onPress={handleLoadMore}
+                        variant="outline"
+                        size="md"
+                        style={styles.loadMoreButton}
+                        labelStyle={styles.loadMoreButtonText}
+                        accessibilityLabel="Загрузить ещё путешествий"
+                      />
+                    </View>
+                  )}
+                </View>
+              ) : (
               <FlashList
                 data={displayedTravels}
                 keyExtractor={keyExtractor}
@@ -647,6 +669,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   ) : null
                 }
               />
+              )
             ) : (
               <View style={styles.mobileMapColumn}>
                 <MapContainer

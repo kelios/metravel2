@@ -52,7 +52,9 @@ type PointListCardRendererProps = {
   onOpenGoogleMap: () => void
   onOpenMap: (coordStr: string) => void | Promise<void>
   onOpenOsmMap: () => void
+  onOpenWaze?: () => void
   onOpenYandexMap: () => void
+  onOpenYandexNavi?: () => void
   onPointCardPress?: (point: PointLike) => void
   onShare: (coordStr: string) => void | Promise<void>
   responsive: {
@@ -82,7 +84,9 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
   onOpenGoogleMap,
   onOpenMap,
   onOpenOsmMap,
+  onOpenWaze: _onOpenWaze,
   onOpenYandexMap,
+  onOpenYandexNavi: _onOpenYandexNavi,
   onPointCardPress,
   onShare,
   responsive,

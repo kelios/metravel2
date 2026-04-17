@@ -17,7 +17,9 @@ export function createPointListItemModel({
   buildAppleMapsUrl,
   buildMapUrl,
   buildOsmUrl,
+  buildWazeUrl,
   buildYandexMapsUrl,
+  buildYandexNaviUrl,
   getCategoryLabel,
   getImageUrl,
   item,
@@ -34,7 +36,9 @@ export function createPointListItemModel({
   buildAppleMapsUrl: (coordStr: string) => string;
   buildMapUrl: (coordStr: string) => string;
   buildOsmUrl: (coordStr: string) => string;
+  buildWazeUrl?: (coordStr: string) => string;
   buildYandexMapsUrl: (coordStr: string) => string;
+  buildYandexNaviUrl?: (coordStr: string) => string;
   getCategoryLabel: (raw: PointLike['categoryName'] | null | undefined) => string;
   getImageUrl: (url?: string, updatedAt?: string) => string | undefined;
   item: PointLike;
@@ -71,7 +75,7 @@ export function createPointListItemModel({
         {
           key: 'google',
           label: 'Google',
-          icon: 'map-pin',
+          icon: 'map',
           onPress: () => void openExternal(buildMapUrl(item.coord)),
           title: 'Открыть в Google Maps',
         },
@@ -85,7 +89,7 @@ export function createPointListItemModel({
         {
           key: 'yandex',
           label: 'Яндекс',
-          icon: 'navigation',
+          icon: 'map',
           onPress: () => void openExternal(buildYandexMapsUrl(item.coord)),
           title: 'Открыть в Яндекс Картах',
         },
@@ -96,6 +100,28 @@ export function createPointListItemModel({
           onPress: () => void openExternal(buildOsmUrl(item.coord)),
           title: 'Открыть в OpenStreetMap',
         },
+        ...(buildWazeUrl
+          ? [
+              {
+                key: 'waze',
+                label: 'Waze',
+                icon: 'navigation' as keyof typeof Feather.glyphMap,
+                onPress: () => void openExternal(buildWazeUrl(item.coord)),
+                title: 'Проложить маршрут в Waze',
+              },
+            ]
+          : []),
+        ...(buildYandexNaviUrl
+          ? [
+              {
+                key: 'yandex-navi',
+                label: 'Навигатор',
+                icon: 'navigation-2' as keyof typeof Feather.glyphMap,
+                onPress: () => void openExternal(buildYandexNaviUrl(item.coord)),
+                title: 'Проложить маршрут в Яндекс Навигаторе',
+              },
+            ]
+          : []),
       ]
     : [];
 
