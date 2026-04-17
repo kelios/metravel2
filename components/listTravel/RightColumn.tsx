@@ -26,7 +26,6 @@ import {
   getRightColumnHeaderMinHeight,
   getRightColumnWebRowBaseStyle,
   RECOMMENDATIONS_TOTAL_HEIGHT,
-  STABLE_PLACEHOLDER_HEIGHT,
   TOP_SCROLL_PADDING,
 } from '@/components/listTravel/rightColumnModel'
 
@@ -229,12 +228,9 @@ const RightColumn: React.FC<RightColumnProps> = (
               overflow: 'hidden',
               overflowY: 'hidden',
               overflowX: 'hidden',
-              scrollbarGutter: 'stable',
-            } as any)
-          : null),
-        ...(isWebMobile
-          ? ({
-              minHeight: 0,
+              // Only reserve scrollbar gutter on desktop to prevent layout shift;
+              // on mobile web scrollbars are overlay so this wastes ~15px.
+              ...(isWebMobile ? {} : { scrollbarGutter: 'stable' }),
             } as any)
           : null),
       }
@@ -258,11 +254,15 @@ const RightColumn: React.FC<RightColumnProps> = (
     }, [rowSeparatorStyle])
 
     const webContentContainerStyle = useMemo(() => ({
-      paddingHorizontal: isWebMobile ? 0 : contentPadding,
-      paddingTop: 0,
-      paddingBottom: isMobile ? 32 + 8 : 28,
-      ...(isWebMobile ? { minHeight: STABLE_PLACEHOLDER_HEIGHT } : null),
-    }), [isMobile, isWebMobile, contentPadding])
+      paddingHorizontal: contentPadding,
+      // Keep a small gap below the search chrome on web so the first card
+      // doesn't visually tuck under the header shadow or clip its top actions.
+      paddingTop: 8,
+      // Reserve the fixed bottom dock exactly once on mobile web.
+      paddingBottom: isMobile
+        ? (`calc(var(--mt-dock-h, 0px) + 8px)` as any)
+        : 28,
+    }), [isMobile, contentPadding])
 
     const nativeContentContainerStyle = useMemo(() => ({
       paddingHorizontal: contentPadding,

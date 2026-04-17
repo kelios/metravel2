@@ -162,11 +162,6 @@ function TravelListItem({
         [effectiveWidth, isMobile]
     );
 
-    const allowCriticalWebBlur = useMemo(() => {
-        if (Platform.OS !== 'web') return false;
-        return !isFirst;
-    }, [isFirst]);
-
     // ✅ БИЗНЕС: Определение badges для социального доказательства
     const popularityFlags = useMemo(() => {
         const updatedAt = (travel as any).updated_at;
@@ -557,7 +552,7 @@ const card = (
     mediaProps={{
       placeholderBlurhash: PLACEHOLDER_BLURHASH,
       blurBackground: true,
-      allowCriticalWebBlur,
+      allowCriticalWebBlur: Platform.OS === 'web',
       revealOnLoadOnly: isMobileSafariFirstCard,
       recyclingKey: travelKey,
       priority: Platform.OS === 'web' ? (isFirst ? 'high' : 'low') : 'normal',

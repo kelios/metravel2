@@ -94,11 +94,11 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       flex: 1,
       overflowY: 'auto',
       overflowX: 'hidden',
-      ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
       paddingTop: DESIGN_TOKENS.spacing.md,
       paddingBottom: DESIGN_TOKENS.spacing.md,
       ...Platform.select({
         web: {
+          scrollbarGutter: 'stable',
           minHeight: 900,
         },
       }),
@@ -108,10 +108,10 @@ export const createListTravelBaseStyles = (colors: ReturnType<typeof useThemedCo
       ...(Platform.OS === 'web'
         ? ({
             minHeight: 0,
-            // On web the dock is fixed and already reserved via --mt-dock-h
-            // (includes safe-area-inset-bottom). Use it so the last card
-            // isn't hidden under the dock on notched devices.
-            paddingBottom: `calc(var(--mt-dock-h, 0px) + ${DESIGN_TOKENS.spacing.xl}px)` as any,
+            scrollbarGutter: 'auto',
+            // The actual list spacing is owned by the ScrollView content container on web.
+            // Keep the outer wrapper flush to avoid a second reserved gap below the last card.
+            paddingBottom: 0,
           } as any)
         : null),
     },

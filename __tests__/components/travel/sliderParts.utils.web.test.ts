@@ -34,7 +34,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     )
 
     expect(src).toContain('w=720')
-    expect(src).toContain('q=45')
+    expect(src).toContain('q=68')
     expect(src).toContain('fit=contain')
     expect(src).not.toContain('f=')
   })
@@ -52,7 +52,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     )
 
     expect(src).toContain('w=720')
-    expect(src).toContain('q=50')
+    expect(src).toContain('q=70')
     expect(src).toContain('fit=contain')
     expect(src).not.toContain('f=')
   })
@@ -70,7 +70,7 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     )
 
     expect(src).toContain('w=1180')
-    expect(src).toContain('q=65')
+    expect(src).toContain('q=78')
   })
 
   it('requests DPR-aware mobile slide variants on retina devices', () => {
@@ -88,8 +88,8 @@ describe('sliderParts/utils buildUriWeb (web)', () => {
     )
 
     expect(src).toContain('w=390')
-    expect(src).toContain('q=58')
-    expect(src).toContain('dpr=2')
+    expect(src).toContain('q=78')
+    expect(src).toContain('dpr=3')
     expect(src).toContain('fit=contain')
   })
 })
