@@ -63,7 +63,9 @@ export const useMapLifecycle = ({
   const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${instanceIdRef.current}`);
   const containerElRef = useRef<any>(null);
 
-  // 1. Pre-paint: clean stale _leaflet_id from our container (prevents "Map container is being reused")
+  // 1. Pre-paint: clean stale _leaflet_id metadata from our container.
+  // Do NOT clear innerHTML — MapContainer's ref callback may have already
+  // created a new map on this container by the time useLayoutEffect fires.
   useLayoutEffect(() => {
     if (!isWeb || typeof document === 'undefined') return;
     try {
@@ -71,7 +73,7 @@ export const useMapLifecycle = ({
       allContainers.forEach((el: any) => {
         if (el.id !== mapContainerIdRef.current) return;
         if (!el._leaflet_id) return;
-        clearContainer(el);
+        try { delete el._leaflet_map; } catch { /* noop */ }
       });
     } catch { /* noop */ }
   }, []);
@@ -85,7 +87,7 @@ export const useMapLifecycle = ({
       const allContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
       allContainers.forEach((el: any) => {
         if (el.id === mapContainerIdRef.current) {
-          if (el._leaflet_id) clearContainer(el);
+          // Don't clear innerHTML on the current container — the live map needs its panes.
           return;
         }
         if (el && typeof el.isConnected === 'boolean' && el.isConnected) return;

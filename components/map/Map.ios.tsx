@@ -59,7 +59,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <MapView style={styles.map} initialRegion={initialRegion}>
+      <MapView style={styles.map} initialRegion={initialRegion} showsUserLocation showsMyLocationButton>
         {travelAddress.map((point, index) => {
           if (!point?.coord) return null;
           const { latitude, longitude } = getLatLng(point.coord);

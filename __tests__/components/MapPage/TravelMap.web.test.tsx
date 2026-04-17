@@ -65,11 +65,10 @@ describe('TravelMap (web)', () => {
     useLeafletLoader.mockReturnValue({
       L: {},
       RL: {
-        MapContainer: ({ children, whenCreated }: any) => {
-          // Simulate react-leaflet calling whenCreated with map instance
-          whenCreated?.({ setView: jest.fn() });
+        MapContainer: React.forwardRef(({ children }: any, ref: any) => {
+          React.useImperativeHandle(ref, () => ({ setView: jest.fn() }));
           return <div data-testid="rl-map">{children}</div>;
-        },
+        }),
         TileLayer: () => <div data-testid="rl-tile" />,
         Marker: () => <div data-testid="rl-marker" />,
         Popup: ({ children }: any) => <div data-testid="rl-popup">{children}</div>,
@@ -109,7 +108,7 @@ describe('TravelMap (web)', () => {
     expect(getByTestId('travel-map')).toBeTruthy();
   });
 
-  it('does not crash when MapContainer uses whenCreated (strictmode-safe)', () => {
+  it('does not crash when MapContainer uses ref (strictmode-safe)', () => {
     const { getByTestId } = render(
       <TravelMap
         travelData={[{ coord: '53.9, 27.56' }]}

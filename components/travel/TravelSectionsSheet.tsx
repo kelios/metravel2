@@ -38,7 +38,6 @@ const getGroupKey = (key: string): GroupKey => {
 const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate, testID }) => {
   const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
   const [open, setOpen] = useState(false)
-  const [webOverlayInteractive, setWebOverlayInteractive] = useState(false)
   const openNonce = useTravelSectionsStore((s) => s.openNonce)
   const triggerRef = useRef<any>(null)
   const closeRef = useRef<any>(null)
@@ -54,17 +53,6 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
     setOpen(true)
   }, [openNonce])
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!open) {
-      setWebOverlayInteractive(false)
-      return
-    }
-
-    setWebOverlayInteractive(false)
-    const t = setTimeout(() => setWebOverlayInteractive(true), 250)
-    return () => clearTimeout(t)
-  }, [open])
 
   const grouped = useMemo(() => {
     const items = links.map((l, idx) => {
@@ -174,8 +162,12 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           color: colors.text,
         },
         closeBtn: {
-          padding: 8,
+          padding: 12,
           borderRadius: 999,
+          minWidth: 44,
+          minHeight: 44,
+          alignItems: 'center' as const,
+          justifyContent: 'center' as const,
         },
         closeBtnPressed: {
           opacity: 0.9,
@@ -265,27 +257,19 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
       >
         <Pressable
           testID="travel-sections-overlay"
-          style={[
-            styles.overlay,
-            {
-              pointerEvents: Platform.OS === 'web' ? (webOverlayInteractive ? 'auto' : 'none') : 'auto',
-            },
-          ]}
+          style={styles.overlay}
           onPress={() => {
-            if (Platform.OS === 'web') {
-              const dt = Date.now() - openedAtRef.current
-              if (dt < 250) return
-            }
+            const dt = Date.now() - openedAtRef.current
+            if (dt < 300) return
             setOpen(false)
           }}
         >
-          <Pressable
+          <View
             testID="travel-sections-sheet"
             style={styles.sheet}
-            onPress={() => undefined}
             accessibilityRole="menu"
             accessibilityLabel="Список разделов"
-            accessibilityViewIsModal
+            {...(Platform.OS === 'web' ? { onClick: (e: any) => e.stopPropagation() } : {})}
           >
             <View style={styles.header}>
               <Text style={styles.title}>Разделы</Text>
@@ -342,7 +326,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                 )
               })}
             </ScrollView>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
     </>

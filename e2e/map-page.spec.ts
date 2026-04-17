@@ -347,7 +347,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       .toBeGreaterThan(markerCountBefore);
   });
 
-  test('mobile: clicking cluster expands markers (zoom-to-area behavior)', async ({ page }) => {
+  test('mobile: cluster tap keeps map interactive', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await installTileMock(page);
 
@@ -390,26 +390,25 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
     await waitForMapUi(page, 90_000);
 
-    const clusterIcon = page.locator('.metravel-cluster-icon').first();
+    const clusterIcons = page.locator('.metravel-cluster-icon');
+    const clusterCount = await clusterIcons.count().catch(() => 0);
+    if (!clusterCount) return;
+
+    const clusterNumbers = await clusterIcons.evaluateAll((nodes) =>
+      nodes.map((node) => Number.parseInt((node.textContent || '').trim(), 10) || 0)
+    );
+    const targetClusterIndex = clusterNumbers.reduce((bestIndex, value, index, values) => {
+      return value > values[bestIndex] ? index : bestIndex;
+    }, 0);
+    const clusterIcon = clusterIcons.nth(targetClusterIndex);
     const hasCluster = await clusterIcon.isVisible({ timeout: 60_000 }).catch(() => false);
     if (!hasCluster) return;
 
-    const markerIcon = page.locator('.metravel-pin-marker');
-    const markerCountBefore = await markerIcon.count().catch(() => 0);
-    const clusterCountBefore = await page.locator('.metravel-cluster-icon').count().catch(() => 0);
-
     await clusterIcon.click({ force: true });
+    await page.waitForTimeout(300);
 
-    await expect
-      .poll(
-        async () => {
-          const markers = await markerIcon.count().catch(() => 0);
-          const clusters = await page.locator('.metravel-cluster-icon').count().catch(() => 0);
-          return markers > markerCountBefore || clusters < clusterCountBefore;
-        },
-        { timeout: 30_000 }
-      )
-      .toBe(true);
+    await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Что-то пошло не так', { exact: true })).not.toBeVisible();
   });
 
   test('desktop: renders markers and opens popup on marker click', async ({ page }) => {

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 const FullscreenPopupOverlay: React.FC<{
   visible: boolean;
@@ -25,9 +25,7 @@ const FullscreenPopupOverlay: React.FC<{
 
   if (Platform.OS !== 'web' || !visible) return null;
 
-  const optimizedUrl = imageUrl
-    ? optimizeImageUrl(imageUrl, { width: 600, height: 600, quality: 80, format: 'auto', fit: 'cover' }) ?? imageUrl
-    : null;
+  const hasImage = !!imageUrl;
 
   const overlay = (
     <div
@@ -52,21 +50,28 @@ const FullscreenPopupOverlay: React.FC<{
           overflow: 'hidden',
         }}
       >
-        {optimizedUrl ? (
-          <img
-            src={optimizedUrl}
-            alt={imageAlt || ''}
+        {hasImage ? (
+          <div
             onClick={onOpenFullscreenImage}
             style={{
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
-              display: 'block',
               cursor: onOpenFullscreenImage ? 'pointer' : 'default',
             }}
-            loading="eager"
-            decoding="async"
-          />
+          >
+            <ImageCardMedia
+              src={imageUrl}
+              alt={imageAlt || ''}
+              fit="cover"
+              height={undefined}
+              width="100%"
+              style={{ width: '100%', height: '100%' }}
+              loading="eager"
+              priority="high"
+              allowCriticalWebBlur
+              blurBackground
+            />
+          </div>
         ) : (
           <div
             style={{
@@ -104,7 +109,7 @@ const FullscreenPopupOverlay: React.FC<{
         </button>
 
         {/* Expand image button */}
-        {optimizedUrl && onOpenFullscreenImage && (
+        {hasImage && onOpenFullscreenImage && (
           <button
             onClick={onOpenFullscreenImage}
             aria-label="Открыть фото на весь экран"

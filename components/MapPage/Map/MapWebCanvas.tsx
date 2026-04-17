@@ -259,7 +259,7 @@ export const MapWebLeafletCanvas: React.FC<MapWebLeafletCanvasProps> = ({
       tap
       tapTolerance={30}
     >
-      {typeof Pane === 'function' ? (
+      {typeof Pane === 'function' && mapInstance ? (
         <>
           <Pane name="metravelRoutePane" style={{ zIndex: 590, pointerEvents: 'none' } as any} />
           <Pane name="metravelUserLocationPane" style={{ zIndex: 550, pointerEvents: 'none' } as any} />

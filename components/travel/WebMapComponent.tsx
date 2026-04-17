@@ -537,7 +537,8 @@ const WebMapComponent = ({
                                 zoom={13}
                                 keyboard={false}
                                 key={mapInstanceKeyRef.current}
-                                whenCreated={(map: any) => {
+                                ref={(map: any) => {
+                                    if (!map || mapRef.current === map) return;
                                     mapRef.current = map;
                                     setMapCreatedNonce((n) => n + 1);
                                 }}

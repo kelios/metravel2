@@ -26,6 +26,22 @@ if (typeof window !== 'undefined') {
         instance.DomUtil.__metravelPatchedGetPosition = true
       }
 
+      // Patch DomUtil.create to guard against undefined container.
+      // react-leaflet Pane or Leaflet internals may call create() with a container
+      // that has been removed from the DOM or is undefined during re-mount races.
+      if (instance?.DomUtil?.create && !instance.DomUtil.__metravelPatchedCreate) {
+        const _originalCreate = instance.DomUtil.create
+        instance.DomUtil.create = (tagName: string, className?: string, container?: any) => {
+          const el = document.createElement(tagName)
+          if (className) el.className = className
+          if (container && typeof container.appendChild === 'function') {
+            container.appendChild(el)
+          }
+          return el
+        }
+        instance.DomUtil.__metravelPatchedCreate = true
+      }
+
       if (instance?.DomUtil?.setPosition && !instance.DomUtil.__metravelPatchedSetPosition) {
         const originalSetPosition = instance.DomUtil.setPosition
         instance.DomUtil.setPosition = (el: any, point: any) => {
@@ -39,6 +55,24 @@ if (typeof window !== 'undefined') {
         }
         instance.DomUtil.__metravelPatchedSetPosition = true
       }
+    }
+
+    // Patch Map.prototype.getPane to never return undefined.
+    // After map.remove() or during re-mount races, _panes may be empty/cleared.
+    // Leaflet internals (Marker._initIcon, Circle.onAdd, etc.) call getPane().appendChild()
+    // without null-checking, causing "Cannot read properties of undefined (reading 'appendChild')".
+    if (leaflet?.Map?.prototype && !leaflet.Map.prototype.__metravelPatchedGetPane) {
+      const originalGetPane = leaflet.Map.prototype.getPane
+      leaflet.Map.prototype.getPane = function safeGetPane(name?: string) {
+        const pane = originalGetPane.call(this, name)
+        if (pane) return pane
+        // Fallback: return _mapPane if available, or create a detached div as last resort.
+        // This prevents crashes when a removed/stale map is still referenced by react-leaflet layers.
+        if (this._mapPane) return this._mapPane
+        if (this._container && typeof this._container.appendChild === 'function') return this._container
+        return document.createElement('div')
+      }
+      leaflet.Map.prototype.__metravelPatchedGetPane = true
     }
 
     // Patch Map.prototype.remove to catch "Map container is being reused by another instance".

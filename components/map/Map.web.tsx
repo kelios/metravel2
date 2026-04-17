@@ -113,6 +113,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const mapRef = useRef<any>(null);
   const { mapInstanceKeyRef, mapContainerIdRef } = useMapLifecycle({ rootRef, mapRef });
   const markersRef = useRef<Map<string, any>>(new Map());
+  const userLocationRef = useRef<any>(null);
   const pendingHighlightRef = useRef<{ coordKey: string; requestKey: string } | null>(null);
   const siteCategoryDictionaryRef = useRef<CategoryDictionaryItem[]>([]);
   const [mapPaneWidth, setMapPaneWidth] = useState(0);
@@ -318,6 +319,72 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const PopupC = RL.Popup;
   const useMapHook = RL.useMap;
 
+
+
+  const LocateUserControl: React.FC = () => {
+    const map = useMapHook?.();
+    const [locating, setLocating] = useState(false);
+
+    const handleLocate = useCallback(() => {
+      if (!map || !navigator?.geolocation) return;
+      setLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          const latlng = L.latLng(latitude, longitude);
+          map.flyTo(latlng, 14, { animate: true, duration: 0.5 });
+          if (userLocationRef.current) {
+            userLocationRef.current.setLatLng(latlng);
+          } else {
+            const circle = L.circleMarker(latlng, {
+              radius: 8,
+              fillColor: '#4285F4',
+              fillOpacity: 1,
+              color: '#fff',
+              weight: 3,
+            }).addTo(map);
+            userLocationRef.current = circle;
+          }
+          setLocating(false);
+        },
+        () => {
+          setLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    }, [map]);
+
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 80,
+          right: 10,
+          zIndex: 1000,
+          cursor: 'pointer',
+          width: 34,
+          height: 34,
+          backgroundColor: '#fff',
+          borderRadius: 4,
+          border: '2px solid rgba(0,0,0,0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: locating ? 0.6 : 1,
+        }}
+        onClick={handleLocate}
+        title="Моё местоположение"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="4" />
+          <line x1="12" y1="2" x2="12" y2="6" />
+          <line x1="12" y1="18" x2="12" y2="22" />
+          <line x1="2" y1="12" x2="6" y2="12" />
+          <line x1="18" y1="12" x2="22" y2="12" />
+        </svg>
+      </div>
+    );
+  };
 
   const FitBoundsOnData: React.FC<{ data: LegacyMapPoint[] }> = ({ data }) => {
     const map = useMapHook?.();
@@ -636,7 +703,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         key={mapInstanceKeyRef.current}
         // чутка экономим на анимациях
         preferCanvas
-        whenCreated={(map: any) => {
+        ref={(map: any) => {
+          if (!map || mapRef.current === map) return;
           mapRef.current = map;
           try {
             const el = map?.getContainer?.() as any;
@@ -671,6 +739,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         />
         <FitBoundsOnData data={travelData} />
         <MapCenterOnPopup />
+        <LocateUserControl />
         {travelData.map((point) => {
           const latLng = getLatLng(point.coord);
           if (!latLng) return null;

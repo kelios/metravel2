@@ -4,7 +4,6 @@ import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
-import { escapeCssUrlString } from './constants';
 
 export const fullscreenStyles = StyleSheet.create({
   container: {
@@ -64,17 +63,6 @@ const FullscreenImageViewer: React.FC<{
     }) ?? imageUrl;
   }, [imageUrl, maxW, maxH]);
 
-  const blurBackdropUrl = useMemo(() => {
-    if (!imageUrl) return imageUrl;
-    return optimizeImageUrl(imageUrl, {
-      width: 180,
-      height: 180,
-      quality: 20,
-      format: 'jpg',
-      fit: 'cover',
-      blur: 12,
-    }) ?? imageUrl;
-  }, [imageUrl]);
 
   if (Platform.OS === 'web') {
     if (!visible) return null;
@@ -95,40 +83,29 @@ const FullscreenImageViewer: React.FC<{
         }}
       >
         <div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: '-5%',
-            width: '110%',
-            height: '110%',
-            backgroundImage: blurBackdropUrl ? `url("${escapeCssUrlString(blurBackdropUrl)}")` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'blur(24px)',
-            transform: 'scale(1.04)',
-            opacity: 0.9,
-            pointerEvents: 'none',
-          }}
-        />
-        <img
-          src={hiResUrl ?? undefined}
-          alt={alt}
           style={{
             position: 'relative',
             maxWidth: maxW,
             maxHeight: maxH,
-            width: 'auto',
-            height: 'auto',
-            objectFit: 'contain',
-            borderRadius: 8,
-            display: 'block',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+            width: maxW,
+            height: maxH,
           }}
-          loading="eager"
-          // @ts-ignore -- fetchPriority is a valid HTML attribute not yet in React types
-          fetchPriority="high"
-          decoding="async"
-        />
+        >
+          <ImageCardMedia
+            src={hiResUrl}
+            alt={alt}
+            fit="contain"
+            blurBackground
+            allowCriticalWebBlur
+            blurRadius={20}
+            priority="high"
+            loading="eager"
+            transition={0}
+            width={maxW}
+            height={maxH}
+            style={{ borderRadius: 8 }}
+          />
+        </div>
         <button
           onClick={onClose}
           aria-label="Закрыть фото"

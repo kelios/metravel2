@@ -47,10 +47,13 @@ export const useMapCleanup = () => {
       const allLeafletContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
       allLeafletContainers.forEach((el: any) => {
         // Always clean the TARGET container if it has a stale _leaflet_id
-        // (previous instance left it dirty before unmount cleanup ran).
+        // from a PREVIOUS mount. However, since this parent effect fires AFTER
+        // react-leaflet's MapContainer ref callback has already created a new map
+        // (setting _leaflet_id), we must NOT clear it — that would destroy the
+        // live map's panes. Only delete metadata, not innerHTML.
         if (el.id === mapContainerIdRef.current) {
           if (el._leaflet_id) {
-            clearContainer(el);
+            try { delete el._leaflet_map; } catch { /* noop */ }
           }
           return;
         }
