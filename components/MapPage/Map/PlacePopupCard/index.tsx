@@ -376,7 +376,7 @@ const PlacePopupCard: React.FC<Props> = ({
               title={POPUP_TOOLTIPS.openWaze}
               style={showLabeled ? labeledActionStyle : actionBtnStyle}
             >
-               <Feather name="zap" size={14} color={colors.textMuted} />
+               <Feather name="navigation" size={14} color={colors.textMuted} />
               {showLabeled && <Text style={styles.labeledActionText}>Waze</Text>}
             </CardActionPressable>
           )}
@@ -388,8 +388,8 @@ const PlacePopupCard: React.FC<Props> = ({
               title={POPUP_TOOLTIPS.openYandexNavi}
               style={showLabeled ? labeledActionStyle : actionBtnStyle}
             >
-              <Feather name="crosshair" size={14} color={colors.textMuted} />
-              {showLabeled && <Text style={styles.labeledActionText}>Яндекс</Text>}
+              <Feather name="navigation-2" size={14} color={colors.textMuted} />
+              {showLabeled && <Text style={styles.labeledActionText}>Навигатор</Text>}
             </CardActionPressable>
           )}
 

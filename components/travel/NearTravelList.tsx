@@ -172,8 +172,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const scrollViewRef = useRef<ScrollView>(null);
     const segmentOptions = useMemo(
       () => [
-        { key: 'list', label: 'Список' },
-        { key: 'map', label: 'Карта' },
+        { key: 'list', label: 'Список', icon: 'view_list', iconSource: 'material' as const },
+        { key: 'map', label: 'Карта', icon: 'map', iconSource: 'material' as const },
       ],
       []
     );
@@ -611,6 +611,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
               value={viewMode}
               onChange={(key) => setViewMode(key as Segment)}
               accessibilityLabel="Переключатель вида"
+              compact
+              tone="subtle"
             />
 
             {viewMode === 'list' ? (
