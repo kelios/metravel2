@@ -39,6 +39,8 @@ build_env() {
   apply_env "$ENV"
 
   rm -rf "$DIR"
+  # build-web-safe.js всегда экспортирует в dist/, потом переносим в dist/$ENV.
+  find dist -mindepth 1 -maxdepth 1 ! -name "$ENV" -exec rm -rf {} + 2>/dev/null || true
 
   CI=1 \
   EXPO_NO_INTERACTIVE=1 \
@@ -48,10 +50,19 @@ build_env() {
   EXPO_PUBLIC_RNW_SLIM=1 \
   EXPO_WEB_BUILD_MINIFY=true \
   EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
-    node scripts/build-web-safe.js -p web -c --output-dir "$DIR" 2>&1 | tee "$EXPORT_LOG"
+    node scripts/build-web-safe.js -p web -c 2>&1 | tee "$EXPORT_LOG"
+
+  if [[ ! -f "dist/index.html" ]]; then
+    echo "❌ Сборка не завершилась: не найден dist/index.html"
+    exit 1
+  fi
+
+  # Переносим артефакты dist/* (кроме самой папки $ENV) в dist/$ENV
+  mkdir -p "$DIR"
+  find dist -mindepth 1 -maxdepth 1 ! -name "$ENV" -exec mv {} "$DIR/" \;
 
   if [[ ! -f "$DIR/index.html" ]]; then
-    echo "❌ Сборка не завершилась: не найден $DIR/index.html"
+    echo "❌ Не удалось перенести артефакты в $DIR"
     exit 1
   fi
 }

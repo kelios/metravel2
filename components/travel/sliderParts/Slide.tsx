@@ -317,8 +317,9 @@ const Slide = memo(function Slide({
             }}
             onLoad={handleLoad}
             onError={handleError}
-            showImmediately={loadedSlideUriCache.has(resolvedUri)}
+            showImmediately={isActive || isFirstSlide || loadedSlideUriCache.has(resolvedUri)}
             allowCriticalWebBlur={effectiveBlurBackground}
+            preserveOptimizedWebSrc={Platform.OS === 'web'}
             contentAspectRatio={
               typeof item?.width === 'number' &&
               typeof item?.height === 'number' &&
