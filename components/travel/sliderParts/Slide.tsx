@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
 
@@ -115,6 +115,15 @@ const Slide = memo(function Slide({
   prepareBlur = false,
   skipImage = false,
 }: SlideProps) {
+  const isSliderSafari =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    isIOSSafariUserAgent(
+      String(navigator.userAgent || ''),
+      typeof navigator.maxTouchPoints === 'number'
+        ? navigator.maxTouchPoints
+        : 0,
+    );
   const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
   const isFirstSlide = index === 0;
@@ -154,6 +163,7 @@ const Slide = memo(function Slide({
   const shouldBlur = blurBackground && (isActive || prepareBlur);
   const effectiveBlurBackground = shouldBlur;
   const effectiveAllowCriticalWebBlur = shouldBlur && Platform.OS === 'web';
+  const shouldRevealOnLoadOnly = isSliderSafari && effectiveAllowCriticalWebBlur;
   const shouldRenderLoadingPlaceholder =
     !isLoaded && (isFirstSlide || isActive || !!preloadPriority);
 
@@ -318,8 +328,13 @@ const Slide = memo(function Slide({
             }}
             onLoad={handleLoad}
             onError={handleError}
-            showImmediately={isActive || isFirstSlide || loadedSlideUriCache.has(resolvedUri)}
+            showImmediately={
+              shouldRevealOnLoadOnly
+                ? false
+                : (isActive || isFirstSlide || loadedSlideUriCache.has(resolvedUri))
+            }
             allowCriticalWebBlur={effectiveAllowCriticalWebBlur}
+            revealOnLoadOnly={shouldRevealOnLoadOnly}
             preserveOptimizedWebSrc={Platform.OS === 'web'}
             contentAspectRatio={
               typeof item?.width === 'number' &&

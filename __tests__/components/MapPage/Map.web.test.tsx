@@ -513,6 +513,25 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     ;(process.env as any).NODE_ENV = prevNodeEnv
   })
 
+  it('renders the web user location marker as non-interactive so clusters beneath remain tappable', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+
+    const { queryAllByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
+    await act(async () => {})
+
+    await waitFor(() => {
+      expect(getUserLocationMarkers(queryAllByTestId).length).toBe(1)
+    })
+
+    const userMarker = getUserLocationMarkers(queryAllByTestId)[0]
+    expect(userMarker.props.interactive).toBe(false)
+    expect(userMarker.props.zIndexOffset).toBe(-1000)
+    expect(userMarker.props.eventHandlers).toBeUndefined()
+
+    ;(process.env as any).NODE_ENV = prevNodeEnv
+  })
+
   it('opens article when clicking popup image', async () => {
     const prevNodeEnv = process.env.NODE_ENV
     ;(process.env as any).NODE_ENV = 'test'

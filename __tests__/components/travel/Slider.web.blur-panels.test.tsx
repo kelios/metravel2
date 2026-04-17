@@ -290,6 +290,8 @@ describe('Slider (web) blur background', () => {
     const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
     expect(firstImage.props.blurBackground).toBe(true)
     expect(firstImage.props.allowCriticalWebBlur).toBe(true)
+    expect(firstImage.props.revealOnLoadOnly).toBe(true)
+    expect(firstImage.props.showImmediately).toBe(false)
   })
 
   it('keeps only the in-track previous frame after navigating without duplicating overlay media', async () => {
