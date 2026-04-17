@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, TouchableOpacity, View } from 'react-native';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { isIOSSafariUserAgent } from '@/components/ui/ImageCardMedia';
 import type { SliderImage } from './types';
 import { injectSliderGlobalStyles } from './globalStyles';
 
@@ -115,6 +115,15 @@ const Slide = memo(function Slide({
   prepareBlur = false,
   skipImage = false,
 }: SlideProps) {
+  const isSliderSafari =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    isIOSSafariUserAgent(
+      String(navigator.userAgent || ''),
+      typeof navigator.maxTouchPoints === 'number'
+        ? navigator.maxTouchPoints
+        : 0,
+    );
   const [resolvedUri, setResolvedUri] = useState(uri);
   const [hasError, setHasError] = useState(false);
   const isFirstSlide = index === 0;
@@ -153,6 +162,7 @@ const Slide = memo(function Slide({
   const mainFit: 'cover' | 'contain' = fit;
   const shouldBlur = blurBackground && (isActive || prepareBlur);
   const effectiveBlurBackground = shouldBlur;
+  const effectiveAllowCriticalWebBlur = shouldBlur && !isSliderSafari;
   const shouldRenderLoadingPlaceholder =
     !isLoaded && (isFirstSlide || isActive || !!preloadPriority);
 
@@ -318,7 +328,7 @@ const Slide = memo(function Slide({
             onLoad={handleLoad}
             onError={handleError}
             showImmediately={isActive || isFirstSlide || loadedSlideUriCache.has(resolvedUri)}
-            allowCriticalWebBlur={effectiveBlurBackground}
+            allowCriticalWebBlur={effectiveAllowCriticalWebBlur}
             preserveOptimizedWebSrc={Platform.OS === 'web'}
             contentAspectRatio={
               typeof item?.width === 'number' &&

@@ -949,6 +949,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             popupProps={popupProps}
             onMarkerClick={() => {}}
             hintCenter={{ lat: center[0], lng: center[1] }}
+            useMap={rl.useMap}
             onMarkerInstance={(coord, marker) => {
               try {
                 const key = String(coord ?? '').trim();
@@ -977,7 +978,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
             hintCenter={{ lat: center[0], lng: center[1] }}
             onClusterZoom={() => {}}
             onMarkerClick={() => {}}
-            onMarkerInstance={(coord, marker) => {
+            useMap={rl.useMap}            onMarkerInstance={(coord, marker) => {
               try {
                 const key = String(coord ?? '').trim();
                 if (!key) return;

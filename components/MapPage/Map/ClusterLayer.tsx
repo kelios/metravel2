@@ -11,7 +11,7 @@ interface ClusterLayerProps {
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   Tooltip?: React.ComponentType<any>;
-  PopupContent: React.ComponentType<{ point: Point }>;
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
   popupProps?: Record<string, unknown>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
   onMarkerInstance?: (coord: string, marker: any | null) => void;
@@ -27,9 +27,23 @@ interface ClusterLayerProps {
   markerOpacity?: number;
   renderer?: any;
   hintCenter?: { lat: number; lng: number } | null;
+  useMap?: () => any;
 }
 
 const TOOLTIP_MAX_LEN = 30;
+
+const ClusterPopupContentWithClose: React.FC<{
+  point: Point;
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
+  useMap?: () => any;
+}> = ({ point, PopupContent, useMap: useMapHook }) => {
+  const map = useMapHook?.();
+  const closePopup = useCallback(() => {
+    map?.closePopup();
+  }, [map]);
+  return <PopupContent point={point} closePopup={closePopup} />;
+};
+
 
 const sanitizeCssValue = (val: string | undefined) => {
   if (!val) return '';
@@ -53,6 +67,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   markerOpacity = 1,
   renderer,
   hintCenter,
+  useMap: useMapHook,
 }) => {
   const colors = useThemedColors();
   const { width: viewportWidth } = useWindowDimensions();
@@ -333,7 +348,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                       </Tooltip>
                     )}
                     <Popup>
-                      <PopupContent point={item} />
+                      <ClusterPopupContentWithClose point={item} PopupContent={PopupContent} useMap={useMapHook} />
                     </Popup>
                   </Marker>
                 );
@@ -383,7 +398,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                 </Tooltip>
               )}
               <Popup {...(popupProps || {})}>
-                <PopupContent point={item} />
+                <ClusterPopupContentWithClose point={item} PopupContent={PopupContent} useMap={useMapHook} />
               </Popup>
             </Marker>
           );

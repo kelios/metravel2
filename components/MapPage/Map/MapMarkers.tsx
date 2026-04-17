@@ -18,12 +18,25 @@ interface MapMarkersProps {
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   Tooltip?: React.ComponentType<any>;
-  PopupContent: React.ComponentType<{ point: Point }>;
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
   popupProps?: Record<string, unknown>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
   onMarkerInstance?: (coord: string, marker: any | null) => void;
   hintCenter?: { lat: number; lng: number } | null;
+  useMap?: () => any;
 }
+
+const PopupContentWithClose: React.FC<{
+  point: Point;
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
+  useMap?: () => any;
+}> = ({ point, PopupContent, useMap: useMapHook }) => {
+  const map = useMapHook?.();
+  const closePopup = useCallback(() => {
+    map?.closePopup();
+  }, [map]);
+  return <PopupContent point={point} closePopup={closePopup} />;
+};
 
 const TOOLTIP_MAX_LEN = 30;
 
@@ -38,6 +51,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   onMarkerClick,
   onMarkerInstance,
   hintCenter,
+  useMap: useMapHook,
 }) => {
   const validPoints = useMemo(() => {
     return points
@@ -128,7 +142,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             </Tooltip>
           )}
           <Popup {...(popupProps || {})}>
-            <PopupContent point={point} />
+            <PopupContentWithClose point={point} PopupContent={PopupContent} useMap={useMapHook} />
           </Popup>
         </Marker>
       );

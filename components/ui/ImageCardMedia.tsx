@@ -282,10 +282,11 @@ function ImageCardMedia({
     if (Platform.OS !== 'web') return false;
     if (!blurBackground || !webMainSrc) return false;
     if (allowCriticalWebBlur) return true;
+    if (isSafariWeb) return true;
     // Avoid promoting the oversized blur backdrop to LCP on eager/critical images
     // unless the caller explicitly opts in for layout fidelity.
     return !(loading === 'eager' || priority === 'high');
-  }, [allowCriticalWebBlur, blurBackground, loading, priority, webMainSrc]);
+  }, [allowCriticalWebBlur, blurBackground, isSafariWeb, loading, priority, webMainSrc]);
   const webBackdropContentBox = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (fit !== 'contain') return null;

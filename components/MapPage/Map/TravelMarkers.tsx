@@ -1,5 +1,5 @@
 // components/MapPage/map/TravelMarkers.tsx
-import React from 'react';
+import React, { useCallback } from 'react';
 import { strToLatLng } from './utils';
 import type { Point } from './types';
 
@@ -8,11 +8,24 @@ interface TravelMarkersProps {
   icon: any;
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
-  PopupContent: React.ComponentType<{ point: Point }>;
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
   markerOpacity?: number;
   renderer?: any;
   hintCenter?: { lat: number; lng: number } | null;
+  useMap?: () => any;
 }
+
+const TravelPopupContentWithClose: React.FC<{
+  point: Point;
+  PopupContent: React.ComponentType<{ point: Point; closePopup?: () => void }>;
+  useMap?: () => any;
+}> = ({ point, PopupContent, useMap: useMapHook }) => {
+  const map = useMapHook?.();
+  const closePopup = useCallback(() => {
+    map?.closePopup();
+  }, [map]);
+  return <PopupContent point={point} closePopup={closePopup} />;
+};
 
 const TravelMarkers: React.FC<TravelMarkersProps> = ({
   points,
@@ -23,6 +36,7 @@ const TravelMarkers: React.FC<TravelMarkersProps> = ({
   markerOpacity = 1,
   renderer,
   hintCenter,
+  useMap: useMapHook,
 }) => {
   return (
     <>
@@ -54,7 +68,7 @@ const TravelMarkers: React.FC<TravelMarkersProps> = ({
         return (
           <Marker key={markerKey} {...markerOptions}>
             <Popup>
-              <PopupContent point={point} />
+              <TravelPopupContentWithClose point={point} PopupContent={PopupContent} useMap={useMapHook} />
             </Popup>
           </Marker>
         );
