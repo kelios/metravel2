@@ -129,10 +129,21 @@ const buildEslintArgs = (lintTargets) => {
   ]
 }
 
+const resolveCommand = (command) => {
+  if (process.platform !== 'win32') {
+    return command
+  }
+
+  if (command === 'npm') return 'npm.cmd'
+  if (command === 'npx') return 'npx.cmd'
+  return command
+}
+
 const runCommand = (command, args) => {
-  const result = spawnSync(command, args, {
+  const result = spawnSync(resolveCommand(command), args, {
     encoding: 'utf8',
     stdio: 'inherit',
+    shell: process.platform === 'win32',
   })
   return result.status ?? 1
 }
