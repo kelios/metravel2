@@ -72,18 +72,16 @@ const ignoredDirs = [
 ]
 const ignoredRegexes = ignoredDirs.map((dir) => {
   const abs = path.resolve(__dirname, dir)
-  // Metro uses regex paths; normalize both separators.
-  const normalized = escapeForRegex(abs).replaceAll('/', '[\\\\/]').replaceAll('\\\\', '[\\\\/]')
-  return new RegExp(`^${normalized}[\\\\/].*`)
+  // Keep the regex on the current platform separator only; Metro's exclusionList
+  // rewrites path separators internally and breaks custom character classes on Windows.
+  return new RegExp(`^${escapeForRegex(`${abs}${path.sep}`)}.*`)
 })
 config.resolver = config.resolver || {}
 const existingBlockList = config.resolver.blockList
-const existingPatterns = Array.isArray(existingBlockList)
-  ? existingBlockList
-  : existingBlockList
-    ? [existingBlockList]
-    : []
-config.resolver.blockList = exclusionList([...existingPatterns, ...ignoredRegexes])
+const additionalBlockList = exclusionList(ignoredRegexes)
+config.resolver.blockList = existingBlockList instanceof RegExp
+  ? new RegExp(`${existingBlockList.source}|${additionalBlockList.source}`)
+  : additionalBlockList
 
 // ✅ PERF: Enable inline requires — defers module execution until first use.
 // This dramatically reduces TBT because heavy modules (reanimated, leaflet, PDF, quill, etc.)

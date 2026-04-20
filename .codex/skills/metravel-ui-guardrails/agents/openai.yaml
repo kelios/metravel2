@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel UI Guardrails"
+  short_description: "Protect metravel UI, media, and link rules."
+  default_prompt: "Use $metravel-ui-guardrails to make a metravel UI change that stays aligned with project rules for links, icons, images, placeholders, and tokens."

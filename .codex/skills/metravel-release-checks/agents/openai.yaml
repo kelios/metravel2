@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Release Checks"
+  short_description: "Pick the right metravel validation flow."
+  default_prompt: "Use $metravel-release-checks to choose and run the right metravel checks for this change, from selective validation to release-ready verification."

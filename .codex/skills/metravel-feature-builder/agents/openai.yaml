@@ -1,0 +1,4 @@
+interface:
+  display_name: "Metravel Feature Builder"
+  short_description: "Build metravel features with docs-first workflow."
+  default_prompt: "Use $metravel-feature-builder to implement or refactor a metravel feature with repo rules, reuse-first coding, and scope-based validation."
