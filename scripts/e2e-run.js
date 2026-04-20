@@ -12,10 +12,7 @@ if (Object.prototype.hasOwnProperty.call(process.env, 'FORCE_COLOR')) {
   delete process.env.FORCE_COLOR;
 }
 
-const playwrightBin =
-  process.platform === 'win32'
-    ? path.join(rootDir, 'node_modules', '.bin', 'playwright.cmd')
-    : path.join(rootDir, 'node_modules', '.bin', 'playwright');
+const playwrightCli = path.join(rootDir, 'node_modules', 'playwright', 'cli.js');
 
 function getNumberEnv(name, fallback) {
   const raw = process.env[name];
@@ -147,7 +144,7 @@ function runPlaywright(args) {
       delete childEnv.FORCE_COLOR;
     }
 
-    const child = spawn(playwrightBin, args, {
+    const child = spawn(process.execPath, [playwrightCli, ...args], {
       cwd: rootDir,
       stdio: 'inherit',
       env: childEnv,

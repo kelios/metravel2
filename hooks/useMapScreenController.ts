@@ -253,6 +253,13 @@ export function useMapScreenController() {
             name: String(c.name || '').trim(),
           }))
           .filter((c) => c.name),
+        categoryTravelAddress: (filters.categoryTravelAddress ?? [])
+          .filter((c) => c && c.name)
+          .map((c) => ({
+            id: Number(c.id) || 0,
+            name: String(c.name || '').trim(),
+          }))
+          .filter((c) => c.name),
         radius: filters.radius.map((r) => ({ id: r.id, name: r.name })),
         address: filters.address,
       },

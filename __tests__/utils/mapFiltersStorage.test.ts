@@ -21,9 +21,9 @@ describe('mapFiltersStorage', () => {
   };
 
   it('sanitizeMapFilterValues returns defaults for invalid input', () => {
-    expect(sanitizeMapFilterValues(null)).toEqual({ categories: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
-    expect(sanitizeMapFilterValues([])).toEqual({ categories: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
-    expect(sanitizeMapFilterValues('x')).toEqual({ categories: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(sanitizeMapFilterValues(null)).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(sanitizeMapFilterValues([])).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(sanitizeMapFilterValues('x')).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
   });
 
   it('sanitizeMapFilterValues validates and trims fields', () => {
@@ -33,7 +33,7 @@ describe('mapFiltersStorage', () => {
       address: ' Minsk ',
     });
 
-    expect(result).toEqual({ categories: ['A'], radius: '100', address: ' Minsk ', transportMode: 'car', lastMode: 'radius' });
+    expect(result).toEqual({ categories: ['A'], categoryTravelAddress: [], radius: '100', address: ' Minsk ', transportMode: 'car', lastMode: 'radius' });
   });
 
   it('sanitizeMapFilterValues accepts valid transportMode and lastMode', () => {
@@ -47,6 +47,7 @@ describe('mapFiltersStorage', () => {
 
     expect(result).toEqual({
       categories: ['A'],
+      categoryTravelAddress: [],
       radius: '60',
       address: 'X',
       transportMode: 'bike',
@@ -65,6 +66,7 @@ describe('mapFiltersStorage', () => {
 
     expect(result).toEqual({
       categories: ['A'],
+      categoryTravelAddress: [],
       radius: '60',
       address: 'X',
       transportMode: 'car',
@@ -77,13 +79,13 @@ describe('mapFiltersStorage', () => {
       'map-filters': JSON.stringify({ categories: ['Food'], radius: '200', address: 'X' }),
     });
 
-    expect(loadMapFilterValues(storage)).toEqual({ categories: ['Food'], radius: '200', address: 'X', transportMode: 'car', lastMode: 'radius' });
+    expect(loadMapFilterValues(storage)).toEqual({ categories: ['Food'], categoryTravelAddress: [], radius: '200', address: 'X', transportMode: 'car', lastMode: 'radius' });
   });
 
   it('loadMapFilterValues clears corrupted JSON', () => {
     const storage = createStorage({ 'map-filters': '{bad json' });
 
-    expect(loadMapFilterValues(storage)).toEqual({ categories: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(loadMapFilterValues(storage)).toEqual({ categories: [], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
     expect(storage.getItem('map-filters')).toBeNull();
   });
 
@@ -99,6 +101,6 @@ describe('mapFiltersStorage', () => {
     });
 
     const loaded = loadMapFilterValues(storage);
-    expect(loaded).toEqual({ categories: ['A'], radius: '60', address: '', transportMode: 'foot', lastMode: 'route' });
+    expect(loaded).toEqual({ categories: ['A'], categoryTravelAddress: [], radius: '60', address: '', transportMode: 'foot', lastMode: 'route' });
   });
 });

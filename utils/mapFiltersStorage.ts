@@ -1,5 +1,6 @@
 export interface MapFilterValues {
   categories: string[];
+  categoryTravelAddress: string[];
   radius: string;
   address: string;
   transportMode?: 'car' | 'bike' | 'foot';
@@ -22,6 +23,7 @@ const MAX_ADDRESS_LENGTH = 500;
 export function sanitizeMapFilterValues(input: unknown): MapFilterValues {
   const fallback: MapFilterValues = {
     categories: [],
+    categoryTravelAddress: [],
     radius: '60',
     address: '',
     transportMode: 'car',
@@ -31,19 +33,24 @@ export function sanitizeMapFilterValues(input: unknown): MapFilterValues {
 
   const unsafe = input as {
     categories?: unknown;
+    categoryTravelAddress?: unknown;
     radius?: unknown;
     address?: unknown;
     transportMode?: unknown;
     lastMode?: unknown
   };
 
-  const categories = Array.isArray(unsafe.categories)
-    ? unsafe.categories
-        .filter((c): c is string => typeof c === 'string')
-        .map((c) => c.trim())
-        .filter((c) => c.length > 0 && c.length < MAX_CATEGORY_LENGTH)
-        .slice(0, MAX_CATEGORIES)
-    : [];
+  const sanitizeNamedList = (value: unknown) =>
+    Array.isArray(value)
+      ? value
+          .filter((c): c is string => typeof c === 'string')
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0 && c.length < MAX_CATEGORY_LENGTH)
+          .slice(0, MAX_CATEGORIES)
+      : [];
+
+  const categories = sanitizeNamedList(unsafe.categories);
+  const categoryTravelAddress = sanitizeNamedList(unsafe.categoryTravelAddress);
 
   const radius =
     typeof unsafe.radius === 'string' && /^\d+$/.test(unsafe.radius) ? unsafe.radius : '60';
@@ -63,7 +70,7 @@ export function sanitizeMapFilterValues(input: unknown): MapFilterValues {
       ? (unsafe.lastMode as 'radius' | 'route')
       : 'radius';
 
-  return { categories, radius, address, transportMode, lastMode };
+  return { categories, categoryTravelAddress, radius, address, transportMode, lastMode };
 }
 
 export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
@@ -79,6 +86,7 @@ export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
       }
       return {
         categories: [],
+        categoryTravelAddress: [],
         radius: '60',
         address: '',
         transportMode: 'car',
@@ -96,6 +104,7 @@ export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
     }
     return {
       categories: [],
+      categoryTravelAddress: [],
       radius: '60',
       address: '',
       transportMode: 'car',

@@ -40,11 +40,13 @@ interface FiltersPanelBodyProps {
   mode: 'radius' | 'route';
   filters: {
     categories: CategoryOption[];
+    categoryTravelAddress: CategoryOption[];
     radius: { id: string; name: string }[];
     address: string;
   };
   filterValue: {
     categories: CategoryOption[];
+    categoryTravelAddress: CategoryOption[];
     radius: string;
     address: string;
     searchQuery?: string;
@@ -112,11 +114,13 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   userLocation,
   onPlaceSelect,
 }) => {
-  const radiusOptions = Array.isArray(filters.radius) ? filters.radius : [];
-  const searchQuery = typeof filterValue.searchQuery === 'string' ? filterValue.searchQuery.trim() : '';
+  const radiusOptions = useMemo(() => (Array.isArray(filters.radius) ? filters.radius : []), [filters.radius]);
   const selectedCategoryNames = useMemo(
-    () => (Array.isArray(filterValue.categories) ? filterValue.categories : []).map(getCategoryName).filter(Boolean),
-    [filterValue.categories]
+    () =>
+      (Array.isArray(filterValue.categoryTravelAddress) ? filterValue.categoryTravelAddress : [])
+        .map(getCategoryName)
+        .filter(Boolean),
+    [filterValue.categoryTravelAddress]
   );
   const activeSummaryChips = useMemo(() => {
     if (mode === 'route') {
@@ -128,19 +132,16 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     }
 
     const chips: string[] = [];
-    if (searchQuery) {
-      chips.push(`Поиск: ${searchQuery}`);
-    }
     if (selectedCategoryNames.length > 0) {
       const preview = selectedCategoryNames.slice(0, 2).join(', ');
       chips.push(
         selectedCategoryNames.length > 2
-          ? `Категории: ${preview} +${selectedCategoryNames.length - 2}`
-          : `Категории: ${preview}`
+          ? `Что посмотреть: ${preview} +${selectedCategoryNames.length - 2}`
+          : `Что посмотреть: ${preview}`
       );
     }
     return chips;
-  }, [mode, routePoints.length, searchQuery, selectedCategoryNames, transportMode]);
+  }, [mode, routePoints.length, selectedCategoryNames, transportMode]);
   const currentRadiusIndex = useMemo(
     () => radiusOptions.findIndex((option) => String(option.id) === String(filterValue.radius)),
     [filterValue.radius, radiusOptions]
@@ -165,7 +166,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         : 'Соберите маршрут';
   const statusDescription =
     mode === 'radius'
-      ? `${getPlacesLabel(totalPoints)} в радиусе ${radiusValue} км. Меняйте поиск и категории, чтобы сразу видеть новый результат.`
+      ? `${getPlacesLabel(totalPoints)} в радиусе ${radiusValue} км. Меняйте категории и радиус, чтобы сразу видеть новый результат.`
       : canBuildRoute
         ? 'Старт и финиш уже выбраны. Проверьте транспорт и запускайте построение маршрута.'
         : 'Выберите транспорт, затем поставьте старт и финиш кликом по карте или через адресные поля.';
@@ -180,7 +181,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     mode === 'radius'
       ? activeSummaryChips.length > 0
         ? 'Активные фильтры уже применены. Можно сразу вернуться к результатам.'
-        : 'Сейчас показаны все места в выбранном радиусе. Уточняйте поиск по мере необходимости.'
+        : 'Сейчас показаны все места в выбранном радиусе. Уточняйте выдачу по категориям и радиусу.'
       : routePoints.length > 0
         ? 'Точки маршрута уже выбраны. После проверки можно вернуться к списку мест.'
         : 'Соберите маршрут здесь, а затем вернитесь к выдаче и карте.';
@@ -289,7 +290,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           <View style={styles.noPointsActions}>
             {nextRadiusOption ? (
               <Button
-                label={`Радиус ${nextRadiusOption.name} км`}
+                label={`Увеличить до ${nextRadiusOption.name} км`}
                 onPress={() => onFilterChange('radius', nextRadiusOption.id)}
                 accessibilityLabel={`Увеличить радиус до ${nextRadiusOption.name} километров`}
                 size="sm"

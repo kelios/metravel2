@@ -421,6 +421,17 @@ export const fetchTravelsForMap = async (
       }
     }
 
+    if (
+      filter?.categoryTravelAddress &&
+      Array.isArray(filter.categoryTravelAddress) &&
+      filter.categoryTravelAddress.length > 0
+    ) {
+      const normalizedCategoryTravelAddress = normalizeNumericArray(filter.categoryTravelAddress);
+      if (normalizedCategoryTravelAddress.length > 0) {
+        whereObject.categoryTravelAddress = normalizedCategoryTravelAddress;
+      }
+    }
+
     const paramsObj = {
       page: (page + 1).toString(),
       perPage: itemsPerPage.toString(),

@@ -27,11 +27,13 @@ interface FiltersPanelRadiusSectionProps {
   isMobile: boolean;
   filters: {
     categories: CategoryOption[];
+    categoryTravelAddress: CategoryOption[];
     radius: { id: string; name: string }[];
     address: string;
   };
   filterValue: {
     categories: CategoryOption[];
+    categoryTravelAddress: CategoryOption[];
     radius: string;
     address: string;
     searchQuery?: string;
@@ -75,7 +77,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 
   const categoriesWithCount = useMemo(
     () =>
-      filters.categories
+      filters.categoryTravelAddress
         .map((c) => {
           const name =
             typeof c === 'string'
@@ -95,7 +97,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           };
         })
         .filter(Boolean) as { id: string | number; label: string; value: string }[],
-    [filters.categories, travelCategoriesCount]
+    [filters.categoryTravelAddress, travelCategoriesCount]
   );
 
   const handleCategoryRemove = useCallback(
@@ -110,8 +112,8 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
               : String(cat || '');
 
       safeOnFilterChange(
-        'categories',
-        filterValue.categories.filter((c) => {
+        'categoryTravelAddress',
+        filterValue.categoryTravelAddress.filter((c) => {
           if (typeof c === 'string') {
             return c !== catValue;
           } else if (c && typeof c === 'object') {
@@ -122,15 +124,15 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         })
       );
     },
-    [filterValue.categories, safeOnFilterChange]
+    [filterValue.categoryTravelAddress, safeOnFilterChange]
   );
 
-  const selectedCategoriesCount = Array.isArray(filterValue.categories)
-    ? filterValue.categories.length
+  const selectedCategoriesCount = Array.isArray(filterValue.categoryTravelAddress)
+    ? filterValue.categoryTravelAddress.length
     : 0;
   const selectedCategoryNames = useMemo(
     () =>
-      (Array.isArray(filterValue.categories) ? filterValue.categories : [])
+      (Array.isArray(filterValue.categoryTravelAddress) ? filterValue.categoryTravelAddress : [])
         .map((cat) => {
           if (typeof cat === 'string') return cat;
           if (cat && typeof cat === 'object' && 'value' in cat) return String((cat as any).value);
@@ -138,7 +140,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           return '';
         })
         .filter(Boolean),
-    [filterValue.categories]
+    [filterValue.categoryTravelAddress]
   );
   const radiusResultCount = useMemo(() => {
     if (selectedCategoryNames.length === 0) return travelsData.length;
@@ -181,8 +183,8 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
             ) : null}
             <MultiSelectField
               items={categoriesWithCount}
-              value={(Array.isArray(filterValue.categories)
-                ? filterValue.categories
+              value={(Array.isArray(filterValue.categoryTravelAddress)
+                ? filterValue.categoryTravelAddress
                     .map((cat) => {
                       if (typeof cat === 'string') return cat;
                       if (cat && typeof cat === 'object' && 'value' in cat) return String((cat as any).value);
@@ -190,7 +192,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                     })
                     .filter((v): v is string => v !== null && v !== undefined)
                 : []) as string[]}
-              onChange={(v) => safeOnFilterChange('categories', v)}
+              onChange={(v) => safeOnFilterChange('categoryTravelAddress', v)}
               labelField="label"
               valueField="value"
               placeholder="Выберите..."
@@ -203,7 +205,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                 style={styles.chipsContainer}
                 contentContainerStyle={styles.chipsContent}
               >
-                {filterValue.categories.slice(0, 5).map((cat) => {
+                {filterValue.categoryTravelAddress.slice(0, 5).map((cat) => {
                   const catValue =
                     typeof cat === 'string'
                       ? cat

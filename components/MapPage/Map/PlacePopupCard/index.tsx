@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -205,6 +205,10 @@ const PlacePopupCard: React.FC<Props> = ({
   const handleCloseFullscreen = useCallback(() => {
     setFullscreenVisible(false);
   }, []);
+
+  useEffect(() => {
+    setFullscreenVisible(false);
+  }, [imageUrl]);
 
   const topInfoSlot = useMemo(() => (
     <View style={styles.infoSection}>
@@ -500,15 +504,10 @@ const PlacePopupCard: React.FC<Props> = ({
     colors.textMuted,
     compactLabel,
     coord,
-    hasArticle,
     hasCoord,
     isAdding,
     onAddPoint,
-    onBuildRoute,
     onCopyCoord,
-    onOpenArticle,
-    onOpenGoogleMaps,
-    onOpenOrganicMaps,
     primaryAction,
     styles,
     useCompactDecisionLayout,

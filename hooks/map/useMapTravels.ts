@@ -48,7 +48,10 @@ function filterTravelsByCategories(
   });
 }
 
-function parseBackendFilters(filtersKey: string): { categories?: Array<number | string> } {
+function parseBackendFilters(filtersKey: string): {
+  categories?: Array<number | string>;
+  categoryTravelAddress?: Array<number | string>;
+} {
   try {
     const parsed: unknown = filtersKey ? JSON.parse(filtersKey) : {};
 
@@ -57,12 +60,24 @@ function parseBackendFilters(filtersKey: string): { categories?: Array<number | 
     }
 
     const categories = (parsed as { categories?: unknown }).categories;
-
-    if (Array.isArray(categories)) {
-      return {
-        categories: categories
+    const categoryTravelAddress = (parsed as { categoryTravelAddress?: unknown }).categoryTravelAddress;
+    const normalizedCategories = Array.isArray(categories)
+      ? categories
           .filter((c): c is number | string => typeof c === 'number' || typeof c === 'string')
-          .slice(0, 50),
+          .slice(0, 50)
+      : [];
+    const normalizedCategoryTravelAddress = Array.isArray(categoryTravelAddress)
+      ? categoryTravelAddress
+          .filter((c): c is number | string => typeof c === 'number' || typeof c === 'string')
+          .slice(0, 50)
+      : [];
+
+    if (normalizedCategories.length || normalizedCategoryTravelAddress.length) {
+      return {
+        ...(normalizedCategories.length ? { categories: normalizedCategories } : {}),
+        ...(normalizedCategoryTravelAddress.length
+          ? { categoryTravelAddress: normalizedCategoryTravelAddress }
+          : {}),
       };
     }
   } catch (err) {
@@ -107,14 +122,21 @@ export function useMapTravels({
     () => mapCategoryNamesToIds(filterValues.categories, filters.categories),
     [filterValues.categories, filters.categories]
   );
+  const normalizedCategoryTravelAddressIds = useMemo(
+    () => mapCategoryNamesToIds(filterValues.categoryTravelAddress, filters.categoryTravelAddress),
+    [filterValues.categoryTravelAddress, filters.categoryTravelAddress]
+  );
 
   // Строим параметры запроса для бэкенда
   const backendFilters = useMemo(
     () =>
-      buildTravelQueryParams(
-        normalizedCategoryIds.length ? { categories: normalizedCategoryIds } : {}
-      ),
-    [normalizedCategoryIds]
+      buildTravelQueryParams({
+        ...(normalizedCategoryIds.length ? { categories: normalizedCategoryIds } : {}),
+        ...(normalizedCategoryTravelAddressIds.length
+          ? { categoryTravelAddress: normalizedCategoryTravelAddressIds }
+          : {}),
+      }),
+    [normalizedCategoryIds, normalizedCategoryTravelAddressIds]
   );
 
   // Стабильный ключ для маршрута (для кэширования)
@@ -179,6 +201,7 @@ export function useMapTravels({
           lng: queryParams.lng!.toString(),
           radius: queryParams.radius,
           categories: parsedFilters.categories,
+          categoryTravelAddress: parsedFilters.categoryTravelAddress,
         },
         { signal }
       );
@@ -293,8 +316,8 @@ export function useMapTravels({
 
   // Фильтруем только по категориям на клиенте (радиус уже применен на бэкенде)
   const filteredTravelsData = useMemo(() => {
-    return filterTravelsByCategories(allTravelsData, filterValues.categories);
-  }, [allTravelsData, filterValues.categories]);
+    return filterTravelsByCategories(allTravelsData, filterValues.categoryTravelAddress);
+  }, [allTravelsData, filterValues.categoryTravelAddress]);
 
   return useMemo(() => ({
     allTravelsData,

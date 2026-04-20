@@ -326,7 +326,12 @@ async function main() {
     // Build web export.
     // Expo export sometimes doesn't exit cleanly even after writing to dist, which can block Playwright webServer.
     // We treat the build as "done" once dist/index.html exists, then terminate the build process.
-    const build = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build:web'], {
+    const buildCommand = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : 'npm';
+    const buildArgs =
+      process.platform === 'win32'
+        ? ['/d', '/s', '/c', 'npm run build:web -- --no-bytecode']
+        : ['run', 'build:web', '--', '--no-bytecode'];
+    const build = spawn(buildCommand, buildArgs, {
       cwd: rootDir,
       stdio: 'inherit',
       env: sanitizedEnv(process.env),

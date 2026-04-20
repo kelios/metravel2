@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ThemedColors } from '@/hooks/useTheme';
@@ -63,6 +63,23 @@ const FullscreenImageViewer: React.FC<{
     }) ?? imageUrl;
   }, [imageUrl, maxW, maxH]);
 
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!visible) return;
+    if (typeof document === 'undefined') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose, visible]);
 
   if (Platform.OS === 'web') {
     if (!visible) return null;

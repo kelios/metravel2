@@ -108,8 +108,11 @@ const useFiltersPanelModel = ({
   );
 
   const hasActiveFilters = useMemo(
-    () => filterValue.categories.length > 0 || filterValue.radius !== '',
-    [filterValue.categories.length, filterValue.radius]
+    () =>
+      filterValue.categories.length > 0 ||
+      filterValue.categoryTravelAddress.length > 0 ||
+      filterValue.radius !== '',
+    [filterValue.categories.length, filterValue.categoryTravelAddress.length, filterValue.radius]
   );
 
   const canBuildRoute = useMemo(

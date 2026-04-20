@@ -56,6 +56,7 @@ interface MapMobileLayoutProps {
 const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
 const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 350
 const PHONE_COMPACT_ACTIONS_MAX_WIDTH = 420
+const WEB_MOBILE_BOTTOM_DOCK_INSET = 88
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   mapComponent,
@@ -242,12 +243,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const activeRadius = filtersContextProps?.filterValue?.radius || '60'
   const selectedCategories = useMemo(
     () =>
-      Array.isArray(filtersContextProps?.filterValue?.categories)
-        ? filtersContextProps.filterValue.categories
+      Array.isArray(filtersContextProps?.filterValue?.categoryTravelAddress)
+        ? filtersContextProps.filterValue.categoryTravelAddress
             .map((value: unknown) => String(value ?? '').trim())
             .filter(Boolean)
         : [],
-    [filtersContextProps?.filterValue?.categories],
+    [filtersContextProps?.filterValue?.categoryTravelAddress],
   )
 
   const routeCtaLabel = useMemo(() => {
@@ -295,7 +296,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     [isVeryNarrow],
   )
 
-  const quickFiltersValue = useMemo(() => {
+  const quickRadiusValue = useMemo(() => {
     if (filtersMode === 'route') return 'Маршрут'
     return activeRadius ? `${activeRadius} км` : 'Выбор'
   }, [activeRadius, filtersMode])
@@ -373,8 +374,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     isNarrow,
   ])
 
-  const sheetPeekContent = Platform.OS === 'web' ? null : peekContent
+  const sheetPeekContent = peekContent
   const quickActionsBottomOffset = consentBannerVisible ? 208 : 128
+  const bottomSheetInset = Platform.OS === 'web' ? WEB_MOBILE_BOTTOM_DOCK_INSET : 0
 
   const sheetContent = useMemo(() => {
     const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
@@ -649,12 +651,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     handleToggleListPanel,
     listTabsOptions,
     modeTabsOptions,
-    canBuildRoute,
     compactSheetActions,
     filterToolbarSummary,
     isNarrow,
-    routeCtaLabel,
-    routingLoading,
     setFiltersMode,
     setTabDeferred,
     sheetState,
@@ -691,6 +690,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     styles.sheetTransitionState,
     styles.sheetTransitionText,
     styles.sheetTransitionTitle,
+    styles.sheetPrimaryActionText,
     transportMode,
     travelsData,
   ])
@@ -706,10 +706,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
         {showQuickFiltersOverlay && (
           <MapQuickFilters
-            filtersValue={quickFiltersValue}
+            radiusValue={quickRadiusValue}
             categoriesValue={quickCategoriesValue}
-            onPressFilters={handleOpenFilters}
-            onPressCategories={handleOpenFilters}
+            radiusOptions={filtersContextProps?.filters?.radius}
+            radiusSelected={activeRadius}
+            onChangeRadius={(next) => filtersContextProps?.onFilterChange?.('radius', next)}
+            categoriesOptions={filtersContextProps?.filters?.categoryTravelAddress}
+            categoriesSelected={selectedCategories}
+            onChangeCategories={(next) => filtersContextProps?.onFilterChange?.('categoryTravelAddress', next)}
+            travelsData={travelsData}
           />
         )}
       </View>
@@ -752,7 +757,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         ref={bottomSheetRef}
         peekContent={sheetPeekContent}
         onStateChange={handleSheetStateChange}
-        bottomInset={0}
+        bottomInset={bottomSheetInset}
       >
         {sheetContent}
       </MapBottomSheet>

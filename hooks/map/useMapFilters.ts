@@ -12,12 +12,14 @@ import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS } from '@/constants/mapConfig';
 
 export interface FiltersData {
   categories: { id: string; name: string }[];
+  categoryTravelAddress: { id: string; name: string }[];
   radius: { id: string; name: string }[];
   address: string;
 }
 
 const DEFAULT_FILTER_VALUES: MapFilterValues = {
   categories: [],
+  categoryTravelAddress: [],
   radius: String(DEFAULT_RADIUS_KM),
   address: '',
   searchQuery: '',
@@ -62,6 +64,7 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
 
   const [filters, setFilters] = useState<FiltersData>({
     categories: [],
+    categoryTravelAddress: [],
     radius: [...RADIUS_OPTIONS],
     address: '',
   });
@@ -70,6 +73,7 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
     const stored = webStorage ? loadMapFilterValues(webStorage) : DEFAULT_FILTER_VALUES;
     return {
       ...stored,
+      searchQuery: '',
       ...(options?.initialCategories?.length ? { categories: options.initialCategories } : {}),
       ...(options?.initialRadius ? { radius: options.initialRadius } : {}),
     };
@@ -95,9 +99,13 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
         const categories = (data.categories || [])
           .map((cat, idx) => normalizeCategory(cat, idx))
           .filter((cat): cat is { id: string; name: string } => cat !== null);
+        const categoryTravelAddress = (data.categoryTravelAddress || [])
+          .map((cat, idx) => normalizeCategory(cat, idx))
+          .filter((cat): cat is { id: string; name: string } => cat !== null);
 
         setFilters({
           categories,
+          categoryTravelAddress,
           radius: [...RADIUS_OPTIONS],
           address: data.categoryTravelAddress?.[0] || '',
         });
@@ -142,6 +150,11 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
         return;
       }
 
+      if (field === 'categoryTravelAddress' && Array.isArray(value) && value.every((v) => typeof v === 'string')) {
+        handleFilterChange('categoryTravelAddress', value);
+        return;
+      }
+
       if (field === 'radius' && typeof value === 'string') {
         handleFilterChange('radius', value);
         return;
@@ -152,9 +165,6 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
         return;
       }
 
-      if (field === 'searchQuery' && typeof value === 'string') {
-        handleFilterChange('searchQuery', value);
-      }
     },
     [handleFilterChange]
   );

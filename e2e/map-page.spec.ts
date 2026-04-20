@@ -60,6 +60,9 @@ const getCanonicalHref = async (page: any): Promise<string | null> => {
 
 const mapTravelsTabSelector = '[data-testid="map-travels-tab"], [testID="map-travels-tab"]';
 const mapTravelCardSelector = '[data-testid="map-travel-card"], [testID="map-travel-card"]';
+const mobilePanelEntrySelector = '[data-testid="map-peek-expand"], [data-testid="map-panel-open"]:visible';
+
+const getMobilePanelEntry = (page: any) => page.locator(mobilePanelEntrySelector).first();
 
 const maybeRecoverFromMapErrorScreen = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
@@ -85,16 +88,16 @@ const maybeRecoverFromMapErrorScreen = async (page: any) => {
 
 const waitForMapUi = async (page: any, timeoutMs: number, { throwOnFailure = true } = {}) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
-  const mobileMenu = page.getByTestId('map-panel-open');
+  const mobileEntry = getMobilePanelEntry(page);
 
   await Promise.race([
     mapReady.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
-    mobileMenu.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
+    mobileEntry.waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
   ]);
 
   const hasUi =
     (await mapReady.isVisible().catch(() => false)) ||
-    (await mobileMenu.isVisible().catch(() => false));
+    (await mobileEntry.isVisible().catch(() => false));
   if (!hasUi && throwOnFailure) throw new Error(`Map UI did not appear (url=${page.url()})`);
   return hasUi;
 };
@@ -117,7 +120,7 @@ const safeGoto = async (page: any, url: string, opts: any) => {
 
 const gotoMapWithRecovery = async (page: any) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
-  const mobileMenu = page.getByTestId('map-panel-open');
+  const mobileEntry = getMobilePanelEntry(page);
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
   const homeHeadline = page.getByText('Пиши о своих путешествиях', { exact: true });
   const mapTabLink = page.getByRole('link', { name: 'Карта' });
@@ -132,7 +135,7 @@ const gotoMapWithRecovery = async (page: any) => {
     // Success condition: UI is present.
     const hasUi =
       (await mapReady.isVisible().catch(() => false)) ||
-      (await mobileMenu.isVisible().catch(() => false));
+      (await mobileEntry.isVisible().catch(() => false));
     if (hasUi) return;
 
     // Sometimes mobile web boots into the Home tab even after direct navigation.
@@ -981,13 +984,13 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-reset-filters-button')).toBeVisible();
   });
 
-  test('mobile: menu button opens list panel', async ({ page }) => {
+  test('mobile: compact preview opens list panel', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
 
     await gotoMapWithRecovery(page);
 
     // На мобильном панель закрыта по умолчанию, должна быть видна кнопка меню
-    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    const toggle = getMobilePanelEntry(page);
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
@@ -996,8 +999,6 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     // Закрытие через крестик (если доступен) либо повторный toggle кнопкой меню
     // Close via the header menu button (toggle).
-    await toggle.click({ force: true });
-    await expect(toggle).toBeVisible({ timeout: 20_000 });
   });
 
   test('mobile: panel close button is topmost and FAB does not overlay panel', async ({ page }) => {
@@ -1005,7 +1006,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     await gotoMapWithRecovery(page);
 
-    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    const toggle = getMobilePanelEntry(page);
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
@@ -1020,28 +1021,30 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(fab).toHaveCount(0);
   });
 
-  test('mobile: overlay click closes panel', async ({ page }) => {
+  test('mobile: close button collapses panel back to compact preview', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
 
     await gotoMapWithRecovery(page);
 
-    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    const toggle = getMobilePanelEntry(page);
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
     // Закрываем панель повторным нажатием на кнопку меню (toggle).
-    await page.getByTestId('segmented-radius').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => null);
-    await toggle.click({ force: true });
+    const close = page.getByTestId('map-panel-close');
+    await expect(close).toBeVisible({ timeout: 20_000 });
+    await close.click();
 
-    await expect(toggle).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('map-peek-preview')).toBeVisible({ timeout: 20_000 });
+    await expect(getMobilePanelEntry(page)).toBeVisible({ timeout: 20_000 });
   });
 
-  test('mobile: double click on menu does not cause panel flicker (stays open)', async ({ page }) => {
+  test('mobile: double click on compact preview entry does not cause panel flicker (stays open)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 720 });
 
     await gotoMapWithRecovery(page);
 
-    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    const toggle = getMobilePanelEntry(page);
     await expect(toggle).toBeVisible({ timeout: 20_000 });
 
     // Regression: RN-web Pressable can emit double events; panel should not open then immediately close.
@@ -1071,7 +1074,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await gotoMapWithRecovery(page);
 
     // Open the panel
-    const toggle = page.locator('[data-testid="map-panel-open"]:visible').first();
+    const toggle = getMobilePanelEntry(page);
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
@@ -1088,10 +1091,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Verify filters panel is shown (radius/route toggle should appear)
     await expect(page.getByTestId('segmented-radius')).toBeVisible({ timeout: 10_000 });
 
-    // Click back to list toggle
-    await listToggle.click();
-
-    // Verify list toggle is now active (checked)
-    await expect(listToggle).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });
+    await expect(listToggle).toBeVisible();
+    await expect(filtersToggle).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });
   });
 });

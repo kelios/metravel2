@@ -205,7 +205,7 @@ const getStyles = (colors: ThemedColors) =>
     sheet: {
       ...Platform.select({
         web: {
-          zIndex: 2000,
+          zIndex: 5000,
           boxShadow: 'none',
           left: 0,
           right: 0,

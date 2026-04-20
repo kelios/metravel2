@@ -74,6 +74,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
 
   return (
     <View
+      testID="map-peek-preview"
       style={styles.container}
       {...(Platform.OS === 'web' ? ({ onWheelCapture: onWheel } as any) : ({} as any))}
     >
@@ -86,6 +87,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
         </View>
         <Button
           label={previewCountLabel}
+          testID="map-peek-expand"
           onPress={onExpandPress}
           variant="ghost"
           size="sm"

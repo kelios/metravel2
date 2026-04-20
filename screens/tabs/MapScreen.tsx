@@ -86,6 +86,10 @@ export default function MapScreen() {
     const dismissGeoBanner = useCallback(() => setGeoBannerDismissed(true), []);
     const showGeoBanner = Boolean(geoError && !geoBannerDismissed);
 
+    useEffect(() => {
+        if (!geoError && geoBannerDismissed) setGeoBannerDismissed(false);
+    }, [geoError, geoBannerDismissed]);
+
     // --- SEO (single block, rendered once) ---
     const mapStructuredData = useMemo(
         () =>
@@ -177,8 +181,8 @@ export default function MapScreen() {
     );
 
     const quickFilterSelected: string[] = useMemo(
-        () => filtersPanelProps?.contextValue?.filterValue?.categories ?? [],
-        [filtersPanelProps?.contextValue?.filterValue?.categories],
+        () => filtersPanelProps?.contextValue?.filterValue?.categoryTravelAddress ?? [],
+        [filtersPanelProps?.contextValue?.filterValue?.categoryTravelAddress],
     );
     const currentRadius = filtersPanelProps?.contextValue?.filterValue?.radius ?? '';
     const quickCategoriesValue = useMemo(() => {
@@ -186,7 +190,7 @@ export default function MapScreen() {
         if (quickFilterSelected.length === 1) return quickFilterSelected[0];
         return `${quickFilterSelected.length} выбрано`;
     }, [quickFilterSelected]);
-    const quickFiltersValue = useMemo(() => {
+    const quickRadiusValue = useMemo(() => {
         if (!currentRadius) return 'Выбор';
         return `${currentRadius} км`;
     }, [currentRadius]);
@@ -210,15 +214,15 @@ export default function MapScreen() {
         if (!onChange) return;
         if (key.startsWith('cat:')) {
             const catName = key.slice(4);
-            const current: string[] = filtersPanelProps?.contextValue?.filterValue?.categories ?? [];
-            onChange('categories', current.filter((c: string) => c !== catName));
+            const current: string[] = filtersPanelProps?.contextValue?.filterValue?.categoryTravelAddress ?? [];
+            onChange('categoryTravelAddress', current.filter((c: string) => c !== catName));
         } else if (key === 'radius') {
             onChange('radius', String(DEFAULT_RADIUS_KM));
         } else if (key === 'transport') {
             const setTransport = filtersPanelProps?.contextValue?.setTransportMode;
             if (typeof setTransport === 'function') setTransport('car');
         }
-    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories, filtersPanelProps?.contextValue?.setTransportMode]);
+    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categoryTravelAddress, filtersPanelProps?.contextValue?.setTransportMode]);
 
     const handleClearAllFilters = useCallback(() => {
         const reset = filtersPanelProps?.contextValue?.resetFilters;
@@ -227,24 +231,6 @@ export default function MapScreen() {
 
     const requestOpenBottomSheet = useMapPanelStore((s) => s.requestOpen);
 
-    const handleOpenFiltersPanel = useCallback(() => {
-        selectFiltersTab();
-        if (isDesktopCollapsed && !isMobile) {
-            toggleDesktopCollapse();
-        }
-        if (isMobile) {
-            requestOpenBottomSheet('filters');
-            return;
-        }
-        openRightPanel();
-    }, [
-        isDesktopCollapsed,
-        isMobile,
-        openRightPanel,
-        requestOpenBottomSheet,
-        selectFiltersTab,
-        toggleDesktopCollapse,
-    ]);
 
     const handleExpandRadius = useCallback(() => {
         const onChange = filtersPanelProps?.contextValue?.onFilterChange;
@@ -268,12 +254,17 @@ export default function MapScreen() {
         () => (
             <View style={styles.mapArea}>
                 <MapLoadingBar visible={isFetching} />
-                {Platform.OS === 'web' && (
+                {Platform.OS === 'web' && !isMobile && (
                     <MapQuickFilters
-                        filtersValue={quickFiltersValue}
+                        radiusValue={quickRadiusValue}
                         categoriesValue={quickCategoriesValue}
-                        onPressFilters={handleOpenFiltersPanel}
-                        onPressCategories={handleOpenFiltersPanel}
+                        radiusOptions={filtersPanelProps?.contextValue?.filters?.radius}
+                        radiusSelected={currentRadius}
+                        onChangeRadius={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('radius', next)}
+                        categoriesOptions={filtersPanelProps?.contextValue?.filters?.categoryTravelAddress}
+                        categoriesSelected={quickFilterSelected}
+                        onChangeCategories={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('categoryTravelAddress', next)}
+                        travelsData={travelsData}
                     />
                 )}
                 {Platform.OS === 'web' && !isMobile && isDesktopCollapsed && travelsData.length > 0 && rightPanelTab !== 'travels' && (
@@ -297,6 +288,7 @@ export default function MapScreen() {
                             onPress={dismissGeoBanner}
                             accessibilityRole="button"
                             accessibilityLabel="Закрыть уведомление"
+                            hitSlop={10}
                             style={({ pressed }) => [styles.geoBannerClose, pressed && { opacity: 0.6 }]}
                         >
                             <Feather name="x" size={12} color={themedColors.textMuted} />
@@ -314,12 +306,12 @@ export default function MapScreen() {
             rightPanelTab,
             isDesktopCollapsed,
             handleShowList,
-            travelsData.length,
-            currentRadius,
-            handleExpandRadius,
-            handleOpenFiltersPanel,
+            travelsData,
             quickCategoriesValue,
-            quickFiltersValue,
+            quickRadiusValue,
+            currentRadius,
+            quickFilterSelected,
+            filtersPanelProps?.contextValue,
             styles.mapArea,
             showGeoBanner,
             dismissGeoBanner,
@@ -392,6 +384,7 @@ export default function MapScreen() {
                     >
                         <Pressable
                             testID="map-panel-expand-button"
+                            hitSlop={8}
                             style={({ pressed }) => [styles.collapseToggle, pressed && { opacity: 0.7 }]}
                             onPress={toggleDesktopCollapse}
                             accessibilityRole="button"
@@ -441,6 +434,7 @@ export default function MapScreen() {
                 {!isMobile && Platform.OS === 'web' && (
                     <Pressable
                         testID="map-panel-collapse-button"
+                        hitSlop={8}
                         style={({ pressed }) => [styles.collapseToggleInPanel, pressed && { opacity: 0.7 }]}
                         onPress={toggleDesktopCollapse}
                         accessibilityRole="button"

@@ -17,11 +17,13 @@ export interface FiltersContextValue {
   // Filters
   filters: {
     categories: CategoryOption[];
+    categoryTravelAddress: CategoryOption[];
     radius: { id: string; name: string }[];
     address: string;
   };
   filterValue: {
     categories: CategoryOption[];
+    categoryTravelAddress: CategoryOption[];
     radius: string;
     address: string;
     searchQuery?: string;
