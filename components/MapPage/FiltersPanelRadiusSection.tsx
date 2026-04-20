@@ -4,7 +4,6 @@ import Feather from '@expo/vector-icons/Feather';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import MapIcon from './MapIcon';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
-import MapSearchInput from '@/components/MapPage/MapSearchInput';
 import type { ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
@@ -57,27 +56,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
     },
     [onFilterChange]
   );
-
-  const searchQuery = filterValue.searchQuery || '';
-
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      safeOnFilterChange('searchQuery', value);
-    },
-    [safeOnFilterChange]
-  );
-
-  // Count results matching search query
-  const searchResultsCount = useMemo(() => {
-    if (!searchQuery.trim()) return undefined;
-    const q = searchQuery.toLowerCase().trim();
-    return travelsData.filter((t) => {
-      const name = (t.name || '').toLowerCase();
-      const address = (t.address || '').toLowerCase();
-      const category = (t.categoryName || '').toLowerCase();
-      return name.includes(q) || address.includes(q) || category.includes(q);
-    }).length;
-  }, [searchQuery, travelsData]);
 
   const travelCategoriesCount = useMemo(() => {
     const count: Record<string, number> = {};
@@ -174,7 +152,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       return categoryNames.some((categoryName) => normalizedSelected.has(categoryName));
     }).length;
   }, [selectedCategoryNames, travelsData]);
-  const hasSelectionSummary = Boolean(searchQuery.trim()) || selectedCategoryNames.length > 0;
+  const hasSelectionSummary = selectedCategoryNames.length > 0;
   const categoryPreview = selectedCategoryNames.slice(0, 2).join(', ');
   const categorySummary = selectedCategoryNames.length > 2
     ? `${categoryPreview} +${selectedCategoryNames.length - 2}`
@@ -182,30 +160,9 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
 
   return (
     <>
-      {/* Поиск — легкий блок */}
       <View style={styles.lightStepBlock}>
         <View style={styles.lightStepHeader}>
           <Text style={styles.lightStepNumber}>1</Text>
-          <Text style={styles.lightStepTitle}>Поиск</Text>
-          {searchQuery.trim() ? (
-            <Text style={styles.lightStepBadge}>Есть запрос</Text>
-          ) : (
-            <Text style={styles.lightStepHint}>Не задан</Text>
-          )}
-        </View>
-        <MapSearchInput
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Поиск мест по названию..."
-          resultsCount={searchResultsCount}
-          testID="map-filters-search"
-        />
-      </View>
-
-      {/* Категории + радиус — легкий блок */}
-      <View style={styles.lightStepBlock}>
-        <View style={styles.lightStepHeader}>
-          <Text style={styles.lightStepNumber}>2</Text>
           <Text style={styles.lightStepTitle}>Что посмотреть + радиус</Text>
           <Text style={selectedCategoriesCount > 0 ? styles.lightStepBadge : styles.lightStepHint}>
             {selectedCategoriesCount > 0 ? `${selectedCategoriesCount} выбрано` : 'Все типы'}
@@ -339,14 +296,6 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         {hasSelectionSummary && (
           <View style={styles.filterSelectionSummary} testID="radius-selection-summary">
             <View style={styles.filterSelectionChips}>
-              {searchQuery.trim() ? (
-                <View style={styles.filterSelectionChip}>
-                  <Feather name="search" size={12} color={colors.primary} />
-                  <Text style={styles.filterSelectionChipText} numberOfLines={1}>
-                    {searchQuery.trim()}
-                  </Text>
-                </View>
-              ) : null}
               {selectedCategoryNames.length > 0 ? (
                 <View style={styles.filterSelectionChip}>
                   <Feather name="grid" size={12} color={colors.primary} />

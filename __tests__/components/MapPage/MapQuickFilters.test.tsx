@@ -1,6 +1,6 @@
 import React from 'react';
 import * as RN from 'react-native';
-import { render, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
 
@@ -14,102 +14,59 @@ describe('MapQuickFilters', () => {
     });
   });
 
-  it('renders a compact overflow filters chip on narrow screens and opens full filters', () => {
-    const onOpenFilters = jest.fn();
-
-    const { getByText, getByLabelText, getByText: getText } = render(
-      <MapQuickFilters
-        categories={[
-          { id: 1, name: 'Горы' },
-          { id: 2, name: 'Пляжи' },
-          { id: 3, name: 'Города' },
-          { id: 4, name: 'Природа' },
-        ]}
-        selectedCategories={[]}
-        onToggleCategory={jest.fn()}
-        maxVisible={3}
-        onOpenFilters={onOpenFilters}
-      />
-    );
-
-    expect(getByText('Горы')).toBeTruthy();
-    expect(getByText('Пляжи')).toBeTruthy();
-    expect(getByLabelText(/Открыть все фильтры, скрыто ещё \d+/)).toBeTruthy();
-    expect(getText(/^\+\d+$/)).toBeTruthy();
-
-    fireEvent.press(getByLabelText(/Открыть все фильтры, скрыто ещё \d+/));
-    expect(onOpenFilters).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps the compact filters chip visible when categories are selected', () => {
-    const onOpenFilters = jest.fn();
-
+  it('renders filters and categories selectors with current values', () => {
     const { getByText, getByLabelText } = render(
       <MapQuickFilters
-        categories={[
-          { id: 1, name: 'Горы' },
-          { id: 2, name: 'Пляжи' },
-        ]}
-        selectedCategories={['Горы']}
-        onToggleCategory={jest.fn()}
-        maxVisible={3}
-        onOpenFilters={onOpenFilters}
+        filtersValue="60 км"
+        categoriesValue="2 выбрано"
+        onPressFilters={jest.fn()}
+        onPressCategories={jest.fn()}
       />
     );
 
-    expect(getByLabelText(/Открыть все фильтры, выбрано 1/)).toBeTruthy();
-    expect(getByText('1')).toBeTruthy();
-
-    fireEvent.press(getByLabelText(/Открыть все фильтры, выбрано 1/));
-    expect(onOpenFilters).toHaveBeenCalledTimes(1);
+    expect(getByText('Фильтры')).toBeTruthy();
+    expect(getByText('Категории')).toBeTruthy();
+    expect(getByText('60 км')).toBeTruthy();
+    expect(getByText('2 выбрано')).toBeTruthy();
+    expect(getByLabelText('Фильтры: 60 км')).toBeTruthy();
+    expect(getByLabelText('Категории: 2 выбрано')).toBeTruthy();
   });
 
-  it('keeps the overflow action chip compact on 393px mobile widths', () => {
-    ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({
-      width: 393,
-      height: 852,
-      scale: 1,
-      fontScale: 1,
-    });
-
-    const { getByText, getByLabelText, queryByText } = render(
-      <MapQuickFilters
-        categories={[
-          { id: 1, name: 'Парковка' },
-          { id: 2, name: 'Пещера' },
-          { id: 3, name: 'Костёл' },
-          { id: 4, name: 'Родник' },
-        ]}
-        selectedCategories={[]}
-        onToggleCategory={jest.fn()}
-        maxVisible={3}
-        onOpenFilters={jest.fn()}
-      />
+  it('uses fallback values when explicit selection is missing', () => {
+    const { getAllByText, getByText } = render(
+      <MapQuickFilters onPressFilters={jest.fn()} onPressCategories={jest.fn()} />
     );
 
-    expect(getByText('Парковка')).toBeTruthy();
-    expect(getByText('Пещера')).toBeTruthy();
-    expect(queryByText('Костёл')).toBeNull();
-    expect(getByLabelText(/Открыть все фильтры, скрыто ещё \d+/)).toBeTruthy();
+    expect(getAllByText('Выбор')).toHaveLength(2);
+    expect(getByText('Категории')).toBeTruthy();
   });
 
-  it('skips categories with empty names so blank chips are not rendered', () => {
-    const { getByText, queryByText } = render(
+  it('fires both selector callbacks independently', () => {
+    const onPressFilters = jest.fn();
+    const onPressCategories = jest.fn();
+
+    const { getByLabelText } = render(
       <MapQuickFilters
-        categories={[
-          { id: 1, name: 'Парковка' },
-          { id: 2, name: '   ' },
-          { id: 3, name: 'Пещера' },
-        ]}
-        selectedCategories={[]}
-        onToggleCategory={jest.fn()}
-        maxVisible={5}
-        onOpenFilters={jest.fn()}
+        filtersValue="Маршрут"
+        categoriesValue="Все"
+        onPressFilters={onPressFilters}
+        onPressCategories={onPressCategories}
       />
     );
 
-    expect(getByText('Парковка')).toBeTruthy();
-    expect(getByText('Пещера')).toBeTruthy();
-    expect(queryByText('   ')).toBeNull();
+    fireEvent.press(getByLabelText('Фильтры: Маршрут'));
+    fireEvent.press(getByLabelText('Категории: Все'));
+
+    expect(onPressFilters).toHaveBeenCalledTimes(1);
+    expect(onPressCategories).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides a selector when its action is unavailable', () => {
+    const { queryByText, getByText } = render(
+      <MapQuickFilters filtersValue="60 км" onPressFilters={jest.fn()} />
+    );
+
+    expect(getByText('Фильтры')).toBeTruthy();
+    expect(queryByText('Категории')).toBeNull();
   });
 });

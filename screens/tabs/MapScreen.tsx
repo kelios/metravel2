@@ -176,32 +176,20 @@ export default function MapScreen() {
         [],
     );
 
-    // Quick filter chips + active filters bar
-    const quickFilterCategories = useMemo(() => {
-        const cats = filtersPanelProps?.contextValue?.filters?.categories ?? [];
-        if (!cats.length || !travelsData.length) return cats;
-        const countMap = new Map<string, number>();
-        for (const t of travelsData) {
-            const names = (t.categoryName || '').split(',').map((s: string) => s.trim()).filter(Boolean);
-            for (const n of names) countMap.set(n, (countMap.get(n) || 0) + 1);
-        }
-        return [...cats].sort((a, b) => (countMap.get(b.name) || 0) - (countMap.get(a.name) || 0));
-    }, [filtersPanelProps?.contextValue?.filters?.categories, travelsData]);
-
     const quickFilterSelected: string[] = useMemo(
         () => filtersPanelProps?.contextValue?.filterValue?.categories ?? [],
         [filtersPanelProps?.contextValue?.filterValue?.categories],
     );
     const currentRadius = filtersPanelProps?.contextValue?.filterValue?.radius ?? '';
-    const quickFilterToggle = useCallback((name: string) => {
-        const onChange = filtersPanelProps?.contextValue?.onFilterChange;
-        if (!onChange) return;
-        const current: string[] = filtersPanelProps?.contextValue?.filterValue?.categories ?? [];
-        const next = current.includes(name)
-            ? current.filter((c: string) => c !== name)
-            : [...current, name];
-        onChange('categories', next);
-    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories]);
+    const quickCategoriesValue = useMemo(() => {
+        if (quickFilterSelected.length === 0) return 'Все';
+        if (quickFilterSelected.length === 1) return quickFilterSelected[0];
+        return `${quickFilterSelected.length} выбрано`;
+    }, [quickFilterSelected]);
+    const quickFiltersValue = useMemo(() => {
+        if (!currentRadius) return 'Выбор';
+        return `${currentRadius} км`;
+    }, [currentRadius]);
 
     const currentTransport = transportMode ?? 'car';
     const activeFilterItems = useMemo(() => {
@@ -280,13 +268,12 @@ export default function MapScreen() {
         () => (
             <View style={styles.mapArea}>
                 <MapLoadingBar visible={isFetching} />
-                {Platform.OS === 'web' && quickFilterCategories.length > 0 && (
+                {Platform.OS === 'web' && (
                     <MapQuickFilters
-                        categories={quickFilterCategories}
-                        selectedCategories={quickFilterSelected}
-                        onToggleCategory={quickFilterToggle}
-                        maxVisible={isMobile ? 3 : 5}
-                        onOpenFilters={handleOpenFiltersPanel}
+                        filtersValue={quickFiltersValue}
+                        categoriesValue={quickCategoriesValue}
+                        onPressFilters={handleOpenFiltersPanel}
+                        onPressCategories={handleOpenFiltersPanel}
                     />
                 )}
                 {Platform.OS === 'web' && !isMobile && isDesktopCollapsed && travelsData.length > 0 && rightPanelTab !== 'travels' && (
@@ -324,14 +311,15 @@ export default function MapScreen() {
             mapPanelPlaceholder,
             mapPanelProps,
             mapReady,
-            quickFilterCategories,
-            quickFilterSelected,
-            quickFilterToggle,
             rightPanelTab,
             isDesktopCollapsed,
             handleShowList,
             travelsData.length,
+            currentRadius,
+            handleExpandRadius,
             handleOpenFiltersPanel,
+            quickCategoriesValue,
+            quickFiltersValue,
             styles.mapArea,
             showGeoBanner,
             dismissGeoBanner,

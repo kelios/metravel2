@@ -527,7 +527,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     const userMarker = getUserLocationMarkers(queryAllByTestId)[0]
     expect(userMarker.props.interactive).toBe(false)
     expect(userMarker.props.pane).toBeUndefined()
-    expect(userMarker.props.zIndexOffset).toBe(-1000)
+    expect(userMarker.props.zIndexOffset).toBe(700)
     expect(userMarker.props.eventHandlers).toBeUndefined()
 
     ;(process.env as any).NODE_ENV = prevNodeEnv
@@ -564,7 +564,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     await act(async () => {})
 
-    fireEvent.press(getAllByLabelText('Открыть статью о точке')[0])
+    fireEvent.press(getAllByLabelText('Открыть статью')[0])
     expect(openSpy).toHaveBeenCalledWith('https://example.com/article', '_blank', 'noopener')
 
     ;(process.env as any).NODE_ENV = prevNodeEnv

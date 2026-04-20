@@ -198,12 +198,6 @@ const PlacePopupCard: React.FC<Props> = ({
     [colors, bp, heroWidth, heroHeight, useCompactLayout, useSplitLayout],
   );
 
-  const actionBtnStyle = useMemo(
-    () =>
-      ({ pressed }: { pressed: boolean }) => [styles.actionBtn, pressed && styles.actionBtnPressed],
-    [styles],
-  );
-
   const handleOpenFullscreen = useCallback(() => {
     if (imageUrl) setFullscreenVisible(true);
   }, [imageUrl]);
@@ -282,12 +276,102 @@ const PlacePopupCard: React.FC<Props> = ({
   ]);
 
   const showLabeled = useFullscreenMobileOverlay;
+  const useCompactDecisionLayout = useCompactLayout || showLabeled;
+  const actionSummaryText = useMemo(() => {
+    if (onBuildRoute) return 'Сначала маршрут, потом можно сохранить точку.';
+    if (hasArticle) return 'Откройте карточку места или навигацию.';
+    return 'Откройте навигацию или сохраните точку.';
+  }, [hasArticle, onBuildRoute]);
 
-  const labeledActionStyle = useMemo(
-    () =>
-      ({ pressed }: { pressed: boolean }) => [styles.labeledActionBtn, pressed && styles.actionBtnPressed],
-    [styles],
-  );
+  const secondaryActions = useMemo(() => {
+    const items: Array<{
+      key: string;
+      accessibilityLabel: string;
+      label: string;
+      icon: React.ComponentProps<typeof Feather>['name'];
+      onPress: () => void;
+      title: string;
+    }> = [];
+
+    if (hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps) {
+      items.push({
+        key: 'google',
+        accessibilityLabel: 'Google Maps',
+        label: 'Google',
+        icon: 'map',
+        onPress: onOpenGoogleMaps,
+        title: POPUP_TOOLTIPS.openGoogleMaps,
+      });
+    }
+
+    if (hasCoord && onOpenOrganicMaps) {
+      items.push({
+        key: 'organic',
+        accessibilityLabel: 'Organic Maps',
+        label: 'Organic',
+        icon: 'compass',
+        onPress: onOpenOrganicMaps,
+        title: POPUP_TOOLTIPS.openOrganicMaps,
+      });
+    }
+
+    if (hasArticle && primaryAction?.onPress !== onOpenArticle && onOpenArticle) {
+      items.push({
+        key: 'article',
+        accessibilityLabel: 'Открыть статью',
+        label: 'Статья',
+        icon: 'book-open',
+        onPress: onOpenArticle,
+        title: POPUP_TOOLTIPS.openArticle,
+      });
+    }
+
+    if (!useCompactDecisionLayout && hasCoord && onOpenWaze) {
+      items.push({
+        key: 'waze',
+        accessibilityLabel: 'Waze',
+        label: 'Waze',
+        icon: 'navigation',
+        onPress: onOpenWaze,
+        title: POPUP_TOOLTIPS.openWaze,
+      });
+    }
+
+    if (!useCompactDecisionLayout && hasCoord && onOpenYandexNavi) {
+      items.push({
+        key: 'yandex',
+        accessibilityLabel: 'Яндекс Навигатор',
+        label: 'Навигатор',
+        icon: 'navigation-2',
+        onPress: onOpenYandexNavi,
+        title: POPUP_TOOLTIPS.openYandexNavi,
+      });
+    }
+
+    if (!useCompactDecisionLayout && hasCoord && onShareTelegram) {
+      items.push({
+        key: 'telegram',
+        accessibilityLabel: 'Поделиться',
+        label: 'Telegram',
+        icon: 'send',
+        onPress: onShareTelegram,
+        title: POPUP_TOOLTIPS.shareTelegram,
+      });
+    }
+
+    return useCompactDecisionLayout ? items.slice(0, 2) : items;
+  }, [
+    hasArticle,
+    hasCoord,
+    onOpenGoogleMaps,
+    onOpenOrganicMaps,
+    onOpenArticle,
+    onOpenWaze,
+    onOpenYandexNavi,
+    onShareTelegram,
+    primaryAction,
+    useCompactDecisionLayout,
+  ]);
 
   const footerSlot = useMemo(() => (
     <View style={styles.footerStack}>
@@ -305,6 +389,12 @@ const PlacePopupCard: React.FC<Props> = ({
       )}
 
       <View style={styles.actionsStack}>
+        {useCompactDecisionLayout && (
+          <Text style={styles.actionSummaryText}>
+            {actionSummaryText}
+          </Text>
+        )}
+
         {primaryAction && (
           <CardActionPressable
             accessibilityLabel={primaryAction.accessibilityLabel}
@@ -345,93 +435,39 @@ const PlacePopupCard: React.FC<Props> = ({
         )}
 
         <View style={styles.secondaryActionsRow}>
-          {hasCoord && onOpenGoogleMaps && primaryAction?.onPress !== onOpenGoogleMaps && (
+          {secondaryActions.map((action) => (
             <CardActionPressable
-              accessibilityLabel="Google Maps"
-              onPress={onOpenGoogleMaps}
-              title={POPUP_TOOLTIPS.openGoogleMaps}
-              style={showLabeled ? labeledActionStyle : actionBtnStyle}
-            >
-              <Feather name="map" size={14} color={colors.textMuted} />
-              {showLabeled && <Text style={styles.labeledActionText}>Google</Text>}
-            </CardActionPressable>
-          )}
-
-          {hasCoord && onOpenOrganicMaps && (
-            <CardActionPressable
-              accessibilityLabel="Organic Maps"
-              onPress={onOpenOrganicMaps}
-              title={POPUP_TOOLTIPS.openOrganicMaps}
-              style={showLabeled ? labeledActionStyle : actionBtnStyle}
-            >
-              <Feather name="compass" size={14} color={colors.textMuted} />
-              {showLabeled && <Text style={styles.labeledActionText}>Organic</Text>}
-            </CardActionPressable>
-          )}
-
-          {hasCoord && onOpenWaze && (
-            <CardActionPressable
-              accessibilityLabel="Waze"
-              onPress={onOpenWaze}
-              title={POPUP_TOOLTIPS.openWaze}
-              style={showLabeled ? labeledActionStyle : actionBtnStyle}
-            >
-               <Feather name="navigation" size={14} color={colors.textMuted} />
-              {showLabeled && <Text style={styles.labeledActionText}>Waze</Text>}
-            </CardActionPressable>
-          )}
-
-          {hasCoord && onOpenYandexNavi && (
-            <CardActionPressable
-              accessibilityLabel="Яндекс Навигатор"
-              onPress={onOpenYandexNavi}
-              title={POPUP_TOOLTIPS.openYandexNavi}
-              style={showLabeled ? labeledActionStyle : actionBtnStyle}
-            >
-              <Feather name="navigation-2" size={14} color={colors.textMuted} />
-              {showLabeled && <Text style={styles.labeledActionText}>Навигатор</Text>}
-            </CardActionPressable>
-          )}
-
-          {hasCoord && onShareTelegram && (
-            <CardActionPressable
-              accessibilityLabel="Поделиться"
-              onPress={onShareTelegram}
-              title={POPUP_TOOLTIPS.shareTelegram}
-              style={showLabeled ? labeledActionStyle : actionBtnStyle}
-            >
-              <Feather name="send" size={14} color={colors.textMuted} />
-              {showLabeled && <Text style={styles.labeledActionText}>Telegram</Text>}
-            </CardActionPressable>
-          )}
-
-          {hasArticle && primaryAction?.onPress !== onOpenArticle && (
-            <CardActionPressable
-              accessibilityLabel="Открыть статью"
-              onPress={onOpenArticle}
-              title={POPUP_TOOLTIPS.openArticle}
-              style={showLabeled ? labeledActionStyle : actionBtnStyle}
-            >
-              <Feather name="book-open" size={14} color={colors.textMuted} />
-              {showLabeled && <Text style={styles.labeledActionText}>Статья</Text>}
-            </CardActionPressable>
-          )}
-
-          {onBuildRoute && primaryAction?.onPress !== onBuildRoute && (
-            <CardActionPressable
-              accessibilityLabel="Маршрут"
-              onPress={onBuildRoute}
-              title={POPUP_TOOLTIPS.buildRoute}
-              testID="popup-build-route"
+              key={action.key}
+              accessibilityLabel={action.accessibilityLabel}
+              onPress={action.onPress}
+              title={action.title}
               style={showLabeled
-                ? ({ pressed }) => [styles.labeledActionBtn, styles.routeBtn, pressed && styles.actionBtnPressed]
-                : ({ pressed }) => [styles.iconBtn, styles.routeBtn, pressed && styles.actionBtnPressed]
+                ? ({ pressed }) => [
+                    styles.labeledActionBtn,
+                    pressed && styles.actionBtnPressed,
+                  ]
+                : ({ pressed }) => [
+                    styles.actionBtn,
+                    pressed && styles.actionBtnPressed,
+                  ]
               }
             >
-              <Feather name="corner-up-right" size={14} color={colors.primary} />
-              {showLabeled && <Text style={[styles.labeledActionText, { color: colors.primary }]}>Маршрут</Text>}
+              <Feather
+                name={action.icon}
+                size={14}
+                color={colors.textMuted}
+              />
+              {showLabeled && (
+                <Text
+                  style={[
+                    styles.labeledActionText,
+                  ]}
+                >
+                  {action.label}
+                </Text>
+              )}
             </CardActionPressable>
-          )}
+          ))}
 
           {onAddPoint && !showLabeled && (
             <CardActionPressable
@@ -456,8 +492,8 @@ const PlacePopupCard: React.FC<Props> = ({
       </View>
     </View>
   ), [
-    actionBtnStyle,
-    labeledActionStyle,
+    actionSummaryText,
+    secondaryActions,
     showLabeled,
     addDisabled,
     colors.primary,
@@ -473,11 +509,9 @@ const PlacePopupCard: React.FC<Props> = ({
     onOpenArticle,
     onOpenGoogleMaps,
     onOpenOrganicMaps,
-    onOpenWaze,
-    onOpenYandexNavi,
-    onShareTelegram,
     primaryAction,
     styles,
+    useCompactDecisionLayout,
     colors.textOnDark,
     colors.textOnPrimary,
   ]);

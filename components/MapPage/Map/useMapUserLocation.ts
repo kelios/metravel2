@@ -6,6 +6,10 @@ import { isValidCoordinate } from '@/utils/coordinateValidator'
 
 import type { Coordinates } from './types'
 
+const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768
+const MOBILE_WEB_USER_FOCUS_OFFSET: [number, number] = [84, -92]
+const USER_LOCATION_FOCUS_ZOOM = 14
+
 let expoLocationModulePromise: Promise<typeof import('expo-location')> | null = null
 
 async function loadExpoLocation() {
@@ -113,7 +117,22 @@ export function useMapUserLocation({
   const centerOnUserLocation = useCallback(() => {
     if (!mapRef.current || !userLocationLatLng) return
     try {
-      mapRef.current.setView(CoordinateConverter.toLeaflet(userLocationLatLng), 14, { animate: true })
+      mapRef.current.setView(
+        CoordinateConverter.toLeaflet(userLocationLatLng),
+        USER_LOCATION_FOCUS_ZOOM,
+        { animate: true },
+      )
+
+      const containerWidth = Number(mapRef.current?.getContainer?.()?.clientWidth ?? 0)
+      const shouldOffsetForCompactWeb =
+        Platform.OS === 'web' &&
+        containerWidth > 0 &&
+        containerWidth < MOBILE_WEB_USER_FOCUS_MAX_WIDTH &&
+        typeof mapRef.current?.panBy === 'function'
+
+      if (shouldOffsetForCompactWeb) {
+        mapRef.current.panBy(MOBILE_WEB_USER_FOCUS_OFFSET, { animate: true })
+      }
     } catch {
       // noop
     }

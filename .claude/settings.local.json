@@ -12,7 +12,10 @@
       "Bash(npx eslint:*)",
       "mcp__Claude_Preview__preview_start",
       "Bash(brew install:*)",
-      "Bash(pdftoppm -v)"
+      "Bash(pdftoppm -v)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(git worktree *)"
     ]
   }
 }

@@ -6,6 +6,7 @@ import ValidationMessage from '@/components/MapPage/ValidationMessage';
 import { RouteValidator } from '@/utils/routeValidator';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
+import Button from '@/components/ui/Button';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
@@ -107,6 +108,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
   );
 
   const hasTwoPoints = mode === 'route' && routePoints.length >= 2;
+  const remainingPoints = Math.max(0, 2 - routePoints.length);
   const selectedTransportLabel =
     TRANSPORT_MODES.find((transport) => transport.key === transportMode)?.label || 'Транспорт выбран';
 
@@ -191,6 +193,30 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
             onClear={onClearRoute}
             compact
           />
+        )}
+        {!hasTwoPoints && (
+          <View style={styles.noPointsToast} testID="route-empty-state">
+            <Text style={styles.noPointsTitle}>
+              {routePoints.length === 0 ? 'Сначала выберите старт и финиш' : 'Нужна ещё одна точка'}
+            </Text>
+            <Text style={styles.noPointsSubtitle}>
+              {routePoints.length === 0
+                ? 'Начните с адреса или отметьте первую точку на карте, затем добавьте место назначения.'
+                : `Маршрут почти готов. Добавьте ещё ${remainingPoints} точку, чтобы запустить расчёт.`}
+            </Text>
+            {routePoints.length > 0 && onClearRoute ? (
+              <View style={styles.noPointsActions}>
+                <Button
+                  label="Очистить маршрут"
+                  onPress={onClearRoute}
+                  accessibilityLabel="Очистить маршрут"
+                  size="sm"
+                  variant="outline"
+                  style={styles.ctaButton}
+                />
+              </View>
+            ) : null}
+          </View>
         )}
       </View>
 

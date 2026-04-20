@@ -8,7 +8,9 @@ import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { useAuthStore } from '@/stores/authStore';
+import { useRouteStore } from '@/stores/routeStore';
 import { ThemeContext, type ThemeContextType, type ThemedColors } from '@/hooks/useTheme';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 interface CreatePopupComponentArgs {
   userLocation?: { lat: number; lng: number } | null;
@@ -224,6 +226,20 @@ export const createMapPopupComponent = ({
       [rawCategoryName, point.address],
     );
     const popupTitle = useMemo(() => buildPopupTitleParts(point), [point]);
+    const canBuildRoute = normalizedCoord != null && typeof userLat === 'number' && typeof userLng === 'number';
+
+    const handleBuildRoute = useCallback(() => {
+      if (!normalizedCoord || typeof userLat !== 'number' || typeof userLng !== 'number') return;
+
+      const routeStore = useRouteStore.getState();
+      const destinationLabel = String(point.address ?? popupTitle.title ?? '').trim() ||
+        CoordinateConverter.formatCoordinates({ lat: normalizedCoord.lat, lng: normalizedCoord.lng });
+
+      routeStore.clearRouteAndSetMode('route');
+      routeStore.addPoint({ lat: userLat, lng: userLng }, 'Моё местоположение');
+      routeStore.addPoint({ lat: normalizedCoord.lat, lng: normalizedCoord.lng }, destinationLabel);
+      handlePress();
+    }, [handlePress, normalizedCoord, point.address, popupTitle.title, userLat, userLng]);
 
     const handleAddPoint = useCallback(async () => {
       if (!authReady) return;
@@ -310,6 +326,7 @@ export const createMapPopupComponent = ({
           onOpenWaze={handleOpenWaze}
           onOpenYandexNavi={handleOpenYandexNavi}
           onAddPoint={handleAddPoint}
+          onBuildRoute={canBuildRoute ? handleBuildRoute : undefined}
           addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
           isAdding={isAdding}
           compactLayout={compactLayout}

@@ -147,7 +147,7 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
           icon={userLocationIcon}
           pane={Platform.OS === 'web' ? userLocationPaneName : undefined}
           interactive={Platform.OS !== 'web'}
-          zIndexOffset={Platform.OS === 'web' ? -1000 : 0}
+          zIndexOffset={Platform.OS === 'web' ? 700 : 0}
           eventHandlers={
             Platform.OS === 'web'
               ? undefined

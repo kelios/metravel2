@@ -1,5 +1,6 @@
 // useMapApi.ts - Hook for exposing map API to parent components
 import { useEffect, useCallback, useMemo, useRef } from 'react';
+import { Platform } from 'react-native';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { MapUiApi } from '@/types/mapUi';
 import type { LatLng } from '@/types/coordinates';
@@ -7,6 +8,10 @@ import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport';
 import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
 import type { OsmPoiCategory } from '@/utils/overpass';
+
+const MOBILE_WEB_USER_FOCUS_MAX_WIDTH = 768;
+const MOBILE_WEB_USER_FOCUS_OFFSET: [number, number] = [84, -92];
+const USER_LOCATION_FOCUS_ZOOM = 14;
 
 interface Point {
   id?: string | number;
@@ -41,16 +46,33 @@ export function useMapApi({
   const pendingOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingOverlayAttemptsRef = useRef(0);
 
+  const centerMapOnUser = useCallback((targetLocation: LatLng, zoom = USER_LOCATION_FOCUS_ZOOM) => {
+    if (!map) return;
+    try {
+      const target = CoordinateConverter.toLeaflet(targetLocation);
+      map.setView(target, zoom, { animate: true });
+
+      const containerWidth = Number(map?.getContainer?.()?.clientWidth ?? 0);
+      const shouldOffsetForCompactWeb =
+        Platform.OS === 'web' &&
+        containerWidth > 0 &&
+        containerWidth < MOBILE_WEB_USER_FOCUS_MAX_WIDTH &&
+        typeof map?.panBy === 'function';
+
+      if (shouldOffsetForCompactWeb) {
+        map.panBy(MOBILE_WEB_USER_FOCUS_OFFSET, { animate: true });
+      }
+    } catch {
+      // noop
+    }
+  }, [map]);
+
   const canExportRoute = useMemo(() => (routePoints?.length ?? 0) >= 2, [routePoints?.length]);
 
   const centerOnUserLocation = useCallback(() => {
     if (!map || !userLocation) return;
-    try {
-      map.setView(CoordinateConverter.toLeaflet(userLocation), 13, { animate: true });
-    } catch {
-      // noop
-    }
-  }, [map, userLocation]);
+    centerMapOnUser(userLocation, 13);
+  }, [centerMapOnUser, map, userLocation]);
 
   const handleDownloadGpx = useCallback(() => {
     if (!routePoints || routePoints.length < 2) return;

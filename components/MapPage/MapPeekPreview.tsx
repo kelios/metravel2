@@ -54,6 +54,8 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
   const topPlaces = useMemo(() => {
     return places.slice(0, 5);
   }, [places]);
+  const previewCountLabel =
+    places.length > topPlaces.length ? `Список ${places.length}` : 'Список';
 
   if (!topPlaces.length) {
     return (
@@ -75,6 +77,22 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
       style={styles.container}
       {...(Platform.OS === 'web' ? ({ onWheelCapture: onWheel } as any) : ({} as any))}
     >
+      <View style={styles.header}>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.title}>Быстрый выбор</Text>
+          <Text style={styles.subtitle}>
+            Нажмите карточку, чтобы сфокусироваться на месте, или откройте список со всеми результатами.
+          </Text>
+        </View>
+        <Button
+          label={previewCountLabel}
+          onPress={onExpandPress}
+          variant="ghost"
+          size="sm"
+          style={styles.headerAction}
+        />
+      </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -160,6 +178,13 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
                       </View>
                     </View>
                   )}
+
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.cardFooterText}>
+                      Открыть и поехать
+                    </Text>
+                    <MapIcon name="alt-route" size={14} color={colors.primary} />
+                  </View>
                 </View>
               </View>
             </CardActionPressable>
@@ -169,7 +194,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
 
       {places.length > topPlaces.length && (
         <Button
-          label={`Ещё ${places.length - topPlaces.length}`}
+          label={`Показать ещё ${places.length - topPlaces.length}`}
           icon={<MapIcon name="expand-less" size={20} color={colors.primary} />}
           onPress={onExpandPress}
           variant="ghost"
@@ -185,6 +210,32 @@ const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
       paddingVertical: 4,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      marginBottom: 10,
+    },
+    headerTextWrap: {
+      flex: 1,
+      minWidth: 0,
+      gap: 2,
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: 11,
+      lineHeight: 15,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
+    headerAction: {
+      alignSelf: 'flex-start',
     },
     emptyContainer: {
       paddingVertical: 2,
@@ -315,6 +366,21 @@ const getStyles = (colors: ThemedColors) =>
       fontSize: 11,
       fontWeight: '600',
       color: colors.accent,
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      marginTop: 2,
+      paddingTop: 6,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
+    },
+    cardFooterText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.primary,
     },
     moreButton: {
       alignSelf: 'center',

@@ -19,11 +19,12 @@ interface MapBottomSheetProps {
   /** Нижний отступ (например, высота нижнего dock на web) */
   bottomInset?: number;
   /** Callback при изменении состояния */
-  onStateChange?: (state: 'collapsed' | 'half' | 'full') => void;
+  onStateChange?: (state: 'collapsed' | 'quarter' | 'half' | 'full') => void;
 }
 
 export interface MapBottomSheetRef {
   snapToCollapsed: () => void;
+  snapToQuarter: () => void;
   snapToHalf: () => void;
   snapToFull: () => void;
   close: () => void;
@@ -40,9 +41,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const hasHeaderText = Boolean(title || subtitle);
 
     const contentBottomPadding = Platform.OS === 'web' ? 12 + bottomInset : 40 + bottomInset;
+    const isNative = Platform.OS !== 'web';
 
     const snapPoints = useMemo(
-      () => (Platform.OS === 'web' ? ['70%', '80%'] : ['55%', '80%']),
+      () => (Platform.OS === 'web' ? ['70%', '80%'] : ['30%', '58%', '86%']),
       []
     );
 
@@ -56,7 +58,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         }
         bottomSheetRef.current?.close();
       },
-      snapToHalf: () => {
+      snapToQuarter: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
         if (Platform.OS === 'web') {
           setSheetIndex(0);
@@ -65,6 +67,15 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         }
         bottomSheetRef.current?.snapToIndex(0);
       },
+      snapToHalf: () => {
+        lastProgrammaticOpenTsRef.current = Date.now();
+        if (Platform.OS === 'web') {
+          setSheetIndex(0);
+          onStateChange?.('half');
+          return;
+        }
+        bottomSheetRef.current?.snapToIndex(1);
+      },
       snapToFull: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
         if (Platform.OS === 'web') {
@@ -72,7 +83,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           onStateChange?.('full');
           return;
         }
-        bottomSheetRef.current?.snapToIndex(1);
+        bottomSheetRef.current?.snapToIndex(2);
       },
       close: () => {
         if (Platform.OS === 'web') {
@@ -95,10 +106,12 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           return;
         }
 
-        const states: ('half' | 'full')[] = ['half', 'full'];
+        const states: ('quarter' | 'half' | 'full')[] = isNative
+          ? ['quarter', 'half', 'full']
+          : ['half', 'full', 'full'];
         onStateChange(states[index] || 'collapsed');
       },
-      [onStateChange]
+      [isNative, onStateChange]
     );
 
     // Render backdrop for half/full states
@@ -115,8 +128,8 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           >
             <BottomSheetBackdrop
               {...props}
-              disappearsOnIndex={0}
-              appearsOnIndex={1}
+              disappearsOnIndex={isNative ? 1 : 0}
+              appearsOnIndex={isNative ? 2 : 1}
               opacity={0.5}
               pressBehavior="none"
             />
@@ -133,7 +146,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           </View>
         );
       },
-      []
+      [isNative]
     );
 
     return (
@@ -144,7 +157,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
-        enablePanDownToClose={false}
+        enablePanDownToClose={true}
         handleIndicatorStyle={styles.indicator}
         backgroundStyle={styles.background}
         style={styles.sheet}

@@ -81,10 +81,12 @@ const AddressListItem: React.FC<Props> = ({
     const webCardImageHeight = useMemo(() => Math.round(Math.max(128, Math.min(188, webCardWidth * 0.48))), [webCardWidth]);
 
     const showOverlays = isMobile || hovered;
+    const showActionIcons = !isMobile && showOverlays;
     const iconSize = isSmallScreen ? 20 : 22;
     const iconButtonSize = isSmallScreen ? 40 : 48;
     const titleFontSize = isSmallScreen ? 16 : isTablet ? 17 : 18;
     const coordFontSize = isSmallScreen ? 12 : 13;
+    const mobileSaveLabel = pointAdded ? 'Сохранено' : 'Сохранить';
 
     const handleMainPress = useCallback(() => {
         if (onPress) onPress();
@@ -163,7 +165,7 @@ const AddressListItem: React.FC<Props> = ({
             <View style={styles.mainPressArea} />
           </Pressable>
 
-          {showOverlays && (
+          {showActionIcons && (
             <View style={styles.iconCol}>
               {!isMobile && onHidePress && (
                 <ActionIconButton name="eye-off" size={iconSize} onPress={handleIconPress(onHidePress)} color={colors.textOnDark} style={[styles.iconBtnDanger, { width: iconButtonSize, height: iconButtonSize }]} accessibilityLabel="Скрыть объект" />
@@ -183,6 +185,17 @@ const AddressListItem: React.FC<Props> = ({
                   <Text style={styles.distanceText}>{distanceInfo.distanceText} · {distanceInfo.travelTimeText}</Text>
                 </View></View></View>
               )}
+              {isMobile && (
+                <View style={styles.mobileDecisionCard}>
+                  <View style={styles.mobileDecisionRow}>
+                    <Feather name="corner-down-right" size={13} color={colors.primary} />
+                    <Text style={styles.mobileDecisionTitle}>Тапните, чтобы открыть место</Text>
+                  </View>
+                  <Text style={styles.mobileDecisionHint}>
+                    Свайпните по карточке, чтобы быстро построить маршрут или добавить место в избранное.
+                  </Text>
+                </View>
+              )}
               {!!coord && !isMobile && (
                 <CardActionPressable onPress={openMap} style={styles.coordPressable} accessibilityLabel="Открыть в карте">
                   <Text style={[styles.coord, isNoImage ? styles.coordOnLight : null, { fontSize: coordFontSize, color: isNoImage ? colors.text : colors.textOnDark }]}>{coord}</Text>
@@ -196,12 +209,12 @@ const AddressListItem: React.FC<Props> = ({
               <View style={styles.addButtonRow}>
                 <CardActionPressable accessibilityLabel={pointAdded ? 'Добавлено' : 'Мои точки'}
                   onPress={() => void handleAddPoint()} disabled={!authReady || !isAuthenticated || isAddingPoint}
-                  style={({ pressed }) => [styles.addButton, pointAdded && styles.addButtonSuccess, (pressed || isAddingPoint) && styles.addButtonPressed, (!authReady || !isAuthenticated || isAddingPoint) && styles.addButtonDisabled]}
-                  title={pointAdded ? 'Добавлено' : 'Мои точки'}>
+                  style={({ pressed }) => [styles.addButton, isMobile && styles.addButtonMobile, pointAdded && styles.addButtonSuccess, (pressed || isAddingPoint) && styles.addButtonPressed, (!authReady || !isAuthenticated || isAddingPoint) && styles.addButtonDisabled]}
+                  title={isMobile ? mobileSaveLabel : pointAdded ? 'Добавлено' : 'Мои точки'}>
                   {isAddingPoint ? <ActivityIndicator size="small" color={colors.textOnPrimary} /> : pointAdded ? (
-                    <><Feather name="check" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>Добавлено</Text></>
+                    <><Feather name="check" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, isMobile && styles.addButtonTextMobile, { color: colors.textOnPrimary }]}>{isMobile ? 'Сохранено' : 'Добавлено'}</Text></>
                   ) : (
-                    <><Feather name="map-pin" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>Мои точки</Text></>
+                    <><Feather name="map-pin" size={14} color={colors.textOnPrimary} /><Text style={[styles.addButtonText, isMobile && styles.addButtonTextMobile, { color: colors.textOnPrimary }]}>{isMobile ? 'Сохранить' : 'Мои точки'}</Text></>
                   )}
                 </CardActionPressable>
               </View>
@@ -373,6 +386,31 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         fontWeight: '700',
         letterSpacing: 0.2,
     },
+    mobileDecisionCard: {
+        marginBottom: 12,
+        padding: 10,
+        borderRadius: 14,
+        backgroundColor: colors.surface,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderLight,
+        gap: 6,
+    },
+    mobileDecisionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    mobileDecisionTitle: {
+        flex: 1,
+        fontSize: 12,
+        fontWeight: '700',
+        color: colors.text,
+    },
+    mobileDecisionHint: {
+        fontSize: 11,
+        lineHeight: 16,
+        color: colors.textMuted,
+    },
     coordPressable: {
         alignSelf: 'flex-start',
         marginBottom: 12,
@@ -441,6 +479,10 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
             },
         }),
     },
+    addButtonMobile: {
+        borderRadius: DESIGN_TOKENS.radii.md,
+        paddingVertical: DESIGN_TOKENS.spacing.xs + 2,
+    },
     addButtonSuccess: {
         backgroundColor: colors.success,
     },
@@ -455,6 +497,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         fontSize: 12,
         fontWeight: '600',
         letterSpacing: -0.2,
+    },
+    addButtonTextMobile: {
+        fontSize: 11,
     },
 });
 

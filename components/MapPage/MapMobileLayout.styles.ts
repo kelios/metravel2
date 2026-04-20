@@ -9,6 +9,7 @@ type MapMobileLayoutStyleOptions = {
   isNarrow: boolean
   compactSheetActions: boolean
   stackSheetToolbar: boolean
+  isSheetPreview: boolean
 }
 
 export const getMapMobileLayoutStyles = (
@@ -39,27 +40,46 @@ export const getMapMobileLayoutStyles = (
     },
     quickActionsRail: {
       position: 'absolute',
-      right: 16,
-      gap: 10,
+      right: options.isNarrow ? 12 : 16,
+      gap: options.isNarrow ? 8 : 10,
       zIndex: 810,
-      alignItems: 'center',
+      alignItems: 'flex-end',
+    },
+    quickSecondaryActions: {
+      flexDirection: 'column',
+      gap: options.isNarrow ? 8 : 10,
+      alignItems: 'flex-end',
     },
     quickCircleButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: options.isNarrow ? 44 : 48,
+      height: options.isNarrow ? 44 : 48,
+      borderRadius: options.isNarrow ? 22 : 24,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      boxShadow: '0 8px 18px rgba(0,0,0,0.14)' as any,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 8px 18px rgba(0,0,0,0.14)',
+            cursor: 'pointer',
+          } as any)
+        : {
+            shadowColor: DESIGN_TOKENS.colors.text,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.12,
+            shadowRadius: 10,
+            elevation: 3,
+          }),
     },
     sheetRoot: {
       flexGrow: 1,
       flexShrink: 1,
       flexBasis: 0,
       minHeight: 0,
+    },
+    sheetRootPreview: {
+      backgroundColor: colors.backgroundSecondary,
     },
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
@@ -97,15 +117,37 @@ export const getMapMobileLayoutStyles = (
         },
       }),
     },
+    sheetToolbarPreview: {
+      minHeight: options.isNarrow ? 36 : 40,
+      paddingVertical: options.isNarrow ? 3 : 5,
+      paddingLeft: options.isNarrow ? 8 : 12,
+      paddingRight: options.isNarrow ? 8 : 12,
+      backgroundColor: colors.backgroundSecondary,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: 'none',
+          } as any)
+        : null),
+    },
     sheetToolbarActions: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
       gap: 4,
       flexShrink: 0,
     },
+    sheetToolbarActionsPreview: {
+      gap: 6,
+    },
     sheetToolbarActionsStacked: {
       width: '100%',
-      justifyContent: 'flex-end' as const,
+      flexDirection: 'column' as const,
+      alignItems: 'stretch' as const,
+      justifyContent: 'flex-start' as const,
+      gap: 8,
     },
     sheetCloseButton: {
       width: options.isNarrow ? 38 : 44,
@@ -152,6 +194,16 @@ export const getMapMobileLayoutStyles = (
       minWidth: 44,
       paddingHorizontal: 10,
     },
+    sheetPrimaryActionText: {
+      fontSize: options.isNarrow ? 12 : 13,
+      fontWeight: '800' as const,
+      color: colors.textOnPrimary,
+      letterSpacing: 0.1,
+    },
+    sheetToolbarButtonStacked: {
+      width: '100%',
+      minWidth: 0,
+    },
     sheetBackToMapButton: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
@@ -188,6 +240,11 @@ export const getMapMobileLayoutStyles = (
       height: 44,
       borderRadius: 12,
     },
+    sheetIconButtonStacked: {
+      width: '100%',
+      minWidth: 0,
+      borderRadius: 14,
+    },
     sheetResultsBadge: {
       fontSize: options.compactSheetActions ? 10 : 11,
       fontWeight: '700' as const,
@@ -209,6 +266,11 @@ export const getMapMobileLayoutStyles = (
       lineHeight: options.isNarrow ? 14 : 15,
       fontWeight: '600' as const,
       color: colors.textMuted,
+    },
+    sheetToolbarSummaryPreview: {
+      marginTop: 2,
+      fontSize: 10,
+      lineHeight: 13,
     },
     sheetToolbarRight: {
       flex: options.stackSheetToolbar ? 0 : 1,
@@ -283,6 +345,71 @@ export const getMapMobileLayoutStyles = (
           paddingHorizontal: options.isNarrow ? 6 : 14,
         },
       }),
+    },
+    sheetBodyPreview: {
+      ...Platform.select({
+        web: {
+          paddingHorizontal: options.isNarrow ? 4 : 8,
+        },
+        default: {},
+      }),
+    },
+    sheetTransitionState: {
+      flex: 1,
+      minHeight: 0,
+      paddingHorizontal: options.isNarrow ? 8 : 12,
+      paddingVertical: options.isNarrow ? 12 : 16,
+      justifyContent: 'flex-start',
+    },
+    sheetTransitionCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderRadius: 18,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      paddingHorizontal: options.isNarrow ? 12 : 14,
+      paddingVertical: options.isNarrow ? 12 : 14,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 8px 22px rgba(0,0,0,0.06)',
+          } as any)
+        : {
+            shadowColor: DESIGN_TOKENS.colors.text,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.06,
+            shadowRadius: 10,
+            elevation: 2,
+          }),
+    },
+    sheetTransitionIconWrap: {
+      width: options.isNarrow ? 40 : 44,
+      height: options.isNarrow ? 40 : 44,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      flexShrink: 0,
+    },
+    sheetTransitionCopy: {
+      flex: 1,
+      minWidth: 0,
+      gap: 4,
+    },
+    sheetTransitionTitle: {
+      fontSize: options.isNarrow ? 13 : 14,
+      lineHeight: options.isNarrow ? 17 : 18,
+      fontWeight: '800' as const,
+      color: colors.text,
+    },
+    sheetTransitionText: {
+      fontSize: options.isNarrow ? 11 : 12,
+      lineHeight: options.isNarrow ? 15 : 17,
+      fontWeight: '500' as const,
+      color: colors.textMuted,
     },
     filtersPeek: {
       gap: 8,

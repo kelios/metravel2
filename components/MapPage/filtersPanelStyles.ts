@@ -231,6 +231,89 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       lineHeight: isMobile ? 15 : 18,
       color: colors.text,
     },
+    mobileFiltersContextCard: {
+      padding: isMobile ? 12 : 14,
+      borderRadius: isMobile ? 14 : 16,
+      marginBottom: isMobile ? 8 : 10,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      gap: 8,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: '0 6px 18px rgba(0,0,0,0.05)',
+          } as any)
+        : DESIGN_TOKENS.shadowsNative.light),
+    },
+    mobileFiltersContextHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    mobileFiltersContextCopy: {
+      flex: 1,
+      minWidth: 0,
+      gap: 2,
+    },
+    mobileFiltersContextTitle: {
+      fontSize: isMobile ? 14 : 15,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.2,
+    },
+    mobileFiltersContextSubtitle: {
+      fontSize: isMobile ? 11 : 12,
+      lineHeight: isMobile ? 15 : 16,
+      fontWeight: '700',
+      color: colors.primaryText,
+    },
+    mobileFiltersContextHint: {
+      fontSize: isMobile ? 11 : 12,
+      lineHeight: isMobile ? 15 : 17,
+      color: colors.textMuted,
+    },
+    mobileFiltersContextButton: {
+      minHeight: 34,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      flex: 0,
+    },
+    mobileFiltersContextChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    mobileFiltersContextChip: {
+      maxWidth: '100%',
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 999,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    mobileFiltersContextChipText: {
+      fontSize: 11,
+      lineHeight: 14,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    mobileFiltersContextEmpty: {
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 12,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
+    mobileFiltersContextEmptyText: {
+      fontSize: 11,
+      lineHeight: 15,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
     section: {
       marginBottom: 8,
     },
@@ -959,11 +1042,17 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
             position: 'sticky',
             bottom: bottomDockReserve,
             backgroundColor: colors.surface,
-            paddingTop: isMobile ? 2 : 4,
-            paddingBottom: isMobile ? 1 : 4,
+            paddingTop: isMobile ? 8 : 4,
+            paddingBottom: isMobile ? 8 : 4,
+            borderTopWidth: isMobile ? StyleSheet.hairlineWidth : 0,
+            borderTopColor: isMobile ? colors.borderLight : 'transparent',
           } as any)
         : {
-            paddingTop: 4,
+            paddingTop: isMobile ? 8 : 4,
+            paddingBottom: isMobile ? 8 : 0,
+            backgroundColor: colors.surface,
+            borderTopWidth: isMobile ? StyleSheet.hairlineWidth : 0,
+            borderTopColor: isMobile ? colors.borderLight : 'transparent',
           }),
     },
     footerButtons: {
@@ -976,8 +1065,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     mobileFooterSummary: {
       paddingHorizontal: isMobile ? 10 : 0,
-      paddingBottom: 6,
-      gap: 1,
+      paddingBottom: 8,
+      gap: 2,
     },
     mobileFooterSummaryTitle: {
       fontSize: 12,

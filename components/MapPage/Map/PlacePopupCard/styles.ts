@@ -218,6 +218,12 @@ export const getStyles = (
     actionsStack: {
       gap: splitLayout ? 8 : 10,
     },
+    actionSummaryText: {
+      fontSize: compactLayout ? fs.small - 1 : fs.small,
+      lineHeight: (compactLayout ? fs.small - 1 : fs.small) * 1.35,
+      color: colors.textMuted,
+      fontWeight: '500',
+    },
     secondaryActionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
