@@ -170,6 +170,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
         icon: 'radio' as const,
         onPress: handleRadiusPress,
         ref: radiusAnchorRef,
+        hideLabel: isNarrow,
         hasHandler: hasRadiusPopover || typeof onPressRadius === 'function',
       },
       {
@@ -179,6 +180,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
         icon: 'grid' as const,
         onPress: handleCategoriesPress,
         ref: categoriesAnchorRef,
+        hideLabel: isVeryNarrow,
         hasHandler: hasCategoriesPopover || typeof onPressCategories === 'function',
       },
       {
@@ -188,6 +190,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
         icon: 'layers' as const,
         onPress: handleOverlaysPress,
         ref: overlaysAnchorRef,
+        hideLabel: isVeryNarrow,
         hasHandler: hasOverlaysPopover || typeof onPressOverlays === 'function',
       },
     ].filter((item) => item.hasHandler)
@@ -217,7 +220,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
                   style={styles.fieldIcon}
                 />
                 <Text
-                  style={[styles.fieldLabel, isVeryNarrow && styles.fieldLabelHidden]}
+                  style={[styles.fieldLabel, selector.hideLabel && styles.fieldLabelHidden]}
                   numberOfLines={1}
                 >
                   {selector.label}
