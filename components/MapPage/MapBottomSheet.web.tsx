@@ -67,8 +67,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const webDomRef = useRef<HTMLElement | null>(null);
 
     const isCollapsed = sheetIndex < 0;
+    const isFullScreen = sheetIndex === 2;
+    const effectiveBottomInset = isFullScreen ? 0 : bottomInset;
     // Pixel-based snap heights (vh units don't work reliably in RN Web View styles)
-    const SNAP_RATIOS = windowHeight < 700 ? ([0.3, 0.62, 0.9] as const) : ([0.25, 0.55, 0.85] as const);
+    const SNAP_RATIOS = windowHeight < 700 ? ([0.3, 0.62, 1] as const) : ([0.25, 0.55, 1] as const);
     const openHeight = !isCollapsed
       ? Math.round(windowHeight * (SNAP_RATIOS[sheetIndex] ?? 0.55))
       : 0;
@@ -87,7 +89,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         node.style.height = peekContent ? 'auto' : '0px';
         node.style.maxHeight = peekContent ? 'none' : '0px';
       } else {
-        node.style.height = 'auto';
+        node.style.height = `${openHeight}px`;
         node.style.maxHeight = `${openHeight}px`;
       }
     }, [isCollapsed, openHeight, peekContent]);
@@ -117,14 +119,15 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     }, [onStateChange]);
 
     const bottomStyle = Platform.OS === 'web'
-      ? ({ bottom: `calc(${bottomInset}px + env(safe-area-inset-bottom, 0px))` } as any)
-      : { bottom: bottomInset };
+      ? ({ bottom: `calc(${effectiveBottomInset}px + env(safe-area-inset-bottom, 0px))` } as any)
+      : { bottom: effectiveBottomInset };
 
     return (
       <View
         ref={webRefCallback}
         style={[
           styles.webRoot,
+          isFullScreen ? styles.webRootFullScreen : null,
           isCollapsed ? styles.webRootCollapsed : null,
           isCollapsed && !peekContent ? styles.webRootHidden : null,
           { ...bottomStyle, pointerEvents: isCollapsed && !peekContent ? 'none' as const : 'auto' as const },
@@ -189,6 +192,10 @@ const getStyles = (colors: ThemedColors) =>
             transition: 'height 200ms ease-out',
           } as any)
         : null),
+    },
+    webRootFullScreen: {
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
     },
     webRootCollapsed: {
       overflow: 'visible' as any,

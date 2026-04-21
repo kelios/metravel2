@@ -104,4 +104,24 @@ describe('MapQuickFilters', () => {
     expect(getByText('Что посмотреть')).toBeTruthy()
     expect(getByLabelText('Что посмотреть: Все')).toBeTruthy()
   })
+
+  it('renders compact icon-only controls without text labels', () => {
+    const { getByLabelText, queryByText } = render(
+      <MapQuickFilters
+        iconOnly={true}
+        radiusValue="60 км"
+        categoriesValue="Все"
+        overlaysValue="Выкл"
+        onPressRadius={jest.fn()}
+        onPressCategories={jest.fn()}
+        onPressOverlays={jest.fn()}
+      />,
+    )
+
+    expect(getByLabelText('Радиус: 60 км')).toBeTruthy()
+    expect(getByLabelText('Что посмотреть: Все')).toBeTruthy()
+    expect(getByLabelText('Оверлеи: Выкл')).toBeTruthy()
+    expect(queryByText('Радиус')).toBeNull()
+    expect(queryByText('Что посмотреть')).toBeNull()
+  })
 })

@@ -22,8 +22,8 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 import { usePathname } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
-import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -66,7 +66,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   coordinates,
   transportMode,
   buildRouteTo,
-  onCenterOnUser,
   onOpenFilters,
   filtersPanelProps,
   onToggleFavorite,
@@ -232,10 +231,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToCollapsed()
   }, [])
 
-  const handleCenterOnUserPress = useCallback(() => {
-    onCenterOnUser()
-  }, [onCenterOnUser])
-
   const canBuildRoute = useMemo(() => {
     if (filtersMode !== 'route') return false
     const points = filtersContextProps?.routePoints
@@ -251,6 +246,26 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     ? filtersContextProps.routePoints.length
     : 0
   const activeRadius = filtersContextProps?.filterValue?.radius || '60'
+  const quickFilterSelected = useMemo(
+    () => filtersContextProps?.filterValue?.categoryTravelAddress ?? [],
+    [filtersContextProps?.filterValue?.categoryTravelAddress],
+  )
+  const quickRadiusOptions = useMemo(
+    () => filtersContextProps?.filters?.radius ?? [],
+    [filtersContextProps?.filters?.radius],
+  )
+  const quickCategoryOptions = useMemo(
+    () => filtersContextProps?.filters?.categoryTravelAddress ?? [],
+    [filtersContextProps?.filters?.categoryTravelAddress],
+  )
+  const quickOverlayOptions = useMemo(
+    () => filtersContextProps?.overlayOptions ?? [],
+    [filtersContextProps?.overlayOptions],
+  )
+  const quickEnabledOverlays = useMemo(
+    () => filtersContextProps?.enabledOverlays ?? {},
+    [filtersContextProps?.enabledOverlays],
+  )
   const selectedCategories = useMemo(
     () =>
       Array.isArray(filtersContextProps?.filterValue?.categoryTravelAddress)
@@ -260,6 +275,23 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         : [],
     [filtersContextProps?.filterValue?.categoryTravelAddress],
   )
+  const quickRadiusValue = useMemo(() => {
+    if (!activeRadius) return 'Выбор'
+    return `${activeRadius} км`
+  }, [activeRadius])
+  const quickCategoriesValue = useMemo(() => {
+    if (quickFilterSelected.length === 0) return 'Все'
+    if (quickFilterSelected.length === 1) return quickFilterSelected[0]
+    return `${quickFilterSelected.length} выбрано`
+  }, [quickFilterSelected])
+  const quickOverlaysValue = useMemo(() => {
+    const enabledCount = quickOverlayOptions.filter((option: { id: string }) =>
+      Boolean(quickEnabledOverlays?.[option.id]),
+    ).length
+    if (enabledCount === 0) return 'Выкл'
+    if (enabledCount === 1) return '1 вкл'
+    return `${enabledCount} вкл`
+  }, [quickEnabledOverlays, quickOverlayOptions])
 
   const filterToolbarSummary = useMemo(() => {
     if (filtersMode === 'route') {
@@ -306,7 +338,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const showCollapsedMapOverlay =
     sheetState === 'collapsed' && bottomSheetState === 'collapsed'
-  const quickActionsBottomOffset = consentBannerVisible ? 208 : 128
   const bottomSheetInset =
     Platform.OS === 'web'
       ? WEB_MOBILE_BOTTOM_DOCK_INSET +
@@ -694,51 +725,46 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       testID="map-mobile-layout"
       {...(isActiveWebRoute ? ({ 'data-active': 'true' } as any) : null)}
     >
-      <View style={styles.mapContainer}>{mapComponent}</View>
-
-      {showCollapsedMapOverlay && (
-        <View
-          style={[
-            styles.quickActionsRail,
-            {
-              bottom:
-                Platform.OS === 'web'
-                  ? (`calc(${quickActionsBottomOffset}px + env(safe-area-inset-bottom, 0px))` as any)
-                  : quickActionsBottomOffset,
-            },
-          ]}
-        >
-          <CardActionPressable
-            testID="map-open-list"
-            accessibilityRole="button"
-            accessibilityLabel="Открыть панель со списком"
-            onPress={handleOpenList}
-            style={styles.quickCircleButton}
-          >
-            <Feather name="list" size={18} color={colors.text} />
-          </CardActionPressable>
-
-          <View style={styles.quickSecondaryActions}>
-            <CardActionPressable
-              accessibilityRole="button"
-              accessibilityLabel="Открыть поиск"
-              onPress={handleOpenSearch}
-              style={styles.quickCircleButton}
-            >
-              <Feather name="sliders" size={18} color={colors.text} />
-            </CardActionPressable>
-            <CardActionPressable
-              testID="map-center-user"
-              accessibilityRole="button"
-              accessibilityLabel="Показать мое местоположение"
-              onPress={handleCenterOnUserPress}
-              style={styles.quickCircleButton}
-            >
-              <Feather name="crosshair" size={18} color={colors.text} />
-            </CardActionPressable>
-          </View>
-        </View>
-      )}
+      <View style={styles.mapContainer}>
+        {mapComponent}
+        {showCollapsedMapOverlay && (
+          <MapQuickFilters
+            iconOnly={true}
+            radiusValue={quickRadiusValue}
+            categoriesValue={quickCategoriesValue}
+            overlaysValue={quickOverlaysValue}
+            extraActions={[
+              {
+                key: 'list',
+                label: 'Открыть панель со списком',
+                icon: 'list',
+                onPress: handleOpenList,
+                testID: 'map-open-list',
+              },
+            ]}
+            onPressRadius={handleOpenSearch}
+            onPressCategories={handleOpenSearch}
+            onPressOverlays={handleOpenSearch}
+            radiusOptions={quickRadiusOptions}
+            radiusSelected={activeRadius}
+            onChangeRadius={(next) =>
+              filtersContextProps?.onFilterChange?.('radius', next)
+            }
+            categoriesOptions={quickCategoryOptions}
+            categoriesSelected={quickFilterSelected}
+            onChangeCategories={(next) =>
+              filtersContextProps?.onFilterChange?.('categoryTravelAddress', next)
+            }
+            overlayOptions={quickOverlayOptions}
+            enabledOverlays={quickEnabledOverlays}
+            onChangeOverlay={(id, enabled) =>
+              filtersContextProps?.onOverlayToggle?.(id, enabled)
+            }
+            onResetOverlays={filtersContextProps?.onResetOverlays}
+            travelsData={travelsData}
+          />
+        )}
+      </View>
 
       <MapBottomSheet
         ref={bottomSheetRef}

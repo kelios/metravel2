@@ -47,7 +47,7 @@ jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({
 }))
 
 describe('TravelDetailsSidebarSection', () => {
-  it('renders nearby travels block when travel has valid id even if travelAddress is empty', () => {
+  it('renders nearby travels block when travel has valid id even if travelAddress is empty', async () => {
     render(
       <TravelDetailsSidebarSection
         travel={{
@@ -74,7 +74,7 @@ describe('TravelDetailsSidebarSection', () => {
     )
 
     expect(screen.getByTestId('travel-details-near-loaded')).toBeTruthy()
-    expect(screen.getByTestId('mock-near-travel-list')).toBeTruthy()
+    expect(await screen.findByTestId('mock-near-travel-list')).toBeTruthy()
     expect(screen.getByText('Рядом можно посмотреть')).toBeTruthy()
   })
 })

@@ -38,43 +38,6 @@ export const getMapMobileLayoutStyles = (
           } as any)
         : null),
     },
-    quickActionsRail: {
-      position: 'absolute',
-      right: options.isNarrow ? 12 : 16,
-      gap: options.isNarrow ? 8 : 10,
-      zIndex: 810,
-      alignItems: 'flex-end',
-    },
-    quickSecondaryActions: {
-      flexDirection: 'column',
-      gap: options.isNarrow ? 8 : 10,
-      alignItems: 'flex-end',
-    },
-    quickCircleButton: {
-      width: options.isNarrow ? 40 : 44,
-      height: options.isNarrow ? 40 : 44,
-      borderRadius: options.isNarrow ? 20 : 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(Platform.OS === 'web'
-        ? ({
-            backgroundColor: colors.surfaceAlpha40,
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 10px 22px rgba(15,23,42,0.12)',
-            cursor: 'pointer',
-          } as any)
-        : {
-            shadowColor: DESIGN_TOKENS.colors.text,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.12,
-            shadowRadius: 10,
-            elevation: 3,
-          }),
-    },
     sheetRoot: {
       flexGrow: 1,
       flexShrink: 1,

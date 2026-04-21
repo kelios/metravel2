@@ -389,7 +389,7 @@ describe('FiltersPanel', () => {
       mapUiApi: mapUiApi as any,
     })
 
-    const collapsible = getByTestId('collapsible-Инструменты карты')
+    const collapsible = getByTestId('collapsible-Управление картой')
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible)
     }
@@ -420,7 +420,7 @@ describe('FiltersPanel', () => {
       mapUiApi: mapUiApi as any,
     })
 
-    const collapsible = getByTestId('collapsible-Инструменты карты')
+    const collapsible = getByTestId('collapsible-Управление картой')
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible)
     }
@@ -451,7 +451,7 @@ describe('FiltersPanel', () => {
       mapUiApi: mapUiApi as any,
     })
 
-    const collapsible = getByTestId('collapsible-Инструменты карты')
+    const collapsible = getByTestId('collapsible-Управление картой')
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible)
     }
@@ -484,7 +484,7 @@ describe('FiltersPanel', () => {
       mapUiApi: mapUiApi as any,
     })
 
-    const collapsible = getByTestId('collapsible-Инструменты карты')
+    const collapsible = getByTestId('collapsible-Управление картой')
     if (collapsible.props.accessibilityState?.expanded === false) {
       fireEvent.press(collapsible)
     }

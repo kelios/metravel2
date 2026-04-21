@@ -49,7 +49,7 @@ describe('selective runner json contract', () => {
     expect(payload.relevantMatches).toBe(0)
   })
 
-  it('emits forced run decision when changed-files input is unavailable', () => {
+  it('treats an explicit empty changed-files payload as a no-match skip', () => {
     const result = runNodeCli(
       ['scripts/run-schema-contract-tests-if-needed.js', '--dry-run', '--json'],
       { CHANGED_FILES: '' },
@@ -59,9 +59,9 @@ describe('selective runner json contract', () => {
     const payload = JSON.parse(result.stdout)
     expect(payload.contractVersion).toBe(1)
     expect(payload.check).toBe('schema-contract-checks')
-    expect(payload.decision).toBe('run')
-    expect(payload.reason).toBe('missing-input')
-    expect(payload.shouldRun).toBe(true)
+    expect(payload.decision).toBe('skip')
+    expect(payload.reason).toBe('no-match')
+    expect(payload.shouldRun).toBe(false)
   })
 
   it('rejects json output without dry-run', () => {
