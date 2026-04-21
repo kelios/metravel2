@@ -150,14 +150,7 @@ describe('FiltersPanel', () => {
     expect(defaultProps.setMode).toHaveBeenCalledWith('route')
   })
 
-  it('calls onFilterChange when radius is changed', () => {
-    const { getByText } = renderWithTheme(<FiltersPanel />)
-    const radius100 = getByText('100')
-    fireEvent.press(radius100)
-    expect(defaultProps.onFilterChange).toHaveBeenCalled()
-  })
-
-  it('shows the search and sightseeing section when data is available', () => {
+  it('shows the sightseeing section when data is available', () => {
     const propsWithData = {
       ...defaultProps,
       filterValue: {
@@ -171,7 +164,6 @@ describe('FiltersPanel', () => {
       ],
     }
     const { getByText } = renderWithTheme(<FiltersPanel />, propsWithData)
-    expect(getByText('Поиск + что посмотреть')).toBeTruthy()
     expect(getByText('Что посмотреть')).toBeTruthy()
   })
 
@@ -236,17 +228,6 @@ describe('FiltersPanel', () => {
     })
 
     expect(queryByText('Ничего не найдено')).toBeNull()
-  })
-
-  it('renders a search field and updates searchQuery on change', () => {
-    const onFilterChange = jest.fn()
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
-      ...defaultProps,
-      onFilterChange,
-    })
-
-    fireEvent.changeText(getByTestId('filters-search-input'), 'Несвиж')
-    expect(onFilterChange).toHaveBeenCalledWith('searchQuery', 'Несвиж')
   })
 
   it('shows the compact mobile header summary and keeps the radius footer actions available', () => {

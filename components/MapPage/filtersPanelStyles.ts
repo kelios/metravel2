@@ -112,21 +112,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       paddingHorizontal: isMobile ? 2 : 0,
       paddingBottom: isMobile ? 2 : 2,
     },
-    compactHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-    },
-    compactTitleRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flex: 1,
-    },
     compactTitle: {
       fontSize: 13,
       fontWeight: '600',
@@ -143,50 +128,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontWeight: '800',
       color: colors.text,
       letterSpacing: -0.5,
-    },
-    counterRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginBottom: 8,
-    },
-    counterBadge: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: 6,
-      paddingHorizontal: 9,
-      paddingVertical: 5,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.surfaceAlpha40,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-    },
-    counterLabel: {
-      fontSize: 13,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-    counterHint: {
-      fontSize: 12,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-    counterValue: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.primaryText,
-    },
-    modeHelper: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 4,
-      paddingVertical: 6,
-    },
-    modeHelperText: {
-      fontSize: 12,
-      color: colors.textMuted,
-      flex: 1,
     },
     content: {
       flex: 1,
@@ -249,28 +190,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
           } as any)
         : null),
     },
-    mobileFiltersContextHeader: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: 10,
-    },
-    mobileFiltersContextCopy: {
-      flex: 1,
-      minWidth: 0,
-      gap: 2,
-    },
-    mobileFiltersContextTitle: {
-      ...TS.h2,
-      fontSize: 17,
-      lineHeight: 22,
-      color: colors.text,
-    },
-    mobileFiltersContextSubtitle: {
-      ...TS.bodySmall,
-      fontWeight: '700',
-      color: colors.primaryText,
-    },
     mobileFiltersContextHint: {
       ...TS.bodySmall,
       color: colors.textMuted,
@@ -301,20 +220,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       lineHeight: 14,
       fontWeight: '700',
       color: colors.text,
-    },
-    mobileFiltersContextEmpty: {
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      borderRadius: 12,
-      backgroundColor: colors.backgroundSecondary,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-    },
-    mobileFiltersContextEmptyText: {
-      fontSize: 11,
-      lineHeight: 15,
-      fontWeight: '600',
-      color: colors.textMuted,
     },
     section: {
       marginBottom: 8,
@@ -350,74 +255,9 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       ...TS.caption,
       color: colors.textMuted,
     },
-    dualInputRow: {
-      flexDirection: 'row',
-      gap: 12,
-      alignItems: 'stretch',
-    },
     separator: {
       width: 1,
       backgroundColor: colors.border,
-    },
-    transportSection: {
-      gap: 8,
-    },
-    routeTransportStep: {
-      paddingVertical: 8,
-      paddingHorizontal: 8,
-      gap: 4,
-      marginBottom: 6,
-      borderRadius: 11,
-      backgroundColor: colors.surfaceMuted ?? colors.backgroundSecondary,
-    },
-    routeTransportHint: {
-      marginBottom: 2,
-      fontSize: 10,
-      lineHeight: 13,
-      letterSpacing: 0.15,
-    },
-    routePointsList: {
-      marginTop: 6,
-      gap: 8,
-    },
-    routePointRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    routePointPill: {
-      flex: 1,
-      minWidth: 0,
-      paddingVertical: 9,
-      paddingHorizontal: 11,
-      borderRadius: 999,
-      backgroundColor: colors.overlay,
-    },
-    routePointPillText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textOnDark,
-    },
-    routePointRemoveBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: colors.overlay,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-      marginHorizontal: 0,
-      shadowColor: 'transparent',
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
-      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
-    },
-    routePointRemoveBtnDisabled: {
-      opacity: 0.4,
-    },
-    sectionTight: {
-      marginBottom: 8,
     },
     sectionLabel: {
       fontSize: 11,
@@ -432,16 +272,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       color: colors.textMuted,
       marginBottom: 4,
       lineHeight: 15,
-    },
-    input: {
-      height: TOUCH,
-      borderRadius: 12,
-      paddingHorizontal: 14,
-      ...TS.body,
-      color: colors.text,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
     },
     chipsContainer: {
       marginTop: 6,
@@ -512,12 +342,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontWeight: '700',
       color: colors.primaryText,
     },
-    radiusQuickOptions: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      marginTop: 6,
-    },
     radiusSelectionHint: {
       marginTop: 10,
       fontSize: 12,
@@ -556,64 +380,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontWeight: '700',
       color: colors.text,
     },
-    radiusOptionButton: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      minHeight: TOUCH,
-      minWidth: 56,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-      ...(Platform.OS === 'web'
-        ? ({
-            transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease',
-            cursor: 'pointer',
-          } as any)
-        : null),
-    },
-    radiusOptionButtonSelected: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-      ...(Platform.OS === 'web'
-        ? ({
-            boxShadow: `0 6px 14px ${colors.primaryAlpha30}`,
-          } as any)
-        : null),
-    },
-    radiusOptionText: {
-      ...TS.bodySmall,
-      fontWeight: '700',
-      color: colors.textMuted,
-    },
-    radiusOptionTextSelected: {
-      color: colors.textOnPrimary,
-    },
-    transportTabs: {
-      flexDirection: 'row',
-      backgroundColor: colors.surfaceAlpha40,
-      borderRadius: 12,
-      padding: 2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      gap: 3,
-      ...(Platform.OS === 'web'
-        ? ({
-            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
-          } as any)
-        : null),
-    },
-    transportTabsCompact: {
-      borderRadius: 11,
-      padding: 1,
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-    },
-    transportTabsDisabled: {
-      opacity: 0.45,
-    },
     routeInfo: {
       backgroundColor: colors.surfaceAlpha40,
       borderRadius: 11,
@@ -629,137 +395,19 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
         default: DESIGN_TOKENS.shadowsNative.light,
       }),
     },
-    routeInfoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      marginBottom: 8,
-    },
-    routePill: {
-      flex: 1,
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      borderRadius: 10,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    routePillLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.textMuted,
-      marginBottom: 4,
-    },
-    routePillValue: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    routePillDivider: {
-      width: 1,
-      alignSelf: 'stretch',
-      backgroundColor: colors.border,
-    },
-    routeDistanceRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 4,
-    },
-    routeItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 4,
-    },
-    routeLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
-      flex: 1,
-    },
-    routeValue: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.text,
-      flex: 2,
-      textAlign: 'right',
-      marginLeft: 8,
-    },
     routeDistance: {
       fontSize: 13,
       fontWeight: '800',
       color: colors.primaryText,
     },
-    compactButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      minHeight: 36,
-      marginLeft: 8,
-    },
-    compactButtonSmall: {
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      minHeight: 34,
-    },
-    compactButtonText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.textOnPrimary,
-      marginLeft: 6,
-    },
     footer: {
       marginTop: 8,
       paddingTop: 8,
-    },
-    infoBox: {
-      backgroundColor: colors.primarySoft,
-      borderRadius: 10,
-      padding: 12,
-      marginBottom: 12,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 6,
     },
     infoText: {
       fontSize: 13,
       color: colors.text,
       fontWeight: '700',
-    },
-    infoTitle: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 6,
-    },
-    infoItem: {
-      fontSize: 12,
-      color: colors.textMuted,
-      marginBottom: 2,
-    },
-    infoBold: {
-      fontWeight: '700',
-      color: colors.primaryText,
-    },
-    routeHintContainer: {
-      marginTop: 12,
-      marginBottom: 12,
-    },
-    routeStatsContainer: {
-      marginTop: 0,
-      marginBottom: 0,
-    },
-    stepper: {
-      marginTop: 4,
-      marginBottom: 12,
-      gap: 8,
     },
     stepItem: {
       flexDirection: 'row',
@@ -771,25 +419,12 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
     },
-    stepItemDone: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primarySoft,
-    },
     stepBadge: {
       width: 28,
       height: 28,
       borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    stepBadgeStart: {
-      backgroundColor: colors.success,
-    },
-    stepBadgeEnd: {
-      backgroundColor: colors.danger,
-    },
-    stepBadgeTransport: {
-      backgroundColor: colors.primary,
     },
     stepBadgeText: {
       color: colors.textOnPrimary,
@@ -808,25 +443,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     stepSubtitle: {
       fontSize: 12,
       color: colors.textMuted,
-    },
-    routeBuilt: {
-      marginTop: 6,
-      padding: 12,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primary,
-    },
-    routeBuiltTitle: {
-      fontSize: 14,
-      fontWeight: '800',
-      color: colors.primaryText,
-      marginBottom: 4,
-    },
-    routeBuiltMeta: {
-      fontSize: 13,
-      color: colors.text,
-      fontWeight: '600',
     },
     noPointsToast: {
       marginTop: 12,
@@ -852,87 +468,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 8,
       marginTop: 4,
     },
-    stepBlock: {
-      padding: 9,
-      borderRadius: 12,
-      backgroundColor: colors.surfaceAlpha40,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      marginBottom: 8,
-      gap: 6,
-    },
-    stepBlockCompact: {
-      padding: 8,
-      gap: 5,
-      marginBottom: 8,
-    },
-    routeResultStep: {
-      paddingVertical: 8,
-      gap: 4,
-      marginBottom: 6,
-    },
-    stepHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    stepBlockTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    stepInlineHint: {
-      fontSize: 11,
-      color: colors.primaryText,
-      fontWeight: '700',
-    },
-    stepInlineHintMuted: {
-      fontSize: 11,
-      color: colors.textMuted,
-      fontWeight: '600',
-    },
-    addressToggle: {
-      alignSelf: 'flex-start',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primary,
-      marginTop: 4,
-    },
-    addressToggleText: {
-      color: colors.primaryText,
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    sectionDisabled: {
-      opacity: 0.6,
-    },
-    actionRow: {
-      flexDirection: 'row',
-      gap: 8,
-      marginTop: 12,
-      justifyContent: 'flex-start',
-      flexWrap: 'wrap',
-    },
-    actionGhost: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 11,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceAlpha40,
-      minHeight: 36,
-    },
-    actionGhostText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.text,
-    },
     statusCard: {
       backgroundColor: colors.surfaceAlpha40,
       borderRadius: 10,
@@ -947,22 +482,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
         } as any,
         default: DESIGN_TOKENS.shadowsNative.light,
       }),
-    },
-    swapButton: {
-      marginTop: 10,
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      borderRadius: 10,
-      backgroundColor: colors.primarySoft,
-    },
-    swapButtonText: {
-      color: colors.primaryText,
-      fontWeight: '700',
-      fontSize: 13,
     },
     accordionHeader: {
       marginTop: 2,
@@ -1134,14 +653,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
             elevation: 6,
           }),
     },
-    ctaPrimaryHover: {
-      ...(Platform.OS === 'web'
-        ? ({
-            transform: 'translateY(-2px)',
-            boxShadow: '0 8px 28px rgba(255, 146, 43, 0.45)',
-          } as any)
-        : null),
-    },
     ctaPrimaryDisabled: {
       backgroundColor: colors.backgroundSecondary,
       borderColor: colors.borderLight,
@@ -1154,13 +665,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
             shadowOpacity: 0,
             elevation: 0,
           }),
-    },
-    footerPreview: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.primary,
-      textAlign: 'center',
-      marginBottom: 6,
     },
     helperText: {
       fontSize: 12,

@@ -168,105 +168,103 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       : categoryPreview
 
   return (
-    <>
-      <View style={styles.lightStepBlock}>
-        <CollapsibleSection
-          title="Что посмотреть"
-          badge={selectedCategoriesCount || undefined}
-          defaultOpen={false}
-          icon="map-pin"
-          tone="flat"
-        >
-          {!isMobile ? (
-            <Text style={styles.sectionHint}>Уточните поиск по типу мест</Text>
-          ) : null}
-          <MultiSelectField
-            items={categoriesWithCount}
-            value={(Array.isArray(filterValue.categoryTravelAddress)
-              ? filterValue.categoryTravelAddress
-                  .map((cat) => getCategoryName(cat))
-                  .filter((value): value is string => Boolean(value))
-              : []) as string[]}
-            onChange={(value) => safeOnFilterChange('categoryTravelAddress', value)}
-            labelField="label"
-            valueField="value"
-            placeholder="Выберите..."
-            searchPlaceholder="Поиск типа места..."
-            search={true}
-            compact
-          />
-          {selectedCategoriesCount > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.chipsContainer}
-              contentContainerStyle={styles.chipsContent}
-            >
-              {filterValue.categoryTravelAddress.slice(0, 5).map((cat) => {
-                const catValue = getCategoryName(cat)
-                const catKey =
-                  typeof cat === 'string'
-                    ? cat
-                    : cat && typeof cat === 'object' && 'id' in cat
-                      ? String(cat.id)
-                      : catValue
-                const displayText = catValue.split(' ')[0] || catValue
-                const iconName = CATEGORY_ICONS[catValue]
+    <View style={styles.lightStepBlock}>
+      <CollapsibleSection
+        title="Что посмотреть"
+        badge={selectedCategoriesCount || undefined}
+        defaultOpen={false}
+        icon="map-pin"
+        tone="flat"
+      >
+        {!isMobile ? (
+          <Text style={styles.sectionHint}>Уточните поиск по типу мест</Text>
+        ) : null}
+        <MultiSelectField
+          items={categoriesWithCount}
+          value={(Array.isArray(filterValue.categoryTravelAddress)
+            ? filterValue.categoryTravelAddress
+                .map((cat) => getCategoryName(cat))
+                .filter((value): value is string => Boolean(value))
+            : []) as string[]}
+          onChange={(value) => safeOnFilterChange('categoryTravelAddress', value)}
+          labelField="label"
+          valueField="value"
+          placeholder="Выберите..."
+          searchPlaceholder="Поиск типа места..."
+          search={true}
+          compact
+        />
+        {selectedCategoriesCount > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipsContainer}
+            contentContainerStyle={styles.chipsContent}
+          >
+            {filterValue.categoryTravelAddress.slice(0, 5).map((cat) => {
+              const catValue = getCategoryName(cat)
+              const catKey =
+                typeof cat === 'string'
+                  ? cat
+                  : cat && typeof cat === 'object' && 'id' in cat
+                    ? String(cat.id)
+                    : catValue
+              const displayText = catValue.split(' ')[0] || catValue
+              const iconName = CATEGORY_ICONS[catValue]
 
-                return (
-                  <View key={catKey} style={styles.categoryChip}>
-                    {iconName && <Feather name={iconName} size={12} color={colors.primary} />}
-                    <Text style={styles.categoryChipText} numberOfLines={1}>
-                      {displayText}
-                    </Text>
-                    <IconButton
-                      icon={<MapIcon name="close" size={16} color={colors.primary} />}
-                      label="Удалить категорию"
-                      size="sm"
-                      onPress={() => handleCategoryRemove(cat)}
-                      style={styles.categoryChipIconButton}
-                    />
-                  </View>
-                )
-              })}
-              {selectedCategoriesCount > 5 && (
-                <View style={styles.moreChip}>
-                  <Text style={styles.moreChipText}>+{selectedCategoriesCount - 5}</Text>
-                </View>
-              )}
-            </ScrollView>
-          )}
-        </CollapsibleSection>
-
-        {hasSelectionSummary && (
-          <View style={styles.filterSelectionSummary} testID="radius-selection-summary">
-            <View style={styles.filterSelectionChips}>
-              {selectedCategoryNames.length > 0 ? (
-                <View style={styles.filterSelectionChip}>
-                  <Feather name="grid" size={12} color={colors.primary} />
-                  <Text style={styles.filterSelectionChipText} numberOfLines={1}>
-                    {categorySummary}
+              return (
+                <View key={catKey} style={styles.categoryChip}>
+                  {iconName && <Feather name={iconName} size={12} color={colors.primary} />}
+                  <Text style={styles.categoryChipText} numberOfLines={1}>
+                    {displayText}
                   </Text>
+                  <IconButton
+                    icon={<MapIcon name="close" size={16} color={colors.primary} />}
+                    label="Удалить категорию"
+                    size="sm"
+                    onPress={() => handleCategoryRemove(cat)}
+                    style={styles.categoryChipIconButton}
+                  />
                 </View>
-              ) : null}
-              {radiusSummaryValue ? (
-                <View style={styles.filterSelectionChip}>
-                  <Feather name="radio" size={12} color={colors.primary} />
-                  <Text style={styles.filterSelectionChipText} numberOfLines={1}>
-                    {radiusSummaryText}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
-            <Text style={styles.radiusSelectionHint}>
-              {radiusResultCount > 0
-                ? `${getPlacesLabel(radiusResultCount)} попадает в выбранные условия.`
-                : 'Под выбранные условия пока ничего не попадает.'}
-            </Text>
-          </View>
+              )
+            })}
+            {selectedCategoriesCount > 5 && (
+              <View style={styles.moreChip}>
+                <Text style={styles.moreChipText}>+{selectedCategoriesCount - 5}</Text>
+              </View>
+            )}
+          </ScrollView>
         )}
-      </View>
-    </>
+      </CollapsibleSection>
+
+      {hasSelectionSummary && (
+        <View style={styles.filterSelectionSummary} testID="radius-selection-summary">
+          <View style={styles.filterSelectionChips}>
+            {selectedCategoryNames.length > 0 ? (
+              <View style={styles.filterSelectionChip}>
+                <Feather name="grid" size={12} color={colors.primary} />
+                <Text style={styles.filterSelectionChipText} numberOfLines={1}>
+                  {categorySummary}
+                </Text>
+              </View>
+            ) : null}
+            {radiusSummaryValue ? (
+              <View style={styles.filterSelectionChip}>
+                <Feather name="radio" size={12} color={colors.primary} />
+                <Text style={styles.filterSelectionChipText} numberOfLines={1}>
+                  {radiusSummaryText}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.radiusSelectionHint}>
+            {radiusResultCount > 0
+              ? `${getPlacesLabel(radiusResultCount)} попадает в выбранные условия.`
+              : 'Под выбранные условия пока ничего не попадает.'}
+          </Text>
+        </View>
+      )}
+    </View>
   )
 }
 

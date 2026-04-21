@@ -497,7 +497,7 @@ export default function MapScreen() {
                     closeRightPanel={closeRightPanel}
                     resetFilters={resetFiltersForPanel}
                 />
-                {!isMobile && activeFilterItems.length > 0 && (
+                {!isMobile && activePanelTab === 'search' && activeFilterItems.length > 0 && (
                     <ActiveFiltersBar
                         filters={activeFilterItems}
                         onRemoveFilter={handleRemoveActiveFilter}

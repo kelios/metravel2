@@ -24,16 +24,6 @@ const getCategoryName = (category: CategoryOption) => {
   return '';
 };
 
-const getPlacesLabel = (count: number) => {
-  const absCount = Math.abs(count);
-  const mod10 = absCount % 10;
-  const mod100 = absCount % 100;
-
-  if (mod10 === 1 && mod100 !== 11) return `${count} место`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} места`;
-  return `${count} мест`;
-};
-
 interface FiltersPanelBodyProps {
   colors: ThemedColors;
   styles: any;
@@ -163,25 +153,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     return radiusOptions[currentRadiusIndex + 1] ?? null;
   }, [currentRadiusIndex, radiusOptions]);
   const showNearbyFallback = mode === 'radius' && totalPoints === 0;
-  const radiusValue = filterValue.radius || '60';
-  const statusBadge =
-    mode === 'radius'
-      ? `${radiusValue} км`
-      : canBuildRoute
-        ? 'Можно строить'
-        : 'Нужно 2 точки';
-  const statusTitle =
-    mode === 'radius'
-      ? 'Сейчас на карте'
-      : canBuildRoute
-        ? 'Маршрут готов к расчёту'
-        : 'Соберите маршрут';
-  const statusDescription =
-    mode === 'radius'
-      ? `${getPlacesLabel(totalPoints)} в радиусе ${radiusValue} км. Меняйте категории и радиус, чтобы сразу видеть новый результат.`
-      : canBuildRoute
-        ? 'Старт и финиш уже выбраны. Проверьте транспорт и запускайте построение маршрута.'
-        : 'Выберите транспорт, затем поставьте старт и финиш кликом по карте или через адресные поля.';
   const mobileContextHint =
     mode === 'radius'
       ? activeSummaryChips.length > 0
@@ -226,18 +197,6 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
               testID="filters-mobile-open-results"
             />
           ) : null}
-        </View>
-      )}
-
-      {mode === 'route' && !canBuildRoute && (
-        <View style={styles.filtersStatusCard} testID="filters-panel-status">
-          <View style={styles.filtersStatusHeader}>
-            <Text style={styles.filtersStatusTitle} numberOfLines={1}>{statusTitle}</Text>
-            <View style={styles.filtersStatusBadge}>
-              <Text style={styles.filtersStatusBadgeText}>{statusBadge}</Text>
-            </View>
-          </View>
-          <Text style={styles.filtersStatusDescription} numberOfLines={isMobile ? 2 : undefined}>{statusDescription}</Text>
         </View>
       )}
 
