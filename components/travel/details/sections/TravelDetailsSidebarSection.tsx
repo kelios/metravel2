@@ -1,18 +1,30 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { Platform, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
+import { withLazy } from '../TravelDetailsLazy'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { useThemedColors } from '@/hooks/useTheme'
 import NavigationArrows from '@/components/travel/NavigationArrows'
-import NearTravelList from '@/components/travel/NearTravelList'
-import PopularTravelList from '@/components/travel/PopularTravelList'
 import { useTravelDetailsSidebarSectionModel } from '../hooks/useTravelDetailsSidebarSectionModel'
 
 const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
+const LIST_FALLBACK_STYLE = { minHeight: 220 } as const
+
+const NearTravelListLazy = withLazy(() =>
+  import('@/components/travel/NearTravelList').then((module) => ({
+    default: module.default,
+  })),
+)
+
+const PopularTravelListLazy = withLazy(() =>
+  import('@/components/travel/PopularTravelList').then((module) => ({
+    default: module.default,
+  })),
+)
 
 export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
@@ -65,12 +77,14 @@ export const TravelDetailsSidebarSection: React.FC<{
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {hasValidTravelId && (
             <View testID="travel-details-near-loaded">
-              <NearTravelList
-                travel={travel}
-                onTravelsLoaded={handleTravelsLoaded}
-                showHeader={false}
-                embedded
-              />
+              <Suspense fallback={<View style={LIST_FALLBACK_STYLE} />}>
+                <NearTravelListLazy
+                  travel={travel}
+                  onTravelsLoaded={handleTravelsLoaded}
+                  showHeader={false}
+                  embedded
+                />
+              </Suspense>
             </View>
           )}
         </View>
@@ -106,7 +120,9 @@ export const TravelDetailsSidebarSection: React.FC<{
         <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
         <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           <View testID="travel-details-popular-loaded">
-            <PopularTravelList title={null} showHeader={false} embedded />
+            <Suspense fallback={<View style={LIST_FALLBACK_STYLE} />}>
+              <PopularTravelListLazy title={null} showHeader={false} embedded />
+            </Suspense>
           </View>
         </View>
       </View>

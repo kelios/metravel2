@@ -1237,8 +1237,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Click on filters toggle to switch to filters view
     await filtersToggle.click();
 
-    // Verify search mode content is shown in the mobile sheet.
-    await expect(page.getByTestId('filters-search-input')).toBeVisible({ timeout: 10_000 });
+    // Verify the filters view is active in the mobile sheet.
+    // The current mobile contract shows the filters body/context card immediately,
+    // while field-level search UI can stay collapsed until the user opens a section.
+    await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('filters-mobile-context')).toBeVisible({ timeout: 10_000 });
 
     await expect(listToggle).toBeVisible();
     await expect(filtersToggle).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });

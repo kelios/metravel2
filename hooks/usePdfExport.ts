@@ -1,7 +1,7 @@
 // src/hooks/usePdfExport.ts
 // ✅ АРХИТЕКТУРА: Тонкий React hook, тяжелый export runtime грузится только по запросу
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
@@ -61,16 +61,6 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
     }
     return runtimeModuleRef.current;
   }, []);
-
-  useEffect(() => {
-    void loadRuntimeModule().then((mod) => {
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      return mod.prewarmPdfExportRuntime();
-    });
-  }, [config, loadRuntimeModule]);
 
   /**
    * Открывает HTML-книгу в новом окне для печати (window.print)
