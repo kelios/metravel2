@@ -179,8 +179,10 @@ config.resolver.resolveRequest = ((orig) => {
 	      const message = String(err && err.message ? err.message : '')
 	      return (
 	        code === 'ERR_STREAM_PREMATURE_CLOSE' ||
+	        code === 'ERR_STREAM_UNABLE_TO_PIPE' ||
 	        code === 'ECONNRESET' ||
-	        /premature close/i.test(message)
+	        /premature close/i.test(message) ||
+	        /closed or destroyed stream/i.test(message)
 	      )
 	    }
 
@@ -273,6 +275,12 @@ config.resolver.resolveRequest = ((orig) => {
               },
 	            },
 	            (proxyRes) => {
+              if (res.writableEnded || res.destroyed) {
+                if (!proxyReq.destroyed) proxyReq.destroy()
+                if (!proxyRes.destroyed) proxyRes.destroy()
+                return
+              }
+
               // Add CORS headers
               res.setHeader('Access-Control-Allow-Origin', '*');
               res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
@@ -300,6 +308,12 @@ config.resolver.resolveRequest = ((orig) => {
 	              })
 
 	              // Pipe response (handle premature close gracefully)
+                if (res.writableEnded || res.destroyed) {
+                  if (!proxyReq.destroyed) proxyReq.destroy()
+                  if (!proxyRes.destroyed) proxyRes.destroy()
+                  return
+                }
+
 	              pipeline(proxyRes, res, (err) => {
 	                if (err && !isPrematureCloseError(err)) {
 	                  console.error('[Metro CORS Proxy] Response pipeline error:', err)
