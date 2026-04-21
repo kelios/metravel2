@@ -247,15 +247,17 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         </View>
       )}
 
-      <View style={styles.filtersStatusCard} testID="filters-panel-status">
-        <View style={styles.filtersStatusHeader}>
-          <Text style={styles.filtersStatusTitle} numberOfLines={1}>{statusTitle}</Text>
-          <View style={styles.filtersStatusBadge}>
-            <Text style={styles.filtersStatusBadgeText}>{statusBadge}</Text>
+      {mode === 'route' && !canBuildRoute && (
+        <View style={styles.filtersStatusCard} testID="filters-panel-status">
+          <View style={styles.filtersStatusHeader}>
+            <Text style={styles.filtersStatusTitle} numberOfLines={1}>{statusTitle}</Text>
+            <View style={styles.filtersStatusBadge}>
+              <Text style={styles.filtersStatusBadgeText}>{statusBadge}</Text>
+            </View>
           </View>
+          <Text style={styles.filtersStatusDescription} numberOfLines={isMobile ? 2 : undefined}>{statusDescription}</Text>
         </View>
-        <Text style={styles.filtersStatusDescription} numberOfLines={isMobile ? 2 : undefined}>{statusDescription}</Text>
-      </View>
+      )}
 
       <View style={styles.sectionCard} testID="filters-block-main">
         {mode === 'radius' ? (
@@ -324,14 +326,8 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       )}
 
       <View style={styles.sectionCard} testID="filters-block-map-tools">
-        <View style={styles.blockHeader}>
-          <Text style={styles.blockTitle}>Управление картой</Text>
-          <Text style={styles.blockHint}>
-            Масштаб, слои и оверлеи.
-          </Text>
-        </View>
         <CollapsibleSection
-          title="Инструменты карты"
+          title="Управление картой"
           icon="sliders"
           defaultOpen={false}
           tone="flat"

@@ -3,6 +3,9 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { LAYOUT } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
+const TS = DESIGN_TOKENS.typography.scale;
+const TOUCH = 44;
+
 export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
   const panelWidth = isMobile ? '100%' : Math.max(Math.min(windowWidth - 32, 420), 280);
   const windowHeight = Dimensions.get('window').height;
@@ -12,33 +15,29 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     card: {
       backgroundColor: colors.surface,
       borderRadius: isMobile ? 0 : 20,
-      padding: isMobile ? 0 : 10,
+      padding: isMobile ? 0 : 12,
       width: panelWidth,
       maxWidth: '100%',
       height: '100%',
       maxHeight: windowHeight,
       display: 'flex',
       flexDirection: 'column',
+      alignSelf: isMobile ? 'stretch' : 'flex-start',
       ...(isMobile
         ? {}
-        : {
-            shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
-            shadowOffset: { width: 0, height: 12 },
-            shadowOpacity: 0.1,
-            shadowRadius: 24,
-            elevation: 8,
-          }),
-      alignSelf: isMobile ? 'stretch' : 'flex-start',
-      ...(Platform.OS === 'web' && !isMobile
-        ? ({
-            backgroundColor: colors.surfaceAlpha40,
-            backdropFilter: 'blur(24px) saturate(1.06)',
-            WebkitBackdropFilter: 'blur(24px) saturate(1.06)',
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: colors.borderLight,
-            boxShadow: '0 18px 38px rgba(15,23,42,0.08), 0 4px 10px rgba(15,23,42,0.04)',
-          } as any)
-        : null),
+        : Platform.OS === 'web'
+          ? ({
+              borderWidth: 1,
+              borderColor: colors.borderLight,
+              boxShadow: '0 16px 40px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04)',
+            } as any)
+          : {
+              shadowColor: (colors.shadows as any)?.shadowColor ?? DESIGN_TOKENS.shadowsNative.light.shadowColor,
+              shadowOffset: { width: 0, height: 12 },
+              shadowOpacity: 0.1,
+              shadowRadius: 24,
+              elevation: 8,
+            }),
     },
     headerContainer: {
       marginBottom: 12,
@@ -200,19 +199,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexGrow: 1,
     },
     filtersStatusCard: {
-      padding: isMobile ? 10 : 11,
-      borderRadius: isMobile ? 12 : 14,
-      marginBottom: isMobile ? 8 : 10,
-      backgroundColor: colors.surfaceAlpha40,
+      padding: isMobile ? 14 : 14,
+      borderRadius: 16,
+      marginBottom: isMobile ? 10 : 12,
+      backgroundColor: colors.primarySoft,
       borderWidth: 1,
       borderColor: colors.primaryAlpha30,
-      gap: isMobile ? 4 : 8,
-      ...(Platform.OS === 'web'
-        ? ({
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-          } as any)
-        : null),
+      gap: isMobile ? 6 : 8,
     },
     filtersStatusHeader: {
       flexDirection: 'row',
@@ -223,44 +216,38 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     filtersStatusTitle: {
       flex: 1,
       minWidth: 0,
-      fontSize: isMobile ? 13 : 14,
-      fontWeight: '800',
+      ...TS.h3,
       color: colors.primaryText,
-      letterSpacing: -0.2,
     },
     filtersStatusBadge: {
-      paddingHorizontal: isMobile ? 8 : 10,
-      paddingVertical: isMobile ? 3 : 4,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
       borderRadius: 999,
       backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
     },
     filtersStatusBadgeText: {
-      fontSize: 11,
-      fontWeight: '800',
+      ...TS.label,
       color: colors.text,
     },
     filtersStatusDescription: {
-      fontSize: isMobile ? 11 : 12,
-      lineHeight: isMobile ? 15 : 18,
+      ...TS.bodySmall,
       color: colors.text,
     },
     mobileFiltersContextCard: {
-      padding: isMobile ? 11 : 12,
-      borderRadius: isMobile ? 14 : 16,
-      marginBottom: isMobile ? 8 : 10,
-      backgroundColor: colors.surfaceAlpha40,
-      borderWidth: StyleSheet.hairlineWidth,
+      padding: isMobile ? 14 : 14,
+      borderRadius: 16,
+      marginBottom: isMobile ? 10 : 12,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
       borderColor: colors.borderLight,
-      gap: 8,
+      gap: 10,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            boxShadow: '0 10px 22px rgba(15,23,42,0.06)',
+            boxShadow: '0 1px 3px rgba(15,23,42,0.04)',
           } as any)
-        : DESIGN_TOKENS.shadowsNative.light),
+        : null),
     },
     mobileFiltersContextHeader: {
       flexDirection: 'row',
@@ -274,26 +261,24 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 2,
     },
     mobileFiltersContextTitle: {
-      fontSize: isMobile ? 14 : 15,
-      fontWeight: '800',
+      ...TS.h2,
+      fontSize: 17,
+      lineHeight: 22,
       color: colors.text,
-      letterSpacing: -0.2,
     },
     mobileFiltersContextSubtitle: {
-      fontSize: isMobile ? 11 : 12,
-      lineHeight: isMobile ? 15 : 16,
+      ...TS.bodySmall,
       fontWeight: '700',
       color: colors.primaryText,
     },
     mobileFiltersContextHint: {
-      fontSize: isMobile ? 11 : 12,
-      lineHeight: isMobile ? 15 : 17,
+      ...TS.bodySmall,
       color: colors.textMuted,
     },
     mobileFiltersContextButton: {
-      minHeight: 32,
-      paddingHorizontal: 11,
-      paddingVertical: 7,
+      minHeight: TOUCH,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
       borderRadius: 999,
       flex: 0,
     },
@@ -340,36 +325,30 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     sectionCard: {
       backgroundColor: colors.surface,
-      borderRadius: isMobile ? 12 : 14,
-      padding: isMobile ? 11 : 11,
-      marginBottom: isMobile ? 8 : 10,
-      gap: isMobile ? 7 : 9,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderRadius: isMobile ? 14 : 16,
+      padding: isMobile ? 14 : 14,
+      marginBottom: isMobile ? 10 : 12,
+      gap: isMobile ? 10 : 12,
+      borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            backgroundColor: colors.surfaceAlpha40,
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
-            boxShadow: '0 10px 24px rgba(15,23,42,0.05)',
+            boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
             transition: 'box-shadow 0.2s ease',
           } as any)
-        : DESIGN_TOKENS.shadowsNative.light),
+        : null),
     },
     blockHeader: {
       gap: 2,
       marginBottom: 0,
     },
     blockTitle: {
-      fontSize: 13,
-      fontWeight: '800',
+      ...TS.h3,
       color: colors.text,
-      letterSpacing: -0.3,
     },
     blockHint: {
-      fontSize: 10,
+      ...TS.caption,
       color: colors.textMuted,
-      lineHeight: 13,
     },
     dualInputRow: {
       flexDirection: 'row',
@@ -455,21 +434,14 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       lineHeight: 15,
     },
     input: {
-      height: 34,
-      borderRadius: 11,
-      paddingHorizontal: 10,
-      fontSize: 13,
-      backgroundColor: colors.surfaceAlpha40,
-      borderWidth: StyleSheet.hairlineWidth,
+      height: TOUCH,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      ...TS.body,
+      color: colors.text,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
       borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          boxShadow: 'none',
-        } as any,
-        default: DESIGN_TOKENS.shadowsNative.light,
-      }),
     },
     chipsContainer: {
       marginTop: 6,
@@ -481,17 +453,18 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     categoryChip: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.surfaceAlpha40,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 16,
-      maxWidth: 128,
-      marginRight: 6,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      minHeight: 36,
+      borderRadius: 999,
+      maxWidth: 150,
+      marginRight: 8,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            transition: 'all 0.2s ease',
+            transition: 'background-color 0.2s ease, border-color 0.2s ease',
             cursor: 'pointer',
           } as any)
         : null),
@@ -584,19 +557,19 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       color: colors.text,
     },
     radiusOptionButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      minHeight: 34,
-      minWidth: 52,
-      borderRadius: 16,
-      borderWidth: StyleSheet.hairlineWidth,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      minHeight: TOUCH,
+      minWidth: 56,
+      borderRadius: 999,
+      borderWidth: 1,
       borderColor: colors.borderLight,
-      backgroundColor: colors.surfaceAlpha40,
+      backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
       ...(Platform.OS === 'web'
         ? ({
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease',
             cursor: 'pointer',
           } as any)
         : null),
@@ -606,12 +579,12 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       borderColor: colors.primary,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: `0 8px 18px ${colors.primaryAlpha30}`,
+            boxShadow: `0 6px 14px ${colors.primaryAlpha30}`,
           } as any)
         : null),
     },
     radiusOptionText: {
-      fontSize: 12,
+      ...TS.bodySmall,
       fontWeight: '700',
       color: colors.textMuted,
     },

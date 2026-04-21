@@ -35,6 +35,19 @@ describe('changed-files-utils', () => {
     delete process.env.CUSTOM_CHANGED
   })
 
+  it('treats an explicitly provided empty env var as available empty input', () => {
+    process.env.CHANGED_FILES = ''
+
+    expect(readChangedFiles({ changedFilesFile: '/tmp/does-not-exist' })).toEqual([])
+    expect(readChangedFilesWithMeta({ changedFilesFile: '/tmp/does-not-exist' })).toEqual({
+      files: [],
+      source: 'env',
+      available: true,
+    })
+
+    delete process.env.CHANGED_FILES
+  })
+
   it('returns unavailable meta when no input source exists', () => {
     delete process.env.CHANGED_FILES
     expect(readChangedFilesWithMeta({ changedFilesFile: '/tmp/does-not-exist' })).toEqual({

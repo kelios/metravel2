@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "Expo Web",
-      "runtimeExecutable": "/opt/homebrew/bin/node",
-      "runtimeArgs": ["./node_modules/.bin/expo", "start", "--web"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--web"],
       "port": 8081,
       "autoPort": false
     },

@@ -210,20 +210,27 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
                 title={selector.label}
                 style={({ pressed }) => [styles.field, pressed && styles.fieldPressed]}
               >
-                <View style={styles.iconBadge}>
-                  <Feather name={selector.icon} size={13} color={colors.primaryText} />
-                </View>
-                <View style={styles.fieldCopy}>
-                  <Text style={styles.fieldLabel} numberOfLines={1}>
-                    {selector.label}
-                  </Text>
-                </View>
-                <View style={styles.fieldValueWrap}>
-                  <Text style={styles.fieldValue} numberOfLines={1}>
-                    {selector.value}
-                  </Text>
-                  <Feather name="chevron-down" size={14} color={colors.textMuted} />
-                </View>
+                <Feather
+                  name={selector.icon}
+                  size={15}
+                  color={colors.primary}
+                  style={styles.fieldIcon}
+                />
+                <Text
+                  style={[styles.fieldLabel, isVeryNarrow && styles.fieldLabelHidden]}
+                  numberOfLines={1}
+                >
+                  {selector.label}
+                </Text>
+                <Text style={styles.fieldValue} numberOfLines={1}>
+                  {selector.value}
+                </Text>
+                <Feather
+                  name="chevron-down"
+                  size={13}
+                  color={colors.textMuted}
+                  style={styles.fieldCaret}
+                />
               </CardActionPressable>
             </View>
           ))}
@@ -299,8 +306,8 @@ const getStyles = (
       zIndex: 5,
     },
     row: {
-      flexDirection: options.isVeryNarrow ? 'column' : 'row',
-      gap: options.isVeryNarrow ? 8 : 10,
+      flexDirection: 'row',
+      gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
       alignItems: 'stretch',
     },
     fieldWrap: {
@@ -312,19 +319,19 @@ const getStyles = (
       minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
-      minHeight: options.isVeryNarrow ? 40 : options.isNarrow ? 43 : 46,
-      paddingHorizontal: options.isVeryNarrow ? 10 : options.isNarrow ? 11 : 13,
-      paddingVertical: options.isVeryNarrow ? 6 : options.isNarrow ? 7 : 8,
-      borderRadius: options.isVeryNarrow ? 15 : options.isNarrow ? 17 : 18,
+      gap: options.isVeryNarrow ? 6 : 8,
+      minHeight: options.isVeryNarrow ? 36 : options.isNarrow ? 38 : 40,
+      paddingHorizontal: options.isVeryNarrow ? 10 : 12,
+      paddingVertical: 4,
+      borderRadius: 14,
       backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(16px) saturate(1.08)',
-            WebkitBackdropFilter: 'blur(16px) saturate(1.08)',
-            boxShadow: '0 10px 22px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04)',
+            backdropFilter: 'blur(20px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(20px) saturate(1.4)',
+            boxShadow: '0 4px 14px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04)',
             cursor: 'pointer',
             transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
           } as any)
@@ -338,43 +345,30 @@ const getStyles = (
           } as any)
         : null),
     },
-    iconBadge: {
-      width: options.isVeryNarrow ? 18 : options.isNarrow ? 20 : 22,
-      height: options.isVeryNarrow ? 18 : options.isNarrow ? 20 : 22,
-      borderRadius: 999,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primarySoft,
+    fieldIcon: {
       flexShrink: 0,
-    },
-    fieldCopy: {
-      flex: 1,
-      minWidth: 0,
-      justifyContent: 'center',
     },
     fieldLabel: {
-      fontSize: options.isVeryNarrow ? 10 : options.isNarrow ? 11 : 12,
-      fontWeight: '700',
-      color: colors.text,
+      fontSize: options.isVeryNarrow ? 12 : 13,
+      fontWeight: '600',
+      color: colors.textMuted,
       letterSpacing: 0.1,
+      flexShrink: 1,
+      minWidth: 0,
     },
-    fieldValueWrap: {
-      marginLeft: 'auto',
-      maxWidth: options.isVeryNarrow ? 90 : options.isNarrow ? 108 : 120,
-      minHeight: options.isVeryNarrow ? 22 : 26,
-      paddingLeft: 7,
-      paddingRight: 4,
-      borderRadius: 999,
-      alignItems: 'center',
-      flexDirection: 'row',
-      gap: 4,
-      justifyContent: 'center',
-      backgroundColor: colors.surfaceAlpha40,
-      flexShrink: 0,
+    fieldLabelHidden: {
+      ...(Platform.OS === 'web' ? ({ display: 'none' } as any) : { width: 0, height: 0, opacity: 0 }),
     },
     fieldValue: {
-      fontSize: options.isVeryNarrow ? 10 : 11,
-      fontWeight: '800',
-      color: colors.primaryText,
+      marginLeft: 'auto',
+      fontSize: options.isVeryNarrow ? 12 : 13,
+      fontWeight: '700',
+      color: colors.text,
+      flexShrink: 0,
+      maxWidth: options.isVeryNarrow ? 90 : 130,
+    },
+    fieldCaret: {
+      flexShrink: 0,
+      opacity: 0.6,
     },
   })

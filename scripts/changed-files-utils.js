@@ -11,8 +11,9 @@ const readChangedFilesWithMeta = ({ changedFilesFile = '', envVarName = 'CHANGED
     }
   }
 
-  const envRaw = process.env[envVarName] || ''
-  if (String(envRaw).trim()) {
+  const hasEnvInput = Object.prototype.hasOwnProperty.call(process.env, envVarName)
+  const envRaw = hasEnvInput ? process.env[envVarName] || '' : ''
+  if (hasEnvInput) {
     return {
       files: parseChangedFiles(envRaw),
       source: 'env',

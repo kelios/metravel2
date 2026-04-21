@@ -22,7 +22,6 @@ const LazyMapOnboarding = lazy(() => import('@/components/MapPage/MapOnboarding'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar';
 import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
 import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
-import { MapShowListButton } from '@/components/MapPage/MapShowListButton';
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { MAP_SEO_TITLE, MAP_SEO_DESCRIPTION } from '@/constants/mapSeo';
@@ -284,11 +283,6 @@ export default function MapScreen() {
         return filtersPanelProps?.contextValue?.mode === 'route' ? 'route' : 'search';
     }, [filtersPanelProps?.contextValue?.mode, rightPanelTab]);
 
-    const handleShowList = useCallback(() => {
-        selectTravelsTab();
-        if (isDesktopCollapsed) toggleDesktopCollapse();
-    }, [selectTravelsTab, isDesktopCollapsed, toggleDesktopCollapse]);
-
     const mapComponent = useMemo(
         () => (
             <View style={styles.mapArea}>
@@ -309,12 +303,6 @@ export default function MapScreen() {
                         onChangeOverlay={(id, enabled) => filtersPanelProps?.contextValue?.onOverlayToggle?.(id, enabled)}
                         onResetOverlays={filtersPanelProps?.contextValue?.onResetOverlays}
                         travelsData={travelsData}
-                    />
-                )}
-                {Platform.OS === 'web' && !isMobile && isDesktopCollapsed && travelsData.length > 0 && rightPanelTab !== 'travels' && (
-                    <MapShowListButton
-                        count={travelsData.length}
-                        onPress={handleShowList}
                     />
                 )}
                 {mapReady ? (
@@ -347,9 +335,6 @@ export default function MapScreen() {
             mapPanelPlaceholder,
             mapPanelProps,
             mapReady,
-            rightPanelTab,
-            isDesktopCollapsed,
-            handleShowList,
             travelsData,
             quickCategoriesValue,
             quickOverlaysValue,

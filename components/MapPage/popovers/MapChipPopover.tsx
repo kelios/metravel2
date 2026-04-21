@@ -154,14 +154,16 @@ const getStyles = (colors: ThemedColors) =>
     },
     popover: {
       position: 'absolute',
-      backgroundColor: colors.backgroundPrimary,
+      backgroundColor: colors.surfaceElevated,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 12px 32px rgba(17,24,39,0.16), 0 4px 12px rgba(17,24,39,0.08)',
+            backdropFilter: 'blur(18px)',
+            WebkitBackdropFilter: 'blur(18px)',
+            boxShadow: '0 20px 44px rgba(17,24,39,0.18), 0 6px 18px rgba(17,24,39,0.10)',
           } as any)
         : colors.shadows.medium),
     },
