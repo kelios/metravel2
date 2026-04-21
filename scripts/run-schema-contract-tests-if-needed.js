@@ -49,11 +49,20 @@ const shouldRunForChangedFiles = (changedFiles) => {
   return getMatchedSchemaFiles(changedFiles).length > 0
 }
 
+const resolveCommand = (command) => {
+  if (process.platform !== 'win32') {
+    return command
+  }
+
+  if (command === 'yarn') return 'yarn.cmd'
+  return command
+}
+
 const runSchemaContractTests = () => {
   const result = spawnSync(
-    'yarn',
+    resolveCommand('yarn'),
     ['jest', '--runInBand', ...SCHEMA_CONTRACT_TESTS],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', shell: process.platform === 'win32' },
   )
   return result.status ?? 1
 }

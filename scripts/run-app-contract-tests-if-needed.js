@@ -131,11 +131,20 @@ const shouldRunForChangedFiles = (changedFiles) => {
   return getMatchedAppFiles(changedFiles).length > 0
 }
 
+const resolveCommand = (command) => {
+  if (process.platform !== 'win32') {
+    return command
+  }
+
+  if (command === 'yarn') return 'yarn.cmd'
+  return command
+}
+
 const runAppTargetedTests = (tests) => {
   const result = spawnSync(
-    'yarn',
+    resolveCommand('yarn'),
     ['jest', '--runInBand', ...(tests || [])],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', shell: process.platform === 'win32' },
   )
   return result.status ?? 1
 }

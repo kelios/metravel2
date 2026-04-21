@@ -79,11 +79,20 @@ const shouldRunForChangedFiles = (changedFiles) => {
   return getMatchedValidatorFiles(changedFiles).length > 0
 }
 
+const resolveCommand = (command) => {
+  if (process.platform !== 'win32') {
+    return command
+  }
+
+  if (command === 'yarn') return 'yarn.cmd'
+  return command
+}
+
 const runValidatorContractTests = () => {
   const result = spawnSync(
-    'yarn',
+    resolveCommand('yarn'),
     ['jest', '--runInBand', ...VALIDATOR_CONTRACT_TESTS],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', shell: process.platform === 'win32' },
   )
   return result.status ?? 1
 }
