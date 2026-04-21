@@ -90,7 +90,9 @@ const TravelListPanel: React.FC<Props> = ({
       if (Platform.OS !== 'web' && isMobile) {
         return (
           <SwipeableListItem
-            onFavorite={onToggleFavorite ? () => onToggleFavorite(itemId) : undefined}
+            onFavorite={
+              onToggleFavorite ? () => onToggleFavorite(itemId) : undefined
+            }
             onBuildRoute={() => buildRouteTo(item)}
             showFavorite={!!onToggleFavorite}
             showRoute={true}
@@ -103,11 +105,20 @@ const TravelListPanel: React.FC<Props> = ({
 
       return content
     },
-    [isMobile, buildRouteTo, onHideTravel, userLocation, transportMode, onToggleFavorite, favorites],
+    [
+      isMobile,
+      buildRouteTo,
+      onHideTravel,
+      userLocation,
+      transportMode,
+      onToggleFavorite,
+      favorites,
+    ],
   )
 
   const keyExtractor = useCallback(
-    (item: any, index: number) => String(item.id ?? item._id ?? item.slug ?? index),
+    (item: any, index: number) =>
+      String(item.id ?? item._id ?? item.slug ?? index),
     [],
   )
 
@@ -132,8 +143,12 @@ const TravelListPanel: React.FC<Props> = ({
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent
 
-      const raf = (globalThis as any)?.requestAnimationFrame as undefined | ((cb: () => void) => number)
-      const caf = (globalThis as any)?.cancelAnimationFrame as undefined | ((id: number) => void)
+      const raf = (globalThis as any)?.requestAnimationFrame as
+        | undefined
+        | ((cb: () => void) => number)
+      const caf = (globalThis as any)?.cancelAnimationFrame as
+        | undefined
+        | ((id: number) => void)
 
       if (typeof raf === 'function') {
         if (webScrollRafRef.current != null && typeof caf === 'function') {
@@ -150,7 +165,8 @@ const TravelListPanel: React.FC<Props> = ({
       }
 
       if (!hasMore || !onLoadMore) return
-      const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y
+      const distanceFromEnd =
+        contentSize.height - layoutMeasurement.height - contentOffset.y
       if (distanceFromEnd < layoutMeasurement.height * 0.5) {
         onLoadMore()
       }
@@ -173,13 +189,11 @@ const TravelListPanel: React.FC<Props> = ({
   }, [compactPreview, hasMore, isLoading, skeletonCards, styles.endText])
 
   const listHeader = useMemo(() => {
-    if (!isMobile || !travelsData.length) {
+    if (!isMobile || !travelsData.length || !compactPreview) {
       return null
     }
-
-    const hintText = compactPreview
-      ? 'Быстрый просмотр рядом. Откройте весь список, если хотите сравнить больше вариантов.'
-      : 'Нажмите карточку, чтобы открыть место и сразу перейти к маршруту. Потяните список вниз, чтобы обновить выдачу.'
+    const hintText =
+      '\u0411\u044b\u0441\u0442\u0440\u044b\u0439 \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u0440\u044f\u0434\u043e\u043c. \u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u0432\u0435\u0441\u044c \u0441\u043f\u0438\u0441\u043e\u043a, \u0435\u0441\u043b\u0438 \u0445\u043e\u0442\u0438\u0442\u0435 \u0441\u0440\u0430\u0432\u043d\u0438\u0442\u044c \u0431\u043e\u043b\u044c\u0448\u0435 \u0432\u0430\u0440\u0438\u0430\u043d\u0442\u043e\u0432.'
 
     return (
       <View style={styles.listHeaderCard} testID="travel-list-mobile-summary">
@@ -215,7 +229,15 @@ const TravelListPanel: React.FC<Props> = ({
         </View>
       </View>
     )
-  }, [compactPreview, isMobile, onClosePanel, onExpandList, onOpenFilters, styles, travelsData.length])
+  }, [
+    compactPreview,
+    isMobile,
+    onClosePanel,
+    onExpandList,
+    onOpenFilters,
+    styles,
+    travelsData.length,
+  ])
 
   if (!travelsData || travelsData.length === 0) {
     if (isLoading) {
@@ -231,7 +253,9 @@ const TravelListPanel: React.FC<Props> = ({
           accessibilityLabel="Нет данных"
         />
         <Text style={styles.emptyText}>Рядом ничего не нашлось</Text>
-        <Text style={styles.emptyHint}>Попробуйте изменить фильтры или увеличить радиус поиска</Text>
+        <Text style={styles.emptyHint}>
+          Попробуйте изменить фильтры или увеличить радиус поиска
+        </Text>
         <View style={styles.emptyActions}>
           {onOpenFilters && (
             <Button
@@ -293,7 +317,9 @@ const TravelListPanel: React.FC<Props> = ({
         >
           {listHeader}
           {visibleTravelsData.map((item: any, index: number) => (
-            <React.Fragment key={String(item.id ?? item._id ?? item.slug ?? index)}>
+            <React.Fragment
+              key={String(item.id ?? item._id ?? item.slug ?? index)}
+            >
               {renderItem({ item })}
             </React.Fragment>
           ))}
@@ -303,14 +329,22 @@ const TravelListPanel: React.FC<Props> = ({
     }
 
     const viewportH = webViewportH || 600
-    const startIndex = Math.max(0, Math.floor(webScrollY / WEB_ESTIMATED_ITEM_HEIGHT_PX) - WEB_LIST_OVERSCAN_ITEMS)
+    const startIndex = Math.max(
+      0,
+      Math.floor(webScrollY / WEB_ESTIMATED_ITEM_HEIGHT_PX) -
+        WEB_LIST_OVERSCAN_ITEMS,
+    )
     const endIndex = Math.min(
       travelsData.length,
-      Math.ceil((webScrollY + viewportH) / WEB_ESTIMATED_ITEM_HEIGHT_PX) + WEB_LIST_OVERSCAN_ITEMS,
+      Math.ceil((webScrollY + viewportH) / WEB_ESTIMATED_ITEM_HEIGHT_PX) +
+        WEB_LIST_OVERSCAN_ITEMS,
     )
 
     const topSpacerHeight = startIndex * WEB_ESTIMATED_ITEM_HEIGHT_PX
-    const bottomSpacerHeight = Math.max(0, (travelsData.length - endIndex) * WEB_ESTIMATED_ITEM_HEIGHT_PX)
+    const bottomSpacerHeight = Math.max(
+      0,
+      (travelsData.length - endIndex) * WEB_ESTIMATED_ITEM_HEIGHT_PX,
+    )
 
     return (
       <ScrollView
@@ -334,12 +368,20 @@ const TravelListPanel: React.FC<Props> = ({
       >
         {topSpacerHeight > 0 && <View style={{ height: topSpacerHeight }} />}
         {listHeader}
-        {visibleTravelsData.slice(startIndex, endIndex).map((item: any, index: number) => (
-          <React.Fragment key={String(item.id ?? item._id ?? item.slug ?? startIndex + index)}>
-            {renderItem({ item })}
-          </React.Fragment>
-        ))}
-        {bottomSpacerHeight > 0 && <View style={{ height: bottomSpacerHeight }} />}
+        {visibleTravelsData
+          .slice(startIndex, endIndex)
+          .map((item: any, index: number) => (
+            <React.Fragment
+              key={String(
+                item.id ?? item._id ?? item.slug ?? startIndex + index,
+              )}
+            >
+              {renderItem({ item })}
+            </React.Fragment>
+          ))}
+        {bottomSpacerHeight > 0 && (
+          <View style={{ height: bottomSpacerHeight }} />
+        )}
         {footer}
       </ScrollView>
     )
@@ -353,7 +395,13 @@ const TravelListPanel: React.FC<Props> = ({
       contentContainerStyle={styles.list}
       {...({ estimatedItemSize: isMobile ? 100 : 120 } as any)}
       onEndReachedThreshold={compactPreview ? undefined : 0.5}
-      onEndReached={compactPreview ? undefined : onLoadMore && hasMore ? onLoadMore : undefined}
+      onEndReached={
+        compactPreview
+          ? undefined
+          : onLoadMore && hasMore
+            ? onLoadMore
+            : undefined
+      }
       ListHeaderComponent={listHeader}
       ListFooterComponent={footer}
       drawDistance={isMobile ? 500 : 800}
@@ -408,7 +456,12 @@ const getStyles = (colors: ThemedColors) =>
       width: '100%',
     },
     loader: { paddingVertical: 16, alignItems: 'center' },
-    endText: { textAlign: 'center', color: colors.textMuted, paddingVertical: 16, fontSize: 12 },
+    endText: {
+      textAlign: 'center',
+      color: colors.textMuted,
+      paddingVertical: 16,
+      fontSize: 12,
+    },
     emptyContainer: {
       padding: 32,
       alignItems: 'center',

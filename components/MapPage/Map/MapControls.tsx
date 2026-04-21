@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { Platform, useWindowDimensions } from 'react-native';
+import { Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { LatLng } from '@/types/coordinates';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -19,14 +19,14 @@ const MOBILE_WEB_BOTTOM_CHROME_GAP = 28;
 const MOBILE_WEB_SIDE_GAP = 16;
 
 const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
-  width: '46px',
-  height: '46px',
-  borderRadius: '18px',
-  backgroundColor: 'rgba(255,255,255,0.9)',
-  border: `1px solid ${colors.surface}`,
-  boxShadow: '0 12px 24px rgba(58,58,58,0.10), 0 2px 8px rgba(58,58,58,0.05)',
-  backdropFilter: 'blur(16px) saturate(1.12)',
-  WebkitBackdropFilter: 'blur(16px) saturate(1.12)',
+  width: '40px',
+  height: '40px',
+  borderRadius: '16px',
+  backgroundColor: 'rgba(255,255,255,0.62)',
+  border: `1px solid ${colors.borderLight}`,
+  boxShadow: '0 8px 18px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)',
+  backdropFilter: 'blur(14px) saturate(1.08)',
+  WebkitBackdropFilter: 'blur(14px) saturate(1.08)',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
@@ -47,18 +47,18 @@ const MapControlButton: React.FC<{
   const style = useMemo(() => getButtonStyle(colors), [colors]);
 
   const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = colors.surface;
-    e.currentTarget.style.borderColor = colors.surface;
+    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.78)';
+    e.currentTarget.style.borderColor = colors.borderLight;
     e.currentTarget.style.transform = 'translateY(-1px)';
-    e.currentTarget.style.boxShadow = '0 16px 30px rgba(58,58,58,0.12), 0 3px 10px rgba(58,58,58,0.06)';
-  }, [colors.surface]);
+    e.currentTarget.style.boxShadow = '0 10px 20px rgba(58,58,58,0.10), 0 2px 6px rgba(58,58,58,0.05)';
+  }, [colors.borderLight]);
 
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.9)';
-    e.currentTarget.style.borderColor = colors.surface;
+    e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.62)';
+    e.currentTarget.style.borderColor = colors.borderLight;
     e.currentTarget.style.transform = 'translateY(0)';
-    e.currentTarget.style.boxShadow = '0 12px 24px rgba(58,58,58,0.10), 0 2px 8px rgba(58,58,58,0.05)';
-  }, [colors.surface]);
+    e.currentTarget.style.boxShadow = '0 8px 18px rgba(58,58,58,0.08), 0 1px 4px rgba(58,58,58,0.04)';
+  }, [colors.borderLight]);
 
   return (
     <button
@@ -83,11 +83,9 @@ const MapControls: React.FC<MapControlsProps> = ({
   alignLeft = false,
 }) => {
   const colors = useThemedColors();
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
 
   // На мобильном размещаем слева, чтобы не конфликтовать с Bottom Sheet
-  const shouldAlignLeft = alignLeft || isMobile;
+  const shouldAlignLeft = alignLeft;
 
   const controlsStyle = useMemo(() => ({
     position: 'absolute' as const,
@@ -105,7 +103,7 @@ const MapControls: React.FC<MapControlsProps> = ({
     zIndex: 40,
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '10px',
+    gap: '8px',
   }), [bottomOffset, shouldAlignLeft]);
 
   if (Platform.OS !== 'web') return null;
