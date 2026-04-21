@@ -10,8 +10,8 @@
     },
     {
       "name": "Expo Web 8082",
-      "runtimeExecutable": "/opt/homebrew/bin/node",
-      "runtimeArgs": ["./node_modules/.bin/expo", "start", "--web", "--port", "8082"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "start", "--web", "--port", "8082"],
       "port": 8082,
       "autoPort": false
     },

@@ -173,20 +173,18 @@ const getStyles = (colors: ThemedColors) =>
       left: 0,
       right: 0,
       bottom: 0,
-      zIndex: 50,
+      zIndex: 2100,
       ...(Platform.OS === 'web' ? ({ position: 'fixed' } as any) : null),
     },
     popover: {
       position: 'absolute',
-      backgroundColor: colors.surfaceElevated,
+      backgroundColor: colors.surface,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)',
             boxShadow: '0 20px 44px rgba(17,24,39,0.18), 0 6px 18px rgba(17,24,39,0.10)',
           } as any)
         : colors.shadows.medium),
@@ -202,7 +200,7 @@ const getStyles = (colors: ThemedColors) =>
         : null),
     },
     sheetContainer: {
-      backgroundColor: colors.backgroundPrimary,
+      backgroundColor: colors.surface,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       paddingTop: 8,

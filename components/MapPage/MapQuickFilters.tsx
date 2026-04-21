@@ -46,8 +46,8 @@ interface MapQuickFiltersProps {
   travelsData?: ReadonlyArray<{ categoryName?: string | null | undefined }>
 }
 
-const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 430
-const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 360
+const PHONE_COMPACT_LAYOUT_MAX_WIDTH = 767
+const PHONE_VERY_NARROW_LAYOUT_MAX_WIDTH = 430
 
 export const CATEGORY_ICONS: Record<
   string,
@@ -180,7 +180,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
         icon: 'grid' as const,
         onPress: handleCategoriesPress,
         ref: categoriesAnchorRef,
-        hideLabel: isVeryNarrow,
+        hideLabel: isNarrow,
         hasHandler: hasCategoriesPopover || typeof onPressCategories === 'function',
       },
       {
@@ -190,7 +190,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
         icon: 'layers' as const,
         onPress: handleOverlaysPress,
         ref: overlaysAnchorRef,
-        hideLabel: isVeryNarrow,
+        hideLabel: isNarrow,
         hasHandler: hasOverlaysPopover || typeof onPressOverlays === 'function',
       },
     ].filter((item) => item.hasHandler)

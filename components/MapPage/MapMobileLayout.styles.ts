@@ -148,9 +148,10 @@ export const getMapMobileLayoutStyles = (
     },
     sheetToolbarActionsStacked: {
       width: '100%',
-      flexDirection: 'column' as const,
-      alignItems: 'stretch' as const,
-      justifyContent: 'flex-start' as const,
+      flexDirection: 'row' as const,
+      flexWrap: 'wrap' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'flex-end' as const,
       gap: 8,
     },
     sheetCloseButton: {
@@ -207,7 +208,6 @@ export const getMapMobileLayoutStyles = (
       letterSpacing: 0.1,
     },
     sheetToolbarButtonStacked: {
-      width: '100%',
       minWidth: 0,
     },
     sheetBackToMapButton: {
@@ -247,7 +247,6 @@ export const getMapMobileLayoutStyles = (
       borderRadius: 12,
     },
     sheetIconButtonStacked: {
-      width: '100%',
       minWidth: 0,
       borderRadius: 14,
     },

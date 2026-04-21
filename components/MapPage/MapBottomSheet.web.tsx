@@ -87,7 +87,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         node.style.height = peekContent ? 'auto' : '0px';
         node.style.maxHeight = peekContent ? 'none' : '0px';
       } else {
-        node.style.height = `${openHeight}px`;
+        node.style.height = 'auto';
         node.style.maxHeight = `${openHeight}px`;
       }
     }, [isCollapsed, openHeight, peekContent]);
@@ -247,10 +247,7 @@ const getStyles = (colors: ThemedColors) =>
       borderRadius: 12,
     },
     contentContainer: {
-      flexGrow: 1,
       flexShrink: 1,
-      flexBasis: 0,
-      height: 0,
       minHeight: 0,
       minWidth: 0,
       ...(Platform.OS === 'web'

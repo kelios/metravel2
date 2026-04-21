@@ -18,7 +18,11 @@
       "Bash(git worktree *)",
       "WebFetch(domain:metravel.by)",
       "Bash(xargs wc *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":8081\")",
+      "Bash(curl -sS -o /dev/null -w \"%{http_code}\" http://localhost:8082/)",
+      "Bash(curl -sSf -o /dev/null http://localhost:8082/)"
     ]
   }
 }
