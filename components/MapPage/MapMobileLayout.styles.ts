@@ -51,9 +51,9 @@ export const getMapMobileLayoutStyles = (
       alignItems: 'flex-end',
     },
     quickCircleButton: {
-      width: options.isNarrow ? 44 : 48,
-      height: options.isNarrow ? 44 : 48,
-      borderRadius: options.isNarrow ? 22 : 24,
+      width: options.isNarrow ? 40 : 44,
+      height: options.isNarrow ? 40 : 44,
+      borderRadius: options.isNarrow ? 20 : 22,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.surface,
@@ -61,7 +61,10 @@ export const getMapMobileLayoutStyles = (
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 8px 18px rgba(0,0,0,0.14)',
+            backgroundColor: colors.surfaceAlpha40,
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 10px 22px rgba(15,23,42,0.12)',
             cursor: 'pointer',
           } as any)
         : {
@@ -79,7 +82,7 @@ export const getMapMobileLayoutStyles = (
       minHeight: 0,
     },
     sheetRootPreview: {
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceAlpha40,
     },
     sheetToolbar: {
       flexDirection: options.stackSheetToolbar ? 'column' : 'row',
@@ -88,19 +91,20 @@ export const getMapMobileLayoutStyles = (
       minHeight: options.stackSheetToolbar
         ? undefined
         : options.isNarrow
-          ? 40
-          : 48,
-      paddingVertical: options.isNarrow ? 4 : 8,
-      paddingLeft: options.isNarrow ? 8 : 14,
-      paddingRight: options.isNarrow ? 8 : 14,
+          ? 36
+          : 42,
+      paddingVertical: options.isNarrow ? 4 : 6,
+      paddingLeft: options.isNarrow ? 8 : 12,
+      paddingRight: options.isNarrow ? 8 : 12,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
       backgroundColor: colors.surface,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
+            backgroundColor: colors.surfaceAlpha40,
+            boxShadow: '0 4px 14px rgba(15,23,42,0.08)',
+            backdropFilter: 'blur(18px)',
+            WebkitBackdropFilter: 'blur(18px)',
           } as any)
         : {
             shadowColor: DESIGN_TOKENS.colors.text,
@@ -150,19 +154,21 @@ export const getMapMobileLayoutStyles = (
       gap: 8,
     },
     sheetCloseButton: {
-      width: options.isNarrow ? 38 : 44,
-      height: options.isNarrow ? 38 : 44,
-      borderRadius: options.isNarrow ? 12 : 14,
+      width: options.isNarrow ? 34 : 38,
+      height: options.isNarrow ? 34 : 38,
+      borderRadius: options.isNarrow ? 11 : 12,
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceAlpha40,
       flexShrink: 0,
       marginHorizontal: 0,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           } as any)
@@ -176,9 +182,9 @@ export const getMapMobileLayoutStyles = (
     },
     sheetShowResultsButton: {
       flexDirection: 'row' as const,
-      height: options.isNarrow ? 38 : 44,
-      minWidth: options.isNarrow ? 38 : 44,
-      paddingHorizontal: options.isNarrow ? 8 : 12,
+      height: options.isNarrow ? 36 : 40,
+      minWidth: options.isNarrow ? 36 : 40,
+      paddingHorizontal: options.isNarrow ? 8 : 10,
       gap: 4,
       borderRadius: 999,
       borderWidth: 0,
@@ -190,9 +196,9 @@ export const getMapMobileLayoutStyles = (
         : null),
     },
     sheetShowResultsButtonCompact: {
-      height: 44,
-      minWidth: 44,
-      paddingHorizontal: 10,
+      height: 40,
+      minWidth: 40,
+      paddingHorizontal: 9,
     },
     sheetPrimaryActionText: {
       fontSize: options.isNarrow ? 12 : 13,
@@ -209,13 +215,13 @@ export const getMapMobileLayoutStyles = (
       alignItems: 'center' as const,
       justifyContent: 'center' as const,
       gap: 4,
-      height: options.isNarrow ? 38 : 44,
-      minWidth: options.isNarrow ? 38 : 44,
-      paddingHorizontal: options.isNarrow ? 8 : 12,
+      height: options.isNarrow ? 36 : 40,
+      minWidth: options.isNarrow ? 36 : 40,
+      paddingHorizontal: options.isNarrow ? 8 : 10,
       borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceAlpha40,
       flexShrink: 0,
       ...(Platform.OS === 'web'
         ? ({
@@ -225,8 +231,8 @@ export const getMapMobileLayoutStyles = (
         : null),
     },
     sheetBackToMapButtonCompact: {
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
       paddingHorizontal: 0,
       borderRadius: 12,
     },
@@ -236,8 +242,8 @@ export const getMapMobileLayoutStyles = (
       color: colors.textMuted,
     },
     sheetIconButtonCompact: {
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
       borderRadius: 12,
     },
     sheetIconButtonStacked: {
@@ -289,14 +295,14 @@ export const getMapMobileLayoutStyles = (
       minHeight: 34,
     },
     sheetIconButton: {
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceAlpha40,
       flexShrink: 0,
       marginHorizontal: 0,
       shadowColor: 'transparent',
@@ -317,11 +323,11 @@ export const getMapMobileLayoutStyles = (
         : null),
     },
     sheetResetButton: {
-      paddingHorizontal: 12,
+      paddingHorizontal: 10,
       borderRadius: 999,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceAlpha40,
       marginHorizontal: 0,
       shadowColor: 'transparent',
       shadowOpacity: 0,
@@ -342,7 +348,7 @@ export const getMapMobileLayoutStyles = (
       minHeight: 0,
       ...Platform.select({
         web: {
-          paddingHorizontal: options.isNarrow ? 6 : 14,
+          paddingHorizontal: options.isNarrow ? 6 : 12,
         },
       }),
     },
@@ -365,15 +371,18 @@ export const getMapMobileLayoutStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
-      borderRadius: 18,
+      borderRadius: 16,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
-      paddingHorizontal: options.isNarrow ? 12 : 14,
-      paddingVertical: options.isNarrow ? 12 : 14,
+      paddingHorizontal: options.isNarrow ? 11 : 13,
+      paddingVertical: options.isNarrow ? 11 : 13,
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 8px 22px rgba(0,0,0,0.06)',
+            backgroundColor: colors.surfaceAlpha40,
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 10px 24px rgba(0,0,0,0.06)',
           } as any)
         : {
             shadowColor: DESIGN_TOKENS.colors.text,
@@ -384,12 +393,12 @@ export const getMapMobileLayoutStyles = (
           }),
     },
     sheetTransitionIconWrap: {
-      width: options.isNarrow ? 40 : 44,
-      height: options.isNarrow ? 40 : 44,
+      width: options.isNarrow ? 36 : 40,
+      height: options.isNarrow ? 36 : 40,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceAlpha40,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.borderLight,
       flexShrink: 0,

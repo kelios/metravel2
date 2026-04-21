@@ -16,7 +16,9 @@
       "Bash(git fetch *)",
       "Bash(git merge *)",
       "Bash(git worktree *)",
-      "WebFetch(domain:metravel.by)"
+      "WebFetch(domain:metravel.by)",
+      "Bash(xargs wc *)",
+      "Bash(git stash *)"
     ]
   }
 }

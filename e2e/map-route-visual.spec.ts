@@ -111,11 +111,11 @@ test.describe('Map Route Line - Visual Regression', () => {
 
     // Переключаемся в режим маршрута
     console.log('🔄 Переключаем режим...');
-    const segmentedRoute = page.getByTestId('segmented-route');
+    const segmentedRoute = page.getByTestId('map-panel-tab-route');
     if (await segmentedRoute.isVisible().catch(() => false)) {
       await segmentedRoute.click({ force: true });
       await page.waitForLoadState('domcontentloaded').catch(() => null);
-      console.log('✅ Режим маршрута (segmented-route)');
+      console.log('✅ Режим маршрута (map-panel-tab-route)');
     } else {
       const routeButton = page.locator('button').filter({ hasText: /Маршрут/i }).first();
       if (await routeButton.isVisible().catch(() => false)) {
@@ -281,7 +281,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     });
 
     // Переключаем режим и добавляем точки
-    const segmentedRoute = page.getByTestId('segmented-route');
+    const segmentedRoute = page.getByTestId('map-panel-tab-route');
     if (await segmentedRoute.isVisible().catch(() => false)) {
       await segmentedRoute.click({ force: true });
       await page.waitForLoadState('domcontentloaded').catch(() => null);

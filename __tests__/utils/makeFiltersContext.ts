@@ -6,12 +6,14 @@ export function makeFiltersContext(
   return {
     filters: {
       categories: [],
+      categoryTravelAddress: [],
       radius: [],
       address: '',
       ...(overrides.filters || {}),
     },
     filterValue: {
       categories: [],
+      categoryTravelAddress: [],
       radius: '60',
       address: '',
       ...(overrides.filterValue || {}),

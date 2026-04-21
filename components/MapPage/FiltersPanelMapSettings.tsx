@@ -33,6 +33,10 @@ interface FiltersPanelMapSettingsProps {
   isMobile: boolean;
   mode: 'radius' | 'route';
   mapUiApi?: MapUiApi | null;
+  overlayOptions?: Array<{ id: string; title: string }>;
+  enabledOverlays?: Record<string, boolean>;
+  onOverlayToggle?: (id: string, enabled: boolean) => void;
+  onResetOverlays?: () => void;
   totalPoints: number;
   hasFilters: boolean;
   canBuildRoute: boolean;
@@ -53,6 +57,10 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   isMobile,
   mode,
   mapUiApi,
+  overlayOptions,
+  enabledOverlays: controlledEnabledOverlays,
+  onOverlayToggle,
+  onResetOverlays: _onResetOverlays,
   totalPoints: _totalPoints,
   hasFilters: _hasFilters,
   canBuildRoute,
@@ -66,7 +74,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
     WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.id || WEB_MAP_BASE_LAYERS[0]?.id || 'osm'
   );
-  const [enabledOverlays, setEnabledOverlays] = useState<Record<string, boolean>>(() => {
+  const [localEnabledOverlays, setLocalEnabledOverlays] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     for (const o of WEB_MAP_OVERLAY_LAYERS) {
       initial[o.id] = Boolean(o.defaultEnabled);
@@ -85,13 +93,27 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   }, []);
 
   const availableOverlays = useMemo(() => {
+    if (Array.isArray(overlayOptions) && overlayOptions.length > 0) {
+      return overlayOptions;
+    }
     return WEB_MAP_OVERLAY_LAYERS.filter((o) => o.kind.startsWith('osm-overpass-') || Boolean(o.url));
-  }, []);
+  }, [overlayOptions]);
+
+  const usesControlledOverlays = typeof onOverlayToggle === 'function' && Boolean(controlledEnabledOverlays);
+  const resolvedEnabledOverlays = controlledEnabledOverlays ?? localEnabledOverlays;
+
+  const updateOverlayEnabled = useCallback((id: string, enabled: boolean) => {
+    if (!usesControlledOverlays) {
+      setLocalEnabledOverlays((prev) => ({ ...prev, [id]: enabled }));
+      safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(id, enabled));
+    }
+    onOverlayToggle?.(id, enabled);
+  }, [mapUiApi, onOverlayToggle, safeMapUiCall, usesControlledOverlays]);
 
   const canCenterOnUser = Boolean(mapUiApi?.capabilities?.canCenterOnUser);
   const canFitToResults = Boolean(mapUiApi?.capabilities?.canFitToResults);
   const canExportRoute = Boolean(mapUiApi?.capabilities?.canExportRoute);
-  const osmPoiEnabled = Boolean(enabledOverlays['osm-poi']);
+  const osmPoiEnabled = Boolean(resolvedEnabledOverlays['osm-poi']);
 
   const resolvedShowBaseLayer = showBaseLayer ?? showLayers;
   const resolvedShowOverlays = showOverlays ?? showLayers;
@@ -108,15 +130,16 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   }, [mapUiApi, selectedBaseLayerId]);
 
   useEffect(() => {
+    if (usesControlledOverlays) return;
     if (!mapUiApi) return;
     try {
       for (const o of WEB_MAP_OVERLAY_LAYERS) {
-        mapUiApi.setOverlayEnabled(o.id, Boolean(enabledOverlays[o.id]));
+        mapUiApi.setOverlayEnabled(o.id, Boolean(resolvedEnabledOverlays[o.id]));
       }
     } catch {
       // noop
     }
-  }, [mapUiApi, enabledOverlays]);
+  }, [mapUiApi, resolvedEnabledOverlays, usesControlledOverlays]);
 
   useEffect(() => {
     if (!mapUiApi?.setOsmPoiCategories) return;
@@ -232,7 +255,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
             <Text style={styles.mapLayersLabel}>Оверлеи</Text>
             <View style={styles.mapToggleList}>
               {availableOverlays.map((o) => {
-                const enabled = Boolean(enabledOverlays[o.id]);
+                const enabled = Boolean(resolvedEnabledOverlays[o.id]);
                 return (
                   <Pressable
                     key={o.id}
@@ -240,8 +263,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                     disabled={!mapUiApi}
                     onPress={() => {
                       const next = !enabled;
-                      setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
-                      safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(o.id, next));
+                      updateOverlayEnabled(o.id, next);
                     }}
                     accessibilityRole="switch"
                     accessibilityLabel={o.title}
@@ -260,8 +282,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                       onValueChange={() => {
                         if (!mapUiApi) return;
                         const next = !enabled;
-                        setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
-                        safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(o.id, next));
+                        updateOverlayEnabled(o.id, next);
                       }}
                       disabled={!mapUiApi}
                     />

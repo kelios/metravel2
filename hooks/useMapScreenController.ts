@@ -1,9 +1,10 @@
-import { lazy, useCallback, useMemo, useRef, useState } from 'react';
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 
 import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
+import { WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
 
 // Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
@@ -157,6 +158,88 @@ export function useMapScreenController() {
     isFetchingNextPage,
   } = dataController;
 
+  const overlayOptions = useMemo(
+    () =>
+      WEB_MAP_OVERLAY_LAYERS
+        .filter((layer) => layer.kind.startsWith('osm-overpass-') || Boolean(layer.url))
+        .map((layer) => ({
+          id: layer.id,
+          title: layer.title,
+        })),
+    [],
+  );
+  const [enabledOverlays, setEnabledOverlays] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    WEB_MAP_OVERLAY_LAYERS.forEach((layer) => {
+      initial[layer.id] = Boolean(layer.defaultEnabled);
+    });
+    return initial;
+  });
+
+  const handleOverlayToggle = useCallback((id: string, enabled: boolean) => {
+    setEnabledOverlays((prev) => {
+      if (prev[id] === enabled) return prev;
+      return { ...prev, [id]: enabled };
+    });
+  }, []);
+
+  const resetOverlays = useCallback(() => {
+    setEnabledOverlays(() => {
+      const next: Record<string, boolean> = {};
+      WEB_MAP_OVERLAY_LAYERS.forEach((layer) => {
+        next[layer.id] = Boolean(layer.defaultEnabled);
+      });
+      return next;
+    });
+  }, []);
+
+  const controlledOverlayIds = useMemo(
+    () => overlayOptions.map((layer) => layer.id),
+    [overlayOptions],
+  );
+
+  // Apply overlay state even if the user toggled it before the map API became ready.
+  useEffect(() => {
+    if (!mapUiApi) return;
+    controlledOverlayIds.forEach((id) => {
+      try {
+        mapUiApi.setOverlayEnabled(id, Boolean(enabledOverlays[id]));
+      } catch {
+        // noop
+      }
+    });
+  }, [controlledOverlayIds, enabledOverlays, mapUiApi]);
+
+  const resolvedCategoryTravelAddressOptions = useMemo(() => {
+    const apiOptions = Array.isArray(filters.categoryTravelAddress)
+      ? filters.categoryTravelAddress
+          .filter((c) => c && c.name)
+          .map((c) => ({
+            id: c.id,
+            name: String(c.name || '').trim(),
+          }))
+          .filter((c) => c.name)
+      : [];
+
+    if (apiOptions.length > 0) return apiOptions;
+
+    const fallbackNames = new Set<string>();
+    (Array.isArray(allTravelsData) ? allTravelsData : []).forEach((travel) => {
+      String(travel?.categoryName || '')
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .forEach((entry) => fallbackNames.add(entry));
+    });
+
+    return Array.from(fallbackNames)
+      .sort((a, b) => a.localeCompare(b, 'ru'))
+      .map((name) => ({
+        id: name,
+        name,
+      }));
+  }, [allTravelsData, filters.categoryTravelAddress]);
+
   // Reset filters and route
   const resetFilters = useCallback(() => {
     resetFiltersBase();
@@ -249,23 +332,21 @@ export function useMapScreenController() {
         categories: filters.categories
           .filter((c) => c && c.name)
           .map((c) => ({
-            id: Number(c.id) || 0,
+            id: c.id,
             name: String(c.name || '').trim(),
           }))
           .filter((c) => c.name),
-        categoryTravelAddress: (filters.categoryTravelAddress ?? [])
-          .filter((c) => c && c.name)
-          .map((c) => ({
-            id: Number(c.id) || 0,
-            name: String(c.name || '').trim(),
-          }))
-          .filter((c) => c.name),
+        categoryTravelAddress: resolvedCategoryTravelAddressOptions,
         radius: filters.radius.map((r) => ({ id: r.id, name: r.name })),
         address: filters.address,
       },
       filterValue: filterValues,
       onFilterChange: handleFilterChangeForPanel,
       resetFilters,
+      overlayOptions,
+      enabledOverlays,
+      onOverlayToggle: handleOverlayToggle,
+      onResetOverlays: resetOverlays,
       travelsData: allTravelsData,
       filteredTravelsData: travelsData,
       isMobile,
@@ -311,7 +392,12 @@ export function useMapScreenController() {
     filterValues,
     handleFilterChangeForPanel,
     resetFilters,
+    overlayOptions,
+    enabledOverlays,
+    handleOverlayToggle,
+    resetOverlays,
     allTravelsData,
+    resolvedCategoryTravelAddressOptions,
     travelsData,
     isMobile,
     mode,

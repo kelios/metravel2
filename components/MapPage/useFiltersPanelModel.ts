@@ -20,8 +20,10 @@ interface UseFiltersPanelModelProps {
   isMobile: boolean;
   filterValue: {
     categories: CategoryOption[];
+    categoryTravelAddress?: CategoryOption[];
     radius: string;
     address: string;
+    searchQuery?: string;
   };
   travelsData: { categoryName?: string }[];
   filteredTravelsData?: { categoryName?: string }[];
@@ -84,6 +86,13 @@ const useFiltersPanelModel = ({
     closeMenu();
   }, [closeMenu]);
 
+  const selectedCategories = Array.isArray(filterValue?.categories)
+    ? filterValue.categories
+    : [];
+  const selectedSightseeingTypes = Array.isArray(filterValue?.categoryTravelAddress)
+    ? filterValue.categoryTravelAddress
+    : [];
+
   const handleSetMode = useCallback(
     (nextMode: 'radius' | 'route') => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -109,10 +118,16 @@ const useFiltersPanelModel = ({
 
   const hasActiveFilters = useMemo(
     () =>
-      filterValue.categories.length > 0 ||
-      filterValue.categoryTravelAddress.length > 0 ||
-      filterValue.radius !== '',
-    [filterValue.categories.length, filterValue.categoryTravelAddress.length, filterValue.radius]
+      selectedCategories.length > 0 ||
+      selectedSightseeingTypes.length > 0 ||
+      filterValue.radius !== '' ||
+      Boolean(String(filterValue.searchQuery || '').trim()),
+    [
+      selectedCategories.length,
+      selectedSightseeingTypes.length,
+      filterValue.radius,
+      filterValue.searchQuery,
+    ]
   );
 
   const canBuildRoute = useMemo(

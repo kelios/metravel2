@@ -309,11 +309,34 @@ export const DESIGN_TOKENS = {
       semibold: '600',
       bold: '700',
     },
+    // Modern type scale — pair size+lineHeight+letterSpacing+weight.
+    // Mobile-first: values already optimised for phone screens. Use `display`/`h1` sparingly.
+    scale: {
+      display: { fontSize: 32, lineHeight: 38, letterSpacing: -0.6, fontWeight: '800' as const },
+      h1: { fontSize: 24, lineHeight: 30, letterSpacing: -0.4, fontWeight: '800' as const },
+      h2: { fontSize: 20, lineHeight: 26, letterSpacing: -0.3, fontWeight: '700' as const },
+      h3: { fontSize: 17, lineHeight: 22, letterSpacing: -0.2, fontWeight: '700' as const },
+      body: { fontSize: 15, lineHeight: 22, letterSpacing: 0, fontWeight: '500' as const },
+      bodyStrong: { fontSize: 15, lineHeight: 22, letterSpacing: 0, fontWeight: '700' as const },
+      bodySmall: { fontSize: 13, lineHeight: 18, letterSpacing: 0.05, fontWeight: '500' as const },
+      caption: { fontSize: 12, lineHeight: 16, letterSpacing: 0.1, fontWeight: '500' as const },
+      label: { fontSize: 11, lineHeight: 14, letterSpacing: 0.8, fontWeight: '700' as const },
+      micro: { fontSize: 10, lineHeight: 13, letterSpacing: 0.2, fontWeight: '600' as const },
+    },
   },
   breakpoints: {
+    // Legacy (referenced in tests) — DO NOT rename.
     mobile: 768,
     tablet: 1024,
     desktop: 1280,
+    // Modern shorthand — prefer these going forward.
+    // Values aligned with METRICS.breakpoints in constants/layout.ts.
+    xs: 360,   // small phone
+    sm: 480,   // large phone
+    md: 768,   // tablet portrait
+    lg: 1024,  // tablet landscape / small desktop
+    xl: 1280,  // desktop
+    xxl: 1536, // large desktop
   },
   zIndex: {
     base: 0,
@@ -337,6 +360,25 @@ export const DESIGN_TOKENS = {
       out: 'cubic-bezier(0, 0, 0.2, 1)',
       inOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
     },
+  },
+  // Reanimated spring configs — pass directly to withSpring(value, config).
+  // `snappy` = default UI response (sheets, chips). `gentle` = subtle state transitions.
+  // `bouncy` = playful, use sparingly (pull-to-refresh, success confirmations).
+  springs: {
+    gentle: { damping: 24, stiffness: 160, mass: 0.9 },
+    snappy: { damping: 20, stiffness: 280, mass: 0.8 },
+    bouncy: { damping: 12, stiffness: 200, mass: 0.9 },
+    stiff: { damping: 26, stiffness: 420, mass: 0.7 },
+  },
+  // Semantic elevation. Level 0 = flat on background, 5 = modal/sheet on top.
+  // Native fields (shadow*) for iOS, elevation for Android, web uses boxShadow via shadows.*.
+  elevation: {
+    0: { shadowOpacity: 0, shadowRadius: 0, shadowOffset: { width: 0, height: 0 }, elevation: 0 },
+    1: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+    2: { shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+    3: { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+    4: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 22, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
+    5: { shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 32, shadowOffset: { width: 0, height: 16 }, elevation: 20 },
   },
   touchTarget: {
     minHeight: 44,

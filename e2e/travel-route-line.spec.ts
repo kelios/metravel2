@@ -44,7 +44,7 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
 
     // Переключаемся в режим маршрута
     console.log('🔄 Переключаемся в режим маршрута...');
-    const segmentedRoute = page.getByTestId('segmented-route');
+    const segmentedRoute = page.getByTestId('map-panel-tab-route');
     const hasSegmentedRoute = await segmentedRoute.isVisible().catch(() => false);
 
     if (hasSegmentedRoute) {

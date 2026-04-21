@@ -48,6 +48,28 @@ function filterTravelsByCategories(
   });
 }
 
+function filterTravelsBySearchQuery(
+  all: TravelCoords[],
+  searchQuery?: string
+): TravelCoords[] {
+  const normalizedQuery = String(searchQuery || '').trim().toLowerCase();
+  if (!normalizedQuery) return all;
+
+  return all.filter((travel) => {
+    const searchable = [
+      travel.address,
+      travel.categoryName,
+      (travel as TravelCoords & { name?: string }).name,
+      travel.urlTravel,
+    ]
+      .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      .join(' ')
+      .toLowerCase();
+
+    return searchable.includes(normalizedQuery);
+  });
+}
+
 function parseBackendFilters(filtersKey: string): {
   categories?: Array<number | string>;
   categoryTravelAddress?: Array<number | string>;
@@ -316,8 +338,13 @@ export function useMapTravels({
 
   // Фильтруем только по категориям на клиенте (радиус уже применен на бэкенде)
   const filteredTravelsData = useMemo(() => {
-    return filterTravelsByCategories(allTravelsData, filterValues.categoryTravelAddress);
-  }, [allTravelsData, filterValues.categoryTravelAddress]);
+    const byCategories = filterTravelsByCategories(
+      allTravelsData,
+      filterValues.categoryTravelAddress
+    );
+
+    return filterTravelsBySearchQuery(byCategories, filterValues.searchQuery);
+  }, [allTravelsData, filterValues.categoryTravelAddress, filterValues.searchQuery]);
 
   return useMemo(() => ({
     allTravelsData,

@@ -34,11 +34,22 @@ function getWebStorage(): StorageLike | null {
 function normalizeCategory(cat: unknown, idx: number): { id: string; name: string } | null {
   if (cat == null) return null;
 
-  const name = typeof cat === 'string' ? cat : (cat as { name?: unknown })?.name;
+  const rec = cat && typeof cat === 'object' ? (cat as Record<string, unknown>) : null;
+  const name =
+    typeof cat === 'string'
+      ? cat
+      : rec?.name ??
+        rec?.name_ru ??
+        rec?.title_ru ??
+        rec?.title ??
+        rec?.text ??
+        rec?.value;
   const realId =
-    cat && typeof cat === 'object' && (cat as { id?: unknown }).id !== undefined
-      ? (cat as { id?: unknown }).id
-      : idx;
+    rec?.id ??
+    rec?.value ??
+    rec?.category_id ??
+    rec?.pk ??
+    idx;
 
   const normalizedName = String(name ?? cat ?? '').trim();
   if (!normalizedName) return null;
@@ -162,6 +173,11 @@ export function useMapFilters(options?: UseMapFiltersOptions) {
 
       if (field === 'address' && typeof value === 'string') {
         handleFilterChange('address', value);
+        return;
+      }
+
+      if (field === 'searchQuery' && typeof value === 'string') {
+        handleFilterChange('searchQuery', value);
         return;
       }
 

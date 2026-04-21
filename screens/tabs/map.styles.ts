@@ -79,12 +79,17 @@ export const getStyles = (
         flexShrink: 0,
         ...(Platform.OS === 'web'
           ? ({
+              backgroundColor: themedColors.surfaceAlpha40,
               boxShadow: isMobile
-                ? themedColors.boxShadows.heavy
-                : '0 14px 36px rgba(15,23,42,0.08), 0 2px 10px rgba(15,23,42,0.05)',
-              borderTopLeftRadius: isMobile ? 20 : 24,
-              borderTopRightRadius: isMobile ? 20 : 24,
-              borderBottomLeftRadius: isMobile ? 0 : 24,
+                ? '0 16px 36px rgba(15,23,42,0.08), 0 4px 14px rgba(15,23,42,0.05)'
+                : '0 18px 44px rgba(15,23,42,0.10), 0 4px 14px rgba(15,23,42,0.05)',
+              backdropFilter: 'blur(24px) saturate(1.08)',
+              WebkitBackdropFilter: 'blur(24px) saturate(1.08)',
+              borderTopLeftRadius: isMobile ? 18 : 22,
+              borderTopRightRadius: isMobile ? 18 : 22,
+              borderBottomLeftRadius: isMobile ? 0 : 22,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: themedColors.borderLight,
               overflow: isMobile ? 'hidden' : 'visible',
               borderRightWidth: 0,
             } as any)
@@ -121,22 +126,27 @@ export const getStyles = (
       tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: isMobile ? Math.max(10, insetTop + 2) : 7,
-        paddingBottom: isMobile ? 7 : 7,
-        paddingHorizontal: isMobile ? 10 : 10,
+        paddingTop: isMobile ? Math.max(8, insetTop + 1) : 6,
+        paddingBottom: 6,
+        paddingHorizontal: isMobile ? 8 : 8,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.borderLight,
-        columnGap: 8,
-        minHeight: isMobile ? 46 : undefined,
+        columnGap: 6,
+        minHeight: isMobile ? 42 : undefined,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: '0 1px 0 rgba(15,23,42,0.05)' } as any)
+          ? ({
+              backgroundColor: themedColors.surfaceAlpha40,
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              boxShadow: '0 1px 0 rgba(15,23,42,0.05)',
+            } as any)
           : null),
       },
       tabsSegment: {
         flexDirection: 'row',
-        backgroundColor: themedColors.backgroundSecondary,
-        borderRadius: 12,
+        backgroundColor: themedColors.overlayLight,
+        borderRadius: 14,
         padding: 2,
         columnGap: 2,
         alignSelf: isMobile ? 'flex-start' : 'stretch',
@@ -149,32 +159,32 @@ export const getStyles = (
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 6,
-        paddingHorizontal: isMobile ? 12 : 10,
-        borderRadius: 10,
+        paddingVertical: 5,
+        paddingHorizontal: isMobile ? 10 : 8,
+        borderRadius: 11,
         gap: isMobile ? 0 : 6,
         minWidth: isMobile ? 48 : undefined,
-        minHeight: isMobile ? 34 : undefined,
+        minHeight: isMobile ? 32 : undefined,
       },
       tabActive: {
         backgroundColor: themedColors.primary,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: `0 1px 6px ${themedColors.primary}30` } as any)
+          ? ({ boxShadow: `0 4px 14px ${themedColors.primaryAlpha30}` } as any)
           : null),
       },
       tabIconBubble: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.surfaceLight,
+        backgroundColor: themedColors.surfaceAlpha40,
       },
       tabIconBubbleActive: {
         backgroundColor: themedColors.primaryLight,
       },
       tabText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '600',
         color: themedColors.textMuted,
         letterSpacing: 0.1,
@@ -188,14 +198,19 @@ export const getStyles = (
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: themedColors.surface,
+        ...(Platform.OS === 'web'
+          ? ({
+              backgroundColor: 'transparent',
+            } as any)
+          : null),
       },
       resetButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 32,
+        height: 32,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.backgroundSecondary,
+        backgroundColor: themedColors.surfaceAlpha40,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
         ...(Platform.OS === 'web' ? ({
@@ -204,10 +219,10 @@ export const getStyles = (
         } as any) : null),
       },
       closePanelButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        backgroundColor: themedColors.backgroundSecondary,
+        width: 32,
+        height: 32,
+        borderRadius: 9,
+        backgroundColor: themedColors.surfaceAlpha40,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
         alignItems: 'center',
@@ -276,25 +291,30 @@ export const getStyles = (
         color: themedColors.textOnPrimary,
       },
       collapsedPanel: {
-        width: 48,
+        width: 44,
         flexShrink: 0,
         alignItems: 'center',
-        paddingTop: 12,
-        gap: 10,
+        paddingTop: 10,
+        gap: 8,
         backgroundColor: themedColors.surface,
         borderRightWidth: StyleSheet.hairlineWidth,
         borderRightColor: themedColors.borderLight,
         ...(Platform.OS === 'web'
-          ? ({ boxShadow: '1px 0 0 rgba(0,0,0,0.05)' } as any)
+          ? ({
+              backgroundColor: themedColors.surfaceAlpha40,
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              boxShadow: '1px 0 0 rgba(0,0,0,0.05)',
+            } as any)
           : null),
       },
       collapseToggle: {
-        width: 36,
-        height: 36,
-        borderRadius: 10,
+        width: 32,
+        height: 32,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.backgroundSecondary,
+        backgroundColor: themedColors.surfaceAlpha40,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
         ...(Platform.OS === 'web'
@@ -304,28 +324,30 @@ export const getStyles = (
       collapseToggleInPanel: {
         position: 'absolute',
         top: 12,
-        right: -16,
-        width: 32,
-        height: 32,
-        borderRadius: 10,
+        right: -14,
+        width: 28,
+        height: 28,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: themedColors.surface,
+        backgroundColor: themedColors.surfaceAlpha40,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.borderLight,
         zIndex: 1002,
         ...(Platform.OS === 'web'
           ? ({
               cursor: 'pointer',
-              boxShadow: '0 1px 6px rgba(0,0,0,0.10)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
               transition: 'background-color 0.15s ease',
             } as any)
           : null),
       },
       collapsedIconBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
+        width: 36,
+        height: 36,
+        borderRadius: 9,
         alignItems: 'center',
         justifyContent: 'center',
         ...(Platform.OS === 'web'
@@ -370,17 +392,18 @@ export const getStyles = (
         alignItems: 'center',
         gap: 8,
         paddingHorizontal: 14,
-        paddingVertical: 10,
+        paddingVertical: 9,
         backgroundColor: themedColors.surface,
-        borderRadius: 16,
+        borderRadius: 14,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.warningSoft,
         zIndex: 1010,
         ...(Platform.OS === 'web'
           ? ({
-              boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
+              backgroundColor: themedColors.surfaceAlpha40,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)',
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
             } as any)
           : themedColors.shadows.medium),
       },

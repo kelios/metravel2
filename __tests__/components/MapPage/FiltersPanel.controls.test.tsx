@@ -155,6 +155,7 @@ describe('FiltersPanel Controls', () => {
 
   const mockFilterValue = {
     categories: [],
+    categoryTravelAddress: [],
     radius: '60',
     address: '',
   };

@@ -21,8 +21,8 @@ jest.mock('@/hooks/map/useMapCoordinates', () => ({
 
 jest.mock('@/hooks/map/useMapFilters', () => ({
   useMapFilters: () => ({
-    filters: { categories: [], radius: [], address: [] },
-    filterValues: { radius: '60' },
+    filters: { categories: [], categoryTravelAddress: [], radius: [], address: [] },
+    filterValues: { categories: [], categoryTravelAddress: [], radius: '60', address: '' },
     handleFilterChangeForPanel: jest.fn(),
     resetFilters: jest.fn(),
   }),

@@ -138,6 +138,10 @@ const mockFetchTravelsForMap = jest.fn().mockResolvedValue({
     urlTravel: '',
   },
 });
+const mockFetchFiltersMap = jest.fn().mockResolvedValue({
+  categories: ['Категория 1', 'Категория 2'],
+  categoryTravelAddress: ['Минск'],
+});
 
 const defaultTravelsForMapResponse = {
   a: {
@@ -213,10 +217,20 @@ describe('MapScreen (map tab)', () => {
     mockResponsiveState = { isPhone: false, isLargePhone: false, isMobile: false, width: 1024 }
     // Reset useWindowDimensions to desktop viewport (used by useMapResponsive)
     const RN = require('react-native');
+    const api = require('@/api/map');
     (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 768 });
     useMapPanelStore.setState({ openNonce: 0 })
     mockFetchTravelsForMap.mockReset();
     mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
+    mockFetchFiltersMap.mockReset();
+    mockFetchFiltersMap.mockResolvedValue({
+      categories: ['Категория 1', 'Категория 2'],
+      categoryTravelAddress: ['Минск'],
+    });
+    api.fetchFiltersMap.mockResolvedValue({
+      categories: ['Категория 1', 'Категория 2'],
+      categoryTravelAddress: ['Минск'],
+    });
   });
 
   afterAll(() => {
@@ -235,9 +249,77 @@ describe('MapScreen (map tab)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-search')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-route')).toBeTruthy()
       expect(getByTestId('map-reset-filters-button')).toBeTruthy()
       expect(getByText('Загрузка фильтров…')).toBeTruthy()
+    })
+  })
+
+  it('shows the sightseeing quick filter after map categories load', async () => {
+    const { getByLabelText } = renderWithClient()
+
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(getByLabelText('Что посмотреть: Все')).toBeTruthy()
+    })
+  })
+
+  it('falls back to categories from map points when filterformap returns no sightseeing options', async () => {
+    const api = require('@/api/map')
+
+    mockFetchFiltersMap.mockResolvedValue({
+      categories: [],
+      categoryTravelAddress: [],
+    })
+    api.fetchFiltersMap.mockResolvedValue({
+      categories: [],
+      categoryTravelAddress: [],
+    })
+    mockFetchTravelsForMap.mockResolvedValue({
+      a: {
+        id: 1,
+        categoryName: 'Замок',
+        coord: '53.95,27.60',
+        lat: '53.95',
+        lng: '27.60',
+        travelImageThumbUrl: '',
+        urlTravel: '',
+      },
+      b: {
+        id: 2,
+        categoryName: 'Болото, Замок',
+        coord: '53.92,27.55',
+        lat: '53.92',
+        lng: '27.55',
+        travelImageThumbUrl: '',
+        urlTravel: '',
+      },
+    })
+
+    const { getByLabelText } = renderWithClient()
+
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(getByLabelText('Что посмотреть: Все')).toBeTruthy()
+    })
+  })
+
+  it('shows overlays quick filter on the map header', async () => {
+    const { getByLabelText } = renderWithClient()
+
+    await waitFor(() => {
+      expect(mockFetchTravelsForMap).toHaveBeenCalled()
+    })
+
+    await waitFor(() => {
+      expect(getByLabelText('Оверлеи: Выкл')).toBeTruthy()
     })
   })
 
@@ -265,7 +347,8 @@ describe('MapScreen (map tab)', () => {
     })
 
     await waitFor(() => {
-      expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-search')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-route')).toBeTruthy()
       expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
     })
 
@@ -274,14 +357,16 @@ describe('MapScreen (map tab)', () => {
     expect(resetButton).toBeTruthy()
 
     // Панель на desktop не должна скрываться, вкладки остаются доступны
-    expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
+    expect(getByTestId('map-panel-tab-search')).toBeTruthy()
+    expect(getByTestId('map-panel-tab-route')).toBeTruthy()
     expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
 
     // Нажатие на reset не должно ломать наличие вкладок
     act(() => {
       fireEvent.press(resetButton)
     })
-    expect(queryByTestId('map-panel-tab-filters')).toBeTruthy()
+    expect(queryByTestId('map-panel-tab-search')).toBeTruthy()
+    expect(queryByTestId('map-panel-tab-route')).toBeTruthy()
     expect(queryByTestId('map-panel-tab-travels')).toBeTruthy()
   })
 

@@ -9,6 +9,7 @@ import type { LatLng } from '@/types/coordinates';
 import type { MapUiApi } from '@/types/mapUi';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
+type MapOverlayOption = { id: string; title: string };
 
 /**
  * Filters context value type
@@ -30,6 +31,10 @@ export interface FiltersContextValue {
   };
   onFilterChange: (field: string, value: any) => void;
   resetFilters: () => void;
+  overlayOptions?: MapOverlayOption[];
+  enabledOverlays?: Record<string, boolean>;
+  onOverlayToggle?: (id: string, enabled: boolean) => void;
+  onResetOverlays?: () => void;
 
   // Data
   travelsData: { categoryName?: string }[];

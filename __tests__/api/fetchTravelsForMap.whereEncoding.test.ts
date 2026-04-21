@@ -51,6 +51,27 @@ describe('fetchTravelsForMap where encoding', () => {
     expect(where.moderation).toBe(1);
   });
 
+  test('serializes categoryTravelAddress ids inside where', async () => {
+    await fetchTravelsForMap(
+      0,
+      100,
+      {
+        lat: 53.9,
+        lng: 27.56,
+        radius: 100,
+        categoryTravelAddress: ['84', 26, 'bad'],
+      },
+      { throwOnError: true }
+    );
+
+    const url = String(mockFetchWithTimeout.mock.calls[0][0]);
+    const qs = url.split('?')[1] ?? '';
+    const params = new URLSearchParams(qs);
+    const where = JSON.parse(String(params.get('where')));
+
+    expect(where.categoryTravelAddress).toEqual([26, 84]);
+  });
+
   test('drops bare media endpoint placeholders from image fields', async () => {
     mockFetchWithTimeout.mockResolvedValueOnce(
       createResponseMock({

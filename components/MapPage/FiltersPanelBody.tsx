@@ -51,7 +51,11 @@ interface FiltersPanelBodyProps {
     address: string;
     searchQuery?: string;
   };
-  travelsData: { categoryName?: string }[];
+  travelsData: { categoryName?: string; name?: string; address?: string }[];
+  overlayOptions?: { id: string; title: string }[];
+  enabledOverlays?: Record<string, boolean>;
+  onOverlayToggle?: (id: string, enabled: boolean) => void;
+  onResetOverlays?: () => void;
   mapUiApi?: MapUiApi | null;
   isMobile: boolean;
   totalPoints: number;
@@ -87,6 +91,10 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   filters,
   filterValue,
   travelsData,
+  overlayOptions,
+  enabledOverlays,
+  onOverlayToggle,
+  onResetOverlays,
   mapUiApi,
   isMobile,
   totalPoints,
@@ -132,6 +140,10 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
     }
 
     const chips: string[] = [];
+    const searchQuery = String(filterValue.searchQuery || '').trim();
+    if (searchQuery) {
+      chips.push(`Поиск: ${searchQuery}`);
+    }
     if (selectedCategoryNames.length > 0) {
       const preview = selectedCategoryNames.slice(0, 2).join(', ');
       chips.push(
@@ -141,7 +153,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       );
     }
     return chips;
-  }, [mode, routePoints.length, selectedCategoryNames, transportMode]);
+  }, [filterValue.searchQuery, mode, routePoints.length, selectedCategoryNames, transportMode]);
   const currentRadiusIndex = useMemo(
     () => radiusOptions.findIndex((option) => String(option.id) === String(filterValue.radius)),
     [filterValue.radius, radiusOptions]
@@ -330,6 +342,10 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
             isMobile={isMobile}
             mode={mode}
             mapUiApi={mapUiApi}
+            overlayOptions={overlayOptions}
+            enabledOverlays={enabledOverlays}
+            onOverlayToggle={onOverlayToggle}
+            onResetOverlays={onResetOverlays}
             totalPoints={totalPoints}
             hasFilters={hasFilters}
             canBuildRoute={canBuildRoute}

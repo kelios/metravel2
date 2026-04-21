@@ -41,6 +41,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     filterValue,
     onFilterChange,
     resetFilters,
+    overlayOptions,
+    enabledOverlays,
+    onOverlayToggle,
+    onResetOverlays,
     travelsData,
     filteredTravelsData,
     isMobile,
@@ -123,6 +127,10 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         filters={filters}
         filterValue={filterValue}
         travelsData={travelsData}
+        overlayOptions={overlayOptions}
+        enabledOverlays={enabledOverlays}
+        onOverlayToggle={onOverlayToggle}
+        onResetOverlays={onResetOverlays}
         mapUiApi={mapUiApi}
         isMobile={isMobile}
         totalPoints={totalPoints}

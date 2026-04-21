@@ -184,6 +184,22 @@ export default function MapScreen() {
         () => filtersPanelProps?.contextValue?.filterValue?.categoryTravelAddress ?? [],
         [filtersPanelProps?.contextValue?.filterValue?.categoryTravelAddress],
     );
+    const quickRadiusOptions = useMemo(
+        () => filtersPanelProps?.contextValue?.filters?.radius ?? [],
+        [filtersPanelProps?.contextValue?.filters?.radius],
+    );
+    const quickCategoryOptions = useMemo(
+        () => filtersPanelProps?.contextValue?.filters?.categoryTravelAddress ?? [],
+        [filtersPanelProps?.contextValue?.filters?.categoryTravelAddress],
+    );
+    const quickOverlayOptions = useMemo(
+        () => filtersPanelProps?.contextValue?.overlayOptions ?? [],
+        [filtersPanelProps?.contextValue?.overlayOptions],
+    );
+    const quickEnabledOverlays = useMemo(
+        () => filtersPanelProps?.contextValue?.enabledOverlays ?? {},
+        [filtersPanelProps?.contextValue?.enabledOverlays],
+    );
     const currentRadius = filtersPanelProps?.contextValue?.filterValue?.radius ?? '';
     const quickCategoriesValue = useMemo(() => {
         if (quickFilterSelected.length === 0) return 'Все';
@@ -194,6 +210,13 @@ export default function MapScreen() {
         if (!currentRadius) return 'Выбор';
         return `${currentRadius} км`;
     }, [currentRadius]);
+
+    const quickOverlaysValue = useMemo(() => {
+        const enabledCount = quickOverlayOptions.filter((option: { id: string }) => Boolean(quickEnabledOverlays?.[option.id])).length;
+        if (enabledCount === 0) return 'Выкл';
+        if (enabledCount === 1) return '1 вкл';
+        return `${enabledCount} вкл`;
+    }, [quickEnabledOverlays, quickOverlayOptions]);
 
     const currentTransport = transportMode ?? 'car';
     const activeFilterItems = useMemo(() => {
@@ -244,6 +267,22 @@ export default function MapScreen() {
         const reset = filtersPanelProps?.contextValue?.resetFilters;
         return typeof reset === 'function' ? reset : undefined;
     }, [filtersPanelProps?.contextValue?.resetFilters]);
+    const setPanelMode = filtersPanelProps?.contextValue?.setMode;
+
+    const handleSelectSearchTab = useCallback(() => {
+        setPanelMode?.('radius');
+        selectFiltersTab();
+    }, [setPanelMode, selectFiltersTab]);
+
+    const handleSelectRouteTab = useCallback(() => {
+        setPanelMode?.('route');
+        selectFiltersTab();
+    }, [setPanelMode, selectFiltersTab]);
+
+    const activePanelTab = useMemo<'search' | 'route' | 'travels'>(() => {
+        if (rightPanelTab === 'travels') return 'travels';
+        return filtersPanelProps?.contextValue?.mode === 'route' ? 'route' : 'search';
+    }, [filtersPanelProps?.contextValue?.mode, rightPanelTab]);
 
     const handleShowList = useCallback(() => {
         selectTravelsTab();
@@ -258,12 +297,17 @@ export default function MapScreen() {
                     <MapQuickFilters
                         radiusValue={quickRadiusValue}
                         categoriesValue={quickCategoriesValue}
-                        radiusOptions={filtersPanelProps?.contextValue?.filters?.radius}
+                        overlaysValue={quickOverlaysValue}
+                        radiusOptions={quickRadiusOptions}
                         radiusSelected={currentRadius}
                         onChangeRadius={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('radius', next)}
-                        categoriesOptions={filtersPanelProps?.contextValue?.filters?.categoryTravelAddress}
+                        categoriesOptions={quickCategoryOptions}
                         categoriesSelected={quickFilterSelected}
                         onChangeCategories={(next) => filtersPanelProps?.contextValue?.onFilterChange?.('categoryTravelAddress', next)}
+                        overlayOptions={quickOverlayOptions}
+                        enabledOverlays={quickEnabledOverlays}
+                        onChangeOverlay={(id, enabled) => filtersPanelProps?.contextValue?.onOverlayToggle?.(id, enabled)}
+                        onResetOverlays={filtersPanelProps?.contextValue?.onResetOverlays}
                         travelsData={travelsData}
                     />
                 )}
@@ -308,7 +352,12 @@ export default function MapScreen() {
             handleShowList,
             travelsData,
             quickCategoriesValue,
+            quickOverlaysValue,
             quickRadiusValue,
+            quickRadiusOptions,
+            quickCategoryOptions,
+            quickOverlayOptions,
+            quickEnabledOverlays,
             currentRadius,
             quickFilterSelected,
             filtersPanelProps?.contextValue,
@@ -340,7 +389,7 @@ export default function MapScreen() {
                         buildRouteTo={buildRouteTo}
                         onCenterOnUser={centerOnUser}
                         onOpenFilters={() => {
-                            selectFiltersTab();
+                            handleSelectSearchTab();
                             requestOpenBottomSheet('filters');
                         }}
                         filtersPanelProps={filtersPanelProps}
@@ -394,17 +443,25 @@ export default function MapScreen() {
                         </Pressable>
                         <Pressable
                             style={({ pressed }) => [styles.collapsedIconBtn, pressed && { opacity: 0.7 }]}
-                            onPress={() => { toggleDesktopCollapse(); selectFiltersTab(); }}
+                            onPress={() => { toggleDesktopCollapse(); handleSelectSearchTab(); }}
                             accessibilityRole="button"
-                            accessibilityLabel="Фильтры"
+                            accessibilityLabel="Поиск"
                         >
-                            <Feather name="filter" size={18} color={themedColors.textMuted} />
+                            <Feather name="search" size={18} color={themedColors.textMuted} />
+                        </Pressable>
+                        <Pressable
+                            style={({ pressed }) => [styles.collapsedIconBtn, pressed && { opacity: 0.7 }]}
+                            onPress={() => { toggleDesktopCollapse(); handleSelectRouteTab(); }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Построение маршрута"
+                        >
+                            <Feather name="navigation" size={18} color={themedColors.textMuted} />
                         </Pressable>
                         <Pressable
                             style={({ pressed }) => [styles.collapsedIconBtn, pressed && { opacity: 0.7 }]}
                             onPress={() => { toggleDesktopCollapse(); selectTravelsTab(); }}
                             accessibilityRole="button"
-                            accessibilityLabel={`Список (${travelsData.length})`}
+                            accessibilityLabel={`Список точек (${travelsData.length})`}
                         >
                             <Feather name="list" size={18} color={themedColors.textMuted} />
                             {travelsData.length > 0 && (
@@ -445,11 +502,12 @@ export default function MapScreen() {
                 )}
                 <MapPanelHeader
                     isMobile={isMobile}
-                    rightPanelTab={rightPanelTab}
+                    activeTab={activePanelTab}
                     travelsCount={travelsData.length}
                     themedColors={themedColors}
                     styles={styles}
-                    selectFiltersTab={selectFiltersTab}
+                    selectSearchTab={handleSelectSearchTab}
+                    selectRouteTab={handleSelectRouteTab}
                     selectTravelsTab={selectTravelsTab}
                     closeRightPanel={closeRightPanel}
                     resetFilters={resetFiltersForPanel}
@@ -470,7 +528,7 @@ export default function MapScreen() {
                                 </View>
                             }>
                                 <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
-                                    <filtersPanelProps.Panel hideFooterReset={!isMobile} />
+                                    <filtersPanelProps.Panel hideTopControls={true} hideFooterReset={!isMobile} />
                                 </filtersPanelProps.Component>
                             </Suspense>
                         ) : (

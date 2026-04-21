@@ -5,11 +5,12 @@ import type { ThemedColors } from '@/hooks/useTheme'
 
 interface MapPanelHeaderProps {
   isMobile: boolean
-  rightPanelTab: 'filters' | 'travels'
+  activeTab: 'search' | 'route' | 'travels'
   travelsCount: number
   themedColors: ThemedColors
   styles: any
-  selectFiltersTab: () => void
+  selectSearchTab: () => void
+  selectRouteTab: () => void
   selectTravelsTab: () => void
   closeRightPanel: () => void
   resetFilters?: () => void
@@ -17,19 +18,20 @@ interface MapPanelHeaderProps {
 
 const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
   isMobile,
-  rightPanelTab,
+  activeTab,
   travelsCount,
   themedColors,
   styles,
-  selectFiltersTab,
+  selectSearchTab,
+  selectRouteTab,
   selectTravelsTab,
   closeRightPanel,
   resetFilters,
 }) => {
   const handleReset = useCallback(() => {
-    selectFiltersTab()
+    selectSearchTab()
     if (typeof resetFilters === 'function') resetFilters()
-  }, [selectFiltersTab, resetFilters])
+  }, [selectSearchTab, resetFilters])
 
   return (
     <View style={styles.tabsContainer}>
@@ -40,24 +42,24 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
         aria-label="Панель карты"
       >
         <Pressable
-          testID="map-panel-tab-filters"
+          testID="map-panel-tab-search"
           style={({ pressed }) => [
             styles.tab,
-            rightPanelTab === 'filters' && styles.tabActive,
+            activeTab === 'search' && styles.tabActive,
             pressed && styles.tabPressed,
           ]}
-          onPress={selectFiltersTab}
+          onPress={selectSearchTab}
           hitSlop={8}
           android_ripple={{ color: themedColors.overlayLight }}
           accessibilityRole="tab"
-          accessibilityState={{ selected: rightPanelTab === 'filters' }}
-          accessibilityLabel="Фильтры"
+          accessibilityState={{ selected: activeTab === 'search' }}
+          accessibilityLabel="Поиск"
         >
           <Feather
-            name="sliders"
+            name="search"
             size={15}
             color={
-              rightPanelTab === 'filters'
+              activeTab === 'search'
                 ? themedColors.textInverse
                 : themedColors.textMuted
             }
@@ -66,10 +68,45 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             <Text
               style={[
                 styles.tabText,
-                rightPanelTab === 'filters' && styles.tabTextActive,
+                activeTab === 'search' && styles.tabTextActive,
               ]}
             >
-              Фильтры
+              Поиск
+            </Text>
+          )}
+        </Pressable>
+
+        <Pressable
+          testID="map-panel-tab-route"
+          style={({ pressed }) => [
+            styles.tab,
+            activeTab === 'route' && styles.tabActive,
+            pressed && styles.tabPressed,
+          ]}
+          onPress={selectRouteTab}
+          hitSlop={8}
+          android_ripple={{ color: themedColors.overlayLight }}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: activeTab === 'route' }}
+          accessibilityLabel="Построение маршрута"
+        >
+          <Feather
+            name="navigation"
+            size={15}
+            color={
+              activeTab === 'route'
+                ? themedColors.textInverse
+                : themedColors.textMuted
+            }
+          />
+          {!isMobile && (
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'route' && styles.tabTextActive,
+              ]}
+            >
+              Маршрут
             </Text>
           )}
         </Pressable>
@@ -81,21 +118,21 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             : null)}
           style={({ pressed }) => [
             styles.tab,
-            rightPanelTab === 'travels' && styles.tabActive,
+            activeTab === 'travels' && styles.tabActive,
             pressed && styles.tabPressed,
           ]}
           onPress={selectTravelsTab}
           hitSlop={8}
           android_ripple={{ color: themedColors.overlayLight }}
           accessibilityRole="tab"
-          accessibilityState={{ selected: rightPanelTab === 'travels' }}
-          accessibilityLabel={`Список (${travelsCount} мест)`}
+          accessibilityState={{ selected: activeTab === 'travels' }}
+          accessibilityLabel={`Список точек (${travelsCount} мест)`}
         >
           <Feather
             name="list"
             size={15}
             color={
-              rightPanelTab === 'travels'
+              activeTab === 'travels'
                 ? themedColors.textInverse
                 : themedColors.textMuted
             }
@@ -104,23 +141,23 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
             <Text
               style={[
                 styles.tabText,
-                rightPanelTab === 'travels' && styles.tabTextActive,
+                activeTab === 'travels' && styles.tabTextActive,
               ]}
             >
-              Список
+              Точки
             </Text>
           )}
           {travelsCount > 0 && (
             <View
               style={[
                 styles.badge,
-                rightPanelTab === 'travels' && styles.badgeActive,
+                activeTab === 'travels' && styles.badgeActive,
               ]}
             >
               <Text
                 style={[
                   styles.badgeText,
-                  rightPanelTab === 'travels' && styles.badgeTextActive,
+                  activeTab === 'travels' && styles.badgeTextActive,
                 ]}
               >
                 {travelsCount > 999 ? '999+' : travelsCount}
@@ -168,4 +205,3 @@ const MapPanelHeader: React.FC<MapPanelHeaderProps> = ({
 }
 
 export default memo(MapPanelHeader)
-

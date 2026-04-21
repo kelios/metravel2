@@ -213,8 +213,156 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
 
-    await expect(page.getByTestId('segmented-radius')).toBeVisible();
-    await expect(page.getByTestId('segmented-route')).toBeVisible();
+    await expect(page.getByTestId('map-panel-tab-search')).toBeVisible();
+    await expect(page.getByTestId('map-panel-tab-route')).toBeVisible();
+    await expect(page.getByLabel('Оверлеи: Выкл')).toBeVisible();
+  });
+
+  test('desktop: sightseeing categories stay visible in panel and quick filters when filters API uses localized fields', async ({ page }) => {
+    const mockedPoints = [
+      {
+        id: 20001,
+        coord: '54.352000,18.646600',
+        address: 'Гданьск',
+        travelImageThumbUrl: '',
+        categoryName: 'Замки',
+        articleUrl: '',
+        urlTravel: '/travels/mock-castle',
+      },
+      {
+        id: 20002,
+        coord: '54.362100,18.638400',
+        address: 'Сопот',
+        travelImageThumbUrl: '',
+        categoryName: 'Замки, Болота',
+        articleUrl: '',
+        urlTravel: '/travels/mock-bog',
+      },
+    ];
+
+    await page.route('**/api/filterformap/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          countries: [],
+          categories: [],
+          categoryTravelAddress: [
+            { id: 84, name_ru: 'Замки' },
+            { id: 26, title: 'Болота' },
+          ],
+          companions: [],
+          complexity: [],
+          month: [],
+          over_nights_stay: [],
+          transports: [],
+          year: '',
+        }),
+      });
+    });
+
+    await page.route('**/api/travels/search_travels_for_map/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockedPoints),
+      });
+    });
+
+    const mapOk = await gotoMapWithRecovery(page);
+    if (!mapOk) return;
+
+    const panel = page.getByTestId('filters-panel');
+    await expect(panel).toBeVisible({ timeout: 60_000 });
+
+    await panel.getByText('Что посмотреть', { exact: true }).click();
+    await panel.getByLabel('Открыть выбор').click();
+
+    await expect(page.getByText('Выбрано: 0', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Замки (2)', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Болота (1)', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-testid^="simple-multiselect.item."]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText('Ничего не найдено', { exact: true })).toHaveCount(0);
+
+    await page.getByText('Готово', { exact: true }).click();
+
+    const quickSightseeingFilter = page.getByLabel('Что посмотреть: Все');
+    await expect(quickSightseeingFilter).toBeVisible({ timeout: 20_000 });
+    await quickSightseeingFilter.click();
+
+    const quickPopover = page.getByTestId('map-quick-filters-categories-popover');
+    await expect(quickPopover).toBeVisible({ timeout: 20_000 });
+    await expect(quickPopover.getByText('Замки')).toBeVisible({ timeout: 20_000 });
+    await expect(quickPopover.getByText('Болота')).toBeVisible({ timeout: 20_000 });
+    await expect(quickPopover.getByText('Нет доступных категорий в радиусе')).toHaveCount(0);
+  });
+
+  test('desktop: sightseeing categories fall back to map points when filterformap returns an empty list', async ({ page }) => {
+    const mockedPoints = [
+      {
+        id: 21001,
+        coord: '54.352000,18.646600',
+        address: 'Гданьск',
+        travelImageThumbUrl: '',
+        categoryName: 'Замок',
+        articleUrl: '',
+        urlTravel: '/travels/mock-castle',
+      },
+      {
+        id: 21002,
+        coord: '54.362100,18.638400',
+        address: 'Сопот',
+        travelImageThumbUrl: '',
+        categoryName: 'Болото, Замок',
+        articleUrl: '',
+        urlTravel: '/travels/mock-bog',
+      },
+    ];
+
+    await page.route('**/api/filterformap/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          countries: [],
+          categories: [],
+          categoryTravelAddress: [],
+          companions: [],
+          complexity: [],
+          month: [],
+          over_nights_stay: [],
+          transports: [],
+          year: '',
+        }),
+      });
+    });
+
+    await page.route('**/api/travels/search_travels_for_map/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockedPoints),
+      });
+    });
+
+    const mapOk = await gotoMapWithRecovery(page);
+    if (!mapOk) return;
+
+    const panel = page.getByTestId('filters-panel');
+    await expect(panel).toBeVisible({ timeout: 60_000 });
+
+    await panel.getByText('Что посмотреть', { exact: true }).click();
+    await panel.getByLabel('Открыть выбор').click();
+
+    await expect(page.getByText('Замок (2)', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Болото (1)', { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('Ничего не найдено', { exact: true })).toHaveCount(0);
+    await page.getByText('Готово', { exact: true }).click();
+
+    const quickSightseeingFilter = page.getByLabel('Что посмотреть: Все');
+    await expect(quickSightseeingFilter).toBeVisible({ timeout: 20_000 });
   });
 
   test('desktop: shows required map attribution (OpenStreetMap)', async ({ page }) => {
@@ -634,9 +782,10 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Wait for panel hydration before interacting with controls.
     const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
     if (!panelOk) return;
-    const routeOk = await page.getByTestId('segmented-route').waitFor({ state: 'visible', timeout: 30_000 }).then(() => true).catch(() => false);
+    const routeTab = page.getByTestId('map-panel-tab-route');
+    const routeOk = await routeTab.waitFor({ state: 'visible', timeout: 30_000 }).then(() => true).catch(() => false);
     if (!routeOk) return;
-    await page.getByTestId('segmented-route').click({ timeout: 60_000 });
+    await routeTab.click({ timeout: 60_000 });
 
     await expect(page.getByTestId('route-builder')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('filters-build-route-button')).toBeVisible();
@@ -657,7 +806,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
 
     const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false);
     if (!panelOk) return;
-    await page.getByTestId('segmented-route').click({ timeout: 60_000 });
+    await page.getByTestId('map-panel-tab-route').click({ timeout: 60_000 });
     const builderOk = await page.getByTestId('route-builder').waitFor({ state: 'visible', timeout: 20_000 }).then(() => true).catch(() => false);
     if (!builderOk) return;
 
@@ -1078,9 +1227,9 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await expect(toggle).toBeVisible({ timeout: 20_000 });
     await toggle.click();
 
-    // Wait for panel to open - check for list/filters toggle which should always be visible
+    // Wait for panel to open - check for list/search toggle which should always be visible
     const listToggle = page.getByTestId('segmented-list');
-    const filtersToggle = page.getByTestId('segmented-filters');
+    const filtersToggle = page.getByTestId('segmented-search');
 
     await expect(listToggle).toBeVisible({ timeout: 20_000 });
     await expect(filtersToggle).toBeVisible({ timeout: 10_000 });
@@ -1088,8 +1237,8 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     // Click on filters toggle to switch to filters view
     await filtersToggle.click();
 
-    // Verify filters panel is shown (radius/route toggle should appear)
-    await expect(page.getByTestId('segmented-radius')).toBeVisible({ timeout: 10_000 });
+    // Verify search mode content is shown in the mobile sheet.
+    await expect(page.getByTestId('filters-search-input')).toBeVisible({ timeout: 10_000 });
 
     await expect(listToggle).toBeVisible();
     await expect(filtersToggle).toHaveAttribute('aria-checked', 'true', { timeout: 5_000 });

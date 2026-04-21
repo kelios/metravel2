@@ -1,6 +1,6 @@
 /**
  * MapQuickFilters - compact selector chips over the map.
- * Each chip can open an inline popover (radius / categories facet).
+ * Each chip can open an inline popover (radius / categories / overlays).
  * Falls back to external onPress handlers when popover props are absent.
  */
 import React, { useCallback, useMemo, useRef, useState } from 'react'
@@ -12,6 +12,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { MapChipPopover, type AnchorRect } from './popovers/MapChipPopover'
 import { RadiusPopover } from './popovers/RadiusPopover'
 import { CategoriesPopover } from './popovers/CategoriesPopover'
+import { OverlaysPopover } from './popovers/OverlaysPopover'
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string }
 
@@ -20,17 +21,28 @@ interface RadiusOption {
   name: string
 }
 
+interface OverlayOption {
+  id: string
+  title: string
+}
+
 interface MapQuickFiltersProps {
   radiusValue?: string
   categoriesValue?: string
+  overlaysValue?: string
   onPressRadius?: () => void
   onPressCategories?: () => void
+  onPressOverlays?: () => void
   radiusOptions?: ReadonlyArray<RadiusOption>
   radiusSelected?: string
   onChangeRadius?: (next: string) => void
   categoriesOptions?: ReadonlyArray<CategoryOption>
   categoriesSelected?: string[]
   onChangeCategories?: (next: string[]) => void
+  overlayOptions?: ReadonlyArray<OverlayOption>
+  enabledOverlays?: Record<string, boolean>
+  onChangeOverlay?: (id: string, enabled: boolean) => void
+  onResetOverlays?: () => void
   travelsData?: ReadonlyArray<{ categoryName?: string | null | undefined }>
 }
 
@@ -41,32 +53,38 @@ export const CATEGORY_ICONS: Record<
   string,
   React.ComponentProps<typeof Feather>['name']
 > = {
-  'Горы': 'triangle',
-  'Пляжи': 'sun',
-  'Города': 'map-pin',
-  'Природа': 'feather',
-  'Музеи': 'home',
-  'Озера': 'droplet',
-  'Культура': 'music',
-  'Спорт': 'activity',
-  'Еда': 'coffee',
-  'Архитектура': 'layers',
+  Горы: 'triangle',
+  Пляжи: 'sun',
+  Города: 'map-pin',
+  Природа: 'feather',
+  Музеи: 'home',
+  Озера: 'droplet',
+  Культура: 'music',
+  Спорт: 'activity',
+  Еда: 'coffee',
+  Архитектура: 'layers',
 }
 
-type ChipKey = 'radius' | 'categories'
+type ChipKey = 'radius' | 'categories' | 'overlays'
 
 export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
   ({
     radiusValue,
     categoriesValue,
+    overlaysValue,
     onPressRadius,
     onPressCategories,
+    onPressOverlays,
     radiusOptions,
     radiusSelected,
     onChangeRadius,
     categoriesOptions,
     categoriesSelected,
     onChangeCategories,
+    overlayOptions,
+    enabledOverlays,
+    onChangeOverlay,
+    onResetOverlays,
     travelsData,
   }) => {
     const colors = useThemedColors()
@@ -80,6 +98,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
 
     const radiusAnchorRef = useRef<View | null>(null)
     const categoriesAnchorRef = useRef<View | null>(null)
+    const overlaysAnchorRef = useRef<View | null>(null)
     const [openChip, setOpenChip] = useState<ChipKey | null>(null)
     const [anchor, setAnchor] = useState<AnchorRect | null>(null)
 
@@ -92,6 +111,11 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
       Array.isArray(categoriesOptions) &&
       categoriesOptions.length > 0 &&
       typeof onChangeCategories === 'function'
+
+    const hasOverlaysPopover =
+      Array.isArray(overlayOptions) &&
+      overlayOptions.length > 0 &&
+      typeof onChangeOverlay === 'function'
 
     const measureAndOpen = useCallback(
       (key: ChipKey, ref: React.MutableRefObject<View | null>) => {
@@ -130,6 +154,14 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
       onPressCategories?.()
     }, [hasCategoriesPopover, measureAndOpen, onPressCategories])
 
+    const handleOverlaysPress = useCallback(() => {
+      if (hasOverlaysPopover) {
+        measureAndOpen('overlays', overlaysAnchorRef)
+        return
+      }
+      onPressOverlays?.()
+    }, [hasOverlaysPopover, measureAndOpen, onPressOverlays])
+
     const selectors = [
       {
         key: 'radius' as const,
@@ -148,6 +180,15 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
         onPress: handleCategoriesPress,
         ref: categoriesAnchorRef,
         hasHandler: hasCategoriesPopover || typeof onPressCategories === 'function',
+      },
+      {
+        key: 'overlays' as const,
+        label: 'Оверлеи',
+        value: overlaysValue || 'Выкл',
+        icon: 'layers' as const,
+        onPress: handleOverlaysPress,
+        ref: overlaysAnchorRef,
+        hasHandler: hasOverlaysPopover || typeof onPressOverlays === 'function',
       },
     ].filter((item) => item.hasHandler)
 
@@ -222,6 +263,24 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(
             />
           </MapChipPopover>
         )}
+
+        {hasOverlaysPopover && (
+          <MapChipPopover
+            visible={openChip === 'overlays'}
+            onClose={handleClose}
+            anchor={anchor}
+            maxWidth={360}
+            testID="map-quick-filters-overlays-popover"
+          >
+            <OverlaysPopover
+              options={overlayOptions!}
+              enabledOverlays={enabledOverlays ?? {}}
+              onToggle={(id, enabled) => onChangeOverlay!(id, enabled)}
+              onReset={onResetOverlays}
+              onClose={handleClose}
+            />
+          </MapChipPopover>
+        )}
       </View>
     )
   },
@@ -240,7 +299,7 @@ const getStyles = (
       zIndex: 5,
     },
     row: {
-      flexDirection: 'row',
+      flexDirection: options.isVeryNarrow ? 'column' : 'row',
       gap: options.isVeryNarrow ? 8 : 10,
       alignItems: 'stretch',
     },
@@ -254,18 +313,18 @@ const getStyles = (
       flexDirection: 'row',
       alignItems: 'center',
       gap: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
-      minHeight: options.isVeryNarrow ? 42 : options.isNarrow ? 46 : 50,
-      paddingHorizontal: options.isVeryNarrow ? 10 : options.isNarrow ? 12 : 14,
-      paddingVertical: options.isVeryNarrow ? 6 : options.isNarrow ? 8 : 10,
-      borderRadius: options.isVeryNarrow ? 16 : options.isNarrow ? 18 : 20,
-      backgroundColor: options.isNarrow ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.94)',
+      minHeight: options.isVeryNarrow ? 40 : options.isNarrow ? 43 : 46,
+      paddingHorizontal: options.isVeryNarrow ? 10 : options.isNarrow ? 11 : 13,
+      paddingVertical: options.isVeryNarrow ? 6 : options.isNarrow ? 7 : 8,
+      borderRadius: options.isVeryNarrow ? 15 : options.isNarrow ? 17 : 18,
+      backgroundColor: Platform.OS === 'web' ? colors.surfaceAlpha40 : colors.surface,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(Platform.OS === 'web'
         ? ({
             backdropFilter: 'blur(16px) saturate(1.08)',
             WebkitBackdropFilter: 'blur(16px) saturate(1.08)',
-            boxShadow: '0 8px 20px rgba(58,58,58,0.08), 0 2px 6px rgba(58,58,58,0.04)',
+            boxShadow: '0 10px 22px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04)',
             cursor: 'pointer',
             transition: 'transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease',
           } as any)
@@ -280,8 +339,8 @@ const getStyles = (
         : null),
     },
     iconBadge: {
-      width: options.isVeryNarrow ? 20 : options.isNarrow ? 22 : 24,
-      height: options.isVeryNarrow ? 20 : options.isNarrow ? 22 : 24,
+      width: options.isVeryNarrow ? 18 : options.isNarrow ? 20 : 22,
+      height: options.isVeryNarrow ? 18 : options.isNarrow ? 20 : 22,
       borderRadius: 999,
       alignItems: 'center',
       justifyContent: 'center',
@@ -294,23 +353,23 @@ const getStyles = (
       justifyContent: 'center',
     },
     fieldLabel: {
-      fontSize: options.isVeryNarrow ? 11 : options.isNarrow ? 12 : 13,
+      fontSize: options.isVeryNarrow ? 10 : options.isNarrow ? 11 : 12,
       fontWeight: '700',
       color: colors.text,
       letterSpacing: 0.1,
     },
     fieldValueWrap: {
       marginLeft: 'auto',
-      maxWidth: options.isVeryNarrow ? 94 : options.isNarrow ? 116 : 128,
-      minHeight: options.isVeryNarrow ? 24 : 28,
-      paddingLeft: 8,
+      maxWidth: options.isVeryNarrow ? 90 : options.isNarrow ? 108 : 120,
+      minHeight: options.isVeryNarrow ? 22 : 26,
+      paddingLeft: 7,
       paddingRight: 4,
       borderRadius: 999,
       alignItems: 'center',
       flexDirection: 'row',
       gap: 4,
       justifyContent: 'center',
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surfaceAlpha40,
       flexShrink: 0,
     },
     fieldValue: {

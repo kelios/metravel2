@@ -23,7 +23,6 @@ import Feather from '@expo/vector-icons/Feather'
 import { usePathname } from 'expo-router'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
-import Button from '@/components/ui/Button'
 import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
@@ -88,8 +87,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     Platform.OS === 'web' && (pathname === '/map' || String(pathname).startsWith('/map/'))
   const [consentBannerVisible, setConsentBannerVisible] = useState(false)
 
-  const [uiTab, setUiTab] = useState<'list' | 'filters'>('list')
-  const [contentTab, setContentTab] = useState<'list' | 'filters'>('list')
+  const [uiTab, setUiTab] = useState<'search' | 'route' | 'list'>('list')
+  const [contentTab, setContentTab] = useState<'search' | 'route' | 'list'>('list')
   const [, startTransition] = useTransition()
   const sheetStateRef = useRef<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed')
   const [sheetState, setSheetState] = useState<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed')
@@ -106,6 +105,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const setBottomSheetState = useBottomSheetStore((s) => s.setState)
   const bottomSheetState = useBottomSheetStore((s) => s.state)
   const collapseNonce = useBottomSheetStore((s) => s.collapseNonce)
+  const filtersContextProps = filtersPanelProps?.props ?? filtersPanelProps?.contextValue
+  const filtersMode: 'radius' | 'route' | undefined = filtersContextProps?.mode
+  const setFiltersMode: ((m: 'radius' | 'route') => void) | undefined = filtersContextProps?.setMode
 
   const handleSheetStateChange = useCallback(
     (state: 'collapsed' | 'quarter' | 'half' | 'full') => {
@@ -118,7 +120,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   useEffect(() => {
     if (!openNonce) return
-    const nextTab = requestedOpenTab === 'list' ? 'list' : 'filters'
+    const nextTab =
+      requestedOpenTab === 'list'
+        ? 'list'
+        : filtersMode === 'route'
+          ? 'route'
+          : 'search'
     setUiTab(nextTab)
     setContentTab(nextTab)
     if (nextTab === 'list') {
@@ -126,7 +133,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       return
     }
     bottomSheetRef.current?.snapToFull()
-  }, [openNonce, requestedOpenTab])
+  }, [filtersMode, openNonce, requestedOpenTab])
 
   useEffect(() => {
     if (!toggleNonce) return
@@ -168,7 +175,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   }, [])
 
   const setTabDeferred = useCallback(
-    (next: 'list' | 'filters') => {
+    (next: 'search' | 'route' | 'list') => {
       setUiTab(next)
 
       if (Platform.OS === 'web') {
@@ -211,11 +218,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToCollapsed()
   }, [handleOpenListPreview])
 
-  const handleOpenFilters = useCallback(() => {
-    setTabDeferred('filters')
+  const handleOpenSearch = useCallback(() => {
+    setFiltersMode?.('radius')
+    setTabDeferred('search')
     bottomSheetRef.current?.snapToFull()
     onOpenFilters()
-  }, [onOpenFilters, setTabDeferred])
+  }, [onOpenFilters, setFiltersMode, setTabDeferred])
 
   const handleBackToMap = useCallback(() => {
     bottomSheetRef.current?.snapToCollapsed()
@@ -224,10 +232,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const handleCenterOnUserPress = useCallback(() => {
     onCenterOnUser()
   }, [onCenterOnUser])
-
-  const filtersContextProps = filtersPanelProps?.props ?? filtersPanelProps?.contextValue
-  const filtersMode: 'radius' | 'route' | undefined = filtersContextProps?.mode
-  const setFiltersMode: ((m: 'radius' | 'route') => void) | undefined = filtersContextProps?.setMode
 
   const canBuildRoute = useMemo(() => {
     if (filtersMode !== 'route') return false
@@ -250,12 +254,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         : [],
     [filtersContextProps?.filterValue?.categoryTravelAddress],
   )
-
-  const routeCtaLabel = useMemo(() => {
-    if (routingLoading) return 'Строим...'
-    if (routeDistance != null) return 'Пересчитать маршрут'
-    return canBuildRoute ? 'Построить маршрут' : 'Добавьте старт и финиш'
-  }, [routingLoading, routeDistance, canBuildRoute])
 
   const filterToolbarSummary = useMemo(() => {
     if (filtersMode === 'route') {
@@ -280,18 +278,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     travelsData.length,
   ])
 
-  const listTabsOptions = useMemo(
+  const panelTabsOptions = useMemo(
     () => [
-      { key: 'list', label: 'Список', icon: isVeryNarrow ? undefined : 'list' },
-      { key: 'filters', label: 'Фильтры', icon: isVeryNarrow ? undefined : 'filter-list' },
-    ],
-    [isVeryNarrow],
-  )
-
-  const modeTabsOptions = useMemo(
-    () => [
-      { key: 'radius', label: 'Радиус', icon: isVeryNarrow ? undefined : 'my-location' },
+      { key: 'search', label: 'Поиск', icon: isVeryNarrow ? undefined : 'search' },
       { key: 'route', label: 'Маршрут', icon: isVeryNarrow ? undefined : 'alt-route' },
+      { key: 'list', label: 'Точки', icon: isVeryNarrow ? undefined : 'list' },
     ],
     [isVeryNarrow],
   )
@@ -305,6 +296,25 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     if (selectedCategories.length === 1) return selectedCategories[0]
     return `${selectedCategories.length} выбрано`
   }, [selectedCategories])
+
+  const quickOverlayOptions = useMemo(
+    () =>
+      Array.isArray(filtersContextProps?.overlayOptions) ? filtersContextProps.overlayOptions : [],
+    [filtersContextProps?.overlayOptions],
+  )
+  const quickEnabledOverlays = useMemo(
+    () =>
+      filtersContextProps?.enabledOverlays && typeof filtersContextProps.enabledOverlays === 'object'
+        ? filtersContextProps.enabledOverlays
+        : {},
+    [filtersContextProps?.enabledOverlays],
+  )
+  const quickOverlaysValue = useMemo(() => {
+    const enabledCount = quickOverlayOptions.filter((option: { id: string }) => Boolean(quickEnabledOverlays?.[option.id])).length
+    if (enabledCount === 0) return 'Выкл'
+    if (enabledCount === 1) return '1 вкл'
+    return `${enabledCount} вкл`
+  }, [quickEnabledOverlays, quickOverlayOptions])
 
   const showCollapsedMapOverlay = sheetState === 'collapsed' && bottomSheetState === 'collapsed'
   const showQuickFiltersOverlay = showCollapsedMapOverlay
@@ -322,56 +332,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       )
     }
 
-    if (contentTab !== 'filters') return null
-    if (!filtersMode || typeof setFiltersMode !== 'function') return null
-
-    const showRouteCta = filtersMode === 'route' && typeof filtersContextProps?.onBuildRoute === 'function'
-
-    return (
-      <View style={styles.filtersPeek}>
-        <SegmentedControl
-          options={modeTabsOptions}
-          value={filtersMode}
-          onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
-          compact={true}
-          dense={isNarrow}
-          tone="subtle"
-          accessibilityLabel="Выбор режима поиска"
-        />
-
-        {showRouteCta && (
-          <View style={styles.filtersPeekCtaRow}>
-            <Button
-              label={routeCtaLabel}
-              onPress={() => {
-                if (!canBuildRoute || routingLoading) return
-                filtersContextProps?.onBuildRoute?.()
-              }}
-              disabled={!canBuildRoute || routingLoading}
-              accessibilityLabel="Построить маршрут"
-              variant="primary"
-              fullWidth
-            />
-          </View>
-        )}
-      </View>
-    )
+    return null
   }, [
     contentTab,
     travelsData,
     coordinates,
     transportMode,
     handlePlacePress,
-    filtersMode,
-    setFiltersMode,
-    filtersContextProps,
-    styles.filtersPeek,
-    styles.filtersPeekCtaRow,
-    canBuildRoute,
-    routingLoading,
-    routeCtaLabel,
-    modeTabsOptions,
-    isNarrow,
   ])
 
   const sheetPeekContent = peekContent
@@ -381,38 +348,72 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const sheetContent = useMemo(() => {
     const isQuarterListPreview = uiTab === 'list' && sheetState === 'quarter'
     const isTabTransitioning = uiTab !== contentTab
-    const showModeToggle =
-      (filtersMode === 'radius' || filtersMode === 'route') && typeof setFiltersMode === 'function'
-    const showTopFilterActions = uiTab === 'filters' && filtersMode === 'radius' && !stackSheetToolbar
+    const showTopFilterActions = uiTab === 'search' && !stackSheetToolbar
     const showSheetCloseButton = !isQuarterListPreview
     const toolbarSummaryText = isQuarterListPreview
       ? 'Быстрый просмотр результатов'
-      : uiTab === 'filters'
+      : uiTab === 'search' || uiTab === 'route'
         ? filterToolbarSummary
         : null
-    const transitionTitle = uiTab === 'filters' ? 'Открываем фильтры' : 'Открываем список мест'
-    const transitionText =
-      uiTab === 'filters'
-        ? 'Сейчас можно будет сузить поиск по категориям, расстоянию и режиму маршрута.'
-        : 'Сейчас покажем актуальные места рядом, чтобы вы могли быстро выбрать точку.'
+    const transitionMeta =
+      uiTab === 'search'
+        ? {
+            icon: 'search' as const,
+            color: colors.primary,
+            title: 'Открываем поиск',
+            text: 'Сейчас можно будет быстро сузить выдачу по категориям и радиусу.',
+          }
+        : uiTab === 'route'
+          ? {
+              icon: 'navigation' as const,
+              color: colors.primary,
+              title: 'Открываем маршрут',
+              text: 'Сейчас можно будет выбрать старт и финиш без вложенных переключателей.',
+            }
+          : {
+              icon: 'list' as const,
+              color: colors.textMuted,
+              title: 'Открываем список мест',
+              text: 'Сейчас покажем актуальные точки рядом, чтобы вы могли быстро выбрать место.',
+            }
 
     const body = isTabTransitioning ? (
       <View style={styles.sheetTransitionState} testID="map-mobile-tab-transition">
         <View style={styles.sheetTransitionCard}>
           <View style={styles.sheetTransitionIconWrap}>
             <Feather
-              name={uiTab === 'filters' ? 'sliders' : 'list'}
+              name={transitionMeta.icon}
               size={18}
-              color={uiTab === 'filters' ? colors.primary : colors.textMuted}
+              color={transitionMeta.color}
             />
           </View>
           <View style={styles.sheetTransitionCopy}>
-            <RNText style={styles.sheetTransitionTitle}>{transitionTitle}</RNText>
-            <RNText style={styles.sheetTransitionText}>{transitionText}</RNText>
+            <RNText style={styles.sheetTransitionTitle}>{transitionMeta.title}</RNText>
+            <RNText style={styles.sheetTransitionText}>{transitionMeta.text}</RNText>
           </View>
         </View>
       </View>
-    ) : contentTab === 'filters' ? (
+    ) : contentTab === 'list' ? (
+      <TravelListPanel
+        travelsData={travelsData}
+        buildRouteTo={buildRouteTo}
+        isMobile={true}
+        hasMore={hasMore}
+        onLoadMore={onLoadMore}
+        onRefresh={onRefresh}
+        isRefreshing={isRefreshing}
+        userLocation={coordinates}
+        transportMode={transportMode}
+        onToggleFavorite={onToggleFavorite}
+        favorites={favorites}
+        compactPreview={sheetState === 'quarter'}
+        onExpandList={handleOpenList}
+        onClosePanel={handleBackToMap}
+        onOpenFilters={handleOpenSearch}
+        onResetFilters={onResetFilters}
+        onExpandRadius={onExpandRadius}
+      />
+    ) : (
       (() => {
         const ProviderComponent = filtersPanelProps?.Component
         const PanelComponent = filtersPanelProps?.Panel
@@ -433,49 +434,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         return (
           <Suspense fallback={<View style={styles.sheetRoot} />}>
             <ProviderComponent {...mergedProviderProps}>
-              {showModeToggle && (
-                <View style={styles.filtersModeBar} testID="map-mobile-mode-toggle">
-                  <SegmentedControl
-                    options={modeTabsOptions}
-                    value={filtersMode}
-                    onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
-                    compact={true}
-                    dense={isNarrow}
-                    noOuterMargins={true}
-                    tone="subtle"
-                    accessibilityLabel="Выбор режима поиска"
-                  />
-                </View>
-              )}
-              <PanelComponent
-                hideTopControls={true}
-                hideFooterCta={filtersMode === 'route'}
-                hideFooterReset={filtersMode !== 'radius'}
-              />
+              <PanelComponent hideTopControls={true} />
             </ProviderComponent>
           </Suspense>
         )
       })()
-    ) : (
-      <TravelListPanel
-        travelsData={travelsData}
-        buildRouteTo={buildRouteTo}
-        isMobile={true}
-        hasMore={hasMore}
-        onLoadMore={onLoadMore}
-        onRefresh={onRefresh}
-        isRefreshing={isRefreshing}
-        userLocation={coordinates}
-        transportMode={transportMode}
-        onToggleFavorite={onToggleFavorite}
-        favorites={favorites}
-        compactPreview={sheetState === 'quarter'}
-        onExpandList={handleOpenList}
-        onClosePanel={handleBackToMap}
-        onOpenFilters={handleOpenFilters}
-        onResetFilters={onResetFilters}
-        onExpandRadius={onExpandRadius}
-      />
     )
 
     return (
@@ -489,12 +452,18 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         >
           <View style={[styles.sheetToolbarLeft, stackSheetToolbar && styles.sheetToolbarFullWidth]}>
             <SegmentedControl
-              options={listTabsOptions}
+              options={panelTabsOptions}
               value={uiTab}
               onChange={(key) => {
-                const next = key === 'filters' ? 'filters' : 'list'
+                const next =
+                  key === 'route' ? 'route' : key === 'list' ? 'list' : 'search'
+                if (next === 'route') {
+                  setFiltersMode?.('route')
+                } else if (next === 'search') {
+                  setFiltersMode?.('radius')
+                }
                 setTabDeferred(next)
-                if (next === 'filters') {
+                if (next === 'search' || next === 'route') {
                   bottomSheetRef.current?.snapToFull()
                   return
                 }
@@ -504,7 +473,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               dense={isNarrow}
               noOuterMargins={true}
               tone="subtle"
-              accessibilityLabel="Переключение между фильтрами и списком"
+              accessibilityLabel="Переключение между поиском, маршрутом и списком точек"
             />
             {toolbarSummaryText && (
               <RNText
@@ -636,7 +605,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     favorites,
     hasMore,
     filtersContextProps,
-    filtersMode,
     filtersPanelProps?.Component,
     filtersPanelProps?.Panel,
     isRefreshing,
@@ -646,11 +614,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onResetFilters,
     onToggleFavorite,
     handleBackToMap,
-    handleOpenFilters,
+    handleOpenSearch,
     handleOpenList,
     handleToggleListPanel,
-    listTabsOptions,
-    modeTabsOptions,
+    panelTabsOptions,
     compactSheetActions,
     filterToolbarSummary,
     isNarrow,
@@ -658,7 +625,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     setTabDeferred,
     sheetState,
     stackSheetToolbar,
-    styles.filtersModeBar,
     styles.sheetBackToMapButton,
     styles.sheetBackToMapButtonCompact,
     styles.sheetBackToMapText,
@@ -708,12 +674,17 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           <MapQuickFilters
             radiusValue={quickRadiusValue}
             categoriesValue={quickCategoriesValue}
+            overlaysValue={quickOverlaysValue}
             radiusOptions={filtersContextProps?.filters?.radius}
             radiusSelected={activeRadius}
             onChangeRadius={(next) => filtersContextProps?.onFilterChange?.('radius', next)}
             categoriesOptions={filtersContextProps?.filters?.categoryTravelAddress}
             categoriesSelected={selectedCategories}
             onChangeCategories={(next) => filtersContextProps?.onFilterChange?.('categoryTravelAddress', next)}
+            overlayOptions={quickOverlayOptions}
+            enabledOverlays={quickEnabledOverlays}
+            onChangeOverlay={(id, enabled) => filtersContextProps?.onOverlayToggle?.(id, enabled)}
+            onResetOverlays={filtersContextProps?.onResetOverlays}
             travelsData={travelsData}
           />
         )}
@@ -734,8 +705,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           <View style={styles.quickSecondaryActions}>
             <CardActionPressable
               accessibilityRole="button"
-              accessibilityLabel="Открыть фильтры"
-              onPress={handleOpenFilters}
+              accessibilityLabel="Открыть поиск"
+              onPress={handleOpenSearch}
               style={styles.quickCircleButton}
             >
               <Feather name="sliders" size={18} color={colors.text} />
